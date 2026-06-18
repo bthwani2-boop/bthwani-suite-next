@@ -2,11 +2,18 @@ openapi: 3.1.0
 info:
   title: BThwani Master Contract Index
   version: 0.0.0
+  description: Root contract index only. No runtime endpoints are defined here.
+
 paths: {}
+
+x-bthwani-contract-kind: master-index
+x-bthwani-runtime-dependency: false
+
 x-bthwani-contracts:
   core:
     identity: ../core/identity/contracts/auth.openapi.yaml
     providers: ../core/providers/contracts/providers.openapi.yaml
+
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
