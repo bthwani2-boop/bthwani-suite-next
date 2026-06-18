@@ -8,6 +8,30 @@ importers:
 
   .: {}
 
+  apps/app-captain/runtime:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  apps/app-client/runtime:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  apps/app-field/runtime:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  apps/app-partner/runtime:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   contracts: {}
 
   shared/app-shell:
