@@ -5,14 +5,11 @@
   "packageManager": "pnpm@11.7.0",
   "engines": {
     "node": ">=24.17.0 <25",
-    "pnpm": ">=11.7.0 <12"
+    "pnpm": "11.7.0"
   },
   "scripts": {
+    "foundation:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
     "typecheck": "pnpm -r --if-present typecheck",
-    "foundation:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1"
-  },
-  "devDependencies": {
-    "@types/node": "24.0.0",
-    "typescript": "5.9.3"
+    "build": "pnpm -r --if-present build"
   }
 }

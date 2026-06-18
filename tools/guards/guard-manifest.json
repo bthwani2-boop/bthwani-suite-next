@@ -1,0 +1,45 @@
+{
+  "version": "0.0.0",
+  "guards": [
+    {
+      "id": "no-direct-tamagui-outside-ui-kit",
+      "severity": "blocking",
+      "ownerPolicy": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-ui-kit-deep-imports",
+      "severity": "blocking",
+      "ownerPolicy": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-local-design-system",
+      "severity": "blocking",
+      "ownerPolicy": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-preview-demo-mock-runtime",
+      "severity": "blocking",
+      "ownerPolicy": "governance/06_EVIDENCE_AND_GATES.md"
+    },
+    {
+      "id": "no-memory-repo-in-slice-runtime",
+      "severity": "blocking",
+      "ownerPolicy": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
+      "id": "no-financial-mutation-outside-wlt",
+      "severity": "blocking",
+      "ownerPolicy": "governance/10_DSH_WLT_FINANCIAL_BOUNDARY.md"
+    },
+    {
+      "id": "no-direct-fetch-in-screen",
+      "severity": "blocking",
+      "ownerPolicy": "governance/04_API_RUNTIME_BINDING.md"
+    },
+    {
+      "id": "service-fullstack-linkage",
+      "severity": "blocking",
+      "ownerPolicy": "governance/02_SERVICES_AND_SURFACES.md"
+    }
+  ]
+}

@@ -1,14 +1,17 @@
 # bthwani-suite-next
 
-Clean canonical implementation target for BThwani.
+Clean canonical rebuild line for BThwani.
 
-Donor:
-- GitHub: bthwani2-boop/bthwani-suite
-- Branch: realtest
-- Local donor: C:\bthwani-suite
+## Repository Role
 
-Rules:
-- No blind copy from donor.
-- No runtime dependency on donor.
-- No preview/demo/mock runtime data.
-- No PASS / READY / CLOSED / 100% without evidence.
+Old repo `C:\bthwani-suite` on branch `realtest` is donor/reference/evidence source only.
+
+This repo is the canonical implementation target.
+
+## Rule
+
+No blind copy. No runtime dependency on the old repo. No feature is closed without gate evidence.
+
+## Current Stage
+
+FOUNDATION-000: repository skeleton and guard baseline.

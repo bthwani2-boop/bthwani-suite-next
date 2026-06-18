@@ -1,0 +1,18 @@
+[
+  {
+    "name": "git-status",
+    "code": 0
+  },
+  {
+    "name": "git-diff-check",
+    "code": 0
+  },
+  {
+    "name": "pnpm-install",
+    "code": 0
+  },
+  {
+    "name": "pnpm-typecheck",
+    "code": 0
+  }
+]

@@ -1,15 +1,15 @@
-# Decision Index
+# Governance Decision Index
 
-Status: FOUNDATION_ROOT_REPAIRED
+Canonical governance files:
 
-Decision:
-- bthwani-suite-next is the clean canonical implementation target.
-- realtest is donor/reference/evidence only.
+1. 01_REPO_BOUNDARIES.md
+2. 02_SERVICES_AND_SURFACES.md
+3. 03_UI_KIT_AND_BRAND_LOCK.md
+4. 04_API_RUNTIME_BINDING.md
+5. 05_DOCKER_AND_DATA_PLANE.md
+6. 06_EVIDENCE_AND_GATES.md
+7. 10_DSH_WLT_FINANCIAL_BOUNDARY.md
+8. 14_TOOLCHAIN_VERSION_LOCK.md
+9. 99_LEGACY_EXTRACTION_LEDGER.md
 
-Forbidden:
-- No blind copy from realtest.
-- No modification of C:\bthwani-suite during foundation.
-- No preview/demo/mock runtime data.
-- No financial mutation outside WLT.
-- No direct Tamagui outside shared/ui-kit.
-- No closure claim without evidence.
+No governance file is canonical unless listed here.

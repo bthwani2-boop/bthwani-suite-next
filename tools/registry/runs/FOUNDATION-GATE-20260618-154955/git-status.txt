@@ -1,0 +1,3 @@
+COMMAND: git --no-pager status --short
+
+?? tools/registry/runs/FOUNDATION-GATE-20260618-154955/
