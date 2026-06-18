@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Service API
+  version: 0.1.0
+  description: Delivery and shopping hub service contract baseline. Foundation-007A defines health and readiness only; commerce runtime endpoints are added only after contract review.
+
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_DRAFT
+x-bthwani-client-generation: DISABLED_UNTIL_CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: false
+
+paths:
+  /dsh/health:
+    get:
+      operationId: getDshHealth
+      summary: Return DSH liveness state.
+      tags:
+        - DshSystem
+      responses:
+        "200":
+          description: DSH process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshHealthResponse"
+
+  /dsh/readiness:
+    get:
+      operationId: getDshReadiness
+      summary: Return DSH readiness state.
+      tags:
+        - DshSystem
+      responses:
+        "200":
+          description: DSH dependencies are ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshReadinessResponse"
+        "503":
+          description: DSH is not ready.
+
+components:
+  schemas:
+    DshHealthResponse:
+      type: object
+      required:
+        - service
+        - status
+        - checkedAt
+      properties:
+        service:
+          type: string
+          const: dsh
+        status:
+          type: string
+          enum:
+            - healthy
+        checkedAt:
+          type: string
+          format: date-time
+
+    DshReadinessResponse:
+      type: object
+      required:
+        - service
+        - status
+        - dependencies
+        - checkedAt
+      properties:
+        service:
+          type: string
+          const: dsh
+        status:
+          type: string
+          enum:
+            - ready
+            - not_ready
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+            enum:
+              - ready
+              - degraded
+              - down
+              - not_configured
+        checkedAt:
+          type: string
+          format: date-time
