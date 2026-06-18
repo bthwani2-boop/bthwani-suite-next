@@ -6,7 +6,10 @@ $Zip = $args -contains "-Zip"
 $GuardArgIndex = [Array]::IndexOf($args, "-Guard")
 $RequestedGuard = if ($GuardArgIndex -ge 0 -and ($GuardArgIndex + 1) -lt $args.Count) { $args[$GuardArgIndex + 1] } else { $null }
 
-$SessionId = "FOUNDATION-GATE-" + (Get-Date -Format "yyyyMMdd-HHmmss")
+$SliceArgIndex = [Array]::IndexOf($args, "-Slice")
+$Slice = if ($SliceArgIndex -ge 0 -and ($SliceArgIndex + 1) -lt $args.Count) { $args[$SliceArgIndex + 1] } else { "UNSPECIFIED_SLICE" }
+
+$SessionId = "SLICE-GATE-" + (Get-Date -Format "yyyyMMdd-HHmmss")
 $EvidenceRoot = Join-Path (Get-Location) "tools\registry\runs\$SessionId"
 New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
 
@@ -35,23 +38,20 @@ function Run-Step {
 
 $manifest = Get-Content -LiteralPath "tools\guards\guard-manifest.json" -Raw | ConvertFrom-Json
 
-$foundationGuards = @($manifest.guardSets.foundation)
+$sliceGuards = @($manifest.guardSets.slice)
 if ($RequestedGuard) {
-  $foundationGuards = @($RequestedGuard)
+  $sliceGuards = @($RequestedGuard)
 }
 
 $results = @()
 
-$results += [pscustomobject]@{ step = "node-version"; ok = (Run-Step "node-version" { node --version }) }
-$results += [pscustomobject]@{ step = "pnpm-version"; ok = (Run-Step "pnpm-version" { pnpm --version }) }
 $results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
-$results += [pscustomobject]@{ step = "pnpm-install-lockfile-only"; ok = (Run-Step "pnpm-install-lockfile-only" { pnpm install --lockfile-only }) }
 $results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Run-Step "pnpm-typecheck" { pnpm typecheck }) }
 
-foreach ($guard in $foundationGuards) {
+foreach ($guard in $sliceGuards) {
   $guardEntry = $manifest.guards | Where-Object { $_.id -eq $guard } | Select-Object -First 1
   if (-not $guardEntry) {
-    throw "Unknown foundation guard: $guard"
+    throw "Unknown slice guard: $guard"
   }
 
   $guardPath = $guardEntry.path
@@ -63,15 +63,15 @@ $results | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $Eviden
 git --no-pager status --short | Set-Content -LiteralPath (Join-Path $EvidenceRoot "git-status.txt") -Encoding UTF8
 
 $failed = @($results | Where-Object { -not $_.ok })
-
 $status = if ($failed.Count -eq 0) { "PASS" } else { "FAIL" }
 
 @"
 status: $status
+slice: $Slice
 session_id: $SessionId
 evidence_root: $EvidenceRoot
 zip_created: $Zip
-guards_run: $($foundationGuards -join ", ")
+guards_run: $($sliceGuards -join ", ")
 "@ | Set-Content -LiteralPath (Join-Path $EvidenceRoot "summary.txt") -Encoding UTF8
 
 if ($Zip) {

@@ -10,6 +10,10 @@
   "scripts": {
     "foundation:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
     "typecheck": "pnpm -r --if-present typecheck",
-    "build": "pnpm -r --if-present build"
+    "build": "pnpm -r --if-present build",
+    "slice:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1",
+    "guard:foundation": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
+    "guard:slice": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1"
   }
 }
+
