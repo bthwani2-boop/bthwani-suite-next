@@ -17,7 +17,7 @@ export function ActionBar({ primary, secondary, sticky = false }: ActionBarProps
       backgroundColor="$surfaceOverlay"
       borderTopWidth={1}
       borderTopColor="$borderColor"
-      position={sticky ? "sticky" : "relative"}
+      position="relative"
       bottom={sticky ? 0 : undefined}
       zIndex={sticky ? "$sticky" : "$base"}
     >

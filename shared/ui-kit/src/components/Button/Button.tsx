@@ -13,7 +13,13 @@ export type ButtonProps = {
   leading?: ReactNode;
   trailing?: ReactNode;
   accessibilityLabel?: string;
-  accessibilityState?: Record<string, boolean>;
+  accessibilityState?: {
+    selected?: boolean;
+    checked?: boolean;
+    expanded?: boolean;
+    disabled?: boolean;
+    busy?: boolean;
+  };
   onPress?: () => void;
   circular?: boolean;
   pill?: boolean;
@@ -27,20 +33,34 @@ export function Button({
   disabled,
   leading,
   trailing,
-  ...props
+  fullWidth,
+  tone,
+  accessibilityLabel,
+  accessibilityState,
+  onPress,
+  circular = false,
+  pill = false
 }: ButtonProps) {
+  const resolvedDisabled = Boolean(disabled || loading);
+
   return (
     <StyledButton
       accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel}
-      accessibilityState={{ disabled: Boolean(disabled || loading), busy: loading }}
-      disabled={disabled || loading}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{
+        ...accessibilityState,
+        disabled: resolvedDisabled,
+        busy: loading
+      }}
+      disabled={resolvedDisabled}
       uiSize={size}
       icon={loading ? <Spinner size="small" color="currentColor" /> : leading}
       iconAfter={trailing}
-      borderRadius={props.circular || props.pill ? "$round" : undefined}
-      paddingHorizontal={props.circular ? 0 : undefined}
-      {...props}
+      borderRadius={circular || pill ? "$round" : undefined}
+      paddingHorizontal={circular ? 0 : undefined}
+      fullWidth={fullWidth}
+      tone={tone}
+      onPress={onPress}
     >
       {label ?? children}
     </StyledButton>

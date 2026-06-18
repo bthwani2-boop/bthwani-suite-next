@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
 import { Dialog as TamaguiDialog } from "tamagui";
+import { asUiCompoundComponent } from "../../internal/tamagui-compat";
 import { Block, Inline } from "../_shared";
 import { Button } from "../Button";
 import { Text } from "../Text";
 
-const DialogRoot = TamaguiDialog as any;
+const DialogRoot = asUiCompoundComponent(
+  TamaguiDialog,
+  ["Portal", "Overlay", "Content", "Title", "Description", "Close"] as const
+);
 
 export type DialogProps = {
   open: boolean;
@@ -41,7 +45,8 @@ export function Dialog({
           key="content"
           elevate
           bordered
-          width="min(92%, 560px)"
+          width="92%"
+          maxWidth={560}
           padding="$5"
           borderRadius="$xl"
           backgroundColor="$surface"

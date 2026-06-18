@@ -18,6 +18,8 @@
       "no-safe-area-in-ui-kit-runtime",
       "no-vector-icons-direct-in-ui-kit",
       "no-domain-component-in-ui-kit",
+      "no-unsafe-ui-kit-tamagui-casts",
+      "ui-kit-token-binding",
       "no-preview-demo-mock-runtime",
       "no-broken-imports"
     ],
@@ -79,6 +81,16 @@
     {
       "id": "no-domain-component-in-ui-kit",
       "path": "tools/guards/no-domain-component-in-ui-kit.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-unsafe-ui-kit-tamagui-casts",
+      "path": "tools/guards/no-unsafe-ui-kit-tamagui-casts.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "ui-kit-token-binding",
+      "path": "tools/guards/ui-kit-token-binding.mjs",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {

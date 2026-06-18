@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
 import { Sheet as TamaguiSheet } from "tamagui";
+import { asUiCompoundComponent } from "../../internal/tamagui-compat";
 import { Block } from "../_shared";
 import { Text } from "../Text";
 
-const SheetRoot = TamaguiSheet as any;
+const SheetRoot = asUiCompoundComponent(
+  TamaguiSheet,
+  ["Overlay", "Handle", "Frame", "ScrollView"] as const
+);
 
 export type SheetProps = {
   open: boolean;

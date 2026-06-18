@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { ScrollView } from "tamagui";
+import { asUiComponent } from "../../internal/tamagui-compat";
 import { Inline } from "../_shared";
 
-const HorizontalScroll = ScrollView as any;
+const HorizontalScroll = asUiComponent(ScrollView);
 
 export type FilterBarProps = {
   children?: ReactNode;

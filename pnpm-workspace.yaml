@@ -4,3 +4,5 @@ packages:
   - "shared/ui-kit"
   - "services/*"
   - "contracts"
+
+verifyDepsBeforeRun: false

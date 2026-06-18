@@ -1,16 +1,33 @@
 import type { ReactNode } from "react";
 import { StyledText } from "../_shared";
+import {
+  direction as directionConfig,
+  resolveTextAlign,
+  type Direction,
+  type LogicalAlignment,
+  type TypographyRole
+} from "../../tokens";
 
 export type TextProps = {
   children?: ReactNode;
-  role?: "display" | "hero" | "titleLg" | "titleMd" | "titleSm" | "bodyLg" | "body" | "bodyStrong" | "bodySm" | "label" | "caption" | "code";
+  role?: TypographyRole;
   tone?: "default" | "secondary" | "muted" | "inverse" | "action" | "success" | "warning" | "danger" | "info";
-  align?: "start" | "center" | "end";
-  color?: string;
+  align?: LogicalAlignment;
+  direction?: Direction;
   htmlFor?: string;
   numberOfLines?: number;
 };
 
-export function Text(props: TextProps) {
-  return <StyledText {...props} />;
+export function Text({
+  align = "start",
+  direction = directionConfig.defaultDirection,
+  ...props
+}: TextProps) {
+  return (
+    <StyledText
+      textAlign={resolveTextAlign(align, direction)}
+      writingDirection={direction}
+      {...props}
+    />
+  );
 }

@@ -1,27 +1,14 @@
-import { Button as TamaguiButton, Input, Text as TamaguiText, XStack, YStack, styled } from "tamagui";
+import { Button as TamaguiButton, Input, Text as TamaguiText, XStack, YStack } from "tamagui";
+import { createUiStyled } from "../internal/tamagui-compat";
+import { sizing, spacing, typography } from "../tokens";
 
-// Tamagui 2.0.0-rc.41 has incomplete styled-prop inference under strict
-// cross-platform TS settings. Keep the compatibility cast private so the
-// exported component contracts remain explicit and stable.
-const createStyled = styled as (...args: unknown[]) => any;
-
-export const StyledText = createStyled(TamaguiText, {
+export const StyledText = createUiStyled(TamaguiText, {
   color: "$color",
   fontFamily: "$body",
   variants: {
     role: {
-      display: { fontSize: 36, lineHeight: 44, fontWeight: "700" },
-      hero: { fontSize: 30, lineHeight: 38, fontWeight: "700" },
-      titleLg: { fontSize: 24, lineHeight: 32, fontWeight: "700" },
-      titleMd: { fontSize: 20, lineHeight: 28, fontWeight: "600" },
-      titleSm: { fontSize: 18, lineHeight: 26, fontWeight: "600" },
-      bodyLg: { fontSize: 17, lineHeight: 27, fontWeight: "400" },
-      body: { fontSize: 15, lineHeight: 24, fontWeight: "400" },
-      bodyStrong: { fontSize: 15, lineHeight: 24, fontWeight: "600" },
-      bodySm: { fontSize: 14, lineHeight: 21, fontWeight: "400" },
-      label: { fontSize: 13, lineHeight: 18, fontWeight: "600" },
-      caption: { fontSize: 12, lineHeight: 17, fontWeight: "500" },
-      code: { fontSize: 13, lineHeight: 19, fontWeight: "500", fontFamily: "$mono" }
+      ...typography,
+      code: { ...typography.code, fontFamily: "$mono" }
     },
     tone: {
       default: { color: "$color" },
@@ -33,21 +20,15 @@ export const StyledText = createStyled(TamaguiText, {
       warning: { color: "$warning" },
       danger: { color: "$danger" },
       info: { color: "$info" }
-    },
-    align: {
-      start: { textAlign: "left" },
-      center: { textAlign: "center" },
-      end: { textAlign: "right" }
     }
   } as const,
   defaultVariants: {
     role: "body",
-    tone: "default",
-    align: "start"
+    tone: "default"
   }
 });
 
-export const StyledSurface = createStyled(YStack, {
+export const StyledSurface = createUiStyled(YStack, {
   backgroundColor: "$surface",
   borderColor: "$borderColor",
   borderWidth: 1,
@@ -77,7 +58,7 @@ export const StyledSurface = createStyled(YStack, {
   }
 });
 
-export const StyledButton = createStyled(TamaguiButton, {
+export const StyledButton = createUiStyled(TamaguiButton, {
   borderRadius: "$lg",
   borderWidth: 1,
   fontWeight: "600",
@@ -113,9 +94,21 @@ export const StyledButton = createStyled(TamaguiButton, {
       }
     },
     uiSize: {
-      sm: { minHeight: 36, paddingHorizontal: "$3", fontSize: 13 },
-      md: { minHeight: 44, paddingHorizontal: "$4", fontSize: 15 },
-      lg: { minHeight: 52, paddingHorizontal: "$5", fontSize: 16 }
+      sm: {
+        minHeight: sizing.controlSm,
+        paddingHorizontal: "$3",
+        fontSize: typography.label.fontSize
+      },
+      md: {
+        minHeight: sizing.controlMd,
+        paddingHorizontal: "$4",
+        fontSize: typography.body.fontSize
+      },
+      lg: {
+        minHeight: sizing.controlLg,
+        paddingHorizontal: "$5",
+        fontSize: typography.bodyLg.fontSize
+      }
     },
     fullWidth: {
       true: { width: "100%" }
@@ -127,8 +120,8 @@ export const StyledButton = createStyled(TamaguiButton, {
   }
 });
 
-export const StyledInput = createStyled(Input, {
-  minHeight: 44,
+export const StyledInput = createUiStyled(Input, {
+  minHeight: sizing.controlMd,
   borderRadius: "$md",
   borderColor: "$borderColorStrong",
   backgroundColor: "$surface",
@@ -141,16 +134,16 @@ export const StyledInput = createStyled(Input, {
   }
 });
 
-export const Inline = createStyled(XStack, {
+export const Inline = createUiStyled(XStack, {
   alignItems: "center",
   gap: "$2"
 });
 
-export const Block = createStyled(YStack, {
+export const Block = createUiStyled(YStack, {
   gap: "$2"
 });
 
-export const InteractiveRow = createStyled(XStack, {
+export const InteractiveRow = createUiStyled(XStack, {
   width: "100%",
   alignItems: "center",
   justifyContent: "space-between",
@@ -161,9 +154,9 @@ export const InteractiveRow = createStyled(XStack, {
   focusStyle: { outlineColor: "$focusColor", outlineWidth: 2 }
 });
 
-export const Dot = createStyled(YStack, {
-  width: 8,
-  height: 8,
+export const Dot = createUiStyled(YStack, {
+  width: spacing[2],
+  height: spacing[2],
   borderRadius: "$round",
   backgroundColor: "$action"
 });

@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:contracts": "tsc --noEmit -p tsconfig.contracts.json"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

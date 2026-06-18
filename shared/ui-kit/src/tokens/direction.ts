@@ -21,6 +21,12 @@ export function resolveDirection(language?: string, fallback: Direction = direct
   return isRtlLanguage(language) ? "rtl" : "ltr";
 }
 
+export function resolveTextAlign(value: "center", activeDirection: Direction): "center";
+export function resolveTextAlign(value: "start", activeDirection: "rtl"): "right";
+export function resolveTextAlign(value: "start", activeDirection: "ltr"): "left";
+export function resolveTextAlign(value: "end", activeDirection: "rtl"): "left";
+export function resolveTextAlign(value: "end", activeDirection: "ltr"): "right";
+export function resolveTextAlign(value: LogicalAlignment, activeDirection: Direction): "left" | "center" | "right";
 export function resolveTextAlign(value: LogicalAlignment, activeDirection: Direction): "left" | "center" | "right" {
   if (value === "center") return "center";
   if (value === "start") return activeDirection === "rtl" ? "right" : "left";

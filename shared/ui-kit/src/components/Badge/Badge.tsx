@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import { XStack, styled } from "tamagui";
+import { XStack } from "tamagui";
+import { createUiStyled } from "../../internal/tamagui-compat";
 import { Text } from "../Text";
 
-const createStyled = styled as (...args: unknown[]) => any;
-
-const BadgeFrame = createStyled(XStack, {
+const BadgeFrame = createUiStyled(XStack, {
   alignSelf: "flex-start",
   alignItems: "center",
   gap: "$1",
@@ -32,10 +31,12 @@ export type BadgeProps = {
 };
 
 export function Badge({ label, tone = "neutral", icon }: BadgeProps) {
+  const textTone = tone === "neutral" ? "secondary" : tone === "action" ? "action" : tone;
+
   return (
     <BadgeFrame tone={tone} accessibilityRole="text">
       {icon}
-      <Text role="caption" color="currentColor">{label}</Text>
+      <Text role="caption" tone={textTone}>{label}</Text>
     </BadgeFrame>
   );
 }
