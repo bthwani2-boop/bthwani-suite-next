@@ -1,0 +1,35 @@
+{
+  "project": "bthwani-suite-next",
+  "phase": "2_TOOLCHAIN_LOCK",
+  "status": "PENDING_VERIFICATION",
+  "locked": {
+    "node": "24.17.0",
+    "pnpm": "11.7.0",
+    "typescript": "5.9.3",
+    "go": "1.26.4"
+  },
+  "root": {
+    "packageManager": "pnpm@11.7.0",
+    "engines": {
+      "node": ">=24.17.0 <25",
+      "pnpm": "11.7.0"
+    },
+    "nodeVersionFile": ".node-version",
+    "nvmrc": ".nvmrc",
+    "npmrc": ".npmrc",
+    "workspace": "pnpm-workspace.yaml",
+    "lockfile": "pnpm-lock.yaml"
+  },
+  "rules": {
+    "noLatest": true,
+    "noWildcardVersions": true,
+    "packageManagerRequired": true,
+    "enginesRequired": true,
+    "workspaceRequired": true,
+    "dockerImagesMustBePinned": true,
+    "goVersionMustBeUnifiedWhenIntroduced": true
+  },
+  "knownWarnings": [
+    "pnpm-lock.yaml may show settings.autoInstallPeers=true while .npmrc has auto-install-peers=false; verify with pnpm install --lockfile-only before editing lockfile."
+  ]
+}
