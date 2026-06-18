@@ -40,18 +40,6 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  shared/config:
-    devDependencies:
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-
-  shared/testing:
-    devDependencies:
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-
   shared/ui-kit:
     devDependencies:
       typescript:

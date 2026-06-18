@@ -1,6 +1,6 @@
 packages:
   - "apps/*/runtime"
-  - "shared/*"
-  - "core/*"
+  - "shared/app-shell"
+  - "shared/ui-kit"
   - "services/*"
   - "contracts"
