@@ -1,0 +1,4 @@
+COMMAND: git --no-pager status --short
+
+ M pnpm-lock.yaml
+?? tools/registry/runs/FOUNDATION-GATE-20260618-155220/
