@@ -40,6 +40,11 @@
       "id": "service-fullstack-linkage",
       "severity": "blocking",
       "ownerPolicy": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "no-reserved-service-package-json-before-blueprint",
+      "severity": "blocking",
+      "ownerPolicy": "governance/02_SERVICES_AND_SURFACES.md"
     }
   ]
 }

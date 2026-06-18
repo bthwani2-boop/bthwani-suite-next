@@ -1,0 +1,3 @@
+COMMAND: git --no-pager diff --check
+
+governance/02_SERVICES_AND_SURFACES.md:26: new blank line at EOF.

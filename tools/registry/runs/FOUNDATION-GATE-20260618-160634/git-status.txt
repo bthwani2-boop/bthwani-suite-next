@@ -1,0 +1,9 @@
+COMMAND: git --no-pager status --short
+
+ M .npmrc
+ M governance/02_SERVICES_AND_SURFACES.md
+ M shared/testing/src/index.ts
+ M tools/guards/guard-manifest.json
+?? tools/registry/runs/FOUNDATION-GATE-20260618-160459/
+?? tools/registry/runs/FOUNDATION-GATE-20260618-160548/
+?? tools/registry/runs/FOUNDATION-GATE-20260618-160634/

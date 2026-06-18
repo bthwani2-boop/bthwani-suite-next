@@ -1,1 +1,6 @@
-export type BthTestEvidenceStatus = "PASS" | "FAIL" | "BLOCKED" | "UNPROVEN";
+export type BthTestEvidenceStatus =
+  | "PASS"
+  | "FAIL"
+  | "BLOCKED_NEEDS_EVIDENCE"
+  | "BLOCKED_NEEDS_RUNTIME_PROOF"
+  | "BLOCKED_NEEDS_VISUAL_EVIDENCE";

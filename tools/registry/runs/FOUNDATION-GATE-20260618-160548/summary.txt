@@ -1,0 +1,6 @@
+status: FAIL
+session_id: FOUNDATION-GATE-20260618-160548
+repo: C:\bthwani-suite-next
+evidence_root: tools\registry\runs\FOUNDATION-GATE-20260618-160548
+handoff_zip: tools\registry\runs\FOUNDATION-GATE-20260618-160548\_HANDOFF.zip
+failed_checks: git-diff-check
