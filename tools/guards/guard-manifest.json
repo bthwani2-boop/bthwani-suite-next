@@ -13,6 +13,11 @@
       "no-ui-kit-deep-imports",
       "no-local-design-system",
       "no-raw-hex-outside-ui-kit",
+      "no-expo-in-ui-kit",
+      "no-react-native-runtime-dependency-in-ui-kit",
+      "no-safe-area-in-ui-kit-runtime",
+      "no-vector-icons-direct-in-ui-kit",
+      "no-domain-component-in-ui-kit",
       "no-preview-demo-mock-runtime",
       "no-broken-imports"
     ],
@@ -49,6 +54,31 @@
     {
       "id": "no-raw-hex-outside-ui-kit",
       "path": "tools/guards/no-raw-hex-outside-ui-kit.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-expo-in-ui-kit",
+      "path": "tools/guards/no-expo-in-ui-kit.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-react-native-runtime-dependency-in-ui-kit",
+      "path": "tools/guards/no-react-native-runtime-dependency-in-ui-kit.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-safe-area-in-ui-kit-runtime",
+      "path": "tools/guards/no-safe-area-in-ui-kit-runtime.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-vector-icons-direct-in-ui-kit",
+      "path": "tools/guards/no-vector-icons-direct-in-ui-kit.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-domain-component-in-ui-kit",
+      "path": "tools/guards/no-domain-component-in-ui-kit.mjs",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {

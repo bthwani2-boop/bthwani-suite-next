@@ -45,9 +45,15 @@ importers:
       '@tamagui/config':
         specifier: 2.0.0-rc.41
         version: 2.0.0-rc.41(react-dom@19.2.7(react@19.2.7))(react-native-reanimated@4.4.1(react-native-worklets@0.9.2(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
-      '@tamagui/native':
-        specifier: 2.0.0-rc.41
-        version: 2.0.0-rc.41(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+      react:
+        specifier: '>=19 <20'
+        version: 19.2.7
+      react-dom:
+        specifier: '>=19 <20'
+        version: 19.2.7(react@19.2.7)
+      react-native:
+        specifier: '>=0.81 <1'
+        version: 0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7)
       tamagui:
         specifier: 2.0.0-rc.41
         version: 2.0.0-rc.41(react-dom@19.2.7(react@19.2.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)

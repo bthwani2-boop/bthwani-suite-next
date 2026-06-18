@@ -14,7 +14,19 @@
   },
   "dependencies": {
     "@tamagui/config": "2.0.0-rc.41",
-    "@tamagui/native": "2.0.0-rc.41",
     "tamagui": "2.0.0-rc.41"
+  },
+  "peerDependencies": {
+    "react": ">=19 <20",
+    "react-dom": ">=19 <20",
+    "react-native": ">=0.81 <1"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
   }
 }
