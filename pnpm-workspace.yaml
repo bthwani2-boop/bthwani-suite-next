@@ -1,0 +1,7 @@
+packages:
+  - "apps/*/runtime"
+  - "shared/*"
+  - "core/*"
+  - "services/*"
+  - "contracts"
+nodeLinker: hoisted

@@ -1,0 +1,5 @@
+openapi: 3.1.0
+info:
+  title: BThwani Master Contract Index
+  version: 0.0.0
+paths: {}
