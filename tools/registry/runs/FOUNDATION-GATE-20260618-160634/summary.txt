@@ -1,6 +1,0 @@
-status: PASS
-session_id: FOUNDATION-GATE-20260618-160634
-repo: C:\bthwani-suite-next
-evidence_root: tools\registry\runs\FOUNDATION-GATE-20260618-160634
-handoff_zip: tools\registry\runs\FOUNDATION-GATE-20260618-160634\_HANDOFF.zip
-failed_checks: 

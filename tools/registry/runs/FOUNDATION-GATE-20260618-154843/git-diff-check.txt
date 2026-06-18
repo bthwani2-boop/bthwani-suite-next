@@ -1,2 +1,0 @@
-COMMAND: git --no-pager diff --check
-

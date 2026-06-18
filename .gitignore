@@ -7,6 +7,11 @@ dist/
 build/
 .next/
 .expo/
+coverage/
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
-tools/registry/runs/*/_HANDOFF.zip
+
+tools/registry/runs/**
+!tools/registry/runs/
+!tools/registry/runs/README.md
