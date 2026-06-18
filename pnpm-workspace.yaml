@@ -4,4 +4,3 @@ packages:
   - "core/*"
   - "services/*"
   - "contracts"
-nodeLinker: hoisted

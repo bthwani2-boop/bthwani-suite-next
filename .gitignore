@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+dist/
+build/
+.next/
+.expo/
+.DS_Store
+Thumbs.db
+tools/registry/runs/*/_HANDOFF.zip
