@@ -10,5 +10,10 @@
   },
   "devDependencies": {
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@tamagui/config": "2.0.0-rc.41",
+    "@tamagui/native": "2.0.0-rc.41",
+    "tamagui": "2.0.0-rc.41"
   }
 }
