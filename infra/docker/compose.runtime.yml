@@ -1,0 +1,65 @@
+name: bthwani-runtime
+
+x-bthwani-policy:
+  compose_files:
+    canonical: "infra/docker/compose.runtime.yml"
+    forbidden:
+      - "infra/docker/compose.local.yml"
+      - "infra/docker/compose.full.yml"
+      - "infra/docker/compose.slice.yml"
+      - "per-slice compose files"
+  postgres: "active by default through Docker"
+  minio: "media profile only"
+  redis: "not active"
+  mongo: "forbidden"
+
+services:
+  postgres:
+    image: ${BTHWANI_POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: ${BTHWANI_POSTGRES_CONTAINER:-bthwani-postgres-runtime}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${BTHWANI_POSTGRES_USER:-bthwani_runtime}
+      POSTGRES_PASSWORD: ${BTHWANI_POSTGRES_PASSWORD:-bthwani_runtime_password}
+      POSTGRES_DB: ${BTHWANI_POSTGRES_DB:-bthwani_runtime}
+    ports:
+      - "${BTHWANI_POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - bthwani-postgres-runtime-data:/var/lib/postgresql/data
+      - ../data-plane/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - bthwani-runtime
+
+  minio:
+    profiles:
+      - media
+    image: ${BTHWANI_MINIO_IMAGE:-minio/minio:latest}
+    container_name: ${BTHWANI_MINIO_CONTAINER:-bthwani-minio-runtime}
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${BTHWANI_MINIO_ROOT_USER:-bthwani_minio}
+      MINIO_ROOT_PASSWORD: ${BTHWANI_MINIO_ROOT_PASSWORD:-bthwani_minio_password}
+    ports:
+      - "${BTHWANI_MINIO_API_PORT:-59000}:9000"
+      - "${BTHWANI_MINIO_CONSOLE_PORT:-59001}:9001"
+    volumes:
+      - bthwani-minio-runtime-data:/data
+    networks:
+      - bthwani-runtime
+
+networks:
+  bthwani-runtime:
+    name: bthwani-runtime
+
+volumes:
+  bthwani-postgres-runtime-data:
+    name: bthwani-postgres-runtime-data
+  bthwani-minio-runtime-data:
+    name: bthwani-minio-runtime-data

@@ -13,7 +13,11 @@
     "build": "pnpm -r --if-present build",
     "slice:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1",
     "guard:foundation": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
-    "guard:slice": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1"
+    "guard:slice": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1",
+    "docker:runtime:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/up-runtime.ps1",
+    "docker:runtime:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/down-runtime.ps1",
+    "docker:runtime:reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/reset-runtime.ps1",
+    "docker:runtime:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/smoke-runtime.ps1"
   }
 }
 
