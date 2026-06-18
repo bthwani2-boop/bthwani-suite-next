@@ -1,22 +1,23 @@
-# Docker and Data Plane
+# 05 — Docker and Data Plane
 
-Docker is required for slice runtime evidence.
+Status: CANONICAL
 
-## infra/docker
+## Ownership
 
-Owns orchestration only.
+`infra/docker` owns containers, networks, volumes, healthchecks, and resource limits.
 
-## infra/data-plane
+`infra/data-plane` owns Postgres/MinIO/Redis provisioning, roles, extensions, buckets, backup, restore, and health.
 
-Owns Postgres/MinIO/Redis provisioning, roles, extensions, backup, restore.
-
-## services/<service>/database
-
-Owns service schema, migrations, seeds/local, and indexes.
+`services/<service>/database` owns service migrations, seeds, indexes, schema, and read models.
 
 ## Forbidden
 
-- memory repository in slice runtime
-- CORS wildcard in realtest/live-like runtime
-- media slice without MinIO
-- auth inside DSH
+- memory repository in live-like runtime
+- CORS wildcard in live-like runtime
+- business schema inside infra/data-plane
+- infra provisioning inside service database folders
+- untagged or latest Docker images
+
+## Acceptance condition
+
+Accepted only when live-like slices run through Docker and service schemas stay under service database folders.

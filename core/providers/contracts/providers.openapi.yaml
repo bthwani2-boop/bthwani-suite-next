@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: BThwani Core Providers API
+  version: 0.1.0
+  description: Provider registry, health, policy, and audit contract baseline.
+x-bthwani-contract-state: CONTRACT_DRAFT
+x-bthwani-owner: core/providers
+paths:
+  /providers/health:
+    get:
+      operationId: listProviderHealth
+      summary: List provider health states.
+      responses:
+        "200":
+          description: Provider health snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProviderHealth"
+components:
+  schemas:
+    ProviderKind:
+      type: string
+      enum: [sms, maps, payment, push, email, storage, search, fraud]
+    ProviderHealth:
+      type: object
+      required: [kind, status]
+      properties:
+        kind:
+          $ref: "#/components/schemas/ProviderKind"
+        status:
+          type: string
+          enum: [healthy, degraded, down, not_configured]
+        checkedAt:
+          type: string
+          format: date-time

@@ -1,15 +1,37 @@
-# Governance Decision Index
+# 00 — Decision Index
 
-Canonical governance files:
+Status: CANONICAL_MINI_GOVERNANCE_INDEX
+Stage: FOUNDATION-001
 
-1. 01_REPO_BOUNDARIES.md
-2. 02_SERVICES_AND_SURFACES.md
-3. 03_UI_KIT_AND_BRAND_LOCK.md
-4. 04_API_RUNTIME_BINDING.md
-5. 05_DOCKER_AND_DATA_PLANE.md
-6. 06_EVIDENCE_AND_GATES.md
-7. 10_DSH_WLT_FINANCIAL_BOUNDARY.md
-8. 14_TOOLCHAIN_VERSION_LOCK.md
-9. 99_LEGACY_EXTRACTION_LEDGER.md
+## Purpose
+
+This is the only canonical governance index for `bthwani-suite-next`.
 
 No governance file is canonical unless listed here.
+
+## Canonical governance files
+
+1. 00_DECISION_INDEX.md
+2. 01_REPO_BOUNDARIES.md
+3. 02_SERVICES_AND_SURFACES.md
+4. 03_UI_KIT_AND_BRAND_LOCK.md
+5. 04_API_RUNTIME_BINDING.md
+6. 05_DOCKER_AND_DATA_PLANE.md
+7. 06_EVIDENCE_AND_GATES.md
+8. 07_SECURITY_AND_SECRETS.md
+9. 08_CLEANUP_AND_DEPRECATION.md
+10. 09_SLICE_OPERATING_MODEL.md
+11. 10_TOOLCHAIN_VERSION_LOCK.md
+12. 99_LEGACY_EXTRACTION_LEDGER.md
+
+## Allowed unresolved states
+
+- NOT_APPROVED_YET
+- BLOCKED_NEEDS_BLUEPRINT
+- BLOCKED_NEEDS_API_CONTRACT
+- BLOCKED_NEEDS_RUNTIME_EVIDENCE
+- OUT_OF_SCOPE_FOR_THIS_SLICE
+
+## Acceptance condition
+
+Accepted only when all listed files exist, every listed file has an `Acceptance condition`, and no product slice starts before `foundation:gate` passes.

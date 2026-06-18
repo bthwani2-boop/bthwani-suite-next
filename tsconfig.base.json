@@ -16,7 +16,11 @@
       "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
       "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
       "@bthwani/config": ["shared/config/src/index.ts"],
-      "@bthwani/testing": ["shared/testing/src/index.ts"]
+      "@bthwani/testing": ["shared/testing/src/index.ts"],
+      "@bthwani/app-captain-runtime": ["apps/app-captain/runtime/src/index.ts"],
+      "@bthwani/app-client-runtime": ["apps/app-client/runtime/src/index.ts"],
+      "@bthwani/app-field-runtime": ["apps/app-field/runtime/src/index.ts"],
+      "@bthwani/app-partner-runtime": ["apps/app-partner/runtime/src/index.ts"]
     }
   }
 }

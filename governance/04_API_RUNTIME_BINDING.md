@@ -1,18 +1,34 @@
-# API Runtime Binding
+# 04 — API Runtime Binding
 
-Required chain:
+Status: CANONICAL
 
+## Required chain
+
+```text
 OpenAPI contract
 → generated types/client
-→ service frontend shared adapter
-→ surface view-model
+→ service adapter
+→ view-model
 → screen state
 → runtime evidence
+```
 
-Forbidden:
+## Contract ownership
 
-- direct fetch inside screens
+- `contracts/master.openapi.yaml` is an index only.
+- `core/identity/contracts/auth.openapi.yaml` owns auth/session/actor identity contracts.
+- `core/providers/contracts/providers.openapi.yaml` owns provider control contracts.
+- `services/<service>/contracts/<service>.openapi.yaml` owns service endpoints.
+
+## Forbidden
+
+- raw fetch in screens
 - undocumented endpoints
-- screen-shaped APIs
+- fake actor IDs
 - mock/demo success paths
-- silent catch without visible state
+- generated client from master OpenAPI
+- service endpoint without service OpenAPI
+
+## Acceptance condition
+
+Accepted only when master is index-only, auth/providers contracts exist, and active endpoints are contract-backed.
