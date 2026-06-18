@@ -6,6 +6,58 @@ info:
 x-bthwani-contract-state: CONTRACT_DRAFT
 x-bthwani-owner: core/identity
 paths:
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate with credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successfully authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials.
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Invalidate the current session.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Successfully logged out.
+        "401":
+          description: Unauthorized.
+
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Refresh access token using refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Successfully refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          description: Invalid or expired refresh token.
+
   /auth/session:
     get:
       operationId: getAuthSession
@@ -18,22 +70,109 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthSession"
+                $ref: "#/components/schemas/SessionResponse"
         "401":
           description: Missing or invalid session.
+
+  /auth/introspect:
+    post:
+      operationId: introspectToken
+      summary: Introspect token validity and resolve identity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntrospectRequest"
+      responses:
+        "200":
+          description: Token is valid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntrospectionResponse"
+        "401":
+          description: Invalid token.
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
   schemas:
-    AuthSession:
+    LoginRequest:
       type: object
-      required: [authState, subject, roles, permissions]
+      required:
+        - username
+        - password
       properties:
-        authState:
+        username:
           type: string
-          enum: [authenticated]
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - identity
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+        refreshToken:
+          type: string
+        identity:
+          $ref: "#/components/schemas/ActorIdentity"
+
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - identity
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+        expiresIn:
+          type: integer
+        refreshToken:
+          type: string
+        identity:
+          $ref: "#/components/schemas/ActorIdentity"
+
+    IntrospectRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+
+    ActorIdentity:
+      type: object
+      required:
+        - subject
+        - roles
+        - permissions
+        - authState
+        - surfaceAccess
+        - serviceAccess
+      properties:
         subject:
           type: string
           minLength: 1
@@ -46,9 +185,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Permission"
+        authState:
+          type: string
+          enum: [authenticated, unauthenticated]
+        surfaceAccess:
+          type: object
+          additionalProperties:
+            type: boolean
+        serviceAccess:
+          type: object
+          additionalProperties:
+            type: boolean
+
     Permission:
       type: object
-      required: [service, surface, action, scope]
+      required:
+        - service
+        - surface
+        - action
+        - scope
       properties:
         service:
           type: string
@@ -61,3 +216,9 @@ components:
         scope:
           type: string
           enum: [own, assigned, store, zone, all, none]
+
+    SessionResponse:
+      $ref: "#/components/schemas/ActorIdentity"
+
+    IntrospectionResponse:
+      $ref: "#/components/schemas/ActorIdentity"

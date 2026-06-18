@@ -17,7 +17,7 @@ OpenAPI contract
 
 - `contracts/master.openapi.yaml` is an index only.
 - `core/identity/contracts/auth.openapi.yaml` owns auth/session/actor identity contracts.
-- `core/providers/contracts/providers.openapi.yaml` owns provider control contracts.
+- `core/providers/contracts/providers.openapi.yaml` owns external provider health contract only; it does not define provider runtime, adapters, registry implementation, audit, or mutations.
 - `services/<service>/contracts/<service>.openapi.yaml` owns service endpoints.
 
 ## Forbidden

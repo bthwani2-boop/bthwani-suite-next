@@ -1,42 +1,75 @@
 openapi: 3.1.0
 info:
-  title: BThwani Core Providers API
+  title: BThwani Core External Provider Health API
   version: 0.1.0
-  description: Provider registry, health, policy, and audit contract baseline.
-x-bthwani-contract-state: CONTRACT_DRAFT
+  description: External provider health contract baseline only. This file does not define provider runtime, registry implementation, adapters, audit, database, or mutation behavior.
+
 x-bthwani-owner: core/providers
+x-bthwani-contract-state: CONTRACT_DRAFT
+x-bthwani-scope: external-provider-health-only
+x-bthwani-not-merchant-provider: true
+
 paths:
   /providers/health:
     get:
-      operationId: listProviderHealth
-      summary: List provider health states.
+      operationId: getExternalProviderHealth
+      summary: Return external provider health state.
+      description: Reports health for external technical providers such as SMS, maps, payment, push, email, storage, search, and fraud providers.
+      tags:
+        - ExternalProviderHealth
       responses:
         "200":
-          description: Provider health snapshot.
+          description: External provider health snapshot.
           content:
             application/json:
               schema:
-                type: object
-                required: [providers]
-                properties:
-                  providers:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/ProviderHealth"
+                $ref: "#/components/schemas/ExternalProviderHealthResponse"
+
 components:
   schemas:
-    ProviderKind:
+    ExternalProviderKind:
       type: string
-      enum: [sms, maps, payment, push, email, storage, search, fraud]
-    ProviderHealth:
+      enum:
+        - sms
+        - maps
+        - payment
+        - push
+        - email
+        - storage
+        - search
+        - fraud
+
+    ExternalProviderStatus:
+      type: string
+      enum:
+        - healthy
+        - degraded
+        - down
+        - not_configured
+
+    ExternalProviderHealthItem:
       type: object
-      required: [kind, status]
+      required:
+        - kind
+        - status
+        - checkedAt
       properties:
         kind:
-          $ref: "#/components/schemas/ProviderKind"
+          $ref: "#/components/schemas/ExternalProviderKind"
         status:
-          type: string
-          enum: [healthy, degraded, down, not_configured]
+          $ref: "#/components/schemas/ExternalProviderStatus"
         checkedAt:
           type: string
           format: date-time
+        message:
+          type: string
+
+    ExternalProviderHealthResponse:
+      type: object
+      required:
+        - providers
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalProviderHealthItem"
