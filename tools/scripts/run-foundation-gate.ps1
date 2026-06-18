@@ -15,7 +15,7 @@ function Run-Step {
   $Path = Join-Path $EvidenceRoot $OutputFile
   "COMMAND: $Command" | Set-Content -LiteralPath $Path -Encoding UTF8
   "" | Add-Content -LiteralPath $Path
-  pwsh -NoProfile -Command $Command 2>&1 | Tee-Object -FilePath $Path -Append
+  pwsh -NoProfile -Command $Command 2>&1 | Tee-Object -FilePath $Path -Append | Out-Null
   return $LASTEXITCODE
 }
 

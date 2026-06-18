@@ -1,0 +1,4 @@
+COMMAND: git --no-pager status --short
+
+?? pnpm-lock.yaml
+?? tools/registry/
