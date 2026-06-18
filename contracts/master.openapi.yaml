@@ -3,3 +3,17 @@ info:
   title: BThwani Master Contract Index
   version: 0.0.0
 paths: {}
+x-bthwani-contracts:
+  core:
+    identity: ../core/identity/contracts/auth.openapi.yaml
+    providers: ../core/providers/contracts/providers.openapi.yaml
+  services:
+    dsh: ../services/dsh/contracts/dsh.openapi.yaml
+    wlt: ../services/wlt/contracts/wlt.openapi.yaml
+    knz: ../services/knz/contracts/knz.openapi.yaml
+    arb: ../services/arb/contracts/arb.openapi.yaml
+    amn: ../services/amn/contracts/amn.openapi.yaml
+    esf: ../services/esf/contracts/esf.openapi.yaml
+    mrf: ../services/mrf/contracts/mrf.openapi.yaml
+    snd: ../services/snd/contracts/snd.openapi.yaml
+    kwd: ../services/kwd/contracts/kwd.openapi.yaml
