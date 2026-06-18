@@ -8,6 +8,7 @@
   },
   "guardSets": {
     "foundation": [
+      "contracts-foundation",
       "no-direct-tamagui-outside-ui-kit",
       "no-ui-kit-deep-imports",
       "no-local-design-system",
@@ -25,6 +26,11 @@
     ]
   },
   "guards": [
+    {
+      "id": "contracts-foundation",
+      "path": "tools/important-scripts/contracts-foundation.mjs",
+      "policySource": "governance/04_API_RUNTIME_BINDING.md"
+    },
     {
       "id": "no-direct-tamagui-outside-ui-kit",
       "path": "tools/guards/no-direct-tamagui-outside-ui-kit.mjs",
