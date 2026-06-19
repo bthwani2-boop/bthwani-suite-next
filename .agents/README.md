@@ -1,18 +1,27 @@
-# BThwani Suite Next Agents
+# BThwani Agent Layer
 
-This directory is the single source for agent behavior and skills in `bthwani-suite-next`.
+Version: 2026.06.19-strict-branch-safe
 
-## Design
+This directory supports agent routing, boundaries, adapters, and task-specific skills. `AGENTS.md` remains the main entry contract.
 
-- `AGENTS.md` is the main contract.
-- `.agents/INDEX.md` is the fast routing index.
-- `.agents/AUTHORITY_BOUNDARY.md` defines authority limits.
-- `.agents/EVIDENCE_GATE_ROUTER.md` defines minimum gates.
-- `.agents/GRAPHIFY.md` defines Graphify as a tool, not an agent.
-- `.agents/SKILL_CATALOG.md` lists approved skills.
-- `.agents/adapters/*` are thin tool-specific entry adapters.
-- `.agents/skills/*/SKILL.md` files are short, practical, task-focused skills.
+## Branch rule
 
-## Token rule
+Every agent must use the current local branch as the execution branch:
 
-Do not read the whole directory for normal work. Read `AGENTS.md`, this file, the index, then the one or two relevant skills only.
+```text
+ACTIVE_BRANCH = git branch --show-current
+TARGET_BRANCH = ACTIVE_BRANCH
+DEFAULT_BRANCH = ACTIVE_BRANCH
+```
+
+No tool may assume, switch, or prefer a remote metadata branch during execution.
+
+## Read order
+
+1. `AGENTS.md`
+2. `.agents/INDEX.md`
+3. `.agents/AUTHORITY_BOUNDARY.md`
+4. `.agents/EVIDENCE_GATE_ROUTER.md` when choosing verification
+5. One or two task-specific skills only
+
+Do not read every skill by default.

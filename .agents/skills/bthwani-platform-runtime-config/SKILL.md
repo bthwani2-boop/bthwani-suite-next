@@ -1,31 +1,45 @@
 ---
 name: bthwani-platform-runtime-config
-description: Control runtime variables, providers, auth/session shell, and service slots safely.
+version: 2026.06.19-clean
+summary: Control environment, providers, service slots, and runtime configuration boundaries.
 ---
 
 # bthwani-platform-runtime-config
 
-## Use when
+## Invoke when
 
-- Environment variables, app shell bootstrap, provider config, or service slot wiring is touched.
+- env/config/provider/service slot/base URL/runtime map files change
+- a screen or service needs runtime configuration
+- provider control plane is touched
 
-## Procedure
+## Read before
 
-1. Keep runtime config explicit and centralized.
-2. Do not hardcode LAN/IP/base URLs in screens.
-3. Do not use preview/demo/mock runtime data in live paths.
-4. Ensure app shell owns bootstrap only, not service business logic.
+`governance/04_API_RUNTIME_BINDING.md`, `governance/05_DOCKER_AND_DATA_PLANE.md`, `shared/app-shell`, provider/core config files
 
-## Evidence / checks
+## Execution contract
 
-Run targeted typecheck and provider/guard checks for touched paths. For env changes, include redacted env evidence and rollback note.
+Keep configuration centralized and owner-specific. Service slots must point to declared service owners. Runtime URLs must come from approved config surfaces, not screen-local constants.
 
+## Forbidden
 
+- no screen-local runtime config
+- no preview/demo/mock runtime data in live paths
+- no provider mutation hidden in frontend
+- no broad CORS or unsafe default config
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- config owner path
+- consumer path
+- runtime evidence when behavior changes
+- security review when sensitive values are involved
+
+## Failure decision
+
+- hardcoded runtime path in screen -> `FIX_REQUIRED`
+- config owner unclear -> `NEEDS_EVIDENCE`
+- sensitive config leaked -> `BLOCKED_SECURITY_RISK`
+
+## Notes
+
+No extra notes.

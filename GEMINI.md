@@ -1,18 +1,17 @@
-# BThwani Suite Next — Gemini Entry
+# Gemini CLI Instructions
 
-Read first:
+Use shared project skills from:
 
-1. `AGENTS.md`
-2. `.agents/INDEX.md`
-3. `.agents/AUTHORITY_BOUNDARY.md`
-4. `.agents/adapters/gemini.md`
-5. One or two relevant `.agents/skills/*/SKILL.md` files only
+    .agents/skills
 
-Rules:
+For Graphify, read and follow:
 
-- Use the smallest relevant skill set.
-- Use `C:\bthwani-suite-next` as the local root.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Do not use Graphify as an orchestrator.
-- Do not create broad reports unless the user asks for a report.
-- Do not claim closure without evidence.
+    .agents/skills/graphify/SKILL.md
+
+Graphify is a tool, not an agent.
+
+Do not create or use:
+
+    .gemini/skills/graphify
+
+When repository understanding is needed, use Graphify first, then verify with actual files and Git evidence.

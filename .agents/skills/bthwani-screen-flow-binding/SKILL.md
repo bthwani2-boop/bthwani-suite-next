@@ -1,32 +1,45 @@
 ---
 name: bthwani-screen-flow-binding
-description: Bind screens, routes, navigation, states, typed clients, and service ownership.
+version: 2026.06.19-clean
+summary: Bind routes, screens, view-models, states, and visual evidence.
 ---
 
 # bthwani-screen-flow-binding
 
-## Use when
+## Invoke when
 
-- A screen, route, navigation entry, app slot, or visible flow is added/changed.
+- screen, navigation, route, tab, flow, CTA, state, or app-surface behavior changes
+- a user journey needs proof
 
-## Procedure
+## Read before
 
-1. Identify surface: app-client, app-partner, app-captain, app-field, control-panel, webapp, website.
-2. Map screen to service capability and route/slot registry.
-3. Bind to typed client/provider, not direct fetch.
-4. Preserve RTL/back behavior and state coverage.
-5. Avoid app-shell business logic.
+`governance/09_SLICE_OPERATING_MODEL.md`, screen matrices, app route files, ui-kit contracts, API binding skill when data-backed
 
-## Evidence / checks
+## Execution contract
 
-Evidence: route path, screen path, service owner, state coverage, targeted typecheck, and screenshots for visible changes.
+Prove route path, screen owner, service owner, data source, primary CTA, state coverage, RTL, and visual evidence. Bind screen behavior to service/client when needed.
 
+## Forbidden
 
+- no orphan screen
+- no route without owner
+- no screen-local fake data as closure
+- no UI closure without screenshots when visible behavior changes
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- route path
+- screen/component path
+- service/client path when data-backed
+- state coverage
+- screenshot or visual evidence requirement
+
+## Failure decision
+
+- route missing -> `FIX_REQUIRED`
+- data-backed screen without client binding -> `FIX_REQUIRED`
+- screenshots missing -> `NEEDS_VISUAL_EVIDENCE`
+
+## Notes
+
+No extra notes.

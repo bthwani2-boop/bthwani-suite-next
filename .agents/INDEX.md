@@ -1,21 +1,50 @@
-# Agent Routing Index
+# BThwani Agent Routing Index
 
-## Fast routing
+Use this file to select the smallest relevant skill set.
 
-| Task | First skill | Second skill if needed |
-|---|---|---|
-| Unknown repo/file scope | `bthwani-graphify-context-tool` | `bthwani-evidence-gate-router` |
-| Any implementation | `bthwani-evidence-gate-router` | task skill |
-| New repo foundation | `bthwani-foundation-execution` | `bthwani-clean-code-guard` |
-| DSH/WLT/full-stack slice | `bthwani-service-fullstack-slice` | `bthwani-dsh-wlt-finance-boundary` |
-| API/OpenAPI/client/runtime binding | `bthwani-api-runtime-binding` | `bthwani-screen-flow-binding` |
-| UI/design/screen | `bthwani-ui-kit-design-lock` | `bthwani-screen-flow-binding` |
-| Docker/local runtime | `bthwani-docker-slice-runtime` | `bthwani-platform-runtime-config` |
-| Donor/realtest extraction | `bthwani-legacy-extraction` | `bthwani-current-workspace-authority` |
-| Patch or Copilot result review | `bthwani-patch-review-evidence` | `bthwani-security-secrets-privacy` |
-| Secrets/security | `bthwani-security-secrets-privacy` | `bthwani-evidence-gate-router` |
-| Code quality/refactor | `bthwani-clean-code-guard` | task skill |
+## Always-on
 
-## Rule
+- `bthwani-current-workspace-authority`
+- `bthwani-evidence-gate-router`
 
-When skill choice is obvious, do not open `SKILL_CATALOG.md`. When unclear, read the catalog then select at most two skills.
+## Tooling and evidence
+
+- Graph/ownership/context unclear → `graphify`
+- Need guard selection → `bthwani-guard-command-router`
+- Review local diff/patch → `bthwani-patch-review-evidence`
+- Need registry evidence pack → `bthwani-agent-handoff-evidence-pack`
+- Updating or auditing agent files → `bthwani-agent-skill-integrity`
+
+## Safety and quality
+
+- Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
+- Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
+
+## Repository foundation
+
+- Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
+- Donor or realtest extraction → `bthwani-legacy-extraction`
+- Matrix-driven closure or coverage → `bthwani-machine-readable-matrix-governor`
+
+## Full-stack and runtime
+
+- Service slice → `bthwani-service-fullstack-slice`
+- API/client/runtime binding → `bthwani-api-runtime-binding`
+- Docker/data-plane/runtime smoke → `bthwani-docker-slice-runtime`
+- Runtime env/provider/service slots → `bthwani-platform-runtime-config`
+
+## UI and finance
+
+- UI kit/design system → `bthwani-ui-kit-design-lock`
+- Screen/route/state/visual binding → `bthwani-screen-flow-binding`
+- DSH/WLT money boundary → `bthwani-dsh-wlt-finance-boundary`
+
+## Selection rule
+
+Use at most three skills for normal work:
+
+1. workspace authority
+2. evidence router
+3. one task-specific skill
+
+Add more only when the task crosses boundaries.

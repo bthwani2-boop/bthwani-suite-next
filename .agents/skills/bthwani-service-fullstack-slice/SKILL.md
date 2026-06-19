@@ -1,32 +1,46 @@
 ---
 name: bthwani-service-fullstack-slice
-description: Implement service-owned full-stack slices with backend, contract, frontend, runtime, and evidence alignment.
+version: 2026.06.19-clean
+summary: Close service slices across contract, backend, client, UI, runtime, and evidence.
 ---
 
 # bthwani-service-fullstack-slice
 
-## Use when
+## Invoke when
 
-- A DSH/WLT or other service slice is being implemented or closed.
+- work touches a service journey or vertical slice
+- DSH, WLT, or another service needs end-to-end proof
+- the user asks for full-stack closure
 
-## Procedure
+## Read before
 
-1. Identify service, surface, capability, owner, API contract, runtime path, and evidence session.
-2. Keep logic inside `services/<service>` and reusable UI in `shared/ui-kit`.
-3. Bind screen/route/client to OpenAPI or typed contract.
-4. Prove loading/empty/error/success/offline/disabled states for affected UI.
-5. Verify backend/frontend/runtime gates relevant to the slice.
+`governance/09_SLICE_OPERATING_MODEL.md`, service blueprint, service contract, relevant surface files, evidence router
 
-## Evidence / checks
+## Execution contract
 
-Use `pnpm -w run slice:gate` only when slice scope justifies it. Otherwise run targeted typecheck/tests/contracts/smoke commands.
+Declare slice scope and exclusions. Verify contract, domain/backend, generated/adapted client, view-model, screen states, runtime evidence, and matrix updates when applicable.
 
+## Forbidden
 
+- do not close with backend only or UI only
+- do not skip service owner boundaries
+- do not invent endpoints or screens
+- do not bypass WLT for financial truth
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- slice scope
+- touched paths by layer
+- contract/client/runtime evidence
+- UI evidence when screens change
+- final decision
+
+## Failure decision
+
+- missing API contract -> `BLOCKED_NEEDS_API_CONTRACT`
+- runtime behavior without runtime evidence -> `BLOCKED_NEEDS_RUNTIME_EVIDENCE`
+- UI state gaps -> `FIX_REQUIRED`
+
+## Notes
+
+No extra notes.

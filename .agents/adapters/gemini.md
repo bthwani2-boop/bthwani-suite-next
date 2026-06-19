@@ -1,23 +1,22 @@
-# BThwani Suite Next — Gemini Adapter
+# BThwani Gemini Adapter
 
 This adapter is intentionally thin.
 
-Read order:
+## Read order
 
 1. `AGENTS.md`
-2. `.agents/README.md`
+2. `.agents/INDEX.md`
 3. `.agents/AUTHORITY_BOUNDARY.md`
-4. `.agents/INDEX.md`
-5. One or two relevant `.agents/skills/*/SKILL.md` files
-6. Relevant `governance/*` and `machine-readable/*` evidence
+4. `.agents/EVIDENCE_GATE_ROUTER.md` when verification level is unclear
+5. One directly relevant skill
 
-Rules:
+## Adapter-specific rule
 
-- Do not create tool-specific mirrors of BThwani rules.
-- Do not restore donor/realtest trees.
-- Do not widen scope.
-- Use `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Use the minimum gate tier from `.agents/EVIDENCE_GATE_ROUTER.md`.
-- Graphify is a context/navigation tool only.
-- No final acceptance claim without evidence.
+Act only inside the current task scope. Do not mirror global rules here; follow `AGENTS.md` as the main contract.
+
+## Stop conditions
+
+- unclear target path
+- required scope expansion
+- missing evidence for closure
+- request to mutate remote Git state without explicit instruction

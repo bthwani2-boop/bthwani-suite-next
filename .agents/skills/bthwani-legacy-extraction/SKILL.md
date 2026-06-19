@@ -1,36 +1,46 @@
 ---
 name: bthwani-legacy-extraction
-description: Extract value from realtest/donor snapshots without copying noise or stale architecture.
+version: 2026.06.19-clean
+summary: Extract from donor or realtest only after conflict review.
 ---
 
 # bthwani-legacy-extraction
 
-## Use when
+## Invoke when
 
-- Any file, skill, screen, guard, or logic is considered from `realtest` or uploaded donor packages.
+- donor zip, old repo, `realtest`, old screens, old services, or archived code are referenced
+- the user asks to migrate old functionality
+- a tool proposes copying old files
 
-## Procedure
+## Read before
 
-1. Classify source as DONOR_REFERENCE.
-2. Identify target owner, target path, consumer, runtime purpose, acceptance gate, and rollback.
-3. Extract concept or minimal code only after conflict review.
-4. Rewrite for `bthwani-suite-next` paths and current governance.
+`governance/01_REPO_BOUNDARIES.md`, `governance/99_LEGACY_EXTRACTION_LEDGER.md`, relevant new owner files
 
-## Evidence / checks
+## Execution contract
 
-Evidence must include source path, target path, decision, risks, and verification command.
-Reject extraction if owner/path/contract is not proven.
+Classify each donor item as design reference, domain reference, API reference, adopt after rewrite, reject noise, reject duplicate, reject demo/preview, or out of scope. Rewrite for the new structure.
 
 ## Forbidden
 
-- Copying full donor directories.
-- Importing old `C:\bthwani-suite` rules.
-- Restoring large Nx generic skill dumps.
+- no folder dump
+- no old path assumptions
+- no donor runtime dependency
+- no preview/demo/mock runtime content
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- donor source path
+- new target owner
+- classification
+- conflict review
+- changed file evidence
+
+## Failure decision
+
+- copied old code without rewrite -> `REVERT_REQUIRED`
+- missing classification -> `NEEDS_EVIDENCE`
+- preview/demo runtime imported -> `FIX_REQUIRED`
+
+## Notes
+
+No extra notes.

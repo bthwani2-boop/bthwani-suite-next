@@ -1,32 +1,45 @@
 ---
 name: bthwani-security-secrets-privacy
-description: Prevent secrets, unsafe env handling, privacy leaks, and security regressions.
+version: 2026.06.19-clean
+summary: Block secrets, sensitive values, unsafe logs, and privacy risks.
 ---
 
 # bthwani-security-secrets-privacy
 
-## Use when
+## Invoke when
 
-- Config/env/auth/security/logging/API changes are involved.
-- Evidence or patch may contain credentials.
+- env files, tokens, keys, URLs, credentials, logs, user data, payment data, or provider config are touched
+- a diff includes secret-like material
+- the user asks for security review
 
-## Procedure
+## Read before
 
-1. Scan touched files for secret-like strings.
-2. Keep `.env*` local and out of prompts unless redacted.
-3. Avoid logging tokens, passwords, private URLs, or personal data.
-4. Check auth/role/tenant boundary for service changes.
+`AGENTS.md`, `governance/07_SECURITY_AND_SECRETS.md`, relevant config files
 
-## Evidence / checks
+## Execution contract
 
-For sensitive changes, require patch review and a redaction note. If secret-like material appears, decision is `BLOCKED_SECURITY_RISK` until removed.
+Inspect diffs and outputs for secret-like values, unsafe logging, broad CORS, credential persistence, and accidental private data exposure. Redact before sharing.
 
+## Forbidden
 
+- do not paste secrets into chat
+- do not commit real credentials
+- do not convert placeholders into real values
+- do not hide a security finding as a warning
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- redacted finding summary
+- affected paths
+- decision and required remediation
+- confirmation that evidence is sanitized
+
+## Failure decision
+
+- secret-like value present -> `BLOCKED_SECURITY_RISK`
+- unsafe config but no secret -> `FIX_REQUIRED`
+- insufficient sanitized evidence -> `NEEDS_EVIDENCE`
+
+## Notes
+
+No extra notes.

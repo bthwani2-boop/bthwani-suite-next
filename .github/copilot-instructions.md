@@ -1,24 +1,12 @@
+# BThwani Suite Next — Copilot Instructions
+
 Read first:
 
-- `AGENTS.md`
-- `.agents/INDEX.md`
-- `.agents/AUTHORITY_BOUNDARY.md`
-- `.agents/adapters/copilot.md`
+1. `AGENTS.md`
+2. `.agents/INDEX.md`
+3. `.agents/AUTHORITY_BOUNDARY.md`
+4. `.agents/adapters/copilot.md`
 
-Copilot is a local execution helper only.
+Copilot is an implementation assistant only. It must not decide architecture, widen scope, delete/move/rename files, change dependencies, or claim final acceptance.
 
-Forbidden without explicit user approval:
-
-- widening scope
-- touching unrelated files
-- deleting, renaming, or moving files
-- changing dependencies, lockfiles, CI, secrets, or generated files
-- claiming `PASS`, `READY`, `CLOSED`, `FINAL`, or `100%`
-
-After edits, return only:
-
-```text
-changed_files:
-verification_to_run:
-risks_or_blockers:
-```
+Before editing, state the exact files you intend to touch. After editing, provide changed paths and ask for Git evidence.

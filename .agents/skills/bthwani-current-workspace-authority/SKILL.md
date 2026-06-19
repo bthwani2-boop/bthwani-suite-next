@@ -1,39 +1,53 @@
 ---
 name: bthwani-current-workspace-authority
-description: Verify the active bthwani-suite-next workspace, branch, paths, and package manager before acting.
+version: 2026.06.19-strict-branch-safe
+summary: Confirm repository root, active branch, scope, and donor boundary before work starts.
 ---
 
 # bthwani-current-workspace-authority
 
-## Use when
+## Invoke when
 
-- The task depends on current repo structure, branch, local paths, or workspace layout.
-- A donor snapshot or old path may be confused with the new repo.
+- any task may edit files
+- the task mentions branch, repo, donor, realtest, local path, GitHub, or current implementation state
+- an agent may compare old and new repository material
 
-## Procedure
+## Read before
 
-1. Confirm root is `C:\bthwani-suite-next`.
-2. Read `package.json`, `pnpm-workspace.yaml`, and relevant governance/machine-readable files.
-3. Treat `realtest` and uploaded snapshots as donor/reference only.
-4. Mark unknowns as `UNPROVEN`.
+`AGENTS.md`, `.agents/AUTHORITY_BOUNDARY.md`
 
-## Evidence / checks
+## Execution contract
 
-```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-git branch --show-current
-git --no-pager status --short
-git --no-pager log --oneline -n 3
-Get-Content .\package.json -Raw
-Get-Content .\pnpm-workspace.yaml -Raw
+Establish the active root as `C:\bthwani-suite-next`. Detect the branch locally with `git branch --show-current` and treat it as the only execution branch.
+
+```text
+ACTIVE_BRANCH = current local branch
+TARGET_BRANCH = ACTIVE_BRANCH
+DEFAULT_BRANCH = ACTIVE_BRANCH
 ```
 
+If branch detection fails or returns detached state, stop with `BLOCKED_BRANCH_UNVERIFIED`. Do not assume remote branch metadata. Do not switch branches automatically.
 
+## Forbidden
 
-## Global constraints
+- do not assume branch state from memory
+- do not use remote repository default metadata as execution branch
+- do not switch branches unless the user explicitly orders it
+- do not read donor material as current truth
+- do not edit before scope and status are known
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+## Required evidence
+
+- repository root
+- `ACTIVE_BRANCH`
+- commit SHA
+- remote URLs
+- Git status before edits
+- exact allowed target paths
+
+## Failure decision
+
+- wrong root -> `BLOCKED`
+- branch/current state not proven -> `BLOCKED_BRANCH_UNVERIFIED`
+- unrelated local changes outside allowed scope -> `BLOCKED_SCOPE_EXPANSION`
+- missing evidence -> `NEEDS_EVIDENCE`

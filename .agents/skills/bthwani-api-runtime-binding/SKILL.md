@@ -1,32 +1,46 @@
 ---
 name: bthwani-api-runtime-binding
-description: Connect OpenAPI/contracts, generated clients, runtime env, and screen/service consumers.
+version: 2026.06.19-clean
+summary: Protect OpenAPI to client to screen/runtime binding.
 ---
 
 # bthwani-api-runtime-binding
 
-## Use when
+## Invoke when
 
-- API, OpenAPI, client generation, env base URL, direct fetch, or frontend binding is involved.
+- OpenAPI, generated types, clients, adapters, backend handlers, or screen fetch behavior are touched
+- a feature needs API-backed behavior
 
-## Procedure
+## Read before
 
-1. Start from `contracts` and approved service API.
-2. Generate/update typed client only when contract change is intentional.
-3. Prohibit direct `fetch` in screens.
-4. Validate env/provider configuration and runtime binding.
-5. Check both backend and consumer side for breakage.
+`governance/04_API_RUNTIME_BINDING.md`, `contracts/master.openapi.yaml`, service OpenAPI, relevant clients/adapters/screens
 
-## Evidence / checks
+## Execution contract
 
-Run contract lint and targeted consumer typecheck. Use `tools/guards/no-direct-fetch-in-screen.mjs` when frontend screens are touched.
+Enforce the chain: service OpenAPI -> generated or typed client -> service adapter -> view-model -> screen state -> runtime evidence. Use existing guard scripts when present.
 
+## Forbidden
 
+- no raw fetch in screens
+- no generated client from master index
+- no undocumented endpoint
+- no fake actor IDs
+- no mock success path as runtime truth
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- contract path
+- client/adapter path
+- screen/view-model path when UI affected
+- contract lint or targeted check when changed
+- runtime proof when behavior is claimed
+
+## Failure decision
+
+- endpoint without service contract -> `FIX_REQUIRED`
+- no client binding -> `FIX_REQUIRED`
+- runtime claim without proof -> `NEEDS_EVIDENCE`
+
+## Notes
+
+No extra notes.

@@ -1,9 +1,17 @@
 {
-  "projectRoot": "C:\\bthwani-suite-next",
-  "entrypoint": "AGENTS.md",
-  "rules": [
-    "Use pnpm, pnpm exec, pnpm dlx, or pnpm nx; never npx.",
-    "Do not claim closure without git diff and verification evidence.",
-    "Graphify is a context/navigation tool only."
-  ]
+  "project": "bthwani-suite-next",
+  "purpose": "Project-scoped hook placeholder. Graphify may update this file during official installation.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Users\\b\\.local\\bin\\graphify.EXE hook-check"
+          }
+        ]
+      }
+    ]
+  }
 }

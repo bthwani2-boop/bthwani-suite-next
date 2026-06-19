@@ -1,36 +1,45 @@
 ---
 name: bthwani-clean-code-guard
-description: Keep code changes minimal, readable, non-duplicated, and root-cause based.
+version: 2026.06.19-clean
+summary: Prevent duplication, dead code, broad refactors, and shallow fixes.
 ---
 
 # bthwani-clean-code-guard
 
-## Use when
+## Invoke when
 
-- Refactor, cleanup, duplicate removal, code quality, or logic hardening is requested.
+- the task asks to clean, refactor, improve, consolidate, or fix quality
+- duplicated patterns or dead files are suspected
+- a tool proposes a broad rewrite
 
-## Procedure
+## Read before
 
-1. Prove the target files and reason.
-2. Prefer small root-cause fixes over broad rewrites.
-3. Remove duplication only after proving consumers/imports.
-4. Do not hide errors with casts, `any`, or dead branches.
-5. Preserve public contracts or add compatibility aliases when required.
+`AGENTS.md`, `governance/08_CLEANUP_AND_DEPRECATION.md`, relevant owners, Graphify when relationships are unclear
 
-## Evidence / checks
+## Execution contract
 
-Use targeted syntax/type checks. For multi-file refactor, run `git diff --check`, targeted typecheck, and import/guard checks relevant to touched paths.
+Find the root cause, decide whether to keep, refactor, merge, retire, move to owner, or block. For risky changes, prove references before deletion or movement.
 
 ## Forbidden
 
-- Formatting the whole repo.
-- Blind global replace.
-- Deleting files without import/export/runtime proof.
+- no blind global replace
+- no broad formatting as a side effect
+- no delete/move without reference proof
+- no local workaround when owner-level fix is required
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- changed file list
+- reference/import/route evidence for deletes or moves
+- targeted verification
+- rollback note for high-risk cleanup
+
+## Failure decision
+
+- unknown references -> `NEEDS_EVIDENCE`
+- unexpected broad diff -> `REVERT_REQUIRED`
+- partial cleanup with broken imports -> `FIX_REQUIRED`
+
+## Notes
+
+No extra notes.

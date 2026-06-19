@@ -1,9 +1,9 @@
 {
-  "mcp": {
-    "nx-mcp": {
-      "type": "local",
-      "command": ["pnpm", "exec", "nx", "mcp"],
-      "enabled": true
-    }
-  }
+  "project": "bthwani-suite-next",
+  "instructions": [
+    "AGENTS.md",
+    ".agents/INDEX.md",
+    ".agents/AUTHORITY_BOUNDARY.md"
+  ],
+  "mcp": {}
 }

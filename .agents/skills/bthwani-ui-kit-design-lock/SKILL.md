@@ -1,36 +1,45 @@
 ---
 name: bthwani-ui-kit-design-lock
-description: Enforce shared UI kit authority, RTL correctness, and BThwani visual identity.
+version: 2026.06.19-clean
+summary: Enforce shared/ui-kit ownership, brand lock, and no local design systems.
 ---
 
 # bthwani-ui-kit-design-lock
 
-## Use when
+## Invoke when
 
-- UI-kit, visual design, screens, shared components, Tamagui, tokens, or RTL layout is involved.
+- work touches UI components, tokens, themes, app screens, visual states, Tamagui usage, or reusable UI patterns
+- a donor visual pattern is being rebuilt
 
-## Procedure
+## Read before
 
-1. Reusable design belongs in `shared/ui-kit` and public `@bthwani/ui-kit` exports.
-2. Tamagui stays inside `shared/ui-kit` only.
-3. Screens consume public UI kit components.
-4. Enforce deepBlue `#0A2F5C`, orange `#FF500D`, white `#FFFFFF` through tokens.
-5. Cover loading/empty/error/success/offline/disabled states when affected.
+`governance/03_UI_KIT_AND_BRAND_LOCK.md`, `shared/ui-kit`, relevant app/surface files, machine-readable screen matrices when relevant
 
-## Evidence / checks
+## Execution contract
 
-Run targeted typecheck and UI-kit guards: no direct Tamagui, no local design system, no raw hex outside UI-kit, no UI-kit deep imports. UI changes need screenshots or `NEEDS_VISUAL_EVIDENCE`.
+Reusable UI belongs in `shared/ui-kit`. Screens consume public exports. Validate brand colors, RTL, states, spacing, and no local reusable visual framework.
 
 ## Forbidden
 
-- Local reusable design systems in apps/services.
-- Direct Tamagui imports outside UI-kit.
-- Random visual constants in screens.
+- no direct Tamagui outside approved ui-kit internals
+- no local Button/Card/Header systems
+- no random raw color drift
+- no deep ui-kit imports
+- no UI closure without visual evidence
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- changed UI paths
+- ui-kit public export evidence
+- visual evidence or `NEEDS_VISUAL_EVIDENCE`
+- targeted guard output when applicable
+
+## Failure decision
+
+- local design system added -> `FIX_REQUIRED`
+- visual evidence missing -> `NEEDS_VISUAL_EVIDENCE`
+- reusable pattern outside ui-kit -> `FIX_REQUIRED`
+
+## Notes
+
+No extra notes.

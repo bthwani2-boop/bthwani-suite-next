@@ -1,32 +1,45 @@
 ---
 name: bthwani-dsh-wlt-finance-boundary
-description: Protect WLT ownership of financial truth while allowing DSH operational references.
+version: 2026.06.19-clean
+summary: Protect WLT financial truth and DSH/WLT integration boundaries.
 ---
 
 # bthwani-dsh-wlt-finance-boundary
 
-## Use when
+## Invoke when
 
-- DSH/WLT order, payment, COD, refund, settlement, commission, wallet, payout, ledger, or reconciliation logic is involved.
+- DSH checkout, payment status, COD, commission, refund, settlement, payout, wallet, ledger, or order financial state is touched
+- a slice crosses DSH and WLT
 
-## Procedure
+## Read before
 
-1. Classify field/action as DSH operational or WLT financial.
-2. DSH may store references/status only.
-3. WLT owns mutation and source of truth for ledger/payment/refund/settlement/payout/commission/COD.
-4. Do not duplicate finance state machines in DSH or apps.
-5. Ensure API names make boundary explicit.
+`governance/_noncanonical/10_DSH_WLT_FINANCIAL_BOUNDARY.md` if present, DSH/WLT service files, service contracts, machine-readable DSH/WLT matrices
 
-## Evidence / checks
+## Execution contract
 
-Run no-financial-mutation-outside-wlt guard when service logic is touched. Add tests for negative authorization and boundary violations when behavior changes.
+DSH may request or display payment state but WLT owns financial mutation and truth. Verify contracts and service ownership before implementing cross-service behavior.
 
+## Forbidden
 
+- no ledger/payment/refund/settlement/payout mutation in DSH
+- no duplicated financial calculations
+- no fake payment success
+- no financial closure without WLT evidence
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- DSH touched paths
+- WLT touched paths
+- contract paths
+- runtime or test evidence for financial behavior
+- guard output when available
+
+## Failure decision
+
+- WLT mutation outside WLT -> `FIX_REQUIRED`
+- financial truth duplicated -> `FIX_REQUIRED`
+- payment success without WLT proof -> `NEEDS_EVIDENCE`
+
+## Notes
+
+No extra notes.

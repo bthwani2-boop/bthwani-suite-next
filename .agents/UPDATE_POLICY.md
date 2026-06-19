@@ -1,22 +1,31 @@
-# Agents Update Policy
+# Agent System Update Policy
 
-Agent and skill changes are HIGH risk because they affect all future execution.
+## Allowed update
 
-Before changes:
+Agent files may be updated only when the change:
+
+- reduces duplication
+- improves routing precision
+- adds a missing task-specific skill
+- fixes an incorrect path or boundary
+- aligns skills with current repository evidence
+
+## Required before update
+
+- identify all touched agent files
+- keep adapters thin
+- keep global rules centralized
+- avoid copying old donor agent blocks
+- verify catalog and skill folders stay in sync
+
+## Required after update
 
 ```powershell
 Set-Location -LiteralPath "C:\bthwani-suite-next"
 git --no-pager status --short
+git --no-pager diff --stat
+git --no-pager diff --name-status
 git --no-pager diff --check
 ```
 
-Required rules:
-
-- Keep skills short and operational.
-- Prefer updating an existing skill over adding a new one.
-- No duplicate tool-specific mirrors.
-- No old `C:\bthwani-suite` target unless explicitly marked donor/reference.
-- No `npx`; use `pnpm exec`.
-- No Graphify leadership wording.
-
-After changes, run targeted checks and review the diff.
+Run `.agents/skills/bthwani-agent-skill-integrity/SKILL.md` checks when agent structure changes.

@@ -1,29 +1,30 @@
-# Graphify Usage Contract
+# Graphify Policy
 
-Graphify is a tool for repository context and navigation.
+Graphify is a project context and relationship tool.
 
-It is not:
+## Use Graphify when
 
-- an agent
-- a workflow leader
-- a replacement for git diff
-- acceptance evidence
-- a reason to run all tools
+- file ownership is unclear
+- import/export impact is unclear
+- cross-service or cross-surface linkage is unclear
+- a slice touches many directories
+- a donor extraction needs relationship comparison
+- the user asks for graph-based analysis
 
-Use Graphify only when:
+## Do not use Graphify as
 
-- file scope is unknown
-- import/export relationships matter
-- a cross-surface dependency must be traced
-- the user asks about relationships or impact
+- final acceptance evidence
+- replacement for `git diff`
+- replacement for tests, type checks, runtime logs, or screenshots
+- authority to modify files without a scoped task
 
-Preferred commands:
+## Project-scoped integration
 
-```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-graphify query "<focused question>"
-graphify path "<source>" "<target>"
-graphify explain "<symbol-or-concept>"
-```
+The package includes a BThwani `graphify` skill wrapper. The official Graphify installer may update or add platform-specific files. After installation, review the generated diff before committing.
 
-Do not run `graphify update .` by default. Run it only when graph data is stale and the current task needs fresh graph navigation.
+## Preferred flow
+
+1. Build or refresh the graph only when graph context is needed.
+2. Query the graph for a narrow question.
+3. Use repository files as source evidence.
+4. Verify changes with Git and the task-specific gate.

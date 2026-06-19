@@ -1,35 +1,44 @@
 ---
 name: bthwani-docker-slice-runtime
-description: Verify local Docker-backed runtime for slices without treating stale compose as truth.
+version: 2026.06.19-clean
+summary: Verify Docker, data-plane, and live-like runtime only when relevant.
 ---
 
 # bthwani-docker-slice-runtime
 
-## Use when
+## Invoke when
 
-- Docker compose, DB, local runtime, smoke, migrations, or provider data plane is involved.
+- task touches `infra/docker`, data-plane, runtime smoke, service runtime, database, Redis, MinIO, or live-like behavior
+- the user asks for runtime proof
 
-## Procedure
+## Read before
 
-1. Confirm compose path under `infra/docker`.
-2. Confirm env and ports are intentional.
-3. Start/stop/reset only through approved scripts.
-4. Do not claim runtime pass without container status, logs/smoke output, and relevant API evidence.
+`package.json`, `governance/05_DOCKER_AND_DATA_PLANE.md`, `infra/docker`, `infra/data-plane`, service database paths
 
-## Evidence / checks
+## Execution contract
 
-```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-pnpm -w run docker:runtime:up
-pnpm -w run docker:runtime:smoke
-```
+Run only runtime-relevant scripts from `package.json`. Keep service business schema inside service database folders and infrastructure provisioning inside infra owners.
 
+## Forbidden
 
+- do not run runtime gates for docs-only/agent-only changes
+- do not use memory repository as live-like proof
+- do not use untagged or floating Docker images
+- do not move business schema into infra provisioning
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- runtime command output
+- smoke logs
+- changed infra/service database paths
+- Git diff checks
+
+## Failure decision
+
+- runtime required but not run -> `NEEDS_EVIDENCE`
+- runtime script fails -> `FIX_REQUIRED`
+- live-like shortcut found -> `FIX_REQUIRED`
+
+## Notes
+
+No extra notes.

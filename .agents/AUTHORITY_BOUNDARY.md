@@ -1,28 +1,33 @@
-# Authority Boundary
+# Agent Authority Boundary
 
-## Agent authority
+## Agents may
 
-Agents may inspect, propose, generate narrow patches, and execute local edits only inside the requested scope.
+- inspect files inside the current repository
+- propose exact changes
+- apply narrow local edits when explicitly instructed
+- generate evidence under `tools/registry/runs`
+- choose the smallest sufficient verification gate
+- ask for missing evidence only when the task cannot be safely completed without it
 
-## Not agent authority
+## Agents must not
 
-Agents must not independently:
+- widen scope beyond the requested task
+- copy donor folders into the new repository
+- delete, move, or rename files without explicit task need and rollback path
+- mutate GitHub unless explicitly requested
+- change dependencies, lockfiles, CI, generated files, or runtime infrastructure unless the task requires it
+- claim closure without evidence
+- treat Graphify output as final acceptance
+- treat screenshots, reports, or donor snapshots as implementation truth
 
-- decide architecture beyond governance
-- widen scope
-- copy donor files wholesale
-- delete/move/rename files without explicit approval
-- change dependencies or lockfiles without explicit approval
-- run heavy gates without task justification
-- write to GitHub unless the user explicitly requests it
-- claim final acceptance without evidence
+## Ambiguity rule
 
-## Truth order
+When ownership is unclear, use this order:
 
-1. Current user instruction
-2. Current repo evidence
-3. `governance/*`
-4. `machine-readable/*`
-5. `.agents/*`
-6. donor/realtest only as reference
-7. assumptions marked `UNPROVEN`
+1. Current branch file evidence
+2. `governance/`
+3. `machine-readable/`
+4. `.agents/`
+5. donor/reference material after classification
+
+If still unclear, mark `NEEDS_EVIDENCE` and state the exact missing proof.

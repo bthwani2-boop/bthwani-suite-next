@@ -1,31 +1,43 @@
 ---
 name: bthwani-foundation-execution
-description: Execute new repo foundation work without drifting into service implementation prematurely.
+version: 2026.06.19-clean
+summary: Execute foundation slice work against governance and guard baseline.
 ---
 
 # bthwani-foundation-execution
 
-## Use when
+## Invoke when
 
-- Work affects root package, workspace layout, governance, tools, guards, baseline contracts, or foundation gates.
+- work touches repository skeleton, governance, toolchain, package metadata, basic guards, or foundation slice evidence
+- current stage is foundation closure
 
-## Procedure
+## Read before
 
-1. Confirm foundation owner and target path.
-2. Keep apps as runtime shells and services as domain owners.
-3. Validate package/workspace/toolchain before adding layers.
-4. Do not implement service slices before foundation gate inputs exist.
+`README.md`, `package.json`, `governance/00_DECISION_INDEX.md`, `governance/09_SLICE_OPERATING_MODEL.md`, `governance/10_TOOLCHAIN_VERSION_LOCK.md`
 
-## Evidence / checks
+## Execution contract
 
-Run root status, diff check, targeted script syntax, and `pnpm -w run typecheck` only when files changed in TypeScript/workspace paths.
+Map the requested work to a foundation slice, verify canonical owner, avoid expanding into service implementation unless the slice requires it, and run the relevant foundation gate.
 
+## Forbidden
 
+- do not claim product runtime from foundation-only files
+- do not introduce service behavior without a slice
+- do not alter locked toolchain versions casually
 
-## Global constraints
+## Required evidence
 
-- Target root: `C:\bthwani-suite-next`.
-- Use PowerShell and `pnpm`; never use `npx`.
-- Keep scope narrow; do not touch unrelated files.
-- Do not claim closure without evidence.
-- Prefer targeted checks over full workspace checks unless risk justifies more.
+- touched foundation paths
+- package metadata evidence if changed
+- foundation gate output when relevant
+- Git diff checks
+
+## Failure decision
+
+- slice not declared -> `BLOCKED_NEEDS_BLUEPRINT`
+- toolchain drift -> `FIX_REQUIRED`
+- foundation gate missing when required -> `NEEDS_EVIDENCE`
+
+## Notes
+
+No extra notes.

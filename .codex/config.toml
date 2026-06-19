@@ -1,10 +1,9 @@
-[mcp_servers.nx-mcp]
-command = "pnpm"
-args = ["exec", "nx", "mcp"]
-
-[features]
-multi_agent = true
+# BThwani Suite Next Codex project hints.
+# AGENTS.md is the authoritative instruction file.
 
 [project]
 root = "C:\\bthwani-suite-next"
-entry = "AGENTS.md"
+instructions = "AGENTS.md"
+
+[features]
+multi_agent = true
