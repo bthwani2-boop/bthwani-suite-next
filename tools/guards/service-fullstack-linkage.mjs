@@ -1,92 +1,95 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 
-const guardId = "service-fullstack-linkage";
-const violations = [];
+const repoRoot = process.cwd();
 
-const servicesRoot = path.join(repoRoot, "services");
+const ACTIVE_SERVICES = ["dsh", "wlt"];
+const RESERVED_SERVICES = ["knz", "arb", "amn", "esf", "mrf", "snd", "kwd"];
 
-function hasImplementationFiles(dir, serviceRoot = dir) {
-  if (!fs.existsSync(dir)) return false;
+function exists(relPath) {
+  return fs.existsSync(path.join(repoRoot, relPath));
+}
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === ".gitkeep" || entry.name === "README.md") continue;
-    const full = path.join(dir, entry.name);
-    const rel = toPosix(path.relative(serviceRoot, full));
+function read(relPath) {
+  return fs.readFileSync(path.join(repoRoot, relPath), "utf8");
+}
 
-    if (entry.isDirectory()) {
-      if (hasImplementationFiles(full, serviceRoot)) return true;
-    } else {
-      if (rel.startsWith("contracts/") && /\.openapi\.ya?ml$/.test(rel)) {
-        continue;
-      }
-      return true;
+function requiredActivationFiles(serviceId) {
+  return [
+    `services/${serviceId}/SERVICE_BLUEPRINT.md`,
+    `services/${serviceId}/service.manifest.ts`,
+    `services/${serviceId}/contracts/${serviceId}.openapi.yaml`,
+  ];
+}
+
+function validateActiveManifest(serviceId, manifestPath, failures) {
+  const content = read(manifestPath);
+
+  if (!content.includes(`service: "${serviceId}"`) && !content.includes(`service: '${serviceId}'`)) {
+    failures.push(`${manifestPath} active service manifest must declare service: "${serviceId}"`);
+  }
+
+  if (!content.includes("realService: true")) {
+    failures.push(`${manifestPath} active service manifest must declare realService: true`);
+  }
+
+  if (!content.includes("activatesService: true")) {
+    failures.push(`${manifestPath} active service manifest must declare activatesService: true`);
+  }
+}
+
+const failures = [];
+
+for (const serviceId of ACTIVE_SERVICES) {
+  for (const relPath of requiredActivationFiles(serviceId)) {
+    if (!exists(relPath)) {
+      failures.push(`${relPath} active service ${serviceId} is missing ${path.basename(relPath)}`);
     }
   }
 
-  return false;
+  const manifestPath = `services/${serviceId}/service.manifest.ts`;
+  if (exists(manifestPath)) {
+    validateActiveManifest(serviceId, manifestPath, failures);
+  }
 }
 
-if (fs.existsSync(servicesRoot)) {
-  for (const entry of fs.readdirSync(servicesRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
+for (const serviceId of RESERVED_SERVICES) {
+  const serviceRoot = `services/${serviceId}`;
 
-    const service = entry.name;
-    if (service.startsWith("_")) continue;
+  if (!exists(serviceRoot)) {
+    continue;
+  }
 
-    const dir = path.join(servicesRoot, service);
-    const manifestPath = path.join(dir, "service.manifest.ts");
-    const active =
-      fs.existsSync(manifestPath) || hasImplementationFiles(dir, dir);
+  const activationFiles = requiredActivationFiles(serviceId);
+  const present = activationFiles.filter(exists);
 
-    if (!active) continue;
+  if (present.length > 0 && present.length < activationFiles.length) {
+    failures.push(
+      `${serviceRoot} is RESERVED but partially activated. Present: ${present.join(", ")}. Either complete activation intentionally or remove partial activation files.`
+    );
+  }
 
-    const required = [
-      "SERVICE_BLUEPRINT.md",
-      "service.manifest.ts",
-      `contracts/${service}.openapi.yaml`
-    ];
+  if (present.length === activationFiles.length) {
+    const manifestPath = `services/${serviceId}/service.manifest.ts`;
+    const content = read(manifestPath);
+    const activates = content.includes("activatesService: true") || content.includes("realService: true");
 
-    for (const rel of required) {
-      const requiredPath = path.join(dir, rel);
-      if (!fs.existsSync(requiredPath)) {
-        violations.push({
-          file: toPosix(path.relative(repoRoot, requiredPath)),
-          message: `active service ${service} is missing ${rel}`
-        });
-      }
-    }
-
-    if (fs.existsSync(manifestPath)) {
-      const manifest = fs.readFileSync(manifestPath, "utf8");
-
-      const serviceDeclaration = new RegExp(
-        `\\bservice:\\s*["']${service}["']`
+    if (activates) {
+      failures.push(
+        `${serviceRoot} is RESERVED but declares active-service markers. Move it to ACTIVE_SERVICES intentionally before activation.`
       );
-
-      if (!serviceDeclaration.test(manifest)) {
-        violations.push({
-          file: toPosix(path.relative(repoRoot, manifestPath)),
-          message: `active service manifest must declare service: "${service}"`
-        });
-      }
-
-      if (!/\brealService:\s*true\b/.test(manifest)) {
-        violations.push({
-          file: toPosix(path.relative(repoRoot, manifestPath)),
-          message: "active service manifest must declare realService: true"
-        });
-      }
-
-      if (!/\bactivatesService:\s*true\b/.test(manifest)) {
-        violations.push({
-          file: toPosix(path.relative(repoRoot, manifestPath)),
-          message: "active service manifest must declare activatesService: true"
-        });
-      }
     }
   }
 }
 
-fail(guardId, violations);
+if (failures.length > 0) {
+  console.log("service-fullstack-linkage: FAIL");
+  for (const failure of failures) {
+    console.log(`- ${failure}`);
+  }
+  process.exit(1);
+}
+
+console.log("service-fullstack-linkage: PASS");
+console.log(`active services: ${ACTIVE_SERVICES.join(", ")}`);
+console.log(`reserved services: ${RESERVED_SERVICES.join(", ")}`);
