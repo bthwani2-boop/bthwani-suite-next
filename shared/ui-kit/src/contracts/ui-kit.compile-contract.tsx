@@ -44,8 +44,8 @@ export function UiKitCompileContract() {
       <Dialog open={false} onOpenChange={() => undefined} title="Confirm" />
       <Sheet open={false} onOpenChange={() => undefined} title="Details" />
 
-      {/* @ts-expect-error arbitrary text colors bypass semantic roles */}
-      <Text color="#123456">Invalid color override</Text>
+      {/* @ts-expect-error arbitrary text color roles bypass semantic roles */}
+      <Text color="invalidTextColorRole">Invalid color override</Text>
       {/* @ts-expect-error business-domain props do not belong in generic controls */}
       <Button orderId="order-1" label="Invalid domain prop" />
     </>
