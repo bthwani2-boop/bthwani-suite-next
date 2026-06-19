@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "bthwani-suite-next",
   "version": "0.0.0",
   "private": true,
@@ -18,7 +18,9 @@
     "docker:runtime:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/up-runtime.ps1",
     "docker:runtime:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/down-runtime.ps1",
     "docker:runtime:reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/reset-runtime.ps1",
-    "docker:runtime:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/smoke-runtime.ps1"
+    "docker:runtime:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/smoke-runtime.ps1",
+    "guard:matrix:v2": "node tools/guards/guard-slice-master-matrix-v2.mjs",
+    "guard:matrix:v3": "node tools/guards/guard-slice-master-matrix-v3.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

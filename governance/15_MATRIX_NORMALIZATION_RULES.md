@@ -306,3 +306,73 @@ final result remains conservative:
 ```text
 PHASE_10_11_MATRICES_CONSISTENT_NOT_SLICE_READY
 ```
+
+---
+
+## V2 → V3 Normalization Additions (MASTER_MATRIX_V3_FINAL_CLOSURE)
+
+### V3 file canonical path
+
+```text
+machine-readable/slice_execution_master_matrix_v3.csv
+```
+
+### V3 vs V2 differences
+
+| Aspect | V2 | V3 |
+| --- | --- | --- |
+| Row count | 1072 | 1180 |
+| Column count | 67 (repaired) | 66 (canonical V3 header) |
+| Header definition | flexible | exact — no deviations allowed |
+| Canonical policy rows | none | DSH states, WLT states, dispatch, pricing, COD, notifications, endpoints, boundary, ext-deps, donor aliases |
+| Status | INVENTORY\_ONLY/BLOCKED | same — READY\_FOR\_SLICE and VERIFIED remain forbidden |
+
+### V3 canonical column order
+
+Exact header required — stored in guard-slice-master-matrix-v3.mjs as EXACT_HEADER constant.
+
+### Machine-readable source rule
+
+All canonical CSVs exist only in `C:\bthwani-suite-next\machine-readable`.
+Donor paths `C:\bthwani-suite\wlt`, `C:\bthwani-suite\dsh`, `C:\bthwani-suite\tools`, `C:\bthwani-suite\tools\guards` are reference-only.
+Never read `C:\bthwani-suite\machine-readable`, `C:\bthwani-suite\services`, or `C:\bthwani-suite\packages` — they do not exist in the donor.
+
+### Provider abstraction rule
+
+No external provider may be named in any matrix cell. Use abstract contracts:
+
+- `abstract-maps-provider`, `abstract-sms-provider`, `abstract-NotificationProvider`
+- `abstract-payment-gateway`, `abstract-storage-provider`, `abstract-email-provider`
+- `abstract-geolocation-provider`, `abstract-analytics-provider`
+
+Every row with `external_dependencies` must carry `provider_decision = TBD_CONFIG_REQUIRED:...` or stronger.
+
+### Store submission gate
+
+Mobile surface rows: `build_target = expo-dev-client; store-submission reserved until PRE_STORE_READINESS_GATE`
+No row may advance to store submission before `PRE_STORE_READINESS_GATE` is explicitly declared.
+
+### Service manifest policy
+
+Real services use `service.manifest.ts` as active machine-readable contract.
+`SERVICE_BLUEPRINT.md` is allowed only in `services/_template` as template.
+Existing real-service `SERVICE_BLUEPRINT.md` is legacy reference until migrated.
+No new real-service `SERVICE_BLUEPRINT.md` may be created.
+
+### Guard commands
+
+```bash
+node tools/guards/guard-slice-master-matrix-v2.mjs
+node tools/guards/guard-slice-master-matrix-v3.mjs
+```
+
+Both must exit 0 before any slice execution begins.
+
+### Evidence requirements for V3 closure
+
+- `tools/registry/runs/MASTER-MATRIX-V2-V3-FINAL-CLOSURE-*/` must exist with all required files
+- `_HANDOFF.zip` must be present in the evidence root
+- `matrix-v2-audit-before.json` and `matrix-v2-audit-after.json` must be present
+- `matrix-v3-audit.json` must be present
+- `donor-wlt-dsh-inventory.json` must be present
+- `donor-guard-inventory.json` must be present
