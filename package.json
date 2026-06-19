@@ -21,9 +21,11 @@
     "docker:runtime:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/smoke-runtime.ps1",
     "guard:matrix:v2": "node tools/guards/guard-slice-master-matrix-v2.mjs",
     "guard:matrix:v3": "node tools/guards/guard-slice-master-matrix-v3.mjs",
-    "graphify": "graphify .",
+    "graphify": "graphify update . --force",
     "graphify:callflow": "graphify export callflow-html",
-    "graphify:version": "graphify --version"
+    "graphify:version": "graphify --version",
+    "graphify:code": "graphify update . --force",
+    "graphify:full": "graphify ."
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
