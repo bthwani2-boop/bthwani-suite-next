@@ -23,7 +23,8 @@
       "no-preview-demo-mock-runtime",
       "no-broken-imports",
       "service-fullstack-linkage",
-      "dsh-service-activation"
+      "dsh-service-activation",
+      "performance-runtime-baseline"
     ],
     "slice": [
       "no-direct-fetch-in-screen",
@@ -32,7 +33,8 @@
       "no-financial-mutation-outside-wlt",
       "no-broken-imports",
       "service-fullstack-linkage",
-      "dsh-service-activation"
+      "dsh-service-activation",
+      "performance-runtime-baseline"
     ]
   },
   "guards": [
@@ -130,6 +132,11 @@
       "id": "dsh-service-activation",
       "path": "tools/guards/dsh-service-activation.mjs",
       "policySource": "governance/13_DSH_SERVICE_ACTIVATION.md"
+    },
+    {
+      "id": "performance-runtime-baseline",
+      "path": "tools/guards/performance-runtime-baseline.mjs",
+      "policySource": "governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md"
     }
   ]
 }
