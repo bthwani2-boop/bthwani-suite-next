@@ -7,16 +7,20 @@ const violations = [];
 
 const servicesRoot = path.join(repoRoot, "services");
 
-function hasNonPlaceholderFiles(dir) {
+function hasImplementationFiles(dir, serviceRoot = dir) {
   if (!fs.existsSync(dir)) return false;
 
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === ".gitkeep") continue;
+    if (entry.name === ".gitkeep" || entry.name === "README.md") continue;
     const full = path.join(dir, entry.name);
+    const rel = toPosix(path.relative(serviceRoot, full));
 
     if (entry.isDirectory()) {
-      if (hasNonPlaceholderFiles(full)) return true;
+      if (hasImplementationFiles(full, serviceRoot)) return true;
     } else {
+      if (rel.startsWith("contracts/") && /\.openapi\.ya?ml$/.test(rel)) {
+        continue;
+      }
       return true;
     }
   }
@@ -29,8 +33,12 @@ if (fs.existsSync(servicesRoot)) {
     if (!entry.isDirectory()) continue;
 
     const service = entry.name;
+    if (service.startsWith("_")) continue;
+
     const dir = path.join(servicesRoot, service);
-    const active = hasNonPlaceholderFiles(dir);
+    const manifestPath = path.join(dir, "service.manifest.ts");
+    const active =
+      fs.existsSync(manifestPath) || hasImplementationFiles(dir, dir);
 
     if (!active) continue;
 
@@ -46,6 +54,35 @@ if (fs.existsSync(servicesRoot)) {
         violations.push({
           file: toPosix(path.relative(repoRoot, requiredPath)),
           message: `active service ${service} is missing ${rel}`
+        });
+      }
+    }
+
+    if (fs.existsSync(manifestPath)) {
+      const manifest = fs.readFileSync(manifestPath, "utf8");
+
+      const serviceDeclaration = new RegExp(
+        `\\bservice:\\s*["']${service}["']`
+      );
+
+      if (!serviceDeclaration.test(manifest)) {
+        violations.push({
+          file: toPosix(path.relative(repoRoot, manifestPath)),
+          message: `active service manifest must declare service: "${service}"`
+        });
+      }
+
+      if (!/\brealService:\s*true\b/.test(manifest)) {
+        violations.push({
+          file: toPosix(path.relative(repoRoot, manifestPath)),
+          message: "active service manifest must declare realService: true"
+        });
+      }
+
+      if (!/\bactivatesService:\s*true\b/.test(manifest)) {
+        violations.push({
+          file: toPosix(path.relative(repoRoot, manifestPath)),
+          message: "active service manifest must declare activatesService: true"
         });
       }
     }

@@ -176,6 +176,14 @@ A page template may be created only when a real page has:
 
 Activate one reserved service at a time through an approved service slice. Add only that service and its approved surfaces to current-phase contracts, then create only the artifacts required by that slice.
 
+## Phase 10A — DSH Service Activation
+
+Phase 10A activates the DSH service contract through `services/dsh/service.manifest.ts`.
+
+The activation is limited to the contract-backed system capability already present in `services/dsh/contracts/dsh.openapi.yaml`. It does not claim that Store Discovery, a commerce runtime, or a screen is implemented.
+
+`DSH-001 Store Discovery` remains the first product slice. Its capability may be declared as the next slice, but it cannot become runtime-active or closed until its OpenAPI, backend, client, frontend, tests, and evidence exist.
+
 ## Control Panel Reserved Taxonomy
 
 These names are reserved taxonomy only, not routes and not files in Phase 9A:
@@ -214,7 +222,8 @@ This file is accepted only when:
 - no control-panel template is added
 - no navigation, auth-session, rtl, or locale runtime folder is added
 - no repeated `SCREEN_BLUEPRINT.md` file is added
-- no `service.manifest.ts` is created without an active slice
+- no real-service `service.manifest.ts` is created without an activation scope
+- DSH activation declares only contract-backed current behavior and does not pre-close DSH-001
 - current phase services remain dsh and wlt only
 - reserved services do not enter current phase maps
 - reserved surfaces do not enter current phase maps

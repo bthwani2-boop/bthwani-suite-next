@@ -13,25 +13,7 @@ New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
 $LogPath = Join-Path $EvidenceRoot "commands.log"
 Set-Content -LiteralPath $LogPath -Value "" -Encoding UTF8
 
-function Run-Step {
-  param(
-    [string]$Name,
-    [scriptblock]$Command
-  )
-
-  $out = Join-Path $EvidenceRoot "$Name.txt"
-  Add-Content -LiteralPath $LogPath -Value "RUN: $Name" -Encoding UTF8
-
-  try {
-    & $Command *> $out
-    Add-Content -LiteralPath $LogPath -Value "PASS: $Name" -Encoding UTF8
-    return $true
-  } catch {
-    $_ | Out-String | Set-Content -LiteralPath $out -Encoding UTF8
-    Add-Content -LiteralPath $LogPath -Value "FAIL: $Name" -Encoding UTF8
-    return $false
-  }
-}
+. (Join-Path $PSScriptRoot "gate-run-step.ps1")
 
 $manifest = Get-Content -LiteralPath "tools\guards\guard-manifest.json" -Raw | ConvertFrom-Json
 
@@ -42,11 +24,11 @@ if ($RequestedGuard) {
 
 $results = @()
 
-$results += [pscustomobject]@{ step = "node-version"; ok = (Run-Step "node-version" { node --version }) }
-$results += [pscustomobject]@{ step = "pnpm-version"; ok = (Run-Step "pnpm-version" { pnpm --version }) }
-$results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
-$results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Run-Step "pnpm-typecheck" { pnpm typecheck }) }
-$results += [pscustomobject]@{ step = "ui-kit-contracts"; ok = (Run-Step "ui-kit-contracts" { pnpm --dir shared/ui-kit typecheck:contracts }) }
+$results += [pscustomobject]@{ step = "node-version"; ok = (Invoke-GateStep "node-version" { node --version } $EvidenceRoot $LogPath) }
+$results += [pscustomobject]@{ step = "pnpm-version"; ok = (Invoke-GateStep "pnpm-version" { pnpm --version } $EvidenceRoot $LogPath) }
+$results += [pscustomobject]@{ step = "git-diff-check"; ok = (Invoke-GateStep "git-diff-check" { git --no-pager diff --check } $EvidenceRoot $LogPath) }
+$results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Invoke-GateStep "pnpm-typecheck" { pnpm typecheck } $EvidenceRoot $LogPath) }
+$results += [pscustomobject]@{ step = "ui-kit-contracts"; ok = (Invoke-GateStep "ui-kit-contracts" { pnpm --dir shared/ui-kit typecheck:contracts } $EvidenceRoot $LogPath) }
 
 foreach ($guard in $foundationGuards) {
   $guardEntry = $manifest.guards | Where-Object { $_.id -eq $guard } | Select-Object -First 1
@@ -56,7 +38,7 @@ foreach ($guard in $foundationGuards) {
 
   $guardPath = $guardEntry.path
   $stepName = "guard-$guard"
-  $results += [pscustomobject]@{ step = $stepName; ok = (Run-Step $stepName { node $guardPath }) }
+  $results += [pscustomobject]@{ step = $stepName; ok = (Invoke-GateStep $stepName { node $guardPath } $EvidenceRoot $LogPath) }
 }
 
 $results | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $EvidenceRoot "evidence.json") -Encoding UTF8
