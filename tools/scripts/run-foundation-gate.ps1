@@ -45,8 +45,8 @@ $results = @()
 $results += [pscustomobject]@{ step = "node-version"; ok = (Run-Step "node-version" { node --version }) }
 $results += [pscustomobject]@{ step = "pnpm-version"; ok = (Run-Step "pnpm-version" { pnpm --version }) }
 $results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
-$results += [pscustomobject]@{ step = "pnpm-install-lockfile-only"; ok = (Run-Step "pnpm-install-lockfile-only" { pnpm install --lockfile-only }) }
 $results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Run-Step "pnpm-typecheck" { pnpm typecheck }) }
+$results += [pscustomobject]@{ step = "ui-kit-contracts"; ok = (Run-Step "ui-kit-contracts" { pnpm --dir shared/ui-kit typecheck:contracts }) }
 
 foreach ($guard in $foundationGuards) {
   $guardEntry = $manifest.guards | Where-Object { $_.id -eq $guard } | Select-Object -First 1

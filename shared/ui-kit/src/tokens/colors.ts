@@ -98,3 +98,100 @@ export const colorRoles = {
 } as const;
 
 export type ColorRole = keyof typeof colorRoles;
+
+export const neutralScale = {
+  0: "#FFFFFF",
+  50: "#F8FAFC",
+  100: "#F1F5F9",
+  200: "#E2E8F0",
+  300: "#CBD5E1",
+  400: "#94A3B8",
+  500: "#64748B",
+  600: "#475569",
+  700: "#334155",
+  800: "#1E293B",
+  900: "#0F172A",
+  950: "#020617"
+} as const;
+
+export const statusScale = {
+  successSoft: "#ECFDF3",
+  success: "#1F8B4C",
+  successStrong: "#16653A",
+  warningSoft: "#FFFBEB",
+  warning: "#B96A06",
+  warningStrong: "#8E5204",
+  dangerSoft: "#FEF2F2",
+  danger: "#C43B35",
+  dangerStrong: "#9B2F2B",
+  infoSoft: "#EFF6FF",
+  info: "#295FAA",
+  infoStrong: "#214D89"
+} as const;
+
+export const lightThemeColors = {
+  background: brandScale.surface[50],
+  backgroundAlt: brandRoots.surfaceBase,
+  surface: brandRoots.surfaceBase,
+  surfaceRaised: brandScale.surface[50],
+  surfaceInset: brandScale.surface[100],
+  surfaceOverlay: colorRoles.surfaceOverlay,
+  color: colorRoles.textPrimary,
+  colorSecondary: colorRoles.textSecondary,
+  colorMuted: colorRoles.textMuted,
+  colorInverse: colorRoles.textInverse,
+  borderColor: colorRoles.borderSubtle,
+  borderColorStrong: colorRoles.borderStrong,
+  focusColor: colorRoles.focusRing,
+  action: colorRoles.brandAction,
+  actionHover: colorRoles.brandActionHover,
+  actionPressed: colorRoles.brandActionPressed,
+  actionSoft: colorRoles.brandActionSoft,
+  structure: colorRoles.brandStructure,
+  structureSoft: colorRoles.brandStructureSoft,
+  success: statusScale.success,
+  successSoft: statusScale.successSoft,
+  warning: statusScale.warning,
+  warningSoft: statusScale.warningSoft,
+  danger: statusScale.danger,
+  dangerSoft: statusScale.dangerSoft,
+  info: statusScale.info,
+  infoSoft: statusScale.infoSoft,
+  shadowColor: colorRoles.shadowBase
+} as const;
+
+export const darkThemeColors = {
+  background: neutralScale[950],
+  backgroundAlt: neutralScale[900],
+  surface: neutralScale[900],
+  surfaceRaised: neutralScale[800],
+  surfaceInset: neutralScale[950],
+  surfaceOverlay: alpha(neutralScale[900], 0.9),
+  color: neutralScale[50],
+  colorSecondary: neutralScale[200],
+  colorMuted: neutralScale[400],
+  colorInverse: brandRoots.brandStructure,
+  borderColor: alpha(neutralScale[0], 0.12),
+  borderColorStrong: alpha(neutralScale[0], 0.2),
+  focusColor: alpha(brandRoots.brandAction, 0.5),
+  action: brandRoots.brandAction,
+  actionHover: brandScale.action[400],
+  actionPressed: brandScale.action[300],
+  actionSoft: alpha(brandRoots.brandAction, 0.18),
+  structure: neutralScale[50],
+  structureSoft: neutralScale[800],
+  success: "#4ADE80",
+  successSoft: alpha("#4ADE80", 0.14),
+  warning: "#F5C04E",
+  warningSoft: alpha("#F5C04E", 0.14),
+  danger: "#F2877A",
+  dangerSoft: alpha("#F2877A", 0.14),
+  info: "#8BB4E8",
+  infoSoft: alpha("#8BB4E8", 0.14),
+  shadowColor: colorRoles.shadowBase
+} as const;
+
+export const tamaguiColorTokens = {
+  ...colorRoles,
+  ...statusScale
+} as const;
