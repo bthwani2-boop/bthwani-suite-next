@@ -1,0 +1,39 @@
+{
+  "name": "knz",
+  "root": "services/knz",
+  "sourceRoot": "services/knz",
+  "projectType": "application",
+  "targets": {},
+  "tags": [
+    "scope:knz type:service"
+  ],
+  "x_bthwani_disabledTargets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/knz typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/knz build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/knz lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/knz test"
+      }
+    }
+  },
+  "x_bthwani_nxDisabled": true,
+  "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+  "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.7802953+03:00"
+}

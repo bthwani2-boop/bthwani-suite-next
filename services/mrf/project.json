@@ -1,0 +1,39 @@
+{
+  "name": "mrf",
+  "root": "services/mrf",
+  "sourceRoot": "services/mrf",
+  "projectType": "application",
+  "targets": {},
+  "tags": [
+    "scope:mrf type:service"
+  ],
+  "x_bthwani_disabledTargets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/mrf typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/mrf build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/mrf lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/mrf test"
+      }
+    }
+  },
+  "x_bthwani_nxDisabled": true,
+  "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+  "x_bthwani_nxDisabledAt": "2026-06-20T00:07:50.3757205+03:00"
+}

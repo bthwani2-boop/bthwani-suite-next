@@ -15,5 +15,6 @@ overrides:
   "@react-native/metro-config": 0.85.3
 allowBuilds:
   '@ast-grep/cli': false
+  nx: true
 
 # END BTHWANI_RUNTIME_VERSION_POLICY

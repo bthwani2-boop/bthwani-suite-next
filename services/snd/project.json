@@ -1,0 +1,39 @@
+{
+  "name": "snd",
+  "root": "services/snd",
+  "sourceRoot": "services/snd",
+  "projectType": "application",
+  "targets": {},
+  "tags": [
+    "scope:snd type:service"
+  ],
+  "x_bthwani_disabledTargets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/snd typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/snd build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/snd lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/snd test"
+      }
+    }
+  },
+  "x_bthwani_nxDisabled": true,
+  "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+  "x_bthwani_nxDisabledAt": "2026-06-20T00:07:51.0597467+03:00"
+}

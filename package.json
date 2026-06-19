@@ -25,7 +25,19 @@
     "graphify:callflow": "graphify export callflow-html",
     "graphify:version": "graphify --version",
     "graphify:code": "graphify update . --force",
-    "graphify:full": "graphify ."
+    "graphify:full": "graphify .",
+    "nx:projects": "nx show projects",
+    "nx:graph": "nx graph",
+    "nx:typecheck": "nx run-many -t typecheck --all",
+    "nx:build": "nx run-many -t build --all",
+    "nx:lint": "nx run-many -t lint --all",
+    "nx:test": "nx run-many -t test --all",
+    "affected:typecheck": "nx affected -t typecheck",
+    "affected:build": "nx affected -t build",
+    "affected:lint": "nx affected -t lint",
+    "affected:test": "nx affected -t test",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
@@ -37,6 +49,7 @@
     "madge": "8.0.0",
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "nx": "22.3.3"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "name": "app-captain",
+  "root": "apps/app-captain/runtime",
+  "sourceRoot": "apps/app-captain/runtime",
+  "projectType": "application",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/app-captain/runtime typecheck"
+      }
+    }
+  },
+  "tags": [
+    "scope:app-captain type:app"
+  ]
+}
