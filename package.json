@@ -19,5 +19,17 @@
     "docker:runtime:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/down-runtime.ps1",
     "docker:runtime:reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/reset-runtime.ps1",
     "docker:runtime:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/smoke-runtime.ps1"
+  },
+  "devDependencies": {
+    "@ast-grep/cli": "0.43.0",
+    "@stoplight/spectral-cli": "6.16.0",
+    "@types/react": "19.2.17",
+    "dependency-cruiser": "17.4.3",
+    "jscpd": "5.0.10",
+    "knip": "6.17.1",
+    "madge": "8.0.0",
+    "openapi-typescript": "7.13.0",
+    "sherif": "1.11.1",
+    "typescript": "5.9.3"
   }
 }
