@@ -91,20 +91,36 @@ if (readyVerifiedRows.length > 0) {
   err(`CRITICAL: ${readyVerifiedRows.length} rows have forbidden status (READY_FOR_SLICE or VERIFIED)`);
 }
 
-// 6. Canonical DSH order lifecycle
+// 6. Canonical DSH order lifecycle (section-based + sentinel artifact_type check)
 const dshOrderStates = dataRows.filter(r => get(r, 'section') === 'order-state-machine');
 if (dshOrderStates.length < 10) {
   err(`CRITICAL: Canonical DSH order lifecycle missing — only ${dshOrderStates.length} state rows (need >= 10)`);
 } else {
   console.log(`DSH order lifecycle: ${dshOrderStates.length} states ✓`);
 }
+const dshCanonicalSentinel = dataRows.filter(r =>
+  get(r, 'artifact_type') === 'canonical-state-machine' && get(r, 'capability') === 'order-state-machine'
+);
+if (dshCanonicalSentinel.length < 1) {
+  err(`CRITICAL: No canonical-state-machine sentinel row for DSH order lifecycle (artifact_type=canonical-state-machine, capability=order-state-machine)`);
+} else {
+  console.log(`DSH canonical-state-machine sentinel: ${dshCanonicalSentinel.length} ✓`);
+}
 
-// 7. Canonical WLT financial lifecycle
+// 7. Canonical WLT financial lifecycle (section-based + sentinel artifact_type check)
 const wltFinStates = dataRows.filter(r => get(r, 'section') === 'wlt-financial-state-machine');
 if (wltFinStates.length < 10) {
   err(`CRITICAL: Canonical WLT financial lifecycle missing — only ${wltFinStates.length} state rows (need >= 10)`);
 } else {
   console.log(`WLT financial lifecycle: ${wltFinStates.length} states ✓`);
+}
+const wltCanonicalSentinel = dataRows.filter(r =>
+  get(r, 'artifact_type') === 'canonical-state-machine' && get(r, 'capability') === 'wlt-financial-state-machine'
+);
+if (wltCanonicalSentinel.length < 1) {
+  err(`CRITICAL: No canonical-state-machine sentinel row for WLT financial lifecycle (artifact_type=canonical-state-machine, capability=wlt-financial-state-machine)`);
+} else {
+  console.log(`WLT canonical-state-machine sentinel: ${wltCanonicalSentinel.length} ✓`);
 }
 
 // 8. dispatch_policy rows >= 5
@@ -267,7 +283,9 @@ const counts = {
   notification_triggers: notifRows.length,
   external_dependencies: extDepRows.length,
   dsh_order_lifecycle: dshOrderStates.length,
+  dsh_canonical_state_machine_sentinel: dshCanonicalSentinel.length,
   wlt_financial_lifecycle: wltFinStates.length,
+  wlt_canonical_state_machine_sentinel: wltCanonicalSentinel.length,
   screen_journey_ui_loc: screenRows.length,
   object_ops_rbac: objectOpRows.length,
   critical_rows_rollback: criticalRows.length,
