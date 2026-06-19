@@ -23,6 +23,10 @@ Approved compact skill set for `bthwani-suite-next`.
 - `bthwani-docker-slice-runtime`
 - `bthwani-platform-runtime-config`
 
+## Finance/boundary
+
+- `bthwani-dsh-wlt-finance-boundary`
+
 ## Frontend/design
 
 - `bthwani-ui-kit-design-lock`

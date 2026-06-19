@@ -41,14 +41,19 @@ UNKNOWN   -> + bthwani-graphify-context-tool, then route.
 
 ## Minimum verification after code changes
 
-```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-git --no-pager status --short
-git --no-pager diff --check
-pnpm -w run typecheck
-```
+Use PowerShell for user-facing Windows commands. Scripts must start with `Set-Location -LiteralPath "C:\bthwani-suite-next"` as the first executable line.
 
-Use narrower verification when the change is limited and a full workspace command is not justified.
+Default after code writes:
+- git status
+- git diff --check
+- targeted type/syntax/test check for touched package/surface
+
+Run full workspace typecheck only when:
+- shared contracts changed
+- shared/ui-kit exports changed
+- service boundary changed
+- multi-package impact is proven
+- human explicitly requests it
 
 ## Heavy commands require justification
 
