@@ -22,7 +22,8 @@ No governance file is canonical unless listed here.
 9. 08_CLEANUP_AND_DEPRECATION.md
 10. 09_SLICE_OPERATING_MODEL.md
 11. 10_TOOLCHAIN_VERSION_LOCK.md
-12. 99_LEGACY_EXTRACTION_LEDGER.md
+12. 11_INTERFACE_BLUEPRINTS.md
+13. 99_LEGACY_EXTRACTION_LEDGER.md
 
 ## Allowed unresolved states
 
