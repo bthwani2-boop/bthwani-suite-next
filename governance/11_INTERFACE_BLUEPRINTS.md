@@ -140,7 +140,7 @@ Any reserved artifact created without this gate is invalid.
 
 ### 9B — Service Activation Manifest
 
-Open with the first real service slice, expected to be `DSH-001 Store Discovery`. Create only the active service manifest and scope it to the active slice. Before slice closure, satisfy the canonical service requirement for `SERVICE_BLUEPRINT.md`. Do not create manifests for inactive services.
+Open with the first real service slice, expected to be `DSH-001 Store Discovery`. Create only the active service manifest and scope it to the active slice. Before slice closure, satisfy service activation requirements through `services/<service>/service.manifest.ts` and slice evidence. Do not create `SERVICE_BLUEPRINT.md` unless a later activation gate explicitly approves it, and resolve any older governance or guard requirement before activating the slice. Do not create manifests for inactive services.
 
 ### 9C — Mobile Interface Runtime
 
