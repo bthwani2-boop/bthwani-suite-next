@@ -48,3 +48,30 @@ Use at most three skills for normal work:
 3. one task-specific skill
 
 Add more only when the task crosses boundaries.
+
+<!-- BTHWANI_NX_SKILLS_START -->
+## Nx workspace support
+
+Use these skills only for Nx-specific tasks. BThwani project rules override generic Nx examples.
+
+Active:
+- 
+x-workspace — inspect Nx workspace, projects, targets, and graph.
+- 
+x-run-tasks — run 
+x run, un-many, ffected, filters, and task debugging.
+- 
+x-import — controlled import/migration from donor or external repos.
+- 
+x-plugins — evaluate and add Nx plugins only when required.
+- 
+x-generate — use generators only after dry-run and pattern check.
+
+Deferred:
+- monitor-ci — preserved under .agents/skills-deferred/monitor-ci; activate only after CI/Nx Cloud is intentionally configured.
+
+Rules:
+- Do not open Nx skills for normal feature work unless Nx routing, project graph, targets, generators, imports, plugins, or CI are involved.
+- Do not let generic Nx examples override BThwani ownership, WLT finance rules, Graphify routing, or live-code closure rules.
+<!-- BTHWANI_NX_SKILLS_END -->
+
