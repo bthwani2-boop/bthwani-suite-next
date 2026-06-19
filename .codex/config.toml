@@ -1,0 +1,10 @@
+[mcp_servers.nx-mcp]
+command = "pnpm"
+args = ["exec", "nx", "mcp"]
+
+[features]
+multi_agent = true
+
+[project]
+root = "C:\\bthwani-suite-next"
+entry = "AGENTS.md"

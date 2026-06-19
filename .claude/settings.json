@@ -1,0 +1,6 @@
+{
+  "projectRoot": "C:\\bthwani-suite-next",
+  "entrypoint": "CLAUDE.md",
+  "skillRoot": ".agents/skills",
+  "maxDefaultSkills": 2
+}
