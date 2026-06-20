@@ -2,10 +2,10 @@
   "name": "bthwani-suite-next",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@11.7.0",
+  "packageManager": "pnpm@10.34.2",
   "engines": {
     "node": ">=24.17.0 <25",
-    "pnpm": "11.7.0"
+    "pnpm": "10.34.2"
   },
   "scripts": {
     "contracts:lint": "node tools/important-scripts/contracts-foundation.mjs",
