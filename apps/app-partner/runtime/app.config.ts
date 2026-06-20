@@ -23,6 +23,9 @@ const config: ExpoConfig = {
   },
 
   extra: {
+      eas: {
+        projectId: "4cde7be0-7582-4a6b-9ae0-d74f2d149580"
+      },
     appKey: "app-partner",
     appLine: "next",
     sourceRepo: "bthwani-suite-next"
