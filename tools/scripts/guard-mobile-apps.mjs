@@ -4,6 +4,20 @@ import path from "node:path";
 
 const root = process.cwd();
 
+const commonEnv = {
+  ...process.env,
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+  EAS_SKIP_AUTO_FINGERPRINT: "1"
+};
+
+function bin(command) {
+  if (process.platform === "win32" && command === "pnpm") {
+    return "pnpm.cmd";
+  }
+
+  return command;
+}
+
 function readJson(file) {
   return JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
 }
@@ -14,16 +28,16 @@ function fail(message) {
 }
 
 function run(command, args, cwd) {
-  const result = spawnSync(command, args, {
+  const result = spawnSync(bin(command), args, {
     cwd,
-    shell: true,
+    shell: false,
     encoding: "utf8",
-    env: {
-      ...process.env,
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-      EAS_SKIP_AUTO_FINGERPRINT: "1"
-    }
+    env: commonEnv
   });
+
+  if (result.error) {
+    fail(`${command} failed: ${result.error.message}`);
+  }
 
   if (result.status !== 0) {
     process.stdout.write(result.stdout ?? "");
@@ -93,7 +107,10 @@ for (const [key, app] of Object.entries(manifest.apps)) {
 
   const raw = run("pnpm", ["--dir", dir, "exec", "expo", "config", "--json"], root);
   const jsonStart = raw.indexOf("{");
-  if (jsonStart < 0) fail(`${key}: expo config did not return JSON`);
+
+  if (jsonStart < 0) {
+    fail(`${key}: expo config did not return JSON`);
+  }
 
   const expo = JSON.parse(raw.slice(jsonStart));
 
@@ -114,9 +131,21 @@ for (const [key, app] of Object.entries(manifest.apps)) {
 }
 
 const workspace = fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8");
-if (!workspace.includes('apps/*/runtime')) fail("pnpm-workspace.yaml must include apps/*/runtime");
-if (!workspace.includes("allowBuilds:")) fail("pnpm-workspace.yaml must define allowBuilds");
-if (workspace.includes("onlyBuiltDependencies")) fail("pnpm-workspace.yaml must not use onlyBuiltDependencies");
-if (workspace.includes("ignoredBuiltDependencies")) fail("pnpm-workspace.yaml must not use ignoredBuiltDependencies");
+
+if (!workspace.includes("apps/*/runtime")) {
+  fail("pnpm-workspace.yaml must include apps/*/runtime");
+}
+
+if (!workspace.includes("allowBuilds:")) {
+  fail("pnpm-workspace.yaml must define allowBuilds");
+}
+
+if (workspace.includes("onlyBuiltDependencies")) {
+  fail("pnpm-workspace.yaml must not use onlyBuiltDependencies");
+}
+
+if (workspace.includes("ignoredBuiltDependencies")) {
+  fail("pnpm-workspace.yaml must not use ignoredBuiltDependencies");
+}
 
 console.log("PASS: mobile apps resolved Expo/EAS config is centrally guarded");
