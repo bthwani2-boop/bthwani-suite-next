@@ -79,13 +79,11 @@ for (const app of apps) {
     fail(key + ": EAS node must be " + nodeVersion);
   }
 
-  if (eas.build?.base?.corepack !== true) {
-    fail(key + ": EAS corepack must be true");
+  if (eas.build?.base?.corepack === true) {
+    fail(key + ": EAS corepack must not be true when EAS pnpm is set");
   }
 
-  if (eas.build?.base?.pnpm !== pnpmVersion) {
-    fail(key + ": EAS pnpm must be " + pnpmVersion);
-  }
+  if (eas.build?.base?.pnpm !== pnpmVersion) fail(`${key}: EAS pnpm must be ${pnpmVersion}`);
 
   if (eas.build?.development?.developmentClient !== true) {
     fail(key + ": developmentClient must be true");
