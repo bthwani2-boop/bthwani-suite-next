@@ -2,33 +2,30 @@
 import type { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
-  name: "app-client-next",
-  slug: "app-client-next",
+  name: "app-partner-next",
+  slug: "app-partner-next",
   owner: "bthwani1",
 
   platforms: ["ios", "android"],
 
-  scheme: "bthwani-client-next",
+  scheme: "bthwani-partner-next",
   version: "0.1.0",
 
   orientation: "portrait",
   userInterfaceStyle: "light",
 
   android: {
-    package: "com.bthwani.client.next"
+    package: "com.bthwani.partner.next"
   },
 
   ios: {
-    bundleIdentifier: "com.bthwani.client.next"
+    bundleIdentifier: "com.bthwani.partner.next"
   },
 
   extra: {
-    appKey: "app-client",
+    appKey: "app-partner",
     appLine: "next",
-    sourceRepo: "bthwani-suite-next",
-    eas: {
-      projectId: "abec897b-1f5f-409d-8286-607a5a6b69e2"
-    }
+    sourceRepo: "bthwani-suite-next"
   }
 };
 
