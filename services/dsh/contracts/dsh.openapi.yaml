@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Service API
-  version: 0.1.0
-  description: Delivery and shopping hub service contract baseline. Foundation-007A defines health and readiness only; commerce runtime endpoints are added only after contract review.
+  version: 0.2.0
+  description: Delivery and shopping hub service contract. DSH-001 adds store discovery endpoints.
 
 x-bthwani-owner: services/dsh
-x-bthwani-contract-state: CONTRACT_DRAFT
-x-bthwani-client-generation: DISABLED_UNTIL_CONTRACT_ACTIVE
-x-bthwani-runtime-dependency: false
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
 
 paths:
   /dsh/health:
@@ -39,9 +39,245 @@ paths:
                 $ref: "#/components/schemas/DshReadinessResponse"
         "503":
           description: DSH is not ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshReadinessResponse"
+
+  /dsh/stores:
+    get:
+      operationId: listDshStores
+      summary: List discoverable stores.
+      tags:
+        - DshStoreDiscovery
+      parameters:
+        - name: cityCode
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by city code.
+        - name: serviceAreaCode
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by service area code.
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/DshStoreStatus"
+          description: Filter by store status.
+        - name: isVisible
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by visibility flag.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Paginated list of stores.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreListResponse"
+        "400":
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
+
+  /dsh/stores/{storeId}:
+    get:
+      operationId: getDshStore
+      summary: Get a single store by ID.
+      tags:
+        - DshStoreDiscovery
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Store identifier.
+      responses:
+        "200":
+          description: Store detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreDetailResponse"
+        "400":
+          description: Invalid store ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
+        "404":
+          description: Store not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
 
 components:
   schemas:
+    DshStoreStatus:
+      type: string
+      enum:
+        - active
+        - inactive
+        - temporarily_closed
+        - unavailable
+
+    DshStoreServiceabilityStatus:
+      type: string
+      enum:
+        - serviceable
+        - limited
+        - out_of_area
+        - unavailable
+
+    DshStoreServiceabilitySummary:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/DshStoreServiceabilityStatus"
+
+    DshStoreSummary:
+      type: object
+      required:
+        - id
+        - slug
+        - displayName
+        - status
+        - cityCode
+        - serviceAreaCode
+        - serviceability
+        - isVisible
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        displayName:
+          type: string
+        status:
+          $ref: "#/components/schemas/DshStoreStatus"
+        cityCode:
+          type: string
+        serviceAreaCode:
+          type: string
+        serviceability:
+          $ref: "#/components/schemas/DshStoreServiceabilitySummary"
+        ratingAverage:
+          type: ["number", "null"]
+          format: float
+        ratingCount:
+          type: integer
+        deliveryEtaMin:
+          type: ["integer", "null"]
+        deliveryEtaMax:
+          type: ["integer", "null"]
+        isVisible:
+          type: boolean
+        heroImageUrl:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+
+    DshStoreDetail:
+      allOf:
+        - $ref: "#/components/schemas/DshStoreSummary"
+        - type: object
+          required:
+            - createdAt
+            - updatedAt
+          properties:
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    DshPagination:
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+
+    DshStoreListResponse:
+      type: object
+      required:
+        - stores
+        - pagination
+      properties:
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshStoreSummary"
+        pagination:
+          $ref: "#/components/schemas/DshPagination"
+
+    DshStoreDetailResponse:
+      type: object
+      required:
+        - store
+      properties:
+        store:
+          $ref: "#/components/schemas/DshStoreDetail"
+
+    DshErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
     DshHealthResponse:
       type: object
       required:
