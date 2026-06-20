@@ -20,7 +20,11 @@ function readText(file) {
 
 function writeText(file, content) {
   fs.mkdirSync(path.dirname(abs(file)), { recursive: true });
-  fs.writeFileSync(abs(file), content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd() + "\n", "utf8");
+  fs.writeFileSync(
+    abs(file),
+    content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd() + "\n",
+    "utf8"
+  );
 }
 
 function readJson(file) {
@@ -74,15 +78,15 @@ export default defineBthwaniExpoApp("${key}");
 `;
 }
 
-function factoryContent() {
-  return `import type { ExpoConfig } from "expo/config";
+function factoryJsContent() {
+  return `const manifest = require("./mobile-apps.manifest.json");
 
-const manifest = ${JSON.stringify(manifest, null, 2)} as const;
-
-type BthwaniMobileAppKey = keyof typeof manifest.apps;
-
-export function defineBthwaniExpoApp(appKey: BthwaniMobileAppKey): ExpoConfig {
+function defineBthwaniExpoApp(appKey) {
   const app = manifest.apps[appKey];
+
+  if (!app) {
+    throw new Error("Unknown BThwani mobile app: " + appKey);
+  }
 
   return {
     name: app.name,
@@ -115,6 +119,21 @@ export function defineBthwaniExpoApp(appKey: BthwaniMobileAppKey): ExpoConfig {
     }
   };
 }
+
+module.exports = {
+  defineBthwaniExpoApp
+};
+`;
+}
+
+function factoryDtsContent() {
+  const union = appKeys.map((key) => `"${key}"`).join(" | ");
+
+  return `import type { ExpoConfig } from "expo/config";
+
+export type BthwaniMobileAppKey = ${union};
+
+export declare function defineBthwaniExpoApp(appKey: BthwaniMobileAppKey): ExpoConfig;
 `;
 }
 
@@ -131,7 +150,12 @@ function updateRootScripts() {
 }
 
 if (apply) {
-  writeText("tools/mobile/defineBthwaniExpoApp.ts", factoryContent());
+  writeText("tools/mobile/defineBthwaniExpoApp.js", factoryJsContent());
+  writeText("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
+
+  if (fs.existsSync(abs("tools/mobile/defineBthwaniExpoApp.ts"))) {
+    fs.rmSync(abs("tools/mobile/defineBthwaniExpoApp.ts"), { force: true });
+  }
 
   for (const key of appKeys) {
     writeText(`${appDir(key)}/app.config.ts`, appConfig(key));
@@ -140,19 +164,16 @@ if (apply) {
 
   writeText("package.json", updateRootScripts());
 
-  if (fs.existsSync(abs("apps/app-partner/runtime/app.config.ts.bak"))) {
-    fs.rmSync(abs("apps/app-partner/runtime/app.config.ts.bak"), { force: true });
-  }
-
-  if (fs.existsSync(abs("tools/scripts/sync-mobile-apps-unified.mjs"))) {
-    fs.rmSync(abs("tools/scripts/sync-mobile-apps-unified.mjs"), { force: true });
-  }
-
   console.log("PASS: mobile apps synchronized from tools/mobile");
   process.exit(0);
 }
 
-assertSame("tools/mobile/defineBthwaniExpoApp.ts", factoryContent());
+assertSame("tools/mobile/defineBthwaniExpoApp.js", factoryJsContent());
+assertSame("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
+
+if (fs.existsSync(abs("tools/mobile/defineBthwaniExpoApp.ts"))) {
+  throw new Error("tools/mobile/defineBthwaniExpoApp.ts must not exist; use .js CommonJS factory");
+}
 
 for (const key of appKeys) {
   assertSame(`${appDir(key)}/app.config.ts`, appConfig(key));
