@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { SafeAreaView, StyleSheet } from "react-native";
-import { Screen, Header, brandScale } from "@bthwani/ui-kit";
+import { Screen, Header } from "@bthwani/ui-kit";
 import { StoreDiscoveryList } from "./StoreDiscoveryList";
 import {
   fetchStoreList,
@@ -33,19 +32,13 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.root}>
-      <Screen padded={false}>
-        <Header title="Discover Stores" />
-        <StoreDiscoveryList
-          state={state}
-          onStorePress={handleStorePress}
-          onRetry={load}
-        />
-      </Screen>
-    </SafeAreaView>
+    <Screen padded={false}>
+      <Header title="Discover Stores" />
+      <StoreDiscoveryList
+        state={state}
+        onStorePress={handleStorePress}
+        onRetry={load}
+      />
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: brandScale.surface[50] },
-});
