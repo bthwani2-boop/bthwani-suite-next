@@ -38,8 +38,10 @@
     "affected:test": "nx affected -t test",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
-    "mobile:expo:verify": "node tools/scripts/guard-mobile-expo-unified.mjs",
-    "mobile:eas:preflight": "node tools/scripts/guard-mobile-expo-unified.mjs && pnpm -r --if-present typecheck"
+    "mobile:expo:verify": "node tools/scripts/guard-mobile-apps.mjs",
+    "mobile:eas:preflight": "node tools/scripts/sync-mobile-apps.mjs --check && node tools/scripts/guard-mobile-apps.mjs && pnpm -r --if-present typecheck",
+    "mobile:apps:sync": "node tools/scripts/sync-mobile-apps.mjs --apply",
+    "mobile:eas:build": "node tools/scripts/eas-build-mobile.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

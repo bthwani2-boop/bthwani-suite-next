@@ -5,11 +5,11 @@
   "build": {
     "base": {
       "node": "24.17.0",
+      "pnpm": "10.34.2",
       "env": {
         "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
         "EAS_SKIP_AUTO_FINGERPRINT": "1"
-      },
-      "pnpm": "10.34.2"
+      }
     },
     "development": {
       "extends": "base",
