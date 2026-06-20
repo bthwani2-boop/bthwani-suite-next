@@ -3,7 +3,15 @@
     "appVersionSource": "local"
   },
   "build": {
+    "base": {
+      "node": "24.17.0",
+      "env": {
+        "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -11,12 +19,14 @@
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "extends": "base",
       "android": {
         "buildType": "app-bundle"
       }
