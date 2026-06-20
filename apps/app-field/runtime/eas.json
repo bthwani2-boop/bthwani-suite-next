@@ -6,7 +6,6 @@
     "base": {
       "node": "24.17.0",
       "corepack": true,
-      "pnpm": "11.7.0",
       "env": {
         "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
         "EAS_SKIP_AUTO_FINGERPRINT": "1"

@@ -12,9 +12,9 @@ const apps = [
 ];
 
 const requiredDeps = {
-  expo: "~56.0.12",
+  "expo": "~56.0.12",
   "expo-dev-client": "~56.0.20",
-  react: "19.2.3",
+  "react": "19.2.3",
   "react-native": "0.85.3",
   "react-native-gesture-handler": "~2.31.2",
   "react-native-reanimated": "4.3.1",
@@ -33,6 +33,12 @@ function fail(message) {
   process.exitCode = 1;
 }
 
+const rootPkg = readJson("package.json");
+if (rootPkg.packageManager !== "pnpm@11.7.0") fail("root packageManager must be pnpm@11.7.0");
+if (rootPkg.engines?.node !== ">=24.17.0 <25") fail("root node engine mismatch");
+if (rootPkg.engines?.pnpm !== "11.7.0") fail("root pnpm engine mismatch");
+if (rootPkg.pnpm) fail("root package.json must not contain pnpm config; pnpm 11 policy belongs in pnpm-workspace.yaml");
+
 for (const [key, dir, slug, androidPackage] of apps) {
   const pkg = readJson(path.join(dir, "package.json"));
 
@@ -47,10 +53,13 @@ for (const [key, dir, slug, androidPackage] of apps) {
   }
 
   const eas = readJson(path.join(dir, "eas.json"));
-  if (eas.build?.base?.node !== "24.17.0") fail(`${key}: EAS node mismatch`);
-  if (eas.build?.base?.pnpm !== "11.7.0") fail(`${key}: EAS pnpm mismatch`);
+  if (eas.build?.base?.node !== "24.17.0") fail(`${key}: EAS node must be 24.17.0`);
   if (eas.build?.base?.corepack !== true) fail(`${key}: EAS corepack must be true`);
+  if (Object.prototype.hasOwnProperty.call(eas.build?.base ?? {}, "pnpm")) {
+    fail(`${key}: build.base.pnpm is forbidden; use root packageManager + corepack as the single pnpm source`);
+  }
   if (eas.build?.development?.developmentClient !== true) fail(`${key}: developmentClient must be true`);
+  if (eas.build?.development?.distribution !== "internal") fail(`${key}: development distribution must be internal`);
   if (eas.build?.development?.android?.buildType !== "apk") fail(`${key}: development buildType must be apk`);
 
   const config = fs.readFileSync(path.join(root, dir, "app.config.ts"), "utf8");
@@ -60,9 +69,9 @@ for (const [key, dir, slug, androidPackage] of apps) {
 }
 
 const workspace = fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8");
+if (!workspace.includes("allowBuilds:")) fail("pnpm-workspace.yaml must define allowBuilds");
 if (workspace.includes("onlyBuiltDependencies")) fail("pnpm-workspace.yaml must not use removed pnpm 11 setting onlyBuiltDependencies");
 if (workspace.includes("ignoredBuiltDependencies")) fail("pnpm-workspace.yaml must not use removed pnpm 11 setting ignoredBuiltDependencies");
-if (!workspace.includes("allowBuilds:")) fail("pnpm-workspace.yaml must define allowBuilds");
 
 if (process.exitCode) process.exit(process.exitCode);
-console.log("PASS: mobile Expo baseline is unified");
+console.log("PASS: mobile Expo baseline uses one pnpm authority: root packageManager + EAS corepack");

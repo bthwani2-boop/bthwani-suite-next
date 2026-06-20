@@ -38,7 +38,8 @@
     "affected:test": "nx affected -t test",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
-    "mobile:expo:verify": "node tools/scripts/guard-mobile-expo-unified.mjs"
+    "mobile:expo:verify": "node tools/scripts/guard-mobile-expo-unified.mjs",
+    "mobile:eas:preflight": "node tools/scripts/guard-mobile-expo-unified.mjs && pnpm -r --if-present typecheck"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
