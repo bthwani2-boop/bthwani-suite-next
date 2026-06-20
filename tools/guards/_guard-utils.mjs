@@ -132,6 +132,12 @@ export function existsResolved(baseFile, specifier) {
     path.join(target, "index.mjs")
   ];
 
+  // NodeNext TS-to-JS: a .js import may resolve to a .ts source file
+  if (specifier.endsWith(".js")) {
+    const tsBase = target.slice(0, -3);
+    candidates.push(`${tsBase}.ts`, `${tsBase}.tsx`);
+  }
+
   return candidates.some((candidate) => fs.existsSync(candidate));
 }
 

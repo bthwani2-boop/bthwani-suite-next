@@ -1,12 +1,13 @@
 {
   "profile": "dsh",
-  "state": "RESERVED_NOT_ACTIVE",
+  "state": "ACTIVE",
   "composeFile": "infra/docker/compose.runtime.yml",
   "container": "bthwani-dsh-api-runtime",
   "hostPort": 58080,
   "internalPort": 8080,
   "database": "dsh_runtime",
-  "dependsOn": ["postgres", "identity"],
-  "activationGate": "DSH slice backend Dockerfile + migrations + seed + health/readiness + API smoke",
+  "activatedInSlice": "DSH-001",
+  "dependsOn": ["postgres"],
+  "activationGate": "DSH-001: Dockerfile + migrations + seed + /health + /readiness + API smoke complete",
   "forbidden": ["memory repo", "CORS wildcard", "donor container names", "donor ports", "mock/demo/preview runtime data"]
 }

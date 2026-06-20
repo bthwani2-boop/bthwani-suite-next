@@ -95,6 +95,12 @@ const profiles = [
   ["wlt", "infra/docker/runtime-profiles/wlt.runtime-profile.json", "bthwani-wlt-api-runtime", 58083]
 ];
 
+const DSH_ACTIVE_PREREQUISITES = [
+  "services/dsh/backend/Dockerfile",
+  "services/dsh/database/migrations/dsh-001_store_discovery.sql",
+  "services/dsh/database/seeds/local/dsh-001_store_discovery.local.sql",
+];
+
 for (const [profile, file, container, hostPort] of profiles) {
   if (!exists(file)) continue;
 
@@ -105,8 +111,23 @@ for (const [profile, file, container, hostPort] of profiles) {
     violations.push(`${file}: expected profile=${profile}`);
   }
 
-  if (json.state !== "RESERVED_NOT_ACTIVE") {
-    violations.push(`${file}: expected state=RESERVED_NOT_ACTIVE before runtime activation`);
+  const allowedActive = profile === "dsh";
+  const isActive = json.state === "ACTIVE";
+
+  if (isActive && !allowedActive) {
+    violations.push(`${file}: profile ${profile} is not allowed to be ACTIVE yet`);
+  } else if (isActive && allowedActive) {
+    const compose = exists("infra/docker/compose.runtime.yml") ? read("infra/docker/compose.runtime.yml") : "";
+    if (!compose.includes("dsh-api")) {
+      violations.push(`${file}: state=ACTIVE requires dsh-api service in compose.runtime.yml`);
+    }
+    for (const prereq of DSH_ACTIVE_PREREQUISITES) {
+      if (!exists(prereq)) {
+        violations.push(`${file}: state=ACTIVE requires ${prereq} to exist`);
+      }
+    }
+  } else if (!isActive && json.state !== "RESERVED_NOT_ACTIVE") {
+    violations.push(`${file}: expected state=RESERVED_NOT_ACTIVE or ACTIVE`);
   }
 
   if (json.container !== container) {

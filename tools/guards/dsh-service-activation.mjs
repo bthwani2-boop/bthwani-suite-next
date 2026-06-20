@@ -84,10 +84,20 @@ const openapi = fs.existsSync(
   : "";
 
 if (/^\s*\/dsh\/stores(?:\/|:)/m.test(openapi)) {
-  violations.push({
-    file: "services/dsh/contracts/dsh.openapi.yaml",
-    message: "Phase 10A must not invent Store Discovery endpoints"
-  });
+  const dsh001Prerequisites = [
+    "services/dsh/capabilities/store-discovery/evidence-plan.md",
+    "services/dsh/backend/Dockerfile",
+    "services/dsh/database/migrations/dsh-001_store_discovery.sql"
+  ];
+  const dsh001Active = dsh001Prerequisites.every(
+    (f) => fs.existsSync(path.join(repoRoot, f))
+  );
+  if (!dsh001Active) {
+    violations.push({
+      file: "services/dsh/contracts/dsh.openapi.yaml",
+      message: "Store Discovery endpoints require DSH-001 prerequisites: evidence-plan, Dockerfile, and migration must all exist"
+    });
+  }
 }
 
 fail(guardId, violations);

@@ -54,6 +54,31 @@ services:
     networks:
       - bthwani-runtime
 
+  dsh-api:
+    profiles:
+      - dsh
+    build:
+      context: ../..
+      dockerfile: services/dsh/backend/Dockerfile
+    container_name: ${BTHWANI_DSH_API_CONTAINER:-bthwani-dsh-api-runtime}
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://${BTHWANI_DSH_DB_USER:-dsh_runtime}:${BTHWANI_DSH_DB_PASSWORD:-dsh_runtime_password}@postgres:5432/${BTHWANI_DSH_DB_NAME:-dsh_runtime}?sslmode=disable"
+      DSH_AUTH_MODE: "public-read-store-discovery"
+    ports:
+      - "${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - bthwani-runtime
+
 networks:
   bthwani-runtime:
     name: bthwani-runtime
