@@ -35,6 +35,9 @@
       ],
       "@bthwani/app-partner-runtime": [
         "apps/app-partner/runtime/src/index.ts"
+      ],
+      "react-native": [
+        "apps/app-client/runtime/node_modules/react-native"
       ]
     }
   }
