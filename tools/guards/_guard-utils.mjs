@@ -92,15 +92,21 @@ export function lineNumber(content, index) {
   return content.slice(0, index).split(/\r?\n/).length;
 }
 
+function blankTemplateLiteral(match) {
+  return match.replace(/[^\r\n]/g, " ");
+}
+
 export function findImportSpecifiers(content) {
   const specs = [];
+  const scanContent = content.replace(/`(?:\\[\s\S]|[^`\\])*`/g, blankTemplateLiteral);
+
   const importRegex = /\bimport\s+(?:[^'"`]*?\s+from\s+)?["']([^"']+)["']/g;
   const exportRegex = /\bexport\s+[^'"`]*?\s+from\s+["']([^"']+)["']/g;
   const requireRegex = /\brequire\(\s*["']([^"']+)["']\s*\)/g;
 
   for (const regex of [importRegex, exportRegex, requireRegex]) {
     let match;
-    while ((match = regex.exec(content))) {
+    while ((match = regex.exec(scanContent))) {
       specs.push({ specifier: match[1], index: match.index });
     }
   }

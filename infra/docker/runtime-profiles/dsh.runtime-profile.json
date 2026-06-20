@@ -1,0 +1,12 @@
+{
+  "profile": "dsh",
+  "state": "RESERVED_NOT_ACTIVE",
+  "composeFile": "infra/docker/compose.runtime.yml",
+  "container": "bthwani-dsh-api-runtime",
+  "hostPort": 58080,
+  "internalPort": 8080,
+  "database": "dsh_runtime",
+  "dependsOn": ["postgres", "identity"],
+  "activationGate": "DSH slice backend Dockerfile + migrations + seed + health/readiness + API smoke",
+  "forbidden": ["memory repo", "CORS wildcard", "donor container names", "donor ports", "mock/demo/preview runtime data"]
+}

@@ -24,7 +24,8 @@
       "no-broken-imports",
       "service-fullstack-linkage",
       "dsh-service-activation",
-      "performance-runtime-baseline"
+      "performance-runtime-baseline",
+      "docker-runtime-profiles"
     ],
     "slice": [
       "no-direct-fetch-in-screen",
@@ -34,7 +35,8 @@
       "no-broken-imports",
       "service-fullstack-linkage",
       "dsh-service-activation",
-      "performance-runtime-baseline"
+      "performance-runtime-baseline",
+      "docker-runtime-profiles"
     ]
   },
   "guards": [
@@ -137,6 +139,11 @@
       "id": "performance-runtime-baseline",
       "path": "tools/guards/performance-runtime-baseline.mjs",
       "policySource": "governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md"
+    },
+    {
+      "id": "docker-runtime-profiles",
+      "path": "tools/guards/docker-runtime-profiles.mjs",
+      "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
     }
   ]
 }

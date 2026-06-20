@@ -1,0 +1,12 @@
+{
+  "profile": "wlt",
+  "state": "RESERVED_NOT_ACTIVE",
+  "composeFile": "infra/docker/compose.runtime.yml",
+  "container": "bthwani-wlt-api-runtime",
+  "hostPort": 58083,
+  "internalPort": 8083,
+  "database": "wlt_runtime",
+  "dependsOn": ["postgres", "identity"],
+  "activationGate": "WLT slice backend Dockerfile + migrations + seed + health/readiness + financial smoke",
+  "financialBoundary": "WLT owns wallet/payment/refund/settlement/COD/ledger/reconciliation"
+}

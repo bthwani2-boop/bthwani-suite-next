@@ -1,0 +1,11 @@
+{
+  "profile": "identity",
+  "state": "RESERVED_NOT_ACTIVE",
+  "composeFile": "infra/docker/compose.runtime.yml",
+  "container": "bthwani-identity-api-runtime",
+  "hostPort": 58082,
+  "internalPort": 8082,
+  "database": "identity_runtime",
+  "mustNotUseDonor": true,
+  "activationGate": "core identity runtime Dockerfile + health/readiness + smoke"
+}
