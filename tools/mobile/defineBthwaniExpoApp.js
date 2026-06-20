@@ -35,6 +35,9 @@ function defineBthwaniExpoApp(appKey) {
       eas: {
         projectId: app.projectId
       }
+    },
+    experiments: {
+      reactCompiler: true
     }
   };
 }
