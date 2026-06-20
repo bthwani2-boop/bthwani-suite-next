@@ -51,10 +51,5 @@
     "sherif": "1.11.1",
     "typescript": "~6.0.3",
     "nx": "22.3.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp"
-    ]
   }
 }

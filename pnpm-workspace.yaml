@@ -14,12 +14,14 @@ overrides:
   react-native-worklets: 0.8.3
   "@react-native/metro-config": 0.85.3
 
-allowBuilds:
-  '@ast-grep/cli': false
-  nx: true
-
 onlyBuiltDependencies:
   - nx
   - sharp
+
+ignoredBuiltDependencies:
+  - "@ast-grep/cli"
+
+allowBuilds:
+  nx: set this to true or false
 
 # END BTHWANI_RUNTIME_VERSION_POLICY
