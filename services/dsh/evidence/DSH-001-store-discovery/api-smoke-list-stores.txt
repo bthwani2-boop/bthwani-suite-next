@@ -1,0 +1,81 @@
+{
+  "stores": [
+    {
+      "id": "store-1001",
+      "slug": "haddah-central-market",
+      "displayName": "Haddah Central Market",
+      "status": "active",
+      "cityCode": "sana",
+      "serviceAreaCode": "haddah",
+      "serviceability": {
+        "status": "serviceable"
+      },
+      "ratingAverage": "4.80",
+      "ratingCount": 312,
+      "deliveryEtaMin": 25,
+      "deliveryEtaMax": 40,
+      "isVisible": true,
+      "heroImageUrl": "dsh.store.hadda.cover.v1",
+      "logoUrl": "dsh.store.hadda.logo.v1"
+    },
+    {
+      "id": "store-1002",
+      "slug": "al-sabeen-bakery",
+      "displayName": "Al Sabeen Bakery",
+      "status": "active",
+      "cityCode": "sana",
+      "serviceAreaCode": "sabeen",
+      "serviceability": {
+        "status": "serviceable"
+      },
+      "ratingAverage": "4.60",
+      "ratingCount": 189,
+      "deliveryEtaMin": 20,
+      "deliveryEtaMax": 35,
+      "isVisible": true,
+      "heroImageUrl": "dsh.store.sabeen.cover.v1",
+      "logoUrl": "dsh.store.sabeen.logo.v1"
+    },
+    {
+      "id": "store-1004",
+      "slug": "al-zubairi-grocery",
+      "displayName": "Al Zubairi Grocery",
+      "status": "temporarily_closed",
+      "cityCode": "sana",
+      "serviceAreaCode": "zubairi",
+      "serviceability": {
+        "status": "unavailable"
+      },
+      "ratingAverage": "4.50",
+      "ratingCount": 241,
+      "deliveryEtaMin": null,
+      "deliveryEtaMax": null,
+      "isVisible": true,
+      "heroImageUrl": null,
+      "logoUrl": null
+    },
+    {
+      "id": "store-1003",
+      "slug": "taiz-street-market",
+      "displayName": "Taiz Street Market",
+      "status": "active",
+      "cityCode": "sana",
+      "serviceAreaCode": "taiz-st",
+      "serviceability": {
+        "status": "limited"
+      },
+      "ratingAverage": "4.20",
+      "ratingCount": 97,
+      "deliveryEtaMin": 35,
+      "deliveryEtaMax": 55,
+      "isVisible": true,
+      "heroImageUrl": null,
+      "logoUrl": null
+    }
+  ],
+  "pagination": {
+    "limit": 20,
+    "offset": 0,
+    "total": 4
+  }
+}

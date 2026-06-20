@@ -1,0 +1,22 @@
+{
+  "store": {
+    "id": "store-1001",
+    "slug": "haddah-central-market",
+    "displayName": "Haddah Central Market",
+    "status": "active",
+    "cityCode": "sana",
+    "serviceAreaCode": "haddah",
+    "serviceability": {
+      "status": "serviceable"
+    },
+    "ratingAverage": "4.80",
+    "ratingCount": 312,
+    "deliveryEtaMin": 25,
+    "deliveryEtaMax": 40,
+    "isVisible": true,
+    "heroImageUrl": "dsh.store.hadda.cover.v1",
+    "logoUrl": "dsh.store.hadda.logo.v1",
+    "createdAt": "2026-06-20T19:33:33.824Z",
+    "updatedAt": "2026-06-20T19:33:33.824Z"
+  }
+}

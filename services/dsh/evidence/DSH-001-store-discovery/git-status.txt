@@ -1,0 +1,38 @@
+On branch starting-implementing-slices
+Your branch is up to date with 'origin/starting-implementing-slices'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   apps/app-client/runtime/src/App.tsx
+	modified:   apps/app-client/runtime/tsconfig.json
+	modified:   infra/docker/compose.runtime.yml
+	modified:   infra/docker/runtime-profiles/dsh.runtime-profile.json
+	modified:   infra/docker/scripts/smoke-dsh-runtime.ps1
+	modified:   pnpm-lock.yaml
+	modified:   services/dsh/contracts/dsh.openapi.yaml
+	modified:   services/dsh/package.json
+	modified:   tools/guards/_guard-utils.mjs
+	modified:   tools/guards/docker-runtime-profiles.mjs
+	modified:   tools/guards/dsh-service-activation.mjs
+	modified:   tsconfig.base.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	infra/docker/scripts/apply-dsh-store-discovery-db.ps1
+	services/dsh/backend/Dockerfile
+	services/dsh/backend/runtime/
+	services/dsh/backend/store-discovery/
+	services/dsh/capabilities/
+	services/dsh/clients/generated/dsh-api.ts
+	services/dsh/clients/store-discovery-client.ts
+	services/dsh/database/migrations/dsh-001_store_discovery.sql
+	services/dsh/database/seeds/local/dsh-001_store_discovery.local.sql
+	services/dsh/domain/store-discovery/
+	services/dsh/evidence/DSH-001-store-discovery/
+	services/dsh/frontend/app-client/store-discovery/
+	services/dsh/frontend/shared/store-discovery/
+	services/dsh/tsconfig.json
+	tools/plan/claude_code_dsh001_store_discovery_execution_command.md
+
+no changes added to commit (use "git add" and/or "git commit -a")

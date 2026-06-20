@@ -1,0 +1,3 @@
+NAME                       IMAGE                     COMMAND                  SERVICE    CREATED         STATUS                   PORTS
+bthwani-dsh-api-runtime    bthwani-runtime-dsh-api   "docker-entrypoint.s…"   dsh-api    3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-postgres-runtime   postgres:16-alpine        "docker-entrypoint.s…"   postgres   4 hours ago     Up 4 hours (healthy)     0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
