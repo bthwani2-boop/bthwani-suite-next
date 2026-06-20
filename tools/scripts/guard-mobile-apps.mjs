@@ -4,20 +4,6 @@ import path from "node:path";
 
 const root = process.cwd();
 
-const commonEnv = {
-  ...process.env,
-  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-  EAS_SKIP_AUTO_FINGERPRINT: "1"
-};
-
-function bin(command) {
-  if (process.platform === "win32" && command === "pnpm") {
-    return "pnpm.cmd";
-  }
-
-  return command;
-}
-
 function readJson(file) {
   return JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
 }
@@ -28,16 +14,16 @@ function fail(message) {
 }
 
 function run(command, args, cwd) {
-  const result = spawnSync(bin(command), args, {
+  const result = spawnSync(command, args, {
     cwd,
-    shell: false,
+    shell: true,
     encoding: "utf8",
-    env: commonEnv
+    env: {
+      ...process.env,
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+      EAS_SKIP_AUTO_FINGERPRINT: "1"
+    }
   });
-
-  if (result.error) {
-    fail(`${command} failed: ${result.error.message}`);
-  }
 
   if (result.status !== 0) {
     process.stdout.write(result.stdout ?? "");
@@ -69,7 +55,6 @@ if (rootPkg.pnpm) {
 
 for (const [key, app] of Object.entries(manifest.apps)) {
   const dir = path.join(root, "apps", key, "runtime");
-
   const pkg = readJson(path.join("apps", key, "runtime", "package.json"));
   const eas = readJson(path.join("apps", key, "runtime", "eas.json"));
 

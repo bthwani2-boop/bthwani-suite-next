@@ -41,6 +41,8 @@
     "mobile:expo:verify": "node tools/scripts/guard-mobile-apps.mjs",
     "mobile:eas:preflight": "node tools/scripts/sync-mobile-apps.mjs --check && node tools/scripts/guard-mobile-apps.mjs && pnpm -r --if-present typecheck",
     "mobile:apps:sync": "node tools/scripts/sync-mobile-apps.mjs --apply",
+    "mobile:eas:build:captain:dev": "pnpm --dir apps/app-captain/runtime dlx eas-cli@latest build --platform android --profile development --clear-cache --non-interactive",
+    "mobile:eas:build:field:dev": "pnpm --dir apps/app-field/runtime dlx eas-cli@latest build --platform android --profile development --clear-cache --non-interactive",
     "mobile:eas:build": "node tools/scripts/eas-build-mobile.mjs"
   },
   "devDependencies": {
