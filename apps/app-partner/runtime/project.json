@@ -1,0 +1,17 @@
+{
+  "name": "app-partner",
+  "root": "apps/app-partner/runtime",
+  "sourceRoot": "apps/app-partner/runtime",
+  "projectType": "application",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/app-partner/runtime typecheck"
+      }
+    }
+  },
+  "tags": [
+    "scope:app-partner type:app"
+  ]
+}

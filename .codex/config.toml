@@ -1,0 +1,9 @@
+# BThwani Suite Next Codex project hints.
+# AGENTS.md is the authoritative instruction file.
+
+[project]
+root = "C:\\bthwani-suite-next"
+instructions = "AGENTS.md"
+
+[features]
+multi_agent = true

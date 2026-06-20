@@ -1,0 +1,39 @@
+{
+  "name": "webapp",
+  "root": "apps/webapp/runtime",
+  "sourceRoot": "apps/webapp/runtime",
+  "projectType": "application",
+  "targets": {},
+  "tags": [
+    "scope:webapp type:app"
+  ],
+  "x_bthwani_disabledTargets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/webapp/runtime typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/webapp/runtime build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/webapp/runtime lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/webapp/runtime test"
+      }
+    }
+  },
+  "x_bthwani_nxDisabled": true,
+  "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+  "x_bthwani_nxDisabledAt": "2026-06-20T00:07:51.3699933+03:00"
+}

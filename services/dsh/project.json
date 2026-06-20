@@ -1,0 +1,35 @@
+{
+  "name": "dsh",
+  "root": "services/dsh",
+  "sourceRoot": "services/dsh",
+  "projectType": "application",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/dsh typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/dsh build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/dsh lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/dsh test"
+      }
+    }
+  },
+  "tags": [
+    "scope:dsh type:service"
+  ]
+}

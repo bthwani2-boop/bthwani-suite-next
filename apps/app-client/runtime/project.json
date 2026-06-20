@@ -1,0 +1,17 @@
+{
+  "name": "app-client",
+  "root": "apps/app-client/runtime",
+  "sourceRoot": "apps/app-client/runtime",
+  "projectType": "application",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/app-client/runtime typecheck"
+      }
+    }
+  },
+  "tags": [
+    "scope:app-client type:app"
+  ]
+}

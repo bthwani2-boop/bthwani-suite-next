@@ -1,0 +1,17 @@
+{
+  "project": "bthwani-suite-next",
+  "purpose": "Project-scoped hook placeholder. Graphify may update this file during official installation.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Users\\b\\.local\\bin\\graphify.EXE hook-check"
+          }
+        ]
+      }
+    ]
+  }
+}

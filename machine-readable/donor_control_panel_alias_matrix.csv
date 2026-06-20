@@ -1,0 +1,12 @@
+donor_section,target_section,target_policy,service_owner,status,reason,next_action
+"dashboard","shell-overview","shell landing only","control-panel-shell","INVENTORY_ONLY","Not a canonical main section","Compose summaries from seven canonical sections"
+"operations","operations","canonical section","dsh","INVENTORY_ONLY","Operational execution owner","Rebuild only in approved operations slices"
+"finance","wallet-finance","rename and transfer ownership","wlt","INVENTORY_ONLY","WLT owns financial truth","Expose only through approved WLT slices"
+"catalogs","catalog","singular canonical alias","dsh","INVENTORY_ONLY","One canonical catalog section","Normalize only in the catalog slice"
+"community-services","RESERVED_INVENTORY","reserved inactive inventory","reserved-services","RESERVED_INVENTORY","Outside active DSH WLT scope","Do not mount"
+"support","support","canonical section","dsh","INVENTORY_ONLY","Operational support owner","Build only in approved support slices"
+"partners","partners","canonical section","dsh","INVENTORY_ONLY","Partner lifecycle operations","Build only in approved partner slices"
+"marketing","marketing","canonical section","dsh","INVENTORY_ONLY","Campaign and media operations","Build only in approved marketing slices"
+"platform","platform","canonical read-oriented section","core","INVENTORY_ONLY","Platform control visibility","Bind only after platform contract approval"
+"administration","platform","platform subpage","core","INVENTORY_ONLY","Not a main section","Map approval chain under platform"
+"hr","platform","read-only platform subpage or reserve","core","RESERVED_INVENTORY","No proven HR runtime in active scope","Keep read-only until service ownership exists"

@@ -1,0 +1,9 @@
+{
+  "project": "bthwani-suite-next",
+  "instructions": [
+    "AGENTS.md",
+    ".agents/INDEX.md",
+    ".agents/AUTHORITY_BOUNDARY.md"
+  ],
+  "mcp": {}
+}

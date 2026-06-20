@@ -1,0 +1,15 @@
+{
+  "name": "@bthwani/webapp-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {},
+  "x_bthwani_disabledScripts": {
+    "typecheck": "node -e \"console.log('webapp registered; no typecheck configured yet')\"",
+    "build": "node -e \"console.log('webapp registered; no build configured yet')\"",
+    "test": "node -e \"console.log('webapp registered; no tests configured yet')\"",
+    "lint": "node -e \"console.log('webapp registered; no lint configured yet')\""
+  },
+  "x_bthwani_nxDisabled": true,
+  "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+  "x_bthwani_nxDisabledAt": "2026-06-20T00:07:51.3045268+03:00"
+}

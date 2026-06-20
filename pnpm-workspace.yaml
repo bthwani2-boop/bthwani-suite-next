@@ -1,3 +1,4 @@
+
 packages:
   - "apps/*/runtime"
   - "shared/app-shell"
@@ -6,11 +7,23 @@ packages:
   - "contracts"
 
 verifyDepsBeforeRun: false
+engineStrict: true
+strictPeerDependencies: false
+autoInstallPeers: false
+sharedWorkspaceLockfile: true
+saveExact: true
+nodeLinker: isolated
+
 # BEGIN BTHWANI_RUNTIME_VERSION_POLICY
 overrides:
   react: 19.2.3
   react-dom: 19.2.3
   react-native: 0.85.3
-  react-native-worklets: 0.8.0
+  react-native-worklets: 0.8.3
   "@react-native/metro-config": 0.85.3
+
+allowBuilds:
+  nx: true
+  sharp: true
+  "@ast-grep/cli": false
 # END BTHWANI_RUNTIME_VERSION_POLICY

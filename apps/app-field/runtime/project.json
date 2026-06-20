@@ -1,0 +1,17 @@
+{
+  "name": "app-field",
+  "root": "apps/app-field/runtime",
+  "sourceRoot": "apps/app-field/runtime",
+  "projectType": "application",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir apps/app-field/runtime typecheck"
+      }
+    }
+  },
+  "tags": [
+    "scope:app-field type:app"
+  ]
+}

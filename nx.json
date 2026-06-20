@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "master",
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*"
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/**/__tests__/**"
+    ]
+  },
+  "targetDefaults": {
+    "typecheck": {
+      "inputs": [
+        "default"
+      ],
+      "cache": true
+    },
+    "build": {
+      "inputs": [
+        "production",
+        "^production"
+      ],
+      "dependsOn": [
+        "^build"
+      ],
+      "cache": true,
+      "outputs": [
+        "{projectRoot}/dist",
+        "{projectRoot}/.next",
+        "{projectRoot}/build"
+      ]
+    },
+    "lint": {
+      "inputs": [
+        "default"
+      ],
+      "cache": true
+    },
+    "test": {
+      "inputs": [
+        "default"
+      ],
+      "cache": true,
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "dev": {
+      "cache": false
+    },
+    "serve": {
+      "cache": false
+    },
+    "start": {
+      "cache": false
+    }
+  }
+}

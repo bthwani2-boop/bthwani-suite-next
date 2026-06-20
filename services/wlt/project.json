@@ -1,0 +1,37 @@
+{
+  "name": "wlt",
+  "root": "services/wlt",
+  "sourceRoot": "services/wlt",
+  "projectType": "application",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/wlt typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/wlt build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/wlt lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/wlt test"
+      }
+    }
+  },
+  "tags": [
+    "scope:wlt",
+    "type:service",
+    "domain:finance"
+  ]
+}

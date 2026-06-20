@@ -1,0 +1,11 @@
+{
+  "name": "@bthwani/wlt",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "node -e \"console.log('wlt registered; no typecheck configured yet')\"",
+    "build": "node -e \"console.log('wlt registered; no build configured yet')\"",
+    "test": "node -e \"console.log('wlt registered; no tests configured yet')\"",
+    "lint": "node -e \"console.log('wlt registered; no lint configured yet')\""
+  }
+}

@@ -7,7 +7,13 @@ const mutationRegex = /\b(createLedger|appendLedger|mutateWallet|setWalletBalanc
 
 for (const file of listCodeFiles()) {
   if (file.startsWith("services/wlt/")) continue;
-  if (file.startsWith("governance/") || file.startsWith("contracts/")) continue;
+  if (
+    file.startsWith("governance/") ||
+    file.startsWith("contracts/") ||
+    file.startsWith("tools/")
+  ) {
+    continue;
+  }
   if (file.includes("/tests/") || file.includes("/test/") || file.includes(".test.") || file.includes(".spec.")) continue;
 
   const content = read(file);

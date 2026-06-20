@@ -1,0 +1,39 @@
+{
+  "name": "kwd",
+  "root": "services/kwd",
+  "sourceRoot": "services/kwd",
+  "projectType": "application",
+  "targets": {},
+  "tags": [
+    "scope:kwd type:service"
+  ],
+  "x_bthwani_disabledTargets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/kwd typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/kwd build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/kwd lint"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir services/kwd test"
+      }
+    }
+  },
+  "x_bthwani_nxDisabled": true,
+  "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+  "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.9578240+03:00"
+}
