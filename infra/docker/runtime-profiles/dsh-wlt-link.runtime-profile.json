@@ -1,0 +1,10 @@
+{
+  "profile": "dsh-wlt-link",
+  "state": "RESERVED_NOT_ACTIVE",
+  "dshInternalBaseUrl": "http://dsh-api:8080",
+  "wltInternalBaseUrl": "http://wlt-api:8083",
+  "hostDshBaseUrl": "http://localhost:58080",
+  "hostWltBaseUrl": "http://localhost:58083",
+  "activationGate": "Only after DSH runtime and WLT runtime are both verified",
+  "rule": "DSH stores financial references only; WLT owns financial truth"
+}
