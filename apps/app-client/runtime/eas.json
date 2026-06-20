@@ -8,7 +8,9 @@
       "env": {
         "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
         "EAS_SKIP_AUTO_FINGERPRINT": "1"
-      }
+      },
+      "pnpm": "11.7.0",
+      "corepack": true
     },
     "development": {
       "extends": "base",
