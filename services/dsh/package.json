@@ -3,9 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "typecheck": "node -e \"console.log('dsh registered; no typecheck configured yet')\"",
-    "build": "node -e \"console.log('dsh registered; no build configured yet')\"",
-    "test": "node -e \"console.log('dsh registered; no tests configured yet')\"",
-    "lint": "node -e \"console.log('dsh registered; no lint configured yet')\""
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test",
+    "lint": "node ../../tools/guards/no-preview-demo-mock-runtime.mjs && node ../../tools/guards/no-memory-repo-in-slice-runtime.mjs"
+  },
+  "dependencies": {
+    "pg": "8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.16.0",
+    "@types/pg": "8.11.15"
   }
 }
