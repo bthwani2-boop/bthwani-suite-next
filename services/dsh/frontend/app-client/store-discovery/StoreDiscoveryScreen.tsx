@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { SafeAreaView, StyleSheet } from "react-native";
 import { Screen, Header, brandScale } from "@bthwani/ui-kit";
-import { StoreDiscoveryList } from "./StoreDiscoveryList.js";
+import { StoreDiscoveryList } from "./StoreDiscoveryList";
 import {
   fetchStoreList,
   loadingState,
-} from "../../shared/store-discovery/store-discovery.api.js";
-import type { DshStoreListState } from "../../shared/store-discovery/store-discovery.states.js";
+} from "../../shared/store-discovery/store-discovery.api";
+import type { DshStoreListState } from "../../shared/store-discovery/store-discovery.states";
 
 type Props = {
   onStorePress?: (storeId: string) => void;

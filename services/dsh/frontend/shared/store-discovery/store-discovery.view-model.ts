@@ -1,4 +1,4 @@
-import type { DshStoreSummaryDto, DshStoreDetailDto } from "./store-discovery.types.js";
+import type { DshStoreSummaryDto, DshStoreDetailDto } from "./store-discovery.types";
 
 export type DshStoreCardViewModel = {
   readonly id: string;

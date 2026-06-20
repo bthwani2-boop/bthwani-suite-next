@@ -1,5 +1,5 @@
 import React from "react";
-import { StoreDiscoveryScreen } from "./StoreDiscoveryScreen.js";
+import { StoreDiscoveryScreen } from "./StoreDiscoveryScreen";
 
 type Props = {
   onStorePress?: (storeId: string) => void;

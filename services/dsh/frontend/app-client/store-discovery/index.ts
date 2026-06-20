@@ -1,6 +1,6 @@
-export { StoreDiscoveryScreen } from "./StoreDiscoveryScreen.js";
-export { StoreDiscoveryRoute } from "./StoreDiscoveryRoute.js";
-export { StoreDiscoveryList } from "./StoreDiscoveryList.js";
-export { StoreDiscoveryCard } from "./StoreDiscoveryCard.js";
-export { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState.js";
-export { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState.js";
+export { StoreDiscoveryScreen } from "./StoreDiscoveryScreen";
+export { StoreDiscoveryRoute } from "./StoreDiscoveryRoute";
+export { StoreDiscoveryList } from "./StoreDiscoveryList";
+export { StoreDiscoveryCard } from "./StoreDiscoveryCard";
+export { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState";
+export { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";

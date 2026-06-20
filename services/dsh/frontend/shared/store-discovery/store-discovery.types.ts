@@ -1,4 +1,4 @@
-import type { paths } from "../../../clients/generated/dsh-api.js";
+import type { paths } from "../../../clients/generated/dsh-api";
 
 export type DshStoreSummaryDto =
   paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];

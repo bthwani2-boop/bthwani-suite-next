@@ -1,4 +1,4 @@
-import type { DshStoreCardViewModel } from "./store-discovery.view-model.js";
+import type { DshStoreCardViewModel } from "./store-discovery.view-model";
 
 export type DshStoreListState =
   | { readonly kind: "loading" }

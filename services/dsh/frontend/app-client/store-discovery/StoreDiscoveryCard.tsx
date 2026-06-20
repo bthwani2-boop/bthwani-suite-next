@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Card, Text, Badge, brandScale } from "@bthwani/ui-kit";
-import type { DshStoreCardViewModel } from "../../shared/store-discovery/store-discovery.view-model.js";
+import type { DshStoreCardViewModel } from "../../shared/store-discovery/store-discovery.view-model";
 
 type Props = {
   store: DshStoreCardViewModel;

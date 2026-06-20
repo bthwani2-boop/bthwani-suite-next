@@ -1,12 +1,12 @@
-import { createDshStoreClient } from "../../../clients/store-discovery-client.js";
-import { toCardViewModel } from "./store-discovery.view-model.js";
+import { createDshStoreClient } from "../../../clients/store-discovery-client";
+import { toCardViewModel } from "./store-discovery.view-model";
 import {
   loadingState,
   errorState,
   serviceUnavailableState,
   successState,
   type DshStoreListState,
-} from "./store-discovery.states.js";
+} from "./store-discovery.states";
 
 const DSH_API_BASE_URL =
   typeof process !== "undefined"
