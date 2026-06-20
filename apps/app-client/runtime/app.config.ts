@@ -26,10 +26,9 @@ const config: ExpoConfig = {
     appLine: "next",
     sourceRepo: "bthwani-suite-next",
     eas: {
-      projectId: "الصق_PROJECT_ID_الحقيقي_هنا"
+      projectId: "abec897b-1f5f-409d-8286-607a5a6b69e2"
     }
   }
 };
 
 export default config;
-
