@@ -1,6 +1,14 @@
+import React from "react";
 import { registerRootComponent } from "expo";
+import { BthwaniUiProvider } from "@bthwani/ui-kit";
 import App from "./App";
 
-registerRootComponent(App);
+function Root() {
+  return React.createElement(
+    BthwaniUiProvider,
+    null,
+    React.createElement(App)
+  );
+}
 
-export default App;
+registerRootComponent(Root);
