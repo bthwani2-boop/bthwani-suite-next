@@ -9,9 +9,7 @@ import {
 } from "./store-discovery.states";
 
 const DSH_API_BASE_URL =
-  typeof process !== "undefined"
-    ? (process.env["DSH_API_BASE_URL"] ?? "http://localhost:58080")
-    : "http://localhost:58080";
+  process.env.EXPO_PUBLIC_DSH_API_BASE_URL ?? "http://localhost:58080";
 
 const client = createDshStoreClient(DSH_API_BASE_URL);
 
@@ -59,3 +57,4 @@ export async function fetchStoreList(params?: {
     return errorState("Unexpected error");
   }
 }
+
