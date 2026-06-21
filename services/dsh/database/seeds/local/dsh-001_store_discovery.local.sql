@@ -27,8 +27,8 @@ INSERT INTO dsh_stores (
     25,
     40,
     true,
-    'dsh.store.hadda.cover.v1',
-    'dsh.store.hadda.logo.v1'
+    null,
+    null
   ),
   (
     'store-1002',
@@ -43,8 +43,8 @@ INSERT INTO dsh_stores (
     20,
     35,
     true,
-    'dsh.store.sabeen.cover.v1',
-    'dsh.store.sabeen.logo.v1'
+    null,
+    null
   ),
   (
     'store-1003',
@@ -74,6 +74,38 @@ INSERT INTO dsh_stores (
     241,
     null,
     null,
+    true,
+    null,
+    null
+  ),
+  (
+    'store-1005',
+    'old-city-restaurant',
+    'Old City Restaurant',
+    'active',
+    'sana',
+    'old-city',
+    'serviceable',
+    4.90,
+    524,
+    15,
+    30,
+    true,
+    null,
+    null
+  ),
+  (
+    'store-1006',
+    'maeen-pharmacy',
+    'Maeen Pharmacy',
+    'active',
+    'sana',
+    'maeen',
+    'serviceable',
+    4.70,
+    88,
+    20,
+    35,
     true,
     null,
     null
