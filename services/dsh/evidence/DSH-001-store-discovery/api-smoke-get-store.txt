@@ -1,4 +1,4 @@
-{
+﻿{
   "store": {
     "id": "store-1001",
     "slug": "haddah-central-market",
@@ -9,7 +9,7 @@
     "serviceability": {
       "status": "serviceable"
     },
-    "ratingAverage": "4.80",
+    "ratingAverage": 4.8,
     "ratingCount": 312,
     "deliveryEtaMin": 25,
     "deliveryEtaMax": 40,

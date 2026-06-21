@@ -14,7 +14,12 @@ export const dshServiceManifest = {
   surfaces: DSH_SURFACE_MAP,
   runtime: DSH_RUNTIME_MAP,
   currentTruth: {
-    contractOperations: ["getDshHealth", "getDshReadiness"],
+    contractOperations: [
+      "getDshHealth",
+      "getDshReadiness",
+      "listStores",
+      "getStore",
+    ],
     backendRuntimeReady: false,
     generatedClientReady: false,
     databaseReady: false,

@@ -12,9 +12,7 @@ export type DshCapability = {
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
   readonly runtimeBound: boolean;
-  readonly closureState:
-    | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
-    | "NOT_APPROVED_YET";
+  readonly closureState: "CONTRACT_ACTIVE_RUNTIME_BLOCKED" | "NOT_APPROVED_YET";
 };
 
 export const DSH_CAPABILITY_MAP = [
@@ -29,7 +27,7 @@ export const DSH_CAPABILITY_MAP = [
   {
     id: "dsh.store.discovery",
     status: "planned",
-    contractOperations: [],
+    contractOperations: ["listStores", "getStore"],
     surfaces: ["app-client"],
     runtimeBound: false,
     closureState: "NOT_APPROVED_YET",

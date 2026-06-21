@@ -18,7 +18,8 @@
   "include": [
     "domain/**/*.ts",
     "backend/**/*.ts",
-    "clients/**/*.ts"
+    "clients/**/*.ts",
+    "frontend/shared/**/*.ts"
   ],
   "exclude": [
     "node_modules",

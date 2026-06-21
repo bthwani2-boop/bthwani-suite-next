@@ -1,4 +1,4 @@
-{
+﻿{
   "stores": [
     {
       "id": "store-1001",
@@ -10,7 +10,7 @@
       "serviceability": {
         "status": "serviceable"
       },
-      "ratingAverage": "4.80",
+      "ratingAverage": 4.8,
       "ratingCount": 312,
       "deliveryEtaMin": 25,
       "deliveryEtaMax": 40,
@@ -28,7 +28,7 @@
       "serviceability": {
         "status": "serviceable"
       },
-      "ratingAverage": "4.60",
+      "ratingAverage": 4.6,
       "ratingCount": 189,
       "deliveryEtaMin": 20,
       "deliveryEtaMax": 35,
@@ -46,7 +46,7 @@
       "serviceability": {
         "status": "unavailable"
       },
-      "ratingAverage": "4.50",
+      "ratingAverage": 4.5,
       "ratingCount": 241,
       "deliveryEtaMin": null,
       "deliveryEtaMax": null,
@@ -64,7 +64,7 @@
       "serviceability": {
         "status": "limited"
       },
-      "ratingAverage": "4.20",
+      "ratingAverage": 4.2,
       "ratingCount": 97,
       "deliveryEtaMin": 35,
       "deliveryEtaMax": 55,
@@ -74,7 +74,7 @@
     }
   ],
   "pagination": {
-    "limit": 20,
+    "limit": 10,
     "offset": 0,
     "total": 4
   }
