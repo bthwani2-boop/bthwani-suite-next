@@ -48,7 +48,7 @@ export type StoreCardPremiumProps = Readonly<{
 
 const CARD_HEIGHT  = 118;
 const IMAGE_SIZE   = CARD_HEIGHT;     // square image size
-const LOGO_SIZE    = 46;
+const LOGO_SIZE    = 52;              // large, prominent circular logo
 const LOCK_BOX     = 30;
 const LEFT_COL_W   = 42;
 
@@ -204,7 +204,7 @@ export function StoreCardPremium({
             <Image
               source={store.logoImageSource}
               style={styles.logoImg}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           ) : (
             <View style={[styles.logoImg, styles.logoFallback]}>
@@ -213,14 +213,14 @@ export function StoreCardPremium({
           )}
         </View>
 
-        {/* Rating + followers pill — bottom-left of image block */}
+        {/* Unified compact rating & followers pill — bottom-left of image block */}
         {store.ratingAverage != null && (
           <View style={styles.ratingPill}>
             <Text style={styles.ratingStar}>{"★"}</Text>
             <Text style={styles.ratingVal}>{store.ratingAverage.toFixed(1)}</Text>
             {store.followerCountLabel != null && (
               <>
-                <Text style={styles.followerIco}>{"👥"}</Text>
+                <Text style={styles.separator}>{"•"}</Text>
                 <Text style={styles.followerVal}>{store.followerCountLabel}</Text>
               </>
             )}
@@ -262,7 +262,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     flexDirection: "row",
-    overflow: "hidden",
     ...SHADOW,
   },
   cardPressed: {
@@ -445,14 +444,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 15,
   },
   squareEmoji: { fontSize: 40 },
 
-  /* Logo ring — bottom-right corner of imageBlock, over the circle */
+  /* Logo ring — prominent circular logo positioned at the bottom-right corner, overlapping the borders */
   logoRing: {
     position: "absolute",
-    bottom: 8,
-    right: 4,
+    bottom: -4,
+    right: -4,
     width: LOGO_SIZE,
     height: LOGO_SIZE,
     borderRadius: LOGO_SIZE / 2,
@@ -473,21 +474,21 @@ const styles = StyleSheet.create({
   },
   logoEmoji: { fontSize: 18 },
 
-  /* Rating pill — bottom-left of imageBlock */
+  /* Unified compact rating/followers pill — bottom-left of imageBlock */
   ratingPill: {
     position: "absolute",
     bottom: 8,
-    left: 4,
+    left: 6,
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    backgroundColor: "rgba(10,47,92,0.82)",
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    gap: 2.5,
+    backgroundColor: "rgba(15, 23, 42, 0.78)", // Premium Slate background
+    borderRadius: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 2.5,
   },
-  ratingStar:   { fontSize: 10, color: "#F59E0B" },
-  ratingVal:    { fontSize: 11, fontWeight: "700", color: "#fff" },
-  followerIco:  { fontSize: 9 },
-  followerVal:  { fontSize: 10, color: "rgba(255,255,255,0.85)" },
+  ratingStar:   { fontSize: 9, color: "#F59E0B" },
+  ratingVal:    { fontSize: 9.5, fontWeight: "800", color: "#fff", letterSpacing: -0.2 },
+  separator:    { fontSize: 8, color: "rgba(255,255,255,0.4)", marginHorizontal: 0.5 },
+  followerVal:  { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.9)", letterSpacing: -0.2 },
 });
