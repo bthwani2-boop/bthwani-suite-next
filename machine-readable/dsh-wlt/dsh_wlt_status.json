@@ -1,0 +1,137 @@
+{
+  "$schema": "dsh-wlt-status/v1",
+  "_meta": {
+    "description": "Current closure status for each DSH/WLT component. Updated after each slice is runtime-verified. Statuses: NOT_STARTED | DISCOVERED | READY_FOR_IMPLEMENTATION | IN_PROGRESS | RUNTIME_VERIFIED | BLOCKED_WITH_REASON",
+    "last_updated": "2026-06-21",
+    "target_branch": "starting-implementing-slices",
+    "target_head": "a55dd95"
+  },
+  "foundation": {
+    "status": "RUNTIME_VERIFIED",
+    "gate": "PASS",
+    "evidence": "services/dsh/evidence/FOUNDATION/",
+    "notes": "foundation:gate, contracts:lint, guard:matrix:v3 all PASS"
+  },
+  "dsh_contract": {
+    "status": "RUNTIME_VERIFIED",
+    "file": "services/dsh/contracts/dsh.openapi.yaml",
+    "version": "0.3.0",
+    "operations_defined": 5,
+    "operations": ["getDshHealth", "getDshReadiness", "listDshStores", "getDshStore", "getDshHomeDiscovery"],
+    "next_operations_needed": ["DSH-003 catalog", "DSH-004 cart", "DSH-005 checkout-intent", "DSH-006 orders", "DSH-007 delivery", "DSH-008 field-readiness", "DSH-009 support", "DSH-010 finance-visibility"],
+    "notes": "Contract covers DSH-001 and DSH-002 only. DSH-003+ requires contract expansion."
+  },
+  "dsh_backend": {
+    "status": "RUNTIME_VERIFIED",
+    "language": "Go",
+    "implemented_handlers": ["health", "readiness", "store-list", "store-get", "home-discovery"],
+    "location": "services/dsh/backend/",
+    "dockerfile": "PRESENT",
+    "http_timeouts": "PRESENT",
+    "notes": "All 5 contract operations have real backend handlers with SQL repositories."
+  },
+  "dsh_database": {
+    "status": "RUNTIME_VERIFIED",
+    "migrations": ["dsh-001_store_discovery.sql", "dsh-002_home_discovery.sql"],
+    "tables": ["dsh_stores", "dsh_home_banners", "dsh_home_promos", "dsh_categories"],
+    "location": "services/dsh/database/migrations/",
+    "notes": "2 migrations applied. DSH-003+ will add: catalog, cart, orders, delivery tables."
+  },
+  "dsh_seed": {
+    "status": "RUNTIME_VERIFIED",
+    "seeds": ["dsh-001_store_discovery.local.sql", "dsh-002_home_discovery.local.sql"],
+    "media_assets": "12 images for 6 stores",
+    "location": "services/dsh/database/seeds/local/",
+    "notes": "Seeds are local-only. Real data to come in production slice."
+  },
+  "dsh_generated_client": {
+    "status": "RUNTIME_VERIFIED",
+    "location": "services/dsh/clients/",
+    "notes": "Typed client generated from OpenAPI spec. Used by all frontend surfaces."
+  },
+  "dsh_frontend_app_client": {
+    "status": "RUNTIME_VERIFIED",
+    "slices_done": ["DSH-001 Store Discovery", "DSH-002 Home Discovery"],
+    "screens": ["StoreDiscoveryScreen", "StoreDiscoveryList", "StoreCardPremium", "HomeDiscoveryScreen", "HomeHeroBannerSection", "HomePromoSection", "HomeCategorySection", "HomeFilterRailSection", "HomeStoreFeedSection"],
+    "direct_fetch_in_screens": false,
+    "local_tamagui": false,
+    "hardcoded_old_ports": false,
+    "mock_data": false,
+    "slices_pending": ["DSH-004 Cart", "DSH-005 Checkout Intent", "DSH-006 Order Tracking"]
+  },
+  "dsh_frontend_app_partner": {
+    "status": "NOT_STARTED",
+    "current_state": "STUB — placeholder 'Coming Soon' screen only",
+    "slices_pending": ["DSH-003 Catalog Management", "DSH-006 Partner Orders", "DSH-008 Partner Readiness"]
+  },
+  "dsh_frontend_app_captain": {
+    "status": "NOT_STARTED",
+    "current_state": "STUB — placeholder 'Coming Soon' screen only",
+    "slices_pending": ["DSH-007 Captain Assignment", "DSH-007 Delivery Lifecycle"]
+  },
+  "dsh_frontend_app_field": {
+    "status": "NOT_STARTED",
+    "current_state": "STUB — placeholder 'Coming Soon' screen only",
+    "slices_pending": ["DSH-008 Field Readiness", "DSH-008 Store Onboarding"]
+  },
+  "dsh_frontend_control_panel": {
+    "status": "NOT_STARTED",
+    "current_state": "EMPTY — only .gitkeep and .next artifacts, no src/ screens",
+    "slices_pending": ["DSH-001 Stores Admin", "DSH-002 Home Discovery Admin", "DSH-003 Catalog Admin", "DSH-006 Orders Admin", "DSH-007 Operations Room", "DSH-008 Field Admin", "DSH-009 Support Room", "DSH-010 Finance Visibility"],
+    "blocker": "control-panel/runtime/src/ is effectively empty. Requires Next.js page structure and DSH API integration.",
+    "note": "Highest priority after app-client — control-panel closes the full-stack loop for every DSH slice."
+  },
+  "dsh_tests": {
+    "status": "RUNTIME_VERIFIED",
+    "ts_test_files": 5,
+    "go_test_files": 2,
+    "total_test_files": 7,
+    "types": ["unit", "integration", "policy", "view-model", "state-machine"],
+    "placeholder_tests": 0,
+    "notes": "All tests are real. Coverage for DSH-001 and DSH-002 only."
+  },
+  "wlt_boundary": {
+    "status": "RUNTIME_VERIFIED",
+    "implementation_state": "CONTRACT_ONLY",
+    "contract_file": "services/wlt/contracts/wlt.openapi.yaml",
+    "contract_state": "CONTRACT_DRAFT",
+    "backend": "NOT_IMPLEMENTED",
+    "database": "NOT_IMPLEMENTED",
+    "frontend": "NOT_IMPLEMENTED",
+    "financial_mutations_in_dsh": false,
+    "guard_active": "tools/guards/no-financial-mutation-outside-wlt.mjs",
+    "dsh_allowed_wlt_fields": ["paymentSessionId", "paymentStatus", "financialReference", "settlementStatus"],
+    "activation_condition": "WLT-FOUNDATION slice gates PASS + WLT implementation slice approved",
+    "notes": "WLT boundary is policy-enforced. No WLT runtime until activation condition met."
+  },
+  "docker_runtime": {
+    "status": "RUNTIME_VERIFIED",
+    "compose_file": "infra/docker/compose.runtime.yml",
+    "services_running": ["postgres:55432", "dsh-api:58080", "minio:59000"],
+    "old_ports_used": false,
+    "notes": "All canonical ports. Single compose file policy enforced."
+  },
+  "visual_evidence": {
+    "status": "PARTIAL",
+    "dsh_001": "PRESENT — services/dsh/evidence/DSH-001-store-discovery/screenshot",
+    "dsh_002": "PRESENT — services/dsh/evidence/DSH-002-client-home-discovery/screenshot",
+    "dsh_003_to_010": "NOT_STARTED",
+    "notes": "Screenshots required per slice per surface."
+  },
+  "final_closure": {
+    "status": "IN_PROGRESS",
+    "slices_verified": 2,
+    "slices_remaining": 8,
+    "surfaces_with_full_implementation": ["app-client (DSH-001, DSH-002)"],
+    "surfaces_pending": ["app-partner", "app-captain", "app-field", "control-panel"],
+    "blocking_items": [
+      "control-panel/runtime/src/ is empty — needs full DSH integration",
+      "app-partner is stub — needs DSH-003, DSH-006, DSH-008",
+      "app-captain is stub — needs DSH-007",
+      "app-field is stub — needs DSH-008",
+      "DSH-003 through DSH-010 contracts not yet defined",
+      "WLT runtime not activated"
+    ],
+    "next_action": "Approve DSH-003 Catalog slice and implement control-panel DSH-001/DSH-002 screens first"
+  }
+}

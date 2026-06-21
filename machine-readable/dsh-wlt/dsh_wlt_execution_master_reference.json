@@ -1,0 +1,529 @@
+{
+  "metadata": {
+    "file_id": "dsh_wlt_execution_master_reference",
+    "version": "1.0.0",
+    "created": "2026-06-21",
+    "description": "المرجع الأعلى لتنفيذ DSH/WLT slices. يجمع ويصنّف كل مدخلات التحليل. لا يجوز بدء تنفيذ أي شريحة قبل وجود هذا الملف صالحًا.",
+    "target_repo": "C:\\bthwani-suite-next",
+    "donor_repo": "C:\\bthwani-suite",
+    "target_branch": "starting-implementing-slices",
+    "target_head": "a55dd95",
+    "donor_branch": "realtest",
+    "donor_head": "e5080831",
+    "no_implementation_in_this_file": true,
+    "authority_hierarchy": [
+      "dsh_wlt_execution_master_reference.json (THIS FILE) — source of truth",
+      "dsh_wlt_slice_master_matrix.json — per-slice detail",
+      "dsh_wlt_master_plan.md — human-readable plan",
+      "dsh_wlt_gates.json — gate definitions",
+      "dsh_wlt_status.json — current state",
+      "dsh_wlt_runtime_ports.json — port registry",
+      "dsh_wlt_docker_runtime.json — docker config"
+    ]
+  },
+
+  "scope": {
+    "in_scope": ["dsh", "wlt"],
+    "out_of_scope_now": ["knz", "arb", "amn", "esf", "mrf", "snd", "kwd"],
+    "webapp_website_rule": "Only if directly required to close a DSH slice — otherwise excluded",
+    "general_cleanups_excluded": true,
+    "description": "DSH is the primary implementation target. WLT is a financial boundary dependency."
+  },
+
+  "source_files": {
+    "description": "Input files that informed this master reference. Do not implement from these directly — consult this file.",
+    "machine_readable_inputs": {
+      "slice_execution_master_matrix_v3": "machine-readable/slice_execution_master_matrix_v3.csv",
+      "slice_execution_master_matrix": "machine-readable/slice_execution_master_matrix.csv",
+      "dsh_wlt_logic_coverage_matrix": "machine-readable/dsh_wlt_logic_coverage_matrix.csv",
+      "extraction_matrix": "machine-readable/extraction_matrix.csv",
+      "mobile_ux_journey_matrix": "machine-readable/mobile_ux_journey_matrix.csv",
+      "screen_state_coverage_matrix": "machine-readable/screen_state_coverage_matrix.csv",
+      "control_panel_coverage_matrix": "machine-readable/control_panel_coverage_matrix.csv",
+      "donor_control_panel_alias_matrix": "machine-readable/donor_control_panel_alias_matrix.csv"
+    },
+    "dsh_wlt_specific": {
+      "slice_master_matrix": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json",
+      "master_plan": "machine-readable/dsh-wlt/dsh_wlt_master_plan.md",
+      "gates": "machine-readable/dsh-wlt/dsh_wlt_gates.json",
+      "status": "machine-readable/dsh-wlt/dsh_wlt_status.json",
+      "runtime_ports": "machine-readable/dsh-wlt/dsh_wlt_runtime_ports.json",
+      "docker_runtime": "machine-readable/dsh-wlt/dsh_wlt_docker_runtime.json",
+      "extraction_matrix_dsh": "machine-readable/dsh-wlt/dsh_wlt_extraction_matrix.csv",
+      "slice_execution_csv": "machine-readable/dsh-wlt/dsh_wlt_slice_execution_matrix.csv"
+    },
+    "plan_files": {
+      "master_plan_doc": "tools/plan/BTHWANI_NEXT_MASTER_EXECUTION_PLAN_20260618.md",
+      "phase_10_11_command": "tools/plan/BTHWANI_PHASE_10_11_DSH_WLT_MASTER_COMMAND.md",
+      "dsh001_execution_command": "tools/plan/claude_code_dsh001_store_discovery_execution_command.md"
+    }
+  },
+
+  "donor_inputs": {
+    "summary": "Donor analysis completed 2026-06-21. Key findings below.",
+    "donor_git": {
+      "branch": "realtest",
+      "head": "e5080831",
+      "last_commit": "Remove fake runtime actor id fallbacks",
+      "dirty_files": ["control-panel/runtime/next-env.d.ts"]
+    },
+    "donor_structure": {
+      "dsh": {
+        "backend": "dsh/backend/ — Go service with handlers, postgres repos, migrations (32 total), seeds",
+        "domain": "dsh/domain/ — clean Go types",
+        "frontend": "dsh/frontend/ — screens per surface + shared boundary modules"
+      },
+      "wlt": {
+        "backend": "wlt/backend/ — Go service with handlers, postgres repos, migrations (7 total)",
+        "domain": "wlt/domain/ — clean Go types",
+        "frontend": "wlt/frontend/ — WLT bridge components per DSH surface"
+      },
+      "ui_kit": "ui-kit/ — single design system, clean, no local bypasses found"
+    },
+    "donor_risk_flags": {
+      "cors_wildcard": {
+        "status": "CONFIRMED — REQUIRES_NORMALIZATION",
+        "detail": "14 DSH handler files + WLT main.go use Access-Control-Allow-Origin: *",
+        "action": "Replace with explicit origin list before adopting"
+      },
+      "old_ports_as_host": {
+        "status": "PARTIAL — docker host ports differ but internal ports conflict",
+        "detail": "DSH internal: 8080, WLT internal: 8083. Host ports: 18082/18083 (not target spec). wlt-dsh-client.ts hardcodes http://localhost:8083",
+        "action": "Remap to 58080 (DSH) and new WLT port. Fix hardcoded URL in wlt-dsh-client.ts"
+      },
+      "memory_repositories": {
+        "status": "CONFIRMED — DEV_ONLY but active fallback",
+        "detail": "DSH memory repo: NOT thread-safe. WLT memory repo: thread-safe (RWMutex) but uses math/rand. Both activate when DATABASE_URL absent.",
+        "action": "REJECT_RUNTIME_RISK — ensure DATABASE_URL always set. Never deploy without it."
+      },
+      "fake_actor_ids": {
+        "status": "CLEAN — removed in HEAD commit",
+        "detail": "HEAD commit: 'Remove fake runtime actor id fallbacks'. Zero fake IDs found.",
+        "action": "NONE"
+      },
+      "financial_mutations_in_dsh": {
+        "status": "CLEAN — boundary is respected",
+        "detail": "DSH stores only bridge reference IDs (wlt_payment_ref_id, wlt_refund_ref_id). Migration 025 explicitly dropped refund_amount and settlement_amount columns. dsh-wlt-boundary.ts declares mutation: forbidden.",
+        "action": "ADOPT — boundary is clean"
+      },
+      "direct_fetch_in_screens": {
+        "status": "CLEAN",
+        "detail": "No fetch() in screen files. All API calls through typed clients.",
+        "action": "NONE"
+      },
+      "tamagui_outside_ui_kit": {
+        "status": "CLEAN",
+        "detail": "No direct Tamagui imports in DSH/WLT frontend. All go through @bthwani/ui-kit.",
+        "action": "NONE"
+      },
+      "mock_demo_data": {
+        "status": "ISOLATED — DEV_ALLOWED items only",
+        "detail": "Runtime violations marked RUNTIME_VIOLATION_FIXED (deleted 2026-06-12/13). dev-fixtures-isolation-guard.ts enforces remaining DEV_ALLOWED items.",
+        "action": "Monitor — do not lift DEV_ALLOWED items to production"
+      },
+      "http_timeouts": {
+        "status": "CLEAN",
+        "detail": "DSH auth middleware: 5s timeout. WLT: 5s auth + 10s payment/refund handlers.",
+        "action": "NONE"
+      }
+    },
+    "normalization_required_before_adoption": [
+      "Replace CORS wildcard in all 14 DSH handlers and WLT main.go",
+      "Remap Docker ports: DSH internal 8080 → host 58080; WLT internal 8083 → new WLT port",
+      "Fix wlt/frontend/dsh/contracts/wlt-dsh-client.ts: remove hardcoded http://localhost:8083",
+      "Remove captain finance screen Arabic 'preview فقط' label (DshCaptainFinanceScreen.tsx)",
+      "Auth service in dsh/backend/cmd/auth-service/ — reference only, belongs in core/identity"
+    ]
+  },
+
+  "ports": {
+    "canonical": {
+      "DSH_API": 58080,
+      "POSTGRES": 55432,
+      "MINIO_API": 59000,
+      "MINIO_CONSOLE": 59001,
+      "APP_CLIENT": 18101,
+      "APP_PARTNER": 18102,
+      "APP_CAPTAIN": 18103,
+      "APP_FIELD": 18104,
+      "CONTROL_PANEL": 13000
+    },
+    "forbidden": [8080, 8081, 8082, 8083, 8084, 3000],
+    "exception": "Port 8080 as container_port inside compose.runtime.yml only, mapped to host 58080. Never as host port.",
+    "adb_reverse": "& $Adb reverse tcp:58080 tcp:58080",
+    "env_vars": {
+      "mobile": "EXPO_PUBLIC_DSH_API_BASE_URL=http://127.0.0.1:58080",
+      "web": "NEXT_PUBLIC_DSH_API_BASE_URL=http://localhost:58080"
+    }
+  },
+
+  "services": {
+    "dsh": {
+      "role": "ACTIVE_IMPLEMENTATION_TARGET",
+      "runtime_state": "PARTIALLY_RUNTIME_VERIFIED",
+      "slices_done": ["DSH-001 (app-client)", "DSH-002 (app-client)"],
+      "slices_pending": ["DSH-001 control-panel", "DSH-002 control-panel", "DSH-003", "DSH-004", "DSH-005", "DSH-006", "DSH-007", "DSH-008", "DSH-009", "DSH-010"],
+      "backend_language": "Go",
+      "backend_path": "services/dsh/backend/",
+      "contract_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "contract_version": "0.3.0",
+      "migrations_applied": 2,
+      "migrations_needed": 8
+    },
+    "wlt": {
+      "role": "FINANCIAL_BOUNDARY_OWNER",
+      "runtime_state": "CONTRACT_ONLY",
+      "backend_state": "NOT_IMPLEMENTED",
+      "activation_condition": "WLT-FOUNDATION slice gates PASS + WLT implementation slice approved",
+      "contract_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "contract_state": "CONTRACT_DRAFT",
+      "dsh_may_read_only": ["paymentSessionId", "paymentStatus", "financialReference", "settlementStatus"],
+      "wlt_owns_exclusively": ["wallet", "payment", "refund", "settlement", "payout", "commission", "COD", "ledger", "reconciliation", "financial_audit"]
+    }
+  },
+
+  "surfaces": {
+    "app_client": {
+      "port": 18101,
+      "role": "Customer mobile app",
+      "dsh_slices": ["DSH-001", "DSH-002", "DSH-003 (catalog browse)", "DSH-004 (cart)", "DSH-005 (checkout)", "DSH-006 (order tracking)", "DSH-007 (delivery tracking)", "DSH-009 (support optional)"],
+      "current_state": "DSH-001 + DSH-002 RUNTIME_VERIFIED",
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-client/runtime exec expo start --dev-client --host localhost --port 18101 --android --clear"
+    },
+    "app_partner": {
+      "port": 18102,
+      "role": "Partner/merchant mobile app",
+      "dsh_slices": ["DSH-003 (catalog management)", "DSH-006 (partner orders)", "DSH-008 (partner readiness)", "DSH-010 (earnings read-only)"],
+      "current_state": "STUB — placeholder only",
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-partner/runtime exec expo start --dev-client --host localhost --port 18102 --android --clear"
+    },
+    "app_captain": {
+      "port": 18103,
+      "role": "Delivery captain mobile app",
+      "dsh_slices": ["DSH-007 (assignment + delivery lifecycle)"],
+      "current_state": "STUB — placeholder only",
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-captain/runtime exec expo start --dev-client --host localhost --port 18103 --android --clear"
+    },
+    "app_field": {
+      "port": 18104,
+      "role": "Field agent mobile app",
+      "dsh_slices": ["DSH-008 (field readiness + store onboarding)"],
+      "current_state": "STUB — placeholder only",
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-field/runtime exec expo start --dev-client --host localhost --port 18104 --android --clear"
+    },
+    "control_panel": {
+      "port": 13000,
+      "role": "Operations + management web dashboard",
+      "dsh_slices": ["DSH-001 (stores admin)", "DSH-002 (home discovery admin)", "DSH-003 (catalog admin)", "DSH-004 (cart debug)", "DSH-005 (checkout monitor)", "DSH-006 (orders admin)", "DSH-007 (operations room)", "DSH-008 (field admin)", "DSH-009 (support room)", "DSH-010 (finance visibility)"],
+      "current_state": "EMPTY — src/ is empty, only .gitkeep and .next artifacts",
+      "priority": "HIGHEST — control-panel closes the full-stack loop for every DSH slice",
+      "start_command": "$env:NEXT_PUBLIC_DSH_API_BASE_URL='http://localhost:58080'; pnpm --dir apps/control-panel/runtime dev --port 13000"
+    }
+  },
+
+  "dsh_wlt_boundary": {
+    "principle": "WLT is the sole owner of financial truth. DSH is the operational layer.",
+    "dsh_owns": [
+      "stores", "catalog", "categories", "products", "media_references",
+      "cart", "serviceability", "checkout_intent_shell", "orders",
+      "delivery_lifecycle", "partner_readiness", "captain_execution",
+      "field_readiness_onboarding", "support_operations_visibility"
+    ],
+    "wlt_owns_exclusively": [
+      "wallet", "payment", "refund", "settlement", "payout",
+      "commission", "COD", "ledger", "reconciliation", "financial_audit"
+    ],
+    "dsh_allowed_to_store_or_display": [
+      "paymentSessionId",
+      "paymentStatus",
+      "financialReference",
+      "settlementStatus (read-only label only)"
+    ],
+    "dsh_forbidden": [
+      "Computing payment amounts",
+      "Creating ledger entries",
+      "Triggering payouts",
+      "Calculating commission",
+      "Handling COD collection",
+      "Running reconciliation",
+      "Any financial mutation outside services/wlt/"
+    ],
+    "guard": "tools/guards/no-financial-mutation-outside-wlt.mjs",
+    "guard_command": "pnpm run guard:no-financial-mutation-outside-wlt",
+    "guard_status": "ACTIVE — 0 violations confirmed"
+  },
+
+  "slice_order": [
+    "DSH-000",
+    "DSH-001",
+    "DSH-002",
+    "DSH-003",
+    "DSH-004",
+    "DSH-005",
+    "DSH-006",
+    "DSH-007",
+    "DSH-008",
+    "DSH-009",
+    "DSH-010"
+  ],
+
+  "slices": {
+    "DSH-000": { "name": "PRE-DSH FOUNDATION GATE", "status": "RUNTIME_VERIFIED", "priority": "PREREQ" },
+    "DSH-001": {
+      "name": "Store Discovery + Store Detail",
+      "status": "PARTIAL",
+      "app_client": "RUNTIME_VERIFIED",
+      "control_panel": "NOT_STARTED",
+      "priority": "HIGH — control-panel surface needed to close this slice",
+      "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-001"
+    },
+    "DSH-002": {
+      "name": "Home Discovery",
+      "status": "PARTIAL",
+      "app_client": "RUNTIME_VERIFIED",
+      "control_panel": "NOT_STARTED",
+      "priority": "HIGH — control-panel surface needed",
+      "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-002"
+    },
+    "DSH-003": { "name": "Catalog", "status": "NOT_STARTED", "surfaces": ["app-client", "app-partner", "control-panel"], "priority": "HIGH — enables cart and orders", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-003" },
+    "DSH-004": { "name": "Cart + Serviceability", "status": "NOT_STARTED", "surfaces": ["app-client", "control-panel"], "blocking": "DSH-003", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-004" },
+    "DSH-005": { "name": "Checkout Intent + WLT Boundary", "status": "NOT_STARTED", "surfaces": ["app-client", "control-panel"], "blocking": "DSH-004 + WLT payment-sessions endpoint", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-005" },
+    "DSH-006": { "name": "Order Creation + Partner Acceptance", "status": "NOT_STARTED", "surfaces": ["app-client", "app-partner", "control-panel"], "blocking": "DSH-005", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-006" },
+    "DSH-007": { "name": "Captain Assignment + Delivery Lifecycle", "status": "NOT_STARTED", "surfaces": ["app-captain", "app-client", "control-panel"], "blocking": "DSH-006", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-007" },
+    "DSH-008": { "name": "Field Readiness + Store Onboarding", "status": "NOT_STARTED", "surfaces": ["app-field", "control-panel", "app-partner"], "blocking": "DSH-001", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-008" },
+    "DSH-009": { "name": "Support + Operations Room", "status": "NOT_STARTED", "surfaces": ["control-panel", "app-client", "app-partner", "app-captain"], "blocking": "DSH-006", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-009" },
+    "DSH-010": { "name": "Finance Visibility", "status": "NOT_STARTED", "surfaces": ["control-panel", "app-partner"], "blocking": "DSH-009 + WLT settlement-summary endpoint", "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-010" }
+  },
+
+  "control_panel_requirements": {
+    "source_matrix": "machine-readable/control_panel_coverage_matrix.csv",
+    "source_donor_alias": "machine-readable/donor_control_panel_alias_matrix.csv",
+    "priority": "CRITICAL — empty in target. Must be built alongside each DSH slice.",
+    "framework": "Next.js 15 (App Router)",
+    "port": 13000,
+    "api_base_url_env": "NEXT_PUBLIC_DSH_API_BASE_URL",
+    "required_sections_by_slice": {
+      "DSH-001": ["stores/list", "stores/detail"],
+      "DSH-002": ["home-discovery/banners", "home-discovery/promos", "home-discovery/categories"],
+      "DSH-003": ["catalog/categories", "catalog/products", "catalog/product-detail"],
+      "DSH-004": ["cart/debug-view"],
+      "DSH-005": ["checkout/monitor"],
+      "DSH-006": ["orders/list", "orders/detail", "partners/order-queue"],
+      "DSH-007": ["operations/live-orders", "operations/dispatch", "orders/tracking"],
+      "DSH-008": ["field/stores", "field/onboarding-queue", "field/inspection-review"],
+      "DSH-009": ["support/queue", "support/case-detail", "operations/interventions", "audit/log"],
+      "DSH-010": ["finance/payment-status", "finance/settlement-summary"]
+    },
+    "page_types": ["list", "detail", "review", "monitor", "workspace"],
+    "state_requirements": ["loading", "empty", "error", "permission", "success", "blocked", "retry"],
+    "filters_required": "status, date, owner, search, cursor + section-specific filters",
+    "audit_required": true,
+    "rtl_required": true,
+    "donor_alias_mapping": "See donor_control_panel_alias_matrix.csv for donor screen → target screen mapping"
+  },
+
+  "mobile_ux_requirements": {
+    "source_matrix": "machine-readable/mobile_ux_journey_matrix.csv",
+    "journey_pattern": "canonical navigation → loading/permission gate → authoritative data → primary action → success/empty/blocked/retry state",
+    "required_states_per_screen": ["loading", "empty", "error", "permission", "offline", "retry", "success", "blocked"],
+    "offline_rule": "bounded retry with no fabricated live data or duplicate write",
+    "rtl_required": true,
+    "small_screen_required": true,
+    "evidence_required": "route, permission, all declared states, RTL screenshot, small-screen screenshot",
+    "key_journeys": {
+      "JRN-001": "app-client: Store Discovery → browse stores → DSH-001",
+      "JRN-002": "app-client: Store Detail → select store → DSH-001",
+      "JRN-003": "app-client: Storefront Catalog → browse products → DSH-003",
+      "JRN-004": "app-client: Product Details → add to cart → DSH-003/DSH-004",
+      "partner_journeys": "app-partner: catalog management, order queue, readiness — DSH-003, DSH-006, DSH-008",
+      "captain_journeys": "app-captain: order assignment, pickup, delivery — DSH-007",
+      "field_journeys": "app-field: store onboarding, readiness, documents — DSH-008"
+    }
+  },
+
+  "screen_state_requirements": {
+    "source_matrix": "machine-readable/screen_state_coverage_matrix.csv",
+    "mandatory_states": ["loading", "empty", "error", "permission", "offline", "retry", "success", "blocked"],
+    "loading_rule": "preserves table or workspace geometry while loading authorized data",
+    "empty_rule": "explains zero-result condition and offers only valid filter reset or owning workflow action",
+    "error_rule": "distinguishes validation, dependency, authorization, and server failures — displays correlation reference",
+    "permission_rule": "hides sensitive fields and actions — does not reveal whether an inaccessible object exists",
+    "offline_rule": "shows unavailable or explicitly stale read state — never substitutes donor or preview data",
+    "retry_rule": "retries bounded reads — writes require confirmation, retained idempotency key, and stale-version protection",
+    "success_rule": "renders the authoritative service read model and audited outcome",
+    "blocked_rule": "names the missing contract, permission, dependency, or business rule without claiming completion"
+  },
+
+  "logic_coverage_requirements": {
+    "source_matrix": "machine-readable/dsh_wlt_logic_coverage_matrix.csv",
+    "key_rules": {
+      "store_visibility": "expose only stores passing active, publication, visibility, and serviceability policy",
+      "financial_isolation": "DSH may retain opaque financial references and read-only statuses only — mutation forbidden",
+      "idempotency": "writes require idempotency key — see per-operation requirement in logic matrix",
+      "auth_per_operation": "authenticated client + role + function permission + tenant + store + assignment + object ownership",
+      "error_taxonomy": "invalid filter, not found, hidden by policy, unavailable zone, identity dependency unavailable, repo timeout",
+      "negative_cases": "cross-tenant ID, non-owner object, wrong role, unassigned actor, duplicate request, replayed event, malformed ID, oversized payload",
+      "performance": "cursor or bounded offset pagination, indexed filters, deterministic ordering, max page size 100, p95 latency evidence",
+      "observability": "structured outcome log, trace span, latency/error/retry metrics, correlationId, actor scope, aggregate ID — no secrets"
+    }
+  },
+
+  "extraction_decisions": {
+    "description": "Classified donor items. Full detail in dsh_wlt_extraction_matrix.csv",
+    "summary": {
+      "ADOPT_AS_IS": {
+        "count": 28,
+        "examples": [
+          "dsh/backend/internal/store/postgres_*.go (8 files) — production repos",
+          "dsh/backend/migrations/001-032 — 32 migrations, finance boundary clean",
+          "dsh/domain/*.go — clean domain types",
+          "dsh/frontend/app-client/screens/ — clean screens, typed clients",
+          "dsh/frontend/app-partner/screens/ — clean, runtime violations fixed",
+          "dsh/frontend/app-captain/screens/ (except FinanceScreen label)",
+          "dsh/frontend/app-field/screens/ — clean",
+          "dsh/frontend/shared/finance-boundary/ — boundary explicitly enforced",
+          "wlt/backend/internal/store/postgres_repository.go — production repo",
+          "wlt/backend/migrations/001-007 — 7 clean migrations",
+          "wlt/domain/wallet.go — clean domain types",
+          "wlt/frontend/dsh/ (all bridge components) — clean typed clients",
+          "ui-kit/ — single design system, no bypasses"
+        ]
+      },
+      "ADAPT_NORMALIZE": {
+        "count": 18,
+        "examples": [
+          "dsh/backend/internal/http/*.go (14 handler files) — correct logic, CORS wildcard",
+          "dsh/backend/docker-compose.local.yml — port remapping needed",
+          "wlt/backend/cmd/wlt-api/main.go — CORS wildcard at server level",
+          "wlt/frontend/dsh/contracts/wlt-dsh-client.ts — hardcoded port 8083",
+          "dsh/frontend/app-captain/DshCaptainFinanceScreen.tsx — preview label"
+        ],
+        "critical_normalizations": [
+          "CORS: Replace Access-Control-Allow-Origin: * with explicit origins in all 14 DSH handlers",
+          "CORS: Fix WLT main.go corsHandler wildcard",
+          "PORTS: Remap all Docker compose internal ports to target spec",
+          "URL: Fix wlt-dsh-client.ts hardcoded http://localhost:8083"
+        ]
+      },
+      "REJECT_RUNTIME_RISK": {
+        "count": 3,
+        "items": [
+          "dsh/backend/internal/store/memory_repository.go — NOT thread-safe, dev only",
+          "dsh/backend/internal/store/memory_checkout_repository.go — dev only",
+          "wlt/backend/internal/store/memory_repository.go — dev only (thread-safe but rand-seeded)"
+        ],
+        "rule": "NEVER deploy without DATABASE_URL set to Postgres. Memory repos are dev fallbacks only."
+      },
+      "REJECT_FINANCE_BOUNDARY_VIOLATION": {
+        "count": 0,
+        "note": "Donor financial boundary is clean. Migration 025 removed financial amount columns from DSH. dsh-wlt-boundary.ts enforces mutation: forbidden."
+      },
+      "REFERENCE_ONLY": {
+        "count": 8,
+        "examples": [
+          "dsh/backend/cmd/auth-service/ — belongs in core/identity",
+          "dsh/backend/seed/003_*.sql, 004_*.sql — dev only seeds",
+          "dsh/frontend/control-panel/catalogs/ — DEV_ALLOWED fixture",
+          "wlt/backend/.data/wlt_dsh.db — SQLite dev artifact (REJECT_NOISE)",
+          "wlt/frontend/dsh/app-field/WltDshFieldBridge.tsx — WLT reference",
+          "donor checkout screens — visual reference for DSH-005 only"
+        ]
+      }
+    }
+  },
+
+  "gates": {
+    "pre_slice_gates": [
+      "FOUNDATION_GATE — pnpm run foundation:gate",
+      "CONTRACTS_LINT_GATE — pnpm contracts:lint",
+      "GUARD_MATRIX_V3 — pnpm run guard:matrix:v3",
+      "WLT_BOUNDARY_GATE — pnpm run guard:no-financial-mutation-outside-wlt",
+      "NO_OLD_PORTS_GATE — no ports 8080-8084/3000 as host ports",
+      "NO_MOCK_DEMO_GATE — pnpm run guard:no-preview-demo-mock-runtime"
+    ],
+    "per_slice_gates": [
+      "DOCKER_RUNTIME_GATE — pnpm runtime:all && pnpm runtime:status",
+      "DSH_API_GATE — Invoke-RestMethod http://localhost:58080/dsh/health",
+      "DSH_SLICE_GATE — pnpm run slice:gate",
+      "UI_KIT_GATE — pnpm run guard:no-direct-fetch-in-screen",
+      "VISUAL_EVIDENCE_GATE — screenshots saved in services/dsh/evidence/{SLICE_ID}/"
+    ],
+    "gate_detail_file": "machine-readable/dsh-wlt/dsh_wlt_gates.json",
+    "current_gate_status": {
+      "FOUNDATION_GATE": "PASS",
+      "CONTRACTS_LINT_GATE": "PASS",
+      "GUARD_MATRIX_V3": "PASS",
+      "WLT_BOUNDARY_GATE": "PASS",
+      "NO_OLD_PORTS_GATE": "PASS",
+      "NO_MOCK_DEMO_GATE": "PASS",
+      "DOCKER_RUNTIME_GATE": "PASS",
+      "DSH_API_GATE": "PASS",
+      "DSH_SLICE_GATE": "PARTIAL — DSH-001 + DSH-002 app-client only",
+      "UI_KIT_GATE": "PASS",
+      "VISUAL_EVIDENCE_GATE": "PARTIAL — DSH-001 + DSH-002 screenshots only"
+    }
+  },
+
+  "runtime_evidence_required": {
+    "per_slice": {
+      "backend": "go test ./... PASS",
+      "api_smoke": "Invoke-RestMethod returns HTTP 200 with real data",
+      "migration": "psql migration applied successfully",
+      "seed": "local seed data inserted",
+      "docker": "pnpm runtime:status shows all services UP"
+    },
+    "evidence_storage_path": "services/dsh/evidence/{SLICE_ID}/",
+    "required_files_per_slice": [
+      "foundation-gate.txt",
+      "slice-gate.txt",
+      "guard-matrix-v3.txt",
+      "dsh-test.txt",
+      "go-test.txt",
+      "runtime-all.txt",
+      "runtime-smoke.txt",
+      "runtime-status.txt",
+      "contracts-lint.txt",
+      "api-*.json",
+      "docker-*.txt",
+      "git-status.txt",
+      "screenshot (at least one per affected surface)"
+    ]
+  },
+
+  "visual_evidence_required": {
+    "per_surface_per_slice": true,
+    "required_states": ["loading", "success with real data", "empty state", "error state"],
+    "rtl_screenshot_required": true,
+    "storage": "services/dsh/evidence/{SLICE_ID}/screenshots/",
+    "current": {
+      "DSH-001-store-discovery": "PRESENT",
+      "DSH-002-client-home-discovery": "PRESENT",
+      "control-panel-any-slice": "NOT_STARTED"
+    }
+  },
+
+  "blocking_rules": {
+    "no_slice_start_without_pre_gates": "All pre_slice_gates must PASS before any implementation begins",
+    "no_closed_without_evidence": "No slice may be declared CLOSED/RUNTIME_VERIFIED without live runtime evidence",
+    "no_wlt_activation_without_slice": "WLT must not activate until WLT-FOUNDATION slice gates PASS",
+    "no_financial_mutation_in_dsh": "guard:no-financial-mutation-outside-wlt must return 0 violations at all times",
+    "no_old_ports": "Host ports 8080-8084/3000 are forbidden. Exception: container port 8080 mapped to host 58080.",
+    "no_memory_repo_in_production": "DATABASE_URL must always be set. Memory repos are dev-only fallbacks.",
+    "no_direct_fetch_in_screens": "All API calls must go through typed clients generated from OpenAPI",
+    "no_tamagui_outside_ui_kit": "All UI components must use shared/ui-kit exports",
+    "no_cors_wildcard_non_local": "CORS wildcard * is forbidden in non-local deployments",
+    "control_panel_required_per_slice": "Every DSH slice must have a corresponding control-panel surface to close the full-stack loop"
+  },
+
+  "execution_rules": {
+    "sequence": "Follow slice_order strictly. DSH-001 control-panel before DSH-003.",
+    "next_immediate_action": "Implement DSH-001 + DSH-002 control-panel surfaces to close the full-stack loop",
+    "donor_adoption_rule": "For each donor file: check extraction_decisions in this file. If ADAPT_NORMALIZE, apply normalizations first. If REJECT_*, do not use.",
+    "contract_first": "Expand dsh.openapi.yaml before implementing any new DSH-003+ handlers",
+    "client_regenerate": "Regenerate typed client after every contract change before frontend work",
+    "evidence_before_next": "Complete all evidence for current slice before starting next slice",
+    "control_panel_always_paired": "Never close a DSH slice as complete unless control-panel surface is also done",
+    "wlt_placeholder_honesty": "WLT placeholder must not return fake PASS. It is CONTRACT_ONLY.",
+    "no_100_without_evidence": "NEVER declare DSH 100% or CLOSED without complete runtime + visual evidence for all slices and all surfaces"
+  }
+}
