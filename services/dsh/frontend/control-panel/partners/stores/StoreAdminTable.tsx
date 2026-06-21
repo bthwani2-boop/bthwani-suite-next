@@ -1,4 +1,4 @@
-import type { DshStoreAdminTableRow } from "../../../shared/store/store-admin.view-model";
+import type { DshStoreAdminTableRow } from "../../../shared/store";
 
 type Props = {
   readonly rows: readonly DshStoreAdminTableRow[];

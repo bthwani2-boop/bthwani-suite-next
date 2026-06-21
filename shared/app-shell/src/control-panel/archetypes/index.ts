@@ -8,3 +8,4 @@ export * from "./ReviewPageFrame";
 export * from "./MetricsPageFrame";
 export * from "./SettingsPageFrame";
 export * from "./FinanceReadOnlyFrame";
+export * from "./PaginationToolbar";

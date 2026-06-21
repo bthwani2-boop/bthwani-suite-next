@@ -1,4 +1,4 @@
-import type { DshStoreAdminKpiSummary } from "../../../shared/store/store-admin.view-model";
+import type { DshStoreAdminKpiSummary } from "../../../shared/store";
 
 type Props = { readonly kpi: DshStoreAdminKpiSummary };
 

@@ -11,7 +11,7 @@ import { StoreDiscoveryList } from "./StoreDiscoveryList";
 import {
   useStoreDiscoveryController,
   type DiscoveryFilter,
-} from "../../shared/store/use-store-discovery-controller";
+} from "../../shared/store";
 
 type Props = Readonly<{
   onStorePress?: (storeId: string) => void;

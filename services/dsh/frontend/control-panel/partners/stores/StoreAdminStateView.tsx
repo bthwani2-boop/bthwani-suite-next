@@ -1,4 +1,4 @@
-import type { DshStoreAdminListState } from "../../../shared/store/store-admin.view-model";
+import type { DshStoreAdminListState } from "../../../shared/store";
 
 type Props = {
   readonly state: DshStoreAdminListState;

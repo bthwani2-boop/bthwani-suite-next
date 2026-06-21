@@ -1,4 +1,4 @@
-import type { DshStoreAdminFilters } from "../../../shared/store/store-admin.view-model";
+import type { DshStoreAdminFilters } from "../../../shared/store";
 
 type Props = {
   readonly filters: DshStoreAdminFilters;

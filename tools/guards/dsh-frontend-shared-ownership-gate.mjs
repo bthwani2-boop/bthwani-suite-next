@@ -11,11 +11,16 @@
  *   2. Surface component files must not import directly from *.api.ts — use controllers.
  *   3. shared/ must not import from any surface folder.
  *   4. shared/ must not import from apps/ runtime route files.
+ *   5. No env var access (NEXT_PUBLIC_DSH_API_BASE_URL / EXPO_PUBLIC_DSH_API_BASE_URL) in surface files.
+ *   6. No Store type/interface definition in surface folders — types belong in shared.
+ *   7. No useEffect() in surface component files — data loading lives in shared controllers.
+ *   8. No old ports (8080,8081,8082,8083,8084,3000) hardcoded in any frontend file.
+ *   9. Warn for raw HTML interactive elements (<button>,<input>,<select>,<table>) in control-panel surface.
  */
 
-import { readFileSync, readdirSync } from "fs";
-import { join, relative } from "path";
-import { fileURLToPath } from "url";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(import.meta.url), "../../..");
 const FRONTEND = join(ROOT, "services/dsh/frontend");
@@ -31,6 +36,7 @@ const SURFACE_DIRS = [
 const SHARED_DIR = join(FRONTEND, "shared");
 
 let errors = 0;
+let warnings = 0;
 
 function walkFiles(dir, exts = [".ts", ".tsx"]) {
   const results = [];
@@ -56,6 +62,11 @@ function fail(filePath, message) {
   errors++;
 }
 
+function warn(filePath, message) {
+  console.warn(`  ⚠ ${relative(ROOT, filePath)}: ${message}`);
+  warnings++;
+}
+
 // ── Rule 1: No fetch() or axios in surface folders ─────────────────────────
 for (const surface of SURFACE_DIRS) {
   for (const file of walkFiles(join(FRONTEND, surface))) {
@@ -70,12 +81,10 @@ for (const surface of SURFACE_DIRS) {
 }
 
 // ── Rule 2: Surface component files must not import *.api directly ──────────
-// Exception: controller files in shared (they ARE allowed to import *.api)
 for (const surface of SURFACE_DIRS) {
   for (const file of walkFiles(join(FRONTEND, surface))) {
     if (file.endsWith("index.ts")) continue;
     const src = read(file);
-    // Matches: from "...something.api" or from "...something.api.ts"
     if (/from\s+["'][^"']*\.api["']/.test(src)) {
       fail(file, "imports *.api directly — surface screens must use controllers (use-*-controller)");
     }
@@ -83,7 +92,6 @@ for (const surface of SURFACE_DIRS) {
 }
 
 // ── Rule 3: shared/ must not import from surface folders ────────────────────
-// Check import/require statements only (not string literals in error messages)
 const IMPORT_RE = /^(?:import|export)\s.*from\s+["']([^"']+)["']/gm;
 
 for (const file of walkFiles(SHARED_DIR)) {
@@ -100,8 +108,76 @@ for (const file of walkFiles(SHARED_DIR)) {
   }
 }
 
+// ── Rule 4 (Rule 3 extends): already covers apps/ above ────────────────────
+
+// ── Rule 5: No DSH env var access in surface files ──────────────────────────
+const DSH_ENV_RE = /NEXT_PUBLIC_DSH_API_BASE_URL|EXPO_PUBLIC_DSH_API_BASE_URL/;
+for (const surface of SURFACE_DIRS) {
+  for (const file of walkFiles(join(FRONTEND, surface))) {
+    const src = read(file);
+    if (DSH_ENV_RE.test(src)) {
+      fail(file, "direct DSH env var access in surface — use resolveDshApiBaseUrl() from shared/_kernel");
+    }
+  }
+}
+
+// ── Rule 6: No Store domain type/interface definition in surface folders ─────
+// Catches: type StoreXxx = ..., interface StoreXxx { ... } where name starts with Store/store.
+// Excludes React component prop types (*Props, *Ref) which legitimately live in surfaces.
+const STORE_TYPE_RE = /^(?:export\s+)?(?:type|interface)\s+([Ss]tore\w*)\s*[={<]/gm;
+for (const surface of SURFACE_DIRS) {
+  for (const file of walkFiles(join(FRONTEND, surface))) {
+    const src = read(file);
+    for (const [, typeName] of src.matchAll(STORE_TYPE_RE)) {
+      if (typeName.endsWith("Props") || typeName.endsWith("Ref")) continue;
+      fail(file, `domain Store type '${typeName}' defined in surface — move to shared/store`);
+    }
+  }
+}
+
+// ── Rule 7: No useEffect() in surface component files ───────────────────────
+// Controllers (use-*) legitimately use useEffect — they live in shared, not surfaces.
+// Any useEffect in a surface file means data-loading logic leaked out of shared.
+for (const surface of SURFACE_DIRS) {
+  for (const file of walkFiles(join(FRONTEND, surface))) {
+    if (!file.endsWith(".tsx")) continue;
+    const src = read(file);
+    if (/\buseEffect\(/.test(src)) {
+      fail(file, "useEffect() in surface component — data loading must stay in shared controllers");
+    }
+  }
+}
+
+// ── Rule 8: No old ports hardcoded in any frontend file ─────────────────────
+const OLD_PORT_RE = /:(8080|8081|8082|8083|8084|3000)\b/;
+const ALL_FRONTEND_DIRS = [SHARED_DIR, ...SURFACE_DIRS.map((s) => join(FRONTEND, s))];
+for (const dir of ALL_FRONTEND_DIRS) {
+  for (const file of walkFiles(dir)) {
+    const src = read(file);
+    const match = OLD_PORT_RE.exec(src);
+    if (match) {
+      fail(file, `hardcoded old port :${match[1]} — DSH API canonical port is 58080`);
+    }
+  }
+}
+
+// ── Rule 9: Warn for raw HTML interactive elements in control-panel ──────────
+// These should use @bthwani/app-shell components (PaginationToolbar, etc.)
+const RAW_HTML_RE = /<(?:button|input|select|table)\b/;
+const CP_DIR = join(FRONTEND, "control-panel");
+for (const file of walkFiles(CP_DIR)) {
+  if (!file.endsWith(".tsx")) continue;
+  const src = read(file);
+  if (RAW_HTML_RE.test(src)) {
+    warn(file, "raw HTML interactive element in control-panel surface — prefer @bthwani/app-shell components");
+  }
+}
 
 // ── Result ───────────────────────────────────────────────────────────────────
+if (warnings > 0) {
+  console.warn(`\n  ${warnings} warning(s) — review raw HTML elements in control-panel`);
+}
+
 if (errors === 0) {
   console.log("\nDSH Frontend Shared Ownership Gate: PASS\n");
   process.exit(0);

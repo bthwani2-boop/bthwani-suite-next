@@ -1,7 +1,7 @@
 "use client";
 
-import { DataTablePageFrame } from "@bthwani/app-shell";
-import { useStoreAdminController } from "../../../shared/store/use-store-admin-controller";
+import { DataTablePageFrame, PaginationToolbar } from "@bthwani/app-shell";
+import { useStoreAdminController } from "../../../shared/store";
 import { StoreAdminKpiStrip } from "./StoreAdminKpiStrip";
 import { StoreAdminFilters } from "./StoreAdminFilters";
 import { StoreAdminTable } from "./StoreAdminTable";
@@ -24,7 +24,7 @@ export function StoreManagementScreen() {
       }
       filters={<StoreAdminFilters filters={c.filters} onChange={c.setFilters} />}
       toolbar={
-        <PaginationBar
+        <PaginationToolbar
           label={c.paginationLabel}
           hasPrev={c.hasPrevPage}
           hasNext={c.hasNextPage}
@@ -64,55 +64,5 @@ export function StoreManagementScreen() {
         )}
       </div>
     </DataTablePageFrame>
-  );
-}
-
-function PaginationBar({
-  label, hasPrev, hasNext, onPrev, onNext, onRetry,
-}: {
-  label: string;
-  hasPrev: boolean;
-  hasNext: boolean;
-  onPrev: () => void;
-  onNext: () => void;
-  onRetry: () => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0.375rem 1rem",
-        fontSize: "0.875rem",
-        opacity: 0.75,
-      }}
-    >
-      <span>{label}</span>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
-        {hasPrev && <PagBtn label="السابق" onClick={onPrev} />}
-        {hasNext && <PagBtn label="التالي" onClick={onNext} />}
-        <PagBtn label="تحديث" onClick={onRetry} />
-      </div>
-    </div>
-  );
-}
-
-function PagBtn({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        background: "none",
-        border: "1px solid currentColor",
-        borderRadius: "0.25rem",
-        padding: "0.25rem 0.75rem",
-        cursor: "pointer",
-        fontSize: "0.8rem",
-      }}
-    >
-      {label}
-    </button>
   );
 }
