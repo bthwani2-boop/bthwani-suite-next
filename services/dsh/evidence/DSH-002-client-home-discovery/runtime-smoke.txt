@@ -10,10 +10,11 @@ Waiting for DSH API (1/20)...
 DSH API: healthy
 
 --- DSH API smoke ---
-  /dsh/health: {"service":"dsh","status":"healthy","checkedAt":"2026-06-21T14:09:45.126195408Z"}
-  /dsh/readiness: {"service":"dsh","status":"ready","dependencies":{"postgres":"ready"},"checkedAt":"2026-06-21T14:09:45.248957642Z"}
+  /dsh/health: {"service":"dsh","status":"healthy","checkedAt":"2026-06-21T16:52:10.703172736Z"}
+  /dsh/readiness: {"service":"dsh","status":"ready","dependencies":{"postgres":"ready"},"checkedAt":"2026-06-21T16:52:10.7628771Z"}
   /dsh/stores: returned 6 stores
   /dsh/stores/store-1001: أسواق حدة المركزية
+  /dsh/home-discovery: banners=2 promos=2 categories=5 filters=5 stores=5
 DSH API smoke: PASS
 
 --- MinIO smoke ---

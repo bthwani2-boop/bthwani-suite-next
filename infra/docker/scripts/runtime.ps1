@@ -166,6 +166,21 @@ function Invoke-DshSmoke {
   Write-Host "  /dsh/stores/store-1001: $($store1.store.displayName)"
   if ($store1.store.id -ne "store-1001") { throw "/dsh/stores/store-1001 returned wrong id" }
 
+
+  # DSH-002: Home Discovery endpoint smoke
+  $homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery" -TimeoutSec 10 -ErrorAction Stop
+  $bannerCount    = if ($homeDisc.banners)    { $homeDisc.banners.Count }    else { 0 }
+  $promoCount     = if ($homeDisc.promos)     { $homeDisc.promos.Count }     else { 0 }
+  $categoryCount  = if ($homeDisc.categories) { $homeDisc.categories.Count } else { 0 }
+  $filterCount    = if ($homeDisc.filters)    { $homeDisc.filters.Count }    else { 0 }
+  $homeStoreCount = if ($homeDisc.stores)     { $homeDisc.stores.Count }     else { 0 }
+  Write-Host "  /dsh/home-discovery: banners=$bannerCount promos=$promoCount categories=$categoryCount filters=$filterCount stores=$homeStoreCount"
+  if ($bannerCount    -eq 0) { throw "/dsh/home-discovery: 0 banners" }
+  if ($promoCount     -eq 0) { throw "/dsh/home-discovery: 0 promos" }
+  if ($categoryCount  -eq 0) { throw "/dsh/home-discovery: 0 categories" }
+  if ($filterCount    -eq 0) { throw "/dsh/home-discovery: 0 filters" }
+  if ($homeStoreCount -eq 0) { throw "/dsh/home-discovery: 0 stores" }
+
   Write-Host "DSH API smoke: PASS"
 }
 

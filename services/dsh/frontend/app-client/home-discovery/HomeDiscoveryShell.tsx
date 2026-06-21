@@ -2,8 +2,8 @@ import React from 'react';
 import { I18nManager, ScrollView, StyleSheet, View } from 'react-native';
 import { colorRoles, spacing } from '@bthwani/ui-kit';
 import { Screen, LoadingState, EmptyState, ErrorState, OfflineState } from '@bthwani/ui-kit';
-import type { HomeDiscoveryState } from '../../shared/home-discovery';
-import type { DiscoveryFilterKind } from '../../shared/home-discovery';
+import type { HomeDiscoveryState, DiscoveryFilterKind } from '../../shared/home-discovery';
+import { applyDiscoveryFilter } from '../../shared/home-discovery';
 import { HomeHeroBannerSection } from './HomeHeroBannerSection';
 import { HomePromoSection } from './HomePromoSection';
 import { HomeFilterRailSection } from './HomeFilterRailSection';
@@ -79,21 +79,7 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
 
   const { banners, promos, filters, categories, stores } = state.data;
 
-  // Apply client-side filter
-  const filteredStores = (() => {
-    if (activeFilter === 'favorites') return [];
-    if (activeFilter === 'nearest') {
-      return [...stores].sort((a, b) => {
-        if (a.distanceDisplay == null) return 1;
-        if (b.distanceDisplay == null) return -1;
-        return 0;
-      });
-    }
-    if (activeFilter === 'offers') {
-      return stores.filter((s) => s.hasCouponBadge || s.isFreeDelivery);
-    }
-    return stores;
-  })();
+  const filteredStores = applyDiscoveryFilter(stores, activeFilter);
 
   return (
     <Screen padded={false}>

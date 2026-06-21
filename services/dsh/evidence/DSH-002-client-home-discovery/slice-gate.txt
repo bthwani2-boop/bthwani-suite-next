@@ -3,4 +3,4 @@
 > pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1
 
 RESULT: PASS
-Evidence: C:\bthwani-suite-next\tools\registry\runs\SLICE-GATE-20260621-170913
+Evidence: C:\bthwani-suite-next\tools\registry\runs\SLICE-GATE-20260621-195323
