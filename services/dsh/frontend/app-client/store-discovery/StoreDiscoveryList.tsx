@@ -4,8 +4,8 @@ import { LoadingState } from "@bthwani/ui-kit";
 import { StoreDiscoveryCard } from "./StoreDiscoveryCard";
 import { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState";
 import { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";
-import type { DshStoreListState } from "../../shared/store-discovery/store-discovery.states";
-import type { DshStoreCardViewModel } from "../../shared/store-discovery/store-discovery.view-model";
+import type { DshStoreListState } from "../../shared/store/store-discovery.states";
+import type { DshStoreCardViewModel } from "../../shared/store/store-discovery.view-model";
 
 export type DiscoveryFilter = "all" | "favorites" | "nearest";
 

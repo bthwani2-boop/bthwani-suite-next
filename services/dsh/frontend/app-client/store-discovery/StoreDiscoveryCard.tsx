@@ -1,6 +1,6 @@
 import React from "react";
 import { StoreCardPremium } from "./StoreCardPremium";
-import type { DshStoreCardViewModel } from "../../shared/store-discovery/store-discovery.view-model";
+import type { DshStoreCardViewModel } from "../../shared/store/store-discovery.view-model";
 
 type Props = {
   store: DshStoreCardViewModel;

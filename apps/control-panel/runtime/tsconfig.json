@@ -14,6 +14,12 @@
     "jsx": "react-jsx",
     "incremental": false,
     "types": ["node", "react", "react-dom"],
+    "paths": {
+      "@bthwani/app-shell": ["../../../shared/app-shell/src/index.ts"],
+      "@dsh-cp/*": ["../../../services/dsh/frontend/control-panel/*"],
+      "@dsh-shared/*": ["../../../services/dsh/frontend/shared/*"],
+      "@dsh-clients/*": ["../../../services/dsh/clients/*"]
+    },
     "plugins": [
       {
         "name": "next"

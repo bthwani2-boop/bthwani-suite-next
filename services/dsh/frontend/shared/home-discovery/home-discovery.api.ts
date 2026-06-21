@@ -1,9 +1,3 @@
-/**
- * DSH-002 Home Discovery — API Adapter
- * Reads EXPO_PUBLIC_DSH_API_BASE_URL from env.
- * DB-backed runtime data only — no static fallback.
- */
-
 import { createDshHomeDiscoveryClient } from '../../../clients/home-discovery-client';
 import {
   toBannerViewModel,
@@ -20,20 +14,13 @@ import {
   type HomeDiscoveryState,
 } from './home-discovery.states';
 import type { DshHomeDiscoveryParams } from '../../../clients/home-discovery-client';
+import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 
 export { loadingState };
 
 export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promise<HomeDiscoveryState> {
-  const baseUrl = process.env['EXPO_PUBLIC_DSH_API_BASE_URL'];
-  if (!baseUrl) {
-    return errorState('DSH_API_BASE_URL_NOT_SET: EXPO_PUBLIC_DSH_API_BASE_URL is not configured');
-  }
-
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(baseUrl);
-    void parsedUrl;
-  } catch {
+  const baseUrl = resolveDshApiBaseUrl();
+  if (!validateDshApiBaseUrl(baseUrl)) {
     return errorState(`DSH_API_BASE_URL_INVALID: "${baseUrl}" is not a valid URL`);
   }
 

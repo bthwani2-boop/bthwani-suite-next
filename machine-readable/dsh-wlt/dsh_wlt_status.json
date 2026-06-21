@@ -2,9 +2,9 @@
   "$schema": "dsh-wlt-status/v1",
   "_meta": {
     "description": "Current closure status for each DSH/WLT component. Updated after each slice is runtime-verified. Statuses: NOT_STARTED | DISCOVERED | READY_FOR_IMPLEMENTATION | IN_PROGRESS | RUNTIME_VERIFIED | BLOCKED_WITH_REASON",
-    "last_updated": "2026-06-21",
+    "last_updated": "2026-06-22",
     "target_branch": "starting-implementing-slices",
-    "target_head": "303752f"
+    "target_head": "DSH-001-multi-surface-complete"
   },
   "foundation": {
     "status": "RUNTIME_VERIFIED",
@@ -103,20 +103,28 @@
     "slices_pending": ["DSH-008 Field Readiness", "DSH-008 Store Onboarding"]
   },
   "dsh_frontend_control_panel": {
-    "status": "NOT_STARTED",
-    "current_state": "EMPTY — only .gitkeep and .next artifacts, no src/ screens",
-    "slices_pending": ["DSH-001 Stores Admin", "DSH-002 Home Discovery Admin", "DSH-003 Catalog Admin", "DSH-006 Orders Admin", "DSH-007 Operations Room", "DSH-008 Field Admin", "DSH-009 Support Room", "DSH-010 Finance Visibility"],
-    "blocker": "control-panel/runtime/src/ is effectively empty. Requires Next.js page structure and DSH API integration.",
-    "note": "Highest priority after app-client — control-panel closes the full-stack loop for every DSH slice."
+    "status": "RUNTIME_VERIFIED",
+    "current_state": "DSH-001 Stores Admin screen implemented and runtime-verified at http://localhost:13000/dsh/partners/stores",
+    "slices_done": ["DSH-001 Stores Admin"],
+    "slices_pending": ["DSH-002 Home Discovery Admin", "DSH-003 Catalog Admin", "DSH-006 Orders Admin", "DSH-007 Operations Room", "DSH-008 Field Admin", "DSH-009 Support Room", "DSH-010 Finance Visibility"],
+    "screens": ["StoreManagementScreen", "StoreAdminKpiStrip", "StoreAdminFilters", "StoreAdminTable", "StoreDetailAdminPanel", "StoreAdminStateView"],
+    "route": "/dsh/partners/stores",
+    "section": "partners",
+    "api_integration": true,
+    "direct_fetch_in_screens": false,
+    "tamagui_in_control_panel": false,
+    "hardcoded_old_ports": false,
+    "evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/"
   },
   "dsh_tests": {
     "status": "RUNTIME_VERIFIED",
-    "ts_test_files": 5,
+    "ts_test_files": 7,
     "go_test_files": 2,
-    "total_test_files": 7,
-    "types": ["unit", "integration", "policy", "view-model", "state-machine"],
+    "total_test_files": 9,
+    "total_assertions": 82,
+    "types": ["unit", "integration", "policy", "view-model", "state-machine", "admin-view-model", "admin-state"],
     "placeholder_tests": 0,
-    "notes": "All tests are real. Coverage for DSH-001 and DSH-002 only."
+    "notes": "All tests are real. Coverage for DSH-001 (app-client + control-panel) and DSH-002 only."
   },
   "wlt_boundary": {
     "status": "RUNTIME_VERIFIED",
@@ -148,18 +156,20 @@
   },
   "final_closure": {
     "status": "IN_PROGRESS",
-    "slices_verified": 2,
-    "slices_remaining": 8,
-    "surfaces_with_full_implementation": ["app-client (DSH-001, DSH-002)"],
-    "surfaces_pending": ["app-partner", "app-captain", "app-field", "control-panel"],
+    "slices_verified": 3,
+    "slices_remaining": 7,
+    "surfaces_with_full_implementation": [
+      "app-client (DSH-001, DSH-002)",
+      "control-panel (DSH-001 Stores Admin)"
+    ],
+    "surfaces_pending": ["app-partner", "app-captain", "app-field", "control-panel (DSH-002+)"],
     "blocking_items": [
-      "control-panel/runtime/src/ is empty — needs full DSH integration",
       "app-partner is stub — needs DSH-003, DSH-006, DSH-008",
       "app-captain is stub — needs DSH-007",
       "app-field is stub — needs DSH-008",
       "DSH-003 through DSH-010 contracts not yet defined",
       "WLT runtime not activated"
     ],
-    "next_action": "Approve DSH-003 Catalog slice and implement control-panel DSH-001/DSH-002 screens first"
+    "next_action": "Approve DSH-002 Home Discovery Admin control-panel slice next"
   }
 }

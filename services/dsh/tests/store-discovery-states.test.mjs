@@ -7,7 +7,7 @@ const {
   errorState,
   serviceUnavailableState,
   successState,
-} = await import("../dist/frontend/shared/store-discovery/store-discovery.states.js");
+} = await import("../dist/frontend/shared/store/store-discovery.states.js");
 
 describe("state constructors", () => {
   test("loadingState returns kind=loading", () => {

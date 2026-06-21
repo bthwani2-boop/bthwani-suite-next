@@ -36,7 +36,7 @@ export const DSH_SURFACE_MAP = [
   },
   {
     surface: "control-panel",
-    capabilityIds: [],
-    implementationState: "planned",
+    capabilityIds: ["dsh.store.discovery"],
+    implementationState: "runtime-verified",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];

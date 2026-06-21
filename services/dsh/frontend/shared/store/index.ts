@@ -4,3 +4,5 @@ export * from "./store-discovery.states";
 export * from "./store-discovery.permissions";
 export * from "./store-discovery.formatters";
 export { fetchStoreList, loadingState } from "./store-discovery.api";
+export * from "./store-admin.view-model";
+export { fetchAdminStoreList, fetchAdminStoreDetail, adminLoadingState } from "./store-admin.api";

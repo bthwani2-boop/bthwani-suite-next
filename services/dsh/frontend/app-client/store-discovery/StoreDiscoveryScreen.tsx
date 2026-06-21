@@ -11,8 +11,8 @@ import { StoreDiscoveryList, type DiscoveryFilter } from "./StoreDiscoveryList";
 import {
   fetchStoreList,
   loadingState,
-} from "../../shared/store-discovery/store-discovery.api";
-import type { DshStoreListState } from "../../shared/store-discovery/store-discovery.states";
+} from "../../shared/store/store-discovery.api";
+import type { DshStoreListState } from "../../shared/store/store-discovery.states";
 
 type Props = Readonly<{
   onStorePress?: (storeId: string) => void;

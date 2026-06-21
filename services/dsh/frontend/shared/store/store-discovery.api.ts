@@ -7,22 +7,11 @@ import {
   successState,
   type DshStoreListState,
 } from "./store-discovery.states";
+import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 
-const DSH_API_BASE_URL =
-  process.env.EXPO_PUBLIC_DSH_API_BASE_URL ?? "http://localhost:58080";
+const DSH_API_BASE_URL = resolveDshApiBaseUrl();
 
-// Guard: reject URLs that are obviously broken (no host — e.g. "http://").
-// This happens when EXPO_PUBLIC_DSH_API_BASE_URL is set to just the scheme.
-function isValidBaseUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-const client = isValidBaseUrl(DSH_API_BASE_URL)
+const client = validateDshApiBaseUrl(DSH_API_BASE_URL)
   ? createDshStoreClient(DSH_API_BASE_URL)
   : null;
 
@@ -54,8 +43,8 @@ export async function fetchStoreList(params?: {
 }): Promise<DshStoreListState> {
   if (!client) {
     return errorState(
-      `API_CONFIG_ERROR: EXPO_PUBLIC_DSH_API_BASE_URL is invalid ("${DSH_API_BASE_URL}"). ` +
-      `Set it to your machine LAN IP in apps/app-client/runtime/.env and restart Metro.`,
+      `API_CONFIG_ERROR: DSH API base URL is invalid ("${DSH_API_BASE_URL}"). ` +
+      `Set EXPO_PUBLIC_DSH_API_BASE_URL (mobile) or NEXT_PUBLIC_DSH_API_BASE_URL (web) in your .env and restart.`,
     );
   }
 

@@ -6,9 +6,9 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-002_RUNTIME_VERIFIED",
+  stage: "DSH-001_CONTROL_PANEL_IN_PROGRESS",
   closureState: "RUNTIME_VERIFIED",
-  activationScope: "home-discovery-full-stack",
+  activationScope: "store-discovery-multi-surface",
   contract: "contracts/dsh.openapi.yaml",
   contractState: "CONTRACT_ACTIVE",
   capabilities: DSH_CAPABILITY_MAP,
@@ -28,8 +28,8 @@ export const dshServiceManifest = {
     screensReady: true,
   },
   nextSlice: {
-    id: "DSH-003",
-    name: "TBD",
+    id: "DSH-002",
+    name: "DSH-002 Home Discovery Admin — control-panel",
     closureState: "NOT_APPROVED_YET",
   },
   boundaries: {
