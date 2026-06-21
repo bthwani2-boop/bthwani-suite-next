@@ -30,6 +30,8 @@
     "runtime:all": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles dsh,media",
     "guard:matrix:v2": "node tools/guards/guard-slice-master-matrix-v2.mjs",
     "guard:matrix:v3": "node tools/guards/guard-slice-master-matrix-v3.mjs",
+    "guard:control-panel-design": "node tools/guards/control-panel-design-gate.mjs",
+    "control-panel:design-gate": "pnpm run guard:control-panel-design",
     "graphify": "graphify update . --force",
     "graphify:callflow": "graphify export callflow-html",
     "graphify:version": "graphify --version",

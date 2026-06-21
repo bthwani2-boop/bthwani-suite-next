@@ -1,0 +1,40 @@
+{
+  "$schema": "control-panel-design/v1",
+  "_meta": {
+    "description": "Service ownership matrix for the control panel. Defines what each layer owns and what is explicitly forbidden.",
+    "last_updated": "2026-06-21"
+  },
+  "ownership": {
+    "shared/ui-kit": {
+      "owns": ["visual primitives", "design tokens", "Tamagui configuration", "color roles", "typography", "spacing", "reusable UI components"],
+      "forbidden": ["business logic", "service-specific screens", "API calls", "mock data", "navigation runtime", "financial mutation logic"]
+    },
+    "shared/app-shell": {
+      "owns": ["shell composition (ControlPanelShell)", "navigation data contract", "top bar slot composition", "service context injection", "section registry", "service registry", "section archetype frames"],
+      "forbidden": ["service business logic", "API clients", "direct fetch", "axios", "mock/preview runtime data", "design tokens", "Tamagui components", "control-panel routes", "financial mutation logic"]
+    },
+    "apps/control-panel/runtime": {
+      "owns": ["Next.js runtime boot", "routing configuration", "page entry points", "provider composition", "environment configuration"],
+      "forbidden": ["business logic", "direct fetch in pages", "service-specific screens", "local design system", "financial mutation logic", "mock/demo/preview runtime data"]
+    },
+    "services/dsh": {
+      "owns": ["stores content", "catalog content", "orders content", "operations content", "home discovery admin content", "support content", "DSH API client usage"],
+      "forbidden": ["financial mutation (payment, refund, settlement, ledger write)", "WLT runtime activation", "direct Tamagui outside ui-kit", "local design system", "direct fetch in screens", "raw hex colors"]
+    },
+    "services/wlt": {
+      "owns": ["finance read-only visibility content", "payment status display (read-only)", "settlement status display (read-only)", "WLT boundary enforcement"],
+      "status": "CONTRACT_ONLY — WLT runtime not activated. No implementation until WLT-FOUNDATION slice gates PASS.",
+      "forbidden": ["financial mutation before activation", "DSH calling WLT financial mutation APIs", "direct Tamagui outside ui-kit", "local design system", "direct fetch in screens"]
+    }
+  },
+  "boundary_invariants": {
+    "DSH_cannot_perform_financial_mutation": true,
+    "WLT_runtime_is_contract_only_until_approved": true,
+    "financial_mutations_in_DSH": false,
+    "direct_Tamagui_outside_ui_kit": false,
+    "local_design_system_in_services_or_apps": false,
+    "direct_fetch_in_control_panel_screens": false,
+    "raw_hex_outside_ui_kit": false,
+    "mock_demo_preview_runtime_data": false
+  }
+}

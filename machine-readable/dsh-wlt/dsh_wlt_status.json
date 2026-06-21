@@ -12,6 +12,18 @@
     "evidence": "services/dsh/evidence/FOUNDATION/",
     "notes": "foundation:gate, contracts:lint, guard:matrix:v3 all PASS"
   },
+  "control_panel_foundation": {
+    "status": "READY_FOR_IMPLEMENTATION",
+    "shell": "PRESENT",
+    "archetypes": "PRESENT",
+    "design_gate": "PASS",
+    "proof_files": ["DSH", "WLT"],
+    "shell_location": "shared/app-shell/src/control-panel/",
+    "archetypes_location": "shared/app-shell/src/control-panel/archetypes/",
+    "machine_readable_location": "machine-readable/control-panel-design/",
+    "guard_script": "tools/guards/control-panel-design-gate.mjs",
+    "notes": "Control panel foundation ready. Production DSH control-panel screens not implemented in this task. Next: DSH-001_CONTROL_PANEL_STORES_ADMIN, then DSH-002_CONTROL_PANEL_HOME_DISCOVERY_ADMIN, then DSH-003_CATALOG."
+  },
   "dsh_contract": {
     "status": "RUNTIME_VERIFIED",
     "file": "services/dsh/contracts/dsh.openapi.yaml",
