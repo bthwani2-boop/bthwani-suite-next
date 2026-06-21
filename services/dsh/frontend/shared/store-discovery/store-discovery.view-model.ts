@@ -61,18 +61,18 @@ type CategoryMeta = { emoji: string; color: string; deliveryModes: string[] };
 function resolveCategoryMeta(displayName: string): CategoryMeta {
   const lower = displayName.toLowerCase();
   if (lower.includes("bakery") || lower.includes("مخبز") || lower.includes("خبز") || lower.includes("حطين")) {
-    return { emoji: "🥖", color: "#D97706", deliveryModes: ["توصيل", "استلام"] };
+    return { emoji: "🥖", color: "warning", deliveryModes: ["توصيل", "استلام"] };
   }
   if (lower.includes("market") || lower.includes("grocery") || lower.includes("سوق") || lower.includes("بقالة") || lower.includes("العليا")) {
-    return { emoji: "🏪", color: "#059669", deliveryModes: ["توصيل", "استلام", "⚡ ثواني"] };
+    return { emoji: "🏪", color: "success", deliveryModes: ["توصيل", "استلام", "⚡ ثواني"] };
   }
   if (lower.includes("restaurant") || lower.includes("مطعم") || lower.includes("cafe") || lower.includes("كافيه")) {
-    return { emoji: "🍽️", color: "#EA580C", deliveryModes: ["توصيل", "استلام"] };
+    return { emoji: "🍽️", color: "brandAction", deliveryModes: ["توصيل", "استلام"] };
   }
   if (lower.includes("pharmacy") || lower.includes("صيدلية")) {
-    return { emoji: "💊", color: "#7C3AED", deliveryModes: ["توصيل"] };
+    return { emoji: "💊", color: "info", deliveryModes: ["توصيل"] };
   }
-  return { emoji: "🛍️", color: "#0A2F5C", deliveryModes: ["توصيل", "استلام"] };
+  return { emoji: "🛍️", color: "brandStructure", deliveryModes: ["توصيل", "استلام"] };
 }
 
 const CITY_NAMES: Record<string, string> = {

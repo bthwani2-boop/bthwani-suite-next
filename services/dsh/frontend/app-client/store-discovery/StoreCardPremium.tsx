@@ -6,7 +6,12 @@ import {
   Text,
   View,
 } from "react-native";
-import { brandScale, colorRoles, statusScale } from "../../tokens/colors";
+import {
+  brandScale,
+  colorRoles,
+  statusScale,
+  neutralScale,
+} from "@bthwani/ui-kit";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +49,6 @@ export type StoreCardPremiumProps = Readonly<{
 }>;
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
-// Donor: IMAGE_SIZE = card height = 114px. Circle = card height, clips right.
 
 const CARD_HEIGHT  = 118;
 const IMAGE_SIZE   = CARD_HEIGHT;     // square image size
@@ -59,6 +63,14 @@ const SVC_ICON: Record<string, string> = {
   ثواني : "⚡",
 };
 
+const PLACEHOLDER_COLORS: Record<string, string> = {
+  warning: statusScale.warning,
+  success: statusScale.success,
+  brandAction: colorRoles.brandAction,
+  info: statusScale.info,
+  brandStructure: colorRoles.brandStructure,
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function StoreCardPremium({
@@ -67,6 +79,8 @@ export function StoreCardPremium({
   onFavoritePress,
   isFavorite = false,
 }: StoreCardPremiumProps) {
+  const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderColor] ?? store.placeholderColor;
+
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -185,7 +199,7 @@ export function StoreCardPremium({
       <View style={styles.imgBlock}>
 
         {/* Main square image */}
-        <View style={[styles.imageSquare, { backgroundColor: store.placeholderColor }]}>
+        <View style={[styles.imageSquare, { backgroundColor: placeholderBgColor }]}>
           {store.heroImageSource != null ? (
             <Image
               source={store.heroImageSource}
@@ -235,19 +249,19 @@ export function StoreCardPremium({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const SHADOW = Platform.select({
-  ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
+  ios:     { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
   android: { elevation: 3 },
   default: {},
 });
 
 const LOCK_SHADOW = Platform.select({
-  ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
+  ios:     { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
   android: { elevation: 2 },
   default: {},
 });
 
 const LOGO_SHADOW = Platform.select({
-  ios:     { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 5 },
+  ios:     { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 5 },
   android: { elevation: 5 },
   default: {},
 });
@@ -321,7 +335,7 @@ const styles = StyleSheet.create({
     color: colorRoles.borderStrong,
   },
   heartIconActive: {
-    color: "#EF4444",
+    color: statusScale.danger,
   },
 
   /* ── Col 2: Content ── */
@@ -397,7 +411,7 @@ const styles = StyleSheet.create({
     backgroundColor: colorRoles.brandAction,
     borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
   },
-  badgeProTxt: { fontSize: 10, fontWeight: "700", color: "#fff" },
+  badgeProTxt: { fontSize: 10, fontWeight: "700", color: neutralScale[0] },
 
   badgeFree: {
     backgroundColor: statusScale.successSoft,
@@ -407,7 +421,7 @@ const styles = StyleSheet.create({
   badgeFreeTxt: { fontSize: 10, fontWeight: "700", color: statusScale.success },
 
   badgeCoupon: {
-    backgroundColor: "#FFF3ED",
+    backgroundColor: brandScale.action[50],
     borderWidth: 1, borderColor: colorRoles.brandAction,
     borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
   },
@@ -421,11 +435,11 @@ const styles = StyleSheet.create({
   badgePointsTxt: { fontSize: 10, fontWeight: "600", color: colorRoles.brandStructure },
 
   badgePopular: {
-    backgroundColor: "#FFF7ED",
-    borderWidth: 1, borderColor: "#F97316",
+    backgroundColor: statusScale.warningSoft,
+    borderWidth: 1, borderColor: statusScale.warning,
     borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
   },
-  badgePopularTxt: { fontSize: 10, fontWeight: "600", color: "#C2410C" },
+  badgePopularTxt: { fontSize: 10, fontWeight: "600", color: statusScale.warningStrong },
 
   /* ── Col 3: Image block ── */
   imgBlock: {
@@ -487,8 +501,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2.5,
   },
-  ratingStar:   { fontSize: 9, color: "#F59E0B" },
-  ratingVal:    { fontSize: 9.5, fontWeight: "800", color: "#fff", letterSpacing: -0.2 },
+  ratingStar:   { fontSize: 9, color: statusScale.warning },
+  ratingVal:    { fontSize: 9.5, fontWeight: "800", color: neutralScale[0], letterSpacing: -0.2 },
   separator:    { fontSize: 8, color: "rgba(255,255,255,0.4)", marginHorizontal: 0.5 },
   followerVal:  { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.9)", letterSpacing: -0.2 },
 });

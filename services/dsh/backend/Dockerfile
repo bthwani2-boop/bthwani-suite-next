@@ -1,26 +1,25 @@
-FROM node:24-alpine AS base
+FROM golang:1.26-alpine AS build
 WORKDIR /app
 
-FROM base AS deps
-WORKDIR /app/services/dsh
-COPY services/dsh/package.json ./package.json
-RUN npm install --omit=dev
+# Copy dependency files
+COPY services/dsh/backend/go.mod services/dsh/backend/go.sum ./services/dsh/backend/
+WORKDIR /app/services/dsh/backend
+RUN go mod download
 
-FROM base AS build
-COPY services/dsh/package.json ./services/dsh/package.json
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-RUN corepack enable && corepack prepare pnpm@10.34.2 --activate
-RUN pnpm --filter @bthwani/dsh install --frozen-lockfile
-COPY services/dsh/tsconfig.json ./services/dsh/tsconfig.json
-COPY services/dsh/domain ./services/dsh/domain
-COPY services/dsh/backend ./services/dsh/backend
-COPY services/dsh/clients ./services/dsh/clients
-RUN pnpm --filter @bthwani/dsh run build
+# Copy the rest of the Go backend files
+WORKDIR /app
+COPY services/dsh/backend/ ./services/dsh/backend/
 
-FROM base AS runtime
-ENV NODE_ENV=production
-COPY --from=deps /app/services/dsh/node_modules ./services/dsh/node_modules
-COPY --from=build /app/services/dsh/dist ./services/dsh/dist
-WORKDIR /app/services/dsh
+# Build the Go API
+WORKDIR /app/services/dsh/backend
+RUN CGO_ENABLED=0 GOOS=linux go build -o dsh-api cmd/dsh-api/main.go
+
+# Runtime stage
+FROM alpine:latest AS runtime
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /app
+COPY --from=build /app/services/dsh/backend/dsh-api /app/dsh-api
+
 EXPOSE 8080
-CMD ["node", "dist/backend/runtime/server.js"]
+CMD ["/app/dsh-api"]
