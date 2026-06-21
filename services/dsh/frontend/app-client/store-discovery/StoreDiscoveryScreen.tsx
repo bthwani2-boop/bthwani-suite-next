@@ -61,11 +61,6 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
 
   return (
     <Screen padded={false}>
-      {/* ── Page Header ── */}
-      <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>اكتشف المتاجر</Text>
-        <Text style={styles.pageSubtitle}>اختر من أفضل المتاجر القريبة منك</Text>
-      </View>
 
       {/* ── Filter Rail ── */}
       <View style={styles.filterWrap}>
@@ -115,25 +110,6 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  pageHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    alignItems: "flex-end",
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: colorRoles.brandStructure,
-    textAlign: "right",
-  },
-  pageSubtitle: {
-    fontSize: 13,
-    color: colorRoles.textMuted,
-    textAlign: "right",
-    marginTop: 2,
-  },
-
   // Filter rail
   filterWrap: {
     borderBottomWidth: 1,
@@ -143,11 +119,11 @@ const styles = StyleSheet.create({
   filterScroll: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     gap: 8,
   },
   filterChip: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 5,
     paddingHorizontal: 14,
