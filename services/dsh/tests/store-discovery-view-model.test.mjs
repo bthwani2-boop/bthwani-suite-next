@@ -37,18 +37,18 @@ describe("toCardViewModel", () => {
 
   test("temporarily_closed produces statusBadge", () => {
     const vm = toCardViewModel(makeDto({ status: "temporarily_closed" }));
-    assert.equal(vm.statusBadge, "Temporarily Closed");
+    assert.equal(vm.statusBadge, "مغلق مؤقتاً");
   });
 
   test("limited serviceability produces statusBadge", () => {
     const vm = toCardViewModel(makeDto({ serviceability: { status: "limited" } }));
-    assert.equal(vm.statusBadge, "Limited Delivery");
+    assert.equal(vm.statusBadge, "توصيل محدود");
     assert.equal(vm.isServiceable, true);
   });
 
   test("out_of_area produces statusBadge", () => {
     const vm = toCardViewModel(makeDto({ serviceability: { status: "out_of_area" } }));
-    assert.equal(vm.statusBadge, "Out of Area");
+    assert.equal(vm.statusBadge, "خارج نطاق التوصيل");
     assert.equal(vm.isServiceable, false);
   });
 
@@ -69,7 +69,7 @@ describe("toCardViewModel", () => {
 
   test("eta label rendered when eta present", () => {
     const vm = toCardViewModel(makeDto({ deliveryEtaMin: 20, deliveryEtaMax: 40 }));
-    assert.equal(vm.etaLabel, "20–40 min");
+    assert.equal(vm.etaLabel, "20–40 دقيقة");
   });
 
   test("eta label null when eta absent", () => {
@@ -77,14 +77,14 @@ describe("toCardViewModel", () => {
     assert.equal(vm.etaLabel, null);
   });
 
-  test("heroImageUrl null when not provided", () => {
+  test("heroImageSource null when not provided", () => {
     const vm = toCardViewModel(makeDto({ heroImageUrl: undefined }));
-    assert.equal(vm.heroImageUrl, null);
+    assert.equal(vm.heroImageSource, null);
   });
 
-  test("logoUrl null when not provided", () => {
+  test("logoImageSource null when not provided", () => {
     const vm = toCardViewModel(makeDto({ logoUrl: undefined }));
-    assert.equal(vm.logoUrl, null);
+    assert.equal(vm.logoImageSource, null);
   });
 });
 

@@ -39,16 +39,15 @@ export type StoreCardPremiumItem = Readonly<{
 export type StoreCardPremiumProps = Readonly<{
   store: StoreCardPremiumItem;
   onPress: (storeId: string) => void;
-  onFavoritePress?: (storeId: string) => void;
-  isFavorite?: boolean;
+  onFavoritePress?: ((storeId: string) => void) | undefined;
+  isFavorite?: boolean | undefined;
 }>;
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
 // Donor: IMAGE_SIZE = card height = 114px. Circle = card height, clips right.
 
 const CARD_HEIGHT  = 118;
-const CIRCLE_SIZE  = CARD_HEIGHT;     // circle = full card height → right portion clips off
-const IMG_BLOCK_W  = 104;             // narrower than circle → 14px clips at right edge
+const IMAGE_SIZE   = CARD_HEIGHT;     // square image size
 const LOGO_SIZE    = 46;
 const LOCK_BOX     = 30;
 const LEFT_COL_W   = 42;
@@ -115,7 +114,7 @@ export function StoreCardPremium({
           <Text style={styles.metaText} numberOfLines={1}>
             {"📍 "}{store.locationLabel}
           </Text>
-          {store.distanceLabel !== null && (
+          {store.distanceLabel != null && (
             <Text style={styles.distText}>
               {"↗ "}{store.distanceLabel}
             </Text>
@@ -123,7 +122,7 @@ export function StoreCardPremium({
         </View>
 
         {/* ETA */}
-        {store.etaLabel !== null && (
+        {store.etaLabel != null && (
           <Text style={styles.metaText}>{"⏱ "}{store.etaLabel}</Text>
         )}
 
@@ -143,7 +142,7 @@ export function StoreCardPremium({
         )}
 
         {/* Closed status */}
-        {!store.isOpen && store.statusBadge !== null && (
+        {!store.isOpen && store.statusBadge != null && (
           <View style={styles.closedTag}>
             <Text style={styles.closedTagTxt}>{store.statusBadge}</Text>
           </View>
@@ -166,7 +165,7 @@ export function StoreCardPremium({
               <Text style={styles.badgeCouponTxt}>كوبون</Text>
             </View>
           )}
-          {store.pointsMultiplier !== null && (
+          {store.pointsMultiplier != null && (
             <View style={styles.badgePoints}>
               <Text style={styles.badgePointsTxt}>
                 {"نقاط "}{store.pointsMultiplier}{"x"}
@@ -182,12 +181,12 @@ export function StoreCardPremium({
 
       </View>
 
-      {/* ══ COL 3 — Circle image ══ */}
+      {/* ══ COL 3 — Square image ══ */}
       <View style={styles.imgBlock}>
 
-        {/* Main circle — CIRCLE_SIZE = CARD_HEIGHT, clips at right edge of card */}
-        <View style={[styles.circle, { backgroundColor: store.placeholderColor }]}>
-          {store.heroImageSource !== null ? (
+        {/* Main square image */}
+        <View style={[styles.imageSquare, { backgroundColor: store.placeholderColor }]}>
+          {store.heroImageSource != null ? (
             <Image
               source={store.heroImageSource}
               style={StyleSheet.absoluteFill}
@@ -195,13 +194,13 @@ export function StoreCardPremium({
               resizeMode="cover"
             />
           ) : (
-            <Text style={styles.circleEmoji}>{store.placeholderEmoji}</Text>
+            <Text style={styles.squareEmoji}>{store.placeholderEmoji}</Text>
           )}
         </View>
 
         {/* Store logo — bottom-right corner of image block, white ring border */}
         <View style={styles.logoRing}>
-          {store.logoImageSource !== null ? (
+          {store.logoImageSource != null ? (
             <Image
               source={store.logoImageSource}
               style={styles.logoImg}
@@ -215,11 +214,11 @@ export function StoreCardPremium({
         </View>
 
         {/* Rating + followers pill — bottom-left of image block */}
-        {store.ratingAverage !== null && (
+        {store.ratingAverage != null && (
           <View style={styles.ratingPill}>
             <Text style={styles.ratingStar}>{"★"}</Text>
             <Text style={styles.ratingVal}>{store.ratingAverage.toFixed(1)}</Text>
-            {store.followerCountLabel !== null && (
+            {store.followerCountLabel != null && (
               <>
                 <Text style={styles.followerIco}>{"👥"}</Text>
                 <Text style={styles.followerVal}>{store.followerCountLabel}</Text>
@@ -431,25 +430,23 @@ const styles = StyleSheet.create({
 
   /* ── Col 3: Image block ── */
   imgBlock: {
-    width: IMG_BLOCK_W,
+    width: IMAGE_SIZE,
     height: CARD_HEIGHT,
     position: "relative",
   },
 
-  /* Main circle — CIRCLE_SIZE = CARD_HEIGHT, starts at top-left of block.
-     Right portion (CIRCLE_SIZE - IMG_BLOCK_W) = 14px clips off via card overflow:hidden */
-  circle: {
+  /* Main square image */
+  imageSquare: {
     position: "absolute",
     top: 0,
     left: 0,
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
+    width: IMAGE_SIZE,
+    height: IMAGE_SIZE,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
-  circleEmoji: { fontSize: 40 },
+  squareEmoji: { fontSize: 40 },
 
   /* Logo ring — bottom-right corner of imageBlock, over the circle */
   logoRing: {
