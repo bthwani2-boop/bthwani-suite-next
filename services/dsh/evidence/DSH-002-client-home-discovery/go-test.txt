@@ -1,0 +1,5 @@
+?   	dsh-api/cmd/dsh-api	[no test files]
+?   	dsh-api/internal/health	[no test files]
+ok  	dsh-api/internal/homediscovery	(cached)
+?   	dsh-api/internal/http	[no test files]
+ok  	dsh-api/internal/store	(cached)

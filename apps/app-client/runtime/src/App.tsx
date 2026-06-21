@@ -10,28 +10,13 @@ import {
   colorRoles,
   type BottomNavItem,
 } from "@bthwani/ui-kit";
-import { StoreDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/store-discovery/StoreDiscoveryRoute";
+import { HomeDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute";
 
-// ─── Minimal inline icons (replace with your icon library) ───
-const ICON_SIZE = 22;
-const ICON_COLOR_ACTIVE = brandRoots.brandAction;
+// ─── Inline icon helpers ───────────────────────────────────────
+const ICON_SIZE          = 22;
+const ICON_COLOR_ACTIVE  = brandRoots.brandAction;
 const ICON_COLOR_INACTIVE = colorRoles.textMuted;
-const ICON_COLOR_WHITE = brandRoots.surfaceBase;
-
-function HomeIcon({ active }: { active?: boolean }) {
-  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
-  return (
-    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"
-        stroke={c}
-        strokeWidth={active ? 2.2 : 1.8}
-        strokeLinejoin="round"
-      />
-      <Path d="M9 21V12h6v9" stroke={c} strokeWidth={active ? 2.2 : 1.8} strokeLinejoin="round" />
-    </Svg>
-  );
-}
+const ICON_COLOR_WHITE   = brandRoots.surfaceBase;
 
 function OrdersIcon({ active }: { active?: boolean }) {
   const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
@@ -54,6 +39,28 @@ function WalletIcon({ active }: { active?: boolean }) {
   );
 }
 
+function HomeIcon({ active }: { active?: boolean }) {
+  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H5a1 1 0 01-1-1V10.5z"
+        stroke={c}
+        strokeWidth={active ? 2.2 : 1.8}
+        fill={active ? c + "22" : "none"}
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9 21V12h6v9"
+        stroke={c}
+        strokeWidth={active ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function ProfileIcon({ active }: { active?: boolean }) {
   const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
   return (
@@ -64,11 +71,27 @@ function ProfileIcon({ active }: { active?: boolean }) {
   );
 }
 
+// ─── Header action icons ───────────────────────────────────────
+
 function SearchIcon() {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Circle cx="11" cy="11" r="7" stroke={ICON_COLOR_WHITE} strokeWidth={2} />
       <Path d="M16.5 16.5L21 21" stroke={ICON_COLOR_WHITE} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function NotificationIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 10a6 6 0 1112 0v4l2 2H4l2-2v-4z"
+        stroke={ICON_COLOR_WHITE}
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <Path d="M10 20a2 2 0 004 0" stroke={ICON_COLOR_WHITE} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -93,19 +116,14 @@ function ServicesIcon() {
   );
 }
 
-// ─── Bottom nav items ─────────────────────────────────────────
+// ─── Bottom nav — order matches reference design:
+//     RTL visual: الرئيسية | طلباتي | [الخدمات launcher] | المحفظة | حسابي
 const NAV_ITEMS: BottomNavItem[] = [
   {
-    id: "home",
-    label: "الرئيسية",
-    icon: <HomeIcon />,
-    activeIcon: <HomeIcon active />,
-  },
-  {
-    id: "orders",
-    label: "طلباتي",
-    icon: <OrdersIcon />,
-    activeIcon: <OrdersIcon active />,
+    id: "profile",
+    label: "حسابي",
+    icon: <ProfileIcon />,
+    activeIcon: <ProfileIcon active />,
   },
   {
     id: "wallet",
@@ -114,10 +132,16 @@ const NAV_ITEMS: BottomNavItem[] = [
     activeIcon: <WalletIcon active />,
   },
   {
-    id: "profile",
-    label: "حسابي",
-    icon: <ProfileIcon />,
-    activeIcon: <ProfileIcon active />,
+    id: "orders",
+    label: "طلباتي",
+    icon: <OrdersIcon />,
+    activeIcon: <OrdersIcon active />,
+  },
+  {
+    id: "home",
+    label: "الرئيسية",
+    icon: <HomeIcon />,
+    activeIcon: <HomeIcon active />,
   },
 ];
 
@@ -128,28 +152,41 @@ export function App() {
 
   return (
     <View style={styles.root}>
+      {/* Header — RTL: right=actions(search+notification+cart), center=title+location, left=avatar */}
       <AppHeader
         title="بثواني"
-        locationLabel="موقعك الحالي"
+        locationLabel="صنعاء، حي الأصبحي"
         topInset={insets.top}
         direction="rtl"
+        tickerMessage="مباشر"
+        tickerStatusLabel="مباشر"
         actions={[
+          {
+            icon: <SearchIcon />,
+            accessibilityLabel: "بحث",
+          },
+          {
+            icon: <NotificationIcon />,
+            accessibilityLabel: "الإشعارات",
+            badgeCount: 0,
+          },
           {
             icon: <CartIcon />,
             accessibilityLabel: "عربة التسوق",
             badgeCount: 0,
           },
-          {
-            icon: <SearchIcon />,
-            accessibilityLabel: "بحث",
-          },
         ]}
       />
 
       <View style={styles.content}>
-        {activeTab === "home" ? <StoreDiscoveryRoute /> : <View style={styles.placeholder} />}
+        {activeTab === "home" ? (
+          <HomeDiscoveryRoute />
+        ) : (
+          <View style={styles.placeholder} />
+        )}
       </View>
 
+      {/* Bottom nav — RTL: الرئيسية | طلباتي | الخدمات | المحفظة | حسابي */}
       <BottomNavBar
         items={NAV_ITEMS}
         activeId={activeTab}

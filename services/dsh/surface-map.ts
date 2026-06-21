@@ -16,7 +16,7 @@ export type DshSurfaceDefinition = {
 export const DSH_SURFACE_MAP = [
   {
     surface: "app-client",
-    capabilityIds: ["dsh.store.discovery"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery"],
     implementationState: "runtime-verified",
   },
   {

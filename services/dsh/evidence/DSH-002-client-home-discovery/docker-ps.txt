@@ -1,0 +1,4 @@
+NAMES                      IMAGE                                      STATUS                    PORTS
+bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    Up 9 minutes (healthy)    0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-postgres-runtime   postgres:16-alpine                         Up 13 minutes (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   Up 13 minutes             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp

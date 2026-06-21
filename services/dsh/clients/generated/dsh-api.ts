@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/home-discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return home discovery payload for the client home screen. */
+        get: operations["getDshHomeDiscovery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/stores/{storeId}": {
         parameters: {
             query?: never;
@@ -100,6 +117,8 @@ export interface components {
             heroImageUrl?: string | null;
             logoUrl?: string | null;
             category: components["schemas"]["DshStoreCategory"];
+            /** Human-readable category label resolved from dsh_categories */
+            categoryLabel: string;
             deliveryModes: components["schemas"]["DshStoreDeliveryMode"][];
             isFreeDelivery: boolean;
             /** Format: float */
@@ -135,6 +154,49 @@ export interface components {
         DshErrorResponse: {
             code: string;
             message: string;
+        };
+        DshHomeBanner: {
+            id: string;
+            title: string;
+            subtitle?: string;
+            imageUrl: string;
+            /** @enum {string} */
+            actionType: "store" | "category" | "external" | "none";
+            actionTarget: string;
+        };
+        DshHomePromo: {
+            id: string;
+            title: string;
+            subtitle?: string;
+            badgeLabel?: string;
+            imageUrl: string;
+            /** @enum {string} */
+            actionType?: "store" | "category" | "external" | "none";
+            actionTarget?: string;
+        };
+        DshHomeFilter: {
+            id: string;
+            label: string;
+            /** @enum {string} */
+            kind: "all" | "favorites" | "nearest" | "new" | "offers";
+            /** @default false */
+            isActive?: boolean;
+        };
+        DshHomeCategory: {
+            id: string;
+            label: string;
+            iconUrl?: string;
+            sortOrder: number;
+        };
+        DshHomeDiscoveryResponse: {
+            banners: components["schemas"]["DshHomeBanner"][];
+            promos: components["schemas"]["DshHomePromo"][];
+            filters: components["schemas"]["DshHomeFilter"][];
+            categories: components["schemas"]["DshHomeCategory"][];
+            stores: components["schemas"]["DshStoreSummary"][];
+            pagination: components["schemas"]["DshPagination"];
+            /** Format: date-time */
+            generatedAt: string;
         };
         DshHealthResponse: {
             /** @constant */
@@ -209,6 +271,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DshReadinessResponse"];
+                };
+            };
+        };
+    };
+    getDshHomeDiscovery: {
+        parameters: {
+            query?: {
+                /** @description Filter by city code. */
+                cityCode?: string;
+                /** @description Filter by service area code. */
+                serviceAreaCode?: string;
+                /** @description Maximum number of stores to return. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Home discovery payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeDiscoveryResponse"];
+                };
+            };
+            /** @description Invalid query parameters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Service unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
                 };
             };
         };

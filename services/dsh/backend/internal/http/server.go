@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"dsh-api/internal/health"
+	"dsh-api/internal/homediscovery"
 	"dsh-api/internal/store"
 )
 
@@ -15,6 +16,7 @@ func NewRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db))
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
+	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
 
 	// Catch-all 404 handler for routes not found
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

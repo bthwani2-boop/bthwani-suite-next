@@ -2,10 +2,14 @@ import type { DshCapability } from "./capability-map";
 
 export type DshRuntimeBinding = {
   readonly capabilityId: DshCapability["id"];
-  readonly contractOperations: readonly string[];
+  readonly contractOperations?: readonly string[];
   readonly backendImplemented: boolean;
   readonly runtimeEvidence: string | null;
   readonly state: "blocked" | "verified";
+  readonly runtimeBound?: boolean;
+  readonly screensReady?: boolean;
+  readonly databaseReady?: boolean;
+  readonly generatedClientReady?: boolean;
 };
 
 export const DSH_RUNTIME_MAP = [
@@ -22,5 +26,15 @@ export const DSH_RUNTIME_MAP = [
     backendImplemented: true,
     runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery",
     state: "verified",
+  },
+  {
+    capabilityId: "dsh.client.home-discovery",
+    backendImplemented: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/DSH-002-client-home-discovery",
   },
 ] as const satisfies readonly DshRuntimeBinding[];

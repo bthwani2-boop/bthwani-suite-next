@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Service API
-  version: 0.2.0
-  description: Delivery and shopping hub service contract. DSH-001 adds store discovery endpoints.
+  version: 0.3.0
+  description: Delivery and shopping hub service contract. DSH-001 adds store discovery endpoints. DSH-002 adds home discovery endpoint.
 
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -110,6 +110,54 @@ paths:
               schema:
                 $ref: "#/components/schemas/DshErrorResponse"
 
+  /dsh/home-discovery:
+    get:
+      operationId: getDshHomeDiscovery
+      summary: Return home discovery payload for the client home screen.
+      tags:
+        - DshHomeDiscovery
+      parameters:
+        - name: cityCode
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by city code.
+        - name: serviceAreaCode
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by service area code.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: Maximum number of stores to return.
+      responses:
+        "200":
+          description: Home discovery payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshHomeDiscoveryResponse"
+        "400":
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
+        "503":
+          description: Service unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshErrorResponse"
+
   /dsh/stores/{storeId}:
     get:
       operationId: getDshStore
@@ -187,6 +235,7 @@ components:
         - serviceability
         - isVisible
         - category
+        - categoryLabel
         - deliveryModes
         - isFreeDelivery
         - followerCount
@@ -225,6 +274,9 @@ components:
           type: ["string", "null"]
         category:
           $ref: "#/components/schemas/DshStoreCategory"
+        categoryLabel:
+          type: string
+          description: Human-readable category label resolved from dsh_categories
         deliveryModes:
           type: array
           items:
@@ -368,5 +420,135 @@ components:
               - down
               - not_configured
         checkedAt:
+          type: string
+          format: date-time
+
+    DshHomeBanner:
+      type: object
+      required:
+        - id
+        - title
+        - imageUrl
+        - actionType
+        - actionTarget
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        imageUrl:
+          type: string
+        actionType:
+          type: string
+          enum:
+            - store
+            - category
+            - external
+            - none
+        actionTarget:
+          type: string
+
+    DshHomePromo:
+      type: object
+      required:
+        - id
+        - title
+        - imageUrl
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        badgeLabel:
+          type: string
+        imageUrl:
+          type: string
+        actionType:
+          type: string
+          enum:
+            - store
+            - category
+            - external
+            - none
+        actionTarget:
+          type: string
+
+    DshHomeFilter:
+      type: object
+      required:
+        - id
+        - label
+        - kind
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        kind:
+          type: string
+          enum:
+            - all
+            - favorites
+            - nearest
+            - new
+            - offers
+        isActive:
+          type: boolean
+          default: false
+
+    DshHomeCategory:
+      type: object
+      required:
+        - id
+        - label
+        - sortOrder
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        iconUrl:
+          type: string
+        sortOrder:
+          type: integer
+
+    DshHomeDiscoveryResponse:
+      type: object
+      required:
+        - banners
+        - promos
+        - filters
+        - categories
+        - stores
+        - pagination
+        - generatedAt
+      properties:
+        banners:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshHomeBanner"
+        promos:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshHomePromo"
+        filters:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshHomeFilter"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshHomeCategory"
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshStoreSummary"
+        pagination:
+          $ref: "#/components/schemas/DshPagination"
+        generatedAt:
           type: string
           format: date-time

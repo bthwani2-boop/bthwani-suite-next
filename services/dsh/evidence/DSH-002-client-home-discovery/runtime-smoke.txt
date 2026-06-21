@@ -1,0 +1,24 @@
+
+> bthwani-suite-next@0.0.0 runtime:smoke C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles dsh,media
+
+=== runtime:smoke (profiles: dsh,media)
+Waiting for Postgres (1/30)...
+/var/run/postgresql:5432 - accepting connections
+Postgres: healthy
+Waiting for DSH API (1/20)...
+DSH API: healthy
+
+--- DSH API smoke ---
+  /dsh/health: {"service":"dsh","status":"healthy","checkedAt":"2026-06-21T14:09:45.126195408Z"}
+  /dsh/readiness: {"service":"dsh","status":"ready","dependencies":{"postgres":"ready"},"checkedAt":"2026-06-21T14:09:45.248957642Z"}
+  /dsh/stores: returned 6 stores
+  /dsh/stores/store-1001: أسواق حدة المركزية
+DSH API smoke: PASS
+
+--- MinIO smoke ---
+  /minio/health/live attempt 1/15
+  /minio/health/live: PASS
+  /minio/health/ready: PASS
+MinIO smoke: PASS
+smoke: PASS

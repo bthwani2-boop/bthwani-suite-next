@@ -1,0 +1,16 @@
+ M apps/app-client/runtime/src/App.tsx
+ M infra/docker/scripts/runtime.ps1
+ M services/dsh/backend/internal/http/server.go
+ M services/dsh/capability-map.ts
+ M services/dsh/clients/generated/dsh-api.ts
+ M services/dsh/contracts/dsh.openapi.yaml
+ M services/dsh/runtime-map.ts
+ M services/dsh/service.manifest.ts
+ M services/dsh/surface-map.ts
+?? services/dsh/backend/internal/homediscovery/
+?? services/dsh/clients/home-discovery-client.ts
+?? services/dsh/database/migrations/dsh-002_home_discovery.sql
+?? services/dsh/database/seeds/local/dsh-002_home_discovery.local.sql
+?? services/dsh/evidence/DSH-002-client-home-discovery/
+?? services/dsh/frontend/app-client/home-discovery/
+?? services/dsh/frontend/shared/home-discovery/

@@ -83,24 +83,34 @@ function Wait-ForDshApi {
 }
 
 function Invoke-Migrate {
-  $MigrationFile = ".\services\dsh\database\migrations\dsh-001_store_discovery.sql"
-  if (-not (Test-Path -LiteralPath $MigrationFile)) { throw "Migration file not found: $MigrationFile" }
-  Write-Host "`n--- Applying DSH-001 migration ---"
-  Get-Content -LiteralPath $MigrationFile -Raw |
-    docker compose @(Get-ComposeBase) exec -T postgres `
-      psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
-  if ($LASTEXITCODE -ne 0) { throw "Migration failed (exit $LASTEXITCODE)" }
+  $MigrationDir = ".\services\dsh\database\migrations"
+  $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
+  if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
+  Write-Host "`n--- Applying DSH migrations ---"
+  foreach ($f in $MigrationFiles) {
+    Write-Host "  Applying: $($f.Name)"
+    Get-Content -LiteralPath $f.FullName -Raw |
+      docker compose @(Get-ComposeBase) exec -T postgres `
+        psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw "Migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+    Write-Host "  $($f.Name): PASS"
+  }
   Write-Host "Migration: PASS"
 }
 
 function Invoke-Seed {
-  $SeedFile = ".\services\dsh\database\seeds\local\dsh-001_store_discovery.local.sql"
-  if (-not (Test-Path -LiteralPath $SeedFile)) { throw "Seed file not found: $SeedFile" }
-  Write-Host "`n--- Applying DSH-001 local seed ---"
-  Get-Content -LiteralPath $SeedFile -Raw |
-    docker compose @(Get-ComposeBase) exec -T postgres `
-      psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
-  if ($LASTEXITCODE -ne 0) { throw "Seed failed (exit $LASTEXITCODE)" }
+  $SeedDir = ".\services\dsh\database\seeds\local"
+  $SeedFiles = Get-ChildItem -LiteralPath $SeedDir -Filter "*.sql" | Sort-Object Name
+  if ($SeedFiles.Count -eq 0) { throw "No seed files found in $SeedDir" }
+  Write-Host "`n--- Applying DSH local seeds ---"
+  foreach ($f in $SeedFiles) {
+    Write-Host "  Seeding: $($f.Name)"
+    Get-Content -LiteralPath $f.FullName -Raw |
+      docker compose @(Get-ComposeBase) exec -T postgres `
+        psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw "Seed failed for $($f.Name) (exit $LASTEXITCODE)" }
+    Write-Host "  $($f.Name): PASS"
+  }
   Write-Host "Seed: PASS"
 }
 
