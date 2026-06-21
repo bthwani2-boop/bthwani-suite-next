@@ -6,8 +6,9 @@ import { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState";
 import { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";
 import type { DshStoreListState } from "../../shared/store/store-discovery.states";
 import type { DshStoreCardViewModel } from "../../shared/store/store-discovery.view-model";
+import type { DiscoveryFilter } from "../../shared/store/use-store-discovery-controller";
 
-export type DiscoveryFilter = "all" | "favorites" | "nearest";
+export type { DiscoveryFilter };
 
 type Props = Readonly<{
   state: DshStoreListState;

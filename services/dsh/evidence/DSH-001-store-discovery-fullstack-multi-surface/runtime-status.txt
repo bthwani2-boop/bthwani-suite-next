@@ -1,0 +1,35 @@
+DSH-001 FULLSTACK MULTI-SURFACE — Runtime Status
+Date: 2026-06-22
+Branch: starting-implementing-slices
+
+Services running:
+  postgres     :55432  UP
+  dsh-api      :58080  UP (healthy)
+  minio        :59000  UP
+  control-panel:13000  UP (Next.js dev)
+
+API verification:
+  GET /dsh/health                          → 200 healthy
+  GET /dsh/stores?limit=10&offset=0        → 200 (6 stores)
+  GET /dsh/stores/store-1005               → 200 (detail)
+  GET http://localhost:13000/dsh/partners/stores → 200 (16431 bytes)
+
+Tests: 82 pass / 0 fail
+  pnpm --dir services/dsh test
+
+Typechecks:
+  pnpm --dir services/dsh typecheck        → 0 errors
+  pnpm --dir apps/control-panel/runtime typecheck → 0 errors
+
+Guards passed:
+  app-shell-control-panel-contract-gate    PASS
+  no-financial-mutation-outside-wlt        PASS
+  control-panel-design-gate                PASS
+  guard-slice-master-matrix-v3             PASS (0 errors, 0 warnings)
+  dsh-frontend-shared-ownership-gate       PASS (new — enforces shared ownership)
+
+Shared ownership:
+  useStoreAdminController    → shared/store/use-store-admin-controller.tsx
+  useStoreDiscoveryController → shared/store/use-store-discovery-controller.tsx
+  StoreManagementScreen      → UI-only (no useState/useEffect/fetch)
+  StoreDiscoveryScreen       → UI-only (no useState/useEffect/fetch)

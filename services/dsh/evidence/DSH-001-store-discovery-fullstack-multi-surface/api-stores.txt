@@ -1,0 +1,12 @@
+GET http://localhost:58080/dsh/stores?limit=10&offset=0
+HTTP 200
+total=6 count=6
+
+store-1005 | مطعم المدينة القديمة    | active             | restaurant
+store-1001 | أسواق حدة المركزية      | active             | grocery
+store-1006 | صيدلية معين             | active             | pharmacy
+store-1002 | مخبز السبعين            | active             | bakery
+store-1004 | بقالة الزبيري           | temporarily_closed | grocery
+store-1003 | سوق شارع تعز            | active             | grocery
+
+Collected: 2026-06-22

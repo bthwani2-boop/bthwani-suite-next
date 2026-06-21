@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import {
   Pressable,
   ScrollView,
@@ -7,12 +7,11 @@ import {
   View,
 } from "react-native";
 import { Screen, colorRoles } from "@bthwani/ui-kit";
-import { StoreDiscoveryList, type DiscoveryFilter } from "./StoreDiscoveryList";
+import { StoreDiscoveryList } from "./StoreDiscoveryList";
 import {
-  fetchStoreList,
-  loadingState,
-} from "../../shared/store/store-discovery.api";
-import type { DshStoreListState } from "../../shared/store/store-discovery.states";
+  useStoreDiscoveryController,
+  type DiscoveryFilter,
+} from "../../shared/store/use-store-discovery-controller";
 
 type Props = Readonly<{
   onStorePress?: (storeId: string) => void;
@@ -25,43 +24,15 @@ const FILTERS: ReadonlyArray<{ key: DiscoveryFilter; label: string; icon: string
 ];
 
 export function StoreDiscoveryScreen({ onStorePress }: Props) {
-  const [state, setState] = useState<DshStoreListState>(loadingState());
-  const [activeFilter, setActiveFilter] = useState<DiscoveryFilter>("all");
-  const [favoriteIds, setFavoriteIds] = useState<ReadonlySet<string>>(new Set());
+  const c = useStoreDiscoveryController();
 
-  const load = useCallback(async () => {
-    setState(loadingState());
-    const nextState = await fetchStoreList();
-    setState(nextState);
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const handleStorePress = useCallback(
-    (storeId: string) => {
-      onStorePress?.(storeId);
-    },
+  const handleStorePress = React.useCallback(
+    (storeId: string) => { onStorePress?.(storeId); },
     [onStorePress],
   );
 
-  const handleFavoritePress = useCallback((storeId: string) => {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(storeId)) {
-        next.delete(storeId);
-      } else {
-        next.add(storeId);
-      }
-      return next;
-    });
-  }, []);
-
   return (
     <Screen padded={false}>
-
-      {/* ── Filter Rail ── */}
       <View style={styles.filterWrap}>
         <ScrollView
           horizontal
@@ -69,12 +40,12 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
           contentContainerStyle={styles.filterScroll}
         >
           {FILTERS.map((f) => {
-            const isActive = activeFilter === f.key;
+            const isActive = c.activeFilter === f.key;
             return (
               <Pressable
                 key={f.key}
-                onPress={() => setActiveFilter(f.key)}
-                style={({ pressed }) => [
+                onPress={() => c.setActiveFilter(f.key)}
+                style={({ pressed }: { pressed: boolean }) => [
                   styles.filterChip,
                   isActive && styles.filterChipActive,
                   pressed && styles.filterChipPressed,
@@ -95,21 +66,19 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
         </ScrollView>
       </View>
 
-      {/* ── Store Feed ── */}
       <StoreDiscoveryList
-        state={state}
-        activeFilter={activeFilter}
-        favoriteIds={favoriteIds}
+        state={c.state}
+        activeFilter={c.activeFilter}
+        favoriteIds={c.favoriteIds}
         onStorePress={handleStorePress}
-        onFavoritePress={handleFavoritePress}
-        onRetry={load}
+        onFavoritePress={c.toggleFavorite}
+        onRetry={c.retry}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  // Filter rail
   filterWrap: {
     borderBottomWidth: 1,
     borderBottomColor: colorRoles.borderSubtle,

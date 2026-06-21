@@ -110,10 +110,13 @@
     "screens": ["StoreManagementScreen", "StoreAdminKpiStrip", "StoreAdminFilters", "StoreAdminTable", "StoreDetailAdminPanel", "StoreAdminStateView"],
     "route": "/dsh/partners/stores",
     "section": "partners",
+    "service_label": "partners / stores",
     "api_integration": true,
     "direct_fetch_in_screens": false,
     "tamagui_in_control_panel": false,
     "hardcoded_old_ports": false,
+    "shared_ownership_enforced": true,
+    "controller_in_shared": "services/dsh/frontend/shared/store/use-store-admin-controller.tsx",
     "evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/"
   },
   "dsh_tests": {
@@ -149,10 +152,11 @@
   },
   "visual_evidence": {
     "status": "PARTIAL",
-    "dsh_001": "PRESENT — services/dsh/evidence/DSH-001-store-discovery/screenshot",
+    "dsh_001_app_client": "PRESENT — services/dsh/evidence/DSH-001-store-discovery/screenshot",
+    "dsh_001_control_panel": "RUNTIME_VERIFIED — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/ (screenshots pending visual capture)",
     "dsh_002": "PRESENT — services/dsh/evidence/DSH-002-client-home-discovery/screenshot",
     "dsh_003_to_010": "NOT_STARTED",
-    "notes": "Screenshots required per slice per surface."
+    "notes": "Screenshots required per slice per surface. DSH-001 control-panel runtime verified at http://localhost:13000/dsh/partners/stores — visual screenshot pending."
   },
   "final_closure": {
     "status": "IN_PROGRESS",

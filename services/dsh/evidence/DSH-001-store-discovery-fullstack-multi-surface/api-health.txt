@@ -1,0 +1,5 @@
+GET http://localhost:58080/dsh/health
+HTTP 200
+{"service":"dsh","status":"healthy","checkedAt":"2026-06-21T22:21:40.270608609Z"}
+
+Collected: 2026-06-22

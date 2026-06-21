@@ -14,7 +14,7 @@ export default function DshStoresPage() {
       topBar={
         <ControlPanelTopBar
           title={<span style={{ fontWeight: 700 }}>لوحة التحكم — DSH</span>}
-          serviceLabel={<span>operations / stores</span>}
+          serviceLabel={<span>partners / stores</span>}
         />
       }
       navigation={

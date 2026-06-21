@@ -6,7 +6,7 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-001_CONTROL_PANEL_IN_PROGRESS",
+  stage: "DSH-001_RUNTIME_VERIFIED_MULTI_SURFACE",
   closureState: "RUNTIME_VERIFIED",
   activationScope: "store-discovery-multi-surface",
   contract: "contracts/dsh.openapi.yaml",
@@ -26,6 +26,8 @@ export const dshServiceManifest = {
     generatedClientReady: true,
     databaseReady: true,
     screensReady: true,
+    sharedOwnershipEnforced: true,
+    controllersInShared: ["useStoreAdminController", "useStoreDiscoveryController"],
   },
   nextSlice: {
     id: "DSH-002",

@@ -8,7 +8,7 @@ const {
   rowToDetail,
   isStoreVisibleToClient,
   applyClientVisibilityFilter,
-} = await import("../dist/domain/store-discovery/store-discovery.policy.js");
+} = await import("../dist/domain/store/store-discovery.policy.js");
 
 const makeRow = (overrides = {}) => ({
   id: "store-001",

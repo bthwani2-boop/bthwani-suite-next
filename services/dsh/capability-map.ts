@@ -16,8 +16,7 @@ export type DshCapability = {
   readonly closureState:
     | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
     | "NOT_APPROVED_YET"
-    | "RUNTIME_VERIFIED"
-    | "CONTROL_PANEL_IN_PROGRESS";
+    | "RUNTIME_VERIFIED";
 };
 
 export const DSH_CAPABILITY_MAP = [
@@ -35,7 +34,7 @@ export const DSH_CAPABILITY_MAP = [
     contractOperations: ["listDshStores", "getDshStore"],
     surfaces: ["app-client", "control-panel"],
     runtimeBound: true,
-    closureState: "CONTROL_PANEL_IN_PROGRESS",
+    closureState: "RUNTIME_VERIFIED",
   },
   {
     id: "dsh.client.home-discovery",

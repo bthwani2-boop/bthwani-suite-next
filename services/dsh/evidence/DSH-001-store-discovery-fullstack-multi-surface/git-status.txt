@@ -1,0 +1,21 @@
+Branch: starting-implementing-slices
+Date: 2026-06-22
+
+Recent commits:
+  109fea3 chore(dsh): remove stale .gitkeep files from frontend and shared roots
+  6f1677b chore(control-panel): add section placeholder folders under frontend/control-panel
+  543f5ef feat(dsh): close DSH-001 as full-stack multi-surface slice — app-client + control-panel
+  462b56a feat(app-shell): audit, finalize, and gate control-panel contract layer
+  303752f feat(control-panel): add foundation shell, archetypes, design gate, and governance sync
+
+Key files changed in 543f5ef (43 files, +1574/-68):
+  NEW  services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts
+  NEW  services/dsh/frontend/shared/store/store-admin.view-model.ts
+  NEW  services/dsh/frontend/shared/store/store-admin.api.ts
+  NEW  services/dsh/frontend/shared/store/use-store-admin-controller.tsx
+  NEW  services/dsh/frontend/shared/store/use-store-discovery-controller.tsx
+  NEW  services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx
+  NEW  apps/control-panel/runtime/src/app/dsh/partners/stores/page.tsx
+  NEW  apps/control-panel/runtime/src/app/layout.tsx
+  RENAME services/dsh/frontend/shared/store-discovery/ → shared/store/
+  RENAME services/dsh/domain/store-discovery/ → domain/store/
