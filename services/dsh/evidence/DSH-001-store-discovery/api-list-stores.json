@@ -1,188 +1,188 @@
 {
-  "stores": [
-    {
-      "id": "store-1005",
-      "slug": "old-city-restaurant",
-      "displayName": "مطعم المدينة القديمة",
-      "status": "active",
-      "cityCode": "sana",
-      "serviceAreaCode": "old-city",
-      "serviceability": {
-        "status": "serviceable"
-      },
-      "ratingAverage": 4.9,
-      "ratingCount": 524,
-      "deliveryEtaMin": 15,
-      "deliveryEtaMax": 30,
-      "isVisible": true,
-      "heroImageUrl": "http://localhost:59000/dsh-media/store-1005-hero.jpg",
-      "logoUrl": "http://localhost:59000/dsh-media/store-1005-logo.jpg",
-      "category": "restaurant",
-      "deliveryModes": [
-        "delivery",
-        "pickup"
-      ],
-      "isFreeDelivery": true,
-      "distanceKm": 0.5,
-      "followerCount": 5200,
-      "hasProBadge": true,
-      "hasCouponBadge": true,
-      "pointsMultiplier": 3,
-      "isPopular": true
-    },
-    {
-      "id": "store-1001",
-      "slug": "haddah-central-market",
-      "displayName": "أسواق حدة المركزية",
-      "status": "active",
-      "cityCode": "sana",
-      "serviceAreaCode": "haddah",
-      "serviceability": {
-        "status": "serviceable"
-      },
-      "ratingAverage": 4.8,
-      "ratingCount": 312,
-      "deliveryEtaMin": 25,
-      "deliveryEtaMax": 40,
-      "isVisible": true,
-      "heroImageUrl": "http://localhost:59000/dsh-media/store-1001-hero.jpg",
-      "logoUrl": "http://localhost:59000/dsh-media/store-1001-logo.jpg",
-      "category": "grocery",
-      "deliveryModes": [
-        "delivery",
-        "pickup",
-        "express"
-      ],
-      "isFreeDelivery": true,
-      "distanceKm": 2.1,
-      "followerCount": 3100,
-      "hasProBadge": true,
-      "hasCouponBadge": false,
-      "pointsMultiplier": 2,
-      "isPopular": true
-    },
-    {
-      "id": "store-1006",
-      "slug": "maeen-pharmacy",
-      "displayName": "صيدلية معين",
-      "status": "active",
-      "cityCode": "sana",
-      "serviceAreaCode": "maeen",
-      "serviceability": {
-        "status": "serviceable"
-      },
-      "ratingAverage": 4.7,
-      "ratingCount": 88,
-      "deliveryEtaMin": 20,
-      "deliveryEtaMax": 35,
-      "isVisible": true,
-      "heroImageUrl": "http://localhost:59000/dsh-media/store-1006-hero.jpg",
-      "logoUrl": "http://localhost:59000/dsh-media/store-1006-logo.jpg",
-      "category": "pharmacy",
-      "deliveryModes": [
-        "delivery"
-      ],
-      "isFreeDelivery": true,
-      "distanceKm": 4.1,
-      "followerCount": 980,
-      "hasProBadge": false,
-      "hasCouponBadge": true,
-      "pointsMultiplier": null,
-      "isPopular": false
-    },
-    {
-      "id": "store-1002",
-      "slug": "al-sabeen-bakery",
-      "displayName": "مخبز السبعين",
-      "status": "active",
-      "cityCode": "sana",
-      "serviceAreaCode": "sabeen",
-      "serviceability": {
-        "status": "serviceable"
-      },
-      "ratingAverage": 4.6,
-      "ratingCount": 189,
-      "deliveryEtaMin": 20,
-      "deliveryEtaMax": 35,
-      "isVisible": true,
-      "heroImageUrl": "http://localhost:59000/dsh-media/store-1002-hero.jpg",
-      "logoUrl": "http://localhost:59000/dsh-media/store-1002-logo.jpg",
-      "category": "bakery",
-      "deliveryModes": [
-        "delivery",
-        "pickup"
-      ],
-      "isFreeDelivery": true,
-      "distanceKm": 1.8,
-      "followerCount": 1200,
-      "hasProBadge": true,
-      "hasCouponBadge": true,
-      "pointsMultiplier": null,
-      "isPopular": false
-    },
-    {
-      "id": "store-1004",
-      "slug": "al-zubairi-grocery",
-      "displayName": "بقالة الزبيري",
-      "status": "temporarily_closed",
-      "cityCode": "sana",
-      "serviceAreaCode": "zubairi",
-      "serviceability": {
-        "status": "unavailable"
-      },
-      "ratingAverage": 4.5,
-      "ratingCount": 241,
-      "deliveryEtaMin": null,
-      "deliveryEtaMax": null,
-      "isVisible": true,
-      "heroImageUrl": "http://localhost:59000/dsh-media/store-1004-hero.jpg",
-      "logoUrl": "http://localhost:59000/dsh-media/store-1004-logo.jpg",
-      "category": "grocery",
-      "deliveryModes": [
-        "delivery"
-      ],
-      "isFreeDelivery": false,
-      "distanceKm": 1.2,
-      "followerCount": 2400,
-      "hasProBadge": true,
-      "hasCouponBadge": false,
-      "pointsMultiplier": null,
-      "isPopular": false
-    },
-    {
-      "id": "store-1003",
-      "slug": "taiz-street-market",
-      "displayName": "سوق شارع تعز",
-      "status": "active",
-      "cityCode": "sana",
-      "serviceAreaCode": "taiz-st",
-      "serviceability": {
-        "status": "limited"
-      },
-      "ratingAverage": 4.2,
-      "ratingCount": 97,
-      "deliveryEtaMin": 35,
-      "deliveryEtaMax": 55,
-      "isVisible": true,
-      "heroImageUrl": "http://localhost:59000/dsh-media/store-1003-hero.jpg",
-      "logoUrl": "http://localhost:59000/dsh-media/store-1003-logo.jpg",
-      "category": "grocery",
-      "deliveryModes": [
-        "delivery",
-        "pickup"
-      ],
-      "isFreeDelivery": false,
-      "distanceKm": 3.5,
-      "followerCount": 850,
-      "hasProBadge": false,
-      "hasCouponBadge": false,
-      "pointsMultiplier": null,
-      "isPopular": false
-    }
-  ],
-  "pagination": {
-    "limit": 10,
-    "offset": 0,
-    "total": 6
-  }
+    "stores":  [
+                   {
+                       "id":  "store-1005",
+                       "slug":  "old-city-restaurant",
+                       "displayName":  "Ù\u0085Ø·Ø¹Ù\u0085 Ø§ÙÙ\u0085Ø¯ÙÙØ© Ø§ÙÙØ¯ÙÙ\u0085Ø©",
+                       "status":  "active",
+                       "cityCode":  "sana",
+                       "serviceAreaCode":  "old-city",
+                       "serviceability":  {
+                                              "status":  "serviceable"
+                                          },
+                       "ratingAverage":  4.9,
+                       "ratingCount":  524,
+                       "deliveryEtaMin":  15,
+                       "deliveryEtaMax":  30,
+                       "isVisible":  true,
+                       "heroImageUrl":  "http://localhost:59000/dsh-media/store-1005-hero.jpg",
+                       "logoUrl":  "http://localhost:59000/dsh-media/store-1005-logo.jpg",
+                       "category":  "restaurant",
+                       "deliveryModes":  [
+                                             "delivery",
+                                             "pickup"
+                                         ],
+                       "isFreeDelivery":  true,
+                       "distanceKm":  0.5,
+                       "followerCount":  5200,
+                       "hasProBadge":  true,
+                       "hasCouponBadge":  true,
+                       "pointsMultiplier":  3,
+                       "isPopular":  true
+                   },
+                   {
+                       "id":  "store-1001",
+                       "slug":  "haddah-central-market",
+                       "displayName":  "Ø£Ø³ÙØ§Ù Ø­Ø¯Ø© Ø§ÙÙ\u0085Ø±ÙØ²ÙØ©",
+                       "status":  "active",
+                       "cityCode":  "sana",
+                       "serviceAreaCode":  "haddah",
+                       "serviceability":  {
+                                              "status":  "serviceable"
+                                          },
+                       "ratingAverage":  4.8,
+                       "ratingCount":  312,
+                       "deliveryEtaMin":  25,
+                       "deliveryEtaMax":  40,
+                       "isVisible":  true,
+                       "heroImageUrl":  "http://localhost:59000/dsh-media/store-1001-hero.jpg",
+                       "logoUrl":  "http://localhost:59000/dsh-media/store-1001-logo.jpg",
+                       "category":  "grocery",
+                       "deliveryModes":  [
+                                             "delivery",
+                                             "pickup",
+                                             "express"
+                                         ],
+                       "isFreeDelivery":  true,
+                       "distanceKm":  2.1,
+                       "followerCount":  3100,
+                       "hasProBadge":  true,
+                       "hasCouponBadge":  false,
+                       "pointsMultiplier":  2,
+                       "isPopular":  true
+                   },
+                   {
+                       "id":  "store-1006",
+                       "slug":  "maeen-pharmacy",
+                       "displayName":  "ØµÙØ¯ÙÙØ© Ù\u0085Ø¹ÙÙ",
+                       "status":  "active",
+                       "cityCode":  "sana",
+                       "serviceAreaCode":  "maeen",
+                       "serviceability":  {
+                                              "status":  "serviceable"
+                                          },
+                       "ratingAverage":  4.7,
+                       "ratingCount":  88,
+                       "deliveryEtaMin":  20,
+                       "deliveryEtaMax":  35,
+                       "isVisible":  true,
+                       "heroImageUrl":  "http://localhost:59000/dsh-media/store-1006-hero.jpg",
+                       "logoUrl":  "http://localhost:59000/dsh-media/store-1006-logo.jpg",
+                       "category":  "pharmacy",
+                       "deliveryModes":  [
+                                             "delivery"
+                                         ],
+                       "isFreeDelivery":  true,
+                       "distanceKm":  4.1,
+                       "followerCount":  980,
+                       "hasProBadge":  false,
+                       "hasCouponBadge":  true,
+                       "pointsMultiplier":  null,
+                       "isPopular":  false
+                   },
+                   {
+                       "id":  "store-1002",
+                       "slug":  "al-sabeen-bakery",
+                       "displayName":  "Ù\u0085Ø®Ø¨Ø² Ø§ÙØ³Ø¨Ø¹ÙÙ",
+                       "status":  "active",
+                       "cityCode":  "sana",
+                       "serviceAreaCode":  "sabeen",
+                       "serviceability":  {
+                                              "status":  "serviceable"
+                                          },
+                       "ratingAverage":  4.6,
+                       "ratingCount":  189,
+                       "deliveryEtaMin":  20,
+                       "deliveryEtaMax":  35,
+                       "isVisible":  true,
+                       "heroImageUrl":  "http://localhost:59000/dsh-media/store-1002-hero.jpg",
+                       "logoUrl":  "http://localhost:59000/dsh-media/store-1002-logo.jpg",
+                       "category":  "bakery",
+                       "deliveryModes":  [
+                                             "delivery",
+                                             "pickup"
+                                         ],
+                       "isFreeDelivery":  true,
+                       "distanceKm":  1.8,
+                       "followerCount":  1200,
+                       "hasProBadge":  true,
+                       "hasCouponBadge":  true,
+                       "pointsMultiplier":  null,
+                       "isPopular":  false
+                   },
+                   {
+                       "id":  "store-1004",
+                       "slug":  "al-zubairi-grocery",
+                       "displayName":  "Ø¨ÙØ§ÙØ© Ø§ÙØ²Ø¨ÙØ±Ù",
+                       "status":  "temporarily_closed",
+                       "cityCode":  "sana",
+                       "serviceAreaCode":  "zubairi",
+                       "serviceability":  {
+                                              "status":  "unavailable"
+                                          },
+                       "ratingAverage":  4.5,
+                       "ratingCount":  241,
+                       "deliveryEtaMin":  null,
+                       "deliveryEtaMax":  null,
+                       "isVisible":  true,
+                       "heroImageUrl":  "http://localhost:59000/dsh-media/store-1004-hero.jpg",
+                       "logoUrl":  "http://localhost:59000/dsh-media/store-1004-logo.jpg",
+                       "category":  "grocery",
+                       "deliveryModes":  [
+                                             "delivery"
+                                         ],
+                       "isFreeDelivery":  false,
+                       "distanceKm":  1.2,
+                       "followerCount":  2400,
+                       "hasProBadge":  true,
+                       "hasCouponBadge":  false,
+                       "pointsMultiplier":  null,
+                       "isPopular":  false
+                   },
+                   {
+                       "id":  "store-1003",
+                       "slug":  "taiz-street-market",
+                       "displayName":  "Ø³ÙÙ Ø´Ø§Ø±Ø¹ ØªØ¹Ø²",
+                       "status":  "active",
+                       "cityCode":  "sana",
+                       "serviceAreaCode":  "taiz-st",
+                       "serviceability":  {
+                                              "status":  "limited"
+                                          },
+                       "ratingAverage":  4.2,
+                       "ratingCount":  97,
+                       "deliveryEtaMin":  35,
+                       "deliveryEtaMax":  55,
+                       "isVisible":  true,
+                       "heroImageUrl":  "http://localhost:59000/dsh-media/store-1003-hero.jpg",
+                       "logoUrl":  "http://localhost:59000/dsh-media/store-1003-logo.jpg",
+                       "category":  "grocery",
+                       "deliveryModes":  [
+                                             "delivery",
+                                             "pickup"
+                                         ],
+                       "isFreeDelivery":  false,
+                       "distanceKm":  3.5,
+                       "followerCount":  850,
+                       "hasProBadge":  false,
+                       "hasCouponBadge":  false,
+                       "pointsMultiplier":  null,
+                       "isPopular":  false
+                   }
+               ],
+    "pagination":  {
+                       "limit":  10,
+                       "offset":  0,
+                       "total":  6
+                   }
 }

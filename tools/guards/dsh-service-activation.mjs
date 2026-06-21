@@ -69,6 +69,7 @@ if (verified) {
     "go-build.txt",
     "api-list-stores.json",
     "minio-media-assets.txt",
+    "media-object-smoke.txt",
     "screenshot-app-client-store-discovery.png",
   ];
   for (const evidence of requiredEvidence) {
@@ -144,6 +145,50 @@ if (/^\s*\/dsh\/stores(?:\/|:)/m.test(openapi)) {
       file: "services/dsh/contracts/dsh.openapi.yaml",
       message: "Store Discovery endpoints require DSH-001 prerequisites: evidence-plan, Dockerfile, and migration must all exist"
     });
+  }
+}
+
+// Consistency check: no runtime-verified capability consumed by a planned surface
+if (capabilityMap) {
+  const capBlocks = [];
+  const capRegex = /\{\s*id:\s*["']([^"']+)["'][\s\S]*?status:\s*["']([^"']+)["'][\s\S]*?surfaces:\s*\[([^\]]*)\][\s\S]*?\}/g;
+  let match;
+  while ((match = capRegex.exec(capabilityMap)) !== null) {
+    const id = match[1];
+    const status = match[2];
+    const surfaces = match[3].split(",").map(s => s.trim().replace(/["']/g, "")).filter(Boolean);
+    capBlocks.push({ id, status, surfaces });
+  }
+
+  const surfaceMapText = fs.existsSync(path.join(repoRoot, "services/dsh/surface-map.ts"))
+    ? read("services/dsh/surface-map.ts")
+    : "";
+  const surfBlocks = [];
+  const surfRegex = /\{\s*surface:\s*["']([^"']+)["'][\s\S]*?capabilityIds:\s*\[([^\]]*)\][\s\S]*?implementationState:\s*["']([^"']+)["'][\s\S]*?\}/g;
+  while ((match = surfRegex.exec(surfaceMapText)) !== null) {
+    const surface = match[1];
+    const capabilityIds = match[2].split(",").map(s => s.trim().replace(/["']/g, "")).filter(Boolean);
+    const implementationState = match[3];
+    surfBlocks.push({ surface, capabilityIds, implementationState });
+  }
+
+  for (const cap of capBlocks) {
+    if (cap.status === "runtime-verified") {
+      const consumingSurfaces = new Set([
+        ...cap.surfaces,
+        ...surfBlocks.filter(s => s.capabilityIds.includes(cap.id)).map(s => s.surface)
+      ]);
+
+      for (const surfaceName of consumingSurfaces) {
+        const surfBlock = surfBlocks.find(s => s.surface === surfaceName);
+        if (surfBlock && surfBlock.implementationState === "planned") {
+          violations.push({
+            file: "services/dsh/surface-map.ts",
+            message: `Surface '${surfaceName}' consumes runtime-verified capability '${cap.id}' but its implementationState is still 'planned'`
+          });
+        }
+      }
+    }
   }
 }
 

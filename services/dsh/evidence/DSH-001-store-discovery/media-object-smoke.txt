@@ -1,0 +1,9 @@
+URL: http://localhost:59000/dsh-media/store-1001-hero.jpg
+StatusCode: 200
+Content-Type: image/jpeg
+Content-Length: 146985
+
+URL: http://localhost:59000/dsh-media/store-1001-logo.jpg
+StatusCode: 200
+Content-Type: image/jpeg
+Content-Length: 30834

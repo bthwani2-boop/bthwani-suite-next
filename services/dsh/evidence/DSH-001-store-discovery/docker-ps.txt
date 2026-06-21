@@ -1,4 +1,4 @@
 NAMES                      IMAGE                                      COMMAND                  STATUS                    PORTS
-bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    "/app/dsh-api"           Up 14 seconds (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
-bthwani-postgres-runtime   postgres:16-alpine                         "docker-entrypoint.s…"   Up 23 seconds (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   "/usr/bin/docker-ent…"   Up 23 seconds             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
+bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    "/app/dsh-api"           Up 28 seconds (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-postgres-runtime   postgres:16-alpine                         "docker-entrypoint.sΓÇª"   Up 46 seconds (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   "/usr/bin/docker-entΓÇª"   Up 46 seconds             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp

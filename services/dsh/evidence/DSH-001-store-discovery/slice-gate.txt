@@ -1,3 +1,7 @@
-RESULT: PASS
-Slice: DSH-001
-Evidence: C:\bthwani-suite-next\tools\registry\runs\SLICE-GATE-20260621-083647
+
+> bthwani-suite-next@0.0.0 slice:gate C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1
+
+RESULT: FAIL
+Evidence: C:\bthwani-suite-next\tools\registry\runs\SLICE-GATE-20260621-090058
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

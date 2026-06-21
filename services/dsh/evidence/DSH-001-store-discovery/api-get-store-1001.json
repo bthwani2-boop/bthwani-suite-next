@@ -1,35 +1,35 @@
 {
-  "store": {
-    "id": "store-1001",
-    "slug": "haddah-central-market",
-    "displayName": "أسواق حدة المركزية",
-    "status": "active",
-    "cityCode": "sana",
-    "serviceAreaCode": "haddah",
-    "serviceability": {
-      "status": "serviceable"
-    },
-    "ratingAverage": 4.8,
-    "ratingCount": 312,
-    "deliveryEtaMin": 25,
-    "deliveryEtaMax": 40,
-    "isVisible": true,
-    "heroImageUrl": "http://localhost:59000/dsh-media/store-1001-hero.jpg",
-    "logoUrl": "http://localhost:59000/dsh-media/store-1001-logo.jpg",
-    "category": "grocery",
-    "deliveryModes": [
-      "delivery",
-      "pickup",
-      "express"
-    ],
-    "isFreeDelivery": true,
-    "distanceKm": 2.1,
-    "followerCount": 3100,
-    "hasProBadge": true,
-    "hasCouponBadge": false,
-    "pointsMultiplier": 2,
-    "isPopular": true,
-    "createdAt": "2026-06-21T05:34:35.690798Z",
-    "updatedAt": "2026-06-21T05:34:35.690798Z"
-  }
+    "store":  {
+                  "id":  "store-1001",
+                  "slug":  "haddah-central-market",
+                  "displayName":  "Ø£Ø³ÙØ§Ù Ø­Ø¯Ø© Ø§ÙÙ\u0085Ø±ÙØ²ÙØ©",
+                  "status":  "active",
+                  "cityCode":  "sana",
+                  "serviceAreaCode":  "haddah",
+                  "serviceability":  {
+                                         "status":  "serviceable"
+                                     },
+                  "ratingAverage":  4.8,
+                  "ratingCount":  312,
+                  "deliveryEtaMin":  25,
+                  "deliveryEtaMax":  40,
+                  "isVisible":  true,
+                  "heroImageUrl":  "http://localhost:59000/dsh-media/store-1001-hero.jpg",
+                  "logoUrl":  "http://localhost:59000/dsh-media/store-1001-logo.jpg",
+                  "category":  "grocery",
+                  "deliveryModes":  [
+                                        "delivery",
+                                        "pickup",
+                                        "express"
+                                    ],
+                  "isFreeDelivery":  true,
+                  "distanceKm":  2.1,
+                  "followerCount":  3100,
+                  "hasProBadge":  true,
+                  "hasCouponBadge":  false,
+                  "pointsMultiplier":  2,
+                  "isPopular":  true,
+                  "createdAt":  "2026-06-21T05:59:18.571837Z",
+                  "updatedAt":  "2026-06-21T05:59:18.571837Z"
+              }
 }

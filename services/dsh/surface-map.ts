@@ -10,14 +10,14 @@ export type DshSurface =
 export type DshSurfaceDefinition = {
   readonly surface: DshSurface;
   readonly capabilityIds: readonly DshCapability["id"][];
-  readonly implementationState: "planned";
+  readonly implementationState: "planned" | "runtime-verified" | "blocked";
 };
 
 export const DSH_SURFACE_MAP = [
   {
     surface: "app-client",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "planned",
+    implementationState: "runtime-verified",
   },
   {
     surface: "app-partner",

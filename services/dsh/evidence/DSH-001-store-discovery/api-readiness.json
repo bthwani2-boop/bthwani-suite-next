@@ -1,8 +1,8 @@
 {
-  "service": "dsh",
-  "status": "ready",
-  "dependencies": {
-    "postgres": "ready"
-  },
-  "checkedAt": "2026-06-21T05:34:50.518667319Z"
+    "service":  "dsh",
+    "status":  "ready",
+    "dependencies":  {
+                         "postgres":  "ready"
+                     },
+    "checkedAt":  "2026-06-21T06:02:29.681024407Z"
 }
