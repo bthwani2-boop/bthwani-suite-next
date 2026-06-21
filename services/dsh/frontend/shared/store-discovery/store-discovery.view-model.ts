@@ -1,5 +1,8 @@
 import type { DshStoreSummaryDto, DshStoreDetailDto } from "./store-discovery.types";
 
+type StoreTone = "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
+type PlaceholderTone = "brandAction" | "success" | "info" | "warning" | "default";
+
 export type DshStoreCardViewModel = {
   readonly id: string;
   readonly displayName: string;
@@ -16,9 +19,10 @@ export type DshStoreCardViewModel = {
   readonly statusBadge: string | null;
   readonly isFreeDelivery: boolean;
   readonly placeholderEmoji: string;
-  readonly placeholderColor: string;
+  readonly placeholderTone: PlaceholderTone;
   readonly deliveryModeLabels: readonly string[];
   readonly distanceLabel: string | null;
+  readonly distanceKm: number | null;
   readonly followerCountLabel: string | null;
   readonly hasProBadge: boolean;
   readonly hasCouponBadge: boolean;
@@ -31,53 +35,27 @@ export type DshStoreDetailViewModel = DshStoreCardViewModel & {
   readonly updatedAt: string;
 };
 
-// Media keys (dsh.store.*) are seed identifiers — not real URLs.
-// Convert them to null so the card shows the emoji placeholder instead.
 function resolveImageSource(raw: string | null | undefined): { uri: string } | null {
-  if (raw == null || raw.trim() === "") return null;
-  if (raw.startsWith("dsh.") || !raw.startsWith("http")) return null;
-
-  let urlStr = raw;
-  if (urlStr.includes("localhost") || urlStr.includes("127.0.0.1")) {
-    const apiBaseUrl = process.env.EXPO_PUBLIC_DSH_API_BASE_URL;
-    if (apiBaseUrl) {
+  if (raw == null || raw.trim() === "" || !raw.startsWith("http")) return null;
+  let url = raw;
+  if (url.includes("localhost") || url.includes("127.0.0.1")) {
+    const apiBaseURL = process.env.EXPO_PUBLIC_DSH_API_BASE_URL;
+    if (apiBaseURL) {
       try {
-        const apiParsed = new URL(apiBaseUrl);
-        const rawParsed = new URL(urlStr);
-        // Replace rawParsed host with apiParsed host, but keep MinIO port (59000)
-        rawParsed.hostname = apiParsed.hostname;
-        urlStr = rawParsed.toString();
+        const api = new URL(apiBaseURL);
+        const media = new URL(url);
+        media.hostname = api.hostname;
+        url = media.toString();
       } catch {
-        // Fallback to raw if parsing fails
+        return null;
       }
     }
   }
-
-  return { uri: urlStr };
-}
-
-type CategoryMeta = { emoji: string; color: string; deliveryModes: string[] };
-
-function resolveCategoryMeta(displayName: string): CategoryMeta {
-  const lower = displayName.toLowerCase();
-  if (lower.includes("bakery") || lower.includes("مخبز") || lower.includes("خبز") || lower.includes("حطين")) {
-    return { emoji: "🥖", color: "warning", deliveryModes: ["توصيل", "استلام"] };
-  }
-  if (lower.includes("market") || lower.includes("grocery") || lower.includes("سوق") || lower.includes("بقالة") || lower.includes("العليا")) {
-    return { emoji: "🏪", color: "success", deliveryModes: ["توصيل", "استلام", "⚡ ثواني"] };
-  }
-  if (lower.includes("restaurant") || lower.includes("مطعم") || lower.includes("cafe") || lower.includes("كافيه")) {
-    return { emoji: "🍽️", color: "brandAction", deliveryModes: ["توصيل", "استلام"] };
-  }
-  if (lower.includes("pharmacy") || lower.includes("صيدلية")) {
-    return { emoji: "💊", color: "info", deliveryModes: ["توصيل"] };
-  }
-  return { emoji: "🛍️", color: "brandStructure", deliveryModes: ["توصيل", "استلام"] };
+  return { uri: url };
 }
 
 const CITY_NAMES: Record<string, string> = {
   sana: "صنعاء",
-  riyadh: "الرياض",
 };
 
 const AREA_NAMES: Record<string, string> = {
@@ -87,154 +65,96 @@ const AREA_NAMES: Record<string, string> = {
   zubairi: "شارع الزبيري",
   "old-city": "صنعاء القديمة",
   maeen: "حي معين",
-  olaya: "حي العليا",
-  hittin: "حي حطين",
 };
 
-const DISPLAY_NAME_MAP: Record<string, string> = {
-  "Haddah Central Market": "أسواق العليا الطازجة",
-  "Al Sabeen Bakery": "مخبز حطين",
-  "Taiz Street Market": "سوق شارع تعز",
-  "Al Zubairi Grocery": "بقالة الزبيري",
-  "Old City Restaurant": "مطعم المدينة القديمة",
-  "Maeen Pharmacy": "صيدلية معين",
+const CATEGORY_EMOJI: Record<StoreTone, string> = {
+  restaurant: "🍽️",
+  grocery: "🏪",
+  pharmacy: "💊",
+  bakery: "🥖",
+  default: "🛍️",
 };
 
-const STORE_PREMIUM_METADATA: Record<string, {
-  readonly distanceLabel: string;
-  readonly followerCountLabel: string;
-  readonly hasProBadge: boolean;
-  readonly hasCouponBadge: boolean;
-  readonly pointsMultiplier: number | null;
-  readonly isPopular: boolean;
-}> = {
-  "store-1001": {
-    distanceLabel: "2.1 كم",
-    followerCountLabel: "3.1 ألف",
-    hasProBadge: true,
-    hasCouponBadge: false,
-    pointsMultiplier: 2,
-    isPopular: true,
-  },
-  "store-1002": {
-    distanceLabel: "1.8 كم",
-    followerCountLabel: "1.2 ألف",
-    hasProBadge: true,
-    hasCouponBadge: true,
-    pointsMultiplier: null,
-    isPopular: false,
-  },
-  "store-1003": {
-    distanceLabel: "3.5 كم",
-    followerCountLabel: "850",
-    hasProBadge: false,
-    hasCouponBadge: false,
-    pointsMultiplier: null,
-    isPopular: false,
-  },
-  "store-1004": {
-    distanceLabel: "1.2 كم",
-    followerCountLabel: "2.4 ألف",
-    hasProBadge: true,
-    hasCouponBadge: false,
-    pointsMultiplier: null,
-    isPopular: false,
-  },
-  "store-1005": {
-    distanceLabel: "0.5 كم",
-    followerCountLabel: "5.2 ألف",
-    hasProBadge: true,
-    hasCouponBadge: true,
-    pointsMultiplier: 3,
-    isPopular: true,
-  },
-  "store-1006": {
-    distanceLabel: "4.1 كم",
-    followerCountLabel: "980",
-    hasProBadge: false,
-    hasCouponBadge: true,
-    pointsMultiplier: null,
-    isPopular: false,
-  },
+const CATEGORY_TONE: Record<StoreTone, PlaceholderTone> = {
+  restaurant: "brandAction",
+  grocery: "success",
+  pharmacy: "info",
+  bakery: "warning",
+  default: "default",
 };
+
+const DELIVERY_MODE_LABELS = {
+  delivery: "توصيل",
+  pickup: "استلام",
+  express: "⚡ ثواني",
+} as const;
+
+function formatFollowerCount(count: number): string | null {
+  if (count <= 0) return null;
+  if (count >= 1000) {
+    const compact = new Intl.NumberFormat("ar", {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(count);
+    return compact;
+  }
+  return new Intl.NumberFormat("ar").format(count);
+}
 
 export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel {
   const isOpen = dto.status === "active";
   const isServiceable =
     dto.serviceability.status === "serviceable" ||
     dto.serviceability.status === "limited";
-
   const ratingCount = dto.ratingCount ?? 0;
-  const ratingLabel =
-    dto.ratingAverage != null && ratingCount > 0
-      ? `${dto.ratingAverage.toFixed(1)} (${ratingCount})`
-      : null;
-
-  const etaLabel =
-    dto.deliveryEtaMin != null && dto.deliveryEtaMax != null
-      ? `${dto.deliveryEtaMin}–${dto.deliveryEtaMax} دقيقة`
-      : null;
-
-  const statusBadge =
-    dto.status === "temporarily_closed"
-      ? "مغلق مؤقتاً"
-      : dto.status === "inactive"
-        ? "غير متاح"
-        : dto.serviceability.status === "limited"
-          ? "توصيل محدود"
-          : dto.serviceability.status === "out_of_area"
-            ? "خارج نطاق التوصيل"
-            : null;
-
-  const mappedDisplayName = DISPLAY_NAME_MAP[dto.displayName] ?? dto.displayName;
-  const city = CITY_NAMES[dto.cityCode] ?? dto.cityCode;
-  const area = AREA_NAMES[dto.serviceAreaCode] ?? dto.serviceAreaCode;
-  const locationLabel = `${area} • ${city}`;
-
-  const meta = resolveCategoryMeta(mappedDisplayName);
-
-  const isFreeDelivery = isOpen && dto.serviceability.status === "serviceable";
-
-  const premium = STORE_PREMIUM_METADATA[dto.id] ?? {
-    distanceLabel: "1.5 كم",
-    followerCountLabel: "1.0 ألف",
-    hasProBadge: false,
-    hasCouponBadge: false,
-    pointsMultiplier: null,
-    isPopular: false,
-  };
+  const category = dto.category as StoreTone;
 
   return {
     id: dto.id,
-    displayName: mappedDisplayName,
+    displayName: dto.displayName,
     cityCode: dto.cityCode,
     serviceAreaCode: dto.serviceAreaCode,
-    locationLabel,
+    locationLabel: `${AREA_NAMES[dto.serviceAreaCode] ?? dto.serviceAreaCode} • ${CITY_NAMES[dto.cityCode] ?? dto.cityCode}`,
     isOpen,
     isServiceable,
-    ratingLabel,
+    ratingLabel:
+      dto.ratingAverage != null && ratingCount > 0
+        ? `${dto.ratingAverage.toFixed(1)} (${ratingCount})`
+        : null,
     ratingAverage: dto.ratingAverage ?? null,
-    etaLabel,
+    etaLabel:
+      dto.deliveryEtaMin != null && dto.deliveryEtaMax != null
+        ? `${dto.deliveryEtaMin}–${dto.deliveryEtaMax} دقيقة`
+        : null,
     heroImageSource: resolveImageSource(dto.heroImageUrl),
     logoImageSource: resolveImageSource(dto.logoUrl),
-    statusBadge,
-    isFreeDelivery,
-    placeholderEmoji: meta.emoji,
-    placeholderColor: meta.color,
-    deliveryModeLabels: meta.deliveryModes,
-    distanceLabel: premium.distanceLabel,
-    followerCountLabel: premium.followerCountLabel,
-    hasProBadge: premium.hasProBadge,
-    hasCouponBadge: premium.hasCouponBadge,
-    pointsMultiplier: premium.pointsMultiplier,
-    isPopular: premium.isPopular,
+    statusBadge:
+      dto.status === "temporarily_closed"
+        ? "مغلق مؤقتاً"
+        : dto.status === "inactive"
+          ? "غير متاح"
+          : dto.serviceability.status === "limited"
+            ? "توصيل محدود"
+            : dto.serviceability.status === "out_of_area"
+              ? "خارج نطاق التوصيل"
+              : null,
+    isFreeDelivery: dto.isFreeDelivery,
+    placeholderEmoji: CATEGORY_EMOJI[category] ?? CATEGORY_EMOJI.default,
+    placeholderTone: CATEGORY_TONE[category] ?? CATEGORY_TONE.default,
+    deliveryModeLabels: dto.deliveryModes.map((mode) => DELIVERY_MODE_LABELS[mode]),
+    distanceLabel: dto.distanceKm == null ? null : `${dto.distanceKm.toFixed(1)} كم`,
+    distanceKm: dto.distanceKm ?? null,
+    followerCountLabel: formatFollowerCount(dto.followerCount),
+    hasProBadge: dto.hasProBadge,
+    hasCouponBadge: dto.hasCouponBadge,
+    pointsMultiplier: dto.pointsMultiplier ?? null,
+    isPopular: dto.isPopular,
   };
 }
 
 export function toDetailViewModel(dto: DshStoreDetailDto): DshStoreDetailViewModel {
-  const card = toCardViewModel(dto);
   return {
-    ...card,
+    ...toCardViewModel(dto),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
   };

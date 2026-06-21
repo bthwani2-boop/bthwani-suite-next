@@ -31,7 +31,7 @@ export type StoreCardPremiumItem = Readonly<{
   statusBadge: string | null;
   isFreeDelivery: boolean;
   placeholderEmoji: string;
-  placeholderColor: string;
+  placeholderTone: "brandAction" | "success" | "info" | "warning" | "default";
   deliveryModeLabels: readonly string[];
   distanceLabel: string | null;
   followerCountLabel: string | null;
@@ -64,11 +64,11 @@ const SVC_ICON: Record<string, string> = {
 };
 
 const PLACEHOLDER_COLORS: Record<string, string> = {
-  warning: statusScale.warning,
-  success: statusScale.success,
   brandAction: colorRoles.brandAction,
+  success: statusScale.success,
   info: statusScale.info,
-  brandStructure: colorRoles.brandStructure,
+  warning: statusScale.warning,
+  default: colorRoles.brandStructure,
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ export function StoreCardPremium({
   onFavoritePress,
   isFavorite = false,
 }: StoreCardPremiumProps) {
-  const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderColor] ?? store.placeholderColor;
+  const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderTone];
 
   return (
     <Pressable
@@ -496,13 +496,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 2.5,
-    backgroundColor: "rgba(15, 23, 42, 0.78)", // Premium Slate background
+    backgroundColor: colorRoles.mediaScrimStrong,
     borderRadius: 5,
     paddingHorizontal: 5,
     paddingVertical: 2.5,
   },
   ratingStar:   { fontSize: 9, color: statusScale.warning },
   ratingVal:    { fontSize: 9.5, fontWeight: "800", color: neutralScale[0], letterSpacing: -0.2 },
-  separator:    { fontSize: 8, color: "rgba(255,255,255,0.4)", marginHorizontal: 0.5 },
-  followerVal:  { fontSize: 9, fontWeight: "700", color: "rgba(255,255,255,0.9)", letterSpacing: -0.2 },
+  separator:    { fontSize: 8, color: colorRoles.textOnMediaMuted, marginHorizontal: 0.5 },
+  followerVal:  { fontSize: 9, fontWeight: "700", color: colorRoles.textOnMediaStrong, letterSpacing: -0.2 },
 });

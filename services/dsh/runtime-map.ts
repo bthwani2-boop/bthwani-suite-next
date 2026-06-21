@@ -5,22 +5,22 @@ export type DshRuntimeBinding = {
   readonly contractOperations: readonly string[];
   readonly backendImplemented: boolean;
   readonly runtimeEvidence: string | null;
-  readonly state: "blocked";
+  readonly state: "blocked" | "verified";
 };
 
 export const DSH_RUNTIME_MAP = [
   {
     capabilityId: "dsh.system.readiness",
     contractOperations: ["getDshHealth", "getDshReadiness"],
-    backendImplemented: false,
-    runtimeEvidence: null,
-    state: "blocked",
+    backendImplemented: true,
+    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery",
+    state: "verified",
   },
   {
     capabilityId: "dsh.store.discovery",
     contractOperations: ["listDshStores", "getDshStore"],
-    backendImplemented: false,
-    runtimeEvidence: null,
-    state: "blocked",
+    backendImplemented: true,
+    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery",
+    state: "verified",
   },
 ] as const satisfies readonly DshRuntimeBinding[];

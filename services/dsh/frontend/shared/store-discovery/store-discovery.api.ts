@@ -28,6 +28,24 @@ const client = isValidBaseUrl(DSH_API_BASE_URL)
 
 export { loadingState };
 
+function hasRuntimeCardContract(
+  store: unknown,
+): store is Parameters<typeof toCardViewModel>[0] {
+  if (store === null || typeof store !== "object") return false;
+  const value = store as Record<string, unknown>;
+  return (
+    typeof value["id"] === "string" &&
+    typeof value["displayName"] === "string" &&
+    typeof value["category"] === "string" &&
+    Array.isArray(value["deliveryModes"]) &&
+    typeof value["isFreeDelivery"] === "boolean" &&
+    typeof value["followerCount"] === "number" &&
+    typeof value["hasProBadge"] === "boolean" &&
+    typeof value["hasCouponBadge"] === "boolean" &&
+    typeof value["isPopular"] === "boolean"
+  );
+}
+
 export async function fetchStoreList(params?: {
   cityCode?: string;
   serviceAreaCode?: string;
@@ -54,6 +72,9 @@ export async function fetchStoreList(params?: {
 
     if (!response || !Array.isArray(response.stores)) {
       return errorState("INVALID_RESPONSE: stores array missing");
+    }
+    if (!response.stores.every(hasRuntimeCardContract)) {
+      return errorState("INVALID_RESPONSE: store card contract is incomplete");
     }
 
     if (response.stores.length === 0 && (params?.offset ?? 0) === 0) {

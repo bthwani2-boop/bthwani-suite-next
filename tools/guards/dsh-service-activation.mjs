@@ -46,31 +46,78 @@ requirePattern(
   /\bactivatesService:\s*true\b/,
   "manifest must explicitly activate DSH"
 );
-requirePattern(
-  "services/dsh/service.manifest.ts",
-  /\bbackendRuntimeReady:\s*false\b/,
-  "manifest must not claim backend runtime readiness before evidence exists"
-);
-requirePattern(
-  "services/dsh/service.manifest.ts",
-  /\bclosureState:\s*["']NOT_APPROVED_YET["']/,
-  "DSH-001 must remain not approved until its full implementation chain exists"
-);
-requirePattern(
-  "services/dsh/capability-map.ts",
-  /id:\s*["']dsh\.system\.readiness["'][\s\S]*runtimeBound:\s*false/,
-  "system readiness capability must remain runtime-blocked"
-);
-requirePattern(
-  "services/dsh/capability-map.ts",
-  /id:\s*["']dsh\.store\.discovery["'][\s\S]*closureState:\s*["']NOT_APPROVED_YET["']/,
-  "Store Discovery must be declared without a false closure claim"
-);
-requirePattern(
-  "services/dsh/runtime-map.ts",
-  /\bbackendImplemented:\s*false\b/,
-  "runtime map must not claim a backend implementation"
-);
+const manifest = fs.existsSync(path.join(repoRoot, "services/dsh/service.manifest.ts"))
+  ? read("services/dsh/service.manifest.ts")
+  : "";
+const capabilityMap = fs.existsSync(path.join(repoRoot, "services/dsh/capability-map.ts"))
+  ? read("services/dsh/capability-map.ts")
+  : "";
+const runtimeMap = fs.existsSync(path.join(repoRoot, "services/dsh/runtime-map.ts"))
+  ? read("services/dsh/runtime-map.ts")
+  : "";
+const verified = /closureState:\s*["']RUNTIME_VERIFIED["']/.test(manifest);
+
+if (verified) {
+  const evidenceDirectory = "services/dsh/evidence/DSH-001-store-discovery";
+  const requiredEvidence = [
+    "runtime-all.txt",
+    "runtime-smoke.txt",
+    "docker-inspect-dsh-api.txt",
+    "foundation-gate.txt",
+    "slice-gate.txt",
+    "go-test.txt",
+    "go-build.txt",
+    "api-list-stores.json",
+    "minio-media-assets.txt",
+    "screenshot-app-client-store-discovery.png",
+  ];
+  for (const evidence of requiredEvidence) {
+    if (!fs.existsSync(path.join(repoRoot, evidenceDirectory, evidence))) {
+      violations.push({
+        file: `${evidenceDirectory}/${evidence}`,
+        message: "runtime-verified DSH-001 requires this evidence artifact",
+      });
+    }
+  }
+  for (const field of [
+    "backendRuntimeReady",
+    "generatedClientReady",
+    "databaseReady",
+    "screensReady",
+  ]) {
+    if (!new RegExp(`\\b${field}:\\s*true\\b`).test(manifest)) {
+      violations.push({
+        file: "services/dsh/service.manifest.ts",
+        message: `${field} must be true for runtime verification`,
+      });
+    }
+  }
+  if (!/id:\s*["']dsh\.store\.discovery["'][\s\S]*runtimeBound:\s*true[\s\S]*closureState:\s*["']RUNTIME_VERIFIED["']/.test(capabilityMap)) {
+    violations.push({
+      file: "services/dsh/capability-map.ts",
+      message: "Store Discovery must be runtime-bound and runtime-verified",
+    });
+  }
+  if (!/capabilityId:\s*["']dsh\.store\.discovery["'][\s\S]*backendImplemented:\s*true[\s\S]*runtimeEvidence:\s*["']services\/dsh\/evidence\/DSH-001-store-discovery["'][\s\S]*state:\s*["']verified["']/.test(runtimeMap)) {
+    violations.push({
+      file: "services/dsh/runtime-map.ts",
+      message: "Store Discovery runtime map must point to verified evidence",
+    });
+  }
+} else {
+  if (!/\bbackendRuntimeReady:\s*false\b/.test(manifest)) {
+    violations.push({
+      file: "services/dsh/service.manifest.ts",
+      message: "backend readiness must remain false until DSH-001 is runtime-verified",
+    });
+  }
+  if (!/\bclosureState:\s*["']NOT_APPROVED_YET["']/.test(manifest)) {
+    violations.push({
+      file: "services/dsh/service.manifest.ts",
+      message: "DSH-001 must remain not approved before runtime verification",
+    });
+  }
+}
 requirePattern(
   "services/dsh/contracts/dsh.openapi.yaml",
   /operationId:\s*getDshHealth[\s\S]*operationId:\s*getDshReadiness/,

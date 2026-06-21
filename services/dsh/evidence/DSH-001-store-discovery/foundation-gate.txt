@@ -1,7 +1,2 @@
-﻿
-> bthwani-suite-next@0.0.0 foundation:gate C:\bthwani-suite-next
-> pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1
-
-RESULT: FAIL
-Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260621-043017
- ELIFECYCLE  Command failed with exit code 1.
+RESULT: PASS
+Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260621-083642

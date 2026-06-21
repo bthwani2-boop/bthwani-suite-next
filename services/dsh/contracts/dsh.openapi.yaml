@@ -186,6 +186,13 @@ components:
         - serviceAreaCode
         - serviceability
         - isVisible
+        - category
+        - deliveryModes
+        - isFreeDelivery
+        - followerCount
+        - hasProBadge
+        - hasCouponBadge
+        - isPopular
       properties:
         id:
           type: string
@@ -216,6 +223,45 @@ components:
           type: ["string", "null"]
         logoUrl:
           type: ["string", "null"]
+        category:
+          $ref: "#/components/schemas/DshStoreCategory"
+        deliveryModes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshStoreDeliveryMode"
+        isFreeDelivery:
+          type: boolean
+        distanceKm:
+          type: ["number", "null"]
+          format: float
+        followerCount:
+          type: integer
+          minimum: 0
+        hasProBadge:
+          type: boolean
+        hasCouponBadge:
+          type: boolean
+        pointsMultiplier:
+          type: ["integer", "null"]
+          minimum: 1
+        isPopular:
+          type: boolean
+
+    DshStoreCategory:
+      type: string
+      enum:
+        - restaurant
+        - grocery
+        - pharmacy
+        - bakery
+        - default
+
+    DshStoreDeliveryMode:
+      type: string
+      enum:
+        - delivery
+        - pickup
+        - express
 
     DshStoreDetail:
       allOf:

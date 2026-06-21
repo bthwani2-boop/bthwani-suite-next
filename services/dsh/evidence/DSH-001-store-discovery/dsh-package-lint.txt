@@ -1,6 +1,0 @@
-
-> @bthwani/dsh@0.0.0 lint C:\bthwani-suite-next\services\dsh
-> node ../../tools/guards/no-preview-demo-mock-runtime.mjs && node ../../tools/guards/no-memory-repo-in-slice-runtime.mjs
-
-no-preview-demo-mock-runtime: PASS
-no-memory-repo-in-slice-runtime: PASS

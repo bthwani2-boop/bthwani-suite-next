@@ -3,6 +3,8 @@ package store
 import "time"
 
 type DshStoreStatus string
+type DshServiceabilityStatus string
+type DshStoreCategory string
 
 const (
 	StatusActive            DshStoreStatus = "active"
@@ -11,32 +13,47 @@ const (
 	StatusUnavailable       DshStoreStatus = "unavailable"
 )
 
-type DshServiceabilityStatus string
-
 const (
 	ServiceabilityServiceable DshServiceabilityStatus = "serviceable"
 	ServiceabilityLimited     DshServiceabilityStatus = "limited"
 	ServiceabilityOutOfArea   DshServiceabilityStatus = "out_of_area"
-	ServiceabilityUnavailable   DshServiceabilityStatus = "unavailable"
+	ServiceabilityUnavailable DshServiceabilityStatus = "unavailable"
+)
+
+const (
+	CategoryRestaurant DshStoreCategory = "restaurant"
+	CategoryGrocery    DshStoreCategory = "grocery"
+	CategoryPharmacy   DshStoreCategory = "pharmacy"
+	CategoryBakery     DshStoreCategory = "bakery"
+	CategoryDefault    DshStoreCategory = "default"
 )
 
 type DshStoreRow struct {
-	ID                   string                  `db:"id"`
-	Slug                 string                  `db:"slug"`
-	DisplayName         string                  `db:"display_name"`
-	Status               DshStoreStatus          `db:"status"`
-	CityCode             string                  `db:"city_code"`
-	ServiceAreaCode      string                  `db:"service_area_code"`
-	ServiceabilityStatus DshServiceabilityStatus `db:"serviceability_status"`
-	RatingAverage        *float64                `db:"rating_average"`
-	RatingCount          int                     `db:"rating_count"`
-	DeliveryEtaMin       *int                    `db:"delivery_eta_min"`
-	DeliveryEtaMax       *int                    `db:"delivery_eta_max"`
-	IsVisible            bool                    `db:"is_visible"`
-	HeroImageUrl         *string                 `db:"hero_image_url"`
-	LogoUrl              *string                 `db:"logo_url"`
-	CreatedAt            time.Time               `db:"created_at"`
-	UpdatedAt            time.Time               `db:"updated_at"`
+	ID                   string
+	Slug                 string
+	DisplayName          string
+	Status               DshStoreStatus
+	CityCode             string
+	ServiceAreaCode      string
+	ServiceabilityStatus DshServiceabilityStatus
+	RatingAverage        *float64
+	RatingCount          int
+	DeliveryEtaMin       *int
+	DeliveryEtaMax       *int
+	IsVisible            bool
+	HeroImageURL         *string
+	LogoURL              *string
+	Category             DshStoreCategory
+	DeliveryModes        []string
+	IsFreeDelivery       bool
+	DistanceKM           *float64
+	FollowerCount        int
+	HasProBadge          bool
+	HasCouponBadge       bool
+	PointsMultiplier     *int
+	IsPopular            bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 type ServiceabilityInfo struct {
@@ -44,20 +61,29 @@ type ServiceabilityInfo struct {
 }
 
 type DshStoreSummary struct {
-	ID              string             `json:"id"`
-	Slug            string             `json:"slug"`
-	DisplayName     string             `json:"displayName"`
-	Status          DshStoreStatus     `json:"status"`
-	CityCode        string             `json:"cityCode"`
-	ServiceAreaCode string             `json:"serviceAreaCode"`
-	Serviceability  ServiceabilityInfo `json:"serviceability"`
-	RatingAverage   *float64           `json:"ratingAverage"`
-	RatingCount     int                `json:"ratingCount"`
-	DeliveryEtaMin  *int               `json:"deliveryEtaMin"`
-	DeliveryEtaMax  *int               `json:"deliveryEtaMax"`
-	IsVisible       bool               `json:"isVisible"`
-	HeroImageUrl    *string            `json:"heroImageUrl"`
-	LogoUrl         *string            `json:"logoUrl"`
+	ID               string             `json:"id"`
+	Slug             string             `json:"slug"`
+	DisplayName      string             `json:"displayName"`
+	Status           DshStoreStatus     `json:"status"`
+	CityCode         string             `json:"cityCode"`
+	ServiceAreaCode  string             `json:"serviceAreaCode"`
+	Serviceability   ServiceabilityInfo `json:"serviceability"`
+	RatingAverage    *float64           `json:"ratingAverage"`
+	RatingCount      int                `json:"ratingCount"`
+	DeliveryEtaMin   *int               `json:"deliveryEtaMin"`
+	DeliveryEtaMax   *int               `json:"deliveryEtaMax"`
+	IsVisible        bool               `json:"isVisible"`
+	HeroImageURL     *string            `json:"heroImageUrl"`
+	LogoURL          *string            `json:"logoUrl"`
+	Category         DshStoreCategory   `json:"category"`
+	DeliveryModes    []string           `json:"deliveryModes"`
+	IsFreeDelivery   bool               `json:"isFreeDelivery"`
+	DistanceKM       *float64           `json:"distanceKm"`
+	FollowerCount    int                `json:"followerCount"`
+	HasProBadge      bool               `json:"hasProBadge"`
+	HasCouponBadge   bool               `json:"hasCouponBadge"`
+	PointsMultiplier *int               `json:"pointsMultiplier"`
+	IsPopular        bool               `json:"isPopular"`
 }
 
 type DshStoreDetail struct {
@@ -88,22 +114,17 @@ type DshStoreListQuery struct {
 
 func RowToSummary(row DshStoreRow) DshStoreSummary {
 	return DshStoreSummary{
-		ID:              row.ID,
-		Slug:            row.Slug,
-		DisplayName:     row.DisplayName,
-		Status:          row.Status,
-		CityCode:        row.CityCode,
-		ServiceAreaCode: row.ServiceAreaCode,
-		Serviceability: ServiceabilityInfo{
-			Status: row.ServiceabilityStatus,
-		},
-		RatingAverage:  row.RatingAverage,
-		RatingCount:    row.RatingCount,
-		DeliveryEtaMin: row.DeliveryEtaMin,
-		DeliveryEtaMax: row.DeliveryEtaMax,
-		IsVisible:      row.IsVisible,
-		HeroImageUrl:   row.HeroImageUrl,
-		LogoUrl:        row.LogoUrl,
+		ID: row.ID, Slug: row.Slug, DisplayName: row.DisplayName, Status: row.Status,
+		CityCode: row.CityCode, ServiceAreaCode: row.ServiceAreaCode,
+		Serviceability: ServiceabilityInfo{Status: row.ServiceabilityStatus},
+		RatingAverage:  row.RatingAverage, RatingCount: row.RatingCount,
+		DeliveryEtaMin: row.DeliveryEtaMin, DeliveryEtaMax: row.DeliveryEtaMax,
+		IsVisible: row.IsVisible, HeroImageURL: row.HeroImageURL, LogoURL: row.LogoURL,
+		Category: row.Category, DeliveryModes: row.DeliveryModes,
+		IsFreeDelivery: row.IsFreeDelivery, DistanceKM: row.DistanceKM,
+		FollowerCount: row.FollowerCount, HasProBadge: row.HasProBadge,
+		HasCouponBadge: row.HasCouponBadge, PointsMultiplier: row.PointsMultiplier,
+		IsPopular: row.IsPopular,
 	}
 }
 

@@ -99,7 +99,21 @@ export interface components {
             isVisible: boolean;
             heroImageUrl?: string | null;
             logoUrl?: string | null;
+            category: components["schemas"]["DshStoreCategory"];
+            deliveryModes: components["schemas"]["DshStoreDeliveryMode"][];
+            isFreeDelivery: boolean;
+            /** Format: float */
+            distanceKm?: number | null;
+            followerCount: number;
+            hasProBadge: boolean;
+            hasCouponBadge: boolean;
+            pointsMultiplier?: number | null;
+            isPopular: boolean;
         };
+        /** @enum {string} */
+        DshStoreCategory: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
+        /** @enum {string} */
+        DshStoreDeliveryMode: "delivery" | "pickup" | "express";
         DshStoreDetail: components["schemas"]["DshStoreSummary"] & {
             /** Format: date-time */
             createdAt: string;

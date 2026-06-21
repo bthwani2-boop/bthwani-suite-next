@@ -20,6 +20,15 @@ const makeDto = (overrides = {}) => ({
   isVisible: true,
   heroImageUrl: null,
   logoUrl: null,
+  category: "grocery",
+  deliveryModes: ["delivery", "pickup"],
+  isFreeDelivery: true,
+  distanceKm: 2.1,
+  followerCount: 3100,
+  hasProBadge: true,
+  hasCouponBadge: false,
+  pointsMultiplier: 2,
+  isPopular: true,
   ...overrides,
 });
 
@@ -85,6 +94,21 @@ describe("toCardViewModel", () => {
   test("logoImageSource null when not provided", () => {
     const vm = toCardViewModel(makeDto({ logoUrl: undefined }));
     assert.equal(vm.logoImageSource, null);
+  });
+
+  test("commercial card metadata comes from the API DTO", () => {
+    const vm = toCardViewModel(makeDto());
+    assert.deepEqual(vm.deliveryModeLabels, ["توصيل", "استلام"]);
+    assert.equal(vm.isFreeDelivery, true);
+    assert.equal(vm.distanceLabel, "2.1 كم");
+    assert.equal(vm.hasProBadge, true);
+    assert.equal(vm.pointsMultiplier, 2);
+    assert.equal(vm.isPopular, true);
+  });
+
+  test("display name is not rewritten or inferred by the view-model", () => {
+    const vm = toCardViewModel(makeDto({ displayName: "اسم موثوق من API" }));
+    assert.equal(vm.displayName, "اسم موثوق من API");
   });
 });
 

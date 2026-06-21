@@ -85,10 +85,27 @@ if (dupV3Ids.length > 0) {
   err(`CRITICAL: Duplicate master_v3_id: ${dupV3Ids.map(([k,v]) => `${k}(x${v})`).join(', ')}`);
 }
 
-// 5. No READY_FOR_SLICE or VERIFIED
-const readyVerifiedRows = dataRows.filter(r => ['READY_FOR_SLICE','VERIFIED'].includes(get(r, 'status')));
-if (readyVerifiedRows.length > 0) {
-  err(`CRITICAL: ${readyVerifiedRows.length} rows have forbidden status (READY_FOR_SLICE or VERIFIED)`);
+// 5. VERIFIED is allowed only for the evidence-backed DSH-001 executable rows.
+const readyRows = dataRows.filter(r => get(r, 'status') === 'READY_FOR_SLICE');
+if (readyRows.length > 0) {
+  err(`CRITICAL: ${readyRows.length} rows have forbidden READY_FOR_SLICE status`);
+}
+const verifiedRows = dataRows.filter(r => get(r, 'status') === 'VERIFIED');
+const invalidVerifiedRows = verifiedRows.filter(r => get(r, 'slice_id') !== 'DSH-001');
+if (invalidVerifiedRows.length > 0) {
+  err(`CRITICAL: ${invalidVerifiedRows.length} VERIFIED rows are outside DSH-001`);
+}
+const dsh001BlockedRows = dataRows.filter(r =>
+  get(r, 'slice_id') === 'DSH-001' && get(r, 'status').startsWith('BLOCKED_')
+);
+if (dsh001BlockedRows.length > 0) {
+  err(`CRITICAL: ${dsh001BlockedRows.length} DSH-001 rows remain blocked`);
+}
+if (verifiedRows.length > 0) {
+  const evidencePath = join(ROOT, 'services', 'dsh', 'evidence', 'DSH-001-store-discovery', 'screenshot-app-client-store-discovery.png');
+  if (!existsSync(evidencePath)) {
+    err('CRITICAL: DSH-001 VERIFIED rows require runtime and visual evidence');
+  }
 }
 
 // 6. Canonical DSH order lifecycle (section-based + sentinel artifact_type check)

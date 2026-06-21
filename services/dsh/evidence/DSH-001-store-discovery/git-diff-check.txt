@@ -1,1 +1,1 @@
-git diff --check: PASS (no trailing whitespace issues)
+git diff --check: PASS

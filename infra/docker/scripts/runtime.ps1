@@ -124,6 +124,17 @@ function Invoke-MinioSmoke {
   Write-Host "MinIO smoke: PASS"
 }
 
+function Invoke-DshMediaSeed {
+  Write-Host "`n--- Applying DSH-001 MinIO media seed ---"
+  $MediaDirectory = (Resolve-Path ".\services\dsh\database\seeds\local\media").Path
+  $Mount = "${MediaDirectory}:/seed:ro"
+  docker run --rm --network bthwani-runtime --volume $Mount `
+    --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
+    -c "mc alias set local http://minio:9000 bthwani_minio bthwani_minio_password && mc mb --ignore-existing local/dsh-media && mc anonymous set download local/dsh-media && mc cp --recursive /seed/ local/dsh-media/"
+  if ($LASTEXITCODE -ne 0) { throw "DSH media seed failed (exit $LASTEXITCODE)" }
+  Write-Host "DSH media seed: PASS"
+}
+
 function Invoke-DshSmoke {
   Write-Host "`n--- DSH API smoke ---"
 
@@ -251,6 +262,7 @@ elseif ($Action -eq "all") {
 
   # minio smoke
   if ($ProfileList -contains "media") {
+    Invoke-DshMediaSeed
     Invoke-MinioSmoke
   }
 

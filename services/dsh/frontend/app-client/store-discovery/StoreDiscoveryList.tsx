@@ -7,7 +7,7 @@ import { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";
 import type { DshStoreListState } from "../../shared/store-discovery/store-discovery.states";
 import type { DshStoreCardViewModel } from "../../shared/store-discovery/store-discovery.view-model";
 
-export type DiscoveryFilter = "all" | "favorites" | "nearest" | "new";
+export type DiscoveryFilter = "all" | "favorites" | "nearest";
 
 type Props = Readonly<{
   state: DshStoreListState;
@@ -27,10 +27,10 @@ function applyFilter(
   switch (filter) {
     case "favorites":
       return base.filter((s) => favoriteIds.has(s.id));
-    case "new":
-      return base.filter((s) => s.isOpen && s.isServiceable);
     case "nearest":
-      return [...base].sort((a, b) => a.serviceAreaCode.localeCompare(b.serviceAreaCode));
+      return [...base].sort(
+        (a, b) => (a.distanceKm ?? Number.POSITIVE_INFINITY) - (b.distanceKm ?? Number.POSITIVE_INFINITY),
+      );
     default:
       return base;
   }

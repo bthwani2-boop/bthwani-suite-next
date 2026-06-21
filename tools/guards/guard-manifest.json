@@ -24,6 +24,7 @@
       "no-broken-imports",
       "service-fullstack-linkage",
       "dsh-service-activation",
+      "go-backend-runtime",
       "performance-runtime-baseline",
       "docker-runtime-profiles"
     ],
@@ -35,6 +36,7 @@
       "no-broken-imports",
       "service-fullstack-linkage",
       "dsh-service-activation",
+      "go-backend-runtime",
       "performance-runtime-baseline",
       "docker-runtime-profiles"
     ]
@@ -134,6 +136,11 @@
       "id": "dsh-service-activation",
       "path": "tools/guards/dsh-service-activation.mjs",
       "policySource": "governance/13_DSH_SERVICE_ACTIVATION.md"
+    },
+    {
+      "id": "go-backend-runtime",
+      "path": "tools/guards/guard-go-backend-runtime.mjs",
+      "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
     },
     {
       "id": "performance-runtime-baseline",

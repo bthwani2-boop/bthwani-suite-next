@@ -20,3 +20,13 @@ graphify-out/
 
 .nx/cache/
 .nx/workspace-data/
+
+# Local images only
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.ico
+services/dsh/database/seeds/local/media/
+

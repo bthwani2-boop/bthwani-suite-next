@@ -2,6 +2,7 @@ export const DSH_CAPABILITY_STATUS = [
   "contract-active",
   "planned",
   "blocked-runtime",
+  "runtime-verified",
 ] as const;
 
 export type DshCapabilityStatus = (typeof DSH_CAPABILITY_STATUS)[number];
@@ -12,24 +13,27 @@ export type DshCapability = {
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
   readonly runtimeBound: boolean;
-  readonly closureState: "CONTRACT_ACTIVE_RUNTIME_BLOCKED" | "NOT_APPROVED_YET";
+  readonly closureState:
+    | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
+    | "NOT_APPROVED_YET"
+    | "RUNTIME_VERIFIED";
 };
 
 export const DSH_CAPABILITY_MAP = [
   {
     id: "dsh.system.readiness",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: ["getDshHealth", "getDshReadiness"],
     surfaces: [],
-    runtimeBound: false,
-    closureState: "CONTRACT_ACTIVE_RUNTIME_BLOCKED",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
   },
   {
     id: "dsh.store.discovery",
-    status: "contract-active",
+    status: "runtime-verified",
     contractOperations: ["listDshStores", "getDshStore"],
     surfaces: ["app-client"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
   },
 ] as const satisfies readonly DshCapability[];

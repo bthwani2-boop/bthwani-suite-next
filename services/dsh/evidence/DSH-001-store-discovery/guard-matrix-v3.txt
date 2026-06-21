@@ -1,0 +1,45 @@
+
+> bthwani-suite-next@0.0.0 guard:matrix:v3 C:\bthwani-suite-next
+> node tools/guards/guard-slice-master-matrix-v3.mjs
+
+Row count: 1182 ✓
+DSH order lifecycle: 16 states ✓
+DSH canonical-state-machine sentinel: 1 ✓
+WLT financial lifecycle: 16 states ✓
+WLT canonical-state-machine sentinel: 1 ✓
+dispatch_policy rows: 127 ✓
+pricing_policy rows: 173 ✓
+COD policy rows: 5 ✓
+notification_triggers rows: 40 ✓
+external_dependencies rows: 49 ✓
+Screen/journey ui_localization_rules: all 728 rows covered ✓
+RBAC coverage: all 201 object operation rows covered ✓
+Audit/privacy coverage: all 398 auditable rows covered ✓
+Rollback coverage: all 248 critical rows covered ✓
+DSH financial ownership violations: 0 ✓
+Provider decision coverage: all 49 ext-dep rows covered ✓
+Donor aliases: 11/11 represented ✓
+Forbidden service owners: 0 ✓
+
+=== GUARD V3 RESULTS ===
+{
+  "rows": 1182,
+  "dispatch_policy": 127,
+  "pricing_policy": 173,
+  "cod_policy": 5,
+  "notification_triggers": 40,
+  "external_dependencies": 49,
+  "dsh_order_lifecycle": 16,
+  "dsh_canonical_state_machine_sentinel": 1,
+  "wlt_financial_lifecycle": 16,
+  "wlt_canonical_state_machine_sentinel": 1,
+  "screen_journey_ui_loc": 728,
+  "object_ops_rbac": 201,
+  "critical_rows_rollback": 248,
+  "donor_aliases": 11,
+  "dsh_financial_violations": 0
+}
+
+Errors: 0, Warnings: 0
+
+RESULT: PASS

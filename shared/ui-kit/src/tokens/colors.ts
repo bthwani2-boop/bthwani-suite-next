@@ -74,6 +74,7 @@ export const colorRoles = {
   surfaceMuted: brandScale.surface[100],
   surfaceInset: brandScale.surface[200],
   surfaceOverlay: alpha(brandRoots.surfaceBase, 0.86),
+  mediaScrimStrong: alpha("#0F172A", 0.78),
 
   brandStructure: brandRoots.brandStructure,
   brandStructureElevated: brandScale.structure[500],
@@ -84,6 +85,8 @@ export const colorRoles = {
   textSecondary: brandScale.structure[500],
   textMuted: alpha(brandRoots.brandStructure, 0.68),
   textInverse: brandRoots.surfaceBase,
+  textOnMediaMuted: alpha(brandRoots.surfaceBase, 0.4),
+  textOnMediaStrong: alpha(brandRoots.surfaceBase, 0.9),
 
   borderSubtle: alpha(brandRoots.brandStructure, 0.1),
   borderStrong: alpha(brandRoots.brandStructure, 0.18),

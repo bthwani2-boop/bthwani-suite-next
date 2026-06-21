@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS dsh_stores (
   is_visible           boolean     NOT NULL DEFAULT true,
   hero_image_url       text,
   logo_url             text,
+  category             text        NOT NULL DEFAULT 'default',
+  delivery_modes       text[]      NOT NULL DEFAULT ARRAY['delivery']::text[],
+  is_free_delivery     boolean     NOT NULL DEFAULT false,
+  distance_km          numeric(6,2),
+  follower_count       integer     NOT NULL DEFAULT 0,
+  has_pro_badge        boolean     NOT NULL DEFAULT false,
+  has_coupon_badge     boolean     NOT NULL DEFAULT false,
+  points_multiplier    integer,
+  is_popular           boolean     NOT NULL DEFAULT false,
   created_at           timestamptz NOT NULL DEFAULT now(),
   updated_at           timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT dsh_stores_status_chk
@@ -28,8 +37,28 @@ CREATE TABLE IF NOT EXISTS dsh_stores (
       delivery_eta_min IS NULL OR
       delivery_eta_max IS NULL OR
       delivery_eta_min <= delivery_eta_max
-    )
+    ),
+  CONSTRAINT dsh_stores_category_chk
+    CHECK (category IN ('restaurant','grocery','pharmacy','bakery','default')),
+  CONSTRAINT dsh_stores_delivery_modes_chk
+    CHECK (delivery_modes <@ ARRAY['delivery','pickup','express']::text[]),
+  CONSTRAINT dsh_stores_distance_chk
+    CHECK (distance_km IS NULL OR distance_km >= 0),
+  CONSTRAINT dsh_stores_follower_count_chk
+    CHECK (follower_count >= 0),
+  CONSTRAINT dsh_stores_points_multiplier_chk
+    CHECK (points_multiplier IS NULL OR points_multiplier >= 1)
 );
+
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'default';
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS delivery_modes text[] NOT NULL DEFAULT ARRAY['delivery']::text[];
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS is_free_delivery boolean NOT NULL DEFAULT false;
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS distance_km numeric(6,2);
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS follower_count integer NOT NULL DEFAULT 0;
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS has_pro_badge boolean NOT NULL DEFAULT false;
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS has_coupon_badge boolean NOT NULL DEFAULT false;
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS points_multiplier integer;
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS is_popular boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_dsh_stores_city_code
   ON dsh_stores(city_code);

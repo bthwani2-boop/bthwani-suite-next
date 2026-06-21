@@ -130,7 +130,7 @@ export function App() {
     <View style={styles.root}>
       <AppHeader
         title="بثواني"
-        locationLabel="الرياض · حي النخيل"
+        locationLabel="موقعك الحالي"
         topInset={insets.top}
         direction="rtl"
         actions={[

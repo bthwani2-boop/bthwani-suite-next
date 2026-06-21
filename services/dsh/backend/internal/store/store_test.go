@@ -15,7 +15,7 @@ func TestRowToSummary(t *testing.T) {
 	row := DshStoreRow{
 		ID:                   "store-001",
 		Slug:                 "test-store",
-		DisplayName:         "Test Store",
+		DisplayName:          "Test Store",
 		Status:               StatusActive,
 		CityCode:             "sana",
 		ServiceAreaCode:      "haddah",
@@ -25,8 +25,16 @@ func TestRowToSummary(t *testing.T) {
 		DeliveryEtaMin:       &etaMin,
 		DeliveryEtaMax:       &etaMax,
 		IsVisible:            true,
-		HeroImageUrl:         &hero,
-		LogoUrl:              &logo,
+		HeroImageURL:         &hero,
+		LogoURL:              &logo,
+		Category:             CategoryGrocery,
+		DeliveryModes:        []string{"delivery", "pickup"},
+		IsFreeDelivery:       true,
+		DistanceKM:           ptrFloat(2.1),
+		FollowerCount:        3100,
+		HasProBadge:          true,
+		PointsMultiplier:     ptrInt(2),
+		IsPopular:            true,
 		CreatedAt:            time.Date(2026, 6, 21, 10, 0, 0, 0, time.UTC),
 		UpdatedAt:            time.Date(2026, 6, 21, 11, 0, 0, 0, time.UTC),
 	}
@@ -42,7 +50,16 @@ func TestRowToSummary(t *testing.T) {
 	if summary.Serviceability.Status != ServiceabilityServiceable {
 		t.Errorf("expected serviceability status 'serviceable', got '%s'", summary.Serviceability.Status)
 	}
+	if summary.Category != CategoryGrocery || len(summary.DeliveryModes) != 2 {
+		t.Errorf("expected API-backed category and delivery modes, got %q and %v", summary.Category, summary.DeliveryModes)
+	}
+	if !summary.IsFreeDelivery || summary.FollowerCount != 3100 || !summary.HasProBadge {
+		t.Errorf("expected API-backed premium metadata, got %+v", summary)
+	}
 }
+
+func ptrFloat(value float64) *float64 { return &value }
+func ptrInt(value int) *int           { return &value }
 
 func TestRowToDetail(t *testing.T) {
 	row := DshStoreRow{

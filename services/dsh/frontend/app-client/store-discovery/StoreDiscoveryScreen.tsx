@@ -22,7 +22,6 @@ const FILTERS: ReadonlyArray<{ key: DiscoveryFilter; label: string; icon: string
   { key: "all", label: "الكل", icon: "◼" },
   { key: "favorites", label: "المفضلة", icon: "♥" },
   { key: "nearest", label: "الأقرب", icon: "📍" },
-  { key: "new", label: "الجديدة", icon: "✦" },
 ];
 
 export function StoreDiscoveryScreen({ onStorePress }: Props) {

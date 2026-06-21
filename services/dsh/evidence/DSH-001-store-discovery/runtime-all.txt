@@ -1,0 +1,219 @@
+
+> bthwani-suite-next@0.0.0 runtime:all C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles dsh,media
+
+=== runtime:all (profiles: dsh,media)
+ Container bthwani-dsh-api-runtime Stopping
+ Container bthwani-minio-runtime Stopping
+ Container bthwani-dsh-api-runtime Stopped
+ Container bthwani-dsh-api-runtime Removing
+ Container bthwani-dsh-api-runtime Removed
+ Container bthwani-postgres-runtime Stopping
+ Container bthwani-minio-runtime Stopped
+ Container bthwani-minio-runtime Removing
+ Container bthwani-minio-runtime Removed
+ Container bthwani-postgres-runtime Stopped
+ Container bthwani-postgres-runtime Removing
+ Container bthwani-postgres-runtime Removed
+ Volume bthwani-minio-runtime-data Removing
+ Volume bthwani-postgres-runtime-data Removing
+ Network bthwani-runtime Removing
+ Volume bthwani-minio-runtime-data Removed
+ Volume bthwani-postgres-runtime-data Removed
+ Network bthwani-runtime Removed
+down: OK
+ Image bthwani-runtime-dsh-api Building
+#1 [internal] load local bake definitions
+#1 reading from stdin 541B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 683B 0.0s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/golang:1.26-alpine
+#3 ...
+
+#4 [auth] library/alpine:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#5 [auth] library/golang:pull token for registry-1.docker.io
+#5 DONE 0.0s
+
+#6 [internal] load metadata for docker.io/library/alpine:latest
+#6 ...
+
+#3 [internal] load metadata for docker.io/library/golang:1.26-alpine
+#3 DONE 2.3s
+
+#6 [internal] load metadata for docker.io/library/alpine:latest
+#6 DONE 2.3s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [build 1/9] FROM docker.io/library/golang:1.26-alpine@sha256:3ad57304ad93bbec8548a0437ad9e06a455660655d9af011d58b993f6f615648
+#9 resolve docker.io/library/golang:1.26-alpine@sha256:3ad57304ad93bbec8548a0437ad9e06a455660655d9af011d58b993f6f615648 0.1s done
+#9 DONE 0.1s
+
+#10 [runtime 1/4] FROM docker.io/library/alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+#10 resolve docker.io/library/alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b 0.1s done
+#10 DONE 0.1s
+
+#8 [internal] load build context
+#8 transferring context: 1.12kB 0.0s done
+#8 DONE 0.0s
+
+#11 [build 2/9] WORKDIR /app
+#11 CACHED
+
+#12 [build 8/9] WORKDIR /app/services/dsh/backend
+#12 CACHED
+
+#13 [build 3/9] COPY services/dsh/backend/go.mod services/dsh/backend/go.sum ./services/dsh/backend/
+#13 CACHED
+
+#14 [runtime 3/4] WORKDIR /app
+#14 CACHED
+
+#15 [build 9/9] RUN CGO_ENABLED=0 GOOS=linux go build -o dsh-api cmd/dsh-api/main.go
+#15 CACHED
+
+#16 [build 7/9] COPY services/dsh/backend/ ./services/dsh/backend/
+#16 CACHED
+
+#17 [build 4/9] WORKDIR /app/services/dsh/backend
+#17 CACHED
+
+#18 [build 5/9] RUN go mod download
+#18 CACHED
+
+#19 [build 6/9] WORKDIR /app
+#19 CACHED
+
+#20 [runtime 2/4] RUN apk --no-cache add ca-certificates tzdata
+#20 CACHED
+
+#21 [runtime 4/4] COPY --from=build /app/services/dsh/backend/dsh-api /app/dsh-api
+#21 CACHED
+
+#22 exporting to image
+#22 exporting layers done
+#22 exporting manifest sha256:197095bf57361baa94eb006d84d67b3c3f27f9ad560bfbca2a0127944b680736
+#22 exporting manifest sha256:197095bf57361baa94eb006d84d67b3c3f27f9ad560bfbca2a0127944b680736 done
+#22 exporting config sha256:0313ead443886ec48bd87339e738e83b1075ee1b7aa50e355f9ccbbed4c06825 done
+#22 exporting attestation manifest sha256:61078f510931c35f60abce2bdbc052f9c64b0ce48e262a3feedb42fafb049cd9 0.1s done
+#22 exporting manifest list sha256:ac5f3eee183893f99a935dc427fb31cc08c9e1f035b6fa976d2e29619b30c8de
+#22 exporting manifest list sha256:ac5f3eee183893f99a935dc427fb31cc08c9e1f035b6fa976d2e29619b30c8de 0.0s done
+#22 naming to docker.io/library/bthwani-runtime-dsh-api:latest done
+#22 unpacking to docker.io/library/bthwani-runtime-dsh-api:latest 0.0s done
+#22 DONE 0.3s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image bthwani-runtime-dsh-api Built
+ Network bthwani-runtime Creating
+ Network bthwani-runtime Created
+ Volume bthwani-minio-runtime-data Creating
+ Volume bthwani-minio-runtime-data Created
+ Volume bthwani-postgres-runtime-data Creating
+ Volume bthwani-postgres-runtime-data Created
+ Container bthwani-minio-runtime Creating
+ Container bthwani-postgres-runtime Creating
+ Container bthwani-minio-runtime Created
+ Container bthwani-postgres-runtime Created
+ Container bthwani-dsh-api-runtime Creating
+ Container bthwani-dsh-api-runtime Created
+ Container bthwani-postgres-runtime Starting
+ Container bthwani-minio-runtime Starting
+ Container bthwani-minio-runtime Started
+ Container bthwani-postgres-runtime Started
+ Container bthwani-postgres-runtime Waiting
+ Container bthwani-postgres-runtime Healthy
+ Container bthwani-dsh-api-runtime Starting
+ Container bthwani-dsh-api-runtime Started
+up: OK
+Waiting for Postgres (1/30)...
+/var/run/postgresql:5432 - rejecting connections
+Waiting for Postgres (2/30)...
+/var/run/postgresql:5432 - accepting connections
+Postgres: healthy
+
+--- Applying DSH-001 migration ---
+CREATE TABLE
+NOTICE:  column "category" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "delivery_modes" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "is_free_delivery" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "distance_km" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "follower_count" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "has_pro_badge" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "has_coupon_badge" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "points_multiplier" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "is_popular" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+Migration: PASS
+
+--- Applying DSH-001 local seed ---
+INSERT 0 6
+Seed: PASS
+Waiting for DSH API (1/20)...
+DSH API: healthy
+
+--- DSH API smoke ---
+  /dsh/health: {"service":"dsh","status":"healthy","checkedAt":"2026-06-21T05:34:36.243521423Z"}
+  /dsh/readiness: {"service":"dsh","status":"ready","dependencies":{"postgres":"ready"},"checkedAt":"2026-06-21T05:34:36.328822854Z"}
+  /dsh/stores: returned 6 stores
+  /dsh/stores/store-1001: أسواق حدة المركزية
+DSH API smoke: PASS
+
+--- Applying DSH-001 MinIO media seed ---
+Added `local` successfully.
+Bucket created successfully `local/dsh-media`.
+Access permission for `local/dsh-media` is set to `download`
+`/seed/store-1003-logo.jpg` -> `local/dsh-media/store-1003-logo.jpg`
+`/seed/store-1002-hero.jpg` -> `local/dsh-media/store-1002-hero.jpg`
+`/seed/store-1003-hero.jpg` -> `local/dsh-media/store-1003-hero.jpg`
+`/seed/store-1001-logo.jpg` -> `local/dsh-media/store-1001-logo.jpg`
+`/seed/store-1004-logo.jpg` -> `local/dsh-media/store-1004-logo.jpg`
+`/seed/store-1004-hero.jpg` -> `local/dsh-media/store-1004-hero.jpg`
+`/seed/store-1002-logo.jpg` -> `local/dsh-media/store-1002-logo.jpg`
+`/seed/store-1001-hero.jpg` -> `local/dsh-media/store-1001-hero.jpg`
+`/seed/store-1005-hero.jpg` -> `local/dsh-media/store-1005-hero.jpg`
+`/seed/store-1005-logo.jpg` -> `local/dsh-media/store-1005-logo.jpg`
+`/seed/store-1006-hero.jpg` -> `local/dsh-media/store-1006-hero.jpg`
+`/seed/store-1006-logo.jpg` -> `local/dsh-media/store-1006-logo.jpg`
+┌─────────────┬─────────────┬──────────┬────────────┐
+│ Total       │ Transferred │ Duration │ Speed      │
+│ 1019.70 KiB │ 1019.70 KiB │ 00m00s   │ 5.89 MiB/s │
+└─────────────┴─────────────┴──────────┴────────────┘
+DSH media seed: PASS
+
+--- MinIO smoke ---
+  /minio/health/live attempt 1/15
+  /minio/health/live: PASS
+  /minio/health/ready: PASS
+MinIO smoke: PASS
+
+--- Final status ---
+NAMES                      IMAGE                                      STATUS                            PORTS
+bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    Up 5 seconds (health: starting)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-postgres-runtime   postgres:16-alpine                         Up 14 seconds (healthy)           0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   Up 14 seconds                     0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
+
+runtime:all: PASS
