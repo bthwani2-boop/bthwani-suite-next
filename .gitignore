@@ -28,5 +28,6 @@ graphify-out/
 *.webp
 *.gif
 *.ico
+!services/dsh/evidence/**/*.png
 services/dsh/database/seeds/local/media/
 

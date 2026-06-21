@@ -1,18 +1,1 @@
-services/dsh/evidence/DSH-001-store-discovery/git-branch.txt:1: trailing whitespace.
-+∩╗┐starting-implementing-slices
-services/dsh/evidence/DSH-001-store-discovery/git-head.txt:1: trailing whitespace.
-+∩╗┐42c6954
-services/dsh/evidence/DSH-001-store-discovery/git-status.txt:1: trailing whitespace.
-+∩╗┐ M services/dsh/evidence/DSH-001-store-discovery/git-branch.txt
-services/dsh/evidence/DSH-001-store-discovery/git-status.txt:2: trailing whitespace.
-+ M services/dsh/evidence/DSH-001-store-discovery/git-head.txt
-services/dsh/evidence/DSH-001-store-discovery/git-status.txt:3: trailing whitespace.
-+ M services/dsh/evidence/DSH-001-store-discovery/git-status.txt
-services/dsh/evidence/DSH-001-store-discovery/git-status.txt:4: trailing whitespace.
-+ M services/dsh/surface-map.ts
-services/dsh/evidence/DSH-001-store-discovery/git-status.txt:5: trailing whitespace.
-+ M tools/guards/dsh-service-activation.mjs
-services/dsh/evidence/DSH-001-store-discovery/git-status.txt:6: trailing whitespace.
-+?? services/dsh/evidence/DSH-001-store-discovery/media-object-smoke.txt
-tools/guards/dsh-service-activation.mjs:181: trailing whitespace.
-+
+

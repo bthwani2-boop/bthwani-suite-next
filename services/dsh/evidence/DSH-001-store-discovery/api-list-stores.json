@@ -3,7 +3,7 @@
                    {
                        "id":  "store-1005",
                        "slug":  "old-city-restaurant",
-                       "displayName":  "Ù\u0085Ø·Ø¹Ù\u0085 Ø§ÙÙ\u0085Ø¯ÙÙØ© Ø§ÙÙØ¯ÙÙ\u0085Ø©",
+                       "displayName":  "Ã™\u0085Ã˜Â·Ã˜Â¹Ã™\u0085 Ã˜Â§Ã™Â„Ã™\u0085Ã˜Â¯Ã™ÂŠÃ™Â†Ã˜Â© Ã˜Â§Ã™Â„Ã™Â‚Ã˜Â¯Ã™ÂŠÃ™\u0085Ã˜Â©",
                        "status":  "active",
                        "cityCode":  "sana",
                        "serviceAreaCode":  "old-city",
@@ -33,7 +33,7 @@
                    {
                        "id":  "store-1001",
                        "slug":  "haddah-central-market",
-                       "displayName":  "Ø£Ø³ÙØ§Ù Ø­Ø¯Ø© Ø§ÙÙ\u0085Ø±ÙØ²ÙØ©",
+                       "displayName":  "Ã˜Â£Ã˜Â³Ã™ÂˆÃ˜Â§Ã™Â‚ Ã˜Â­Ã˜Â¯Ã˜Â© Ã˜Â§Ã™Â„Ã™\u0085Ã˜Â±Ã™ÂƒÃ˜Â²Ã™ÂŠÃ˜Â©",
                        "status":  "active",
                        "cityCode":  "sana",
                        "serviceAreaCode":  "haddah",
@@ -64,7 +64,7 @@
                    {
                        "id":  "store-1006",
                        "slug":  "maeen-pharmacy",
-                       "displayName":  "ØµÙØ¯ÙÙØ© Ù\u0085Ø¹ÙÙ",
+                       "displayName":  "Ã˜ÂµÃ™ÂŠÃ˜Â¯Ã™Â„Ã™ÂŠÃ˜Â© Ã™\u0085Ã˜Â¹Ã™ÂŠÃ™Â†",
                        "status":  "active",
                        "cityCode":  "sana",
                        "serviceAreaCode":  "maeen",
@@ -93,7 +93,7 @@
                    {
                        "id":  "store-1002",
                        "slug":  "al-sabeen-bakery",
-                       "displayName":  "Ù\u0085Ø®Ø¨Ø² Ø§ÙØ³Ø¨Ø¹ÙÙ",
+                       "displayName":  "Ã™\u0085Ã˜Â®Ã˜Â¨Ã˜Â² Ã˜Â§Ã™Â„Ã˜Â³Ã˜Â¨Ã˜Â¹Ã™ÂŠÃ™Â†",
                        "status":  "active",
                        "cityCode":  "sana",
                        "serviceAreaCode":  "sabeen",
@@ -123,7 +123,7 @@
                    {
                        "id":  "store-1004",
                        "slug":  "al-zubairi-grocery",
-                       "displayName":  "Ø¨ÙØ§ÙØ© Ø§ÙØ²Ø¨ÙØ±Ù",
+                       "displayName":  "Ã˜Â¨Ã™Â‚Ã˜Â§Ã™Â„Ã˜Â© Ã˜Â§Ã™Â„Ã˜Â²Ã˜Â¨Ã™ÂŠÃ˜Â±Ã™ÂŠ",
                        "status":  "temporarily_closed",
                        "cityCode":  "sana",
                        "serviceAreaCode":  "zubairi",
@@ -152,7 +152,7 @@
                    {
                        "id":  "store-1003",
                        "slug":  "taiz-street-market",
-                       "displayName":  "Ø³ÙÙ Ø´Ø§Ø±Ø¹ ØªØ¹Ø²",
+                       "displayName":  "Ã˜Â³Ã™ÂˆÃ™Â‚ Ã˜Â´Ã˜Â§Ã˜Â±Ã˜Â¹ Ã˜ÂªÃ˜Â¹Ã˜Â²",
                        "status":  "active",
                        "cityCode":  "sana",
                        "serviceAreaCode":  "taiz-st",

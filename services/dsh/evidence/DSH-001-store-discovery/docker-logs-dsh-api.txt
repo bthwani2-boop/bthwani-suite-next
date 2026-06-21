@@ -1,9 +1,9 @@
-docker : 2026/06/21 05:59:16 [dsh-api] connecting to database...
-At line:1 char:412
-+ ... oding utf8; docker logs bthwani-dsh-api-runtime --tail 100 2>&1 | Out ...
-+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (2026/06/21 05:5... to database...:String) [], RemoteException
+docker : 2026/06/21 06:11:10 [dsh-api] connecting to database...
+At line:4 char:1
++ docker logs bthwani-dsh-api-runtime --tail 100 2>&1 | Out-File "$Evid ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (2026/06/21 06:1... to database...:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
 
-2026/06/21 05:59:16 [dsh-api] database connected successfully
-2026/06/21 05:59:16 [dsh-api] listening on port 8080
+2026/06/21 06:11:10 [dsh-api] database connected successfully
+2026/06/21 06:11:10 [dsh-api] listening on port 8080

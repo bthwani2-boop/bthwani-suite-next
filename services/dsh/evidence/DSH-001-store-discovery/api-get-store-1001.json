@@ -2,7 +2,7 @@
     "store":  {
                   "id":  "store-1001",
                   "slug":  "haddah-central-market",
-                  "displayName":  "Ø£Ø³ÙØ§Ù Ø­Ø¯Ø© Ø§ÙÙ\u0085Ø±ÙØ²ÙØ©",
+                  "displayName":  "Ã˜Â£Ã˜Â³Ã™ÂˆÃ˜Â§Ã™Â‚ Ã˜Â­Ã˜Â¯Ã˜Â© Ã˜Â§Ã™Â„Ã™\u0085Ã˜Â±Ã™ÂƒÃ˜Â²Ã™ÂŠÃ˜Â©",
                   "status":  "active",
                   "cityCode":  "sana",
                   "serviceAreaCode":  "haddah",
@@ -29,7 +29,7 @@
                   "hasCouponBadge":  false,
                   "pointsMultiplier":  2,
                   "isPopular":  true,
-                  "createdAt":  "2026-06-21T05:59:18.571837Z",
-                  "updatedAt":  "2026-06-21T05:59:18.571837Z"
+                  "createdAt":  "2026-06-21T06:11:12.650602Z",
+                  "updatedAt":  "2026-06-21T06:11:12.650602Z"
               }
 }
