@@ -104,6 +104,26 @@ function Invoke-Seed {
   Write-Host "Seed: PASS"
 }
 
+function Invoke-MinioSmoke {
+  Write-Host "`n--- MinIO smoke ---"
+  $MinioUrl = "http://localhost:59000"
+  $max = 15
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "  /minio/health/live attempt $i/$max"
+    try {
+      Invoke-RestMethod "$MinioUrl/minio/health/live" -TimeoutSec 5 -ErrorAction Stop | Out-Null
+      Write-Host "  /minio/health/live: PASS"
+      break
+    } catch {
+      if ($i -eq $max) { throw "/minio/health/live: FAIL — $_" }
+      Start-Sleep -Seconds 3
+    }
+  }
+  Invoke-RestMethod "$MinioUrl/minio/health/ready" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  Write-Host "  /minio/health/ready: PASS"
+  Write-Host "MinIO smoke: PASS"
+}
+
 function Invoke-DshSmoke {
   Write-Host "`n--- DSH API smoke ---"
 
@@ -199,6 +219,9 @@ elseif ($Action -eq "smoke") {
     Wait-ForDshApi
     Invoke-DshSmoke
   }
+  if ($ProfileList -contains "media") {
+    Invoke-MinioSmoke
+  }
   Write-Host "smoke: PASS"
 }
 
@@ -224,6 +247,11 @@ elseif ($Action -eq "all") {
     Invoke-Seed
     Wait-ForDshApi
     Invoke-DshSmoke
+  }
+
+  # minio smoke
+  if ($ProfileList -contains "media") {
+    Invoke-MinioSmoke
   }
 
   # final status

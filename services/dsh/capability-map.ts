@@ -26,8 +26,8 @@ export const DSH_CAPABILITY_MAP = [
   },
   {
     id: "dsh.store.discovery",
-    status: "planned",
-    contractOperations: ["listStores", "getStore"],
+    status: "contract-active",
+    contractOperations: ["listDshStores", "getDshStore"],
     surfaces: ["app-client"],
     runtimeBound: false,
     closureState: "NOT_APPROVED_YET",

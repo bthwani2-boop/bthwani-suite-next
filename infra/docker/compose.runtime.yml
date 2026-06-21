@@ -39,7 +39,7 @@ services:
   minio:
     profiles:
       - media
-    image: ${BTHWANI_MINIO_IMAGE:-minio/minio:RELEASE.2026-06-13T11-33-47Z}
+    image: ${BTHWANI_MINIO_IMAGE:-minio/minio:RELEASE.2024-11-07T00-52-20Z}
     container_name: ${BTHWANI_MINIO_CONTAINER:-bthwani-minio-runtime}
     restart: unless-stopped
     command: server /data --console-address ":9001"

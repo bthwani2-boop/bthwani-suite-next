@@ -16,4 +16,11 @@ export const DSH_RUNTIME_MAP = [
     runtimeEvidence: null,
     state: "blocked",
   },
+  {
+    capabilityId: "dsh.store.discovery",
+    contractOperations: ["listDshStores", "getDshStore"],
+    backendImplemented: false,
+    runtimeEvidence: null,
+    state: "blocked",
+  },
 ] as const satisfies readonly DshRuntimeBinding[];
