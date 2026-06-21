@@ -36,7 +36,24 @@ export type DshStoreDetailViewModel = DshStoreCardViewModel & {
 function resolveImageSource(raw: string | null | undefined): { uri: string } | null {
   if (raw == null || raw.trim() === "") return null;
   if (raw.startsWith("dsh.") || !raw.startsWith("http")) return null;
-  return { uri: raw };
+
+  let urlStr = raw;
+  if (urlStr.includes("localhost") || urlStr.includes("127.0.0.1")) {
+    const apiBaseUrl = process.env.EXPO_PUBLIC_DSH_API_BASE_URL;
+    if (apiBaseUrl) {
+      try {
+        const apiParsed = new URL(apiBaseUrl);
+        const rawParsed = new URL(urlStr);
+        // Replace rawParsed host with apiParsed host, but keep MinIO port (59000)
+        rawParsed.hostname = apiParsed.hostname;
+        urlStr = rawParsed.toString();
+      } catch {
+        // Fallback to raw if parsing fails
+      }
+    }
+  }
+
+  return { uri: urlStr };
 }
 
 type CategoryMeta = { emoji: string; color: string; deliveryModes: string[] };

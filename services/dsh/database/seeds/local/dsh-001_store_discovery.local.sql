@@ -27,8 +27,8 @@ INSERT INTO dsh_stores (
     25,
     40,
     true,
-    null,
-    null
+    'http://localhost:59000/dsh-media/store-1001-hero.png',
+    'http://localhost:59000/dsh-media/store-1001-logo.png'
   ),
   (
     'store-1002',
@@ -43,8 +43,8 @@ INSERT INTO dsh_stores (
     20,
     35,
     true,
-    null,
-    null
+    'http://localhost:59000/dsh-media/store-1002-hero.png',
+    'http://localhost:59000/dsh-media/store-1002-logo.png'
   ),
   (
     'store-1003',
@@ -59,8 +59,8 @@ INSERT INTO dsh_stores (
     35,
     55,
     true,
-    null,
-    null
+    'http://localhost:59000/dsh-media/store-1003-hero.png',
+    'http://localhost:59000/dsh-media/store-1003-logo.png'
   ),
   (
     'store-1004',
@@ -75,8 +75,8 @@ INSERT INTO dsh_stores (
     null,
     null,
     true,
-    null,
-    null
+    'http://localhost:59000/dsh-media/store-1004-hero.png',
+    'http://localhost:59000/dsh-media/store-1004-logo.png'
   ),
   (
     'store-1005',
@@ -91,8 +91,8 @@ INSERT INTO dsh_stores (
     15,
     30,
     true,
-    null,
-    null
+    'http://localhost:59000/dsh-media/store-1005-hero.png',
+    'http://localhost:59000/dsh-media/store-1005-logo.png'
   ),
   (
     'store-1006',
@@ -107,7 +107,7 @@ INSERT INTO dsh_stores (
     20,
     35,
     true,
-    null,
-    null
+    'http://localhost:59000/dsh-media/store-1006-hero.png',
+    'http://localhost:59000/dsh-media/store-1006-logo.png'
   )
 ON CONFLICT (id) DO NOTHING;
