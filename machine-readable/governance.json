@@ -7,7 +7,15 @@
     "current": "REAL_EXPERIENCE_CLOSURE_v2",
     "effective_from": "2026-06-22",
     "previous_standard": "TECHNICAL_CLOSURE_v1",
-    "transition_note": "DSH-001 was closed under v1 (technical closure + shared wiring + success screenshots). Its technical closure is valid. Mobile surfaces have success-only screenshots. v2 is mandatory for all new Topics from DSH-002 control-panel onward. DSH-001 retains RUNTIME_VERIFIED with evidence_quality_note in execution-status.json."
+    "transition_note": "TECHNICAL_CLOSURE_v1 is historical evidence only and cannot establish final closure. Every previously closed Topic, including DSH-001, is re-evaluated under REAL_EXPERIENCE_CLOSURE_v2. DSH-001 technical wiring remains verified, but missing required visual states block closure."
+  },
+
+  "retroactive_closure_rules": {
+    "no_retroactive_exemption": "Any previously closed Topic must be re-evaluated under the current closure standard when user-reported visual or runtime evidence exposes a gap.",
+    "evidence_gap_is_blocker": "Any missing required visual state, required surface state, manual navigation proof, or runtime state proof blocks closure.",
+    "context_only_is_not_closure": "A context-only surface is accepted only when declared read-only before implementation and all required read-only evidence states are present.",
+    "technical_closure_v1_role": "HISTORICAL_EVIDENCE_ONLY",
+    "current_enforcement": "REAL_EXPERIENCE_CLOSURE_v2 applies to every Topic without grandfathering."
   },
 
   "topic_definition": {

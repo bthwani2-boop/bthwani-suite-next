@@ -2,10 +2,11 @@
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
   "branch": "starting-implementing-slices",
-  "head_at_audit": "06e64cf",
+  "head_at_audit": "f40ef7362a459cfe058919ab37a47816e738a3be",
   "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2 — effective 2026-06-22",
-  "note": "CLOSED status requires live runtime evidence. FIX_REQUIRED blocks merge. CI_NOT_CONFIGURED is not a failure. evidence_quality_note documents gaps without blocking topics closed under prior standard.",
-  "overall_merge_safety": "SAFE — no violations, no FIX_REQUIRED items",
+  "note": "CLOSED status requires REAL_EXPERIENCE_CLOSURE_v2 evidence. TECHNICAL_CLOSURE_v1 is historical evidence only. Every required evidence gap blocks closure.",
+  "overall_merge_safety": "DO_NOT_MERGE_UNTIL_DSH001_REAL_EXPERIENCE_REWORK",
+  "machine_readable_result": "MACHINE_READABLE_FIX_REQUIRED",
 
   "topics": {
     "DSH-000": {
@@ -43,34 +44,49 @@
 
     "DSH-001": {
       "topic_id": "DSH-001",
-      "current_status": "RUNTIME_VERIFIED",
-      "reason": "Full-stack store discovery closed across all 5 surfaces. 118/118 tests PASS. All guards PASS. Real API data (6 stores from DB). Control-panel shows success and error state screenshots. Mobile surfaces show success state screenshots.",
-      "evidence_matches_claim": true,
-      "merge_safe": true,
-      "evaluation_standard_applied": "TECHNICAL_CLOSURE_v1",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "reason": "TECHNICAL_WIRING_VERIFIED_BUT_REAL_EXPERIENCE_CLOSURE_FAILED",
+      "evidence_matches_claim": false,
+      "merge_safe": false,
+      "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2",
       "evidence_quality_note": {
-        "standard": "TECHNICAL_CLOSURE_v1",
+        "standard": "REAL_EXPERIENCE_CLOSURE_v2",
         "gap": "MOBILE_SUCCESS_ONLY_SCREENSHOTS",
         "detail": "app-client, app-captain, app-field, app-partner each have 1 success screenshot. Error/loading/empty states are unit-tested in shared controllers (118/118 tests pass) but not screenshot-verified. control-panel has success, error, and detail-panel screenshots (3 screenshots).",
         "what_is_verified": "Technical closure is genuine: real API, real DB, all guards pass, all controllers unit-tested including error/empty/loading state transitions.",
         "v2_gap": "The REAL_EXPERIENCE_CLOSURE_v2 standard requires error/loading/empty screenshots per surface. Mobile surfaces do not meet v2 visual evidence standard.",
-        "action_required": "NONE for DSH-001 closure — technical closure is valid. v2 standard mandatory from DSH-002 control-panel onward.",
-        "escalation": "If user requires v2 retroactive compliance, add error/loading/empty screenshots for mobile surfaces. This is optional until explicitly requested."
+        "action_required": "REWORK_REQUIRED_BEFORE_CLOSURE",
+        "escalation": "BLOCKING — add all missing per-surface visual and runtime-state proof before DSH-001 can be closed."
       },
       "surfaces": {
-        "app-client": "RUNTIME_VERIFIED — StoreDiscoveryScreen, StoreDiscoveryList, StoreCardPremium (success screenshot only)",
-        "control-panel": "RUNTIME_VERIFIED — StoreManagementScreen at /dsh/partners/stores (success + error + detail screenshots)",
-        "app-partner": "RUNTIME_VERIFIED — PartnerStoreScreen (success screenshot only — read-only surface)",
-        "app-field": "RUNTIME_VERIFIED — FieldStoreVerificationScreen (success screenshot only — read-only surface)",
-        "app-captain": "RUNTIME_VERIFIED — CaptainStorePickupContextScreen (success screenshot only — read-only surface)"
+        "app-client": "FIX_REQUIRED — success screenshot exists; loading, empty, error, and permission_denied visual proof missing",
+        "control-panel": "FIX_REQUIRED — success, error, and detail screenshots exist; loading and empty visual proof missing",
+        "app-partner": "FIX_REQUIRED — read-only success screenshot exists; loading and error visual proof missing",
+        "app-field": "FIX_REQUIRED — read-only success screenshot exists; loading and error visual proof missing",
+        "app-captain": "FIX_REQUIRED — read-only success screenshot exists; loading and error visual proof missing"
       },
       "exact_paths": [
         "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
         "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/"
       ],
-      "blockers": [],
-      "required_actions": [],
-      "design_debt": "Inline styles in control-panel screens — not a gate failure, deferred to pre-DSH-003",
+      "blockers": [
+        "Required REAL_EXPERIENCE_CLOSURE_v2 screenshots are missing across all five surfaces",
+        "Read-only role surfaces have success-only context evidence",
+        "Control-panel Store Network Governance lacks loading and empty visual evidence",
+        "DSH-001 design debt remains inside the declared scope"
+      ],
+      "required_actions": [
+        "Add per-surface loading, success, empty, error, and permission_denied visual evidence where applicable",
+        "Prove app-partner read-only loading, success, and error states or implement the declared Partner Store Readiness experience",
+        "Prove app-field read-only loading, success, and error states or implement the declared Field Store Verification Readiness experience",
+        "Prove app-captain read-only loading, success, and error states or implement the declared Captain Pickup Readiness experience",
+        "Upgrade control-panel partners/stores from table proof to Store Network Governance experience with all required states",
+        "Remove or resolve design debt inside DSH-001 scope",
+        "Regenerate the canonical evidence index and visual evidence pack"
+      ],
+      "design_debt": "BLOCKING_UNDER_REAL_EXPERIENCE_CLOSURE_v2 — inline-style debt must be removed or explicitly resolved inside DSH-001 scope",
       "verification_commands": [
         "pnpm run foundation:gate",
         "pnpm run slice:gate",
@@ -78,7 +94,7 @@
         "pnpm --dir services/dsh test",
         "pnpm --dir services/dsh typecheck"
       ],
-      "next_topic_allowed": "DSH-002 control-panel surface requires explicit approval before implementation",
+      "next_topic_allowed": false,
       "status_updated_from": "git commit 06e64cf"
     },
 
@@ -238,9 +254,41 @@
     "unstaged_changes": "D services/dsh/frontend/app-captain/.gitkeep, D services/dsh/frontend/app-field/.gitkeep, D services/dsh/frontend/app-partner/.gitkeep, D services/dsh/frontend/control-panel/.gitkeep, D services/wlt/frontend/.gitkeep — gitkeep deletes, not a gate failure"
   },
 
-  "next_approved_action": "STOP — no next slice is approved. DSH-002 control-panel or DSH-003 requires explicit approval before implementation begins.",
+  "next_approved_action": "STOP — DSH-001 real experience rework is required before DSH-002 or DSH-003.",
 
-  "pending_fixes": [],
+  "pending_fixes": [
+    {
+      "topic_id": "DSH-001",
+      "priority": "P0",
+      "reason": "DSH-001 real experience closure failed",
+      "blocks_merge": true,
+      "blocks_next_topic": true,
+      "required_action": "Complete all missing visual states, navigation proof, runtime-state proof, and in-scope design-debt remediation; then regenerate machine-readable evidence."
+    },
+    {
+      "topic_id": "FOUNDATION-GATE",
+      "priority": "P1",
+      "reason": "foundation:gate and slice:gate both fail because tools/guards/performance-runtime-baseline.mjs requires missing machine-readable/slice_execution_master_matrix_v3.csv",
+      "blocks_merge": true,
+      "blocks_next_topic": true,
+      "required_action": "Restore the authoritative V3 matrix or update the performance baseline guard in a separately approved scope; do not fabricate the matrix in this governance-only correction."
+    }
+  ],
+
+  "verification_results_2026_06_22": {
+    "json_parse": "PASS",
+    "semantic_consistency": "PASS — 16 Topics complete; DSH-001 FIX_REQUIRED; 12 missing screenshots explicitly blocking",
+    "git_diff_check": "PASS",
+    "guard_matrix_v3": "PASS",
+    "guard_dsh_frontend_shared_ownership": "PASS",
+    "guard_no_financial_mutation_outside_wlt": "PASS",
+    "guard_app_shell_control_panel": "PASS",
+    "dsh_tests": "PASS — 118/118",
+    "dsh_typecheck": "PASS",
+    "foundation_gate": "FAIL — performance-runtime-baseline reports missing machine-readable/slice_execution_master_matrix_v3.csv",
+    "slice_gate": "FAIL — performance-runtime-baseline reports missing machine-readable/slice_execution_master_matrix_v3.csv",
+    "graphify": "NOT_AVAILABLE_WITH_REASON — no configured LLM API key for semantic extraction"
+  },
 
   "verification_commands": {
     "check_all_gates": "pnpm run foundation:gate && pnpm run slice:gate",

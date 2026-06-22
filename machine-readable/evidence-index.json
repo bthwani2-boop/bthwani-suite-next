@@ -1,7 +1,20 @@
 {
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "note": "Each entry has a path, status, topic_id, and last_verified_source. supports_claims lists what each evidence file proves. contradictions are resolved inline.",
+  "note": "Each entry has a path, status, topic_id, and last_verified_source. supports_claims lists what each evidence file proves. Missing required evidence is always blocking under REAL_EXPERIENCE_CLOSURE_v2.",
+  "evidence_entry_contract": {
+    "required_fields": ["required_states", "existing_screenshots", "missing_screenshots", "missing_manual_navigation", "missing_runtime_state_proof", "blocks_closure", "blocking_reason"],
+    "non_visual_evidence_defaults": {
+      "required_states": [],
+      "existing_screenshots": [],
+      "missing_screenshots": [],
+      "missing_manual_navigation": [],
+      "missing_runtime_state_proof": [],
+      "blocks_closure": false,
+      "blocking_reason": null
+    },
+    "rule": "Topic visual-evidence entries must override every default explicitly. A missing required state sets blocks_closure=true."
+  },
 
   "contradictions_resolved": [
     {
@@ -99,19 +112,52 @@
       "last_verified_source": "git commit 06e64cf",
       "command_used": "pnpm run foundation:gate && pnpm run slice:gate && pnpm --dir services/dsh test",
       "supports_claims": [
-        "DSH-001 RUNTIME_VERIFIED — all 5 surfaces operational",
+        "DSH-001 TECHNICAL_WIRING_VERIFIED across all 5 surfaces",
         "118/118 tests PASS",
         "All guards PASS",
         "Real API data (6 stores from DB)",
         "Control-panel has success + error + detail screenshots",
         "All mobile surfaces have success screenshots"
       ],
-      "contradictions": "NONE",
-      "evidence_quality_gap": "Mobile surfaces (app-client, app-captain, app-field, app-partner) have success-state screenshots only. Error/loading/empty states are unit-tested in shared controllers but not screenshot-verified. This is noted as a v1-standard gap, not a contradiction.",
+      "required_states": {
+        "app-client": ["loading", "success", "empty", "error", "permission_denied"],
+        "control-panel": ["loading", "success", "empty", "error"],
+        "app-partner": ["loading", "success", "error"],
+        "app-field": ["loading", "success", "error"],
+        "app-captain": ["loading", "success", "error"]
+      },
+      "existing_screenshots": [
+        "app-client:success",
+        "control-panel:success",
+        "control-panel:error",
+        "control-panel:detail",
+        "app-partner:success",
+        "app-field:success",
+        "app-captain:success"
+      ],
+      "missing_screenshots": [
+        "app-client:loading", "app-client:empty", "app-client:error", "app-client:permission_denied",
+        "control-panel:loading", "control-panel:empty",
+        "app-partner:loading", "app-partner:error",
+        "app-field:loading", "app-field:error",
+        "app-captain:loading", "app-captain:error"
+      ],
+      "missing_manual_navigation": [],
+      "missing_runtime_state_proof": [
+        "app-client loading/empty/error/permission_denied",
+        "control-panel loading/empty",
+        "app-partner loading/error",
+        "app-field loading/error",
+        "app-captain loading/error"
+      ],
+      "blocks_closure": true,
+      "blocking_reason": "Required REAL_EXPERIENCE_CLOSURE_v2 states are not screenshot-verified for every required and read-only surface.",
+      "contradictions": "The prior RUNTIME_VERIFIED claim conflicts with the current closure standard.",
+      "evidence_quality_gap": "BLOCKING_GAP_UNDER_REAL_EXPERIENCE_CLOSURE_v2",
       "ci_status": "CI_NOT_CONFIGURED",
       "test_result": "118/118 tests PASS, 0 failures",
       "api_result": "GET /dsh/stores → 6 stores; GET /dsh/stores/{id} → store-1005 detail",
-      "required_update": "NONE for current standard. Optional: add error/loading/empty screenshots for mobile surfaces to meet v2 standard."
+      "required_update": "MANDATORY — capture every missing required state, resolve in-scope design debt, and regenerate this evidence entry before closure."
     },
 
     "DSH-001_STORE_DISCOVERY_INITIAL": {
@@ -205,15 +251,15 @@
       "evidence_type": "SERVICE_MANIFEST",
       "status": "PRESENT",
       "key_fields": {
-        "stage": "DSH-001_RUNTIME_VERIFIED_MULTI_SURFACE",
-        "closureState": "RUNTIME_VERIFIED",
+        "stage": "DSH-001_TECHNICAL_WIRING_VERIFIED",
+        "closureState": "FIX_REQUIRED_REAL_EXPERIENCE_REWORK",
         "contractState": "CONTRACT_ACTIVE",
         "backendRuntimeReady": true,
         "sharedOwnershipEnforced": true
       },
-      "supports_claims": ["DSH service is in RUNTIME_VERIFIED state"],
-      "contradictions": "NONE",
-      "required_update": "Update stage and closureState when DSH-002 is fully closed"
+      "supports_claims": ["The service manifest records technical runtime wiring; it does not prove REAL_EXPERIENCE_CLOSURE_v2"],
+      "contradictions": "The repository manifest may still contain the historical runtime-verified stage; machine-readable closure remains FIX_REQUIRED.",
+      "required_update": "Do not change runtime code in this task. Reconcile the service manifest only during approved DSH-001 real-experience rework."
     },
 
     "WLT_SERVICE_MANIFEST": {

@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "head_at_verification": "06e64cf",
+  "head_at_verification": "f40ef7362a459cfe058919ab37a47816e738a3be",
   "evaluation_standard": "REAL_EXPERIENCE_CLOSURE_v2",
   "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure. NOT_AVAILABLE_WITH_REASON documents gates that are inapplicable without counting them as failures.",
 
@@ -46,7 +46,7 @@
       ]
     },
     "real_experience_verification": {
-      "description": "v2 standard — must be completed before declaring RUNTIME_VERIFIED from DSH-002 control-panel onward.",
+      "description": "v2 standard — must be completed before declaring any Topic closed, including retroactive re-evaluation of DSH-001.",
       "gates": [
         "VISUAL_EVIDENCE_GATE_v2",
         "STATE_COVERAGE_GATE",
@@ -140,7 +140,7 @@
       "script": "tools/scripts/run-slice-gate.ps1",
       "blocking": true,
       "required_before": "SLICE_CLOSURE",
-      "current_status": "PASS_FOR_DSH-001",
+      "current_status": "FAIL_FOR_DSH-001_REAL_EXPERIENCE",
       "last_verified": "2026-06-22",
       "evidence": "tools/registry/runs/SLICE-GATE-20260622-172256"
     },
@@ -159,15 +159,15 @@
       "required_states_per_read_only_surface": ["loading", "success", "error"],
       "screenshot_location": "services/<service>/evidence/<TOPIC_ID>/screenshots/",
       "current_status": {
-        "DSH-001_app_client": "PARTIAL_v1 — success only (v1 standard applied, gap documented)",
-        "DSH-001_control_panel": "PASS_v2 — success + error + detail screenshots present",
-        "DSH-001_app_partner": "PARTIAL_v1 — success only (read-only surface, v1 standard applied)",
-        "DSH-001_app_field": "PARTIAL_v1 — success only (read-only surface, v1 standard applied)",
-        "DSH-001_app_captain": "PARTIAL_v1 — success only (read-only surface, v1 standard applied)",
+        "DSH-001_app_client": "FAIL_v2 — loading, empty, error, and permission_denied screenshots missing",
+        "DSH-001_control_panel": "FAIL_v2 — loading and empty screenshots missing",
+        "DSH-001_app_partner": "FAIL_v2 — read-only loading and error screenshots missing",
+        "DSH-001_app_field": "FAIL_v2 — read-only loading and error screenshots missing",
+        "DSH-001_app_captain": "FAIL_v2 — read-only loading and error screenshots missing",
         "DSH-002_app_client": "RUNTIME_VERIFIED — app-client verified",
         "DSH-002_control_panel": "NOT_STARTED"
       },
-      "enforcement_note": "v2 standard mandatory for all topics from DSH-002 control-panel onward. DSH-001 mobile surfaces are accepted under v1 with documented gap."
+      "enforcement_note": "v2 applies retroactively without grandfathering. Every missing required state is a closure blocker."
     },
     "STATE_COVERAGE_GATE": {
       "type": "MANUAL",
@@ -177,7 +177,7 @@
       "description": "Verify that screenshots cover all required states (loading, success, empty, error) for all required surfaces.",
       "verification_method": "Manual review of screenshots/ directory in evidence pack",
       "current_status": {
-        "DSH-001": "PARTIAL_v1 — mobile success-only (documented gap)",
+        "DSH-001": "FAIL_v2 — required states missing across all five surfaces",
         "DSH-002": "NOT_STARTED"
       }
     },
@@ -314,7 +314,7 @@
     "typecheck_all": "PASS",
     "dsh_tests": "118/118 PASS",
     "ci": "CI_NOT_CONFIGURED",
-    "real_experience_v2": "PARTIAL — DSH-001 mobile surfaces documented as v1-gap. v2 mandatory from DSH-002 control-panel onward.",
+    "real_experience_v2": "FAIL — DSH-001 is FIX_REQUIRED until all required surface states are visually and operationally proven.",
     "last_verified": "2026-06-22"
   }
 }

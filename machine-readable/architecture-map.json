@@ -6,7 +6,9 @@
     "dsh": {
       "role": "ACTIVE_IMPLEMENTATION_TARGET",
       "description": "Discovery + Store + Home + Catalog + Cart + Orders + Dispatch + Field + Support — operational commerce layer",
-      "status": "DSH-001_RUNTIME_VERIFIED_DSH-002_PARTIAL",
+      "status": "DSH-001_TECHNICAL_WIRING_VERIFIED_REAL_EXPERIENCE_FIX_REQUIRED",
+      "closure_status": "FIX_REQUIRED",
+      "next_topic_allowed": false,
       "backend": {
         "language": "Go",
         "path": "services/dsh/backend/",

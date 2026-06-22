@@ -94,15 +94,19 @@ WLT is the sole owner of financial truth:
 
 ## Current Execution State
 
+**Machine-readable result:** `MACHINE_READABLE_FIX_REQUIRED`
+
+The governance package now reports DSH-001 truthfully, but repository-wide foundation and slice gates remain blocked because `tools/guards/performance-runtime-baseline.mjs` requires the absent `machine-readable/slice_execution_master_matrix_v3.csv`. This task does not fabricate or restore that matrix.
+
 | Topic | Status | Notes |
 | ----- | ------ | ----- |
 | DSH-000 | RUNTIME_VERIFIED | Foundation gates all pass |
 | WLT-000 | RUNTIME_VERIFIED | Reference endpoints only — no mutations |
-| DSH-001 | RUNTIME_VERIFIED | All 5 surfaces. v1 evidence standard. Mobile success-only screenshots (documented gap). |
+| DSH-001 | FIX_REQUIRED | TECHNICAL_WIRING_VERIFIED; REAL_EXPERIENCE_CLOSURE_v2 failed because required per-surface visual states are missing. |
 | DSH-002 | PARTIAL | app-client verified. control-panel NOT_STARTED — needs approval. |
 | DSH-003 to DSH-010 | NOT_STARTED | See topic-registry.json for dependencies |
 
-**Next approved action:** STOP — no Topic is approved. DSH-002 control-panel or DSH-003 requires explicit approval.
+**Next approved action:** STOP — DSH-001 real experience rework is required before DSH-002 or DSH-003.
 
 ## Contradiction Policy
 
@@ -115,7 +119,7 @@ If any JSON file conflicts with actual code or evidence:
 
 Date: 2026-06-22
 Branch: starting-implementing-slices
-Head at audit: 06e64cf
+Head at audit: f40ef7362a459cfe058919ab37a47816e738a3be
 New repo local: C:\bthwani-suite-next
 Donor repo local: C:\bthwani-suite (READ ONLY, branch: realtest)
 Standard applied: REAL_EXPERIENCE_CLOSURE_v2

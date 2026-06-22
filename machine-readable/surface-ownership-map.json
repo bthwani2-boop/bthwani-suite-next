@@ -64,7 +64,7 @@
         "dsh-frontend-shared-ownership",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED)", "DSH-002 (RUNTIME_VERIFIED)"],
+      "current_dsh_slices": ["DSH-001 (TECHNICAL_WIRING_VERIFIED; REAL_EXPERIENCE_STATUS=FIX_REQUIRED)", "DSH-002 (PARTIAL)"],
       "ownership_violations_found": "NONE",
       "port": 18101,
       "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-client/runtime exec expo start --dev-client --host localhost --port 18101 --android --clear"
@@ -124,7 +124,7 @@
         "dsh-frontend-shared-ownership",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only readiness context)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only readiness context lacks loading/error visual proof)"],
       "dsh_001_scope_note": "DSH-001 in app-partner implements store-only readiness context. Catalog management, partner orders, finance are excluded.",
       "ownership_violations_found": "NONE",
       "port": 18102,
@@ -181,7 +181,7 @@
         "dsh-frontend-shared-ownership",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only pickup context)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only pickup context lacks loading/error visual proof)"],
       "dsh_001_scope_note": "DSH-001 in app-captain implements read-only store pickup context. Delivery lifecycle and earnings are excluded.",
       "ownership_violations_found": "NONE",
       "port": 18103
@@ -237,7 +237,7 @@
         "dsh-frontend-shared-ownership",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only verification context)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only verification context lacks loading/error visual proof)"],
       "ownership_violations_found": "NONE",
       "port": 18104
     },
@@ -313,10 +313,10 @@
         "control-panel-design-gate",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — stores admin at /dsh/partners/stores)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — Store Network Governance lacks loading/empty visual proof)"],
       "implemented_routes": ["/dsh/partners/stores"],
       "ownership_violations_found": "NONE",
-      "design_debt": "Inline styles in DSH-001 control-panel screens — not a gate failure, deferred to pre-DSH-003",
+      "design_debt": "BLOCKING under REAL_EXPERIENCE_CLOSURE_v2 until removed or explicitly resolved within DSH-001 scope",
       "port": 13000,
       "start_command": "$env:NEXT_PUBLIC_DSH_API_BASE_URL='http://localhost:58080'; pnpm --dir apps/control-panel/runtime dev --port 13000"
     },

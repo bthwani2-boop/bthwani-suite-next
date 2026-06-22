@@ -2,7 +2,19 @@
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
   "evaluation_standard": "REAL_EXPERIENCE_CLOSURE_v2",
-  "note": "Each Topic is a full-stack operational unit. Fields marked NOT_DEFINED require definition before implementation begins. Source evidence paths must be verified before trusting any RUNTIME_VERIFIED claim.",
+  "note": "Each Topic is a full-stack operational unit evaluated under REAL_EXPERIENCE_CLOSURE_v2 without grandfathering. Source evidence must distinguish present runtime proof from planned requirements.",
+  "evidence_contract": {
+    "evidence_required_type": "array",
+    "source_evidence_type": "array<object>",
+    "source_evidence_fields": ["type", "path", "status"],
+    "planned_evidence_status": "NOT_PRESENT",
+    "rule": "A planned path or donor reference never establishes runtime readiness."
+  },
+  "donor_mapping_contract": {
+    "required_fields": ["topic_id", "use_as", "accepted_value", "rejected_parts", "target_new_repo_mapping", "implementation_requirement"],
+    "unmapped_policy": "REFERENCE_ONLY",
+    "runtime_authority": false
+  },
 
   "topics": {
     "DSH-000": {
@@ -39,7 +51,7 @@
       "optional_surfaces": [],
       "read_only_surfaces": [],
       "forbidden_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "control-panel", "webapp", "website"],
-      "primary_control_panel_section": null,
+      "primary_control_panel_section": "NOT_APPLICABLE_SYSTEM_GATE",
       "secondary_control_panel_sections": [],
       "read_only_control_panel_sections": [],
       "forbidden_control_panel_sections": ["dashboard", "operations", "finance", "catalogs", "partners", "marketing", "support", "platform", "administration", "hr"],
@@ -50,10 +62,10 @@
       },
       "tests_required": ["foundation:gate PASS", "contracts:lint PASS", "guard:matrix:v3 PASS"],
       "guards_required": ["FOUNDATION_GATE", "CONTRACTS_LINT_GATE", "GUARD_MATRIX_V3", "WLT_BOUNDARY_GATE", "NO_OLD_PORTS_GATE", "NO_MOCK_DEMO_GATE", "DOCKER_RUNTIME_GATE"],
-      "evidence_required": "services/dsh/evidence/DSH-001-store-discovery/ (foundation artifacts)",
+      "evidence_required": ["Foundation gate outputs", "Contract lint output", "Guard outputs", "Docker/API smoke proof"],
       "current_status": "RUNTIME_VERIFIED",
       "blockers": [],
-      "source_evidence": "services/dsh/evidence/DSH-001-store-discovery/"
+      "source_evidence": [{"type": "FOUNDATION_RUNTIME_EVIDENCE", "path": "services/dsh/evidence/DSH-001-store-discovery/", "status": "PRESENT"}]
     },
 
     "WLT-000": {
@@ -97,7 +109,7 @@
       "optional_surfaces": [],
       "read_only_surfaces": [],
       "forbidden_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
-      "primary_control_panel_section": null,
+      "primary_control_panel_section": "NOT_APPLICABLE_REFERENCE_FOUNDATION",
       "secondary_control_panel_sections": [],
       "read_only_control_panel_sections": [],
       "forbidden_control_panel_sections": ["dashboard", "operations", "finance", "catalogs", "partners", "marketing", "support", "platform", "administration", "hr"],
@@ -110,11 +122,11 @@
       },
       "tests_required": ["WLT slice:gate PASS", "Go build PASS", "Go test PASS"],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "DOCKER_RUNTIME_GATE"],
-      "evidence_required": "services/wlt/evidence/WLT-000-runtime-foundation/",
+      "evidence_required": ["WLT reference runtime proof", "Migration and seed proof", "Go build/test output", "Boundary guard output"],
       "api_port": 58083,
       "current_status": "RUNTIME_VERIFIED",
       "blockers": [],
-      "source_evidence": "services/wlt/evidence/WLT-000-runtime-foundation/",
+      "source_evidence": [{"type": "REFERENCE_ONLY_RUNTIME_EVIDENCE", "path": "services/wlt/evidence/WLT-000-runtime-foundation/", "status": "PRESENT"}],
       "next_slice_note": "WLT-001 mutation APIs (payment, refund, settlement) — NOT_APPROVED_YET. Requires separate approval."
     },
 
@@ -192,14 +204,20 @@
         "app_captain_read_only": "Captain sees pickup context for store, loading, error states. Context is intentionally read-only."
       },
       "evidence_quality_note_v1_closure": {
-        "standard_applied": "TECHNICAL_CLOSURE_v1",
+        "standard_applied": "HISTORICAL_TECHNICAL_CLOSURE_v1_EVIDENCE_ONLY",
         "mobile_screenshot_coverage": "SUCCESS_STATE_ONLY — app-client, app-partner, app-captain, app-field each have 1 success screenshot. Error/loading/empty states are unit-tested in shared controllers but not screenshot-verified.",
         "control_panel_screenshot_coverage": "SUCCESS_AND_ERROR — control-panel has success, error, and detail-panel screenshots.",
         "unit_test_state_coverage": "118/118 tests PASS including error, empty, and loading state tests in shared controllers.",
-        "v2_gap": "Mobile surfaces do not have error/loading/empty screenshots. This gap is documented. v2 standard applies to DSH-002 control-panel and all future topics.",
-        "action": "NONE_REQUIRED for DSH-001 closure. Apply v2 standard to all new topics."
+        "v2_gap": "Required and read-only surfaces lack mandatory visual states. The gap blocks closure under the current standard.",
+        "action": "REWORK_REQUIRED_BEFORE_CLOSURE"
       },
       "tests_status": "PASS — 118/118 tests, 33 suites, 0 failures",
+      "tests_required": [
+        "Store discovery controller loading/success/empty/error/permission tests",
+        "Store admin governance state tests",
+        "Role-context read-only state tests",
+        "Manual per-surface navigation verification"
+      ],
       "guards_required": [
         "FOUNDATION_GATE", "CONTRACTS_LINT_GATE", "GUARD_MATRIX_V3",
         "WLT_BOUNDARY_GATE", "DOCKER_RUNTIME_GATE", "DSH_API_GATE",
@@ -209,13 +227,50 @@
         "guard:app-shell-control-panel",
         "control-panel:design-gate"
       ],
-      "evidence_required": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
-      "design_debt": ["Inline styles in control-panel screens — not a gate failure, deferred to pre-DSH-003"],
-      "current_status": "RUNTIME_VERIFIED",
-      "blockers": [],
-      "source_evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+      "evidence_required": [
+        "Per-surface screenshots for every state declared in states_required",
+        "Manual navigation proof for all five surfaces",
+        "Runtime API and database proof",
+        "Passing tests and guards",
+        "Resolved in-scope control-panel design debt"
+      ],
+      "design_debt": ["BLOCKING — inline styles in control-panel screens remain unresolved inside DSH-001 scope"],
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "merge_safe": false,
+      "blockers": [
+        "app-client loading, empty, error, and permission_denied screenshots missing",
+        "control-panel loading and empty screenshots missing",
+        "app-partner read-only loading and error screenshots missing",
+        "app-field read-only loading and error screenshots missing",
+        "app-captain read-only loading and error screenshots missing",
+        "Control-panel design debt remains unresolved"
+      ],
+      "required_actions": [
+        "Capture every missing required visual state with real runtime data",
+        "Prove all read-only role-surface states or reclassify and implement the declared real experience",
+        "Upgrade control-panel proof to complete Store Network Governance state coverage",
+        "Resolve in-scope design debt",
+        "Regenerate evidence-index.json after evidence completion"
+      ],
+      "source_evidence": [
+        {
+          "type": "TECHNICAL_AND_PARTIAL_VISUAL_EVIDENCE",
+          "path": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+          "status": "PRESENT_BUT_BLOCKING_GAPS"
+        }
+      ],
       "verified_date": "2026-06-22",
-      "next_allowed": "DSH-002 control-panel surface (requires separate approval)",
+      "next_allowed": false,
+      "donor_reference_policy": {
+        "topic_id": "INHERIT_CURRENT_TOPIC_ID",
+        "use_as": "REFERENCE_ONLY",
+        "accepted_value": "Workflow, information architecture, state vocabulary, and role-boundary reference",
+        "rejected_parts": ["Runtime wiring", "mock/demo/preview data", "direct donor imports", "copy-verbatim UI", "financial mutation outside WLT"],
+        "target_new_repo_mapping": "Map only through this Topic's declared shared brain, contracts, and surfaces",
+        "implementation_requirement": "Requires separate Topic approval and complete REAL_EXPERIENCE_CLOSURE_v2 evidence"
+      },
       "donor_screens": {
         "app_client": [
           "dsh/frontend/app-client/screens/HomeScreen.tsx — DshHomeGetScreen: store feed, category carousel, promos, video reels, inline search, favorites, filter rail. Uses useHomeState, useHomeDerivedStores, useHomeFilterRail, useHomeVideoHandlers.",
@@ -226,6 +281,16 @@
         "app_field": ["dsh/frontend/app-field/ — field agent store verification context (read-only)"],
         "app_captain": ["dsh/frontend/app-captain/ — captain store pickup context with address and store code (read-only)"]
       },
+      "donor_mappings": [
+        {
+          "topic_id": "DSH-001",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Store discovery information architecture, role-specific store context, and governance concepts",
+          "rejected_parts": ["Donor runtime wiring", "mock or preview data", "direct financial behavior", "copy-verbatim UI"],
+          "target_new_repo_mapping": "services/dsh/frontend/shared/store plus the five declared DSH surfaces",
+          "implementation_requirement": "Reimplement through generated clients and shared controllers; prove every REAL_EXPERIENCE_CLOSURE_v2 state."
+        }
+      ],
       "acceptance_criteria": [
         "Client sees store list with store name, category, open/closed status, and ETA in RTL layout",
         "Client sees loading skeleton during store list fetch",
@@ -315,13 +380,13 @@
         "app_client": "RUNTIME_VERIFIED — HomeDiscoveryScreen and all home sections",
         "control_panel": "NOT_STARTED — home discovery admin screens not built"
       },
-      "evidence_required": "services/dsh/evidence/DSH-002-client-home-discovery/ (app-client only)",
+      "evidence_required": ["App-client runtime and visual evidence", "Control-panel evidence after separate approval", "Passing tests and guards"],
       "blockers": [
         "control-panel Home Discovery Admin screens not started",
         "control-panel tests not written",
         "DSH-002 control-panel requires explicit approval before implementation"
       ],
-      "source_evidence": "services/dsh/evidence/DSH-002-client-home-discovery/",
+      "source_evidence": [{"type": "PARTIAL_APP_CLIENT_EVIDENCE", "path": "services/dsh/evidence/DSH-002-client-home-discovery/", "status": "PRESENT_PARTIAL"}],
       "donor_screens": {
         "app_client": [
           "dsh/frontend/app-client/screens/HomeScreen.tsx — DshHomeGetScreen: full home layout with hero banner carousel, promo rail, category shortcuts, filter rail (all/nearest/offers/favorites/new), store feed, video reels. States: ready (full render), loading (skeleton while fetching). Uses useHomeState, useHomeDerivedStores, useHomePromoHandlers, useHomeFilterRail, useHomeVideoHandlers, useHomeTickerState."
@@ -457,7 +522,19 @@
         "RBAC: partner sees only own store catalog; operator sees all"
       ],
       "feature_behavior": "Partner adds product → product enters draft state → publication readiness check (media + pricing + taxonomy) → partner submits for review → appears in operator approval queue → operator reviews in detail drawer → approves → product becomes visible to clients in store catalog",
-      "source_evidence": null
+      "evidence_required": [
+        "Runtime API and database proof for the approved Topic scope",
+        "Passing tests and guards",
+        "Per-surface visual evidence for every declared state",
+        "Manual navigation proof"
+      ],
+      "source_evidence": [
+        {
+          "type": "PLANNED_TOPIC_EVIDENCE",
+          "path": null,
+          "status": "NOT_PRESENT"
+        }
+      ]
     },
 
     "DSH-004": {
@@ -538,7 +615,8 @@
         "Fulfillment mode selection affects which delivery fee estimate is shown (from WLT reference)"
       ],
       "feature_behavior": "Client selects products → opens cart → reviews items + totals → selects payment method → selects fulfillment mode → serviceability check fires (DSH checks zone) → if in-zone: proceed button enabled → tap proceed → navigate to checkout intent (DSH-005)",
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-005": {
@@ -622,7 +700,8 @@
         "All 8 states have distinct UI and correct RTL layout"
       ],
       "feature_behavior": "Client taps 'Confirm order' in cart → checkout intent created in DSH → DSH calls WLT payment-sessions reference for payment authorization → WLT returns payment session ID → DSH receives session reference (not financial state) → quote confirmed → client taps 'Place order' → order created → order-created state shown → track order",
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-006": {
@@ -710,7 +789,8 @@
         "All state labels are localized (RTL + Arabic)"
       ],
       "feature_behavior": "Client places order → order created in DSH with state=pending → partner inbox gets order notification → partner opens inbox → stage filter shows new order in 'acceptance' stage → partner taps accept → state transitions to store-accepted → preparing → marks ready → state=ready-for-pickup → dispatch starts",
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-007": {
@@ -800,7 +880,8 @@
         "RBAC: captain sees only their own assigned orders"
       ],
       "feature_behavior": "Order state=ready-for-pickup → dispatch engine runs radial search → finds online captain within radius → sends assignment offer → captain accepts → state=driver-assigned → captain navigates to store → confirms arrived (state=driver-arrived-store) → picks up order (state=picked-up) → navigates to customer → confirms arrived (state=arrived-customer) → submits PoD → state=delivered",
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-008": {
@@ -899,7 +980,8 @@
         "RBAC: field agent sees only their assigned stores; partner sees only own store onboarding"
       ],
       "feature_behavior": "Operator assigns field agent to store → agent receives task notification (DSH-011) → agent opens DshFieldStoresScreen → filters by today → opens store → completes visit checklist step by step → uploads documents → if issues: escalates from DshFieldReadinessEscalationScreen → operator notified → operator reviews in readiness queue → approves → partner notified → onboarding status updated",
-      "source_evidence": null,
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}],
       "note": "DSH-001 app-field context layer is done (store verification context). Full field onboarding workflow is this Topic."
     },
 
@@ -961,7 +1043,8 @@
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
       "current_status": "NOT_STARTED",
       "blockers": ["DSH-006 not closed"],
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-010": {
@@ -1039,7 +1122,8 @@
         "Guard: no DSH-side financial calculation or mutation code present"
       ],
       "feature_behavior": "Operator opens finance section → DSH reads WLT settlement-summary reference endpoint → displays partner settlement statuses and payment summaries in FinanceReadOnlyFrame → no interactive mutations possible — display only",
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-011": {
@@ -1173,7 +1257,8 @@
         "DSH-011 API contracts not defined in dsh.openapi.yaml",
         "Push notification provider not configured — infrastructure decision pending DSH-011 approval"
       ],
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-012": {
@@ -1289,7 +1374,8 @@
         "DSH-012 API contracts not defined in dsh.openapi.yaml",
         "DSH-012 not approved for implementation"
       ],
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-013": {
@@ -1387,7 +1473,8 @@
         "DSH-013 API contracts not defined in dsh.openapi.yaml",
         "DSH-013 not approved for implementation"
       ],
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     },
 
     "DSH-014": {
@@ -1496,7 +1583,8 @@
         "DSH-014 API contracts not defined in dsh.openapi.yaml",
         "DSH-014 not approved for implementation"
       ],
-      "source_evidence": null
+      "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
+      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
     }
   }
 }

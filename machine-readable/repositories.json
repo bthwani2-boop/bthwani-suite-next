@@ -9,7 +9,7 @@
     "active_branch": "starting-implementing-slices",
     "base_branch": "master",
     "role": "CANONICAL_IMPLEMENTATION_TARGET",
-    "head_at_audit": "06e64cf",
+    "head_at_audit": "f40ef7362a459cfe058919ab37a47816e738a3be",
     "policy": "All implementation happens here. This is the source of architectural truth.",
     "forbidden": [
       "Copy old repo structure wholesale",
@@ -115,6 +115,11 @@
       ]
     },
     "DONOR_SCREENS_EXTRACTED_FOR_REFERENCE": {
+      "mapping_policy": {
+        "required_fields": ["topic_id", "use_as", "accepted_value", "rejected_parts", "target_new_repo_mapping", "implementation_requirement"],
+        "default_for_unmapped_item": "REFERENCE_ONLY",
+        "runtime_authority": false
+      },
       "control_panel_sections": [
         "dashboard", "operations", "finance (read-only)", "catalogs", "partners",
         "marketing", "support", "platform", "administration", "hr"
@@ -143,7 +148,33 @@
           "DshFieldReadinessEscalationScreen", "DshFieldStoreVisitScreen"
         ]
       },
-      "note": "These donor screens are visual references for DSH-003+ slices only. Not to be copied verbatim."
+      "topic_mappings": [
+        {
+          "topic_id": "DSH-001",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Store discovery, store detail, role-specific store context, and store governance concepts",
+          "rejected_parts": ["Donor runtime wiring", "mock/demo/preview data", "copy-verbatim UI", "financial behavior"],
+          "target_new_repo_mapping": "services/dsh/frontend/shared/store and DSH-001 declared surfaces",
+          "implementation_requirement": "Use generated clients and shared controllers; satisfy every REAL_EXPERIENCE_CLOSURE_v2 state."
+        },
+        {
+          "topic_id": "DSH-002",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Home discovery section composition and content-management concepts",
+          "rejected_parts": ["Donor runtime wiring", "hardcoded data", "copy-verbatim UI"],
+          "target_new_repo_mapping": "DSH-002 app-client and control-panel home-discovery surfaces",
+          "implementation_requirement": "No execution until DSH-001 rework is closed and DSH-002 is separately approved."
+        },
+        {
+          "topic_id": "DSH-003_TO_DSH-014",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Domain workflows, screen inventories, state vocabulary, and control-panel section concepts",
+          "rejected_parts": ["Any unverified runtime behavior", "financial mutation outside WLT", "direct donor imports", "copy-verbatim UI"],
+          "target_new_repo_mapping": "The owning Topic entry in topic-registry.json",
+          "implementation_requirement": "Each item remains non-executable until its Topic has exact contracts, approval, state coverage, and evidence requirements."
+        }
+      ],
+      "note": "Every listed donor screen inherits REFERENCE_ONLY unless a topic_mappings record explicitly narrows its accepted value. Donor material never establishes implementation readiness."
     }
   }
 }
