@@ -11,6 +11,8 @@ import type {
   DshHomeCategoryDto,
   DshHomeStoreDto,
 } from './home-discovery.types';
+import { resolveDshMediaUrl } from '../_kernel/dsh-media-url';
+import type { DshStoreCardViewModel } from '../store';
 
 export type BannerViewModel = {
   id: string;
@@ -69,25 +71,6 @@ export type HomeStoreCardViewModel = {
   openStatusRole: 'storeOpen' | 'storeClosed' | 'storeTemporaryClosed' | 'storeUnavailable';
 };
 
-function resolveMediaUrl(raw: string | null | undefined): string | null {
-  if (raw == null || raw.trim() === '' || !raw.startsWith('http')) return null;
-  let url = raw;
-  if (url.includes('localhost') || url.includes('127.0.0.1')) {
-    const apiBaseURL = process.env.EXPO_PUBLIC_DSH_API_BASE_URL;
-    if (apiBaseURL) {
-      try {
-        const api = new URL(apiBaseURL);
-        const media = new URL(url);
-        media.hostname = api.hostname;
-        url = media.toString();
-      } catch {
-        return null;
-      }
-    }
-  }
-  return url;
-}
-
 const DELIVERY_MODE_LABELS: Record<string, string> = {
   delivery: 'توصيل',
   pickup:   'استلام',
@@ -123,7 +106,7 @@ export function toBannerViewModel(dto: DshHomeBannerDto): BannerViewModel {
     id: dto.id,
     title: dto.title,
     subtitle: dto.subtitle ?? '',
-    imageUrl: resolveMediaUrl(dto.imageUrl) ?? '',
+    imageUrl: resolveDshMediaUrl(dto.imageUrl) ?? '',
     actionType: dto.actionType,
     actionTarget: dto.actionTarget,
   };
@@ -135,7 +118,7 @@ export function toPromoViewModel(dto: DshHomePromoDto): PromoViewModel {
     title: dto.title,
     subtitle: dto.subtitle ?? '',
     badgeLabel: dto.badgeLabel ?? '',
-    imageUrl: resolveMediaUrl(dto.imageUrl) ?? '',
+    imageUrl: resolveDshMediaUrl(dto.imageUrl) ?? '',
     actionType: dto.actionType,
     actionTarget: dto.actionTarget,
   };
@@ -160,8 +143,8 @@ export function toHomeStoreCardViewModel(dto: DshHomeStoreDto): HomeStoreCardVie
     ratingDisplay: formatRating(dto.ratingAverage),
     followerCountDisplay: formatFollowerCount(dto.followerCount),
     etaDisplay: formatEta(dto.deliveryEtaMin, dto.deliveryEtaMax),
-    heroImageUrl: resolveMediaUrl(dto.heroImageUrl),
-    logoUrl: resolveMediaUrl(dto.logoUrl),
+    heroImageUrl: resolveDshMediaUrl(dto.heroImageUrl),
+    logoUrl: resolveDshMediaUrl(dto.logoUrl),
     categoryLabel: dto.categoryLabel,
     isFreeDelivery: dto.isFreeDelivery,
     hasProBadge: dto.hasProBadge,
@@ -171,5 +154,37 @@ export function toHomeStoreCardViewModel(dto: DshHomeStoreDto): HomeStoreCardVie
     distanceDisplay: dto.distanceKm != null ? `${dto.distanceKm.toFixed(1)} كم` : null,
     deliveryModeLabels: (dto.deliveryModes ?? []).map((m) => DELIVERY_MODE_LABELS[m] ?? m),
     openStatusRole: resolveOpenStatusRole(dto.status, dto.serviceability.status),
+  };
+}
+
+export function toSharedStoreCardViewModel(
+  vm: HomeStoreCardViewModel,
+): DshStoreCardViewModel {
+  return {
+    id: vm.id,
+    displayName: vm.displayName,
+    cityCode: "",
+    serviceAreaCode: "",
+    locationLabel: vm.categoryLabel,
+    isOpen: vm.openStatusRole === "storeOpen",
+    isServiceable: vm.serviceabilityStatus === "serviceable",
+    ratingLabel: vm.ratingDisplay === "—" ? null : vm.ratingDisplay,
+    ratingAverage: vm.ratingDisplay === "—" ? null : Number(vm.ratingDisplay),
+    etaLabel: vm.etaDisplay === "—" ? null : vm.etaDisplay,
+    heroImageSource: vm.heroImageUrl === null ? null : { uri: vm.heroImageUrl },
+    logoImageSource: vm.logoUrl === null ? null : { uri: vm.logoUrl },
+    statusBadge:
+      vm.storeStatus === "temporarily_closed" ? "مغلق مؤقتًا" : null,
+    isFreeDelivery: vm.isFreeDelivery,
+    placeholderEmoji: "🏪",
+    placeholderTone: "brandAction",
+    deliveryModeLabels: vm.deliveryModeLabels,
+    distanceLabel: vm.distanceDisplay,
+    distanceKm: null,
+    followerCountLabel: vm.followerCountDisplay,
+    hasProBadge: vm.hasProBadge,
+    hasCouponBadge: vm.hasCouponBadge,
+    pointsMultiplier: vm.pointsMultiplier,
+    isPopular: vm.isPopular,
   };
 }

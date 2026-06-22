@@ -1,0 +1,4 @@
+COMMAND: Invoke-RestMethod http://localhost:58080/dsh/readiness
+RESULT: HTTP 200
+BODY:
+{"service":"dsh","status":"ready","dependencies":{"postgres":"ready"}}

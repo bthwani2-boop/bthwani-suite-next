@@ -98,16 +98,19 @@
       "slice_id": "DSH-001",
       "slice_name": "STORE DISCOVERY + STORE DETAIL",
       "journey": "BROWSE",
-      "objective": "إغلاق اكتشاف المتاجر وعرض تفاصيلها على app-client وcontrol-panel.",
+      "objective": "إغلاق نطاق المتاجر للقراءة والعرض على جميع أسطح DSH الخمسة مع بقاء shared/store هو المالك الوحيد للمنطق.",
       "why_this_slice_exists": "Store discovery هي نقطة الدخول لكل رحلة المستخدم في DSH. بدونها لا تبدأ أي رحلة شراء.",
-      "business_outcome": "المستخدم يرى قائمة المتاجر ويختار متجرًا. المشغّل يدير المتاجر من control-panel.",
+      "business_outcome": "العميل يكتشف المتاجر، والإدارة تراجعها، والشريك والميداني والكابتن يستهلكون سياق متجر محدودًا بدورهم دون فتح كتالوج أو طلبات أو مالية.",
       "services": ["dsh"],
       "wlt_dependency": "NOT_REQUIRED_FOR_THIS_SLICE",
       "wlt_boundary_rule": "لا بيانات مالية في store discovery. نطاق أسعار المتجر هو نص عرض فقط — ليس حقيقة مالية.",
-      "surfaces": ["app-client", "control-panel"],
+      "surfaces": ["app-client", "control-panel", "app-partner", "app-field", "app-captain"],
       "surface_requirements": {
         "app-client": "StoreDiscoveryScreen يعرض قائمة متاجر حقيقية من API. StoreDetailScreen يعرض تفاصيل متجر واحد.",
-        "control-panel": "StoreManagementPage تعرض كل المتاجر. StoreDetailAdminPage تعرض تفاصيل المتجر وتسمح بالتعديل."
+        "control-panel": "StoreManagementPage تعرض كل المتاجر وStoreDetailAdminPage تعرض التفاصيل للقراءة.",
+        "app-partner": "PartnerStoreScreen يعرض ملف المتجر وجاهزية بياناته فقط.",
+        "app-field": "FieldStoreVerificationScreen يعرض قائمة تحقق مشتقة من Store read-model فقط.",
+        "app-captain": "CaptainStorePickupContextScreen يعرض سياق الاستلام للقراءة فقط."
       },
       "backend_scope": "services/dsh/backend/internal/store/ — handler.go + repository.go + model.go. جميعها مكتملة.",
       "domain_scope": "DshStore | DshStoreSummary | DshStoreDetail. قواعد: store visibility | store status (OPEN/CLOSED/PENDING) | category filter | city filter | service-area filter.",
@@ -116,10 +119,13 @@
       "seed_scope": "dsh-001_store_discovery.local.sql — 6 متاجر (store-1001 إلى store-1006). صور عبر MinIO.",
       "contract_scope": "services/dsh/contracts/dsh.openapi.yaml — عمليتا listDshStores و getDshStore مُعرَّفتان (v0.3.0).",
       "client_scope": "services/dsh/clients/store-discovery-client.ts — client مولَّد من OpenAPI. مُستخدَم في app-client.",
-      "frontend_shared_scope": "services/dsh/frontend/shared/store/ — يملك: store-discovery.types, store-discovery.view-model, store-discovery.states, store-discovery.api, store-admin.view-model, store-admin.api, use-store-admin-controller, use-store-discovery-controller. _kernel/dsh-api-base-url.ts موحّد.",
+      "frontend_shared_scope": "services/dsh/frontend/shared/store/ — يملك API adapters وtypes وview-models وstates وfilters وpagination وdetail selection وuse-store-admin-controller وuse-store-discovery-controller وuse-store-role-context-controller. _kernel يملك URL/media resolution.",
       "frontend_surface_scope": {
         "app_client": "StoreDiscoveryScreen (UI-only, uses useStoreDiscoveryController) | StoreDiscoveryList | StoreCardPremium | StoreDiscoveryEmptyState | StoreDiscoveryErrorState — مكتملة ومتوافقة مع shared-ownership.",
-        "control_panel": "partners/stores/StoreManagementScreen (UI-only, uses useStoreAdminController) | StoreAdminKpiStrip | StoreAdminFilters | StoreAdminTable | StoreDetailAdminPanel | StoreAdminStateView — مكتملة."
+        "control_panel": "partners/stores/StoreManagementScreen (UI-only, uses useStoreAdminController) | StoreAdminKpiStrip | StoreAdminFilters | StoreAdminTable | StoreDetailAdminPanel | StoreAdminStateView — مكتملة.",
+        "app_partner": "store/PartnerStoreScreen (UI-only, uses useStoreRoleContextController).",
+        "app_field": "store/FieldStoreVerificationScreen (UI-only, uses useStoreRoleContextController).",
+        "app_captain": "store/CaptainStorePickupContextScreen (UI-only, uses useStoreRoleContextController)."
       },
       "control_panel_route": "/dsh/partners/stores",
       "control_panel_section": "partners",
@@ -132,6 +138,9 @@
         "POSTGRES": 55432,
         "MINIO_API": 59000,
         "APP_CLIENT": 18101,
+        "APP_PARTNER": 18102,
+        "APP_CAPTAIN": 18103,
+        "APP_FIELD": 18104,
         "CONTROL_PANEL": 13000
       },
       "ui_kit_requirements": "كل المكوّنات من shared/ui-kit. لا Tamagui مباشر في screen files. BthwaniUiProvider مُحقَن في App.tsx.",
@@ -159,8 +168,12 @@
         "services/dsh/frontend/shared/store/store-admin.api.ts",
         "services/dsh/frontend/shared/store/use-store-admin-controller.tsx",
         "services/dsh/frontend/shared/store/use-store-discovery-controller.tsx",
+        "services/dsh/frontend/shared/store/use-store-role-context-controller.tsx",
         "services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts",
         "services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx",
+        "services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx",
+        "services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx",
+        "services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx",
         "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/"
       ],
       "guards_required": ["FOUNDATION_GATE", "NO_OLD_PORTS_GATE", "WLT_BOUNDARY_GATE", "NO_MOCK_DEMO_GATE", "DSH_SLICE_GATE", "DOCKER_RUNTIME_GATE", "DSH_API_GATE", "DSH_SHARED_OWNERSHIP_GATE"],
@@ -182,8 +195,8 @@
       ],
       "rollback_plan": "git revert commits خاصة بـ DSH-001 control-panel. لا تتراجع عن migration لأنها مُطبَّقة مسبقًا.",
       "blocking_conditions": ["DSH-000 يجب أن يكون RUNTIME_VERIFIED"],
-      "completion_definition": "app-client store discovery يعرض متاجر حقيقية. control-panel stores admin يعمل (/dsh/partners/stores). جميع tests تمر (82 pass). gate scripts تعود exit 0. shared هو العقل، الأسطح UI-only.",
-      "status": "RUNTIME_VERIFIED — app-client + control-panel. shared-ownership enforced. 82 tests pass."
+      "completion_definition": "الأسطح الخمسة تستهلك Store logic من shared/store فقط، 117 tests تمر، الحراس تمر، والتشغيل والصور مكتملة لكل سطح.",
+      "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE — code/typecheck/tests pass for five surfaces; partner/field/captain screenshots are still required."
     },
     {
       "slice_id": "DSH-002",

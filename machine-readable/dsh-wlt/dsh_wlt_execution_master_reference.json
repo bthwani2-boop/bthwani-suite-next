@@ -160,9 +160,9 @@
   "services": {
     "dsh": {
       "role": "ACTIVE_IMPLEMENTATION_TARGET",
-      "runtime_state": "PARTIALLY_RUNTIME_VERIFIED",
-      "slices_done": ["DSH-001 (app-client)", "DSH-002 (app-client)"],
-      "slices_pending": ["DSH-001 control-panel", "DSH-002 control-panel", "DSH-003", "DSH-004", "DSH-005", "DSH-006", "DSH-007", "DSH-008", "DSH-009", "DSH-010"],
+      "runtime_state": "DSH-001_ALL_SURFACES_IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+      "slices_done": ["DSH-001 code complete on app-client + control-panel + app-partner + app-field + app-captain; visual closure pending", "DSH-002 (app-client only)"],
+      "slices_pending": ["DSH-002 control-panel", "DSH-003", "DSH-004", "DSH-005", "DSH-006", "DSH-007", "DSH-008", "DSH-009", "DSH-010"],
       "backend_language": "Go",
       "backend_path": "services/dsh/backend/",
       "contract_path": "services/dsh/contracts/dsh.openapi.yaml",
@@ -271,10 +271,15 @@
     "DSH-000": { "name": "PRE-DSH FOUNDATION GATE", "status": "RUNTIME_VERIFIED", "priority": "PREREQ" },
     "DSH-001": {
       "name": "Store Discovery + Store Detail",
-      "status": "PARTIAL",
+      "status": "RUNTIME_VERIFIED",
       "app_client": "RUNTIME_VERIFIED",
-      "control_panel": "NOT_STARTED",
-      "priority": "HIGH — control-panel surface needed to close this slice",
+      "control_panel": "RUNTIME_VERIFIED",
+      "primary_surfaces": ["app-client", "control-panel"],
+      "related_not_executed_surfaces": ["app-partner", "app-field", "app-captain"],
+      "shared_engine": "services/dsh/frontend/shared/store",
+      "control_panel_route": "/dsh/partners/stores",
+      "evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
+      "priority": "CLOSED — do not start another slice without approval",
       "detail_file": "machine-readable/dsh-wlt/dsh_wlt_slice_master_matrix.json#DSH-001"
     },
     "DSH-002": {
@@ -458,9 +463,9 @@
       "NO_MOCK_DEMO_GATE": "PASS",
       "DOCKER_RUNTIME_GATE": "PASS",
       "DSH_API_GATE": "PASS",
-      "DSH_SLICE_GATE": "PARTIAL — DSH-001 + DSH-002 app-client only",
+      "DSH_SLICE_GATE": "PASS — DSH-001 app-client + control-panel",
       "UI_KIT_GATE": "PASS",
-      "VISUAL_EVIDENCE_GATE": "PARTIAL — DSH-001 + DSH-002 screenshots only"
+      "VISUAL_EVIDENCE_GATE": "PASS_FOR_DSH_001 — app-client + control-panel screenshots present"
     }
   },
 
@@ -498,7 +503,7 @@
     "current": {
       "DSH-001-store-discovery": "PRESENT",
       "DSH-002-client-home-discovery": "PRESENT",
-      "control-panel-any-slice": "NOT_STARTED"
+      "DSH-001-control-panel": "PRESENT — success, detail, and error screenshots"
     }
   },
 
@@ -516,8 +521,8 @@
   },
 
   "execution_rules": {
-    "sequence": "Follow slice_order strictly. DSH-001 control-panel before DSH-003.",
-    "next_immediate_action": "Implement DSH-001 + DSH-002 control-panel surfaces to close the full-stack loop",
+    "sequence": "DSH-001 is closed. Stop; DSH-002 control-panel and DSH-003 require separate approval.",
+    "next_immediate_action": "NO_NEXT_SLICE_APPROVED",
     "donor_adoption_rule": "For each donor file: check extraction_decisions in this file. If ADAPT_NORMALIZE, apply normalizations first. If REJECT_*, do not use.",
     "contract_first": "Expand dsh.openapi.yaml before implementing any new DSH-003+ handlers",
     "client_regenerate": "Regenerate typed client after every contract change before frontend work",

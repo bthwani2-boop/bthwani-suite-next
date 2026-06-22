@@ -17,14 +17,14 @@ export const DSH_RUNTIME_MAP = [
     capabilityId: "dsh.system.readiness",
     contractOperations: ["getDshHealth", "getDshReadiness"],
     backendImplemented: true,
-    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery",
+    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
     state: "verified",
   },
   {
     capabilityId: "dsh.store.discovery",
     contractOperations: ["listDshStores", "getDshStore"],
     backendImplemented: true,
-    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery",
+    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
     state: "verified",
   },
   {

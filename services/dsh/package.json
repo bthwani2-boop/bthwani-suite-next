@@ -9,8 +9,12 @@
     "lint": "node ../../tools/guards/no-preview-demo-mock-runtime.mjs && node ../../tools/guards/no-memory-repo-in-slice-runtime.mjs",
     "guard:shared-ownership": "node ../../tools/guards/dsh-frontend-shared-ownership-gate.mjs"
   },
-  "dependencies": {},
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
   "devDependencies": {
-    "@types/node": "22.16.0"
+    "@types/node": "22.16.0",
+    "@types/react": "19.2.17",
+    "react": "19.2.3"
   }
 }

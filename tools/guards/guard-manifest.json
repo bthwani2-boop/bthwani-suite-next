@@ -39,7 +39,8 @@
       "go-backend-runtime",
       "performance-runtime-baseline",
       "docker-runtime-profiles",
-      "dsh-frontend-shared-ownership"
+      "dsh-frontend-shared-ownership",
+      "dsh-001-cross-surface-dependency-map"
     ]
   },
   "guards": [
@@ -156,6 +157,11 @@
     {
       "id": "dsh-frontend-shared-ownership",
       "path": "tools/guards/dsh-frontend-shared-ownership-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "dsh-001-cross-surface-dependency-map",
+      "path": "tools/guards/dsh-001-cross-surface-dependency-map.mjs",
       "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     }
   ]

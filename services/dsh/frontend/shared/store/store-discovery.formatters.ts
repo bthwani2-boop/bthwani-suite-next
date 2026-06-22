@@ -1,6 +1,6 @@
 export function formatServiceArea(
-  cityCode: string,
-  serviceAreaCode: string,
+  cityLabel: string,
+  serviceAreaLabel: string,
 ): string {
-  return `${cityCode.toUpperCase()} · ${serviceAreaCode}`;
+  return `${serviceAreaLabel} • ${cityLabel}`;
 }

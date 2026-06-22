@@ -1,18 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { brandRoots, colorRoles } from "@bthwani/ui-kit";
+import { PartnerStoreScreen } from "../../../../services/dsh/frontend/app-partner/store";
 
-export function App() {
-  return (
-    <View style={styles.root}>
-      <Text style={styles.text}>Partner App — Coming Soon</Text>
-    </View>
-  );
+function App() {
+  return <PartnerStoreScreen />;
 }
 
 export default App;
-
-const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: brandRoots.surfaceBase },
-  text: { fontSize: 16, color: colorRoles.textPrimary },
-});

@@ -110,13 +110,15 @@ for (const file of walkFiles(SHARED_DIR)) {
 
 // ── Rule 4 (Rule 3 extends): already covers apps/ above ────────────────────
 
-// ── Rule 5: No DSH env var access in surface files ──────────────────────────
-const DSH_ENV_RE = /NEXT_PUBLIC_DSH_API_BASE_URL|EXPO_PUBLIC_DSH_API_BASE_URL/;
-for (const surface of SURFACE_DIRS) {
-  for (const file of walkFiles(join(FRONTEND, surface))) {
+// ── Rule 5: DSH env access is allowed only in shared/_kernel ────────────────
+const DSH_ENV_RE =
+  /process\.env(?:\.(?:NEXT_PUBLIC_DSH_API_BASE_URL|EXPO_PUBLIC_DSH_API_BASE_URL)|\s*\[\s*["'](?:NEXT_PUBLIC_DSH_API_BASE_URL|EXPO_PUBLIC_DSH_API_BASE_URL)["']\s*\])/;
+for (const dir of [SHARED_DIR, ...SURFACE_DIRS.map((surface) => join(FRONTEND, surface))]) {
+  for (const file of walkFiles(dir)) {
+    if (file.includes(`${join("shared", "_kernel")}`)) continue;
     const src = read(file);
     if (DSH_ENV_RE.test(src)) {
-      fail(file, "direct DSH env var access in surface — use resolveDshApiBaseUrl() from shared/_kernel");
+      fail(file, "direct DSH env var access outside shared/_kernel");
     }
   }
 }
@@ -132,6 +134,72 @@ for (const surface of SURFACE_DIRS) {
       if (typeName.endsWith("Props") || typeName.endsWith("Ref")) continue;
       fail(file, `domain Store type '${typeName}' defined in surface — move to shared/store`);
     }
+  }
+}
+
+// ── Rule 6b: Surface Store consumers use the shared/store public barrel ─────
+for (const surface of SURFACE_DIRS) {
+  for (const file of walkFiles(join(FRONTEND, surface))) {
+    const src = read(file);
+    if (/from\s+["'][^"']*shared\/store\/[^"']+["']/.test(src)) {
+      fail(file, "deep import from shared/store — consume the public shared/store barrel");
+    }
+  }
+}
+
+const REQUIRED_SURFACE_BINDINGS = [
+  {
+    file: join(FRONTEND, "app-client/store/StoreDiscoveryScreen.tsx"),
+    pattern: /\buseStoreDiscoveryController\b/,
+    message: "StoreDiscoveryScreen must consume useStoreDiscoveryController",
+  },
+  {
+    file: join(FRONTEND, "control-panel/partners/stores/StoreManagementScreen.tsx"),
+    pattern: /\buseStoreAdminController\b/,
+    message: "StoreManagementScreen must consume useStoreAdminController",
+  },
+  {
+    file: join(FRONTEND, "app-client/home-discovery/HomeDiscoveryScreen.tsx"),
+    pattern: /\buseHomeDiscoveryController\b/,
+    message: "HomeDiscoveryScreen must consume useHomeDiscoveryController",
+  },
+  {
+    file: join(FRONTEND, "app-partner/store/PartnerStoreScreen.tsx"),
+    pattern: /\buseStoreRoleContextController\b/,
+    message: "PartnerStoreScreen must consume useStoreRoleContextController",
+  },
+  {
+    file: join(FRONTEND, "app-field/store/FieldStoreVerificationScreen.tsx"),
+    pattern: /\buseStoreRoleContextController\b/,
+    message: "FieldStoreVerificationScreen must consume useStoreRoleContextController",
+  },
+  {
+    file: join(FRONTEND, "app-captain/store/CaptainStorePickupContextScreen.tsx"),
+    pattern: /\buseStoreRoleContextController\b/,
+    message: "CaptainStorePickupContextScreen must consume useStoreRoleContextController",
+  },
+];
+
+for (const binding of REQUIRED_SURFACE_BINDINGS) {
+  if (!binding.pattern.test(read(binding.file))) {
+    fail(binding.file, binding.message);
+  }
+}
+
+for (const file of walkFiles(FRONTEND)) {
+  if (/\bStoreCardPremiumItem\b/.test(read(file))) {
+    fail(file, "StoreCardPremiumItem duplicates DshStoreCardViewModel");
+  }
+}
+
+const RETIRED_PATHS = [
+  join(FRONTEND, "app-client/store-discovery"),
+  join(FRONTEND, "shared/store-discovery"),
+  join(FRONTEND, "control-panel/_skeleton-proof"),
+];
+for (const retiredPath of RETIRED_PATHS) {
+  if (walkFiles(retiredPath).length > 0) {
+    fail(retiredPath, "retired DSH frontend path still contains source files");
   }
 }
 

@@ -33,6 +33,8 @@
     "guard:control-panel-design": "node tools/guards/control-panel-design-gate.mjs",
     "guard:app-shell-control-panel": "node tools/guards/app-shell-control-panel-contract-gate.mjs",
     "guard:dsh-frontend-shared-ownership": "pnpm --dir services/dsh guard:shared-ownership",
+    "guard:dsh-001-cross-surface-dependency-map": "node tools/guards/dsh-001-cross-surface-dependency-map.mjs",
+    "guard:no-financial-mutation-outside-wlt": "node tools/guards/no-financial-mutation-outside-wlt.mjs",
     "control-panel:design-gate": "pnpm run guard:app-shell-control-panel",
     "graphify": "graphify update . --force",
     "graphify:callflow": "graphify export callflow-html",

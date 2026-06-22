@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { fetchHomeDiscovery, loadingState, type HomeDiscoveryState } from '../../shared/home-discovery';
-import type { DiscoveryFilterKind } from '../../shared/home-discovery';
+import React from 'react';
+import { useHomeDiscoveryController } from '../../shared/home-discovery';
 import { HomeDiscoveryShell } from './HomeDiscoveryShell';
 
 type Props = {
@@ -8,24 +7,15 @@ type Props = {
 };
 
 export function HomeDiscoveryScreen({ onStorePress }: Props) {
-  const [state, setState] = useState<HomeDiscoveryState>(loadingState());
-  const [activeFilter, setActiveFilter] = useState<DiscoveryFilterKind>('all');
-
-  const load = useCallback(async () => {
-    setState(loadingState());
-    const result = await fetchHomeDiscovery({ limit: 20 });
-    setState(result);
-  }, []);
-
-  useEffect(() => { void load(); }, [load]);
+  const controller = useHomeDiscoveryController();
 
   return (
     <HomeDiscoveryShell
-      state={state}
-      activeFilter={activeFilter}
-      onFilterChange={setActiveFilter}
+      state={controller.state}
+      activeFilter={controller.activeFilter}
+      onFilterChange={controller.setActiveFilter}
       onStorePress={onStorePress}
-      onRetry={load}
+      onRetry={controller.retry}
     />
   );
 }

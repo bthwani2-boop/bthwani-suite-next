@@ -1,18 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { brandRoots, colorRoles } from "@bthwani/ui-kit";
+import { CaptainStorePickupContextScreen } from "../../../../services/dsh/frontend/app-captain/store";
 
-export function App() {
-  return (
-    <View style={styles.root}>
-      <Text style={styles.text}>Captain App — Coming Soon</Text>
-    </View>
-  );
+function App() {
+  return <CaptainStorePickupContextScreen />;
 }
 
 export default App;
-
-const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: brandRoots.surfaceBase },
-  text: { fontSize: 16, color: colorRoles.textPrimary },
-});

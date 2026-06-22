@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchStoreList, loadingState } from "./store-discovery.api";
+import { fetchStoreList } from "./store-discovery.api";
+import {
+  loadStoreDiscovery,
+  toggleFavoriteIds,
+  withStoreDiscoveryFilter,
+  type DiscoveryFilter,
+} from "./store-discovery.controller-core";
+import { loadingState } from "./store-discovery.states";
 import type { DshStoreListState } from "./store-discovery.states";
-
-export type DiscoveryFilter = "all" | "favorites" | "nearest";
 
 export type StoreDiscoveryController = {
   readonly state: DshStoreListState;
+  readonly visibleState: DshStoreListState;
   readonly activeFilter: DiscoveryFilter;
   readonly favoriteIds: ReadonlySet<string>;
   readonly setActiveFilter: (filter: DiscoveryFilter) => void;
@@ -19,9 +25,7 @@ export function useStoreDiscoveryController(): StoreDiscoveryController {
   const [favoriteIds, setFavoriteIds] = useState<ReadonlySet<string>>(new Set());
 
   const load = useCallback(async () => {
-    setState(loadingState());
-    const next = await fetchStoreList();
-    setState(next);
+    await loadStoreDiscovery(fetchStoreList, setState);
   }, []);
 
   useEffect(() => {
@@ -29,19 +33,12 @@ export function useStoreDiscoveryController(): StoreDiscoveryController {
   }, [load]);
 
   const toggleFavorite = useCallback((storeId: string) => {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(storeId)) {
-        next.delete(storeId);
-      } else {
-        next.add(storeId);
-      }
-      return next;
-    });
+    setFavoriteIds((prev) => toggleFavoriteIds(prev, storeId));
   }, []);
 
   return {
     state,
+    visibleState: withStoreDiscoveryFilter(state, activeFilter, favoriteIds),
     activeFilter,
     favoriteIds,
     setActiveFilter,

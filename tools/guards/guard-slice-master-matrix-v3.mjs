@@ -102,9 +102,25 @@ if (dsh001BlockedRows.length > 0) {
   err(`CRITICAL: ${dsh001BlockedRows.length} DSH-001 rows remain blocked`);
 }
 if (verifiedRows.length > 0) {
-  const evidencePath = join(ROOT, 'services', 'dsh', 'evidence', 'DSH-001-store-discovery', 'screenshot-app-client-store-discovery.png');
-  if (!existsSync(evidencePath)) {
-    err('CRITICAL: DSH-001 VERIFIED rows require runtime and visual evidence');
+  const evidenceDirectory = join(
+    ROOT,
+    'services',
+    'dsh',
+    'evidence',
+    'DSH-001-store-discovery-fullstack-multi-surface',
+    'screenshots',
+  );
+  const requiredScreenshots = [
+    'app-client-store-discovery-reverify.png',
+    'control-panel-stores-admin-success.png',
+    'app-partner-store-context.png',
+    'app-field-store-verification.png',
+    'app-captain-store-pickup-context.png',
+  ];
+  for (const screenshot of requiredScreenshots) {
+    if (!existsSync(join(evidenceDirectory, screenshot))) {
+      err(`CRITICAL: DSH-001 VERIFIED rows require ${screenshot}`);
+    }
   }
 }
 

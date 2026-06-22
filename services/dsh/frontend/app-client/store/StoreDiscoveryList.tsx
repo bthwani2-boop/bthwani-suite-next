@@ -6,40 +6,17 @@ import { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState";
 import { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";
 import type { DshStoreListState } from "../../shared/store";
 import type { DshStoreCardViewModel } from "../../shared/store";
-import type { DiscoveryFilter } from "../../shared/store";
-
-export type { DiscoveryFilter };
 
 type Props = Readonly<{
   state: DshStoreListState;
-  activeFilter: DiscoveryFilter;
   favoriteIds: ReadonlySet<string>;
   onStorePress: (storeId: string) => void;
   onFavoritePress: (storeId: string) => void;
   onRetry: () => void;
 }>;
 
-function applyFilter(
-  stores: readonly DshStoreCardViewModel[],
-  filter: DiscoveryFilter,
-  favoriteIds: ReadonlySet<string>,
-): DshStoreCardViewModel[] {
-  const base = stores as DshStoreCardViewModel[];
-  switch (filter) {
-    case "favorites":
-      return base.filter((s) => favoriteIds.has(s.id));
-    case "nearest":
-      return [...base].sort(
-        (a, b) => (a.distanceKm ?? Number.POSITIVE_INFINITY) - (b.distanceKm ?? Number.POSITIVE_INFINITY),
-      );
-    default:
-      return base;
-  }
-}
-
 export function StoreDiscoveryList({
   state,
-  activeFilter,
   favoriteIds,
   onStorePress,
   onFavoritePress,
@@ -66,15 +43,13 @@ export function StoreDiscoveryList({
     return <StoreDiscoveryEmptyState />;
   }
 
-  const displayed = applyFilter(state.stores, activeFilter, favoriteIds);
-
-  if (displayed.length === 0) {
+  if (state.stores.length === 0) {
     return <StoreDiscoveryEmptyState />;
   }
 
   return (
     <FlatList<DshStoreCardViewModel>
-      data={displayed}
+      data={state.stores}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
         <View style={styles.cardWrapper}>

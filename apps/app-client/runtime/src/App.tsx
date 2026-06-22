@@ -146,7 +146,7 @@ const NAV_ITEMS: BottomNavItem[] = [
 ];
 
 // ─── App shell ────────────────────────────────────────────────
-export function App() {
+function App() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<string>("home");
 

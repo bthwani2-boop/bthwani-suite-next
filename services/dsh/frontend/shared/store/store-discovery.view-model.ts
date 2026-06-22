@@ -1,4 +1,6 @@
 import type { DshStoreSummaryDto, DshStoreDetailDto } from "./store-discovery.types";
+import { resolveDshImageSource } from "../_kernel/dsh-media-url";
+import { formatServiceArea } from "./store-discovery.formatters";
 
 type StoreTone = "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
 type PlaceholderTone = "brandAction" | "success" | "info" | "warning" | "default";
@@ -34,25 +36,6 @@ export type DshStoreDetailViewModel = DshStoreCardViewModel & {
   readonly createdAt: string;
   readonly updatedAt: string;
 };
-
-function resolveImageSource(raw: string | null | undefined): { uri: string } | null {
-  if (raw == null || raw.trim() === "" || !raw.startsWith("http")) return null;
-  let url = raw;
-  if (url.includes("localhost") || url.includes("127.0.0.1")) {
-    const apiBaseURL = process.env.EXPO_PUBLIC_DSH_API_BASE_URL;
-    if (apiBaseURL) {
-      try {
-        const api = new URL(apiBaseURL);
-        const media = new URL(url);
-        media.hostname = api.hostname;
-        url = media.toString();
-      } catch {
-        return null;
-      }
-    }
-  }
-  return { uri: url };
-}
 
 const CITY_NAMES: Record<string, string> = {
   sana: "صنعاء",
@@ -114,7 +97,10 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     displayName: dto.displayName,
     cityCode: dto.cityCode,
     serviceAreaCode: dto.serviceAreaCode,
-    locationLabel: `${AREA_NAMES[dto.serviceAreaCode] ?? dto.serviceAreaCode} • ${CITY_NAMES[dto.cityCode] ?? dto.cityCode}`,
+    locationLabel: formatServiceArea(
+      CITY_NAMES[dto.cityCode] ?? dto.cityCode,
+      AREA_NAMES[dto.serviceAreaCode] ?? dto.serviceAreaCode,
+    ),
     isOpen,
     isServiceable,
     ratingLabel:
@@ -126,8 +112,8 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
       dto.deliveryEtaMin != null && dto.deliveryEtaMax != null
         ? `${dto.deliveryEtaMin}–${dto.deliveryEtaMax} دقيقة`
         : null,
-    heroImageSource: resolveImageSource(dto.heroImageUrl),
-    logoImageSource: resolveImageSource(dto.logoUrl),
+    heroImageSource: resolveDshImageSource(dto.heroImageUrl),
+    logoImageSource: resolveDshImageSource(dto.logoUrl),
     statusBadge:
       dto.status === "temporarily_closed"
         ? "مغلق مؤقتاً"

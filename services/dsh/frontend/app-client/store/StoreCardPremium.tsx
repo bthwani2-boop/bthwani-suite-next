@@ -12,37 +12,10 @@ import {
   statusScale,
   neutralScale,
 } from "@bthwani/ui-kit";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type StoreCardPremiumItem = Readonly<{
-  id: string;
-  displayName: string;
-  cityCode: string;
-  serviceAreaCode: string;
-  locationLabel: string;
-  isOpen: boolean;
-  isServiceable: boolean;
-  ratingLabel: string | null;
-  ratingAverage: number | null;
-  etaLabel: string | null;
-  heroImageSource: { uri: string } | null;
-  logoImageSource: { uri: string } | null;
-  statusBadge: string | null;
-  isFreeDelivery: boolean;
-  placeholderEmoji: string;
-  placeholderTone: "brandAction" | "success" | "info" | "warning" | "default";
-  deliveryModeLabels: readonly string[];
-  distanceLabel: string | null;
-  followerCountLabel: string | null;
-  hasProBadge: boolean;
-  hasCouponBadge: boolean;
-  pointsMultiplier: number | null;
-  isPopular: boolean;
-}>;
+import type { DshStoreCardViewModel } from "../../shared/store";
 
 export type StoreCardPremiumProps = Readonly<{
-  store: StoreCardPremiumItem;
+  store: DshStoreCardViewModel;
   onPress: (storeId: string) => void;
   onFavoritePress?: ((storeId: string) => void) | undefined;
   isFavorite?: boolean | undefined;

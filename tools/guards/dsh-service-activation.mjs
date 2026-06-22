@@ -58,19 +58,28 @@ const runtimeMap = fs.existsSync(path.join(repoRoot, "services/dsh/runtime-map.t
 const verified = /closureState:\s*["']RUNTIME_VERIFIED["']/.test(manifest);
 
 if (verified) {
-  const evidenceDirectory = "services/dsh/evidence/DSH-001-store-discovery";
+  const evidenceDirectory =
+    "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface";
   const requiredEvidence = [
     "runtime-all.txt",
-    "runtime-smoke.txt",
-    "docker-inspect-dsh-api.txt",
+    "runtime-status.txt",
     "foundation-gate.txt",
     "slice-gate.txt",
+    "dsh-test.txt",
     "go-test.txt",
     "go-build.txt",
-    "api-list-stores.json",
-    "minio-media-assets.txt",
-    "media-object-smoke.txt",
-    "screenshot-app-client-store-discovery.png",
+    "api-health.txt",
+    "api-readiness.txt",
+    "api-stores.txt",
+    "app-client-reverify.txt",
+    "git-diff-check.txt",
+    "screenshots/app-client-store-discovery-reverify.png",
+    "screenshots/control-panel-stores-admin-success.png",
+    "screenshots/control-panel-store-detail-panel.png",
+    "screenshots/control-panel-error-or-service-unavailable.png",
+    "screenshots/app-partner-store-context.png",
+    "screenshots/app-field-store-verification.png",
+    "screenshots/app-captain-store-pickup-context.png",
   ];
   for (const evidence of requiredEvidence) {
     if (!fs.existsSync(path.join(repoRoot, evidenceDirectory, evidence))) {
@@ -99,10 +108,18 @@ if (verified) {
       message: "Store Discovery must be runtime-bound and runtime-verified",
     });
   }
-  if (!/capabilityId:\s*["']dsh\.store\.discovery["'][\s\S]*backendImplemented:\s*true[\s\S]*runtimeEvidence:\s*["']services\/dsh\/evidence\/DSH-001-store-discovery["'][\s\S]*state:\s*["']verified["']/.test(runtimeMap)) {
+  if (!/capabilityId:\s*["']dsh\.store\.discovery["'][\s\S]*backendImplemented:\s*true[\s\S]*runtimeEvidence:\s*["']services\/dsh\/evidence\/DSH-001-store-discovery-fullstack-multi-surface["'][\s\S]*state:\s*["']verified["']/.test(runtimeMap)) {
     violations.push({
       file: "services/dsh/runtime-map.ts",
       message: "Store Discovery runtime map must point to verified evidence",
+    });
+  }
+  const crossSurfaceMap =
+    "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json";
+  if (!fs.existsSync(path.join(repoRoot, crossSurfaceMap))) {
+    violations.push({
+      file: crossSurfaceMap,
+      message: "DSH-001 runtime verification requires cross-surface dependency documentation",
     });
   }
 } else {

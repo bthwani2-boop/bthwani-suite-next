@@ -67,8 +67,7 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
       </View>
 
       <StoreDiscoveryList
-        state={c.state}
-        activeFilter={c.activeFilter}
+        state={c.visibleState}
         favoriteIds={c.favoriteIds}
         onStorePress={handleStorePress}
         onFavoritePress={c.toggleFavorite}

@@ -27,7 +27,22 @@ export const dshServiceManifest = {
     databaseReady: true,
     screensReady: true,
     sharedOwnershipEnforced: true,
-    controllersInShared: ["useStoreAdminController", "useStoreDiscoveryController"],
+    controllersInShared: [
+      "useStoreAdminController",
+      "useStoreDiscoveryController",
+      "useStoreRoleContextController",
+      "useHomeDiscoveryController",
+    ],
+    primarySurfaces: [
+      "app-client",
+      "control-panel",
+      "app-partner",
+      "app-field",
+      "app-captain",
+    ],
+    storeOnlyRoleSurfaces: ["app-partner", "app-field", "app-captain"],
+    crossSurfaceDependencyMap:
+      "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json",
   },
   nextSlice: {
     id: "DSH-002",

@@ -4,7 +4,7 @@
     "description": "Current closure status for each DSH/WLT component. Updated after each slice is runtime-verified. Statuses: NOT_STARTED | DISCOVERED | READY_FOR_IMPLEMENTATION | IN_PROGRESS | RUNTIME_VERIFIED | BLOCKED_WITH_REASON",
     "last_updated": "2026-06-22",
     "target_branch": "starting-implementing-slices",
-    "target_head": "DSH-001-multi-surface-complete"
+    "target_head": "16b1dbfadaf7dee15b6f77cc5d05d52e5e9ea15a"
   },
   "foundation": {
     "status": "RUNTIME_VERIFIED",
@@ -22,7 +22,7 @@
     "archetypes_location": "shared/app-shell/src/control-panel/archetypes/",
     "machine_readable_location": "machine-readable/control-panel-design/",
     "guard_script": "tools/guards/control-panel-design-gate.mjs",
-    "notes": "Control panel foundation ready. Production DSH control-panel screens not implemented in this task. Next: DSH-001_CONTROL_PANEL_STORES_ADMIN, then DSH-002_CONTROL_PANEL_HOME_DISCOVERY_ADMIN, then DSH-003_CATALOG."
+    "notes": "Control panel foundation and DSH-001 partners/stores production screen are present. DSH-002 control-panel and DSH-003 remain NOT_STARTED."
   },
   "app_shell_control_panel_foundation": {
     "status": "READY_FOR_DSH_CONTROL_PANEL_SLICES",
@@ -34,11 +34,11 @@
       "dsh": "PRESENT",
       "wlt": "PRESENT"
     },
-    "production_screens_created": false,
+    "production_screens_created": true,
     "app_shell_audit": "machine-readable/control-panel-design/control_panel_app_shell_audit.json",
     "guard_script": "tools/guards/app-shell-control-panel-contract-gate.mjs",
-    "next_step": "DSH-001_CONTROL_PANEL_STORES_ADMIN",
-    "notes": "Full audit of shared/app-shell/src — 27 files, all KEEP_ACTIVE. No dead code, no duplicates, no local design system. Mobile shell not created by design."
+    "next_step": "NO_NEXT_SLICE_APPROVED",
+    "notes": "Full audit of shared/app-shell/src — 27 files, all KEEP_ACTIVE. DSH-001 partners/stores consumes the canonical shell and archetype."
   },
   "dsh_contract": {
     "status": "RUNTIME_VERIFIED",
@@ -88,18 +88,30 @@
     "slices_pending": ["DSH-004 Cart", "DSH-005 Checkout Intent", "DSH-006 Order Tracking"]
   },
   "dsh_frontend_app_partner": {
-    "status": "NOT_STARTED",
-    "current_state": "STUB — placeholder 'Coming Soon' screen only",
+    "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+    "current_state": "DSH-001 Store-only partner readiness UI consumes useStoreRoleContextController",
+    "screen": "services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx",
+    "dsh_001_dependency_role": "downstream",
+    "dsh_001_execute_now": true,
+    "excluded_workflows": ["catalog management", "partner orders", "finance"],
     "slices_pending": ["DSH-003 Catalog Management", "DSH-006 Partner Orders", "DSH-008 Partner Readiness"]
   },
   "dsh_frontend_app_captain": {
-    "status": "NOT_STARTED",
-    "current_state": "STUB — placeholder 'Coming Soon' screen only",
+    "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+    "current_state": "DSH-001 read-only Store pickup context consumes useStoreRoleContextController",
+    "screen": "services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx",
+    "dsh_001_dependency_role": "none-for-dsh-001",
+    "dsh_001_execute_now": true,
+    "excluded_workflows": ["order assignment", "delivery lifecycle", "earnings", "finance"],
     "slices_pending": ["DSH-007 Captain Assignment", "DSH-007 Delivery Lifecycle"]
   },
   "dsh_frontend_app_field": {
-    "status": "NOT_STARTED",
-    "current_state": "STUB — placeholder 'Coming Soon' screen only",
+    "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+    "current_state": "DSH-001 Store verification context consumes useStoreRoleContextController",
+    "screen": "services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx",
+    "dsh_001_dependency_role": "upstream",
+    "dsh_001_execute_now": true,
+    "excluded_workflows": ["field onboarding workflow", "document upload", "approval mutation"],
     "slices_pending": ["DSH-008 Field Readiness", "DSH-008 Store Onboarding"]
   },
   "dsh_frontend_control_panel": {
@@ -121,11 +133,11 @@
   },
   "dsh_tests": {
     "status": "RUNTIME_VERIFIED",
-    "ts_test_files": 7,
+    "ts_test_files": 12,
     "go_test_files": 2,
-    "total_test_files": 9,
-    "total_assertions": 82,
-    "types": ["unit", "integration", "policy", "view-model", "state-machine", "admin-view-model", "admin-state"],
+    "total_test_files": 14,
+    "total_assertions": 117,
+    "types": ["unit", "integration", "policy", "view-model", "state-machine", "controller-core", "admin-view-model", "admin-state"],
     "placeholder_tests": 0,
     "notes": "All tests are real. Coverage for DSH-001 (app-client + control-panel) and DSH-002 only."
   },
@@ -151,12 +163,15 @@
     "notes": "All canonical ports. Single compose file policy enforced."
   },
   "visual_evidence": {
-    "status": "PARTIAL",
-    "dsh_001_app_client": "PRESENT — services/dsh/evidence/DSH-001-store-discovery/screenshot",
-    "dsh_001_control_panel": "RUNTIME_VERIFIED — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/ (screenshots pending visual capture)",
+    "status": "PARTIAL_FOR_DSH_001_ALL_SURFACES",
+    "dsh_001_app_client": "PRESENT — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-client-store-discovery-reverify.png",
+    "dsh_001_control_panel": "PRESENT — success, detail, and service-unavailable screenshots under services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/",
+    "dsh_001_app_partner": "MISSING — app-partner-store-context.png required",
+    "dsh_001_app_field": "MISSING — app-field-store-verification.png required",
+    "dsh_001_app_captain": "MISSING — app-captain-store-pickup-context.png required",
     "dsh_002": "PRESENT — services/dsh/evidence/DSH-002-client-home-discovery/screenshot",
     "dsh_003_to_010": "NOT_STARTED",
-    "notes": "Screenshots required per slice per surface. DSH-001 control-panel runtime verified at http://localhost:13000/dsh/partners/stores — visual screenshot pending."
+    "notes": "DSH-001 code and typechecks cover all five surfaces, but final closure remains blocked until partner, field, and captain screenshots are captured."
   },
   "final_closure": {
     "status": "IN_PROGRESS",
@@ -164,16 +179,19 @@
     "slices_remaining": 7,
     "surfaces_with_full_implementation": [
       "app-client (DSH-001, DSH-002)",
-      "control-panel (DSH-001 Stores Admin)"
+      "control-panel (DSH-001 Stores Admin)",
+      "app-partner (DSH-001 Store-only context)",
+      "app-field (DSH-001 Store-only verification context)",
+      "app-captain (DSH-001 Store-only pickup context)"
     ],
-    "surfaces_pending": ["app-partner", "app-captain", "app-field", "control-panel (DSH-002+)"],
+    "surfaces_pending": ["control-panel (DSH-002+)", "DSH-001 partner/field/captain visual evidence"],
     "blocking_items": [
-      "app-partner is stub — needs DSH-003, DSH-006, DSH-008",
-      "app-captain is stub — needs DSH-007",
-      "app-field is stub — needs DSH-008",
+      "DSH-001 app-partner screenshot is missing",
+      "DSH-001 app-field screenshot is missing",
+      "DSH-001 app-captain screenshot is missing",
       "DSH-003 through DSH-010 contracts not yet defined",
       "WLT runtime not activated"
     ],
-    "next_action": "Approve DSH-002 Home Discovery Admin control-panel slice next"
+    "next_action": "STOP_AFTER_DSH_001 — no next slice is approved by this closure"
   }
 }

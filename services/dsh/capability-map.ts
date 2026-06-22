@@ -13,11 +13,18 @@ export type DshCapability = {
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
   readonly runtimeBound: boolean;
+  readonly relatedFutureSurfaces?: readonly DshSurfaceDependency[];
+  readonly relatedFutureCapabilities?: readonly string[];
   readonly closureState:
     | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
     | "NOT_APPROVED_YET"
     | "RUNTIME_VERIFIED";
 };
+
+export type DshSurfaceDependency =
+  | "app-partner"
+  | "app-field"
+  | "app-captain";
 
 export const DSH_CAPABILITY_MAP = [
   {
@@ -32,7 +39,13 @@ export const DSH_CAPABILITY_MAP = [
     id: "dsh.store.discovery",
     status: "runtime-verified",
     contractOperations: ["listDshStores", "getDshStore"],
-    surfaces: ["app-client", "control-panel"],
+    surfaces: [
+      "app-client",
+      "control-panel",
+      "app-partner",
+      "app-field",
+      "app-captain",
+    ],
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },

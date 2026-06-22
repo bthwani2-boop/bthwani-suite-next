@@ -1,0 +1,6 @@
+COMMAND: pnpm run foundation:gate
+STATUS: PENDING FINAL RERUN
+
+The first run identified a stale dsh-service-activation evidence-path assertion.
+The guard was corrected to the canonical full-stack evidence path. This file is
+replaced with the final result after the rerun.

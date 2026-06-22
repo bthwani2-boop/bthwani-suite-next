@@ -37,6 +37,10 @@ describe("validateDshApiBaseUrl — rejects old ports on localhost", () => {
   test("rejects 127.0.0.1:3000", () => {
     assert.equal(validateDshApiBaseUrl("http://127.0.0.1:3000"), false);
   });
+
+  test("rejects IPv6 localhost old port", () => {
+    assert.equal(validateDshApiBaseUrl("http://[::1]:8084"), false);
+  });
 });
 
 describe("validateDshApiBaseUrl — accepts canonical DSH port", () => {
@@ -54,6 +58,10 @@ describe("validateDshApiBaseUrl — accepts canonical DSH port", () => {
 
   test("accepts production URL with port 8080 (non-localhost)", () => {
     assert.equal(validateDshApiBaseUrl("https://api.example.com:8080"), true);
+  });
+
+  test("accepts IPv6 localhost canonical port", () => {
+    assert.equal(validateDshApiBaseUrl("http://[::1]:58080"), true);
   });
 });
 
