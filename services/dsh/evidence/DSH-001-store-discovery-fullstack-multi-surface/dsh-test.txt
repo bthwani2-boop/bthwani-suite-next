@@ -1,4 +1,4 @@
-COMMAND: pnpm --dir services/dsh test
+﻿COMMAND: pnpm --dir services/dsh test
 RESULT: PASS
 TESTS: 113
 PASSED: 113

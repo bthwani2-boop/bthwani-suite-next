@@ -148,7 +148,7 @@ for (const s of requiredScreenshots) {
 const serviceManifestPath = join(ROOT, "services/dsh/service.manifest.ts");
 if (existsSync(serviceManifestPath)) {
   const manifestSrc = readFileSync(serviceManifestPath, "utf8");
-  
+
   // Prevent closureState = RUNTIME_VERIFIED if visual evidence is missing
   const closureStateMatch = /closureState:\s*["']([^"']+)["']/.exec(manifestSrc);
   if (closureStateMatch && closureStateMatch[1] === "RUNTIME_VERIFIED") {

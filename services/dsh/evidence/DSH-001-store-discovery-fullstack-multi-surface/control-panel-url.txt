@@ -1,5 +1,5 @@
-GET http://localhost:13000/dsh/partners/stores
-HTTP 200 — 16431 bytes
+﻿GET http://localhost:13000/dsh/partners/stores
+HTTP 200 â€” 16431 bytes
 NEXT_PUBLIC_DSH_API_BASE_URL=http://localhost:58080
 
 Route: /dsh/partners/stores

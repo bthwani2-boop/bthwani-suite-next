@@ -1,4 +1,4 @@
-COMMAND: pnpm run foundation:gate
+﻿COMMAND: pnpm run foundation:gate
 STATUS: PENDING FINAL RERUN
 
 The first run identified a stale dsh-service-activation evidence-path assertion.

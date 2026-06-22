@@ -1,10 +1,10 @@
-GET http://localhost:58080/dsh/stores/store-1005
+﻿GET http://localhost:58080/dsh/stores/store-1005
 HTTP 200
 {
   "store": {
     "id": "store-1005",
     "slug": "old-city-restaurant",
-    "displayName": "مطعم المدينة القديمة",
+    "displayName": "Ù…Ø·Ø¹Ù… Ø§Ù„Ù…Ø¯ÙŠÙ†Ø© Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø©",
     "status": "active",
     "cityCode": "sana",
     "serviceAreaCode": "old-city",

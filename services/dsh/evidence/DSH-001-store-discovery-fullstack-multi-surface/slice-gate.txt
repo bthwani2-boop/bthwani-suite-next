@@ -1,4 +1,4 @@
-COMMAND: pnpm run slice:gate
+﻿COMMAND: pnpm run slice:gate
 STATUS: PENDING FINAL RERUN
 
 The first run identified the same stale dsh-service-activation evidence-path

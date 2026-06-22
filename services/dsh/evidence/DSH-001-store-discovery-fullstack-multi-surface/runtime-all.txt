@@ -1,4 +1,4 @@
-COMMAND: pnpm run runtime:all
+﻿COMMAND: pnpm run runtime:all
 RESULT: PASS
 DATE: 2026-06-22
 
@@ -11,5 +11,5 @@ Verified:
 - GET /dsh/health PASS.
 - GET /dsh/readiness PASS.
 - GET /dsh/stores returned 6 stores.
-- GET /dsh/stores/store-1001 returned أسواق حدة المركزية.
+- GET /dsh/stores/store-1001 returned Ø£Ø³ÙˆØ§Ù‚ Ø­Ø¯Ø© Ø§Ù„Ù…Ø±ÙƒØ²ÙŠØ©.
 - MinIO media seed and smoke PASS.

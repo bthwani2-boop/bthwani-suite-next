@@ -1,4 +1,4 @@
-SURFACE: app-field
+﻿SURFACE: app-field
 ROLE: field-store-verification
 SCOPE: store-location, media-evidence-readiness, verification-checklist
 FORBIDDEN: unrelated-field-workflow, orders, finance
