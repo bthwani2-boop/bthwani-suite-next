@@ -1,4 +1,12 @@
-import { CpTable, CpTableHeaderCell, CpTableCell } from "@bthwani/app-shell";
+import {
+  CpEmptyTableMessage,
+  CpInlineCode,
+  CpMutedInline,
+  CpSelectableTableRow,
+  CpTable,
+  CpTableHeaderCell,
+  CpTableCell,
+} from "@bthwani/app-shell";
 import type { DshStoreAdminTableRow } from "../../../shared/store";
 
 type Props = {
@@ -10,19 +18,14 @@ type Props = {
 export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props) {
   if (rows.length === 0) {
     return (
-      <div
-        style={{ padding: "1.5rem 1rem", fontSize: "0.875rem", opacity: 0.65 }}
-      >
+      <CpEmptyTableMessage>
         لا توجد نتائج تطابق الفلاتر الحالية.
-      </div>
+      </CpEmptyTableMessage>
     );
   }
 
   return (
-    <CpTable
-      style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}
-      aria-label="جدول المتاجر"
-    >
+    <CpTable aria-label="جدول المتاجر">
       <thead>
         <tr>
           {HEADERS.map((h) => (
@@ -34,23 +37,17 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr
+          <CpSelectableTableRow
             key={row.id}
             onClick={() =>
               onSelectStore(row.id === selectedStoreId ? null : row.id)
             }
-            aria-selected={row.id === selectedStoreId || undefined}
-            style={{
-              cursor: "pointer",
-              outline: row.id === selectedStoreId
-                ? "2px solid currentColor"
-                : undefined,
-            }}
+            selected={row.id === selectedStoreId}
           >
             <CpTableCell>
-              <code style={{ fontSize: "0.75rem" }}>
+              <CpInlineCode>
                 {row.id.slice(0, 8)}…
-              </code>
+              </CpInlineCode>
             </CpTableCell>
             <CpTableCell>{row.displayName}</CpTableCell>
             <CpTableCell>{row.categoryLabel}</CpTableCell>
@@ -67,7 +64,7 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
               {row.hasProBadge ? "✓ Pro" : ""}
               {row.hasCouponBadge ? " ✓ كوبون" : ""}
             </CpTableCell>
-          </tr>
+          </CpSelectableTableRow>
         ))}
       </tbody>
     </CpTable>
@@ -96,9 +93,9 @@ function StatusBadge({
     <span>
       {label}
       {!isVisible && (
-        <span style={{ marginInlineStart: "0.375rem", opacity: 0.55 }}>
+        <CpMutedInline>
           (مخفي)
-        </span>
+        </CpMutedInline>
       )}
     </span>
   );

@@ -515,5 +515,87 @@
       }
     ],
     "required_for_topic": "Each dependency declared at the topic that first requires it"
+  },
+
+  "performance_runtime_baseline": {
+    "schema_version": "1.0.0",
+    "policy_source": "governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md",
+    "canonical_source": true,
+    "measurement_status": "NOT_MEASURED",
+    "measurement_note": "No load-test run is recorded for the current HEAD. Policy validation must not be reported as measured performance PASS.",
+    "targets": {
+      "p95_api_reads_ms": 300,
+      "p95_api_writes_ms": 700,
+      "db_basic_query_ms": 100,
+      "cpu_utilization_percent_max": 70,
+      "ram_stability_window_minutes": 30,
+      "error_rate_percent_max": 1
+    },
+    "backend_rules": {
+      "independent_runtimes": true,
+      "server_timeouts_required": true,
+      "context_scoped_timeouts_required": true,
+      "health_and_readiness_required": true,
+      "bounded_concurrency_required": true,
+      "rate_limits_required": true,
+      "structured_log_fields": ["timestamp", "level", "service", "correlation_id", "actor_id"]
+    },
+    "database_rules": {
+      "pagination_required_for_lists": true,
+      "strict_default_and_max_limits_required": true,
+      "indexes_required_for_filters_sorts_and_foreign_keys": true,
+      "n_plus_one_forbidden": true,
+      "optimized_read_models_required_for_heavy_reads": true
+    },
+    "provider_rules": {
+      "timeouts_required": true,
+      "bounded_retries_required": true,
+      "retry_max_attempts": 3,
+      "slow_operation_queue_threshold_ms": 1000,
+      "idempotency_required_for_mutations": true,
+      "circuit_breakers_required": true,
+      "audit_metadata_required": true,
+      "health_checks_required": true,
+      "controlled_failover_required": true
+    },
+    "active_operation_contracts": [
+      {
+        "operation_id": "listDshStores",
+        "service": "dsh",
+        "kind": "list_read",
+        "pagination": "limit-offset",
+        "default_limit": 20,
+        "max_limit": 100,
+        "database_indexes": ["dsh_stores_city_code", "dsh_stores_service_area_code", "dsh_stores_status", "dsh_stores_is_visible"],
+        "structured_logging": "REQUIRED",
+        "external_provider": "NONE"
+      },
+      {
+        "operation_id": "getDshStore",
+        "service": "dsh",
+        "kind": "object_read",
+        "database_indexes": ["dsh_stores_primary_key"],
+        "structured_logging": "REQUIRED",
+        "external_provider": "NONE"
+      },
+      {
+        "operation_id": "getDshHomeDiscovery",
+        "service": "dsh",
+        "kind": "read_model",
+        "database_indexes": ["dsh_home_banners_zone", "dsh_home_promos_zone", "dsh_categories_sort_order"],
+        "structured_logging": "REQUIRED",
+        "external_provider": "NONE"
+      },
+      {
+        "operation_id": "wltReferenceReads",
+        "service": "wlt",
+        "kind": "reference_read",
+        "mutation_allowed": false,
+        "generated_client_ready": false,
+        "runtime_consumption_allowed": false,
+        "structured_logging": "REQUIRED",
+        "external_provider": "NONE"
+      }
+    ]
   }
 }

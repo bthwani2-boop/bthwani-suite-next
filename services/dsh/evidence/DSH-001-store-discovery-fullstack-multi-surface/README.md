@@ -1,6 +1,6 @@
 # DSH-001 Store Discovery — Full-Stack Multi-Surface Evidence
 
-**Slice:** DSH-001_STORES_TOPIC_FULLSTACK_MULTI_SURFACE_CLOSED  
+**Slice:** DSH-001_STORES_TOPIC_FIX_REQUIRED  
 **Branch:** starting-implementing-slices  
 **Date:** 2026-06-22  
 **Surfaces:** app-client, control-panel, app-partner, app-field, app-captain
@@ -9,7 +9,7 @@
 
 ## Implemented Surfaces
 
-DSH-001 store-topic is implemented for all five surfaces. Business logic resides in `services/dsh/frontend/shared` as the sole engine; surfaces are strictly UI-only, free from fetch/env/mutations/Store types. app-partner, app-field, and app-captain implement store-only context — no catalog, orders, delivery, or finance.
+DSH-001 has technical GET wiring for all five surfaces, but it is not closed. Business logic resides in `services/dsh/frontend/shared`; surfaces remain UI-only. Partner, field, captain, and control-panel still lack approved store-domain mutation/auth/audit contracts and therefore remain `FIX_REQUIRED`.
 
 1. **app-client**: Client store discovery, feeds, and details.
 2. **control-panel**: Store admin governance dashboard.
@@ -44,9 +44,9 @@ The following verification files have been recorded in the evidence directory:
 
 ---
 
-## Screenshots Included
+## Existing Screenshots
 
-The following screenshots are generated and present in the `screenshots/` folder:
+The following screenshots are historical partial evidence only. They do not close the Topic:
 
 - `screenshots/app-client-store-discovery-reverify.png`
 - `screenshots/control-panel-stores-admin-success.png`
@@ -56,11 +56,24 @@ The following screenshots are generated and present in the `screenshots/` folder
 - `screenshots/app-field-store-verification.png`
 - `screenshots/app-captain-store-pickup-context.png`
 
+## Required Real-Experience Evidence
+
+DSH-001 now treats all five actor surfaces as required. Closure requires 25 state screenshots: loading, success, empty, error, and permission-denied for control-panel, partner, field, and captain; app-client uses service-unavailable instead of permission-denied because its read endpoint is public.
+
+The role surfaces also require real authenticated actions:
+
+- partner: own-store operating/settings update;
+- field: assigned-store verification submission;
+- captain: assigned pickup-point readiness report;
+- control-panel: activation, suspension, visibility, and serviceability governance.
+
+These actions are not implemented in the current API contract. Do not report this evidence pack as closure.
+
 ---
 
 ## Guards Passed
 
-All the following policy guards are PASS (zero warnings):
+The following results are historical and must be rerun after the current rework:
 - `guard:dsh-frontend-shared-ownership` — zero raw HTML warnings (CpPrimitives via app-shell)
 - `guard:dsh-001-cross-surface-dependency-map`
 - `guard:no-financial-mutation-outside-wlt`
@@ -88,12 +101,12 @@ The services launcher ("الخدمات") in `apps/app-client/runtime/src/App.tsx
 `StoreDiscoveryRoute` directly, making DSH-001 Store Discovery browsable alongside
 `HomeDiscoveryRoute` without requiring a separate navigation slot.
 
-## Role Surfaces storeId Injection
+## Historical Role Surface Injection
 
 `PartnerStoreScreen`, `FieldStoreVerificationScreen`, and `CaptainStorePickupContextScreen`
 now accept an optional `storeId` prop. Each app's `App.tsx` injects
 `EXPO_PUBLIC_DEV_STORE_ID` when set, enabling concrete store context in dev/CI.
-When unset, the fallback to first-store from API remains as documented dev-only behavior.
+When unset, the fallback to first-store from API remains a dev-only fallback and is not acceptable authorization or closure proof.
 
 ## WLT-for-DSH Boundary
 
@@ -109,4 +122,3 @@ All unit/integration tests are passing:
 - `pnpm --dir services/dsh test` → 118 pass / 0 fail
   Includes: role-context controller core, direct fetch bypass, and status mapping.
 - `pnpm --dir services/dsh typecheck` → 0 errors
-

@@ -2,7 +2,7 @@
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
   "branch": "starting-implementing-slices",
-  "head_at_audit": "f40ef7362a459cfe058919ab37a47816e738a3be",
+  "head_at_audit": "d422caf7c6bec356305ff375863965e25295f202",
   "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2 — effective 2026-06-22",
   "note": "CLOSED status requires REAL_EXPERIENCE_CLOSURE_v2 evidence. TECHNICAL_CLOSURE_v1 is historical evidence only. Every required evidence gap blocks closure.",
   "overall_merge_safety": "DO_NOT_MERGE_UNTIL_DSH001_REAL_EXPERIENCE_REWORK",
@@ -53,19 +53,19 @@
       "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2",
       "evidence_quality_note": {
         "standard": "REAL_EXPERIENCE_CLOSURE_v2",
-        "gap": "MOBILE_SUCCESS_ONLY_SCREENSHOTS",
-        "detail": "app-client, app-captain, app-field, app-partner each have 1 success screenshot. Error/loading/empty states are unit-tested in shared controllers (118/118 tests pass) but not screenshot-verified. control-panel has success, error, and detail-panel screenshots (3 screenshots).",
-        "what_is_verified": "Technical closure is genuine: real API, real DB, all guards pass, all controllers unit-tested including error/empty/loading state transitions.",
-        "v2_gap": "The REAL_EXPERIENCE_CLOSURE_v2 standard requires error/loading/empty screenshots per surface. Mobile surfaces do not meet v2 visual evidence standard.",
+        "gap": "ROLE_EXPERIENCE_AND_VISUAL_COVERAGE_INCOMPLETE",
+        "detail": "The current role apps and control-panel prove GET-based technical wiring only. Partner, field, captain, and operator mutation contracts are absent; 12 of 18 required state screenshots are also missing.",
+        "what_is_verified": "Real API reads, real DB reads, generated read client, shared read controllers, and current success-state rendering.",
+        "v2_gap": "REAL_EXPERIENCE_CLOSURE_v2 requires complete role experiences, not context-only read screens or a raw admin table. Missing write/auth/audit contracts and visual states block closure.",
         "action_required": "REWORK_REQUIRED_BEFORE_CLOSURE",
         "escalation": "BLOCKING — add all missing per-surface visual and runtime-state proof before DSH-001 can be closed."
       },
       "surfaces": {
-        "app-client": "FIX_REQUIRED — success screenshot exists; loading, empty, error, and permission_denied visual proof missing",
-        "control-panel": "FIX_REQUIRED — success, error, and detail screenshots exist; loading and empty visual proof missing",
-        "app-partner": "FIX_REQUIRED — read-only success screenshot exists; loading and error visual proof missing",
-        "app-field": "FIX_REQUIRED — read-only success screenshot exists; loading and error visual proof missing",
-        "app-captain": "FIX_REQUIRED — read-only success screenshot exists; loading and error visual proof missing"
+        "app-client": "FIX_REQUIRED — success screenshot exists; loading, empty, error, and service_unavailable visual proof missing",
+        "control-panel": "FIX_REQUIRED — GET table/detail exists; store governance actions, auth/audit contract, loading, and empty proof are missing",
+        "app-partner": "FIX_REQUIRED — enriched readiness experience exists, but own-store update actions and auth/audit contract are missing",
+        "app-field": "FIX_REQUIRED — enriched verification experience exists, but verification submission and auth/audit contract are missing",
+        "app-captain": "FIX_REQUIRED — enriched pickup readiness exists, but store-readiness reporting and auth/audit contract are missing"
       },
       "exact_paths": [
         "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
@@ -73,20 +73,19 @@
       ],
       "blockers": [
         "Required REAL_EXPERIENCE_CLOSURE_v2 screenshots are missing across all five surfaces",
-        "Read-only role surfaces have success-only context evidence",
-        "Control-panel Store Network Governance lacks loading and empty visual evidence",
-        "DSH-001 design debt remains inside the declared scope"
+        "Role surfaces remain GET-only because DSH-001 has no approved mutation/auth/audit contract",
+        "Control-panel Store Network Governance lacks activation, suspension, visibility, and serviceability actions",
+        "Fresh visual evidence is required after the experience and shared app-shell changes"
       ],
       "required_actions": [
-        "Add per-surface loading, success, empty, error, and permission_denied visual evidence where applicable",
-        "Prove app-partner read-only loading, success, and error states or implement the declared Partner Store Readiness experience",
-        "Prove app-field read-only loading, success, and error states or implement the declared Field Store Verification Readiness experience",
-        "Prove app-captain read-only loading, success, and error states or implement the declared Captain Pickup Readiness experience",
-        "Upgrade control-panel partners/stores from table proof to Store Network Governance experience with all required states",
-        "Remove or resolve design debt inside DSH-001 scope",
+        "Approve and implement store-domain mutation, authentication, authorization, idempotency, and audit contracts without absorbing orders, delivery lifecycle, or finance",
+        "Implement partner own-store settings, field verification submission, captain pickup-point readiness reporting, and operator governance actions",
+        "Add the 18 declared per-surface visual state screenshots from real runtime behavior",
+        "Upgrade control-panel partners/stores from table proof to an actionable Store Network Governance experience",
+        "Visually verify the shared app-shell design-debt remediation",
         "Regenerate the canonical evidence index and visual evidence pack"
       ],
-      "design_debt": "BLOCKING_UNDER_REAL_EXPERIENCE_CLOSURE_v2 — inline-style debt must be removed or explicitly resolved inside DSH-001 scope",
+      "design_debt": "IMPLEMENTATION_REMEDIATED_NEEDS_VISUAL_EVIDENCE — DSH-001 layout/typography compositions moved to shared/app-shell; quality is not accepted until recaptured.",
       "verification_commands": [
         "pnpm run foundation:gate",
         "pnpm run slice:gate",
@@ -239,7 +238,7 @@
 
   "current_gate_summary": {
     "foundation_gate": "PASS",
-    "slice_gate": "PASS",
+    "slice_gate": "FAIL — 20 of 25 required DSH-001 screenshots are missing",
     "contracts_lint": "PASS",
     "guard_matrix_v3": "PASS",
     "wlt_boundary": "PASS",
@@ -247,11 +246,11 @@
     "no_mock_demo": "PASS",
     "docker_runtime": "PASS",
     "dsh_api_smoke": "PASS",
-    "typecheck_all": "PASS",
-    "dsh_tests": "118/118 PASS",
+    "typecheck_all": "PASS — app-shell, ui-kit, control-panel, DSH",
+    "dsh_tests": "121/121 PASS",
     "ci": "CI_NOT_CONFIGURED",
     "git_diff_check": "PASS",
-    "unstaged_changes": "D services/dsh/frontend/app-captain/.gitkeep, D services/dsh/frontend/app-field/.gitkeep, D services/dsh/frontend/app-partner/.gitkeep, D services/dsh/frontend/control-panel/.gitkeep, D services/wlt/frontend/.gitkeep — gitkeep deletes, not a gate failure"
+    "unstaged_changes": "Current DSH-001 and machine-readable rework is intentionally uncommitted."
   },
 
   "next_approved_action": "STOP — DSH-001 real experience rework is required before DSH-002 or DSH-003.",
@@ -268,25 +267,25 @@
     {
       "topic_id": "FOUNDATION-GATE",
       "priority": "P1",
-      "reason": "foundation:gate and slice:gate both fail because tools/guards/performance-runtime-baseline.mjs requires missing machine-readable/slice_execution_master_matrix_v3.csv",
-      "blocks_merge": true,
-      "blocks_next_topic": true,
-      "required_action": "Restore the authoritative V3 matrix or update the performance baseline guard in a separately approved scope; do not fabricate the matrix in this governance-only correction."
+      "reason": "RESOLVED — performance-runtime-baseline now validates architecture-map.json#performance_runtime_baseline and foundation:gate passes.",
+      "blocks_merge": false,
+      "blocks_next_topic": false,
+      "required_action": "NONE"
     }
   ],
 
   "verification_results_2026_06_22": {
     "json_parse": "PASS",
-    "semantic_consistency": "PASS — 16 Topics complete; DSH-001 FIX_REQUIRED; 12 missing screenshots explicitly blocking",
+    "semantic_consistency": "PASS — 16 Topics checked; DSH-001 FIX_REQUIRED; all five surfaces required; 20 missing screenshots explicitly blocking",
     "git_diff_check": "PASS",
     "guard_matrix_v3": "PASS",
     "guard_dsh_frontend_shared_ownership": "PASS",
     "guard_no_financial_mutation_outside_wlt": "PASS",
     "guard_app_shell_control_panel": "PASS",
-    "dsh_tests": "PASS — 118/118",
+    "dsh_tests": "PASS — 121/121",
     "dsh_typecheck": "PASS",
-    "foundation_gate": "FAIL — performance-runtime-baseline reports missing machine-readable/slice_execution_master_matrix_v3.csv",
-    "slice_gate": "FAIL — performance-runtime-baseline reports missing machine-readable/slice_execution_master_matrix_v3.csv",
+    "foundation_gate": "PASS — tools/registry/runs/FOUNDATION-GATE-20260622-210921",
+    "slice_gate": "FAIL — tools/registry/runs/SLICE-GATE-20260622-211225; required DSH-001 visual evidence missing",
     "graphify": "NOT_AVAILABLE_WITH_REASON — no configured LLM API key for semantic extraction"
   },
 

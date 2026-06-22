@@ -44,49 +44,65 @@ export function FieldStoreVerificationScreen({ storeId }: Props) {
   const { field } = state;
   return (
     <ScrollScreen>
-        <Header
-          title="التحقق الميداني للمتجر"
-          subtitle="سياق المتجر وأدلة الجاهزية المتاحة"
-        />
+      <Header
+        title="مساحة التحقق الميداني"
+        subtitle="مراجعة جاهزية بيانات المتجر قبل الزيارة والاعتماد"
+        actions={
+          <Badge
+            label={`${field.readinessPercent}% مكتمل`}
+            tone={field.attentionChecks.length === 0 ? "success" : "warning"}
+          />
+        }
+      />
+      <Card>
+        <View style={styles.hero}>
+          <Text role="titleLg">{field.store.displayName}</Text>
+          <Text tone="secondary">
+            {field.store.cityCode} / {field.store.serviceAreaCode}
+          </Text>
+          <View style={styles.badges}>
+            <Badge label={field.verificationSummary} tone={field.attentionChecks.length === 0 ? "success" : "warning"} />
+            <Badge label={field.store.isVisible ? "ظاهر للعملاء" : "غير ظاهر"} tone={field.store.isVisible ? "info" : "neutral"} />
+          </View>
+        </View>
+      </Card>
+
+      <View style={styles.metrics}>
         <Card>
-          <View style={styles.cardContent}>
-            <Text role="titleLg">{field.store.displayName}</Text>
-            <Text tone="secondary">
-              {field.store.serviceAreaCode} / {field.store.cityCode}
-            </Text>
-            <Badge
-              label={field.verificationSummary}
-              tone={field.checks.every((check) => check.ready) ? "success" : "warning"}
-            />
+          <View style={styles.metric}>
+            <Text role="titleLg">{field.checks.length - field.attentionChecks.length}</Text>
+            <Text role="caption" tone="muted">أدلة مثبتة</Text>
           </View>
         </Card>
-
-        <Text role="titleMd">قائمة التحقق</Text>
         <Card>
-          {field.checks.map((check) => (
-            <ListItem
-              key={check.id}
-              title={check.label}
-              subtitle={check.detail}
-              trailing={
-                <Badge
-                  label={check.ready ? "مثبت" : "ناقص"}
-                  tone={check.ready ? "success" : "warning"}
-                />
-              }
-            />
-          ))}
-        </Card>
-
-        <Card>
-          <View style={styles.cardContent}>
-            <Text role="titleSm">حدود هذه الشاشة</Text>
-            <Text tone="secondary">
-              تعرض أدلة الجاهزية الموجودة في Store read-model فقط. لا تنفذ رفع
-              وثائق أو اعتمادًا ميدانيًا أو workflow خارج المتجر.
-            </Text>
+          <View style={styles.metric}>
+            <Text role="titleLg">{field.attentionChecks.length}</Text>
+            <Text role="caption" tone="muted">ملاحظات مفتوحة</Text>
           </View>
         </Card>
+      </View>
+
+      <Text role="titleMd">قائمة التحقق</Text>
+      <Card>
+        {field.checks.map((check) => (
+          <ListItem
+            key={check.id}
+            title={check.label}
+            subtitle={check.detail}
+            trailing={<Badge label={check.ready ? "مثبت" : "ناقص"} tone={check.ready ? "success" : "warning"} />}
+          />
+        ))}
+      </Card>
+
+      <Card>
+        <View style={styles.cardContent}>
+          <Text role="titleSm">توصية التحقق</Text>
+          <Text tone="secondary">{field.recommendation}</Text>
+          <Text role="caption" tone="muted">
+            رفع الوثائق والاعتماد الميداني الفعلي يظل ضمن DSH-008 بعد اعتماده.
+          </Text>
+        </View>
+      </Card>
     </ScrollScreen>
   );
 }
@@ -95,5 +111,24 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: spacing[4],
     gap: spacing[2],
+  },
+  hero: {
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  badges: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: spacing[2],
+  },
+  metrics: {
+    flexDirection: "row-reverse",
+    gap: spacing[3],
+  },
+  metric: {
+    minWidth: 128,
+    padding: spacing[4],
+    alignItems: "center",
+    gap: spacing[1],
   },
 });

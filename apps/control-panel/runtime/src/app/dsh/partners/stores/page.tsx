@@ -13,7 +13,7 @@ export default function DshStoresPage() {
       dir="rtl"
       topBar={
         <ControlPanelTopBar
-          title={<span style={{ fontWeight: 700 }}>لوحة التحكم — DSH</span>}
+          title={<strong>لوحة التحكم — DSH</strong>}
           serviceLabel={<span>partners / stores</span>}
         />
       }

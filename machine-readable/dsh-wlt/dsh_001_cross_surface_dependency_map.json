@@ -14,18 +14,18 @@
       "scope": ["store-list", "store-detail", "visibility-review", "readiness-review"]
     },
     "app-partner": {
-      "role": "partner-store-readiness",
-      "scope": ["store-profile", "operating-status", "media-readiness", "catalog-readiness-summary"],
+      "role": "partner-own-store-operations",
+      "scope": ["store-profile", "operating-status-update", "media-readiness", "service-mode-settings"],
       "forbidden": ["full-catalog", "partner-orders", "finance"]
     },
     "app-field": {
-      "role": "field-store-verification",
-      "scope": ["store-location", "media-evidence-readiness", "verification-checklist"],
+      "role": "field-store-verification-action",
+      "scope": ["assigned-store-location", "media-evidence-readiness", "verification-checklist-submit"],
       "forbidden": ["unrelated-field-workflow", "orders", "finance"]
     },
     "app-captain": {
-      "role": "captain-store-pickup-context",
-      "scope": ["store-name", "pickup-location", "operating-state", "service-modes"],
+      "role": "captain-pickup-point-readiness",
+      "scope": ["assigned-store-name", "pickup-location", "operating-state", "pickup-readiness-report"],
       "forbidden": ["order-assignment", "delivery-lifecycle", "earnings", "finance"]
     }
   },
@@ -37,6 +37,9 @@
     "no_orders": true,
     "no_full_catalog": true,
     "no_finance": true,
-    "control_panel_route": "/dsh/partners/stores"
+    "control_panel_route": "/dsh/partners/stores",
+    "store_domain_actions_required": true,
+    "authentication_authorization_required": true,
+    "idempotency_and_audit_required": true
   }
 }

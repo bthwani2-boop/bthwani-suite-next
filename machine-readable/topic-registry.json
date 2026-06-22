@@ -56,7 +56,9 @@
       "read_only_control_panel_sections": [],
       "forbidden_control_panel_sections": ["dashboard", "operations", "finance", "catalogs", "partners", "marketing", "support", "platform", "administration", "hr"],
       "permissions": {},
-      "states_required": {},
+      "states_required": {
+        "system": ["guards_running", "guards_pass", "guards_fail", "runtime_unavailable"]
+      },
       "real_experience_required": {
         "system": "All gate scripts exit 0. No violations. Docker UP. API smoke 200."
       },
@@ -146,7 +148,7 @@
         "Generated store-discovery-client.ts",
         "useStoreDiscoveryController (app-client logic)",
         "useStoreAdminController (control-panel logic)",
-        "useStoreRoleContextController (partner/captain/field read-only context)",
+        "useStoreRoleContextController (partner/captain/field state and action context; action contract pending)",
         "StoreDiscoveryScreen + StoreDiscoveryList + StoreCardPremium (app-client)",
         "StoreManagementScreen + StoreAdminKpiStrip + StoreAdminFilters + StoreAdminTable + StoreDetailAdminPanel + StoreAdminStateView (control-panel)",
         "PartnerStoreScreen (app-partner — store-only readiness context)",
@@ -169,13 +171,9 @@
       "migrations_required": ["dsh-001_store_discovery.sql"],
       "api_contracts_required": ["listDshStores", "getDshStore"],
       "api_clients_required": ["services/dsh/clients/store-discovery-client.ts"],
-      "required_surfaces": ["app-client", "control-panel"],
+      "required_surfaces": ["app-client", "control-panel", "app-partner", "app-field", "app-captain"],
       "optional_surfaces": [],
-      "read_only_surfaces": [
-        "app-partner (store-only readiness context)",
-        "app-field (store-only verification context)",
-        "app-captain (store-only pickup context)"
-      ],
+      "read_only_surfaces": [],
       "forbidden_surfaces": ["webapp", "website"],
       "primary_control_panel_section": "partners",
       "primary_control_panel_route": "/dsh/partners/stores",
@@ -190,32 +188,32 @@
         "app_captain": "store-role-context-read"
       },
       "states_required": {
-        "app_client": ["loading", "success", "empty", "error", "permission_denied"],
-        "control_panel": ["loading", "success", "empty", "error"],
-        "app_partner_read_only": ["loading", "success", "error"],
-        "app_field_read_only": ["loading", "success", "error"],
-        "app_captain_read_only": ["loading", "success", "error"]
+        "app_client": ["loading", "success", "empty", "error", "service_unavailable"],
+        "control_panel": ["loading", "success", "empty", "error", "permission_denied"],
+        "app_partner": ["loading", "success", "empty", "error", "permission_denied"],
+        "app_field": ["loading", "success", "empty", "error", "permission_denied"],
+        "app_captain": ["loading", "success", "empty", "error", "permission_denied"]
       },
       "real_experience_required": {
-        "app_client": "Customer can browse store list, see loading, empty (no stores), error (API down), and store detail. Screenshots required per state.",
-        "control_panel": "Operator sees store governance table, KPI strip, store detail panel, error/service-unavailable state. Screenshots required per state.",
-        "app_partner_read_only": "Partner sees store readiness context, loading, error states. Context is intentionally read-only.",
-        "app_field_read_only": "Field agent sees store verification context, loading, error states. Context is intentionally read-only.",
-        "app_captain_read_only": "Captain sees pickup context for store, loading, error states. Context is intentionally read-only."
+        "app_client": "Customer can browse the public store list and see loading, success, empty, contract/error, and service-unavailable states. Screenshots are required for each state.",
+        "control_panel": "Operator governs activation, suspension, visibility, and serviceability with authenticated, audited actions and complete visual states.",
+        "app_partner": "Partner manages own-store operating status and store profile readiness without accessing another partner's store.",
+        "app_field": "Field agent records assigned-store verification outcomes and evidence status without performing approval outside assignment scope.",
+        "app_captain": "Captain reports assigned pickup-point readiness without absorbing order assignment, pickup confirmation, or delivery lifecycle."
       },
       "evidence_quality_note_v1_closure": {
         "standard_applied": "HISTORICAL_TECHNICAL_CLOSURE_v1_EVIDENCE_ONLY",
         "mobile_screenshot_coverage": "SUCCESS_STATE_ONLY — app-client, app-partner, app-captain, app-field each have 1 success screenshot. Error/loading/empty states are unit-tested in shared controllers but not screenshot-verified.",
         "control_panel_screenshot_coverage": "SUCCESS_AND_ERROR — control-panel has success, error, and detail-panel screenshots.",
-        "unit_test_state_coverage": "118/118 tests PASS including error, empty, and loading state tests in shared controllers.",
-        "v2_gap": "Required and read-only surfaces lack mandatory visual states. The gap blocks closure under the current standard.",
+        "unit_test_state_coverage": "121/121 tests PASS including error, empty, loading, service-unavailable, and API classification tests in shared controllers.",
+        "v2_gap": "Required surfaces lack mandatory visual states and actionable store-domain contracts. The gap blocks closure under the current standard.",
         "action": "REWORK_REQUIRED_BEFORE_CLOSURE"
       },
-      "tests_status": "PASS — 118/118 tests, 33 suites, 0 failures",
+      "tests_status": "PASS — 121/121 tests, 34 suites, 0 failures",
       "tests_required": [
-        "Store discovery controller loading/success/empty/error/permission tests",
-        "Store admin governance state tests",
-        "Role-context read-only state tests",
+        "Store discovery controller loading/success/empty/error/service-unavailable tests",
+        "Store admin governance action and state tests",
+        "Partner/field/captain store-action authorization, idempotency, audit, and state tests",
         "Manual per-surface navigation verification"
       ],
       "guards_required": [
@@ -234,22 +232,22 @@
         "Passing tests and guards",
         "Resolved in-scope control-panel design debt"
       ],
-      "design_debt": ["BLOCKING — inline styles in control-panel screens remain unresolved inside DSH-001 scope"],
+      "design_debt": ["IMPLEMENTATION_REMEDIATED — DSH-001 control-panel layout and typography compositions moved to shared/app-shell; visual re-verification remains required"],
       "current_status": "FIX_REQUIRED",
       "technical_status": "TECHNICAL_WIRING_VERIFIED",
       "real_experience_status": "FIX_REQUIRED",
       "merge_safe": false,
       "blockers": [
-        "app-client loading, empty, error, and permission_denied screenshots missing",
+        "app-client loading, empty, error, and service_unavailable screenshots missing",
         "control-panel loading and empty screenshots missing",
-        "app-partner read-only loading and error screenshots missing",
-        "app-field read-only loading and error screenshots missing",
-        "app-captain read-only loading and error screenshots missing",
-        "Control-panel design debt remains unresolved"
+        "app-partner loading, empty, error, permission, and own-store action proof missing",
+        "app-field loading, empty, error, permission, and verification submission proof missing",
+        "app-captain loading, empty, error, permission, and pickup-readiness reporting proof missing",
+        "Control-panel design remediation requires fresh visual evidence"
       ],
       "required_actions": [
         "Capture every missing required visual state with real runtime data",
-        "Prove all read-only role-surface states or reclassify and implement the declared real experience",
+        "Implement all required role-surface actions with authentication, authorization, idempotency, and audit proof",
         "Upgrade control-panel proof to complete Store Network Governance state coverage",
         "Resolve in-scope design debt",
         "Regenerate evidence-index.json after evidence completion"
@@ -277,9 +275,9 @@
           "dsh/frontend/app-client/screens/StoreScreen.tsx — DshStoreGetScreen: single store with product listings, category filter, search, favorites. Uses useStoreState, useStoreDerivedItems."
         ],
         "control_panel": ["dsh/frontend/control-panel/stores/ — store governance table, admin management (equivalent to new repo StoreManagementScreen)"],
-        "app_partner": ["dsh/frontend/app-partner/ — partner own store context (read-only view of store readiness)"],
-        "app_field": ["dsh/frontend/app-field/ — field agent store verification context (read-only)"],
-        "app_captain": ["dsh/frontend/app-captain/ — captain store pickup context with address and store code (read-only)"]
+        "app_partner": ["dsh/frontend/app-partner/ — partner own-store readiness reference; target implementation must add bounded own-store actions"],
+        "app_field": ["dsh/frontend/app-field/ — field verification reference; target implementation must add assigned-store verification submission"],
+        "app_captain": ["dsh/frontend/app-captain/ — pickup context reference; target implementation must add assigned pickup-point readiness reporting"]
       },
       "donor_mappings": [
         {
@@ -295,15 +293,16 @@
         "Client sees store list with store name, category, open/closed status, and ETA in RTL layout",
         "Client sees loading skeleton during store list fetch",
         "Client sees empty state with descriptive message when no stores available in zone",
-        "Client sees error state with retry action when API fails",
+        "Client sees error state with retry action when the response contract is invalid or a non-availability failure occurs",
+        "Client sees service-unavailable state with retry action when DSH cannot be reached",
         "Client can filter stores by category, favorites, or nearest",
         "Operator sees all stores in paginated admin table with search and status filters",
         "Operator can open store detail panel with full store information (name, address, status, category)",
         "Operator sees KPI strip (total stores, active, inactive counts)",
         "Operator sees error/service-unavailable state when admin API fails",
-        "Partner sees own store readiness context — read-only, no edit capability here",
-        "Field agent sees store physical verification context — read-only address and verification status",
-        "Captain sees store pickup address and code — read-only",
+        "Partner can update own-store operating status and approved store settings with audited authorization",
+        "Field agent can submit assigned-store verification outcomes with evidence status",
+        "Captain can report assigned pickup-point readiness without changing order or delivery state",
         "All surfaces enforce RTL layout with Arabic typography",
         "RBAC: client sees only publicly visible stores; partner sees only own store; captain/field see only assigned store context; operator sees all stores"
       ],

@@ -74,7 +74,7 @@
       "retry",
       "offline_network_failure"
     ],
-    "visual_evidence_requirement": "At least one screenshot per required state per required surface. Read-only surfaces require loading, success, and error screenshots.",
+    "visual_evidence_requirement": "At least one screenshot per state declared by the Topic for each required surface. Public read surfaces use service_unavailable/offline instead of permission_denied when authentication is not part of the active contract. Read-only role surfaces require loading, success, and error screenshots.",
     "manual_navigation_requirement": "Manual navigation proof (text log or screenshot sequence) showing the actor can reach and use the surface in the real runtime environment.",
     "api_binding_requirement": "Surface must be wired to real API via generated client through shared controller. No mock/demo/preview data.",
     "shared_brain_binding_requirement": "Surface must import from owning_shared_brain. No inline API calls, no local business logic.",

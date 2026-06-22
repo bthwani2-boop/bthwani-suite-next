@@ -44,51 +44,55 @@ export function CaptainStorePickupContextScreen({ storeId }: Props) {
   const { captain } = state;
   return (
     <ScrollScreen>
-        <Header
-          title="سياق الاستلام من المتجر"
-          subtitle="بيانات قراءة فقط قبل دورة التوصيل"
-          actions={
-            <Badge
-              label={captain.operatingLabel}
-              tone={captain.store.isOpen ? "success" : "warning"}
-            />
-          }
-        />
-        <Card>
-          <View style={styles.cardContent}>
-            <Text role="titleLg">{captain.store.displayName}</Text>
-            <Text tone="secondary">{captain.store.categoryLabel}</Text>
-            <Badge
-              label={captain.pickupLabel}
-              tone={captain.pickupEnabled ? "success" : "warning"}
-            />
+      <Header
+        title="جاهزية نقطة الاستلام"
+        subtitle="تحقق من المتجر والموقع قبل بدء مهمة التوصيل"
+        actions={
+          <Badge
+            label={captain.operatingLabel}
+            tone={captain.store.isOpen ? "success" : "warning"}
+          />
+        }
+      />
+      <Card>
+        <View style={styles.hero}>
+          <Text role="titleLg">{captain.store.displayName}</Text>
+          <Text tone="secondary">{captain.store.categoryLabel}</Text>
+          <View style={styles.badges}>
+            <Badge label={captain.pickupLabel} tone={captain.pickupEnabled ? "success" : "warning"} />
+            <Badge label={captain.locationLabel} tone="info" />
           </View>
-        </Card>
+        </View>
+      </Card>
 
-        <Card>
-          <ListItem
-            title="موقع الاستلام"
-            subtitle={captain.locationLabel}
-          />
-          <ListItem
-            title="حالة المتجر"
-            subtitle={captain.operatingLabel}
-          />
-          <ListItem
-            title="طرق الخدمة"
-            subtitle={captain.store.deliveryModes.join("، ") || "غير محددة"}
-          />
-        </Card>
+      <Text role="titleMd">ملخص الاستلام</Text>
+      <Card>
+        <ListItem title="موقع الاستلام" subtitle={captain.locationLabel} />
+        <ListItem title="الوقت المتوقع" subtitle={captain.estimatedWindowLabel} />
+        <ListItem title="طرق الخدمة" subtitle={captain.serviceModesLabel} />
+      </Card>
 
-        <Card>
-          <View style={styles.cardContent}>
-            <Text role="titleSm">قراءة فقط</Text>
-            <Text tone="secondary">
-              لا تتضمن هذه الشاشة تعيين طلب أو تأكيد استلام أو دورة توصيل أو
-              أي بيانات مالية.
-            </Text>
-          </View>
-        </Card>
+      <Text role="titleMd">فحص ما قبل الوصول</Text>
+      <Card>
+        {captain.pickupChecks.map((check) => (
+          <ListItem
+            key={check.id}
+            title={check.label}
+            subtitle={check.detail}
+            trailing={<Badge label={check.ready ? "جاهز" : "متوقف"} tone={check.ready ? "success" : "warning"} />}
+          />
+        ))}
+      </Card>
+
+      <Card>
+        <View style={styles.cardContent}>
+          <Text role="titleSm">تعليمات الكابتن</Text>
+          <Text tone="secondary">{captain.pickupInstruction}</Text>
+          <Text role="caption" tone="muted">
+            هذه الشاشة لا تعيّن طلبًا ولا تؤكد استلامًا. دورة المهمة الكاملة تتبع DSH-007.
+          </Text>
+        </View>
+      </Card>
     </ScrollScreen>
   );
 }
@@ -96,6 +100,15 @@ export function CaptainStorePickupContextScreen({ storeId }: Props) {
 const styles = StyleSheet.create({
   cardContent: {
     padding: spacing[4],
+    gap: spacing[2],
+  },
+  hero: {
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  badges: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: spacing[2],
   },
 });

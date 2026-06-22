@@ -1,6 +1,6 @@
 # DSH-001 Visual Evidence — Screenshots
 
-All screenshots captured during runtime verification of DSH-001 Store Discovery across five surfaces.
+Historical partial screenshots from the first technical wiring pass. They are not closure evidence under the current DSH-001 contract.
 
 ## Screenshots
 
@@ -21,3 +21,6 @@ All screenshots captured during runtime verification of DSH-001 Store Discovery 
 - No mock/preview/demo data present
 - No catalog/orders/delivery/finance present in any DSH-001 screenshot
 - CI is not configured for this branch — screenshots serve as the primary visual evidence
+- Current coverage is 5 of 25 required state screenshots; the old control-panel error and detail-panel captures are supplementary and must be recaptured under the new names and UI.
+- Partner, field, captain, and control-panel screenshots do not prove authenticated actions.
+- Decision: `FIX_REQUIRED`.

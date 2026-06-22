@@ -1,4 +1,4 @@
-import { CpSelect, CpSearchInput } from "@bthwani/app-shell";
+import { CpFilterBar, CpSelect, CpSearchInput } from "@bthwani/app-shell";
 import type { DshStoreAdminFilters } from "../../../shared/store";
 
 type Props = {
@@ -31,17 +31,7 @@ const CATEGORY_OPTIONS = [
 
 export function StoreAdminFilters({ filters, onChange }: Props) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "0.75rem",
-        padding: "0.5rem 1rem",
-        alignItems: "center",
-      }}
-      role="search"
-      aria-label="فلاتر المتاجر"
-    >
+    <CpFilterBar label="فلاتر المتاجر">
       <CpSelect
         aria-label="الحالة"
         value={filters.status ?? ""}
@@ -75,8 +65,8 @@ export function StoreAdminFilters({ filters, onChange }: Props) {
         placeholder="بحث بالاسم أو الرمز..."
         value={filters.search ?? ""}
         onChange={(v) => onChange({ ...filters, search: v || null })}
-        style={{ minWidth: "14rem" }}
+        wide
       />
-    </div>
+    </CpFilterBar>
   );
 }

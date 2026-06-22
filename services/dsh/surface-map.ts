@@ -10,7 +10,7 @@ export type DshSurface =
 export type DshSurfaceDefinition = {
   readonly surface: DshSurface;
   readonly capabilityIds: readonly DshCapability["id"][];
-  readonly implementationState: "planned" | "runtime-verified" | "blocked";
+  readonly implementationState: "planned" | "runtime-verified" | "fix-required" | "blocked";
   readonly dependencyRole?:
     | "none"
     | "upstream"
@@ -29,39 +29,39 @@ export const DSH_SURFACE_MAP = [
   {
     surface: "app-partner",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "runtime-verified",
+    implementationState: "fix-required",
     dependencyRole: "downstream",
     dependencyNotes: [
       "Partner readiness and catalog readiness affect future store visibility.",
-      "DSH-001 implements Store-only readiness UI; catalog and orders remain excluded.",
+      "DSH-001 requires authenticated own-store operations; catalog and orders remain excluded.",
     ],
     firstExecutableSlices: ["DSH-003", "DSH-006", "DSH-008"],
   },
   {
     surface: "app-captain",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "runtime-verified",
+    implementationState: "fix-required",
     dependencyRole: "none-for-dsh-001",
     dependencyNotes: [
       "Captain interaction starts with assignment, pickup, and delivery.",
-      "DSH-001 implements read-only pickup context; delivery lifecycle remains excluded.",
+      "DSH-001 requires pickup-point readiness reporting; delivery lifecycle remains excluded.",
     ],
     firstExecutableSlices: ["DSH-007"],
   },
   {
     surface: "app-field",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "runtime-verified",
+    implementationState: "fix-required",
     dependencyRole: "upstream",
     dependencyNotes: [
       "Field onboarding and visit evidence can qualify stores for approval.",
-      "DSH-001 implements Store-only verification context; field workflow remains excluded.",
+      "DSH-001 requires assigned-store verification submission; broader field workflow remains excluded.",
     ],
     firstExecutableSlices: ["DSH-008"],
   },
   {
     surface: "control-panel",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "runtime-verified",
+    implementationState: "fix-required",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];

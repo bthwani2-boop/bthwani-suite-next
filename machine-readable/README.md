@@ -23,14 +23,12 @@ This directory is a compact, authoritative, AI-readable governance layer for all
 | `execution-status.json` | Per-Topic execution status, blockers, next allowed actions, evidence quality notes |
 | `README.md` | This file |
 
-## Guard-Required Files (DO NOT DELETE OR RENAME)
+## Guard-Required Supporting Files (DO NOT DELETE OR RENAME)
 
 These files are read directly by active guard scripts and must remain in place. They are documented in `governance.json#additional_file_justification`.
 
 | File | Guard(s) |
 | ---- | -------- |
-| `slice_execution_master_matrix_v3.csv` | `guard-slice-master-matrix-v3.mjs`, `performance-runtime-baseline.mjs` |
-| `slice_execution_master_matrix.csv` | `guard-slice-master-matrix-v2.mjs` |
 | `control-panel-design/control_panel_design_gate.json` | `control-panel-design-gate.mjs`, `app-shell-control-panel-contract-gate.mjs` |
 | `control-panel-design/control_panel_section_archetypes.json` | same |
 | `control-panel-design/control_panel_service_ownership_matrix.json` | same |
@@ -67,7 +65,7 @@ A Topic is NOT a single screen, a UI component, or a technical wiring proof.
 
 Every required surface must show all required states with visual evidence:
 
-**Required surfaces:** loading, success, empty, error, permission_denied
+**Required surfaces:** states explicitly declared by the Topic. Authenticated surfaces normally require loading, success, empty, error, and permission_denied. Public read surfaces use service_unavailable/offline instead of a fabricated permission state.
 **Read-only surfaces:** loading, success, error
 
 What does NOT count as closure:
@@ -96,7 +94,7 @@ WLT is the sole owner of financial truth:
 
 **Machine-readable result:** `MACHINE_READABLE_FIX_REQUIRED`
 
-The governance package now reports DSH-001 truthfully, but repository-wide foundation and slice gates remain blocked because `tools/guards/performance-runtime-baseline.mjs` requires the absent `machine-readable/slice_execution_master_matrix_v3.csv`. This task does not fabricate or restore that matrix.
+The retired CSV matrices are no longer guard dependencies. Matrix v3 compatibility and the performance baseline validate canonical JSON. DSH-001 remains `FIX_REQUIRED`: all five surfaces are required, only 5 of 25 state screenshots currently match the evidence contract, and authenticated store-domain actions are not implemented.
 
 | Topic | Status | Notes |
 | ----- | ------ | ----- |
@@ -119,7 +117,7 @@ If any JSON file conflicts with actual code or evidence:
 
 Date: 2026-06-22
 Branch: starting-implementing-slices
-Head at audit: f40ef7362a459cfe058919ab37a47816e738a3be
+Head at audit: d422caf7c6bec356305ff375863965e25295f202 (implementation baseline; refresh after verification)
 New repo local: C:\bthwani-suite-next
 Donor repo local: C:\bthwani-suite (READ ONLY, branch: realtest)
 Standard applied: REAL_EXPERIENCE_CLOSURE_v2

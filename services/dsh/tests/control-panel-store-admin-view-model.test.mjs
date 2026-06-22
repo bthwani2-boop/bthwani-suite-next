@@ -109,7 +109,7 @@ describe("toAdminDetail", () => {
     assert.equal(detail.isPopular, true);
   });
 
-  test("no mutation actions in detail — read-only shape", () => {
+  test("detail view-model contains no mutation callbacks; actions belong to the controller contract", () => {
     const detail = toAdminDetail(makeDetailDto());
     assert.equal("createStore" in detail, false);
     assert.equal("editStore" in detail, false);

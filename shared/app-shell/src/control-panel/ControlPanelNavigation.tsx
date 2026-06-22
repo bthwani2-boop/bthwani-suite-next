@@ -29,7 +29,7 @@ export function ControlPanelNavigation({
   return (
     <nav
       dir={dir}
-      style={{ display: "flex", flexDirection: "column", height: "100%" }}
+      style={{ display: "flex", flexDirection: "column", height: "100%", padding: "1rem 0.75rem" }}
       aria-label="قائمة لوحة التحكم"
     >
       {header != null ? <div style={{ flexShrink: 0 }}>{header}</div> : null}
@@ -46,10 +46,17 @@ export function ControlPanelNavigation({
                 display: "flex",
                 alignItems: "center",
                 width: "100%",
-                background: "none",
-                border: "none",
+                gap: "0.625rem",
+                padding: "0.75rem 0.875rem",
+                borderRadius: "0.75rem",
+                background:
+                  activeSection === item.section
+                    ? "color-mix(in srgb, currentColor 10%, transparent)"
+                    : "transparent",
+                border: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
                 cursor: (item.disabled ?? false) ? "not-allowed" : "pointer",
                 textAlign: "inherit",
+                fontWeight: activeSection === item.section ? 700 : 500,
               }}
             >
               {item.icon != null ? <span aria-hidden="true">{item.icon}</span> : null}

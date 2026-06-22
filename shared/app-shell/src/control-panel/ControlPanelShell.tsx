@@ -25,13 +25,30 @@ export function ControlPanelShell({
   return (
     <div
       dir={dir}
-      style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
+        background: "Canvas",
+        color: "CanvasText",
+      }}
     >
       {serviceContext}
       <div style={{ flexShrink: 0 }}>{topBar}</div>
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <div style={{ flexShrink: 0, overflowY: "auto" }}>{navigation}</div>
-        <main style={{ flex: 1, overflowY: "auto" }}>{main}</main>
+      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <div
+          style={{
+            width: "15rem",
+            flexShrink: 0,
+            overflowY: "auto",
+            borderInlineEnd: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+            background: "color-mix(in srgb, currentColor 3%, Canvas)",
+          }}
+        >
+          {navigation}
+        </div>
+        <main style={{ flex: 1, minWidth: 0, overflowY: "auto", background: "Canvas" }}>{main}</main>
         {sidePanel != null ? (
           <div style={{ flexShrink: 0, overflowY: "auto" }}>{sidePanel}</div>
         ) : null}

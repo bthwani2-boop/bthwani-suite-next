@@ -18,6 +18,15 @@
 
   "contradictions_resolved": [
     {
+      "id": "CONTRADICTION-005",
+      "file_with_error": "services/dsh/service.manifest.ts + capability-map.ts + runtime-map.ts + surface-map.ts",
+      "field": "DSH-001 closure and per-surface implementation state",
+      "stale_claim": "RUNTIME_VERIFIED",
+      "actual_state": "FIX_REQUIRED — technical GET wiring exists, but partner, field, captain, and control-panel experiences are not complete or actionable",
+      "proof": "Current API contract exposes listDshStores/getDshStore only; current evidence has 6 of 18 required screenshots.",
+      "resolution": "FIXED — service and surface maps now report FIX_REQUIRED/fix-required while preserving technical runtime truth."
+    },
+    {
       "id": "CONTRADICTION-001",
       "file_with_error": "machine-readable/dsh-wlt/dsh_wlt_status.json",
       "field": "wlt_boundary.backend, wlt_boundary.database, wlt_boundary.frontend",
@@ -66,7 +75,7 @@
       "surface": "system",
       "control_panel_section": null,
       "evidence_type": "GATE_OUTPUT",
-      "status": "PRESENT",
+      "status": "PRESENT_BUT_BLOCKING_GAPS",
       "contents": ["foundation-gate.txt", "contracts-lint.txt", "guard-matrix-v3.txt", "runtime-all.txt", "runtime-status.txt"],
       "last_verified_source": "git commit 06e64cf",
       "command_used": "pnpm run foundation:gate",
@@ -112,52 +121,49 @@
       "last_verified_source": "git commit 06e64cf",
       "command_used": "pnpm run foundation:gate && pnpm run slice:gate && pnpm --dir services/dsh test",
       "supports_claims": [
-        "DSH-001 TECHNICAL_WIRING_VERIFIED across all 5 surfaces",
-        "118/118 tests PASS",
-        "All guards PASS",
+        "DSH-001 technical GET wiring exists across all 5 surfaces",
         "Real API data (6 stores from DB)",
-        "Control-panel has success + error + detail screenshots",
-        "All mobile surfaces have success screenshots"
+        "Existing screenshots prove only partial success/error rendering"
       ],
       "required_states": {
-        "app-client": ["loading", "success", "empty", "error", "permission_denied"],
-        "control-panel": ["loading", "success", "empty", "error"],
-        "app-partner": ["loading", "success", "error"],
-        "app-field": ["loading", "success", "error"],
-        "app-captain": ["loading", "success", "error"]
+        "app-client": ["loading", "success", "empty", "error", "service_unavailable"],
+        "control-panel": ["loading", "success", "empty", "error", "permission_denied"],
+        "app-partner": ["loading", "success", "empty", "error", "permission_denied"],
+        "app-field": ["loading", "success", "empty", "error", "permission_denied"],
+        "app-captain": ["loading", "success", "empty", "error", "permission_denied"]
       },
       "existing_screenshots": [
         "app-client:success",
         "control-panel:success",
-        "control-panel:error",
-        "control-panel:detail",
         "app-partner:success",
         "app-field:success",
         "app-captain:success"
       ],
       "missing_screenshots": [
-        "app-client:loading", "app-client:empty", "app-client:error", "app-client:permission_denied",
-        "control-panel:loading", "control-panel:empty",
-        "app-partner:loading", "app-partner:error",
-        "app-field:loading", "app-field:error",
-        "app-captain:loading", "app-captain:error"
+        "app-client:loading", "app-client:empty", "app-client:error", "app-client:service_unavailable",
+        "control-panel:loading", "control-panel:empty", "control-panel:error", "control-panel:permission_denied",
+        "app-partner:loading", "app-partner:empty", "app-partner:error", "app-partner:permission_denied",
+        "app-field:loading", "app-field:empty", "app-field:error", "app-field:permission_denied",
+        "app-captain:loading", "app-captain:empty", "app-captain:error", "app-captain:permission_denied"
       ],
       "missing_manual_navigation": [],
       "missing_runtime_state_proof": [
-        "app-client loading/empty/error/permission_denied",
-        "control-panel loading/empty",
-        "app-partner loading/error",
-        "app-field loading/error",
-        "app-captain loading/error"
+        "app-client loading/empty/error/service_unavailable",
+        "control-panel loading/empty/error/permission_denied",
+        "app-partner loading/empty/error/permission_denied",
+        "app-field loading/empty/error/permission_denied",
+        "app-captain loading/empty/error/permission_denied",
+        "partner/field/captain/control-panel store-domain mutation flows are not implemented",
+        "authentication, authorization, idempotency, and audit proof for store mutations is absent"
       ],
       "blocks_closure": true,
-      "blocking_reason": "Required REAL_EXPERIENCE_CLOSURE_v2 states are not screenshot-verified for every required and read-only surface.",
+      "blocking_reason": "Required REAL_EXPERIENCE_CLOSURE_v2 states are not screenshot-verified, and four actor experiences remain non-actionable GET-only surfaces.",
       "contradictions": "The prior RUNTIME_VERIFIED claim conflicts with the current closure standard.",
       "evidence_quality_gap": "BLOCKING_GAP_UNDER_REAL_EXPERIENCE_CLOSURE_v2",
       "ci_status": "CI_NOT_CONFIGURED",
-      "test_result": "118/118 tests PASS, 0 failures",
+      "test_result": "121/121 tests PASS, 0 failures",
       "api_result": "GET /dsh/stores → 6 stores; GET /dsh/stores/{id} → store-1005 detail",
-      "required_update": "MANDATORY — capture every missing required state, resolve in-scope design debt, and regenerate this evidence entry before closure."
+      "required_update": "MANDATORY — approve and implement bounded store-domain actions with auth/audit proof, capture every required state, visually verify the app-shell remediation, and regenerate this evidence entry before closure."
     },
 
     "DSH-001_STORE_DISCOVERY_INITIAL": {
@@ -355,20 +361,19 @@
 
     "MATRIX_V3": {
       "evidence_id": "MATRIX-V3-001",
-      "path": "machine-readable/slice_execution_master_matrix_v3.csv",
+      "path": "machine-readable/architecture-map.json + machine-readable/topic-registry.json + machine-readable/governance.json",
       "topic_id": "ALL",
       "service": "system",
       "surface": "system",
       "control_panel_section": null,
-      "evidence_type": "SLICE_MATRIX",
+      "evidence_type": "CANONICAL_JSON_GOVERNANCE",
       "status": "PRESENT",
       "guard_reads_this": ["guard-slice-master-matrix-v3.mjs", "performance-runtime-baseline.mjs"],
       "do_not_delete": true,
-      "classification": "LEGACY_GUARD_DEPENDENCY",
-      "rows_verified": ">= 1150 (guard checks this)",
-      "supports_claims": ["GUARD_MATRIX_V3 PASS — all required artifacts tracked"],
-      "contradictions": "NONE",
-      "required_update": "NONE — guard validates automatically"
+      "classification": "CANONICAL_JSON",
+      "supports_claims": ["GUARD_MATRIX_V3 validates Topic completeness, ownership, lifecycle policies, and performance policy contracts"],
+      "contradictions": "Retired CSV references removed from active guards.",
+      "required_update": "Keep canonical JSON and guards synchronized."
     },
 
     "CONTROL_PANEL_DESIGN_FILES": {

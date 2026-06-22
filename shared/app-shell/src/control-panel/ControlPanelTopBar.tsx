@@ -24,7 +24,17 @@ export function ControlPanelTopBar({
   return (
     <header
       dir={dir}
-      style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "1rem",
+        minHeight: "4rem",
+        padding: "0.75rem 1.5rem",
+        flexShrink: 0,
+        borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+        boxShadow: "0 0.25rem 1rem rgba(0, 0, 0, 0.05)",
+        background: "Canvas",
+      }}
     >
       {logo != null ? <div style={{ flexShrink: 0 }}>{logo}</div> : null}
       {title != null ? <div style={{ flexShrink: 0 }}>{title}</div> : null}

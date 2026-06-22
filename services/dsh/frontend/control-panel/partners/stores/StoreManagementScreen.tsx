@@ -1,6 +1,6 @@
 "use client";
 
-import { DataTablePageFrame, PaginationToolbar } from "@bthwani/app-shell";
+import { CpPageHeader, DataTablePageFrame, PaginationToolbar } from "@bthwani/app-shell";
 import { useStoreAdminController } from "../../../shared/store";
 import { StoreAdminKpiStrip } from "./StoreAdminKpiStrip";
 import { StoreAdminFilters } from "./StoreAdminFilters";
@@ -15,12 +15,9 @@ export function StoreManagementScreen() {
     <DataTablePageFrame
       dir="rtl"
       header={
-        <div style={{ padding: "1rem 1rem 0" }}>
-          <h1 style={{ margin: "0 0 0.5rem", fontSize: "1.25rem", fontWeight: 700 }}>
-            إدارة المتاجر
-          </h1>
+        <CpPageHeader title="إدارة المتاجر">
           {c.kpi !== null && <StoreAdminKpiStrip kpi={c.kpi} />}
-        </div>
+        </CpPageHeader>
       }
       filters={<StoreAdminFilters filters={c.filters} onChange={c.setFilters} />}
       toolbar={

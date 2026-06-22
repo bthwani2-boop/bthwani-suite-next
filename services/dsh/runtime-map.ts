@@ -5,7 +5,7 @@ export type DshRuntimeBinding = {
   readonly contractOperations?: readonly string[];
   readonly backendImplemented: boolean;
   readonly runtimeEvidence: string | null;
-  readonly state: "blocked" | "verified" | "client-reverified-only";
+  readonly state: "blocked" | "verified" | "experience-fix-required" | "client-reverified-only";
   readonly runtimeBound?: boolean;
   readonly screensReady?: boolean;
   readonly databaseReady?: boolean;
@@ -25,7 +25,7 @@ export const DSH_RUNTIME_MAP = [
     contractOperations: ["listDshStores", "getDshStore"],
     backendImplemented: true,
     runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
-    state: "verified",
+    state: "experience-fix-required",
   },
   {
     capabilityId: "dsh.client.home-discovery",

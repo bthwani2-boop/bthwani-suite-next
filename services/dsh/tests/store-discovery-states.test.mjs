@@ -56,3 +56,43 @@ describe("successState", () => {
     assert.equal(s.offset, 20);
   });
 });
+
+describe("store discovery API state classification", async () => {
+  const {
+    classifyStoreDiscoveryError,
+    normalizeStoreListResponse,
+  } = await import("../dist/frontend/shared/store/store-discovery.api.js");
+
+  test("maps an empty first page to empty", () => {
+    const state = normalizeStoreListResponse({
+      stores: [],
+      pagination: { total: 0, limit: 20, offset: 0 },
+    });
+    assert.equal(state.kind, "empty");
+  });
+
+  test("maps network and 503 failures to service_unavailable", () => {
+    assert.equal(
+      classifyStoreDiscoveryError({ kind: "network", message: "ECONNREFUSED" }).kind,
+      "service_unavailable",
+    );
+    assert.equal(
+      classifyStoreDiscoveryError({ kind: "http", status: 503 }).kind,
+      "service_unavailable",
+    );
+  });
+
+  test("keeps contract and non-503 HTTP failures as error", () => {
+    assert.equal(
+      classifyStoreDiscoveryError({ kind: "http", status: 500 }).kind,
+      "error",
+    );
+    assert.equal(
+      normalizeStoreListResponse({
+        stores: [{}],
+        pagination: { total: 1, limit: 20, offset: 0 },
+      }).kind,
+      "error",
+    );
+  });
+});

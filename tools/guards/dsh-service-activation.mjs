@@ -56,8 +56,9 @@ const runtimeMap = fs.existsSync(path.join(repoRoot, "services/dsh/runtime-map.t
   ? read("services/dsh/runtime-map.ts")
   : "";
 const verified = /closureState:\s*["']RUNTIME_VERIFIED["']/.test(manifest);
+const experienceFixRequired = /closureState:\s*["']FIX_REQUIRED["']/.test(manifest);
 
-if (verified) {
+if (verified || experienceFixRequired) {
   const evidenceDirectory =
     "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface";
   const requiredEvidence = [
@@ -93,7 +94,6 @@ if (verified) {
     "backendRuntimeReady",
     "generatedClientReady",
     "databaseReady",
-    "screensReady",
   ]) {
     if (!new RegExp(`\\b${field}:\\s*true\\b`).test(manifest)) {
       violations.push({
@@ -102,16 +102,24 @@ if (verified) {
       });
     }
   }
-  if (!/id:\s*["']dsh\.store\.discovery["'][\s\S]*runtimeBound:\s*true[\s\S]*closureState:\s*["']RUNTIME_VERIFIED["']/.test(capabilityMap)) {
+  const expectedClosureState = verified ? "RUNTIME_VERIFIED" : "FIX_REQUIRED";
+  if (!new RegExp(`id:\\s*["']dsh\\.store\\.discovery["'][\\s\\S]*runtimeBound:\\s*true[\\s\\S]*closureState:\\s*["']${expectedClosureState}["']`).test(capabilityMap)) {
     violations.push({
       file: "services/dsh/capability-map.ts",
-      message: "Store Discovery must be runtime-bound and runtime-verified",
+      message: `Store Discovery must be runtime-bound with closureState ${expectedClosureState}`,
     });
   }
-  if (!/capabilityId:\s*["']dsh\.store\.discovery["'][\s\S]*backendImplemented:\s*true[\s\S]*runtimeEvidence:\s*["']services\/dsh\/evidence\/DSH-001-store-discovery-fullstack-multi-surface["'][\s\S]*state:\s*["']verified["']/.test(runtimeMap)) {
+  const expectedRuntimeState = verified ? "verified" : "experience-fix-required";
+  if (!new RegExp(`capabilityId:\\s*["']dsh\\.store\\.discovery["'][\\s\\S]*backendImplemented:\\s*true[\\s\\S]*runtimeEvidence:\\s*["']services\\/dsh\\/evidence\\/DSH-001-store-discovery-fullstack-multi-surface["'][\\s\\S]*state:\\s*["']${expectedRuntimeState}["']`).test(runtimeMap)) {
     violations.push({
       file: "services/dsh/runtime-map.ts",
-      message: "Store Discovery runtime map must point to verified evidence",
+      message: `Store Discovery runtime map must point to evidence with state ${expectedRuntimeState}`,
+    });
+  }
+  if (experienceFixRequired && !/\bscreensReady:\s*false\b/.test(manifest)) {
+    violations.push({
+      file: "services/dsh/service.manifest.ts",
+      message: "screensReady must remain false while DSH-001 is FIX_REQUIRED",
     });
   }
   const crossSurfaceMap =

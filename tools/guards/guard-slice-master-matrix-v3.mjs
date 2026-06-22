@@ -149,7 +149,10 @@ if (execSt) {
 // 11. No Topics specifying control-panel without naming sections
 if (topicReg) {
   const topicsObj = topicReg.topics || topicReg;
-  const topics = Array.isArray(topicsObj) ? topicsObj : Object.values(topicsObj);
+  const topicEntries = Array.isArray(topicsObj)
+    ? topicsObj.map((topic) => [topic.topic_id, topic])
+    : Object.entries(topicsObj);
+  const topics = topicEntries.map(([, topic]) => topic);
   const cpWithoutSection = topics.filter(t =>
     t && Array.isArray(t.required_surfaces) &&
     t.required_surfaces.includes('control-panel') &&
@@ -160,6 +163,77 @@ if (topicReg) {
   } else {
     console.log(`Control-panel section naming: all topics with CP surface have section named ✓`);
   }
+
+  const requiredTopicFields = [
+    'required_surfaces',
+    'optional_surfaces',
+    'read_only_surfaces',
+    'forbidden_surfaces',
+    'primary_control_panel_section',
+    'secondary_control_panel_sections',
+    'read_only_control_panel_sections',
+    'forbidden_control_panel_sections',
+    'states_required',
+    'evidence_required',
+  ];
+  const allowedSurfaces = new Set([
+    'system',
+    'app-client',
+    'app-partner',
+    'app-captain',
+    'app-field',
+    'control-panel',
+    'webapp',
+    'website',
+  ]);
+
+  for (const [topicId, topic] of topicEntries) {
+    for (const field of requiredTopicFields) {
+      if (!(field in topic)) {
+        err(`CRITICAL: ${topicId} missing required Topic field ${field}`);
+      }
+    }
+    if (!Array.isArray(topic.required_surfaces) || topic.required_surfaces.length === 0) {
+      err(`CRITICAL: ${topicId} required_surfaces must not be empty`);
+    }
+    if (!topic.states_required || Object.keys(topic.states_required).length === 0) {
+      err(`CRITICAL: ${topicId} states_required must not be empty`);
+    }
+    if (!Array.isArray(topic.evidence_required) || topic.evidence_required.length === 0) {
+      err(`CRITICAL: ${topicId} evidence_required must not be empty`);
+    }
+    for (const surface of [
+      ...(topic.required_surfaces ?? []),
+      ...(topic.optional_surfaces ?? []),
+      ...(topic.forbidden_surfaces ?? []),
+    ]) {
+      const surfaceName = surface.split(' ')[0];
+      if (!allowedSurfaces.has(surfaceName)) {
+        err(`CRITICAL: ${topicId} declares unsupported surface ${surface}`);
+      }
+    }
+    for (const surface of topic.required_surfaces ?? []) {
+      const stateKeys = Object.keys(topic.states_required ?? {});
+      const normalized = surface.replaceAll('-', '_');
+      const hasStateContract =
+        stateKeys.includes(normalized) ||
+        stateKeys.some((key) => key.startsWith(`${normalized}_`));
+      if (!hasStateContract) {
+        err(`CRITICAL: ${topicId} required surface ${surface} has no matching states_required entry`);
+      }
+    }
+    for (const readOnlySurface of topic.read_only_surfaces ?? []) {
+      const surface = readOnlySurface.split(' ')[0];
+      const normalized = surface.replaceAll('-', '_');
+      const hasStateContract = Object.keys(topic.states_required ?? {}).some(
+        (key) => key === normalized || key.startsWith(`${normalized}_`),
+      );
+      if (!hasStateContract) {
+        err(`CRITICAL: ${topicId} read-only surface ${surface} has no matching states_required entry`);
+      }
+    }
+  }
+  console.log(`Topic registry completeness: ${topicEntries.length} topics checked ✓`);
 }
 
 // 12. DSH financial ownership violations
@@ -190,22 +264,43 @@ if (leakedWltStates.length > 0) {
   console.log('DSH financial ownership violations: 0 ✓');
 }
 
-// 13. DSH-001 screenshot evidence still present
+// 13. DSH-001 real-experience status must match screenshot coverage.
 const DSH001_SCREENSHOTS = join(ROOT, 'services', 'dsh', 'evidence', 'DSH-001-store-discovery-fullstack-multi-surface', 'screenshots');
 const REQUIRED_SCREENSHOTS = [
   'app-client-store-discovery-reverify.png',
+  'app-client-store-discovery-loading.png',
+  'app-client-store-discovery-empty.png',
+  'app-client-store-discovery-error.png',
+  'app-client-store-discovery-service-unavailable.png',
   'control-panel-stores-admin-success.png',
+  'control-panel-stores-admin-loading.png',
+  'control-panel-stores-admin-empty.png',
+  'control-panel-stores-admin-error.png',
+  'control-panel-stores-admin-permission-denied.png',
   'app-partner-store-context.png',
+  'app-partner-store-context-loading.png',
+  'app-partner-store-context-empty.png',
+  'app-partner-store-context-error.png',
+  'app-partner-store-context-permission-denied.png',
   'app-field-store-verification.png',
-  'app-captain-store-pickup-context.png'
+  'app-field-store-verification-loading.png',
+  'app-field-store-verification-empty.png',
+  'app-field-store-verification-error.png',
+  'app-field-store-verification-permission-denied.png',
+  'app-captain-store-pickup-context.png',
+  'app-captain-store-pickup-context-loading.png',
+  'app-captain-store-pickup-context-empty.png',
+  'app-captain-store-pickup-context-error.png',
+  'app-captain-store-pickup-context-permission-denied.png'
 ];
-for (const shot of REQUIRED_SCREENSHOTS) {
-  if (!existsSync(join(DSH001_SCREENSHOTS, shot))) {
-    err(`CRITICAL: DSH-001 required screenshot missing: ${shot}`);
-  }
-}
-if (errors.filter(e => e.includes('screenshot')).length === 0) {
-  console.log(`DSH-001 screenshots: ${REQUIRED_SCREENSHOTS.length}/5 present ✓`);
+const missingDsh001Screenshots = REQUIRED_SCREENSHOTS.filter(
+  (shot) => !existsSync(join(DSH001_SCREENSHOTS, shot)),
+);
+const dsh001Status = execSt?.topics?.['DSH-001']?.current_status;
+if (missingDsh001Screenshots.length > 0 && dsh001Status !== 'FIX_REQUIRED') {
+  err(`CRITICAL: DSH-001 has ${missingDsh001Screenshots.length} missing real-experience screenshots but status is ${dsh001Status}`);
+} else {
+  console.log(`DSH-001 screenshot coverage: ${REQUIRED_SCREENSHOTS.length - missingDsh001Screenshots.length}/${REQUIRED_SCREENSHOTS.length}; status=${dsh001Status} ✓`);
 }
 
 // 14. WLT boundary integrity

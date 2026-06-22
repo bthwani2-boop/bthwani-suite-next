@@ -3,6 +3,7 @@ export const DSH_CAPABILITY_STATUS = [
   "planned",
   "blocked-runtime",
   "runtime-verified",
+  "experience-fix-required",
 ] as const;
 
 export type DshCapabilityStatus = (typeof DSH_CAPABILITY_STATUS)[number];
@@ -19,6 +20,7 @@ export type DshCapability = {
     | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
     | "NOT_APPROVED_YET"
     | "RUNTIME_VERIFIED"
+    | "FIX_REQUIRED"
     | "CLIENT_REVERIFIED_ONLY"
     | "CONTROL_PANEL_NOT_STARTED"
     | "TOPIC_CLOSURE_NOT_APPROVED";
@@ -48,7 +50,7 @@ export const DSH_CAPABILITY_MAP = [
   },
   {
     id: "dsh.store.discovery",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: ["listDshStores", "getDshStore"],
     surfaces: [
       "app-client",
@@ -58,7 +60,7 @@ export const DSH_CAPABILITY_MAP = [
       "app-captain",
     ],
     runtimeBound: true,
-    closureState: "RUNTIME_VERIFIED",
+    closureState: "FIX_REQUIRED",
     topic: "stores",
     topicScope: ["discovery", "governance", "readiness", "verification", "pickup-context"],
   },

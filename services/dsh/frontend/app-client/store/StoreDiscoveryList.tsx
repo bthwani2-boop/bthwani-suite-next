@@ -1,6 +1,6 @@
 import React from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { LoadingState } from "@bthwani/ui-kit";
+import { LoadingState, OfflineState } from "@bthwani/ui-kit";
 import { StoreDiscoveryCard } from "./StoreDiscoveryCard";
 import { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState";
 import { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";
@@ -32,9 +32,11 @@ export function StoreDiscoveryList({
 
   if (state.kind === "service_unavailable") {
     return (
-      <StoreDiscoveryErrorState
-        message="الخدمة غير متاحة حالياً. يرجى المحاولة لاحقاً."
-        onRetry={onRetry}
+      <OfflineState
+        title="تعذر الوصول إلى المتاجر"
+        description="تحقق من الاتصال أو أعد المحاولة بعد عودة خدمة DSH."
+        actionLabel="إعادة المحاولة"
+        onActionPress={onRetry}
       />
     );
   }

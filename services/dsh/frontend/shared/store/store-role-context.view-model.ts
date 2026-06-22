@@ -14,12 +14,19 @@ export type PartnerStoreContextViewModel = {
   readonly operatingLabel: string;
   readonly visibilityLabel: string;
   readonly catalogReadinessSummary: string;
+  readonly readinessPercent: number;
+  readonly attentionCount: number;
+  readonly serviceModesLabel: string;
+  readonly nextAction: string;
 };
 
 export type FieldStoreContextViewModel = {
   readonly store: DshStoreAdminDetail;
   readonly checks: readonly StoreReadinessCheck[];
   readonly verificationSummary: string;
+  readonly readinessPercent: number;
+  readonly attentionChecks: readonly StoreReadinessCheck[];
+  readonly recommendation: string;
 };
 
 export type CaptainStoreContextViewModel = {
@@ -28,12 +35,18 @@ export type CaptainStoreContextViewModel = {
   readonly pickupLabel: string;
   readonly locationLabel: string;
   readonly operatingLabel: string;
+  readonly serviceModesLabel: string;
+  readonly estimatedWindowLabel: string;
+  readonly pickupChecks: readonly StoreReadinessCheck[];
+  readonly pickupInstruction: string;
 };
 
 export function toPartnerStoreContext(
   store: DshStoreAdminDetail,
 ): PartnerStoreContextViewModel {
   const checks = createReadinessChecks(store);
+  const readyCount = checks.filter((check) => check.ready).length;
+  const attentionCount = checks.length - readyCount;
   return {
     store,
     checks,
@@ -42,6 +55,13 @@ export function toPartnerStoreContext(
     catalogReadinessSummary: checks.every((check) => check.ready)
       ? "بيانات المتجر جاهزة للربط بكتالوج لاحق"
       : "يلزم استكمال بيانات المتجر قبل ربط الكتالوج",
+    readinessPercent: Math.round((readyCount / checks.length) * 100),
+    attentionCount,
+    serviceModesLabel: store.deliveryModes.join("، ") || "لا توجد طرق خدمة مفعلة",
+    nextAction:
+      attentionCount === 0
+        ? "حافظ على البيانات محدثة وراجع ظهور المتجر للعملاء."
+        : `راجع ${attentionCount} عناصر غير مكتملة قبل توسيع تشغيل المتجر.`,
   };
 }
 
@@ -54,6 +74,12 @@ export function toFieldStoreContext(
     store,
     checks,
     verificationSummary: `${readyCount} من ${checks.length} عناصر تحقق جاهزة`,
+    readinessPercent: Math.round((readyCount / checks.length) * 100),
+    attentionChecks: checks.filter((check) => !check.ready),
+    recommendation:
+      readyCount === checks.length
+        ? "البيانات الحالية متسقة ويمكن رفع نتيجة التحقق للجهة المالكة في DSH-008 عند اعتماده."
+        : "وثّق العناصر الناقصة ولا تعتبر المتجر جاهزًا قبل استكمالها في مسار DSH-008 المعتمد.",
   };
 }
 
@@ -61,6 +87,26 @@ export function toCaptainStoreContext(
   store: DshStoreAdminDetail,
 ): CaptainStoreContextViewModel {
   const pickupEnabled = store.deliveryModes.includes("pickup");
+  const pickupChecks: readonly StoreReadinessCheck[] = [
+    {
+      id: "store-open",
+      label: "حالة المتجر",
+      ready: store.isOpen,
+      detail: store.isOpen ? "المتجر مفتوح حاليًا" : "المتجر غير متاح حاليًا",
+    },
+    {
+      id: "pickup-mode",
+      label: "خدمة الاستلام",
+      ready: pickupEnabled,
+      detail: pickupEnabled ? "الاستلام مفعل" : "الاستلام غير مفعل",
+    },
+    {
+      id: "serviceability",
+      label: "قابلية الخدمة",
+      ready: store.isServiceable,
+      detail: store.isServiceable ? "الموقع قابل للخدمة" : "الموقع خارج الخدمة",
+    },
+  ];
   return {
     store,
     pickupEnabled,
@@ -69,6 +115,16 @@ export function toCaptainStoreContext(
       : "الاستلام من المتجر غير متاح",
     locationLabel: formatServiceArea(store.cityCode, store.serviceAreaCode),
     operatingLabel: store.isOpen ? "مفتوح للاستلام" : "غير متاح للاستلام",
+    serviceModesLabel: store.deliveryModes.join("، ") || "غير محددة",
+    estimatedWindowLabel:
+      store.deliveryEtaMin !== null && store.deliveryEtaMax !== null
+        ? `${store.deliveryEtaMin}–${store.deliveryEtaMax} دقيقة`
+        : "غير محدد",
+    pickupChecks,
+    pickupInstruction:
+      pickupChecks.every((check) => check.ready)
+        ? "راجع هوية المتجر وموقعه قبل الوصول. تأكيد الاستلام يبدأ فقط من دورة DSH-007 المعتمدة."
+        : "لا تبدأ الاستلام. توجد قيود تشغيلية يجب أن يعالجها المشغل قبل دورة التوصيل.",
   };
 }
 

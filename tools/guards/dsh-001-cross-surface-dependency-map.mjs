@@ -43,6 +43,9 @@ if (!existsSync(MAP_PATH)) {
     "no_orders",
     "no_full_catalog",
     "no_finance",
+    "store_domain_actions_required",
+    "authentication_authorization_required",
+    "idempotency_and_audit_required",
   ]) {
     if (map.invariants?.[invariant] !== true) {
       errors.push(`invariant ${invariant} must be true`);
@@ -52,7 +55,7 @@ if (!existsSync(MAP_PATH)) {
 
 const capabilityMap = readFileSync(CAPABILITY_MAP_PATH, "utf8");
 const storeBlock =
-  /id:\s*["']dsh\.store\.discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.exec(
+  /id:\s*["']dsh\.store\.discovery["'][\s\S]*?closureState:\s*["'](?:RUNTIME_VERIFIED|FIX_REQUIRED)["']/.exec(
     capabilityMap,
   )?.[0] ?? "";
 for (const surface of SURFACES) {
@@ -63,9 +66,10 @@ for (const surface of SURFACES) {
 
 const surfaceMap = readFileSync(SURFACE_MAP_PATH, "utf8");
 for (const surface of SURFACES) {
+  const expectedState = surface === "app-client" ? "runtime-verified" : "fix-required";
   const block =
     new RegExp(
-      `surface:\\s*["']${surface}["'][\\s\\S]*?implementationState:\\s*["']runtime-verified["']`,
+      `surface:\\s*["']${surface}["'][\\s\\S]*?implementationState:\\s*["']${expectedState}["']`,
     ).exec(surfaceMap)?.[0] ?? "";
   if (!/dsh\.store\.discovery/.test(block)) {
     errors.push(`${surface} must consume dsh.store.discovery`);
@@ -122,12 +126,30 @@ const requiredFiles = [
 
 const requiredScreenshots = [
   "app-client-store-discovery-reverify.png",
+  "app-client-store-discovery-loading.png",
+  "app-client-store-discovery-empty.png",
+  "app-client-store-discovery-error.png",
+  "app-client-store-discovery-service-unavailable.png",
   "control-panel-stores-admin-success.png",
-  "control-panel-store-detail-panel.png",
-  "control-panel-error-or-service-unavailable.png",
+  "control-panel-stores-admin-loading.png",
+  "control-panel-stores-admin-empty.png",
+  "control-panel-stores-admin-error.png",
+  "control-panel-stores-admin-permission-denied.png",
   "app-partner-store-context.png",
+  "app-partner-store-context-loading.png",
+  "app-partner-store-context-empty.png",
+  "app-partner-store-context-error.png",
+  "app-partner-store-context-permission-denied.png",
   "app-field-store-verification.png",
+  "app-field-store-verification-loading.png",
+  "app-field-store-verification-empty.png",
+  "app-field-store-verification-error.png",
+  "app-field-store-verification-permission-denied.png",
   "app-captain-store-pickup-context.png",
+  "app-captain-store-pickup-context-loading.png",
+  "app-captain-store-pickup-context-empty.png",
+  "app-captain-store-pickup-context-error.png",
+  "app-captain-store-pickup-context-permission-denied.png",
 ];
 
 for (const f of requiredFiles) {

@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "head_at_verification": "f40ef7362a459cfe058919ab37a47816e738a3be",
+  "head_at_verification": "d422caf7c6bec356305ff375863965e25295f202",
   "evaluation_standard": "REAL_EXPERIENCE_CLOSURE_v2",
   "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure. NOT_AVAILABLE_WITH_REASON documents gates that are inapplicable without counting them as failures.",
 
@@ -63,7 +63,7 @@
       "required_before": "ANY_DSH_SLICE",
       "current_status": "PASS",
       "last_verified": "2026-06-22",
-      "evidence": "tools/registry/runs/FOUNDATION-GATE-20260622-181127"
+      "evidence": "tools/registry/runs/FOUNDATION-GATE-20260622-210921"
     },
     "CONTRACTS_LINT_GATE": {
       "command": "pnpm contracts:lint",
@@ -76,11 +76,17 @@
     "GUARD_MATRIX_V3": {
       "command": "pnpm run guard:matrix:v3",
       "script": "tools/guards/guard-slice-master-matrix-v3.mjs",
-      "reads_file": "machine-readable/slice_execution_master_matrix_v3.csv",
+      "reads_files": [
+        "machine-readable/architecture-map.json",
+        "machine-readable/dsh-wlt-boundary.json",
+        "machine-readable/governance.json",
+        "machine-readable/execution-status.json",
+        "machine-readable/topic-registry.json"
+      ],
       "blocking": true,
       "required_before": "ANY_DSH_SLICE",
       "current_status": "PASS",
-      "note": "Standalone guard — NOT part of foundation:gate or slice:gate guard sets."
+      "note": "Compatibility command name retained. The guard validates canonical JSON, not the retired CSV."
     },
     "WLT_BOUNDARY_GATE": {
       "command": "pnpm run guard:no-financial-mutation-outside-wlt",
@@ -142,7 +148,7 @@
       "required_before": "SLICE_CLOSURE",
       "current_status": "FAIL_FOR_DSH-001_REAL_EXPERIENCE",
       "last_verified": "2026-06-22",
-      "evidence": "tools/registry/runs/SLICE-GATE-20260622-172256"
+      "evidence": "tools/registry/runs/SLICE-GATE-20260622-211225"
     },
     "UI_KIT_GATE": {
       "command": "pnpm run guard:no-direct-fetch-in-screen",
@@ -155,15 +161,15 @@
       "standard": "REAL_EXPERIENCE_CLOSURE_v2",
       "blocking": true,
       "required_before": "SLICE_CLOSURE",
-      "required_states_per_required_surface": ["loading", "success", "empty", "error", "permission_denied"],
+      "required_states_policy": "Use the exact states declared in topic-registry.json. Public unauthenticated reads use service_unavailable/offline instead of permission_denied.",
       "required_states_per_read_only_surface": ["loading", "success", "error"],
       "screenshot_location": "services/<service>/evidence/<TOPIC_ID>/screenshots/",
       "current_status": {
-        "DSH-001_app_client": "FAIL_v2 — loading, empty, error, and permission_denied screenshots missing",
-        "DSH-001_control_panel": "FAIL_v2 — loading and empty screenshots missing",
-        "DSH-001_app_partner": "FAIL_v2 — read-only loading and error screenshots missing",
-        "DSH-001_app_field": "FAIL_v2 — read-only loading and error screenshots missing",
-        "DSH-001_app_captain": "FAIL_v2 — read-only loading and error screenshots missing",
+        "DSH-001_app_client": "FAIL_v2 — loading, empty, error, and service_unavailable screenshots missing",
+        "DSH-001_control_panel": "FAIL_v2 — loading, empty, permission-denied, and authenticated governance actions missing",
+        "DSH-001_app_partner": "FAIL_v2 — loading/empty/error/permission screenshots and actionable own-store flow missing",
+        "DSH-001_app_field": "FAIL_v2 — loading/empty/error/permission screenshots and verification submission flow missing",
+        "DSH-001_app_captain": "FAIL_v2 — loading/empty/error/permission screenshots and pickup-point readiness reporting missing",
         "DSH-002_app_client": "RUNTIME_VERIFIED — app-client verified",
         "DSH-002_control_panel": "NOT_STARTED"
       },
@@ -307,12 +313,12 @@
   },
 
   "overall_gate_status": {
-    "foundation_gate": "PASS",
-    "slice_gate": "PASS",
+    "foundation_gate": "PASS — tools/registry/runs/FOUNDATION-GATE-20260622-210921",
+    "slice_gate": "FAIL — tools/registry/runs/SLICE-GATE-20260622-211225; 20 required screenshots missing",
     "guard_matrix_v3": "PASS",
     "wlt_boundary": "PASS",
-    "typecheck_all": "PASS",
-    "dsh_tests": "118/118 PASS",
+    "typecheck_all": "PASS — app-shell, ui-kit, control-panel, DSH",
+    "dsh_tests": "121/121 PASS",
     "ci": "CI_NOT_CONFIGURED",
     "real_experience_v2": "FAIL — DSH-001 is FIX_REQUIRED until all required surface states are visually and operationally proven.",
     "last_verified": "2026-06-22"
