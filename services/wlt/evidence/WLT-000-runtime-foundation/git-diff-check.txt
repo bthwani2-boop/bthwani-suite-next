@@ -1,2 +1,3 @@
-git diff --check: PASS
+git diff --check HEAD: PASS
+commit: 3b1d63a
 no trailing whitespace detected
