@@ -1,21 +1,32 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "audit_source": "forensic-audit-2026-06-22",
+  "audit_source": "forensic-audit-2026-06-22-topic-based-fullstack-rebuild",
+
+  "evaluation_standard_version": {
+    "current": "REAL_EXPERIENCE_CLOSURE_v2",
+    "effective_from": "2026-06-22",
+    "previous_standard": "TECHNICAL_CLOSURE_v1",
+    "transition_note": "DSH-001 was closed under v1 (technical closure + shared wiring + success screenshots). Its technical closure is valid. Mobile surfaces have success-only screenshots. v2 is mandatory for all new Topics from DSH-002 control-panel onward. DSH-001 retains RUNTIME_VERIFIED with evidence_quality_note in execution-status.json."
+  },
 
   "topic_definition": {
-    "description": "A Topic is a full-stack operational unit, not a single screen. It covers: backend handler + DB migration + seeds + OpenAPI contract + generated client + frontend shared engine + all required surface UIs + guards + tests + runtime evidence.",
+    "description": "A Topic is a full-stack operational unit covering every layer from backend to all required surfaces. It is NOT a single screen, feature, or UI improvement.",
     "topic_is_NOT": [
       "a single screen",
       "a UI component",
       "a backend handler alone",
-      "a database migration alone"
+      "a database migration alone",
+      "a context-only surface",
+      "a read-only card without state coverage",
+      "a shared wiring proof without surface UI",
+      "a demo or preview implementation"
     ],
-    "closure_requires": "All required layers and all required surfaces must be runtime-verified with real evidence before a Topic may be declared CLOSED."
+    "closure_requires": "All required layers AND all required surfaces must have live runtime evidence including real experience states before a Topic may be declared CLOSED."
   },
 
   "full_stack_multi_surface_model": {
-    "principle": "Every DSH Topic must close Full-Stack AND Multi-Surface simultaneously. A Topic is not CLOSED if any required surface is missing or unverified.",
+    "principle": "Every DSH Topic must close Full-Stack AND Multi-Surface simultaneously. A Topic is not CLOSED if any required surface is missing, unverified, or has only success-state evidence.",
     "required_layers": [
       "backend_handler_go",
       "database_migration",
@@ -27,42 +38,126 @@
       "guards_pass",
       "tests_pass",
       "runtime_api_smoke",
-      "visual_evidence_per_surface"
+      "visual_evidence_per_surface_per_required_state"
     ],
     "shared_brain_rule": "All business logic, controllers, view-models, and state machines live in services/<service>/frontend/shared/. Surfaces consume shared — they do not own logic.",
-    "surface_ui_rule": "Surface files in services/<service>/frontend/<surface>/ are UI-only. They import controllers/hooks from shared. Any business logic in a surface file is an ownership violation.",
-    "wlt_brain_for_dsh_path": "services/wlt/frontend/dsh/shared/",
-    "dsh_shared_brain_path": "services/dsh/frontend/shared/"
+    "surface_ui_rule": "Surface files in services/<service>/frontend/<surface>/ are UI-only. They import controllers/hooks from shared. Any business logic in a surface file is an OWNERSHIP_VIOLATION.",
+    "dsh_shared_brain_path": "services/dsh/frontend/shared/",
+    "wlt_shared_brain_for_dsh_path": "services/wlt/frontend/dsh/shared/"
+  },
+
+  "real_experience_closure_standard": {
+    "principle": "A Topic surface is not CLOSED unless it proves the full user experience, not just the happy path. All required surfaces must show all required states with visual evidence.",
+    "required_states_for_required_surfaces": [
+      "loading",
+      "success",
+      "empty",
+      "error",
+      "permission_denied"
+    ],
+    "required_states_for_read_only_surfaces": [
+      "loading",
+      "success",
+      "error"
+    ],
+    "optional_states_where_applicable": [
+      "blocked",
+      "disabled",
+      "retry",
+      "offline_network_failure"
+    ],
+    "visual_evidence_requirement": "At least one screenshot per required state per required surface. Read-only surfaces require loading, success, and error screenshots.",
+    "manual_navigation_requirement": "Manual navigation proof (text log or screenshot sequence) showing the actor can reach and use the surface in the real runtime environment.",
+    "api_binding_requirement": "Surface must be wired to real API via generated client through shared controller. No mock/demo/preview data.",
+    "shared_brain_binding_requirement": "Surface must import from owning_shared_brain. No inline API calls, no local business logic.",
+    "read_only_surface_exception": {
+      "rule": "A read-only surface is valid ONLY if: (1) it is pre-declared in the Topic as read_only_surfaces, (2) the read operation is the correct business experience for that actor in that Topic, and (3) it still requires loading/success/error visual evidence.",
+      "forbidden": "A read-only surface is NOT valid as a substitute for a required interactive surface."
+    },
+    "what_does_NOT_count_as_closure": [
+      "technical wiring only (controllers wired but no surface UI)",
+      "shared binding proof without rendered surface",
+      "context-only surface without error/loading evidence",
+      "first-store fallback used in screenshots instead of real actor flow",
+      "single success screenshot with no error or loading evidence",
+      "table-only control-panel without KPI strip, filters, and state views",
+      "README claiming PASS without evidence files",
+      "smoke-only API test without DB data",
+      "screenshot taken from dev fixture, not live runtime",
+      "mock or demo data in screenshots",
+      "unit tests covering states but no visual evidence of UI rendering those states"
+    ]
+  },
+
+  "screenshot_evidence_standard": {
+    "minimum_per_required_surface": {
+      "loading": 1,
+      "success": 1,
+      "empty": 1,
+      "error": 1,
+      "permission_denied": "1 if applicable"
+    },
+    "minimum_per_read_only_surface": {
+      "loading": 1,
+      "success": 1,
+      "error": 1
+    },
+    "naming_convention": "screenshots/<surface>-<state>.png",
+    "location": "services/<service>/evidence/<TOPIC_ID>-<topic-name>/screenshots/",
+    "exception": "If a state is genuinely unreachable in the current runtime (e.g. disabled is always false), document the reason in the Topic's evidence README. Do not skip silently."
   },
 
   "closure_states": {
     "RUNTIME_VERIFIED": {
-      "meaning": "All required layers and surfaces have live runtime evidence. All gates pass. Visual evidence present per surface.",
+      "meaning": "All required layers and surfaces have live runtime evidence. All gates pass. Visual evidence present per surface per required state.",
       "requires": [
         "All pre-slice gates: PASS",
         "All per-slice gates: PASS",
         "Live API smoke with real DB data (not mock)",
-        "Visual evidence screenshots per surface",
+        "Visual evidence screenshots per surface per required state (v2 standard)",
         "Tests: 0 failures",
-        "git diff --check: PASS"
+        "git diff --check: PASS",
+        "All required surfaces shown with loading, success, empty, error states",
+        "No ownership violations"
       ]
     },
     "PARTIAL": {
       "meaning": "Some surfaces or layers are RUNTIME_VERIFIED, but at least one required surface/layer is NOT_STARTED or BLOCKED.",
-      "action": "Document which surfaces/layers remain and list them as blockers."
+      "action": "Document which surfaces/layers remain and list them as blockers. PARTIAL is not a valid final state."
     },
     "NOT_STARTED": {
-      "meaning": "No implementation has begun for this Topic."
+      "meaning": "No implementation has begun for this Topic.",
+      "action": "All required fields must still be defined in topic-registry.json."
     },
     "BLOCKED_WITH_REASON": {
-      "meaning": "Implementation cannot begin because a prerequisite is missing. The blocker must be named explicitly."
+      "meaning": "Implementation cannot begin because a prerequisite is missing. The blocker must be named explicitly.",
+      "forbidden": "Using BLOCKED_WITH_REASON without a specific named prerequisite."
     },
     "FIX_REQUIRED": {
-      "meaning": "Implementation exists but a gate failure, evidence contradiction, or ownership violation has been found. Cannot be declared CLOSED until fixed.",
+      "meaning": "Implementation exists but a gate failure, evidence contradiction, ownership violation, or real experience gap has been found. Cannot be declared CLOSED until fixed.",
+      "triggers": [
+        "Any guard: FAIL",
+        "Ownership violation found in any surface",
+        "Evidence contradiction between machine-readable and code",
+        "Required surface has only success-state screenshots (v2 standard)",
+        "Mock/demo/preview data found in runtime code paths",
+        "Financial mutation found outside services/wlt/",
+        "Context-only surface declared as required surface without real experience"
+      ],
       "forbidden": "Declaring CLOSED while FIX_REQUIRED exists."
     },
     "DO_NOT_MERGE": {
-      "meaning": "Branch has a known violation, conflicting evidence, or pending FIX_REQUIRED item. Must not be merged until resolved."
+      "meaning": "Branch has a known violation, conflicting evidence, or pending FIX_REQUIRED item that blocks safe merging. Must not be merged until resolved.",
+      "triggers": [
+        "Financial mutation outside services/wlt/",
+        "Active ownership violation (business logic in surface)",
+        "Evidence contradiction not resolved",
+        "FIX_REQUIRED item unresolved"
+      ]
+    },
+    "UNKNOWN": {
+      "meaning": "Status cannot be determined from current evidence. Must be resolved before any new Topic begins.",
+      "action": "Run all gates, check evidence, resolve to a known status."
     }
   },
 
@@ -71,7 +166,8 @@
     "forbidden": "Declaring CI: PASS when no CI pipeline has run.",
     "required_documentation": "CI status must always be CI_NOT_CONFIGURED or CI_PASS with evidence, never assumed.",
     "current_status": "CI_NOT_CONFIGURED_FOR_BRANCH_starting-implementing-slices",
-    "gate_substitute": "Manual evidence pack (evidence-index.json) is the gate in the absence of CI."
+    "gate_substitute": "Manual evidence pack (evidence-index.json) is the gate in the absence of CI.",
+    "escalation": "Before any production deploy, CI must be configured and green."
   },
 
   "mock_demo_preview_policy": {
@@ -93,7 +189,9 @@
     "no_pass_without_output": true,
     "no_runtime_verified_without_live_api": true,
     "no_ci_pass_without_pipeline": true,
-    "no_visual_evidence_without_screenshot": true
+    "no_visual_evidence_without_screenshot": true,
+    "no_state_coverage_without_screenshot_per_state": true,
+    "no_context_only_as_required_surface": true
   },
 
   "financial_boundary_rule": {
@@ -132,13 +230,117 @@
   "ownership_violation_rule": {
     "business_logic_in_surface": "FIX_REQUIRED — business logic must move to shared/",
     "tamagui_outside_ui_kit": "FIX_REQUIRED — all UI must go through @bthwani/ui-kit",
-    "fetch_in_screen": "FIX_REQUIRED — screens must use generated typed clients",
-    "financial_mutation_in_dsh": "DO_NOT_MERGE"
+    "fetch_in_screen": "FIX_REQUIRED — screens must use generated typed clients via shared controllers",
+    "financial_mutation_in_dsh": "DO_NOT_MERGE",
+    "topic_logic_in_surface_not_shared": "FIX_REQUIRED — Topic logic belongs in owning_shared_brain"
   },
 
   "wlt_activation_rule": {
     "condition": "WLT-000 Foundation is RUNTIME_VERIFIED. WLT implementation slices (WLT-001+) require separate approval.",
     "wlt_000_status": "RUNTIME_VERIFIED — reference endpoints only, no mutation APIs",
-    "wlt_001_plus": "NOT_APPROVED — requires dedicated approval before implementation"
+    "wlt_001_plus": "NOT_APPROVED — requires dedicated approval before implementation",
+    "wlt_runtime_while_contract_only": {
+      "forbidden": [
+        "Activating WLT runtime mutations",
+        "Claiming WLT readiness for payment/settlement/refund",
+        "Creating financial backend/database/API within DSH",
+        "Registering PASS for financial mutations",
+        "Placing financial mutation inside DSH layers"
+      ]
+    }
+  },
+
+  "control_panel_section_rule": {
+    "rule": "No Topic may reference control-panel without specifying which section(s) it touches.",
+    "required_fields_per_topic": [
+      "primary_control_panel_section",
+      "secondary_control_panel_sections",
+      "read_only_control_panel_sections",
+      "forbidden_control_panel_sections"
+    ],
+    "canonical_sections": [
+      "dashboard", "operations", "finance", "catalogs", "partners",
+      "marketing", "support", "platform", "administration", "hr"
+    ],
+    "violation": "Any Topic specifying control-panel as a surface without naming sections = FIX_REQUIRED"
+  },
+
+  "cross_cutting_rules": {
+    "rtl_i18n": {
+      "rule": "RTL required; translation keys only; no hardcoded strings; Arabic typography via ui-kit tokens; localized number/date/currency formatting",
+      "applies_to": ["app-client", "app-partner", "app-captain", "app-field", "control-panel", "webapp", "website"],
+      "guard": "no violation detected — enforced by ui-kit token system"
+    },
+    "rbac_tenant": {
+      "client_actor": "client own data only; deny cross-tenant without object existence leak",
+      "operator_actor": "operator role-scoped; audited; support operational read only without payment card data",
+      "captain_actor": "captain assigned tasks only; no cross-captain data",
+      "partner_actor": "partner own store data only; deny cross-partner without existence leak",
+      "field_actor": "field agent assigned stores only",
+      "auth_source": "actor, role, tenant, assignment, and object scope from core identity"
+    },
+    "audit_privacy": {
+      "rule": "audit actor_id actor_role object_id action from_state to_state correlation_id timestamp; mask phone/location; never log payment secrets; mask provider references",
+      "applies_to": "all write operations, financial operations, order state transitions, WLT state transitions, support escalations"
+    },
+    "idempotency": {
+      "order_state_transitions": "idempotent by order_id + correlation_id",
+      "wlt_financial_transitions": "idempotent by payment_session_id + idempotency_key",
+      "dispatch_attempts": "idempotent by order_id + attempt_sequence",
+      "rule": "All state transitions must be idempotent. Duplicate transition = no-op + audited rejection logged."
+    },
+    "build_targets": {
+      "mobile": "expo-dev-client; store-submission reserved until PRE_STORE_READINESS_GATE",
+      "control_panel": "local web/control-panel runtime; production deploy reserved until CI is configured",
+      "backend": "Docker compose runtime only; canonical ports enforced"
+    },
+    "rollback_compensation": {
+      "invalid_state_transition": "no state mutation; audited rejection logged",
+      "dispatch_failure_after_authorization": "release WLT payment authorization hold; requeue order",
+      "wlt_provider_callback_duplicate": "idempotent no-op; do not double-charge",
+      "provider_timeout": "query provider status before retry; do not assume failure",
+      "slice_rollback": "restore pre-slice inventory state; remove unapproved slice artifacts"
+    }
+  },
+
+  "additional_file_justification": {
+    "policy": "The canonical machine-readable set is exactly 10 files. Additional files are permitted ONLY when a guard reads them directly and restructuring the guard is out of scope for this task.",
+    "csv_files_deleted_record": {
+      "slice_execution_master_matrix_v3.csv": "DELETED 2026-06-22 — 1182 rows extracted. Canonical domain data moved to: architecture-map.json#dsh_order_state_machine, architecture-map.json#dsh_dispatch_policy, architecture-map.json#notification_triggers, architecture-map.json#external_dependencies, architecture-map.json#pricing_policy_summary, architecture-map.json#cod_policy_summary. Guard guard-slice-master-matrix-v3.mjs rewritten to read from JSON files.",
+      "slice_execution_master_matrix.csv": "DELETED 2026-06-22 — cross-cutting rules moved to governance.json#cross_cutting_rules. Guard guard-slice-master-matrix-v2.mjs rewritten to validate canonical JSON files."
+    },
+    "guard_required_files": {
+      "machine-readable/control-panel-design/control_panel_design_gate.json": {
+        "reason": "Read by tools/guards/control-panel-design-gate.mjs and tools/guards/app-shell-control-panel-contract-gate.mjs.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
+        "action": "KEEP — guard reads this path directly."
+      },
+      "machine-readable/control-panel-design/control_panel_section_archetypes.json": {
+        "reason": "Read by control-panel-design-gate.mjs.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
+        "action": "KEEP"
+      },
+      "machine-readable/control-panel-design/control_panel_service_ownership_matrix.json": {
+        "reason": "Read by control-panel-design-gate.mjs.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
+        "action": "KEEP"
+      },
+      "machine-readable/control-panel-design/control_panel_design_skeleton_reference.json": {
+        "reason": "Read by control-panel-design-gate.mjs.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
+        "action": "KEEP"
+      },
+      "machine-readable/control-panel-design/control_panel_app_shell_audit.json": {
+        "reason": "Read by tools/guards/app-shell-control-panel-contract-gate.mjs.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
+        "action": "KEEP"
+      },
+      "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json": {
+        "reason": "Read by tools/guards/dsh-service-activation.mjs and tools/guards/dsh-001-cross-surface-dependency-map.mjs.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
+        "action": "KEEP — do not move to canonical set without updating guard paths."
+      }
+    },
+    "no_other_files_permitted": "No other files may be added to machine-readable/ without documenting justification here."
   }
 }

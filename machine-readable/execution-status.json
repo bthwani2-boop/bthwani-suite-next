@@ -1,127 +1,223 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
   "branch": "starting-implementing-slices",
-  "head_at_audit": "a29583d",
-  "note": "CLOSED status requires live runtime evidence. FIX_REQUIRED blocks merge. CI_NOT_CONFIGURED is not a failure.",
+  "head_at_audit": "06e64cf",
+  "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2 — effective 2026-06-22",
+  "note": "CLOSED status requires live runtime evidence. FIX_REQUIRED blocks merge. CI_NOT_CONFIGURED is not a failure. evidence_quality_note documents gaps without blocking topics closed under prior standard.",
   "overall_merge_safety": "SAFE — no violations, no FIX_REQUIRED items",
 
   "topics": {
     "DSH-000": {
-      "status": "RUNTIME_VERIFIED",
-      "summary": "Foundation gates all PASS. Docker runtime UP. Contracts valid.",
-      "evidence": "services/dsh/evidence/DSH-001-store-discovery/ (foundation artifacts)",
+      "topic_id": "DSH-000",
+      "current_status": "RUNTIME_VERIFIED",
+      "reason": "All foundation gates pass. Docker runtime UP. Contracts valid. All guards PASS.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "blockers": [],
-      "merge_safe": true
+      "required_actions": [],
+      "verification_commands": ["pnpm run foundation:gate", "pnpm contracts:lint"],
+      "next_topic_allowed": "Any DSH slice (pre-slice gates met)",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "WLT-000": {
-      "status": "RUNTIME_VERIFIED",
-      "summary": "WLT Go backend UP at 58083. Migration applied (wlt-000_financial_references.sql). Seeds inserted. Reference endpoints return 200. slice:gate PASS.",
-      "corrected_from": "Previously documented as NOT_IMPLEMENTED in dsh_wlt_status.json — STALE. This file reflects verified reality.",
-      "evidence": "services/wlt/evidence/WLT-000-runtime-foundation/",
-      "pending": "WLT-001+ mutation APIs (payment, refund, settlement) — NOT_APPROVED_YET",
-      "pending_code_update": "services/wlt/service.manifest.ts#sliceRuntimeVerified should be set to true",
+      "topic_id": "WLT-000",
+      "current_status": "RUNTIME_VERIFIED",
+      "reason": "WLT Go backend UP at 58083. Migration applied (wlt-000_financial_references.sql). 4 reference tables created. Seeds inserted. Reference endpoints return 200. slice:gate PASS.",
+      "corrected_from": "Previously documented as NOT_IMPLEMENTED in dsh_wlt_status.json — STALE. Resolved in forensic audit 2026-06-22.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "blockers": [],
-      "merge_safe": true
+      "required_actions": [],
+      "pending": "WLT-001+ mutation APIs (payment, refund, settlement) — NOT_APPROVED_YET",
+      "exact_paths": ["services/wlt/evidence/WLT-000-runtime-foundation/"],
+      "verification_commands": [
+        "pnpm runtime:status",
+        "Invoke-RestMethod 'http://localhost:58083/wlt/health'",
+        "Invoke-RestMethod 'http://localhost:58083/wlt/readiness'"
+      ],
+      "next_topic_allowed": "WLT-001 requires separate approval before any mutation implementation",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-001": {
-      "status": "RUNTIME_VERIFIED",
-      "summary": "Full-stack store discovery CLOSED across all 5 surfaces. 118/118 tests PASS. All guards PASS. Visual evidence present per surface.",
-      "surfaces": {
-        "app-client": "RUNTIME_VERIFIED — StoreDiscoveryScreen, StoreDiscoveryList, StoreCardPremium",
-        "control-panel": "RUNTIME_VERIFIED — StoreManagementScreen at /dsh/partners/stores",
-        "app-partner": "RUNTIME_VERIFIED — PartnerStoreScreen (store-only readiness context)",
-        "app-field": "RUNTIME_VERIFIED — FieldStoreVerificationScreen (store-only verification context)",
-        "app-captain": "RUNTIME_VERIFIED — CaptainStorePickupContextScreen (store-only pickup context)"
-      },
-      "evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
-      "design_debt": "Inline styles in control-panel screens — not a gate failure, deferred to pre-DSH-003",
-      "blockers": [],
+      "topic_id": "DSH-001",
+      "current_status": "RUNTIME_VERIFIED",
+      "reason": "Full-stack store discovery closed across all 5 surfaces. 118/118 tests PASS. All guards PASS. Real API data (6 stores from DB). Control-panel shows success and error state screenshots. Mobile surfaces show success state screenshots.",
+      "evidence_matches_claim": true,
       "merge_safe": true,
-      "next_allowed": "DSH-002 control-panel surface (requires explicit approval)"
+      "evaluation_standard_applied": "TECHNICAL_CLOSURE_v1",
+      "evidence_quality_note": {
+        "standard": "TECHNICAL_CLOSURE_v1",
+        "gap": "MOBILE_SUCCESS_ONLY_SCREENSHOTS",
+        "detail": "app-client, app-captain, app-field, app-partner each have 1 success screenshot. Error/loading/empty states are unit-tested in shared controllers (118/118 tests pass) but not screenshot-verified. control-panel has success, error, and detail-panel screenshots (3 screenshots).",
+        "what_is_verified": "Technical closure is genuine: real API, real DB, all guards pass, all controllers unit-tested including error/empty/loading state transitions.",
+        "v2_gap": "The REAL_EXPERIENCE_CLOSURE_v2 standard requires error/loading/empty screenshots per surface. Mobile surfaces do not meet v2 visual evidence standard.",
+        "action_required": "NONE for DSH-001 closure — technical closure is valid. v2 standard mandatory from DSH-002 control-panel onward.",
+        "escalation": "If user requires v2 retroactive compliance, add error/loading/empty screenshots for mobile surfaces. This is optional until explicitly requested."
+      },
+      "surfaces": {
+        "app-client": "RUNTIME_VERIFIED — StoreDiscoveryScreen, StoreDiscoveryList, StoreCardPremium (success screenshot only)",
+        "control-panel": "RUNTIME_VERIFIED — StoreManagementScreen at /dsh/partners/stores (success + error + detail screenshots)",
+        "app-partner": "RUNTIME_VERIFIED — PartnerStoreScreen (success screenshot only — read-only surface)",
+        "app-field": "RUNTIME_VERIFIED — FieldStoreVerificationScreen (success screenshot only — read-only surface)",
+        "app-captain": "RUNTIME_VERIFIED — CaptainStorePickupContextScreen (success screenshot only — read-only surface)"
+      },
+      "exact_paths": [
+        "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+        "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/"
+      ],
+      "blockers": [],
+      "required_actions": [],
+      "design_debt": "Inline styles in control-panel screens — not a gate failure, deferred to pre-DSH-003",
+      "verification_commands": [
+        "pnpm run foundation:gate",
+        "pnpm run slice:gate",
+        "pnpm run guard:matrix:v3",
+        "pnpm --dir services/dsh test",
+        "pnpm --dir services/dsh typecheck"
+      ],
+      "next_topic_allowed": "DSH-002 control-panel surface requires explicit approval before implementation",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-002": {
-      "status": "PARTIAL",
-      "summary": "app-client Home Discovery RUNTIME_VERIFIED. control-panel Home Discovery Admin NOT_STARTED.",
+      "topic_id": "DSH-002",
+      "current_status": "PARTIAL",
+      "reason": "app-client Home Discovery RUNTIME_VERIFIED. control-panel Home Discovery Admin NOT_STARTED.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "surfaces": {
         "app-client": "RUNTIME_VERIFIED — HomeDiscoveryScreen and all home sections",
         "control-panel": "NOT_STARTED — home-discovery/banners, home-discovery/promos, home-discovery/categories screens not built"
       },
-      "evidence": "services/dsh/evidence/DSH-002-client-home-discovery/ (app-client only)",
+      "exact_paths": ["services/dsh/evidence/DSH-002-client-home-discovery/"],
       "blockers": [
         "control-panel Home Discovery Admin screens not started",
-        "Not approved to start DSH-002 control-panel"
+        "DSH-002 control-panel requires explicit approval before implementation"
       ],
-      "merge_safe": true,
       "required_actions": [
         "Get approval for DSH-002 control-panel",
-        "Implement home discovery admin screens in services/dsh/frontend/control-panel/",
-        "Add tests",
-        "Get visual evidence for control-panel surface"
-      ]
+        "Implement home discovery admin screens in services/dsh/frontend/control-panel/marketing/",
+        "Add tests for home discovery admin controllers",
+        "Get visual evidence for control-panel marketing section (all states per v2 standard)"
+      ],
+      "verification_commands": [
+        "pnpm run foundation:gate",
+        "Invoke-RestMethod 'http://localhost:58080/dsh/home-discovery'",
+        "pnpm --dir services/dsh test"
+      ],
+      "next_topic_allowed": "DSH-002 control-panel after approval. OR DSH-003 (requires separate approval).",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-003": {
-      "status": "NOT_STARTED",
-      "summary": "Catalog management not started. Contract not defined.",
+      "topic_id": "DSH-003",
+      "current_status": "NOT_STARTED",
+      "reason": "Catalog management contract not defined. Not approved.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "blockers": [
-        "DSH-003 contract not defined in dsh.openapi.yaml",
-        "DSH-003 not approved"
+        "DSH-003 API contract not defined in dsh.openapi.yaml",
+        "DSH-003 not approved for implementation",
+        "DSH-002 not fully CLOSED (control-panel pending)"
       ],
       "required_actions": [
         "Get approval",
         "Define catalog API operations in dsh.openapi.yaml",
         "Regenerate typed client",
-        "Implement backend handlers",
+        "Implement backend handlers (Go)",
         "Write migration dsh-003_catalog.sql",
-        "Implement all required surfaces"
-      ]
+        "Implement all required surfaces (app-client, app-partner, control-panel/catalogs)",
+        "Get visual evidence per v2 standard for all surfaces"
+      ],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-004": {
-      "status": "NOT_STARTED",
-      "blockers": ["DSH-003 not closed"],
-      "required_actions": ["Close DSH-003 first"]
+      "topic_id": "DSH-004",
+      "current_status": "NOT_STARTED",
+      "reason": "DSH-003 not closed.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": ["DSH-003 not closed", "DSH-004 contract not defined"],
+      "required_actions": ["Close DSH-003 first"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-005": {
-      "status": "NOT_STARTED",
-      "blockers": ["DSH-004 not closed", "WLT-001 payment-sessions not approved"],
-      "required_actions": ["Close DSH-004 first", "Approve WLT-001"]
+      "topic_id": "DSH-005",
+      "current_status": "NOT_STARTED",
+      "reason": "DSH-004 not closed. WLT-001 payment-sessions not approved.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": ["DSH-004 not closed", "WLT-001 payment-sessions not approved", "DSH-005 contract not defined"],
+      "required_actions": ["Close DSH-004 first", "Approve WLT-001"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-006": {
-      "status": "NOT_STARTED",
+      "topic_id": "DSH-006",
+      "current_status": "NOT_STARTED",
+      "reason": "DSH-005 not closed.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "blockers": ["DSH-005 not closed"],
-      "required_actions": ["Close DSH-005 first"]
+      "required_actions": ["Close DSH-005 first"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-007": {
-      "status": "NOT_STARTED",
+      "topic_id": "DSH-007",
+      "current_status": "NOT_STARTED",
+      "reason": "DSH-006 not closed.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "blockers": ["DSH-006 not closed"],
-      "required_actions": ["Close DSH-006 first"]
+      "required_actions": ["Close DSH-006 first"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-008": {
-      "status": "NOT_STARTED",
-      "blockers": ["DSH-008 not approved"],
-      "note": "DSH-001 context layer is done (field verification context). Full field onboarding requires DSH-008 approval.",
-      "required_actions": ["Get DSH-008 approval", "Define field readiness API contract"]
+      "topic_id": "DSH-008",
+      "current_status": "NOT_STARTED",
+      "reason": "Not approved. DSH-001 context layer done (field verification context). Full field onboarding workflow requires separate approval.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": ["DSH-008 not approved", "DSH-008 API contract not defined"],
+      "required_actions": ["Get DSH-008 approval", "Define field readiness API contract"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-009": {
-      "status": "NOT_STARTED",
+      "topic_id": "DSH-009",
+      "current_status": "NOT_STARTED",
+      "reason": "DSH-006 not closed.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
       "blockers": ["DSH-006 not closed"],
-      "required_actions": ["Close DSH-006 first"]
+      "required_actions": ["Close DSH-006 first"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     },
 
     "DSH-010": {
-      "status": "NOT_STARTED",
-      "blockers": ["DSH-009 not closed", "WLT-001 settlement-summary not approved"],
-      "required_actions": ["Close DSH-009 first", "Approve WLT-001 settlement endpoint"]
+      "topic_id": "DSH-010",
+      "current_status": "NOT_STARTED",
+      "reason": "DSH-009 not closed. WLT-001 settlement-summary not approved.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": ["DSH-009 not closed", "WLT-001 settlement-summary endpoint not approved"],
+      "required_actions": ["Close DSH-009 first", "Approve WLT-001 settlement endpoint"],
+      "next_topic_allowed": "NOT_APPROVED",
+      "status_updated_from": "git commit 06e64cf"
     }
   },
 
@@ -138,7 +234,8 @@
     "typecheck_all": "PASS",
     "dsh_tests": "118/118 PASS",
     "ci": "CI_NOT_CONFIGURED",
-    "git_diff_check": "PASS"
+    "git_diff_check": "PASS",
+    "unstaged_changes": "D services/dsh/frontend/app-captain/.gitkeep, D services/dsh/frontend/app-field/.gitkeep, D services/dsh/frontend/app-partner/.gitkeep, D services/dsh/frontend/control-panel/.gitkeep, D services/wlt/frontend/.gitkeep — gitkeep deletes, not a gate failure"
   },
 
   "next_approved_action": "STOP — no next slice is approved. DSH-002 control-panel or DSH-003 requires explicit approval before implementation begins.",

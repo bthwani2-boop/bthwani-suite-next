@@ -1,14 +1,26 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "head_at_verification": "a29583d",
-  "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure — it is documented as such.",
+  "head_at_verification": "06e64cf",
+  "evaluation_standard": "REAL_EXPERIENCE_CLOSURE_v2",
+  "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure. NOT_AVAILABLE_WITH_REASON documents gates that are inapplicable without counting them as failures.",
 
   "ci_policy": {
     "status": "CI_NOT_CONFIGURED_FOR_BRANCH_starting-implementing-slices",
     "meaning": "No GitHub Actions pipeline is configured for this branch. This is expected. Manual evidence packs replace CI.",
     "forbidden": "Declaring CI: PASS when no pipeline ran.",
-    "escalation": "Before any production deploy, CI must be configured and green."
+    "escalation": "Before any production deploy, CI must be configured and green.",
+    "not_a_gate_failure": true
+  },
+
+  "not_available_policy": {
+    "rule": "If a gate command is not available or not applicable in the current environment, document it as NOT_AVAILABLE_WITH_REASON. Do not claim PASS.",
+    "examples": [
+      "pnpm run guard:dsh-frontend-shared-ownership — available",
+      "pnpm run guard:no-financial-mutation-outside-wlt — available",
+      "pnpm run foundation:gate — available",
+      "CI pipeline — NOT_AVAILABLE_WITH_REASON: not configured for branch"
+    ]
   },
 
   "gate_sets": {
@@ -30,48 +42,15 @@
         "DSH_API_GATE",
         "DSH_SLICE_GATE",
         "UI_KIT_GATE",
-        "VISUAL_EVIDENCE_GATE"
+        "VISUAL_EVIDENCE_GATE_v2"
       ]
     },
-    "foundation_guard_set": {
-      "description": "Guards run by foundation:gate script via guard-manifest.json#guardSets.foundation",
-      "guards": [
-        "contracts-foundation",
-        "no-direct-tamagui-outside-ui-kit",
-        "no-ui-kit-deep-imports",
-        "no-local-design-system",
-        "no-raw-hex-outside-ui-kit",
-        "no-expo-in-ui-kit",
-        "no-react-native-runtime-dependency-in-ui-kit",
-        "no-safe-area-in-ui-kit-runtime",
-        "no-vector-icons-direct-in-ui-kit",
-        "no-domain-component-in-ui-kit",
-        "no-unsafe-ui-kit-tamagui-casts",
-        "ui-kit-token-binding",
-        "no-preview-demo-mock-runtime",
-        "no-broken-imports",
-        "service-fullstack-linkage",
-        "dsh-service-activation",
-        "go-backend-runtime",
-        "performance-runtime-baseline",
-        "docker-runtime-profiles"
-      ]
-    },
-    "slice_guard_set": {
-      "description": "Guards run by slice:gate script via guard-manifest.json#guardSets.slice",
-      "guards": [
-        "no-direct-fetch-in-screen",
-        "no-preview-demo-mock-runtime",
-        "no-memory-repo-in-slice-runtime",
-        "no-financial-mutation-outside-wlt",
-        "no-broken-imports",
-        "service-fullstack-linkage",
-        "dsh-service-activation",
-        "go-backend-runtime",
-        "performance-runtime-baseline",
-        "docker-runtime-profiles",
-        "dsh-frontend-shared-ownership",
-        "dsh-001-cross-surface-dependency-map"
+    "real_experience_verification": {
+      "description": "v2 standard — must be completed before declaring RUNTIME_VERIFIED from DSH-002 control-panel onward.",
+      "gates": [
+        "VISUAL_EVIDENCE_GATE_v2",
+        "STATE_COVERAGE_GATE",
+        "MANUAL_NAVIGATION_PROOF"
       ]
     }
   },
@@ -101,7 +80,7 @@
       "blocking": true,
       "required_before": "ANY_DSH_SLICE",
       "current_status": "PASS",
-      "note": "This is a standalone guard, NOT part of foundation:gate or slice:gate guard sets."
+      "note": "Standalone guard — NOT part of foundation:gate or slice:gate guard sets."
     },
     "WLT_BOUNDARY_GATE": {
       "command": "pnpm run guard:no-financial-mutation-outside-wlt",
@@ -113,7 +92,7 @@
       "violations_found": 0
     },
     "NO_OLD_PORTS_GATE": {
-      "command": "foundation:gate includes docker-runtime-profiles guard",
+      "command": "Included in foundation:gate via docker-runtime-profiles guard",
       "forbidden_ports": [8080, 8081, 8082, 8083, 8084, 3000],
       "exception": "Container ports 8080→58080 and 8083→58083 inside compose.runtime.yml are permitted",
       "blocking": true,
@@ -171,15 +150,45 @@
       "blocking": true,
       "current_status": "PASS"
     },
-    "VISUAL_EVIDENCE_GATE": {
+    "VISUAL_EVIDENCE_GATE_v2": {
       "type": "MANUAL",
+      "standard": "REAL_EXPERIENCE_CLOSURE_v2",
       "blocking": true,
       "required_before": "SLICE_CLOSURE",
+      "required_states_per_required_surface": ["loading", "success", "empty", "error", "permission_denied"],
+      "required_states_per_read_only_surface": ["loading", "success", "error"],
+      "screenshot_location": "services/<service>/evidence/<TOPIC_ID>/screenshots/",
       "current_status": {
-        "DSH-001": "PASS — 5 surface screenshots present",
-        "DSH-002": "PARTIAL — app-client screenshot present, control-panel missing"
+        "DSH-001_app_client": "PARTIAL_v1 — success only (v1 standard applied, gap documented)",
+        "DSH-001_control_panel": "PASS_v2 — success + error + detail screenshots present",
+        "DSH-001_app_partner": "PARTIAL_v1 — success only (read-only surface, v1 standard applied)",
+        "DSH-001_app_field": "PARTIAL_v1 — success only (read-only surface, v1 standard applied)",
+        "DSH-001_app_captain": "PARTIAL_v1 — success only (read-only surface, v1 standard applied)",
+        "DSH-002_app_client": "RUNTIME_VERIFIED — app-client verified",
+        "DSH-002_control_panel": "NOT_STARTED"
       },
-      "evidence_location": "services/dsh/evidence/{SLICE_ID}/screenshots/"
+      "enforcement_note": "v2 standard mandatory for all topics from DSH-002 control-panel onward. DSH-001 mobile surfaces are accepted under v1 with documented gap."
+    },
+    "STATE_COVERAGE_GATE": {
+      "type": "MANUAL",
+      "standard": "REAL_EXPERIENCE_CLOSURE_v2",
+      "blocking": true,
+      "required_before": "SLICE_CLOSURE_v2",
+      "description": "Verify that screenshots cover all required states (loading, success, empty, error) for all required surfaces.",
+      "verification_method": "Manual review of screenshots/ directory in evidence pack",
+      "current_status": {
+        "DSH-001": "PARTIAL_v1 — mobile success-only (documented gap)",
+        "DSH-002": "NOT_STARTED"
+      }
+    },
+    "MANUAL_NAVIGATION_PROOF": {
+      "type": "MANUAL",
+      "blocking": true,
+      "description": "Text log or screenshot sequence showing manual navigation from app launch to the surface, confirming the actor can reach and use the feature.",
+      "evidence_type": "txt file in evidence directory",
+      "current_status": {
+        "DSH-001": "PRESENT — app-captain-store-pickup-context.txt, app-client-reverify.txt, app-field-store-verification.txt, app-partner-store-context.txt, control-panel-url.txt"
+      }
     },
     "CONTROL_PANEL_DESIGN_GATE": {
       "command": "node tools/guards/control-panel-design-gate.mjs",
@@ -194,6 +203,7 @@
     },
     "APP_SHELL_CONTRACT_GATE": {
       "command": "node tools/guards/app-shell-control-panel-contract-gate.mjs",
+      "reads_files": ["machine-readable/control-panel-design/control_panel_app_shell_audit.json"],
       "blocking": true,
       "current_status": "PASS"
     },
@@ -201,14 +211,14 @@
       "command": "pnpm run guard:dsh-frontend-shared-ownership",
       "script": "tools/guards/dsh-frontend-shared-ownership-gate.mjs",
       "blocking": true,
-      "current_status": "PASS"
+      "current_status": "PASS",
+      "violations_found": 0
     },
     "WLT_DSH_FRONTEND_SHARED_OWNERSHIP_GATE": {
       "command": "node tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
-      "script": "tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
       "blocking": true,
       "current_status": "PASS",
-      "note": "Guard updated to check evidence directory existence (services/wlt/evidence/WLT-000-runtime-foundation/) before allowing sliceRuntimeVerified: true",
+      "note": "Guard checks evidence directory existence before allowing sliceRuntimeVerified: true",
       "last_verified": "2026-06-22"
     },
     "DSH_001_CROSS_SURFACE_DEPENDENCY_MAP_GATE": {
@@ -238,8 +248,52 @@
       "command": "git status --short",
       "current_status": "HAS_UNSTAGED_DELETES",
       "detail": "D services/dsh/frontend/app-captain/.gitkeep, D services/dsh/frontend/app-field/.gitkeep, D services/dsh/frontend/app-partner/.gitkeep, D services/dsh/frontend/control-panel/.gitkeep, D services/wlt/frontend/.gitkeep",
-      "note": "These are deleted .gitkeep files — surfaces have actual implementations. Not a gate failure."
+      "note": "These are deleted .gitkeep files — surfaces have actual implementations that replaced the gitkeep placeholders. Not a gate failure. The gitkeep files are tracked as deleted in git working tree but the directories and their contents exist.",
+      "blocking": false
     }
+  },
+
+  "foundation_guard_set": {
+    "description": "Guards run by foundation:gate script via guard-manifest.json#guardSets.foundation",
+    "guards": [
+      "contracts-foundation",
+      "no-direct-tamagui-outside-ui-kit",
+      "no-ui-kit-deep-imports",
+      "no-local-design-system",
+      "no-raw-hex-outside-ui-kit",
+      "no-expo-in-ui-kit",
+      "no-react-native-runtime-dependency-in-ui-kit",
+      "no-safe-area-in-ui-kit-runtime",
+      "no-vector-icons-direct-in-ui-kit",
+      "no-domain-component-in-ui-kit",
+      "no-unsafe-ui-kit-tamagui-casts",
+      "ui-kit-token-binding",
+      "no-preview-demo-mock-runtime",
+      "no-broken-imports",
+      "service-fullstack-linkage",
+      "dsh-service-activation",
+      "go-backend-runtime",
+      "performance-runtime-baseline",
+      "docker-runtime-profiles"
+    ]
+  },
+
+  "slice_guard_set": {
+    "description": "Guards run by slice:gate script via guard-manifest.json#guardSets.slice",
+    "guards": [
+      "no-direct-fetch-in-screen",
+      "no-preview-demo-mock-runtime",
+      "no-memory-repo-in-slice-runtime",
+      "no-financial-mutation-outside-wlt",
+      "no-broken-imports",
+      "service-fullstack-linkage",
+      "dsh-service-activation",
+      "go-backend-runtime",
+      "performance-runtime-baseline",
+      "docker-runtime-profiles",
+      "dsh-frontend-shared-ownership",
+      "dsh-001-cross-surface-dependency-map"
+    ]
   },
 
   "ownership_guards": {
@@ -255,8 +309,12 @@
   "overall_gate_status": {
     "foundation_gate": "PASS",
     "slice_gate": "PASS",
+    "guard_matrix_v3": "PASS",
+    "wlt_boundary": "PASS",
+    "typecheck_all": "PASS",
+    "dsh_tests": "118/118 PASS",
     "ci": "CI_NOT_CONFIGURED",
-    "all_pre_slice_gates": "PASS",
+    "real_experience_v2": "PARTIAL — DSH-001 mobile surfaces documented as v1-gap. v2 mandatory from DSH-002 control-panel onward.",
     "last_verified": "2026-06-22"
   }
 }

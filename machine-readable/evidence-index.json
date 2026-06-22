@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "note": "Each entry has a path, status, and last_verified_source. A status of PRESENT means the file/directory exists. Contradictions resolved by forensic audit are documented.",
+  "note": "Each entry has a path, status, topic_id, and last_verified_source. supports_claims lists what each evidence file proves. contradictions are resolved inline.",
 
   "contradictions_resolved": [
     {
@@ -11,8 +11,8 @@
       "stale_claim": "NOT_IMPLEMENTED",
       "actual_state": "RUNTIME_VERIFIED — WLT-000 foundation is complete with backend, migrations, seeds, reference endpoints",
       "proof": "services/wlt/evidence/WLT-000-runtime-foundation/ — slice:gate PASS, api-health.txt shows healthy",
-      "resolution": "FIXED — execution-status.json reflects correct WLT-000 status",
-      "root_cause": "dsh_wlt_status.json was written before WLT-000 commit was made. File was not updated after commit 3b1d63a."
+      "resolution": "FIXED — execution-status.json reflects correct WLT-000 status. dsh_wlt_status.json retired to stale_files_retired.",
+      "root_cause": "dsh_wlt_status.json was written before WLT-000 commit was made. Not updated after the commit."
     },
     {
       "id": "CONTRADICTION-002",
@@ -21,7 +21,7 @@
       "stale_claim": "CONTRACT_ONLY",
       "actual_state": "WLT-000_FOUNDATION_RUNTIME_VERIFIED",
       "proof": "services/wlt/evidence/WLT-000-runtime-foundation/ + runtime-status.txt shows wlt-api UP at 58083",
-      "resolution": "FIXED — execution-status.json reflects correct status"
+      "resolution": "FIXED — execution-status.json reflects correct status. Stale file retired."
     },
     {
       "id": "CONTRADICTION-003",
@@ -29,7 +29,7 @@
       "field": "ports (WLT_API missing)",
       "stale_claim": "WLT port not listed in canonical ports",
       "actual_state": "WLT API runs at 58083 (confirmed in compose.runtime.yml and runtime evidence)",
-      "proof": "infra/docker/compose.runtime.yml line: 58083:8083; runtime-status.txt",
+      "proof": "infra/docker/compose.runtime.yml: 58083:8083; runtime-status.txt",
       "resolution": "FIXED — architecture-map.json includes WLT_API: 58083 in canonical ports"
     },
     {
@@ -39,23 +39,37 @@
       "stale_claim": "false",
       "actual_state": "WLT-000 slice:gate shows PASS and evidence shows runtime verified",
       "proof": "services/wlt/evidence/WLT-000-runtime-foundation/slice-gate.txt",
-      "resolution": "FIXED — manifest updated to sliceRuntimeVerified: true + referenceRuntimeVerified: true + mutationRuntimeReady: false. Guard wlt-dsh-frontend-shared-ownership-gate.mjs updated to check evidence directory instead of blocking sliceRuntimeVerified: true unconditionally.",
+      "resolution": "FIXED — manifest updated to sliceRuntimeVerified: true + referenceRuntimeVerified: true + mutationRuntimeReady: false",
       "evidence": "services/wlt/evidence/WLT-000-runtime-foundation/manifest-alignment.txt"
     }
   ],
 
   "evidence_entries": {
     "DSH-000_FOUNDATION": {
+      "evidence_id": "DSH-000-FOUNDATION-001",
       "path": "services/dsh/evidence/DSH-001-store-discovery/",
+      "topic_id": "DSH-000",
+      "service": "dsh",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "GATE_OUTPUT",
       "status": "PRESENT",
       "contents": ["foundation-gate.txt", "contracts-lint.txt", "guard-matrix-v3.txt", "runtime-all.txt", "runtime-status.txt"],
-      "last_verified_source": "git commit a401420",
-      "foundation_gate_result": "PASS",
-      "contradictions": "NONE"
+      "last_verified_source": "git commit 06e64cf",
+      "command_used": "pnpm run foundation:gate",
+      "supports_claims": ["DSH-000 RUNTIME_VERIFIED — all foundation gates pass"],
+      "contradictions": "NONE",
+      "required_update": "NONE"
     },
 
     "DSH-001_FULLSTACK_MULTI_SURFACE": {
+      "evidence_id": "DSH-001-FULLSTACK-001",
       "path": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+      "topic_id": "DSH-001",
+      "service": "dsh",
+      "surface": "all_5_surfaces",
+      "control_panel_section": "partners",
+      "evidence_type": "FULLSTACK_MULTI_SURFACE_PACK",
       "status": "PRESENT",
       "is_canonical_evidence": true,
       "contents": {
@@ -82,52 +96,113 @@
           "screenshots/control-panel-stores-admin-success.png"
         ]
       },
-      "last_verified_source": "git commit a401420 (latest at audit)",
-      "ci_status": "CI_NOT_CONFIGURED",
+      "last_verified_source": "git commit 06e64cf",
+      "command_used": "pnpm run foundation:gate && pnpm run slice:gate && pnpm --dir services/dsh test",
+      "supports_claims": [
+        "DSH-001 RUNTIME_VERIFIED — all 5 surfaces operational",
+        "118/118 tests PASS",
+        "All guards PASS",
+        "Real API data (6 stores from DB)",
+        "Control-panel has success + error + detail screenshots",
+        "All mobile surfaces have success screenshots"
+      ],
       "contradictions": "NONE",
+      "evidence_quality_gap": "Mobile surfaces (app-client, app-captain, app-field, app-partner) have success-state screenshots only. Error/loading/empty states are unit-tested in shared controllers but not screenshot-verified. This is noted as a v1-standard gap, not a contradiction.",
+      "ci_status": "CI_NOT_CONFIGURED",
       "test_result": "118/118 tests PASS, 0 failures",
-      "api_result": "GET /dsh/stores → 6 stores; GET /dsh/stores/{id} → store-1005 detail"
+      "api_result": "GET /dsh/stores → 6 stores; GET /dsh/stores/{id} → store-1005 detail",
+      "required_update": "NONE for current standard. Optional: add error/loading/empty screenshots for mobile surfaces to meet v2 standard."
+    },
+
+    "DSH-001_STORE_DISCOVERY_INITIAL": {
+      "evidence_id": "DSH-001-INITIAL-001",
+      "path": "services/dsh/evidence/DSH-001-store-discovery/",
+      "topic_id": "DSH-001",
+      "service": "dsh",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "INITIAL_SLICE_EVIDENCE",
+      "status": "PRESENT",
+      "note": "Initial slice evidence. Superseded by DSH-001-store-discovery-fullstack-multi-surface/ for canonical closure evidence.",
+      "last_verified_source": "git history",
+      "supports_claims": ["DSH-001 initial technical closure foundation"],
+      "contradictions": "NONE",
+      "required_update": "NONE — superseded by fullstack-multi-surface pack"
     },
 
     "DSH-002_CLIENT_HOME_DISCOVERY": {
+      "evidence_id": "DSH-002-CLIENT-001",
       "path": "services/dsh/evidence/DSH-002-client-home-discovery/",
+      "topic_id": "DSH-002",
+      "service": "dsh",
+      "surface": "app-client",
+      "control_panel_section": null,
+      "evidence_type": "PARTIAL_SURFACE_PACK",
       "status": "PRESENT",
-      "scope": "app-client only — control-panel evidence MISSING (not started)",
+      "scope": "app-client only — control-panel evidence MISSING (surface not started)",
       "contents": ["api-home-discovery.json", "contracts-lint.txt", "docker-*.txt", "dsh-build.txt", "dsh-lint.txt", "dsh-test.txt", "dsh-typecheck.txt", "foundation-gate.txt", "go-build.txt", "go-test.txt", "guard-matrix-v3.txt", "runtime-*.txt", "slice-gate.txt"],
-      "last_verified_source": "commit during DSH-002 slice",
+      "last_verified_source": "git history (DSH-002 slice commit)",
+      "command_used": "pnpm run slice:gate",
+      "supports_claims": ["DSH-002 app-client RUNTIME_VERIFIED — HomeDiscoveryScreen operational"],
       "contradictions": "NONE for app-client",
-      "missing_evidence": "control-panel Home Discovery Admin evidence (surface not started)"
+      "missing_evidence": "control-panel Home Discovery Admin evidence (surface not started — NOT_STARTED)",
+      "required_update": "Add control-panel evidence when DSH-002 control-panel is implemented and approved"
     },
 
     "WLT-000_RUNTIME_FOUNDATION": {
+      "evidence_id": "WLT-000-FOUNDATION-001",
       "path": "services/wlt/evidence/WLT-000-runtime-foundation/",
+      "topic_id": "WLT-000",
+      "service": "wlt",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "RUNTIME_FOUNDATION_PACK",
       "status": "PRESENT",
       "contents": [
         "api-health.txt", "api-payment-status.txt", "api-readiness.txt",
         "api-refund-status.txt", "api-settlement-status.txt", "api-wallet-status.txt",
         "foundation-gate.txt", "git-diff-check.txt", "guard-results.txt",
-        "migration-results.txt", "runtime-status.txt", "seed-results.txt",
-        "slice-gate.txt", "test-results.txt", "typecheck-results.txt"
+        "manifest-alignment.txt", "migration-results.txt", "runtime-status.txt",
+        "seed-results.txt", "slice-gate.txt", "test-results.txt", "typecheck-results.txt"
       ],
-      "api_health_result": "healthy — wlt service running at 58083",
-      "migration_result": "PASS — wlt-000_financial_references.sql applied; 4 tables created",
-      "slice_gate_result": "PASS",
-      "test_result": "PASS",
+      "last_verified_source": "git commit 06e64cf",
+      "command_used": "pnpm run slice:gate",
+      "supports_claims": [
+        "WLT-000 RUNTIME_VERIFIED",
+        "wlt-000_financial_references.sql applied",
+        "4 reference tables created",
+        "Reference endpoints return 200",
+        "WLT API healthy at 58083"
+      ],
       "contradictions": "CONTRADICTION-001 + CONTRADICTION-002 resolved (see contradictions_resolved above)",
-      "last_verified_source": "git commit 3b1d63a + 708bb5a"
+      "required_update": "NONE"
     },
 
-    "GUARD_EVIDENCE": {
+    "GUARD_RUN_ARCHIVE": {
+      "evidence_id": "GUARD-ARCHIVE-001",
       "path": "tools/registry/runs/",
+      "topic_id": "ALL",
+      "service": "system",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "GUARD_RUN_ARCHIVE",
       "status": "PRESENT",
       "description": "All foundation:gate and slice:gate runs are archived here with timestamped directories",
       "latest_foundation_gate": "tools/registry/runs/FOUNDATION-GATE-20260622-181127",
       "latest_slice_gate": "tools/registry/runs/SLICE-GATE-20260622-172256",
-      "contradictions": "NONE"
+      "supports_claims": ["Foundation gate PASS", "Slice gate PASS for DSH-001"],
+      "contradictions": "NONE",
+      "required_update": "Updated automatically when gates run"
     },
 
     "DSH_SERVICE_MANIFEST": {
+      "evidence_id": "DSH-MANIFEST-001",
       "path": "services/dsh/service.manifest.ts",
+      "topic_id": "DSH-001",
+      "service": "dsh",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "SERVICE_MANIFEST",
       "status": "PRESENT",
       "key_fields": {
         "stage": "DSH-001_RUNTIME_VERIFIED_MULTI_SURFACE",
@@ -136,11 +211,19 @@
         "backendRuntimeReady": true,
         "sharedOwnershipEnforced": true
       },
-      "contradictions": "NONE"
+      "supports_claims": ["DSH service is in RUNTIME_VERIFIED state"],
+      "contradictions": "NONE",
+      "required_update": "Update stage and closureState when DSH-002 is fully closed"
     },
 
     "WLT_SERVICE_MANIFEST": {
+      "evidence_id": "WLT-MANIFEST-001",
       "path": "services/wlt/service.manifest.ts",
+      "topic_id": "WLT-000",
+      "service": "wlt",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "SERVICE_MANIFEST",
       "status": "PRESENT",
       "key_fields": {
         "runtimeState": "WLT_000_FOUNDATION_RUNTIME_VERIFIED",
@@ -153,67 +236,121 @@
         "mutationRuntimeReady": false,
         "mutationSlicesApproved": false
       },
+      "supports_claims": ["WLT-000 RUNTIME_VERIFIED", "Mutation APIs not approved"],
       "contradictions": "NONE — CONTRADICTION-004 resolved",
       "required_update": "NONE"
     },
 
     "DOCKER_COMPOSE": {
+      "evidence_id": "DOCKER-COMPOSE-001",
       "path": "infra/docker/compose.runtime.yml",
+      "topic_id": "ALL",
+      "service": "system",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "DOCKER_COMPOSE",
       "status": "PRESENT",
       "verified_services": ["postgres:55432", "dsh-api:58080", "wlt-api:58083", "minio:59000"],
-      "contradictions": "NONE"
+      "supports_claims": ["Docker runtime is correct with canonical port mapping"],
+      "contradictions": "NONE",
+      "required_update": "Add new service profile when a new service is activated"
     },
 
     "DSH_OPENAPI": {
+      "evidence_id": "DSH-OPENAPI-001",
       "path": "services/dsh/contracts/dsh.openapi.yaml",
+      "topic_id": "DSH-001",
+      "service": "dsh",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "API_CONTRACT",
       "status": "PRESENT",
       "version": "0.3.0",
       "state": "CONTRACT_ACTIVE",
       "operations": ["getDshHealth", "getDshReadiness", "listDshStores", "getDshStore", "getDshHomeDiscovery"],
-      "contradictions": "NONE"
+      "supports_claims": ["DSH-001 API contract active", "DSH-002 home-discovery endpoint present"],
+      "contradictions": "NONE",
+      "required_update": "Add catalog operations when DSH-003 is approved"
     },
 
     "WLT_OPENAPI": {
+      "evidence_id": "WLT-OPENAPI-001",
       "path": "services/wlt/contracts/wlt.openapi.yaml",
+      "topic_id": "WLT-000",
+      "service": "wlt",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "API_CONTRACT",
       "status": "PRESENT",
       "version": "0.2.0",
       "state": "CONTRACT_ACTIVE",
-      "contradictions": "NONE"
+      "note": "Reference-only endpoints. No mutation APIs.",
+      "supports_claims": ["WLT-000 API contract active — read-only reference endpoints only"],
+      "contradictions": "NONE",
+      "required_update": "Add mutation operations when WLT-001 is approved"
     },
 
     "CROSS_SURFACE_DEPENDENCY_MAP": {
+      "evidence_id": "DSH-001-CROSS-SURFACE-001",
       "path": "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json",
+      "topic_id": "DSH-001",
+      "service": "dsh",
+      "surface": "all_5_surfaces",
+      "control_panel_section": "partners",
+      "evidence_type": "CROSS_SURFACE_MAP",
       "status": "PRESENT",
-      "guard_reads_this": "dsh-service-activation.mjs, dsh-001-cross-surface-dependency-map.mjs",
+      "guard_reads_this": ["dsh-service-activation.mjs", "dsh-001-cross-surface-dependency-map.mjs"],
       "do_not_delete": true,
-      "contradictions": "NONE"
+      "classification": "LEGACY_GUARD_DEPENDENCY",
+      "supports_claims": ["DSH-001 surface roles are correctly defined and enforced by guard"],
+      "contradictions": "NONE",
+      "required_update": "Add DSH-002 cross-surface map when control-panel is implemented"
     },
 
     "MATRIX_V3": {
+      "evidence_id": "MATRIX-V3-001",
       "path": "machine-readable/slice_execution_master_matrix_v3.csv",
+      "topic_id": "ALL",
+      "service": "system",
+      "surface": "system",
+      "control_panel_section": null,
+      "evidence_type": "SLICE_MATRIX",
       "status": "PRESENT",
-      "guard_reads_this": "guard-slice-master-matrix-v3.mjs, performance-runtime-baseline.mjs",
+      "guard_reads_this": ["guard-slice-master-matrix-v3.mjs", "performance-runtime-baseline.mjs"],
       "do_not_delete": true,
+      "classification": "LEGACY_GUARD_DEPENDENCY",
       "rows_verified": ">= 1150 (guard checks this)",
-      "contradictions": "NONE"
+      "supports_claims": ["GUARD_MATRIX_V3 PASS — all required artifacts tracked"],
+      "contradictions": "NONE",
+      "required_update": "NONE — guard validates automatically"
     },
 
     "CONTROL_PANEL_DESIGN_FILES": {
+      "evidence_id": "CP-DESIGN-001",
       "paths": [
         "machine-readable/control-panel-design/control_panel_design_gate.json",
         "machine-readable/control-panel-design/control_panel_section_archetypes.json",
         "machine-readable/control-panel-design/control_panel_service_ownership_matrix.json",
-        "machine-readable/control-panel-design/control_panel_design_skeleton_reference.json"
+        "machine-readable/control-panel-design/control_panel_design_skeleton_reference.json",
+        "machine-readable/control-panel-design/control_panel_app_shell_audit.json"
       ],
+      "topic_id": "DSH-001",
+      "service": "dsh",
+      "surface": "control-panel",
+      "control_panel_section": "all_sections",
+      "evidence_type": "CONTROL_PANEL_DESIGN_CONTRACT",
       "status": "PRESENT",
-      "guard_reads_these": "control-panel-design-gate.mjs, app-shell-control-panel-contract-gate.mjs",
+      "guard_reads_these": ["control-panel-design-gate.mjs", "app-shell-control-panel-contract-gate.mjs"],
       "do_not_delete": true,
-      "contradictions": "NONE"
+      "classification": "LEGACY_GUARD_DEPENDENCY",
+      "supports_claims": ["Control-panel design gate PASS", "App shell contract gate PASS"],
+      "contradictions": "NONE",
+      "required_update": "Update ownership matrix when new sections/services are added"
     }
   },
 
   "stale_files_retired": {
-    "description": "Files that were in machine-readable/ but have been retired in this audit. Their content is preserved in canonical files.",
+    "description": "Files that were in machine-readable/ but have been retired. Their content is preserved in canonical files.",
     "retired": [
       {
         "path": "machine-readable/dsh-wlt/dsh_wlt_status.json",
@@ -251,69 +388,10 @@
         "content_migrated_to": "architecture-map.json"
       },
       {
-        "path": "machine-readable/dsh-wlt/dsh_wlt_master_plan.md",
-        "reason": "RETIRE_STALE — not machine-readable; human planning doc",
-        "content_migrated_to": "topic-registry.json + execution-status.json"
-      },
-      {
-        "path": "machine-readable/dsh-wlt/dsh_wlt_execution_master_reference.md",
-        "reason": "RETIRE_STALE — not machine-readable; human planning doc",
-        "content_migrated_to": "canonical set"
-      },
-      {
-        "path": "machine-readable/dsh-wlt/dsh_wlt_extraction_matrix.csv",
-        "reason": "RETIRE_STALE — extraction decisions captured in repositories.json",
-        "content_migrated_to": "repositories.json#donor_extraction_decisions"
-      },
-      {
-        "path": "machine-readable/dsh-wlt/dsh_wlt_slice_execution_matrix.csv",
-        "reason": "RETIRE_STALE — superseded by topic-registry.json",
-        "content_migrated_to": "topic-registry.json"
-      },
-      {
-        "path": "machine-readable/dsh-wlt/README.md",
-        "reason": "RETIRE_STALE — superseded by root machine-readable/README.md",
-        "content_migrated_to": "machine-readable/README.md"
-      },
-      {
-        "path": "machine-readable/control_panel_coverage_matrix.csv",
-        "reason": "RETIRE_STALE — control panel requirements captured in topic-registry.json + architecture-map.json",
-        "content_migrated_to": "topic-registry.json + architecture-map.json"
-      },
-      {
-        "path": "machine-readable/donor_control_panel_alias_matrix.csv",
-        "reason": "RETIRE_STALE — donor extraction analysis captured in repositories.json",
-        "content_migrated_to": "repositories.json#donor_extraction_decisions"
-      },
-      {
-        "path": "machine-readable/dsh_wlt_logic_coverage_matrix.csv",
-        "reason": "RETIRE_STALE — key rules captured in governance.json + topic-registry.json",
-        "content_migrated_to": "governance.json + topic-registry.json"
-      },
-      {
-        "path": "machine-readable/extraction_matrix.csv",
-        "reason": "RETIRE_STALE — extraction decisions captured in repositories.json",
-        "content_migrated_to": "repositories.json"
-      },
-      {
-        "path": "machine-readable/mobile_ux_journey_matrix.csv",
-        "reason": "RETIRE_STALE — key journeys captured in topic-registry.json",
-        "content_migrated_to": "topic-registry.json"
-      },
-      {
-        "path": "machine-readable/screen_state_coverage_matrix.csv",
-        "reason": "RETIRE_STALE — state requirements captured in governance.json",
-        "content_migrated_to": "governance.json"
-      },
-      {
-        "path": "machine-readable/slice_execution_master_matrix.csv",
-        "reason": "KEEP_GUARD_REQUIRED — guard-slice-master-matrix-v2.mjs reads this file. Must not be deleted.",
+        "path": "machine-readable/slice_execution_master_matrix.csv (legacy guard dependency — kept but not canonical)",
+        "reason": "KEEP_GUARD_REQUIRED — guard-slice-master-matrix-v2.mjs reads this. Must not be deleted.",
+        "classification": "LEGACY_GUARD_DEPENDENCY",
         "action": "KEEP"
-      },
-      {
-        "path": "machine-readable/control-panel-design/README.md",
-        "reason": "RETIRE_STALE — superseded by root machine-readable/README.md",
-        "content_migrated_to": "machine-readable/README.md"
       }
     ]
   }

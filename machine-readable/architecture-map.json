@@ -1,11 +1,11 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
 
   "services": {
     "dsh": {
       "role": "ACTIVE_IMPLEMENTATION_TARGET",
-      "description": "Discovery + Store + Home — operational commerce layer",
+      "description": "Discovery + Store + Home + Catalog + Cart + Orders + Dispatch + Field + Support — operational commerce layer",
       "status": "DSH-001_RUNTIME_VERIFIED_DSH-002_PARTIAL",
       "backend": {
         "language": "Go",
@@ -49,7 +49,7 @@
     },
     "wlt": {
       "role": "FINANCIAL_BOUNDARY_OWNER",
-      "description": "Wallet + Ledger + Finance — financial truth layer",
+      "description": "Wallet + Ledger + Finance — financial truth layer. DSH may only reference, never mutate.",
       "status": "WLT-000_FOUNDATION_RUNTIME_VERIFIED",
       "backend": {
         "language": "Go",
@@ -58,7 +58,7 @@
         "handlers_implemented": ["health", "readiness", "reference-endpoints"],
         "internal_port": 8083,
         "host_port": 58083,
-        "mode": "public-read-references"
+        "mode": "reference-read-only"
       },
       "contract": {
         "path": "services/wlt/contracts/wlt.openapi.yaml",
@@ -84,10 +84,11 @@
       },
       "frontend_shared_brain_for_dsh": "services/wlt/frontend/dsh/shared/",
       "frontend_surfaces": {
-        "app-client": "services/wlt/frontend/app-client/ (gitkeep)",
-        "app-partner": "services/wlt/frontend/app-partner/ (gitkeep)",
-        "app-captain": "services/wlt/frontend/app-captain/ (gitkeep)",
-        "app-field": "services/wlt/frontend/app-field/ (gitkeep)",
+        "dsh_shared_brain": "services/wlt/frontend/dsh/shared/ (ACTIVE — reference controller)",
+        "app-client": "services/wlt/frontend/app-client/ (gitkeep — not started)",
+        "app-partner": "services/wlt/frontend/app-partner/ (gitkeep — not started)",
+        "app-captain": "services/wlt/frontend/app-captain/ (gitkeep — not started)",
+        "app-field": "services/wlt/frontend/app-field/ (gitkeep — not started)",
         "control-panel": "services/wlt/frontend/control-panel/ (skeleton proof only)"
       },
       "service_manifest": "services/wlt/service.manifest.ts",
@@ -115,9 +116,10 @@
       "forbidden": [
         "business logic",
         "direct fetch in pages",
-        "service-specific screens",
+        "service-specific screens (use service ui paths)",
         "local design system",
-        "financial mutation"
+        "financial mutation",
+        "Tamagui imports"
       ],
       "start_command": "$env:NEXT_PUBLIC_DSH_API_BASE_URL='http://localhost:58080'; pnpm --dir apps/control-panel/runtime dev --port 13000"
     },
@@ -125,13 +127,15 @@
       "type": "Expo React Native (customer)",
       "path": "apps/app-client/runtime/",
       "port": 18101,
-      "env_var": "EXPO_PUBLIC_DSH_API_BASE_URL"
+      "env_var": "EXPO_PUBLIC_DSH_API_BASE_URL",
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-client/runtime exec expo start --dev-client --host localhost --port 18101 --android --clear"
     },
     "app-partner": {
       "type": "Expo React Native (merchant)",
       "path": "apps/app-partner/runtime/",
       "port": 18102,
-      "env_var": "EXPO_PUBLIC_DSH_API_BASE_URL"
+      "env_var": "EXPO_PUBLIC_DSH_API_BASE_URL",
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-partner/runtime exec expo start --dev-client --host localhost --port 18102 --android --clear"
     },
     "app-captain": {
       "type": "Expo React Native (delivery captain)",
@@ -170,20 +174,14 @@
       "path": "shared/app-shell/",
       "role": "SHELL_AND_CONTRACTS",
       "owns": [
-        "ControlPanelShell",
-        "ControlPanelNavigation",
-        "ControlPanelTopBar",
-        "ControlPanelServiceContext",
-        "ControlPanelSectionRegistry",
-        "ControlPanelServiceRegistry",
-        "section archetype frames"
-      ],
-      "forbidden": ["service business logic", "API clients", "direct fetch", "financial mutation", "Tamagui"],
-      "archetypes": [
+        "ControlPanelShell", "ControlPanelNavigation", "ControlPanelTopBar",
+        "ControlPanelServiceContext", "ControlPanelSectionRegistry", "ControlPanelServiceRegistry",
+        "CpPrimitives",
         "OverviewPageFrame", "DataTablePageFrame", "QueuePageFrame",
         "OperationsRoomFrame", "DetailPageFrame", "EditorPageFrame",
         "ReviewPageFrame", "MetricsPageFrame", "SettingsPageFrame", "FinanceReadOnlyFrame"
       ],
+      "forbidden": ["service business logic", "API clients", "direct fetch", "financial mutation", "Tamagui"],
       "typecheck_command": "pnpm --dir shared/app-shell typecheck",
       "status": "RUNTIME_VERIFIED"
     },
@@ -200,46 +198,59 @@
 
   "control_panel_sections": {
     "dashboard": {
+      "path": "services/dsh/frontend/control-panel/dashboard/",
       "archetypes": ["OverviewPageFrame", "MetricsPageFrame"],
-      "dsh_slices": ["DSH-010 (finance visibility summary)"]
+      "dsh_slices": ["DSH-010 (finance visibility summary — read-only from WLT)"],
+      "wlt_constraint": "READ-ONLY display of WLT data only"
     },
     "operations": {
+      "path": "services/dsh/frontend/control-panel/operations/",
       "archetypes": ["OperationsRoomFrame", "QueuePageFrame", "DetailPageFrame"],
-      "dsh_slices": ["DSH-007 (captain dispatch)", "DSH-007 (live orders)", "DSH-009 (interventions)"]
+      "dsh_slices": ["DSH-004 (cart activity)", "DSH-006 (order queue)", "DSH-007 (dispatch room, live orders)", "DSH-009 (intervention room)"]
     },
     "finance": {
+      "path": "services/dsh/frontend/control-panel/finance/",
       "archetypes": ["FinanceReadOnlyFrame", "MetricsPageFrame"],
       "dsh_slices": ["DSH-010 (finance visibility)"],
-      "constraint": "READ-ONLY — WLT boundary. No payment mutation."
+      "constraint": "READ-ONLY — WLT boundary. No payment mutation. Only FinanceReadOnlyFrame permitted here."
     },
     "catalogs": {
+      "path": "services/dsh/frontend/control-panel/catalogs/",
       "archetypes": ["DataTablePageFrame", "EditorPageFrame", "ReviewPageFrame"],
-      "dsh_slices": ["DSH-003 (catalog management)"]
+      "dsh_slices": ["DSH-003 (catalog management, product governance)"]
     },
     "partners": {
+      "path": "services/dsh/frontend/control-panel/partners/",
       "archetypes": ["QueuePageFrame", "DetailPageFrame", "ReviewPageFrame"],
-      "dsh_slices": ["DSH-001 (stores admin)", "DSH-008 (field readiness)", "DSH-006 (partner orders)"],
+      "dsh_slices": ["DSH-001 (stores admin)", "DSH-008 (field readiness queue)", "DSH-006 (partner orders view)"],
       "implemented_routes": ["/dsh/partners/stores"]
     },
     "marketing": {
+      "path": "services/dsh/frontend/control-panel/marketing/",
       "archetypes": ["OverviewPageFrame", "EditorPageFrame", "MetricsPageFrame"],
-      "dsh_slices": ["DSH-002 (home discovery admin — banners, promos, categories)"]
+      "dsh_slices": ["DSH-002 (home discovery admin — banners, promos, categories)"],
+      "planned_routes": ["/dsh/marketing/home-discovery/banners", "/dsh/marketing/home-discovery/promos", "/dsh/marketing/home-discovery/categories"]
     },
     "support": {
+      "path": "services/dsh/frontend/control-panel/support/",
       "archetypes": ["QueuePageFrame", "DetailPageFrame"],
-      "dsh_slices": ["DSH-009 (support queue, case detail)"]
+      "dsh_slices": ["DSH-009 (support queue, case detail, intervention)"]
     },
     "platform": {
+      "path": "services/dsh/frontend/control-panel/platform/",
       "archetypes": ["SettingsPageFrame"],
-      "dsh_slices": []
+      "dsh_slices": ["Platform policies, service areas, operational rules — future"]
     },
     "administration": {
+      "path": "services/dsh/frontend/control-panel/administration/",
       "archetypes": ["DataTablePageFrame", "SettingsPageFrame"],
-      "dsh_slices": []
+      "dsh_slices": ["Roles, approvals, governance — future"]
     },
     "hr": {
+      "path": "services/dsh/frontend/control-panel/ (no hr subdirectory yet)",
       "archetypes": ["DataTablePageFrame", "QueuePageFrame"],
-      "dsh_slices": []
+      "dsh_slices": ["HR management — future, out of current scope"],
+      "status": "SCAFFOLD_ONLY — no routes yet"
     }
   },
 
@@ -284,5 +295,223 @@
     "CONTROL_PANEL": 13000
   },
 
-  "forbidden_ports_as_host": [8080, 8081, 8082, 8083, 8084, 3000]
+  "forbidden_ports_as_host": [8080, 8081, 8082, 8083, 8084, 3000],
+
+  "dsh_order_state_machine": {
+    "owner": "dsh",
+    "principle": "DSH owns order operational state lifecycle. WLT is triggered only at payment-relevant transitions. DSH must not own financial truth.",
+    "db_table": "orders",
+    "db_columns": ["state", "valid_from", "valid_to", "transition_log"],
+    "idempotency_key": "order_id + correlation_id",
+    "event_on_every_transition": "order.state.changed",
+    "states": [
+      "pending",
+      "store-accepted",
+      "preparing",
+      "ready-for-pickup",
+      "dispatching",
+      "driver-assigned",
+      "driver-arrived-store",
+      "picked-up",
+      "arrived-customer",
+      "delivered",
+      "cancelled-by-client",
+      "cancelled-by-store",
+      "cancelled-no-driver",
+      "failed-payment",
+      "failed-dispatch"
+    ],
+    "error_cases": ["invalid_transition", "duplicate_transition", "auth_failure"],
+    "rollback_rule": "invalid transition -> no state mutation; audited rejection logged",
+    "wlt_trigger_policy": "WLT triggered only at payment-relevant transitions (payment initiation, COD collection at delivery, refund after cancellation). Order state itself is DSH-authoritative.",
+    "required_for_topic": "DSH-006 (Order Fulfillment), DSH-007 (Dispatch & Delivery)",
+    "note": "State machine diagram required before DSH-006 implementation. BLOCKED_NEEDS_DOMAIN_MODEL until spec approved."
+  },
+
+  "dsh_dispatch_policy": {
+    "owner": "dsh",
+    "principle": "DSH owns dispatch logic. WLT owns payment authorization before dispatch. Captain assignment is DSH-operational.",
+    "db_tables": ["dispatch_attempts", "captain_assignments", "zone_config"],
+    "idempotency_key": "order_id + attempt_sequence",
+    "state_trigger": "pending -> dispatching -> driver-assigned",
+    "audit_rule": "audit actor_id actor_role object_id action from_state to_state correlation_id timestamp",
+    "rollback_rule": "dispatch failure -> release WLT payment authorization; requeue order",
+    "policies": [
+      {
+        "policy_id": "dispatch-radial-search",
+        "rule": "Search drivers within configurable radius; expand radius if no match within timeout window"
+      },
+      {
+        "policy_id": "dispatch-priority-routing",
+        "rule": "Priority order: online captain -> nearest -> highest rating -> manual operator escalation"
+      },
+      {
+        "policy_id": "dispatch-auto-reject",
+        "rule": "Auto-reject dispatch offer if captain does not accept within configurable time window"
+      },
+      {
+        "policy_id": "dispatch-batching",
+        "rule": "Batch orders to same captain if same zone and within batch time window"
+      },
+      {
+        "policy_id": "dispatch-manual-escalation",
+        "rule": "Operator can manually assign captain from control-panel operations room if auto-dispatch fails"
+      },
+      {
+        "policy_id": "dispatch-geofencing",
+        "rule": "Enforce active zone polygon; check zone version; store radius; reject if zone inactive or stale"
+      },
+      {
+        "policy_id": "dispatch-partner-blacklist",
+        "rule": "Do not dispatch to blocked or suspended partners; check partner status before dispatch assignment"
+      }
+    ],
+    "required_for_topic": "DSH-007 (Dispatch & Captain Delivery Lifecycle)",
+    "note": "Full dispatch policy spec required before DSH-007 execution."
+  },
+
+  "pricing_policy_summary": {
+    "owner": "wlt",
+    "principle": "All financial calculations belong to WLT. DSH sends order details to WLT which returns a payment session reference. DSH never calculates amounts.",
+    "policies": [
+      {
+        "policy_id": "base-delivery-fee",
+        "rule": "Calculated by WLT per zone and distance tier at checkout intent; DSH sends store_id + customer_location + items"
+      },
+      {
+        "policy_id": "surge-pricing",
+        "rule": "WLT applies surge multiplier during peak demand/supply ratio; DSH displays paymentStatus reference only"
+      },
+      {
+        "policy_id": "service-fee",
+        "rule": "Platform commission percentage per order; calculated and owned by WLT"
+      },
+      {
+        "policy_id": "discount-application",
+        "rule": "Promo codes and loyalty discounts applied by WLT at checkout; DSH sends promo_code reference to WLT"
+      },
+      {
+        "policy_id": "vat-calculation",
+        "rule": "Tax calculation per jurisdiction; WLT-owned; DSH receives tax_included amount only as display reference"
+      }
+    ],
+    "dsh_forbidden": "DSH must not compute, store, or mutate any price or amount. All pricing is WLT-owned.",
+    "required_for_topic": "DSH-005 (Checkout Intent & WLT Handoff)"
+  },
+
+  "cod_policy_summary": {
+    "owner": "wlt",
+    "principle": "Cash-on-delivery collection and reconciliation are WLT financial operations. DSH captain marks delivery; WLT handles COD financial state.",
+    "policies": [
+      {
+        "policy_id": "cod-collection-at-delivery",
+        "rule": "Captain collects exact amount displayed on order at delivery; amount sourced from WLT payment session reference"
+      },
+      {
+        "policy_id": "cod-amount-verification",
+        "rule": "Order total must match WLT-expected amount before physical handover; mismatch triggers support escalation"
+      },
+      {
+        "policy_id": "cod-remittance",
+        "rule": "Captain transfers collected cash to designated settlement point; WLT records COD_financial_state transition"
+      },
+      {
+        "policy_id": "cod-reconciliation",
+        "rule": "Daily COD reconciliation between captain cash and WLT settlement records; owned entirely by WLT"
+      },
+      {
+        "policy_id": "cod-failure-escalation",
+        "rule": "COD collection failure triggers WLT refund flow if payment was pre-authorized; DSH order state = failed-payment"
+      }
+    ],
+    "dsh_forbidden": "DSH must not own COD financial state. DSH may display COD payment status reference from WLT only.",
+    "required_for_topic": "DSH-007 (Dispatch & Delivery) for captain side; WLT-001+ for financial state"
+  },
+
+  "notification_triggers_summary": {
+    "owner": "dsh (operational notifications); wlt (financial notifications)",
+    "principle": "Every order and financial state transition must emit a typed event with correlation_id. Notification service consumes events.",
+    "triggers": [
+      {"event": "order.state.pending", "notify": ["partner"], "message": "New order incoming — accept or reject"},
+      {"event": "order.state.store-accepted", "notify": ["client"], "message": "Your order has been accepted by the store"},
+      {"event": "order.state.preparing", "notify": ["client"], "message": "Your order is being prepared"},
+      {"event": "order.state.ready-for-pickup", "notify": ["captain"], "message": "Order ready for pickup — navigate to store"},
+      {"event": "order.state.driver-assigned", "notify": ["client"], "message": "Captain assigned; tracking available"},
+      {"event": "order.state.dispatching", "notify": ["client"], "message": "Captain is on the way to the store"},
+      {"event": "order.state.driver-arrived-store", "notify": ["partner"], "message": "Captain has arrived at store"},
+      {"event": "order.state.picked-up", "notify": ["client"], "message": "Order picked up; captain is on the way"},
+      {"event": "order.state.arrived-customer", "notify": ["client"], "message": "Captain has arrived — please receive your order"},
+      {"event": "order.state.delivered", "notify": ["client", "partner"], "message": "Order delivered successfully"},
+      {"event": "order.state.cancelled-by-client", "notify": ["partner", "captain"], "message": "Order cancelled by client"},
+      {"event": "order.state.cancelled-by-store", "notify": ["client", "captain"], "message": "Order cancelled by store"},
+      {"event": "order.state.cancelled-no-driver", "notify": ["client", "partner", "operator"], "message": "No captain available — order cancelled"},
+      {"event": "order.state.failed-dispatch", "notify": ["operator"], "message": "Manual intervention required — dispatch failed"},
+      {"event": "order.state.failed-payment", "notify": ["client"], "message": "Payment failed — order cancelled"},
+      {"event": "wlt.financial.state.captured", "notify": ["partner"], "message": "Payment captured — proceed with order"},
+      {"event": "wlt.financial.state.settled", "notify": ["partner"], "message": "Settlement completed"},
+      {"event": "wlt.financial.state.refund-completed", "notify": ["client"], "message": "Refund processed successfully"},
+      {"event": "store.onboarding.submitted", "notify": ["field_team", "operator"], "message": "Store onboarding documents submitted for review"},
+      {"event": "store.onboarding.approved", "notify": ["partner"], "message": "Your store has been approved"},
+      {"event": "store.onboarding.rejected", "notify": ["partner"], "message": "Store onboarding rejected — reason attached"},
+      {"event": "support.case.escalated", "notify": ["operator"], "message": "Support case escalated — requires intervention"},
+      {"event": "captain.assigned.new-task", "notify": ["captain"], "message": "New delivery assignment — tap to view"}
+    ],
+    "required_for_topic": "DSH-011 (Notifications & Actor Communication)"
+  },
+
+  "external_dependencies_summary": {
+    "principle": "External providers are decided at WLT-001+ or dedicated topic approval. DSH never couples to external providers directly.",
+    "dependencies": [
+      {
+        "dependency_id": "payment-gateway",
+        "owner": "wlt",
+        "provider": "TBD_CONFIG_REQUIRED — abstract contract; decided at WLT-001 approval",
+        "dsh_access": "FORBIDDEN — DSH never calls payment gateway directly"
+      },
+      {
+        "dependency_id": "maps-routing-api",
+        "owner": "dsh",
+        "provider": "TBD_CONFIG_REQUIRED — abstract contract; decided at DSH-007 approval",
+        "purpose": "Captain navigation, ETA calculation, zone polygon management"
+      },
+      {
+        "dependency_id": "sms-gateway",
+        "owner": "notifications-service (future)",
+        "provider": "TBD_CONFIG_REQUIRED",
+        "purpose": "SMS notifications for order state changes to customers"
+      },
+      {
+        "dependency_id": "push-notification-service",
+        "owner": "notifications-service (future)",
+        "provider": "TBD_CONFIG_REQUIRED — Firebase or abstract contract",
+        "purpose": "Mobile push notifications to all actor apps"
+      },
+      {
+        "dependency_id": "object-storage",
+        "owner": "dsh (media)",
+        "provider": "MinIO (S3 compatible) — RUNTIME_VERIFIED at DSH-000",
+        "port": "59000",
+        "purpose": "Store images, product images, banner assets, PoD photos"
+      },
+      {
+        "dependency_id": "email-service",
+        "owner": "notifications-service (future)",
+        "provider": "TBD_CONFIG_REQUIRED",
+        "purpose": "Order confirmations, receipts, store approval emails"
+      },
+      {
+        "dependency_id": "geofencing-service",
+        "owner": "dsh",
+        "provider": "TBD_CONFIG_REQUIRED — abstract contract; decided at DSH-007",
+        "purpose": "Zone management, captain live tracking, delivery radius enforcement"
+      },
+      {
+        "dependency_id": "identity-auth-service",
+        "owner": "core/identity (future)",
+        "provider": "Internal — core/identity/contracts/auth.openapi.yaml (REFERENCE_ONLY)",
+        "purpose": "Actor authentication, RBAC, tenant scoping for all surfaces"
+      }
+    ],
+    "required_for_topic": "Each dependency declared at the topic that first requires it"
+  }
 }

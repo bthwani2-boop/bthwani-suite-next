@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
-  "principle": "Surfaces are UI-only. All business logic, controllers, view-models, and state machines live in shared brains. A surface importing logic directly from another surface or defining its own business logic is an ownership violation.",
+  "principle": "Surfaces are UI-only. All business logic, controllers, view-models, and state machines live in shared brains. A surface importing logic directly from another surface or defining its own business logic is an OWNERSHIP_VIOLATION that blocks closure.",
 
   "surfaces": {
     "app-client": {
@@ -14,20 +14,55 @@
       "dsh_shared_brain": "services/dsh/frontend/shared/",
       "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
       "is_ui_only": true,
-      "role": "Customer-facing mobile experience — browse, discover, order, track",
-      "allowed_in_surface": [
-        "React Native screens consuming controllers/hooks from shared",
-        "Navigation wiring",
+      "role": "Customer-facing mobile experience — browse stores, discover products, manage cart, place orders, track delivery",
+      "allowed_content": [
+        "React Native screen components consuming controllers/hooks from shared brain",
+        "Navigation wiring and route params",
         "UI composition using @bthwani/ui-kit components",
-        "Route params and screen props"
+        "Screen-level layout and presentation logic",
+        "Props drilling from navigator to screen",
+        "Event handlers that call shared controller actions"
       ],
-      "forbidden_in_surface": [
-        "Business logic",
-        "Direct API fetch (use generated client via shared controller)",
+      "forbidden_content": [
+        "Business logic of any kind",
+        "Direct API fetch or axios calls",
         "Local design system or Tamagui direct imports",
-        "Financial mutations",
+        "Financial mutations or financial state management",
         "Raw hex colors",
-        "Mock/demo/preview runtime data"
+        "Mock/demo/preview runtime data",
+        "State management stores owned by the surface",
+        "Topic logic (must live in shared brain)",
+        "Cross-surface imports"
+      ],
+      "allowed_imports": [
+        "@bthwani/ui-kit (components, tokens, theme)",
+        "@bthwani/app-shell (shell contracts only)",
+        "services/dsh/frontend/shared/* (controllers, hooks, types, view-models)",
+        "services/wlt/frontend/dsh/shared/* (reference data only — no mutations)",
+        "react, react-native",
+        "expo-* packages",
+        "@react-navigation/*"
+      ],
+      "forbidden_imports": [
+        "tamagui (direct — use @bthwani/ui-kit)",
+        "@tamagui/* (direct — use @bthwani/ui-kit)",
+        "axios, fetch (direct — use shared controller)",
+        "services/wlt/frontend/app-client/* (WLT surfaces not started)",
+        "Any service backend path",
+        "Any other surface's files"
+      ],
+      "api_call_policy": "All API calls must go through shared controller which uses the generated typed client. No direct fetch/axios in surface files.",
+      "state_policy": "State is owned by the shared controller (via React hooks). Surface receives state via hook return values only.",
+      "financial_policy": "No financial mutations. Read-only display of payment/settlement status references from WLT shared controller only.",
+      "route_exposure": "Expo Router / React Navigation routes defined in apps/app-client/runtime/src/App.tsx. Service screens mounted as route components.",
+      "required_guards": [
+        "no-direct-tamagui-outside-ui-kit",
+        "no-direct-fetch-in-screen",
+        "no-financial-mutation-outside-wlt",
+        "no-local-design-system",
+        "no-raw-hex-outside-ui-kit",
+        "dsh-frontend-shared-ownership",
+        "no-preview-demo-mock-runtime"
       ],
       "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED)", "DSH-002 (RUNTIME_VERIFIED)"],
       "ownership_violations_found": "NONE",
@@ -43,20 +78,51 @@
         "wlt": "services/wlt/frontend/app-partner/ (gitkeep — not started)"
       },
       "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
       "is_ui_only": true,
-      "role": "Partner-facing mobile — catalog management, order acceptance, store readiness",
-      "allowed_in_surface": [
-        "React Native screens consuming controllers/hooks from shared",
+      "role": "Partner-facing mobile — store readiness context, catalog management, order acceptance, onboarding status, settlement display",
+      "allowed_content": [
+        "React Native screen components consuming controllers/hooks from shared brain",
         "Navigation wiring",
-        "UI composition using @bthwani/ui-kit components"
+        "UI composition using @bthwani/ui-kit components",
+        "Screen-level layout and presentation"
       ],
-      "forbidden_in_surface": [
+      "forbidden_content": [
         "Business logic",
-        "Direct API fetch",
+        "Direct API fetch or axios",
         "Local design system or Tamagui direct imports",
         "Financial mutations",
         "Raw hex colors",
-        "Mock/demo/preview runtime data"
+        "Mock/demo/preview runtime data",
+        "Topic logic (belongs in shared brain)",
+        "Cross-surface imports"
+      ],
+      "allowed_imports": [
+        "@bthwani/ui-kit",
+        "@bthwani/app-shell (shell contracts only)",
+        "services/dsh/frontend/shared/*",
+        "services/wlt/frontend/dsh/shared/* (reference data only)",
+        "react, react-native",
+        "expo-* packages",
+        "@react-navigation/*"
+      ],
+      "forbidden_imports": [
+        "tamagui (direct)",
+        "@tamagui/* (direct)",
+        "axios, fetch (direct)",
+        "Any other surface's files"
+      ],
+      "api_call_policy": "All API calls via shared controller using generated typed client.",
+      "state_policy": "State owned by shared controller. Surface consumes hook return values.",
+      "financial_policy": "No financial mutations. WLT settlement status display via wlt_shared_brain only.",
+      "route_exposure": "Expo Router routes in apps/app-partner/runtime/src/App.tsx.",
+      "required_guards": [
+        "no-direct-tamagui-outside-ui-kit",
+        "no-direct-fetch-in-screen",
+        "no-financial-mutation-outside-wlt",
+        "no-local-design-system",
+        "dsh-frontend-shared-ownership",
+        "no-preview-demo-mock-runtime"
       ],
       "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only readiness context)"],
       "dsh_001_scope_note": "DSH-001 in app-partner implements store-only readiness context. Catalog management, partner orders, finance are excluded.",
@@ -73,19 +139,47 @@
         "wlt": "services/wlt/frontend/app-captain/ (gitkeep — not started)"
       },
       "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
       "is_ui_only": true,
-      "role": "Captain-facing mobile — order assignment, pickup, delivery, PoD",
-      "allowed_in_surface": [
-        "React Native screens consuming controllers/hooks from shared",
+      "role": "Captain-facing mobile — store pickup context, order assignment, delivery navigation, PoD submission",
+      "allowed_content": [
+        "React Native screen components consuming controllers/hooks from shared brain",
         "Navigation wiring",
         "UI composition using @bthwani/ui-kit components"
       ],
-      "forbidden_in_surface": [
+      "forbidden_content": [
         "Business logic",
-        "Direct API fetch",
+        "Direct API fetch or axios",
         "Financial mutations (earnings, commissions — WLT only)",
-        "Local design system",
-        "Mock/demo/preview runtime data"
+        "Local design system or Tamagui direct imports",
+        "Mock/demo/preview runtime data",
+        "Cross-surface imports"
+      ],
+      "allowed_imports": [
+        "@bthwani/ui-kit",
+        "services/dsh/frontend/shared/*",
+        "services/wlt/frontend/dsh/shared/* (reference data only)",
+        "react, react-native",
+        "expo-* packages",
+        "@react-navigation/*"
+      ],
+      "forbidden_imports": [
+        "tamagui (direct)",
+        "@tamagui/* (direct)",
+        "axios, fetch (direct)",
+        "Any other surface's files"
+      ],
+      "api_call_policy": "All API calls via shared controller using generated typed client.",
+      "state_policy": "State owned by shared controller.",
+      "financial_policy": "No financial mutations. No earnings/commission display until WLT-001 approved.",
+      "route_exposure": "Expo Router routes in apps/app-captain/runtime/src/App.tsx.",
+      "required_guards": [
+        "no-direct-tamagui-outside-ui-kit",
+        "no-direct-fetch-in-screen",
+        "no-financial-mutation-outside-wlt",
+        "no-local-design-system",
+        "dsh-frontend-shared-ownership",
+        "no-preview-demo-mock-runtime"
       ],
       "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only pickup context)"],
       "dsh_001_scope_note": "DSH-001 in app-captain implements read-only store pickup context. Delivery lifecycle and earnings are excluded.",
@@ -101,22 +195,49 @@
         "wlt": "services/wlt/frontend/app-field/ (gitkeep — not started)"
       },
       "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "wlt_shared_brain": null,
       "is_ui_only": true,
-      "role": "Field agent — store onboarding, readiness, document upload, store visits",
-      "allowed_in_surface": [
-        "React Native screens consuming controllers/hooks from shared",
+      "role": "Field agent — store onboarding, verification, readiness escalation, document upload, store visits",
+      "allowed_content": [
+        "React Native screen components consuming controllers/hooks from shared brain",
         "Navigation wiring",
         "UI composition using @bthwani/ui-kit components"
       ],
-      "forbidden_in_surface": [
+      "forbidden_content": [
         "Business logic",
-        "Direct API fetch",
+        "Direct API fetch or axios",
         "Financial mutations",
-        "Local design system",
-        "Approval mutations (belong in backend)"
+        "Local design system or Tamagui direct imports",
+        "Approval mutations (belong in backend)",
+        "Cross-surface imports"
+      ],
+      "allowed_imports": [
+        "@bthwani/ui-kit",
+        "services/dsh/frontend/shared/*",
+        "react, react-native",
+        "expo-* packages",
+        "@react-navigation/*"
+      ],
+      "forbidden_imports": [
+        "tamagui (direct)",
+        "@tamagui/* (direct)",
+        "axios, fetch (direct)",
+        "services/wlt/* (field has no financial context)",
+        "Any other surface's files"
+      ],
+      "api_call_policy": "All API calls via shared controller using generated typed client.",
+      "state_policy": "State owned by shared controller.",
+      "financial_policy": "No financial access. Field surfaces have no WLT dependency.",
+      "route_exposure": "Expo Router routes in apps/app-field/runtime/src/App.tsx.",
+      "required_guards": [
+        "no-direct-tamagui-outside-ui-kit",
+        "no-direct-fetch-in-screen",
+        "no-financial-mutation-outside-wlt",
+        "no-local-design-system",
+        "dsh-frontend-shared-ownership",
+        "no-preview-demo-mock-runtime"
       ],
       "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only verification context)"],
-      "dsh_001_scope_note": "DSH-001 in app-field implements store-only verification context. Full field onboarding workflow, document upload, approval mutation are excluded.",
       "ownership_violations_found": "NONE",
       "port": 18104
     },
@@ -133,21 +254,64 @@
       "dsh_shared_brain": "services/dsh/frontend/shared/",
       "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
       "is_ui_only": true,
-      "role": "Operations + management web dashboard — admin, governance, monitoring",
-      "allowed_in_surface": [
-        "Next.js page components consuming controllers from DSH/WLT shared",
-        "Archetype frames from shared/app-shell",
+      "role": "Operations + management web dashboard — admin, governance, monitoring, analytics across all DSH sections",
+      "sections": {
+        "dashboard": "OverviewPageFrame, MetricsPageFrame — finance visibility summary (DSH-010)",
+        "operations": "OperationsRoomFrame, QueuePageFrame, DetailPageFrame — orders, dispatch, cart (DSH-004, DSH-006, DSH-007, DSH-009)",
+        "finance": "FinanceReadOnlyFrame, MetricsPageFrame — WLT-sourced display only (DSH-010)",
+        "catalogs": "DataTablePageFrame, EditorPageFrame, ReviewPageFrame — product catalog governance (DSH-003)",
+        "partners": "QueuePageFrame, DetailPageFrame, ReviewPageFrame — stores admin (DSH-001), field readiness (DSH-008), partner orders (DSH-006)",
+        "marketing": "OverviewPageFrame, EditorPageFrame, MetricsPageFrame — home discovery admin (DSH-002: banners, promos, categories)",
+        "support": "QueuePageFrame, DetailPageFrame — support queue, case detail (DSH-009)",
+        "platform": "SettingsPageFrame — service areas, policies (future)",
+        "administration": "DataTablePageFrame, SettingsPageFrame — roles, approvals (future)",
+        "hr": "DataTablePageFrame, QueuePageFrame — future"
+      },
+      "allowed_content": [
+        "Next.js page components consuming controllers from DSH/WLT shared brains",
+        "Archetype frames from shared/app-shell/src/control-panel/archetypes/",
         "CSS modules for control-panel-specific layout",
-        "Route definitions"
+        "Next.js App Router route definitions",
+        "CpPrimitives from @bthwani/app-shell"
       ],
-      "forbidden_in_surface": [
+      "forbidden_content": [
         "Tamagui imports (control-panel uses CSS/Next.js styling, NOT Tamagui)",
         "Direct fetch or axios (use generated typed clients via shared controllers)",
         "Business logic",
         "Local design system",
         "Financial mutations",
         "Raw hex colors",
-        "Mock/demo/preview runtime data"
+        "Mock/demo/preview runtime data",
+        "Custom archetype frames (use shared/app-shell archetypes)"
+      ],
+      "allowed_imports": [
+        "shared/app-shell (ControlPanelShell, archetypes, CpPrimitives)",
+        "services/dsh/frontend/shared/* (controllers, hooks, view-models)",
+        "services/wlt/frontend/dsh/shared/* (reference data display only)",
+        "react, next",
+        "CSS modules"
+      ],
+      "forbidden_imports": [
+        "tamagui (direct)",
+        "@tamagui/* (direct)",
+        "axios, fetch (direct)",
+        "@bthwani/ui-kit (use CSS + CpPrimitives for control-panel — no Tamagui in Next.js)",
+        "Any mobile surface paths",
+        "Any other surface's files"
+      ],
+      "api_call_policy": "All API calls via DSH/WLT shared controllers using generated typed clients. No direct fetch in page components.",
+      "state_policy": "State owned by shared controllers. Page components consume hook return values.",
+      "financial_policy": "Finance section is READ-ONLY. Only FinanceReadOnlyFrame archetype permitted in finance section. No financial mutations in any control-panel route.",
+      "route_exposure": "Next.js App Router in apps/control-panel/runtime/src/app/. Service screens mounted as page.tsx components under route segments.",
+      "current_routes": ["/dsh/partners/stores"],
+      "required_guards": [
+        "no-direct-fetch-in-screen",
+        "no-financial-mutation-outside-wlt",
+        "no-local-design-system",
+        "dsh-frontend-shared-ownership",
+        "app-shell-control-panel-contract-gate",
+        "control-panel-design-gate",
+        "no-preview-demo-mock-runtime"
       ],
       "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — stores admin at /dsh/partners/stores)"],
       "implemented_routes": ["/dsh/partners/stores"],
@@ -162,7 +326,16 @@
       "app_runtime_path": "apps/webapp/runtime/",
       "is_ui_only": true,
       "role": "SCAFFOLD_ONLY — out of scope for current DSH slices",
-      "current_status": "OUT_OF_SCOPE"
+      "current_status": "OUT_OF_SCOPE",
+      "allowed_content": [],
+      "forbidden_content": ["DSH/WLT business logic — not in scope"],
+      "allowed_imports": [],
+      "forbidden_imports": ["All service paths — out of scope"],
+      "api_call_policy": "OUT_OF_SCOPE",
+      "state_policy": "OUT_OF_SCOPE",
+      "financial_policy": "OUT_OF_SCOPE",
+      "required_guards": [],
+      "ownership_violations_found": "NONE"
     },
 
     "website": {
@@ -170,7 +343,16 @@
       "app_runtime_path": "apps/website/runtime/",
       "is_ui_only": true,
       "role": "SCAFFOLD_ONLY — out of scope for current DSH slices",
-      "current_status": "OUT_OF_SCOPE"
+      "current_status": "OUT_OF_SCOPE",
+      "allowed_content": [],
+      "forbidden_content": ["DSH/WLT business logic — not in scope"],
+      "allowed_imports": [],
+      "forbidden_imports": ["All service paths — out of scope"],
+      "api_call_policy": "OUT_OF_SCOPE",
+      "state_policy": "OUT_OF_SCOPE",
+      "financial_policy": "OUT_OF_SCOPE",
+      "required_guards": [],
+      "ownership_violations_found": "NONE"
     }
   },
 
@@ -179,16 +361,76 @@
       "path": "shared/ui-kit/",
       "role": "VISUAL_PRIMITIVES_OWNER",
       "is_surface": false,
-      "forbidden": ["business logic", "service-specific screens", "API calls"],
-      "ownership_violations_found": "NONE"
+      "owns": ["Tamagui configuration", "design tokens", "color roles", "typography", "spacing", "reusable UI components"],
+      "allowed_imports": ["tamagui", "@tamagui/*", "react", "react-native"],
+      "forbidden_imports": ["Any service path", "Any surface path", "API clients", "Generated clients"],
+      "forbidden_content": ["Business logic", "API calls", "Service-specific screens", "Financial mutation", "Domain components"],
+      "required_guards": [
+        "no-expo-in-ui-kit",
+        "no-domain-component-in-ui-kit",
+        "no-react-native-runtime-dependency-in-ui-kit",
+        "no-safe-area-in-ui-kit-runtime",
+        "no-vector-icons-direct-in-ui-kit",
+        "no-unsafe-ui-kit-tamagui-casts",
+        "ui-kit-token-binding"
+      ],
+      "ownership_violations_found": "NONE",
+      "typecheck_command": "pnpm --dir shared/ui-kit typecheck"
     },
     "shared_app_shell": {
       "path": "shared/app-shell/",
       "role": "SHELL_AND_CONTRACTS",
       "is_surface": false,
-      "forbidden": ["business logic", "API clients", "Tamagui", "financial mutation"],
-      "ownership_violations_found": "NONE"
+      "owns": [
+        "ControlPanelShell", "ControlPanelNavigation", "ControlPanelTopBar",
+        "ControlPanelServiceContext", "ControlPanelSectionRegistry", "ControlPanelServiceRegistry",
+        "Control panel archetype frames (OverviewPageFrame, DataTablePageFrame, QueuePageFrame, OperationsRoomFrame, DetailPageFrame, EditorPageFrame, ReviewPageFrame, MetricsPageFrame, SettingsPageFrame, FinanceReadOnlyFrame)",
+        "CpPrimitives",
+        "Shell contracts (surfaces.ts, services.ts, shell-contracts.ts, service-slots.ts)"
+      ],
+      "allowed_imports": ["react", "@types/react"],
+      "forbidden_imports": ["tamagui", "@tamagui/*", "axios", "fetch", "Any service API client", "Any financial domain"],
+      "forbidden_content": ["Service business logic", "API clients", "Direct fetch", "Financial mutation", "Tamagui"],
+      "required_guards": ["app-shell-control-panel-contract-gate"],
+      "ownership_violations_found": "NONE",
+      "typecheck_command": "pnpm --dir shared/app-shell typecheck"
     }
+  },
+
+  "dsh_shared_brains": {
+    "dsh_store_shared": {
+      "path": "services/dsh/frontend/shared/store/",
+      "owns": ["useStoreDiscoveryController", "useStoreAdminController", "useStoreRoleContextController", "store types", "store states", "store view-models"],
+      "currently_serving": ["app-client", "app-partner", "app-captain", "app-field", "control-panel"],
+      "topic": "DSH-001"
+    },
+    "dsh_home_discovery_shared": {
+      "path": "services/dsh/frontend/shared/home-discovery/",
+      "owns": ["useHomeDiscoveryController", "home types", "home states", "home view-models"],
+      "currently_serving": ["app-client"],
+      "topic": "DSH-002"
+    },
+    "dsh_kernel": {
+      "path": "services/dsh/frontend/shared/_kernel/",
+      "owns": ["base URL resolver", "shared hooks", "cross-topic utilities"],
+      "currently_serving": ["all DSH surfaces"]
+    }
+  },
+
+  "wlt_shared_brain_for_dsh": {
+    "path": "services/wlt/frontend/dsh/shared/",
+    "owns": [
+      "use-wlt-dsh-reference-controller.tsx",
+      "wlt-dsh-reference.api.ts",
+      "wlt-dsh-reference.states.ts",
+      "wlt-dsh-reference.view-model.ts",
+      "wlt-dsh-boundary.types.ts",
+      "wlt-dsh-api-base-url.ts"
+    ],
+    "allowed_usage": "DSH surfaces import from this path for read-only financial reference display. No mutations permitted.",
+    "forbidden_usage": "DSH surfaces must NOT call WLT mutation endpoints. No financial write operations.",
+    "currently_serving": ["app-client (future)", "app-partner (future)", "control-panel (future)"],
+    "wlt_runtime_state": "WLT-000 RUNTIME_VERIFIED — reference endpoints only"
   },
 
   "ownership_violation_audit": {
@@ -199,7 +441,10 @@
       "guard:no-financial-mutation-outside-wlt (PASS)",
       "guard:no-direct-fetch-in-screen (PASS)",
       "guard:no-direct-tamagui-outside-ui-kit (PASS)",
-      "guard:no-local-design-system (PASS)"
+      "guard:no-local-design-system (PASS)",
+      "guard:no-raw-hex-outside-ui-kit (PASS)",
+      "guard:app-shell-control-panel (PASS)",
+      "guard:control-panel-design (PASS)"
     ]
   }
 }
