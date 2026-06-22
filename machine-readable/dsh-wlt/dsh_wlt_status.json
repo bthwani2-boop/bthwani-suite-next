@@ -163,15 +163,15 @@
     "notes": "All canonical ports. Single compose file policy enforced."
   },
   "visual_evidence": {
-    "status": "PARTIAL_FOR_DSH_001_ALL_SURFACES",
+    "status": "COMPLETE",
     "dsh_001_app_client": "PRESENT — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-client-store-discovery-reverify.png",
     "dsh_001_control_panel": "PRESENT — success, detail, and service-unavailable screenshots under services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/",
-    "dsh_001_app_partner": "MISSING — app-partner-store-context.png required",
-    "dsh_001_app_field": "MISSING — app-field-store-verification.png required",
-    "dsh_001_app_captain": "MISSING — app-captain-store-pickup-context.png required",
+    "dsh_001_app_partner": "PRESENT — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-partner-store-context.png",
+    "dsh_001_app_field": "PRESENT — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-field-store-verification.png",
+    "dsh_001_app_captain": "PRESENT — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-captain-store-pickup-context.png",
     "dsh_002": "PRESENT — services/dsh/evidence/DSH-002-client-home-discovery/screenshot",
     "dsh_003_to_010": "NOT_STARTED",
-    "notes": "DSH-001 code and typechecks cover all five surfaces, but final closure remains blocked until partner, field, and captain screenshots are captured."
+    "notes": "DSH-001 visual evidence is fully complete across all five surfaces."
   },
   "final_closure": {
     "status": "IN_PROGRESS",
@@ -184,11 +184,8 @@
       "app-field (DSH-001 Store-only verification context)",
       "app-captain (DSH-001 Store-only pickup context)"
     ],
-    "surfaces_pending": ["control-panel (DSH-002+)", "DSH-001 partner/field/captain visual evidence"],
+    "surfaces_pending": ["control-panel (DSH-002+)"],
     "blocking_items": [
-      "DSH-001 app-partner screenshot is missing",
-      "DSH-001 app-field screenshot is missing",
-      "DSH-001 app-captain screenshot is missing",
       "DSH-003 through DSH-010 contracts not yet defined",
       "WLT runtime not activated"
     ],

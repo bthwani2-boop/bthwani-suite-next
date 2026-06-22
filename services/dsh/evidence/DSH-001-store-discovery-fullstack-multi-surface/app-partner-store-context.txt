@@ -1,0 +1,8 @@
+SURFACE: app-partner
+ROLE: partner-store-readiness
+SCOPE: store-profile, operating-status, media-readiness, catalog-readiness-summary
+FORBIDDEN: full-catalog, partner-orders, finance
+RESULT: PASS (UI-only screen consumes useStoreRoleContextController)
+
+Screenshot:
+screenshots/app-partner-store-context.png

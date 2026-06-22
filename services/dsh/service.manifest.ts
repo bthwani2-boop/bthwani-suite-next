@@ -8,7 +8,7 @@ export const dshServiceManifest = {
   activatesService: true,
   stage: "DSH-001_RUNTIME_VERIFIED_MULTI_SURFACE",
   closureState: "RUNTIME_VERIFIED",
-  activationScope: "store-discovery-multi-surface",
+  activationScope: "stores-topic-all-surfaces",
   contract: "contracts/dsh.openapi.yaml",
   contractState: "CONTRACT_ACTIVE",
   capabilities: DSH_CAPABILITY_MAP,

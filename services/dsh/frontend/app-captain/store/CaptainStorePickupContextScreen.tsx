@@ -16,7 +16,10 @@ import {
 } from "../../shared/store";
 
 export function CaptainStorePickupContextScreen() {
-  const controller = useStoreRoleContextController();
+  const controller = useStoreRoleContextController({
+    actorRole: "captain",
+    contextMode: "pickup-context",
+  });
   const state = controller.state;
 
   if (state.kind !== "success") {

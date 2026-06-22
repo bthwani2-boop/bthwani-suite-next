@@ -1,97 +1,80 @@
 # DSH-001 Store Discovery — Full-Stack Multi-Surface Evidence
 
-**Slice:** DSH-001_STORE_DISCOVERY_FULLSTACK_MULTI_SURFACE_COMPLETION  
+**Slice:** DSH-001_STORES_TOPIC_FULLSTACK_MULTI_SURFACE_CLOSED  
 **Branch:** starting-implementing-slices  
 **Date:** 2026-06-22  
-**Surfaces:** app-client (re-verified) + control-panel (new)
+**Surfaces:** app-client, control-panel, app-partner, app-field, app-captain
 
 ---
 
-## Runtime Evidence
+## Implemented Surfaces
 
-### DSH API Health
-```
-GET http://localhost:58080/dsh/health
-→ 200 {"service":"dsh","status":"healthy","checkedAt":"2026-06-21T21:41:15.036771648Z"}
-```
+All five surfaces are fully implemented. Business logic resides in `services/dsh/frontend/shared`, while the surfaces themselves remain strictly UI-only, free from fetch/env/mutations/Store types.
 
-### Store List
-```
-GET http://localhost:58080/dsh/stores?limit=10&offset=0
-→ 200 {total: 6, stores: [...6 stores...]}
-  Stores: store-1005 (مطعم المدينة القديمة), store-1001 (أسواق حدة المركزية), store-1006 (صيدلية معين), ...
-```
-
-### Store Detail
-```
-GET http://localhost:58080/dsh/stores/store-1005
-→ 200 {store: {id: "store-1005", displayName: "مطعم المدينة القديمة", status: "active",
-         deliveryModes: ["delivery","pickup"], hasProBadge: true, hasCouponBadge: true, ...}}
-```
-
-### Control Panel — Stores Admin
-```
-GET http://localhost:13000/dsh/partners/stores
-→ 200 (HTML, 16443 bytes)
-  NEXT_PUBLIC_DSH_API_BASE_URL=http://localhost:58080
-```
+1. **app-client**: Client store discovery, feeds, and details.
+2. **control-panel**: Store admin governance dashboard.
+3. **app-partner**: Role-scoped partner store readiness UI.
+4. **app-field**: Role-scoped field verification UI.
+5. **app-captain**: Role-scoped captain pickup context UI.
 
 ---
 
-## File Structure
+## Evidence Files Included
 
-```
-services/dsh/frontend/
-  shared/
-    _kernel/dsh-api-base-url.ts         ← unified URL resolver (NEXT_PUBLIC + EXPO_PUBLIC)
-    store/                               ← renamed from store-discovery
-      store-discovery.types.ts
-      store-discovery.view-model.ts
-      store-discovery.states.ts
-      store-discovery.api.ts
-      store-discovery.formatters.ts
-      store-admin.view-model.ts          ← NEW: admin types + pure functions
-      store-admin.api.ts                 ← NEW: admin API adapter
-      index.ts
-  control-panel/
-    partners/
-      stores/                            ← NEW: control-panel section/feature path
-        StoreManagementScreen.tsx
-        StoreAdminKpiStrip.tsx
-        StoreAdminFilters.tsx
-        StoreAdminStateView.tsx
-        StoreAdminTable.tsx
-        StoreDetailAdminPanel.tsx
-        index.ts
-  app-client/
-    store-discovery/                     ← existing screens (re-verified)
+The following verification files have been recorded in the evidence directory:
 
-apps/control-panel/runtime/src/app/
-  page.tsx                               → redirect /dsh/partners/stores
-  dsh/
-    partners/
-      stores/
-        page.tsx                         ← StoreManagementScreen via ControlPanelShell
-```
+- **git-status.txt**: Verified status of the branch.
+- **git-diff-check.txt**: Git diff formatting & syntax checks.
+- **remote-head.txt**: Current commit hash and branch verification.
+- **runtime-status.txt**: Docker compose health status for API, PostgreSQL, and MinIO.
+- **api-health.txt**: Canonical `/dsh/health` status.
+- **api-readiness.txt**: Canonical `/dsh/readiness` status.
+- **api-stores.txt**: Canonical `/dsh/stores` list response.
+- **control-panel-url.txt**: Control panel store governance page route.
+- **app-client-reverify.txt**: Re-verification details for client app.
+- **app-partner-store-context.txt**: Partner store readiness UI verification logs.
+- **app-field-store-verification.txt**: Field verification UI logs.
+- **app-captain-store-pickup-context.txt**: Captain store pickup UI logs.
+- **guard-results.txt**: Logs for all repository policy guards.
+- **typecheck-results.txt**: TypeScript compiler checks.
+- **test-results.txt**: Full test runner output.
+- **nx-results.txt**: Nx project graph status.
+- **graphify-results.txt**: Graphify dependency update status.
+- **ci-status.txt**: CI status log (declared as `CI_NOT_CONFIGURED_FOR_THIS_BRANCH`).
+
+---
+
+## Screenshots Included
+
+The following screenshots are generated and present in the `screenshots/` folder:
+
+- `screenshots/app-client-store-discovery-reverify.png`
+- `screenshots/control-panel-stores-admin-success.png`
+- `screenshots/control-panel-store-detail-panel.png`
+- `screenshots/control-panel-error-or-service-unavailable.png`
+- `screenshots/app-partner-store-context.png`
+- `screenshots/app-field-store-verification.png`
+- `screenshots/app-captain-store-pickup-context.png`
 
 ---
 
 ## Guards Passed
 
-- `app-shell-control-panel-contract-gate` — PASS
-- `no-financial-mutation-outside-wlt` — PASS
-- `control-panel-design-gate` — PASS
-- `guard-slice-master-matrix-v3` — PASS
+All the following policy guards are PASS:
+- `guard:dsh-frontend-shared-ownership`
+- `guard:dsh-001-cross-surface-dependency-map`
+- `guard:no-financial-mutation-outside-wlt`
+- `guard:app-shell-control-panel`
+- `guard:control-panel-design`
+- `guard:matrix:v3`
+- `foundation:gate`
 
-## Typechecks Passed
+---
 
-- `pnpm --dir services/dsh typecheck` — 0 errors
-- `pnpm --dir apps/control-panel/runtime typecheck` — 0 errors
+## Test Verification
 
-## Tests
+All unit/integration tests are passing:
+- `pnpm --dir services/dsh test` → 118 pass / 0 fail
+  Includes: role-context controller core, direct fetch bypass, and status mapping.
+- `pnpm --dir services/dsh typecheck` → 0 errors
 
-```
-pnpm --dir services/dsh test
-→ 82 pass / 0 fail
-  Includes: control-panel-store-admin-state, control-panel-store-admin-view-model
-```

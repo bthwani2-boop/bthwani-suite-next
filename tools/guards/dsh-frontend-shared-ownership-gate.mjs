@@ -186,6 +186,13 @@ for (const binding of REQUIRED_SURFACE_BINDINGS) {
   }
 }
 
+// Ensure role context controller documents fallback
+const controllerPath = join(SHARED_DIR, "store/use-store-role-context-controller.tsx");
+const controllerSrc = read(controllerPath);
+if (!/dev\/read-only fallback/i.test(controllerSrc)) {
+  fail(controllerPath, "useStoreRoleContextController must document dev/read-only fallback comment");
+}
+
 for (const file of walkFiles(FRONTEND)) {
   if (/\bStoreCardPremiumItem\b/.test(read(file))) {
     fail(file, "StoreCardPremiumItem duplicates DshStoreCardViewModel");

@@ -63,6 +63,41 @@ describe("store role context controller core", () => {
     assert.equal(success.partner.checks.every((check) => check.ready), true);
   });
 
+  test("uses storeId directly when provided without calling fetchList", async () => {
+    const published = [];
+    let fetchListCalled = false;
+    await loadStoreRoleContext(
+      async () => {
+        fetchListCalled = true;
+        return {
+          kind: "success",
+          rows: [],
+          total: 0,
+          limit: 1,
+          offset: 0,
+        };
+      },
+      async (id) => {
+        assert.equal(id, "store-override-id");
+        return { kind: "success", detail: { ...detail, id } };
+      },
+      (state) => published.push(state),
+      {
+        storeId: "store-override-id",
+        actorRole: "partner",
+        contextMode: "readiness",
+      }
+    );
+
+    assert.equal(fetchListCalled, false);
+    assert.deepEqual(published.map((state) => state.kind), [
+      "loading",
+      "success",
+    ]);
+    const success = published.at(-1);
+    assert.equal(success.partner.store.id, "store-override-id");
+  });
+
   test("maps list empty, permission, unavailable, and error states", async () => {
     for (const expected of [
       { kind: "empty" },

@@ -18,7 +18,18 @@ export type DshCapability = {
   readonly closureState:
     | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
     | "NOT_APPROVED_YET"
-    | "RUNTIME_VERIFIED";
+    | "RUNTIME_VERIFIED"
+    | "CLIENT_REVERIFIED_ONLY"
+    | "CONTROL_PANEL_NOT_STARTED"
+    | "TOPIC_CLOSURE_NOT_APPROVED";
+  readonly topic?: "stores";
+  readonly topicScope?: readonly (
+    | "discovery"
+    | "governance"
+    | "readiness"
+    | "verification"
+    | "pickup-context"
+  )[];
 };
 
 export type DshSurfaceDependency =
@@ -48,13 +59,15 @@ export const DSH_CAPABILITY_MAP = [
     ],
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
+    topic: "stores",
+    topicScope: ["discovery", "governance", "readiness", "verification", "pickup-context"],
   },
   {
     id: "dsh.client.home-discovery",
-    status: "runtime-verified",
+    status: "planned",
     contractOperations: ["getDshHomeDiscovery"],
     surfaces: ["app-client"],
     runtimeBound: true,
-    closureState: "RUNTIME_VERIFIED",
+    closureState: "CLIENT_REVERIFIED_ONLY",
   },
 ] as const satisfies readonly DshCapability[];

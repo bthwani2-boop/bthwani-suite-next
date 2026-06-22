@@ -97,6 +97,92 @@ for (const surface of STORE_ONLY_SURFACES) {
   }
 }
 
+// 1. Evidence files and screenshots checks
+const EVIDENCE_DIR = join(ROOT, "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface");
+const requiredFiles = [
+  "git-status.txt",
+  "git-diff-check.txt",
+  "remote-head.txt",
+  "runtime-status.txt",
+  "api-health.txt",
+  "api-readiness.txt",
+  "api-stores.txt",
+  "control-panel-url.txt",
+  "app-client-reverify.txt",
+  "app-partner-store-context.txt",
+  "app-field-store-verification.txt",
+  "app-captain-store-pickup-context.txt",
+  "guard-results.txt",
+  "typecheck-results.txt",
+  "test-results.txt",
+  "nx-results.txt",
+  "graphify-results.txt",
+  "ci-status.txt",
+];
+
+const requiredScreenshots = [
+  "app-client-store-discovery-reverify.png",
+  "control-panel-stores-admin-success.png",
+  "control-panel-store-detail-panel.png",
+  "control-panel-error-or-service-unavailable.png",
+  "app-partner-store-context.png",
+  "app-field-store-verification.png",
+  "app-captain-store-pickup-context.png",
+];
+
+for (const f of requiredFiles) {
+  const p = join(EVIDENCE_DIR, f);
+  if (!existsSync(p)) {
+    errors.push(`missing required evidence file: ${f}`);
+  }
+}
+
+for (const s of requiredScreenshots) {
+  const p = join(EVIDENCE_DIR, "screenshots", s);
+  if (!existsSync(p)) {
+    errors.push(`missing required screenshot: screenshots/${s}`);
+  }
+}
+
+// 2. Manifest values and activation checks
+const serviceManifestPath = join(ROOT, "services/dsh/service.manifest.ts");
+if (existsSync(serviceManifestPath)) {
+  const manifestSrc = readFileSync(serviceManifestPath, "utf8");
+  
+  // Prevent closureState = RUNTIME_VERIFIED if visual evidence is missing
+  const closureStateMatch = /closureState:\s*["']([^"']+)["']/.exec(manifestSrc);
+  if (closureStateMatch && closureStateMatch[1] === "RUNTIME_VERIFIED") {
+    for (const s of requiredScreenshots) {
+      const p = join(EVIDENCE_DIR, "screenshots", s);
+      if (!existsSync(p)) {
+        errors.push(`closureState cannot be RUNTIME_VERIFIED because screenshot is missing: screenshots/${s}`);
+      }
+    }
+  }
+
+  // Prevent old activationScope
+  const activationScopeMatch = /activationScope:\s*["']([^"']+)["']/.exec(manifestSrc);
+  if (activationScopeMatch && activationScopeMatch[1] === "store-discovery-multi-surface") {
+    errors.push(`activationScope cannot be the old 'store-discovery-multi-surface'`);
+  }
+}
+
+// 3. Prevent DSH-002 verified if nextSlice is NOT_APPROVED_YET
+if (existsSync(CAPABILITY_MAP_PATH)) {
+  const capMapSrc = readFileSync(CAPABILITY_MAP_PATH, "utf8");
+  if (existsSync(serviceManifestPath)) {
+    const manifestSrc = readFileSync(serviceManifestPath, "utf8");
+    const nextSliceMatch = /nextSlice:\s*\{[\s\S]*?closureState:\s*["']NOT_APPROVED_YET["']/.test(manifestSrc);
+    if (nextSliceMatch) {
+      // Check if dsh.client.home-discovery capability is marked RUNTIME_VERIFIED in capability-map
+      const homeDiscoveryVerified = /id:\s*["']dsh\.client\.home-discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.test(capMapSrc);
+      if (homeDiscoveryVerified) {
+        errors.push("dsh.client.home-discovery capability cannot be marked RUNTIME_VERIFIED when nextSlice DSH-002 is NOT_APPROVED_YET");
+      }
+    }
+  }
+}
+
 if (errors.length > 0) {
   console.error("DSH-001 All-Surface Store Role Gate: FAIL");
   for (const error of errors) console.error(`  - ${error}`);

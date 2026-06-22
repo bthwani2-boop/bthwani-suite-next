@@ -16,7 +16,10 @@ import {
 } from "../../shared/store";
 
 export function PartnerStoreScreen() {
-  const controller = useStoreRoleContextController();
+  const controller = useStoreRoleContextController({
+    actorRole: "partner",
+    contextMode: "readiness",
+  });
   const state = controller.state;
 
   if (state.kind !== "success") {

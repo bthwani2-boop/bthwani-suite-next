@@ -16,7 +16,10 @@ import {
 } from "../../shared/store";
 
 export function FieldStoreVerificationScreen() {
-  const controller = useStoreRoleContextController();
+  const controller = useStoreRoleContextController({
+    actorRole: "field",
+    contextMode: "verification",
+  });
   const state = controller.state;
 
   if (state.kind !== "success") {

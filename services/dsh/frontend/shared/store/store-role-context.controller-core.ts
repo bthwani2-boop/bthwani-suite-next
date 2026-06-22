@@ -73,8 +73,32 @@ export async function loadStoreRoleContext(
   fetchList: () => Promise<DshStoreAdminListState>,
   fetchDetail: (storeId: string) => Promise<DshStoreAdminDetailState>,
   publish: (state: StoreRoleContextState) => void,
+  input?: {
+    readonly storeId?: string;
+    readonly actorRole?: "partner" | "field" | "captain";
+    readonly contextMode?: "readiness" | "verification" | "pickup-context";
+  },
 ): Promise<void> {
   publish({ kind: "loading" });
+
+  if (input?.storeId) {
+    const detail = await fetchDetail(input.storeId);
+    if (detail.kind !== "success") {
+      publish(mapDetailFailure(detail));
+      return;
+    }
+
+    publish({
+      kind: "success",
+      partner: toPartnerStoreContext(detail.detail),
+      field: toFieldStoreContext(detail.detail),
+      captain: toCaptainStoreContext(detail.detail),
+    });
+    return;
+  }
+
+  // dev/read-only fallback
+  // This is a local dev/read-only fallback for when storeId is not available, not for runtime closure truth.
   const list = await fetchList();
 
   if (list.kind !== "success") {
