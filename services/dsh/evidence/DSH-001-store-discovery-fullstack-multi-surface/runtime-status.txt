@@ -1,4 +1,4 @@
-
+﻿
 > bthwani-suite-next@0.0.0 runtime:status C:\bthwani-suite-next
 > pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles dsh,media
 

@@ -1,3 +1,4 @@
+import { CpButton } from "@bthwani/app-shell";
 import type { DshStoreAdminListState } from "../../../shared/store";
 
 type Props = {
@@ -84,8 +85,7 @@ export function StoreAdminStateView({ state, onRetry }: Props) {
 
 function RetryButton({ onRetry }: { onRetry: () => void }) {
   return (
-    <button
-      type="button"
+    <CpButton
       onClick={onRetry}
       style={{
         marginTop: "0.75rem",
@@ -98,7 +98,7 @@ function RetryButton({ onRetry }: { onRetry: () => void }) {
       }}
     >
       إعادة المحاولة
-    </button>
+    </CpButton>
   );
 }
 

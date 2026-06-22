@@ -1,5 +1,4 @@
-[33;1mWARNING: Resulting JSON is truncated as serialization has exceeded the set depth of 2.[0m
-{
+﻿{
   "stores": [
     {
       "id": "store-1005",
@@ -8,7 +7,9 @@
       "status": "active",
       "cityCode": "sana",
       "serviceAreaCode": "old-city",
-      "serviceability": "@{status=serviceable}",
+      "serviceability": {
+        "status": "serviceable"
+      },
       "ratingAverage": 4.9,
       "ratingCount": 524,
       "deliveryEtaMin": 15,
@@ -17,7 +18,10 @@
       "heroImageUrl": "http://localhost:59000/dsh-media/store-1005-hero.jpg",
       "logoUrl": "http://localhost:59000/dsh-media/store-1005-logo.jpg",
       "category": "restaurant",
-      "deliveryModes": "delivery pickup",
+      "deliveryModes": [
+        "delivery",
+        "pickup"
+      ],
       "isFreeDelivery": true,
       "distanceKm": 0.5,
       "followerCount": 5200,
@@ -33,7 +37,9 @@
       "status": "active",
       "cityCode": "sana",
       "serviceAreaCode": "haddah",
-      "serviceability": "@{status=serviceable}",
+      "serviceability": {
+        "status": "serviceable"
+      },
       "ratingAverage": 4.8,
       "ratingCount": 312,
       "deliveryEtaMin": 25,
@@ -42,7 +48,11 @@
       "heroImageUrl": "http://localhost:59000/dsh-media/store-1001-hero.jpg",
       "logoUrl": "http://localhost:59000/dsh-media/store-1001-logo.jpg",
       "category": "grocery",
-      "deliveryModes": "delivery pickup express",
+      "deliveryModes": [
+        "delivery",
+        "pickup",
+        "express"
+      ],
       "isFreeDelivery": true,
       "distanceKm": 2.1,
       "followerCount": 3100,
@@ -58,7 +68,9 @@
       "status": "active",
       "cityCode": "sana",
       "serviceAreaCode": "maeen",
-      "serviceability": "@{status=serviceable}",
+      "serviceability": {
+        "status": "serviceable"
+      },
       "ratingAverage": 4.7,
       "ratingCount": 88,
       "deliveryEtaMin": 20,
@@ -67,7 +79,9 @@
       "heroImageUrl": "http://localhost:59000/dsh-media/store-1006-hero.jpg",
       "logoUrl": "http://localhost:59000/dsh-media/store-1006-logo.jpg",
       "category": "pharmacy",
-      "deliveryModes": "delivery",
+      "deliveryModes": [
+        "delivery"
+      ],
       "isFreeDelivery": true,
       "distanceKm": 4.1,
       "followerCount": 980,
@@ -83,7 +97,9 @@
       "status": "active",
       "cityCode": "sana",
       "serviceAreaCode": "sabeen",
-      "serviceability": "@{status=serviceable}",
+      "serviceability": {
+        "status": "serviceable"
+      },
       "ratingAverage": 4.6,
       "ratingCount": 189,
       "deliveryEtaMin": 20,
@@ -92,7 +108,10 @@
       "heroImageUrl": "http://localhost:59000/dsh-media/store-1002-hero.jpg",
       "logoUrl": "http://localhost:59000/dsh-media/store-1002-logo.jpg",
       "category": "bakery",
-      "deliveryModes": "delivery pickup",
+      "deliveryModes": [
+        "delivery",
+        "pickup"
+      ],
       "isFreeDelivery": true,
       "distanceKm": 1.8,
       "followerCount": 1200,
@@ -108,7 +127,9 @@
       "status": "temporarily_closed",
       "cityCode": "sana",
       "serviceAreaCode": "zubairi",
-      "serviceability": "@{status=unavailable}",
+      "serviceability": {
+        "status": "unavailable"
+      },
       "ratingAverage": 4.5,
       "ratingCount": 241,
       "deliveryEtaMin": null,
@@ -117,7 +138,9 @@
       "heroImageUrl": "http://localhost:59000/dsh-media/store-1004-hero.jpg",
       "logoUrl": "http://localhost:59000/dsh-media/store-1004-logo.jpg",
       "category": "grocery",
-      "deliveryModes": "delivery",
+      "deliveryModes": [
+        "delivery"
+      ],
       "isFreeDelivery": false,
       "distanceKm": 1.2,
       "followerCount": 2400,
@@ -133,7 +156,9 @@
       "status": "active",
       "cityCode": "sana",
       "serviceAreaCode": "taiz-st",
-      "serviceability": "@{status=limited}",
+      "serviceability": {
+        "status": "limited"
+      },
       "ratingAverage": 4.2,
       "ratingCount": 97,
       "deliveryEtaMin": 35,
@@ -142,7 +167,10 @@
       "heroImageUrl": "http://localhost:59000/dsh-media/store-1003-hero.jpg",
       "logoUrl": "http://localhost:59000/dsh-media/store-1003-logo.jpg",
       "category": "grocery",
-      "deliveryModes": "delivery pickup",
+      "deliveryModes": [
+        "delivery",
+        "pickup"
+      ],
       "isFreeDelivery": false,
       "distanceKm": 3.5,
       "followerCount": 850,

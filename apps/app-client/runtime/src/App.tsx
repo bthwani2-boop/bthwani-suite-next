@@ -11,6 +11,7 @@ import {
   type BottomNavItem,
 } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute";
+import { StoreDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDiscoveryRoute";
 
 // ─── Inline icon helpers ───────────────────────────────────────
 const ICON_SIZE          = 22;
@@ -181,18 +182,22 @@ function App() {
       <View style={styles.content}>
         {activeTab === "home" ? (
           <HomeDiscoveryRoute />
+        ) : activeTab === "stores" ? (
+          <StoreDiscoveryRoute />
         ) : (
           <View style={styles.placeholder} />
         )}
       </View>
 
       {/* Bottom nav — RTL: الرئيسية | طلباتي | الخدمات | المحفظة | حسابي */}
+      {/* Launcher opens StoreDiscovery (DSH-001 surface) */}
       <BottomNavBar
         items={NAV_ITEMS}
         activeId={activeTab}
         onSelect={setActiveTab}
         launcherIcon={<ServicesIcon />}
         launcherLabel="الخدمات"
+        onLauncherPress={() => setActiveTab(activeTab === "stores" ? "home" : "stores")}
         direction="rtl"
         bottomInset={insets.bottom}
       />

@@ -15,8 +15,11 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-export function FieldStoreVerificationScreen() {
+type Props = Readonly<{ storeId?: string }>;
+
+export function FieldStoreVerificationScreen({ storeId }: Props) {
   const controller = useStoreRoleContextController({
+    ...(storeId !== undefined ? { storeId } : {}),
     actorRole: "field",
     contextMode: "verification",
   });

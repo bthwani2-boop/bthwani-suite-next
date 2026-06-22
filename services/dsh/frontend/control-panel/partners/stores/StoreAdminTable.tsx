@@ -1,3 +1,4 @@
+import { CpTable } from "@bthwani/app-shell";
 import type { DshStoreAdminTableRow } from "../../../shared/store";
 
 type Props = {
@@ -18,7 +19,7 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
   }
 
   return (
-    <table
+    <CpTable
       style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}
       aria-label="جدول المتاجر"
     >
@@ -69,7 +70,7 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
           </tr>
         ))}
       </tbody>
-    </table>
+    </CpTable>
   );
 }
 

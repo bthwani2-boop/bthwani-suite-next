@@ -1,3 +1,4 @@
+import { CpButton } from "@bthwani/app-shell";
 import type { DshStoreAdminDetailState } from "../../../shared/store";
 
 type Props = {
@@ -19,8 +20,7 @@ export function StoreDetailAdminPanel({ state, onClose }: Props) {
         <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
           تفاصيل المتجر
         </h2>
-        <button
-          type="button"
+        <CpButton
           onClick={onClose}
           aria-label="إغلاق لوحة التفاصيل"
           style={{
@@ -32,7 +32,7 @@ export function StoreDetailAdminPanel({ state, onClose }: Props) {
           }}
         >
           ×
-        </button>
+        </CpButton>
       </div>
 
       {state.kind === "loading" && (

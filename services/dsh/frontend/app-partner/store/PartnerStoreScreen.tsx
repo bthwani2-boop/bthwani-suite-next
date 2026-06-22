@@ -15,8 +15,11 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-export function PartnerStoreScreen() {
+type Props = Readonly<{ storeId?: string }>;
+
+export function PartnerStoreScreen({ storeId }: Props) {
   const controller = useStoreRoleContextController({
+    ...(storeId !== undefined ? { storeId } : {}),
     actorRole: "partner",
     contextMode: "readiness",
   });

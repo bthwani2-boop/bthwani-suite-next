@@ -16,6 +16,7 @@ export const wltServiceManifest = {
   databaseReady: false,
   generatedClientReady: false,
   frontendReady: false,
+  frontendDshBoundaryReady: true,
   sliceRuntimeVerified: false,
 
   boundaries: {

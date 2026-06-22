@@ -1,3 +1,4 @@
+import { CpSelect, CpSearchInput } from "@bthwani/app-shell";
 import type { DshStoreAdminFilters } from "../../../shared/store";
 
 type Props = {
@@ -41,71 +42,43 @@ export function StoreAdminFilters({ filters, onChange }: Props) {
       role="search"
       aria-label="فلاتر المتاجر"
     >
-      <select
+      <CpSelect
         aria-label="الحالة"
         value={filters.status ?? ""}
-        onChange={(e) =>
-          onChange({ ...filters, status: e.target.value || null })
-        }
+        onChange={(v) => onChange({ ...filters, status: v || null })}
+        options={STATUS_OPTIONS}
         style={selectStyle}
-      >
-        {STATUS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      />
 
-      <select
+      <CpSelect
         aria-label="الرؤية"
         value={
-          filters.isVisible === null
-            ? ""
-            : String(filters.isVisible)
+          filters.isVisible === null ? "" : String(filters.isVisible)
         }
-        onChange={(e) => {
-          const val = e.target.value;
+        onChange={(v) =>
           onChange({
             ...filters,
-            isVisible: val === "" ? null : val === "true",
-          });
-        }}
+            isVisible: v === "" ? null : v === "true",
+          })
+        }
+        options={VISIBILITY_OPTIONS}
         style={selectStyle}
-      >
-        {VISIBILITY_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      />
 
-      <select
+      <CpSelect
         aria-label="التصنيف"
         value={filters.category ?? ""}
-        onChange={(e) =>
-          onChange({ ...filters, category: e.target.value || null })
-        }
+        onChange={(v) => onChange({ ...filters, category: v || null })}
+        options={CATEGORY_OPTIONS}
         style={selectStyle}
-      >
-        {CATEGORY_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      />
 
-      <input
-        type="search"
+      <CpSearchInput
         aria-label="بحث"
         placeholder="بحث بالاسم أو الرمز..."
         value={filters.search ?? ""}
-        onChange={(e) =>
-          onChange({ ...filters, search: e.target.value || null })
-        }
-        style={{
-          ...selectStyle,
-          minWidth: "14rem",
-        }}
+        onChange={(v) => onChange({ ...filters, search: v || null })}
+        style={{ ...selectStyle, minWidth: "14rem" }}
       />
     </div>
   );

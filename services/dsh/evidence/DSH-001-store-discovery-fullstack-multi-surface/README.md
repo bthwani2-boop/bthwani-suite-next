@@ -60,14 +60,46 @@ The following screenshots are generated and present in the `screenshots/` folder
 
 ## Guards Passed
 
-All the following policy guards are PASS:
-- `guard:dsh-frontend-shared-ownership`
+All the following policy guards are PASS (zero warnings):
+- `guard:dsh-frontend-shared-ownership` — zero raw HTML warnings (CpPrimitives via app-shell)
 - `guard:dsh-001-cross-surface-dependency-map`
 - `guard:no-financial-mutation-outside-wlt`
 - `guard:app-shell-control-panel`
 - `guard:control-panel-design`
 - `guard:matrix:v3`
+- `guard:wlt-dsh-frontend-shared-ownership` — NEW: WLT-for-DSH boundary verified
 - `foundation:gate`
+- `slice:gate`
+
+## CI Status
+
+```
+CI_NOT_CONFIGURED_FOR_THIS_BRANCH
+CI_NOT_BLOCKING_BY_POLICY
+```
+
+CI/GitHub Actions is not configured for this branch. This is non-blocking by policy:
+all slice gates, guards, typecheck, tests, and runtime evidence are verified locally
+and pushed to GitHub Remote as the source of truth for this slice closure.
+
+## app-client Surface
+
+The services launcher ("الخدمات") in `apps/app-client/runtime/src/App.tsx` now opens
+`StoreDiscoveryRoute` directly, making DSH-001 Store Discovery browsable alongside
+`HomeDiscoveryRoute` without requiring a separate navigation slot.
+
+## Role Surfaces storeId Injection
+
+`PartnerStoreScreen`, `FieldStoreVerificationScreen`, and `CaptainStorePickupContextScreen`
+now accept an optional `storeId` prop. Each app's `App.tsx` injects
+`EXPO_PUBLIC_DEV_STORE_ID` when set, enabling concrete store context in dev/CI.
+When unset, the fallback to first-store from API remains as documented dev-only behavior.
+
+## WLT-for-DSH Boundary
+
+`services/wlt/frontend/dsh/shared` is established as the read-only financial reference
+boundary for DSH surfaces. WLT runtime remains `CONTRACT_ONLY`; no backend, database,
+or financial mutation is active.
 
 ---
 

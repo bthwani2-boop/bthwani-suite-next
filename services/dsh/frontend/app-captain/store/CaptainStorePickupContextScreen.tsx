@@ -15,8 +15,11 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-export function CaptainStorePickupContextScreen() {
+type Props = Readonly<{ storeId?: string }>;
+
+export function CaptainStorePickupContextScreen({ storeId }: Props) {
   const controller = useStoreRoleContextController({
+    ...(storeId !== undefined ? { storeId } : {}),
     actorRole: "captain",
     contextMode: "pickup-context",
   });

@@ -1,4 +1,4 @@
-=== GUARDS VERIFICATION LOG ===
+﻿=== GUARDS VERIFICATION LOG ===
 Running guard:dsh-frontend-shared-ownership...
 
 
@@ -99,11 +99,21 @@ Errors: 0, Warnings: 0
 RESULT: PASS
 
 
+Running guard:wlt-dsh-frontend-shared-ownership...
+
+
+> bthwani-suite-next@0.0.0 guard:wlt-dsh-frontend-shared-ownership C:\bthwani-suite-next
+> node tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs
+
+wlt-dsh-frontend-shared-ownership: PASS
+
+
 Running foundation:gate...
 
 
 > bthwani-suite-next@0.0.0 foundation:gate C:\bthwani-suite-next
 > pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1
 
-RESULT: PASS
-Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260622-050156
+RESULT: FAIL
+Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260622-053016
+ ELIFECYCLE  Command failed with exit code 1.
