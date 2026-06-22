@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
-import { ScrollView } from "react-native";
+import { ScrollView } from "tamagui";
+import { asUiComponent } from "../../internal/tamagui-compat";
 import { colorRoles, spacing } from "../../tokens";
+
+const StyledScrollView = asUiComponent(ScrollView);
 
 export type ScrollScreenProps = {
   readonly children?: ReactNode;
@@ -14,7 +17,7 @@ export function ScrollScreen({
   gap = spacing[4],
 }: ScrollScreenProps) {
   return (
-    <ScrollView
+    <StyledScrollView
       style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}
       contentContainerStyle={{
         padding: padded ? spacing[4] : 0,
@@ -24,6 +27,6 @@ export function ScrollScreen({
       showsVerticalScrollIndicator={false}
     >
       {children}
-    </ScrollView>
+    </StyledScrollView>
   );
 }
