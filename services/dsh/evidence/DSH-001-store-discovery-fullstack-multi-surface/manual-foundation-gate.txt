@@ -1,0 +1,6 @@
+
+> bthwani-suite-next@0.0.0 foundation:gate C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1
+
+RESULT: PASS
+Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260622-172200
