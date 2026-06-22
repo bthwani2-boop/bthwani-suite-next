@@ -24,6 +24,9 @@
       "@bthwani/app-shell": [
         "shared/app-shell/src/index.ts"
       ],
+      "@bthwani/core-identity": [
+        "core/identity/clients/index.ts"
+      ],
       "@bthwani/app-captain-runtime": [
         "apps/app-captain/runtime/src/index.ts"
       ],

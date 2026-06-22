@@ -52,6 +52,7 @@ type DshStoreRow struct {
 	HasCouponBadge       bool
 	PointsMultiplier     *int
 	IsPopular            bool
+	Version              int
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -84,6 +85,7 @@ type DshStoreSummary struct {
 	HasCouponBadge   bool               `json:"hasCouponBadge"`
 	PointsMultiplier *int               `json:"pointsMultiplier"`
 	IsPopular        bool               `json:"isPopular"`
+	Version          int                `json:"version"`
 }
 
 type DshStoreDetail struct {
@@ -125,6 +127,7 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		FollowerCount: row.FollowerCount, HasProBadge: row.HasProBadge,
 		HasCouponBadge: row.HasCouponBadge, PointsMultiplier: row.PointsMultiplier,
 		IsPopular: row.IsPopular,
+		Version:   row.Version,
 	}
 }
 

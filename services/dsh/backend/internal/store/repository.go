@@ -12,7 +12,7 @@ const storeColumns = `id, slug, display_name, status, city_code, service_area_co
 	serviceability_status, rating_average, rating_count, delivery_eta_min,
 	delivery_eta_max, is_visible, hero_image_url, logo_url, category,
 	delivery_modes, is_free_delivery, distance_km, follower_count,
-	has_pro_badge, has_coupon_badge, points_multiplier, is_popular,
+	has_pro_badge, has_coupon_badge, points_multiplier, is_popular, version,
 	created_at, updated_at`
 
 func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
@@ -24,13 +24,25 @@ func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 		&row.HeroImageURL, &row.LogoURL, &row.Category, pq.Array(&row.DeliveryModes),
 		&row.IsFreeDelivery, &row.DistanceKM, &row.FollowerCount, &row.HasProBadge,
 		&row.HasCouponBadge, &row.PointsMultiplier, &row.IsPopular,
+		&row.Version,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	return row, err
 }
 
 func ListStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) {
+	return listStores(db, q, true)
+}
+
+func ListAllStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) {
+	return listStores(db, q, false)
+}
+
+func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListResult, error) {
 	conditions := []string{}
+	if publicOnly {
+		conditions = append(conditions, "is_visible = true")
+	}
 	params := []any{}
 	idx := 1
 
@@ -90,7 +102,7 @@ func ListStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) {
 }
 
 func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
-	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
+	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1 AND is_visible = true", storeID))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

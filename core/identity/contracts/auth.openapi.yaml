@@ -1,15 +1,39 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Identity API
-  version: 0.1.0
-  description: Authentication, session verification, actor identity, roles, and permissions.
-x-bthwani-contract-state: CONTRACT_DRAFT
+  version: 0.2.0
+  description: Authentication, rotating sessions, actor identity, roles, and permissions.
+x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
+servers:
+  - url: http://localhost:58082
+    description: Local identity runtime
 paths:
+  /identity/health:
+    get:
+      operationId: getIdentityHealth
+      responses:
+        "200":
+          description: Identity runtime is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeStatus"
+  /identity/readiness:
+    get:
+      operationId: getIdentityReadiness
+      responses:
+        "200":
+          description: Identity database is ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeStatus"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /auth/login:
     post:
       operationId: login
-      summary: Authenticate with credentials.
       requestBody:
         required: true
         content:
@@ -18,30 +42,28 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Successfully authenticated.
+          description: Authenticated session and rotating token pair.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LoginResponse"
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
         "401":
-          description: Invalid credentials.
-
+          $ref: "#/components/responses/Unauthenticated"
   /auth/logout:
     post:
       operationId: logout
-      summary: Invalidate the current session.
       security:
         - bearerAuth: []
       responses:
         "204":
-          description: Successfully logged out.
+          description: Session revoked.
         "401":
-          description: Unauthorized.
-
+          $ref: "#/components/responses/Unauthenticated"
   /auth/refresh:
     post:
       operationId: refreshSession
-      summary: Refresh access token using refresh token.
       requestBody:
         required: true
         content:
@@ -50,18 +72,18 @@ paths:
               $ref: "#/components/schemas/RefreshRequest"
       responses:
         "200":
-          description: Successfully refreshed.
+          description: Previous refresh session revoked and replaced.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RefreshResponse"
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
         "401":
-          description: Invalid or expired refresh token.
-
+          $ref: "#/components/responses/Unauthenticated"
   /auth/session:
     get:
       operationId: getAuthSession
-      summary: Resolve current actor session.
       security:
         - bearerAuth: []
       responses:
@@ -70,14 +92,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SessionResponse"
+                $ref: "#/components/schemas/ActorIdentity"
         "401":
-          description: Missing or invalid session.
-
+          $ref: "#/components/responses/Unauthenticated"
   /auth/introspect:
     post:
       operationId: introspectToken
-      summary: Introspect token validity and resolve identity.
       requestBody:
         required: true
         content:
@@ -86,98 +106,115 @@ paths:
               $ref: "#/components/schemas/IntrospectRequest"
       responses:
         "200":
-          description: Token is valid.
+          description: Token is active.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/IntrospectionResponse"
+                $ref: "#/components/schemas/ActorIdentity"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
         "401":
-          description: Invalid token.
-
+          $ref: "#/components/responses/Unauthenticated"
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+  responses:
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthenticated:
+      description: Authentication failed or the session expired.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    ServiceUnavailable:
+      description: Identity runtime is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
   schemas:
+    RuntimeStatus:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+        service:
+          type: string
     LoginRequest:
       type: object
-      required:
-        - username
-        - password
+      additionalProperties: false
+      required: [username, password]
       properties:
         username:
           type: string
+          minLength: 1
         password:
           type: string
-
-    LoginResponse:
-      type: object
-      required:
-        - accessToken
-        - tokenType
-        - identity
-      properties:
-        accessToken:
+          minLength: 12
+        deviceFingerprint:
           type: string
-        tokenType:
-          type: string
-        expiresIn:
-          type: integer
-        refreshToken:
-          type: string
-        identity:
-          $ref: "#/components/schemas/ActorIdentity"
-
+          maxLength: 200
     RefreshRequest:
       type: object
-      required:
-        - refreshToken
+      additionalProperties: false
+      required: [refreshToken]
       properties:
         refreshToken:
           type: string
-
-    RefreshResponse:
-      type: object
-      required:
-        - accessToken
-        - tokenType
-        - identity
-      properties:
-        accessToken:
-          type: string
-        tokenType:
-          type: string
-        expiresIn:
-          type: integer
-        refreshToken:
-          type: string
-        identity:
-          $ref: "#/components/schemas/ActorIdentity"
-
+          minLength: 20
     IntrospectRequest:
       type: object
-      required:
-        - token
+      additionalProperties: false
+      required: [token]
       properties:
         token:
           type: string
-
+          minLength: 20
+    TokenResponse:
+      type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn, identity]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          const: Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+        identity:
+          $ref: "#/components/schemas/ActorIdentity"
     ActorIdentity:
       type: object
       required:
         - subject
+        - tenantId
         - roles
         - permissions
         - authState
         - surfaceAccess
         - serviceAccess
+        - sessionId
+        - expiresAt
       properties:
         subject:
           type: string
           minLength: 1
+        tenantId:
+          type: string
+          minLength: 1
         roles:
           type: array
+          minItems: 1
           items:
             type: string
             enum: [client, partner, captain, field, operator, system]
@@ -186,8 +223,7 @@ components:
           items:
             $ref: "#/components/schemas/Permission"
         authState:
-          type: string
-          enum: [authenticated, unauthenticated]
+          const: authenticated
         surfaceAccess:
           type: object
           additionalProperties:
@@ -196,14 +232,15 @@ components:
           type: object
           additionalProperties:
             type: boolean
-
+        sessionId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
     Permission:
       type: object
-      required:
-        - service
-        - surface
-        - action
-        - scope
+      additionalProperties: false
+      required: [service, surface, action, scope]
       properties:
         service:
           type: string
@@ -213,12 +250,16 @@ components:
           enum: [app-client, app-partner, app-captain, app-field, control-panel, webapp, website, system]
         action:
           type: string
+          minLength: 1
         scope:
           type: string
           enum: [own, assigned, store, zone, all, none]
-
-    SessionResponse:
-      $ref: "#/components/schemas/ActorIdentity"
-
-    IntrospectionResponse:
-      $ref: "#/components/schemas/ActorIdentity"
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

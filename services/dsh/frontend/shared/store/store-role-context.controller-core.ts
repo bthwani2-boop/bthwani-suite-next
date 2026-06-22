@@ -6,10 +6,7 @@ import {
   type FieldStoreContextViewModel,
   type PartnerStoreContextViewModel,
 } from "./store-role-context.view-model";
-import type {
-  DshStoreAdminDetailState,
-  DshStoreAdminListState,
-} from "./store-admin.view-model";
+import type { DshStoreAdminDetail } from "./store-admin.view-model";
 
 export type StoreRoleContextState =
   | { readonly kind: "loading" }
@@ -19,10 +16,17 @@ export type StoreRoleContextState =
   | { readonly kind: "error"; readonly message: string }
   | {
       readonly kind: "success";
-      readonly partner: PartnerStoreContextViewModel;
-      readonly field: FieldStoreContextViewModel;
-      readonly captain: CaptainStoreContextViewModel;
+      readonly actorRole: "partner" | "field" | "captain" | "operator";
+      readonly scope: "own" | "assigned" | "all";
+      readonly store: DshStoreAdminDetail;
+      readonly latestAction: unknown | null;
     };
+
+export type StoreRoleExperience = {
+  readonly partner: PartnerStoreContextViewModel;
+  readonly field: FieldStoreContextViewModel;
+  readonly captain: CaptainStoreContextViewModel;
+};
 
 export type StoreRoleStatePresentation = {
   readonly title: string;
@@ -31,6 +35,14 @@ export type StoreRoleStatePresentation = {
   readonly loading?: boolean;
   readonly retryable: boolean;
 };
+
+export function toStoreRoleExperience(state: Extract<StoreRoleContextState, { kind: "success" }>): StoreRoleExperience {
+  return {
+    partner: toPartnerStoreContext(state.store),
+    field: toFieldStoreContext(state.store),
+    captain: toCaptainStoreContext(state.store),
+  };
+}
 
 export function toStoreRoleStatePresentation(
   state: Exclude<StoreRoleContextState, { readonly kind: "success" }>,
@@ -48,14 +60,14 @@ export function toStoreRoleStatePresentation(
     case "permission_denied":
       return {
         title: "غير مصرح",
-        description: `HTTP ${state.statusCode}`,
+        description: state.statusCode === 401 ? "سجّل الدخول للمتابعة." : "لا تملك صلاحية لهذا المتجر.",
         tone: "warning",
         retryable: false,
       };
     case "service_unavailable":
       return {
         title: labels.error,
-        description: "خدمة DSH غير متاحة.",
+        description: "خدمة DSH أو الهوية غير متاحة.",
         tone: "danger",
         retryable: true,
       };
@@ -70,76 +82,9 @@ export function toStoreRoleStatePresentation(
 }
 
 export async function loadStoreRoleContext(
-  fetchList: () => Promise<DshStoreAdminListState>,
-  fetchDetail: (storeId: string) => Promise<DshStoreAdminDetailState>,
+  fetchContext: () => Promise<StoreRoleContextState>,
   publish: (state: StoreRoleContextState) => void,
-  input?: {
-    readonly storeId?: string;
-    readonly actorRole?: "partner" | "field" | "captain";
-    readonly contextMode?: "readiness" | "verification" | "pickup-context";
-  },
 ): Promise<void> {
   publish({ kind: "loading" });
-
-  if (input?.storeId) {
-    const detail = await fetchDetail(input.storeId);
-    if (detail.kind !== "success") {
-      publish(mapDetailFailure(detail));
-      return;
-    }
-
-    publish({
-      kind: "success",
-      partner: toPartnerStoreContext(detail.detail),
-      field: toFieldStoreContext(detail.detail),
-      captain: toCaptainStoreContext(detail.detail),
-    });
-    return;
-  }
-
-  // dev/read-only fallback
-  // This is a local dev/read-only fallback for when storeId is not available, not for runtime closure truth.
-  const list = await fetchList();
-
-  if (list.kind !== "success") {
-    publish(mapListFailure(list));
-    return;
-  }
-  const first = list.rows[0];
-  if (!first) {
-    publish({ kind: "empty" });
-    return;
-  }
-
-  const detail = await fetchDetail(first.id);
-  if (detail.kind !== "success") {
-    publish(mapDetailFailure(detail));
-    return;
-  }
-
-  publish({
-    kind: "success",
-    partner: toPartnerStoreContext(detail.detail),
-    field: toFieldStoreContext(detail.detail),
-    captain: toCaptainStoreContext(detail.detail),
-  });
-}
-
-function mapListFailure(
-  state: Exclude<DshStoreAdminListState, { readonly kind: "success" }>,
-): StoreRoleContextState {
-  if (state.kind === "loading") return { kind: "loading" };
-  if (state.kind === "empty") return { kind: "empty" };
-  if (state.kind === "service_unavailable") return { kind: "service_unavailable" };
-  if (state.kind === "permission_denied") return state;
-  return { kind: "error", message: state.message };
-}
-
-function mapDetailFailure(
-  state: Exclude<DshStoreAdminDetailState, { readonly kind: "success" }>,
-): StoreRoleContextState {
-  if (state.kind === "loading") return { kind: "loading" };
-  if (state.kind === "not_found") return { kind: "empty" };
-  if (state.kind === "permission_denied") return state;
-  return { kind: "error", message: state.message };
+  publish(await fetchContext());
 }

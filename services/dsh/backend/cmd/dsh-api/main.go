@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"dsh-api/internal/auth"
 	dshHttp "dsh-api/internal/http"
 )
 
@@ -27,6 +28,7 @@ func main() {
 	}
 
 	authMode := os.Getenv("DSH_AUTH_MODE")
+	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -43,7 +45,7 @@ func main() {
 	}
 	log.Println("[dsh-api] database connected successfully")
 
-	router := dshHttp.NewRouter(db)
+	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL))
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	server := &http.Server{

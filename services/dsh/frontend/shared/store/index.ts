@@ -12,3 +12,4 @@ export * from "./store-discovery.controller-core";
 export * from "./store-role-context.view-model";
 export * from "./store-role-context.controller-core";
 export * from "./use-store-role-context-controller";
+export * from "./store-role.api";

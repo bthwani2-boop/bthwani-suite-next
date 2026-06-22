@@ -31,3 +31,5 @@ graphify-out/
 !services/dsh/evidence/**/*.png
 services/dsh/database/seeds/local/media/
 
+.gocache*/
+.gomodcache*/

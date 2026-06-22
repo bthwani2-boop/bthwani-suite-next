@@ -1,45 +1,69 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  fetchAdminStoreDetail,
-  fetchAdminStoreList,
-} from "./store-admin.api";
+  fetchStoreRoleContext,
+  submitStoreRoleAction,
+  type StoreRoleAction,
+} from "./store-role.api";
 import {
   loadStoreRoleContext,
+  toStoreRoleExperience,
   type StoreRoleContextState,
+  type StoreRoleExperience,
 } from "./store-role-context.controller-core";
+
+export type StoreActionState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "submitting" }
+  | { readonly kind: "success"; readonly replayed: boolean }
+  | { readonly kind: "conflict"; readonly message: string }
+  | { readonly kind: "error"; readonly message: string };
 
 export type StoreRoleContextController = {
   readonly state: StoreRoleContextState;
+  readonly experience: StoreRoleExperience | null;
+  readonly actionState: StoreActionState;
   readonly retry: () => void;
+  readonly submit: (action: StoreRoleAction) => Promise<void>;
 };
 
-export function useStoreRoleContextController(input?: {
-  readonly storeId?: string;
-  readonly actorRole: "partner" | "field" | "captain";
-  readonly contextMode: "readiness" | "verification" | "pickup-context";
-}): StoreRoleContextController {
+export function useStoreRoleContextController(): StoreRoleContextController {
   const [state, setState] = useState<StoreRoleContextState>({ kind: "loading" });
+  const [actionState, setActionState] = useState<StoreActionState>({ kind: "idle" });
 
   const load = useCallback(async () => {
-    // dev/read-only fallback
-    // When input is undefined or lacks storeId, the loader queries fetchAdminStoreList with limit: 1
-    // as a fallback for local dev/testing only.
-    await loadStoreRoleContext(
-      () => fetchAdminStoreList({ limit: 1, offset: 0 }),
-      fetchAdminStoreDetail,
-      setState,
-      input,
-    );
-  }, [input?.storeId, input?.actorRole, input?.contextMode]);
+    await loadStoreRoleContext(fetchStoreRoleContext, setState);
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const submit = useCallback(async (action: StoreRoleAction) => {
+    setActionState({ kind: "submitting" });
+    try {
+      const response = await submitStoreRoleAction(action);
+      setActionState({ kind: "success", replayed: response.replayed });
+      await load();
+    } catch (error) {
+      const typed = error as { kind?: string; status?: number };
+      if (typed.kind === "http" && typed.status === 409) {
+        setActionState({ kind: "conflict", message: "تغيّرت بيانات المتجر. أعد التحميل ثم حاول مجددًا." });
+      } else {
+        setActionState({ kind: "error", message: "تعذر حفظ الإجراء." });
+      }
+    }
+  }, [load]);
+
+  const experience = useMemo(
+    () => state.kind === "success" ? toStoreRoleExperience(state) : null,
+    [state],
+  );
+
   return {
     state,
-    retry: () => {
-      void load();
-    },
+    experience,
+    actionState,
+    retry: () => void load(),
+    submit,
   };
 }

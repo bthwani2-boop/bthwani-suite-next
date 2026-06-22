@@ -7,8 +7,8 @@
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
-  Supported: dsh, media, wlt
-  Example: -Profiles dsh,media or -Profiles wlt
+  Supported: identity, dsh, media, wlt
+  Example: -Profiles identity,dsh,media or -Profiles wlt
 
 .PARAMETER Service
   (Optional) Target a specific service for logs/status.
@@ -39,11 +39,14 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("dsh", "media", "wlt")
+$AllowedProfiles = @("identity", "dsh", "media", "wlt")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
   }
+}
+if ($ProfileList -contains "dsh" -and $ProfileList -notcontains "identity") {
+  $ProfileList = @("identity") + $ProfileList
 }
 
 function Get-ComposeProfileArgs {
@@ -80,6 +83,61 @@ function Wait-ForDshApi {
     Start-Sleep -Seconds 4
   }
   throw "DSH API did not become healthy after $max attempts"
+}
+
+function Wait-ForIdentityApi {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for Identity API ($i/$max)..."
+    try {
+      $h = Invoke-RestMethod "http://localhost:58082/identity/health" -TimeoutSec 5 -ErrorAction Stop
+      if ($h.status -eq "healthy") { Write-Host "Identity API: healthy"; return }
+    } catch { }
+    Start-Sleep -Seconds 4
+  }
+  throw "Identity API did not become healthy after $max attempts"
+}
+
+function Invoke-IdentityMigrate {
+  $MigrationDir = ".\core\identity\database\migrations"
+  $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
+  if ($MigrationFiles.Count -eq 0) { throw "No identity migration files found in $MigrationDir" }
+  Write-Host "`n--- Applying identity migrations ---"
+  foreach ($f in $MigrationFiles) {
+    Write-Host "  Applying: $($f.Name)"
+    Get-Content -LiteralPath $f.FullName -Raw |
+      docker compose @(Get-ComposeBase) exec -T postgres `
+        psql -U identity_runtime -d identity_runtime -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw "Identity migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+  }
+  Write-Host "Identity migration: PASS"
+}
+
+function Invoke-IdentitySmoke {
+  Write-Host "`n--- Identity API smoke ---"
+  $health = Invoke-RestMethod "http://localhost:58082/identity/health" -TimeoutSec 10 -ErrorAction Stop
+  if ($health.status -ne "healthy") { throw "/identity/health not healthy" }
+  $readiness = Invoke-RestMethod "http://localhost:58082/identity/readiness" -TimeoutSec 10 -ErrorAction Stop
+  if ($readiness.status -ne "ready") { throw "/identity/readiness not ready" }
+  $body = @{
+    username = "operator.local"
+    password = $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
+    deviceFingerprint = "runtime-smoke"
+  } | ConvertTo-Json
+  if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
+    $body = @{
+      username = "operator.local"
+      password = "LocalOnly-ChangeMe-2026!"
+      deviceFingerprint = "runtime-smoke"
+    } | ConvertTo-Json
+  }
+  $login = Invoke-RestMethod "http://localhost:58082/auth/login" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($login.accessToken)) { throw "identity login did not return accessToken" }
+  $headers = @{ Authorization = "Bearer $($login.accessToken)" }
+  $session = Invoke-RestMethod "http://localhost:58082/auth/session" -Headers $headers -TimeoutSec 10
+  if ($session.subject -ne "operator-local-001") { throw "identity session returned wrong subject" }
+  Invoke-RestMethod "http://localhost:58082/auth/logout" -Method Post -Headers $headers -TimeoutSec 10 | Out-Null
+  Write-Host "Identity API smoke: PASS"
 }
 
 function Invoke-Migrate {
@@ -233,6 +291,52 @@ function Invoke-DshSmoke {
   Write-Host "  /dsh/stores/store-1001: $($store1.store.displayName)"
   if ($store1.store.id -ne "store-1001") { throw "/dsh/stores/store-1001 returned wrong id" }
 
+  $identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
+    "LocalOnly-ChangeMe-2026!"
+  } else {
+    $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
+  }
+  function Get-LocalActorToken([string] $Username) {
+    $loginBody = @{
+      username = $Username
+      password = $identityPassword
+      deviceFingerprint = "dsh-runtime-smoke"
+    } | ConvertTo-Json
+    $login = Invoke-RestMethod "http://localhost:58082/auth/login" -Method Post -ContentType "application/json" -Body $loginBody -TimeoutSec 10
+    return $login.accessToken
+  }
+
+  $operatorToken = Get-LocalActorToken "operator.local"
+  $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
+  $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
+  if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
+  $operatorStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001" -Headers $operatorHeaders -TimeoutSec 10
+  $governanceHeaders = @{
+    Authorization = "Bearer $operatorToken"
+    "Idempotency-Key" = "smoke-operator-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
+  }
+  $governanceBody = @{
+    expectedVersion = $operatorStore.store.version
+    action = "visibility"
+    value = "visible"
+    reason = "runtime smoke verification"
+  } | ConvertTo-Json
+  $governance = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $governanceHeaders -ContentType "application/json" -Body $governanceBody -TimeoutSec 10
+  if ($governance.audit.actorRole -ne "operator") { throw "operator governance audit missing" }
+
+  foreach ($actor in @(
+    @{ username = "partner.local"; expectedRole = "partner" },
+    @{ username = "field.local"; expectedRole = "field" },
+    @{ username = "captain.local"; expectedRole = "captain" }
+  )) {
+    $token = Get-LocalActorToken $actor.username
+    $headers = @{ Authorization = "Bearer $token" }
+    $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context" -Headers $headers -TimeoutSec 10
+    if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.username)" }
+    if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.username)" }
+  }
+
 
   # DSH-002: Home Discovery endpoint smoke
   $homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery" -TimeoutSec 10 -ErrorAction Stop
@@ -273,6 +377,11 @@ elseif ($Action -eq "reset") {
   Write-Host "Volumes removed. Restarting..."
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d
   Wait-ForPostgres
+  if ($ProfileList -contains "identity") {
+    Invoke-IdentityMigrate
+    Wait-ForIdentityApi
+    Invoke-IdentitySmoke
+  }
   if ($ProfileList -contains "dsh") {
     Invoke-Migrate
     Invoke-Seed
@@ -311,6 +420,7 @@ elseif ($Action -eq "migrate") {
   Write-Host "=== runtime:migrate"
   Wait-ForPostgres
   if ($ProfileList -contains "dsh" -or $ProfileList.Count -eq 0) { Invoke-Migrate }
+  if ($ProfileList -contains "identity") { Invoke-IdentityMigrate }
   if ($ProfileList -contains "wlt") { Invoke-WltMigrate }
 }
 
@@ -318,6 +428,10 @@ elseif ($Action -eq "migrate") {
 elseif ($Action -eq "seed") {
   Write-Host "=== runtime:seed"
   Wait-ForPostgres
+  if ($ProfileList -contains "identity") {
+    Wait-ForIdentityApi
+    Invoke-IdentitySmoke
+  }
   if ($ProfileList -contains "dsh" -or $ProfileList.Count -eq 0) { Invoke-Seed }
   if ($ProfileList -contains "wlt") { Invoke-WltSeed }
 }
@@ -326,6 +440,12 @@ elseif ($Action -eq "seed") {
 elseif ($Action -eq "smoke") {
   Write-Host "=== runtime:smoke (profiles: $($ProfileList -join ','))"
   Wait-ForPostgres
+
+  if ($ProfileList -contains "identity") {
+    Invoke-IdentityMigrate
+    Wait-ForIdentityApi
+    Invoke-IdentitySmoke
+  }
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
     Invoke-DshSmoke

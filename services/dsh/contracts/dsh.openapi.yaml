@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Service API
-  version: 0.3.0
-  description: Delivery and shopping hub service contract. DSH-001 adds store discovery endpoints. DSH-002 adds home discovery endpoint.
+  version: 0.4.0
+  description: Delivery and shopping hub service contract. DSH-001 includes public discovery and protected store-role governance actions.
 
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -197,7 +197,298 @@ paths:
               schema:
                 $ref: "#/components/schemas/DshErrorResponse"
 
+  /dsh/store-context:
+    get:
+      operationId: getDshStoreContext
+      summary: Resolve the authenticated actor's own or assigned store context.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Scoped store context.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreContextResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /dsh/operator/stores:
+    get:
+      operationId: listOperatorDshStores
+      summary: List all stores for an authenticated operator.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All stores including hidden and suspended stores.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /dsh/operator/stores/{storeId}:
+    get:
+      operationId: getOperatorDshStore
+      summary: Get unrestricted store detail for an authenticated operator.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Operator store detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /dsh/partner/stores/{storeId}/settings:
+    patch:
+      operationId: updatePartnerStoreSettings
+      summary: Update bounded operating settings for the authenticated partner's own store.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerStoreSettingsRequest"
+      responses:
+        "200":
+          description: Store settings updated or idempotently replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreActionResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /dsh/field/stores/{storeId}/verifications:
+    post:
+      operationId: submitFieldStoreVerification
+      summary: Submit a verification outcome for the authenticated field actor's assigned store.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieldStoreVerificationRequest"
+      responses:
+        "200":
+          description: Verification recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreActionResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /dsh/captain/stores/{storeId}/pickup-readiness:
+    post:
+      operationId: reportCaptainPickupReadiness
+      summary: Report readiness for the authenticated captain's assigned pickup point.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaptainPickupReadinessRequest"
+      responses:
+        "200":
+          description: Pickup readiness report recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreActionResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /dsh/operator/stores/{storeId}/governance:
+    post:
+      operationId: governDshStore
+      summary: Apply an authenticated and audited lifecycle, visibility, or serviceability action.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperatorStoreGovernanceRequest"
+      responses:
+        "200":
+          description: Governance action applied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreActionResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /dsh/operator/stores/{storeId}/audit:
+    get:
+      operationId: listDshStoreAudit
+      summary: List the latest audited store actions for an operator.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Store audit timeline.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshStoreAuditResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+  responses:
+    InvalidRequest:
+      description: Validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshErrorResponse"
+    Unauthenticated:
+      description: Bearer session is missing, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshErrorResponse"
+    Forbidden:
+      description: Actor role cannot perform this function.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshErrorResponse"
+    NotFound:
+      description: Scoped store context was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshErrorResponse"
+    Conflict:
+      description: Version or idempotency conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshErrorResponse"
+    ServiceUnavailable:
+      description: Identity or DSH dependency is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/DshErrorResponse"
   schemas:
     DshStoreStatus:
       type: string
@@ -322,6 +613,7 @@ components:
           required:
             - createdAt
             - updatedAt
+            - version
           properties:
             createdAt:
               type: string
@@ -329,6 +621,9 @@ components:
             updatedAt:
               type: string
               format: date-time
+            version:
+              type: integer
+              minimum: 1
 
     DshPagination:
       type: object
@@ -375,6 +670,147 @@ components:
           type: string
         message:
           type: string
+
+    DshStoreContextResponse:
+      type: object
+      required: [actorRole, scope, store]
+      properties:
+        actorRole:
+          type: string
+          enum: [partner, field, captain, operator]
+        scope:
+          type: string
+          enum: [own, assigned, all]
+        store:
+          $ref: "#/components/schemas/DshStoreDetail"
+        latestAction:
+          oneOf:
+            - $ref: "#/components/schemas/DshStoreAuditEvent"
+            - type: "null"
+
+    PartnerStoreSettingsRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, status, deliveryModes, reason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/DshStoreStatus"
+        deliveryModes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/DshStoreDeliveryMode"
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 500
+
+    FieldStoreVerificationRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, outcome, evidenceStatus, notes]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        outcome:
+          type: string
+          enum: [verified, needs_follow_up, rejected]
+        evidenceStatus:
+          type: string
+          enum: [complete, partial, missing]
+        notes:
+          type: string
+          minLength: 3
+          maxLength: 1000
+
+    CaptainPickupReadinessRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, readiness, reason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        readiness:
+          type: string
+          enum: [ready, blocked]
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 500
+
+    OperatorStoreGovernanceRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, action, value, reason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+          enum: [lifecycle, visibility, serviceability]
+        value:
+          type: string
+          minLength: 1
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 500
+
+    DshStoreActionResponse:
+      type: object
+      required: [store, audit, replayed]
+      properties:
+        store:
+          $ref: "#/components/schemas/DshStoreDetail"
+        audit:
+          $ref: "#/components/schemas/DshStoreAuditEvent"
+        replayed:
+          type: boolean
+
+    DshStoreAuditEvent:
+      type: object
+      required:
+        [id, actorId, actorRole, storeId, action, fromState, toState, correlationId, createdAt]
+      properties:
+        id:
+          type: string
+        actorId:
+          type: string
+        actorRole:
+          type: string
+        storeId:
+          type: string
+        action:
+          type: string
+        fromState:
+          type: object
+          additionalProperties: true
+        toState:
+          type: object
+          additionalProperties: true
+        reason:
+          type: string
+        correlationId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    DshStoreAuditResponse:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshStoreAuditEvent"
 
     DshHealthResponse:
       type: object

@@ -10,7 +10,7 @@ export type DshStoreAdminTableRow = {
   readonly cityCode: string;
   readonly serviceAreaCode: string;
   readonly serviceabilityStatus: "serviceable" | "limited" | "out_of_area" | "unavailable";
-  readonly deliveryModes: readonly string[];
+  readonly deliveryModes: readonly ("delivery" | "pickup" | "express")[];
   readonly isOpen: boolean;
   readonly isServiceable: boolean;
   readonly ratingAverage: number | null;
@@ -29,6 +29,7 @@ export type DshStoreAdminDetail = DshStoreAdminTableRow & {
   readonly pointsMultiplier: number | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly version: number;
 };
 
 export type DshStoreAdminListState =
@@ -138,6 +139,7 @@ export function toAdminDetail(dto: DshStoreDetailDto): DshStoreAdminDetail {
     pointsMultiplier: dto.pointsMultiplier ?? null,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
+    version: dto.version,
   };
 }
 

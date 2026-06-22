@@ -1,3 +1,7 @@
 $ErrorActionPreference = "Stop"
+Set-Location -LiteralPath "C:\bthwani-suite-next"
 
-throw "Identity runtime is RESERVED_NOT_ACTIVE. Activate only after core identity backend Dockerfile, /health, /ready, and smoke exist."
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\infra\docker\scripts\runtime.ps1 -Action smoke -Profiles identity
+if ($LASTEXITCODE -ne 0) {
+  throw "Identity runtime smoke failed."
+}

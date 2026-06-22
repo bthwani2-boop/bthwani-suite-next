@@ -1,13 +1,17 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { useIdentitySession } from "@bthwani/app-shell";
 import {
+  AuthLoginCard,
   Badge,
+  Button,
   Card,
   Header,
   ListItem,
   ScrollScreen,
   StateView,
   Text,
+  TextField,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -15,15 +19,30 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-type Props = Readonly<{ storeId?: string }>;
-
-export function FieldStoreVerificationScreen({ storeId }: Props) {
-  const controller = useStoreRoleContextController({
-    ...(storeId !== undefined ? { storeId } : {}),
-    actorRole: "field",
-    contextMode: "verification",
-  });
+export function FieldStoreVerificationScreen() {
+  const identity = useIdentitySession();
+  const controller = useStoreRoleContextController();
+  const [notes, setNotes] = React.useState("");
   const state = controller.state;
+
+  React.useEffect(() => {
+    if (identity.state.kind === "authenticated") controller.retry();
+  }, [identity.state.kind]);
+
+  if (identity.state.kind !== "authenticated") {
+    return (
+      <ScrollScreen>
+        <Header title="دخول الفريق الميداني" subtitle="الوصول محصور بالمتاجر المعيّنة" />
+        <AuthLoginCard
+          title="تسجيل دخول الموظف الميداني"
+          subtitle="ستظهر فقط مهمة المتجر المرتبطة بهويتك."
+          loading={identity.state.kind === "authenticating"}
+          {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
+          onSubmit={(username, password) => void identity.login(username, password)}
+        />
+      </ScrollScreen>
+    );
+  }
 
   if (state.kind !== "success") {
     const { retryable, ...presentation } = toStoreRoleStatePresentation(state, {
@@ -41,7 +60,8 @@ export function FieldStoreVerificationScreen({ storeId }: Props) {
     );
   }
 
-  const { field } = state;
+  const field = controller.experience?.field;
+  if (!field) return null;
   return (
     <ScrollScreen>
       <Header
@@ -64,6 +84,57 @@ export function FieldStoreVerificationScreen({ storeId }: Props) {
             <Badge label={field.verificationSummary} tone={field.attentionChecks.length === 0 ? "success" : "warning"} />
             <Badge label={field.store.isVisible ? "ظاهر للعملاء" : "غير ظاهر"} tone={field.store.isVisible ? "info" : "neutral"} />
           </View>
+        </View>
+      </Card>
+
+      <Text role="titleMd">رفع نتيجة التحقق</Text>
+      <Card>
+        <View style={styles.cardContent}>
+          <TextField
+            label="ملاحظات التحقق"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="صف الأدلة والنتيجة الميدانية"
+            multiline
+          />
+          <View style={styles.actions}>
+            <Button
+              label="اعتماد التحقق"
+              tone="success"
+              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting"}
+              onPress={() => void controller.submit({
+                kind: "field",
+                storeId: field.store.id,
+                input: {
+                  expectedVersion: field.store.version,
+                  outcome: "verified",
+                  evidenceStatus: "complete",
+                  notes: notes.trim(),
+                },
+              })}
+            />
+            <Button
+              label="يحتاج متابعة"
+              tone="secondary"
+              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting"}
+              onPress={() => void controller.submit({
+                kind: "field",
+                storeId: field.store.id,
+                input: {
+                  expectedVersion: field.store.version,
+                  outcome: "needs_follow_up",
+                  evidenceStatus: "partial",
+                  notes: notes.trim(),
+                },
+              })}
+            />
+          </View>
+          {controller.actionState.kind === "success" && (
+            <Text tone="success">تم تسجيل نتيجة التحقق وربطها بهويتك.</Text>
+          )}
+          {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") && (
+            <Text tone="danger">{controller.actionState.message}</Text>
+          )}
         </View>
       </Card>
 
@@ -130,5 +201,10 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     alignItems: "center",
     gap: spacing[1],
+  },
+  actions: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: spacing[2],
   },
 });

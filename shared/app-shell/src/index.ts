@@ -7,3 +7,4 @@ export * from "./ui-kit-consumption-contract";
 export * from "./donor-pattern-contract";
 export * from "./shell-contracts";
 export * from "./control-panel";
+export * from "./auth-session";

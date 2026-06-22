@@ -1,4 +1,5 @@
 import { createDshStoreClient } from "../../../clients/store-discovery-client";
+import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import {
   toAdminTableRow,
@@ -30,12 +31,11 @@ export async function fetchAdminStoreList(params?: {
       `Set NEXT_PUBLIC_DSH_API_BASE_URL in apps/control-panel/runtime/.env.local`,
     );
   }
+  const token = getIdentityAccessToken();
+  if (token === null) return adminPermissionDeniedState(401);
 
   try {
-    const response = await adminClient.listStores({
-      limit: params?.limit ?? 20,
-      offset: params?.offset ?? 0,
-    });
+    const response = await adminClient.listOperatorStores(token);
 
     if (!response || !Array.isArray(response.stores)) {
       return adminErrorState("INVALID_RESPONSE: stores array missing");
@@ -59,9 +59,11 @@ export async function fetchAdminStoreDetail(
   if (!adminClient) {
     return { kind: "error", message: "API_CONFIG_ERROR: DSH admin client not initialized" };
   }
+  const token = getIdentityAccessToken();
+  if (token === null) return { kind: "permission_denied", statusCode: 401 };
 
   try {
-    const response = await adminClient.getStore(storeId);
+    const response = await adminClient.getOperatorStore(storeId, token);
     if (!response || !response.store) {
       return { kind: "not_found" };
     }

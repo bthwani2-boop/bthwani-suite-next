@@ -19,6 +19,9 @@ import {
   nextStoreAdminOffset,
   previousStoreAdminOffset,
 } from "./store-admin.controller-core";
+import { submitStoreRoleAction } from "./store-role.api";
+import type { OperatorStoreGovernanceRequest } from "../../../clients/store-discovery-client";
+import type { StoreActionState } from "./use-store-role-context-controller";
 
 export type StoreAdminController = {
   readonly listState: DshStoreAdminListState;
@@ -38,6 +41,8 @@ export type StoreAdminController = {
   readonly nextPage: () => void;
   readonly prevPage: () => void;
   readonly retry: () => void;
+  readonly actionState: StoreActionState;
+  readonly govern: (storeId: string, input: OperatorStoreGovernanceRequest) => Promise<void>;
 };
 
 export function useStoreAdminController(): StoreAdminController {
@@ -48,6 +53,7 @@ export function useStoreAdminController(): StoreAdminController {
     createStoreAdminInitialFilters,
   );
   const [offset, setOffset] = useState(0);
+  const [actionState, setActionState] = useState<StoreActionState>({ kind: "idle" });
 
   const loadStores = useCallback(async (currentOffset: number) => {
     await loadStoreAdminList(currentOffset, fetchAdminStoreList, setListState);
@@ -70,6 +76,22 @@ export function useStoreAdminController(): StoreAdminController {
   const nextPage = useCallback(() => setOffset(nextStoreAdminOffset), []);
   const prevPage = useCallback(() => setOffset(previousStoreAdminOffset), []);
   const derived = deriveStoreAdminView(listState, filters, offset);
+  const govern = useCallback(async (storeId: string, input: OperatorStoreGovernanceRequest) => {
+    setActionState({ kind: "submitting" });
+    try {
+      const response = await submitStoreRoleAction({ kind: "operator", storeId, input });
+      setActionState({ kind: "success", replayed: response.replayed });
+      await loadStores(offset);
+      await loadStoreAdminDetail(storeId, fetchAdminStoreDetail, setDetailState);
+    } catch (error) {
+      const typed = error as { kind?: string; status?: number };
+      if (typed.kind === "http" && typed.status === 409) {
+        setActionState({ kind: "conflict", message: "تغيّرت نسخة المتجر. أعد التحميل قبل تطبيق الإجراء." });
+      } else {
+        setActionState({ kind: "error", message: "تعذر تطبيق إجراء الحوكمة." });
+      }
+    }
+  }, [loadStores, offset]);
 
   return {
     listState,
@@ -83,5 +105,7 @@ export function useStoreAdminController(): StoreAdminController {
     nextPage,
     prevPage,
     retry,
+    actionState,
+    govern,
   };
 }

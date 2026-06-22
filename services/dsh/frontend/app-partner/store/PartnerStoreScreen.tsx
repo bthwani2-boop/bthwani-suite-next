@@ -1,13 +1,17 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { useIdentitySession } from "@bthwani/app-shell";
 import {
+  AuthLoginCard,
   Badge,
+  Button,
   Card,
   Header,
   ListItem,
   ScrollScreen,
   StateView,
   Text,
+  TextField,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -15,15 +19,32 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-type Props = Readonly<{ storeId?: string }>;
-
-export function PartnerStoreScreen({ storeId }: Props) {
-  const controller = useStoreRoleContextController({
-    ...(storeId !== undefined ? { storeId } : {}),
-    actorRole: "partner",
-    contextMode: "readiness",
-  });
+export function PartnerStoreScreen() {
+  const identity = useIdentitySession();
+  const controller = useStoreRoleContextController();
+  const [reason, setReason] = React.useState("");
   const state = controller.state;
+
+  React.useEffect(() => {
+    if (identity.state.kind === "authenticated") {
+      controller.retry();
+    }
+  }, [identity.state.kind]);
+
+  if (identity.state.kind !== "authenticated") {
+    return (
+      <ScrollScreen>
+        <Header title="دخول الشريك" subtitle="هوية موثقة لإدارة متجرك فقط" />
+        <AuthLoginCard
+          title="تسجيل دخول الشريك"
+          subtitle="استخدم حساب الشريك المحلي المصرح به لهذا المتجر."
+          loading={identity.state.kind === "authenticating"}
+          {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
+          onSubmit={(username, password) => void identity.login(username, password)}
+        />
+      </ScrollScreen>
+    );
+  }
 
   if (state.kind !== "success") {
     const { retryable, ...presentation } = toStoreRoleStatePresentation(state, {
@@ -41,7 +62,8 @@ export function PartnerStoreScreen({ storeId }: Props) {
     );
   }
 
-  const { partner } = state;
+  const partner = controller.experience?.partner;
+  if (!partner) return null;
   return (
     <ScrollScreen>
       <Header
@@ -122,6 +144,56 @@ export function PartnerStoreScreen({ storeId }: Props) {
           </Text>
         </View>
       </Card>
+
+      <Text role="titleMd">تحديث حالة التشغيل</Text>
+      <Card>
+        <View style={styles.cardContent}>
+          <TextField
+            label="سبب التغيير"
+            value={reason}
+            onChangeText={setReason}
+            placeholder="اكتب سببًا تشغيليًا واضحًا"
+          />
+          <View style={styles.actions}>
+            <Button
+              label="تشغيل المتجر"
+              tone="success"
+              disabled={reason.trim().length < 3 || controller.actionState.kind === "submitting"}
+              onPress={() => void controller.submit({
+                kind: "partner",
+                storeId: partner.store.id,
+                input: {
+                  expectedVersion: partner.store.version,
+                  status: "active",
+                  deliveryModes: [...partner.store.deliveryModes],
+                  reason: reason.trim(),
+                },
+              })}
+            />
+            <Button
+              label="إيقاف مؤقت"
+              tone="secondary"
+              disabled={reason.trim().length < 3 || controller.actionState.kind === "submitting"}
+              onPress={() => void controller.submit({
+                kind: "partner",
+                storeId: partner.store.id,
+                input: {
+                  expectedVersion: partner.store.version,
+                  status: "temporarily_closed",
+                  deliveryModes: [...partner.store.deliveryModes],
+                  reason: reason.trim(),
+                },
+              })}
+            />
+          </View>
+          {controller.actionState.kind === "success" && (
+            <Text tone="success">تم حفظ الإجراء وتسجيله في سجل التدقيق.</Text>
+          )}
+          {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") && (
+            <Text tone="danger">{controller.actionState.message}</Text>
+          )}
+        </View>
+      </Card>
     </ScrollScreen>
   );
 }
@@ -150,6 +222,11 @@ const styles = StyleSheet.create({
   metrics: {
     flexDirection: "row-reverse",
     gap: spacing[3],
+  },
+  actions: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: spacing[2],
   },
   metric: {
     minWidth: 128,

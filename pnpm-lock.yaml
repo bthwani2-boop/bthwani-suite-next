@@ -57,6 +57,12 @@ importers:
 
   apps/app-captain/runtime:
     dependencies:
+      '@bthwani/app-shell':
+        specifier: workspace:*
+        version: link:../../../shared/app-shell
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../../core/identity
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -137,6 +143,12 @@ importers:
 
   apps/app-field/runtime:
     dependencies:
+      '@bthwani/app-shell':
+        specifier: workspace:*
+        version: link:../../../shared/app-shell
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../../core/identity
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -177,6 +189,12 @@ importers:
 
   apps/app-partner/runtime:
     dependencies:
+      '@bthwani/app-shell':
+        specifier: workspace:*
+        version: link:../../../shared/app-shell
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../../core/identity
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit
@@ -217,6 +235,12 @@ importers:
 
   apps/control-panel/runtime:
     dependencies:
+      '@bthwani/app-shell':
+        specifier: workspace:*
+        version: link:../../../shared/app-shell
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../../core/identity
       next:
         specifier: 16.2.2
         version: 16.2.2(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -246,11 +270,17 @@ importers:
 
   contracts: {}
 
+  core/identity: {}
+
   services/amn: {}
 
   services/arb: {}
 
   services/dsh:
+    dependencies:
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../core/identity
     devDependencies:
       '@types/node':
         specifier: 22.16.0
@@ -261,6 +291,7 @@ importers:
       react:
         specifier: 19.2.3
         version: 19.2.3
+
   services/esf: {}
 
   services/knz: {}
@@ -274,6 +305,10 @@ importers:
   services/wlt: {}
 
   shared/app-shell:
+    dependencies:
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../core/identity
     devDependencies:
       '@types/react':
         specifier: 19.2.17

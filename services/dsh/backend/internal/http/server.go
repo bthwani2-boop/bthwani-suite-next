@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"net/http"
 
+	"dsh-api/internal/auth"
 	"dsh-api/internal/health"
 	"dsh-api/internal/homediscovery"
 	"dsh-api/internal/store"
 )
 
-func NewRouter(db *sql.DB) *http.ServeMux {
+func NewRouter(db *sql.DB, identityClient *auth.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
@@ -17,6 +18,15 @@ func NewRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
+	protected := newProtectedStoreServer(db, identityClient)
+	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
+	mux.HandleFunc("GET /dsh/operator/stores", protected.handleOperatorStores)
+	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.handleOperatorStoreDetail)
+	mux.HandleFunc("PATCH /dsh/partner/stores/{storeId}/settings", protected.handlePartnerSettings)
+	mux.HandleFunc("POST /dsh/field/stores/{storeId}/verifications", protected.handleFieldVerification)
+	mux.HandleFunc("POST /dsh/captain/stores/{storeId}/pickup-readiness", protected.handleCaptainReadiness)
+	mux.HandleFunc("POST /dsh/operator/stores/{storeId}/governance", protected.handleOperatorGovernance)
+	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/audit", protected.handleStoreAudit)
 
 	// Catch-all 404 handler for routes not found
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -38,8 +48,8 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-Correlation-ID")
 			w.Header().Set("Vary", "Origin")
 		}
 

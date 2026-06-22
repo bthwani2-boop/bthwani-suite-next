@@ -108,6 +108,36 @@ export function CpSearchInput({
   );
 }
 
+export type CpTextInputProps = {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly placeholder?: string;
+  readonly type?: "text" | "password";
+  readonly disabled?: boolean;
+  readonly "aria-label"?: string;
+};
+
+export function CpTextInput({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  disabled,
+  "aria-label": ariaLabel,
+}: CpTextInputProps) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+      style={{ ...CP_SELECT_DEFAULT_STYLE, width: "100%" }}
+      aria-label={ariaLabel}
+    />
+  );
+}
+
 export type CpTableProps = {
   readonly style?: CSSProperties;
   readonly "aria-label"?: string;

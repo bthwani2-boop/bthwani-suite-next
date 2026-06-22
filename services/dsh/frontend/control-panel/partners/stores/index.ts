@@ -1,4 +1,5 @@
 export { StoreManagementScreen } from "./StoreManagementScreen";
+export { StoreGovernanceActions } from "./StoreGovernanceActions";
 export { StoreDetailAdminPanel } from "./StoreDetailAdminPanel";
 export { StoreAdminFilters } from "./StoreAdminFilters";
 export { StoreAdminTable } from "./StoreAdminTable";

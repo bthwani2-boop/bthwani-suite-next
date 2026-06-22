@@ -89,6 +89,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/store-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve the authenticated actor's own or assigned store context. */
+        get: operations["getDshStoreContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all stores for an authenticated operator. */
+        get: operations["listOperatorDshStores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get unrestricted store detail for an authenticated operator. */
+        get: operations["getOperatorDshStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update bounded operating settings for the authenticated partner's own store. */
+        patch: operations["updatePartnerStoreSettings"];
+        trace?: never;
+    };
+    "/dsh/field/stores/{storeId}/verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a verification outcome for the authenticated field actor's assigned store. */
+        post: operations["submitFieldStoreVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/stores/{storeId}/pickup-readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report readiness for the authenticated captain's assigned pickup point. */
+        post: operations["reportCaptainPickupReadiness"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply an authenticated and audited lifecycle, visibility, or serviceability action. */
+        post: operations["governDshStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the latest audited store actions for an operator. */
+        get: operations["listDshStoreAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -117,7 +253,7 @@ export interface components {
             heroImageUrl?: string | null;
             logoUrl?: string | null;
             category: components["schemas"]["DshStoreCategory"];
-            /** Human-readable category label resolved from dsh_categories */
+            /** @description Human-readable category label resolved from dsh_categories */
             categoryLabel: string;
             deliveryModes: components["schemas"]["DshStoreDeliveryMode"][];
             isFreeDelivery: boolean;
@@ -138,6 +274,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            version: number;
         };
         DshPagination: {
             limit: number;
@@ -154,6 +291,85 @@ export interface components {
         DshErrorResponse: {
             code: string;
             message: string;
+        };
+        DshStoreContextResponse: {
+            /** @enum {string} */
+            actorRole: "partner" | "field" | "captain" | "operator";
+            /** @enum {string} */
+            scope: "own" | "assigned" | "all";
+            store: components["schemas"]["DshStoreDetail"];
+            latestAction?: components["schemas"]["DshStoreAuditEvent"] | null;
+        };
+        PartnerStoreSettingsRequest: {
+            expectedVersion: number;
+            status: components["schemas"]["DshStoreStatus"];
+            deliveryModes: components["schemas"]["DshStoreDeliveryMode"][];
+            reason: string;
+        };
+        FieldStoreVerificationRequest: {
+            expectedVersion: number;
+            /** @enum {string} */
+            outcome: "verified" | "needs_follow_up" | "rejected";
+            /** @enum {string} */
+            evidenceStatus: "complete" | "partial" | "missing";
+            notes: string;
+        };
+        CaptainPickupReadinessRequest: {
+            expectedVersion: number;
+            /** @enum {string} */
+            readiness: "ready" | "blocked";
+            reason: string;
+        };
+        OperatorStoreGovernanceRequest: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "lifecycle" | "visibility" | "serviceability";
+            value: string;
+            reason: string;
+        };
+        DshStoreActionResponse: {
+            store: components["schemas"]["DshStoreDetail"];
+            audit: components["schemas"]["DshStoreAuditEvent"];
+            replayed: boolean;
+        };
+        DshStoreAuditEvent: {
+            id: string;
+            actorId: string;
+            actorRole: string;
+            storeId: string;
+            action: string;
+            fromState: {
+                [key: string]: unknown;
+            };
+            toState: {
+                [key: string]: unknown;
+            };
+            reason?: string;
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshStoreAuditResponse: {
+            events: components["schemas"]["DshStoreAuditEvent"][];
+        };
+        DshHealthResponse: {
+            /** @constant */
+            service: "dsh";
+            /** @enum {string} */
+            status: "healthy";
+            /** Format: date-time */
+            checkedAt: string;
+        };
+        DshReadinessResponse: {
+            /** @constant */
+            service: "dsh";
+            /** @enum {string} */
+            status: "ready" | "not_ready";
+            dependencies: {
+                [key: string]: "ready" | "degraded" | "down" | "not_configured";
+            };
+            /** Format: date-time */
+            checkedAt: string;
         };
         DshHomeBanner: {
             id: string;
@@ -180,7 +396,7 @@ export interface components {
             /** @enum {string} */
             kind: "all" | "favorites" | "nearest" | "new" | "offers";
             /** @default false */
-            isActive?: boolean;
+            isActive: boolean;
         };
         DshHomeCategory: {
             id: string;
@@ -198,28 +414,68 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
-        DshHealthResponse: {
-            /** @constant */
-            service: "dsh";
-            /** @enum {string} */
-            status: "healthy";
-            /** Format: date-time */
-            checkedAt: string;
-        };
-        DshReadinessResponse: {
-            /** @constant */
-            service: "dsh";
-            /** @enum {string} */
-            status: "ready" | "not_ready";
-            dependencies: {
-                [key: string]: "ready" | "degraded" | "down" | "not_configured";
+    };
+    responses: {
+        /** @description Validation failed. */
+        InvalidRequest: {
+            headers: {
+                [name: string]: unknown;
             };
-            /** Format: date-time */
-            checkedAt: string;
+            content: {
+                "application/json": components["schemas"]["DshErrorResponse"];
+            };
+        };
+        /** @description Bearer session is missing, invalid, or expired. */
+        Unauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshErrorResponse"];
+            };
+        };
+        /** @description Actor role cannot perform this function. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshErrorResponse"];
+            };
+        };
+        /** @description Scoped store context was not found. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshErrorResponse"];
+            };
+        };
+        /** @description Version or idempotency conflict. */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshErrorResponse"];
+            };
+        };
+        /** @description Identity or DSH dependency is unavailable. */
+        ServiceUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshErrorResponse"];
+            };
         };
     };
-    responses: never;
-    parameters: never;
+    parameters: {
+        StoreId: string;
+        IdempotencyKey: string;
+        CorrelationId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -275,51 +531,6 @@ export interface operations {
             };
         };
     };
-    getDshHomeDiscovery: {
-        parameters: {
-            query?: {
-                /** @description Filter by city code. */
-                cityCode?: string;
-                /** @description Filter by service area code. */
-                serviceAreaCode?: string;
-                /** @description Maximum number of stores to return. */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Home discovery payload. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshHomeDiscoveryResponse"];
-                };
-            };
-            /** @description Invalid query parameters. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Service unavailable. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-        };
-    };
     listDshStores: {
         parameters: {
             query?: {
@@ -360,6 +571,51 @@ export interface operations {
             };
             /** @description Internal server error. */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshHomeDiscovery: {
+        parameters: {
+            query?: {
+                /** @description Filter by city code. */
+                cityCode?: string;
+                /** @description Filter by service area code. */
+                serviceAreaCode?: string;
+                /** @description Maximum number of stores to return. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Home discovery payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeDiscoveryResponse"];
+                };
+            };
+            /** @description Invalid query parameters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+            /** @description Service unavailable. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -417,6 +673,237 @@ export interface operations {
                     "application/json": components["schemas"]["DshErrorResponse"];
                 };
             };
+        };
+    };
+    getDshStoreContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped store context. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreContextResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    listOperatorDshStores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All stores including hidden and suspended stores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getOperatorDshStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operator store detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreDetailResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updatePartnerStoreSettings: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerStoreSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Store settings updated or idempotently replayed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreActionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    submitFieldStoreVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldStoreVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description Verification recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreActionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    reportCaptainPickupReadiness: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptainPickupReadinessRequest"];
+            };
+        };
+        responses: {
+            /** @description Pickup readiness report recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreActionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    governDshStore: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorStoreGovernanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Governance action applied. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreActionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDshStoreAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store audit timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreAuditResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

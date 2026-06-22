@@ -1,0 +1,16 @@
+{
+  "name": "@bthwani/core-identity",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "clients/index.ts",
+  "types": "clients/index.ts",
+  "scripts": {
+    "test": "cd backend && go test ./...",
+    "build": "cd backend && go build ./...",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}
