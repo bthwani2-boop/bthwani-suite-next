@@ -1,0 +1,34 @@
+WLT-000 manifest alignment evidence
+====================================
+Date: 2026-06-22
+HEAD at write time: a29583db989d6782fde961b1da458374dc29b0e8
+Branch: starting-implementing-slices
+
+service.manifest.ts changes:
+  runtimeState: WLT_000_FOUNDATION_RUNTIME_VERIFIED
+  referenceRuntimeVerified: true
+  sliceRuntimeVerified: true
+  mutationRuntimeReady: false
+  mutationSlicesApproved: false
+  generatedClientReady: false (unchanged)
+
+Guard fix:
+  wlt-dsh-frontend-shared-ownership-gate.mjs
+  Rule updated: sliceRuntimeVerified=true allowed when evidence directory
+  services/wlt/evidence/WLT-000-runtime-foundation/ + slice-gate.txt + api-health.txt exist.
+
+Gate results after fix:
+  foundation:gate: PASS
+  slice:gate: PASS
+  git diff --check: PASS (exit 0)
+  guard:no-financial-mutation-outside-wlt: PASS
+  guard:wlt-dsh-frontend-shared-ownership: PASS
+  typecheck shared/app-shell: PASS
+  typecheck shared/ui-kit: PASS
+  typecheck apps/control-panel/runtime: PASS
+  typecheck services/dsh: PASS
+  dsh tests: 118/118 PASS
+  CI: CI_NOT_CONFIGURED_FOR_BRANCH
+
+JSON validation (machine-readable):
+  15/15 files VALID

@@ -39,8 +39,8 @@
       "stale_claim": "false",
       "actual_state": "WLT-000 slice:gate shows PASS and evidence shows runtime verified",
       "proof": "services/wlt/evidence/WLT-000-runtime-foundation/slice-gate.txt",
-      "resolution": "DOCUMENTED — machine-readable reflects RUNTIME_VERIFIED. Service manifest may be updated in a future commit.",
-      "note": "This is a manifest file in code, not a machine-readable file. Flagged for future update."
+      "resolution": "FIXED — manifest updated to sliceRuntimeVerified: true + referenceRuntimeVerified: true + mutationRuntimeReady: false. Guard wlt-dsh-frontend-shared-ownership-gate.mjs updated to check evidence directory instead of blocking sliceRuntimeVerified: true unconditionally.",
+      "evidence": "services/wlt/evidence/WLT-000-runtime-foundation/manifest-alignment.txt"
     }
   ],
 
@@ -143,15 +143,18 @@
       "path": "services/wlt/service.manifest.ts",
       "status": "PRESENT",
       "key_fields": {
-        "runtimeState": "RUNTIME_IMPLEMENTED_EVIDENCE_REQUIRED",
+        "runtimeState": "WLT_000_FOUNDATION_RUNTIME_VERIFIED",
         "backendRuntimeReady": true,
         "databaseReady": true,
         "generatedClientReady": false,
         "frontendReady": true,
-        "sliceRuntimeVerified": false
+        "referenceRuntimeVerified": true,
+        "sliceRuntimeVerified": true,
+        "mutationRuntimeReady": false,
+        "mutationSlicesApproved": false
       },
-      "contradictions": "CONTRADICTION-004 — sliceRuntimeVerified: false but evidence shows slice:gate PASS. Manifest needs update.",
-      "required_update": "Update sliceRuntimeVerified to true in services/wlt/service.manifest.ts"
+      "contradictions": "NONE — CONTRADICTION-004 resolved",
+      "required_update": "NONE"
     },
 
     "DOCKER_COMPOSE": {

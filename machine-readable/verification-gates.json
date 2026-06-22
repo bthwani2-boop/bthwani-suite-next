@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0.0",
   "last_updated": "2026-06-22",
+  "head_at_verification": "a29583d",
   "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure — it is documented as such.",
 
   "ci_policy": {
@@ -201,6 +202,14 @@
       "script": "tools/guards/dsh-frontend-shared-ownership-gate.mjs",
       "blocking": true,
       "current_status": "PASS"
+    },
+    "WLT_DSH_FRONTEND_SHARED_OWNERSHIP_GATE": {
+      "command": "node tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+      "script": "tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+      "blocking": true,
+      "current_status": "PASS",
+      "note": "Guard updated to check evidence directory existence (services/wlt/evidence/WLT-000-runtime-foundation/) before allowing sliceRuntimeVerified: true",
+      "last_verified": "2026-06-22"
     },
     "DSH_001_CROSS_SURFACE_DEPENDENCY_MAP_GATE": {
       "command": "node tools/guards/dsh-001-cross-surface-dependency-map.mjs",

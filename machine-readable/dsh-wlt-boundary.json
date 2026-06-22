@@ -58,6 +58,14 @@
     "wlt_000_foundation": "RUNTIME_VERIFIED",
     "wlt_000_scope": "Reference-only endpoints: payment_status_refs, settlement_status_refs, refund_status_refs, wallet_refs",
     "wlt_api_port": 58083,
+    "wlt_manifest_state": {
+      "runtimeState": "WLT_000_FOUNDATION_RUNTIME_VERIFIED",
+      "referenceRuntimeVerified": true,
+      "sliceRuntimeVerified": true,
+      "mutationRuntimeReady": false,
+      "mutationSlicesApproved": false,
+      "generatedClientReady": false
+    },
     "wlt_mutation_apis": "NOT_IMPLEMENTED — WLT-001+ mutation slice NOT_APPROVED_YET",
     "wlt_generated_client": "NOT_GENERATED — required before any DSH surface consumes WLT reference data",
     "wlt_mobile_surfaces": "NOT_STARTED — all mobile WLT surfaces have gitkeep only",

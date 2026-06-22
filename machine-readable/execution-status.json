@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "last_updated": "2026-06-22",
   "branch": "starting-implementing-slices",
-  "head_at_audit": "a401420",
+  "head_at_audit": "a29583d",
   "note": "CLOSED status requires live runtime evidence. FIX_REQUIRED blocks merge. CI_NOT_CONFIGURED is not a failure.",
   "overall_merge_safety": "SAFE — no violations, no FIX_REQUIRED items",
 
@@ -143,17 +143,7 @@
 
   "next_approved_action": "STOP — no next slice is approved. DSH-002 control-panel or DSH-003 requires explicit approval before implementation begins.",
 
-  "pending_fixes": [
-    {
-      "priority": "LOW",
-      "path": "services/wlt/service.manifest.ts",
-      "field": "sliceRuntimeVerified",
-      "current_value": false,
-      "correct_value": true,
-      "action": "Update to true — WLT-000 slice:gate evidence confirms PASS",
-      "blocking": false
-    }
-  ],
+  "pending_fixes": [],
 
   "verification_commands": {
     "check_all_gates": "pnpm run foundation:gate && pnpm run slice:gate",

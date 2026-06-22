@@ -8,7 +8,7 @@ export const wltServiceManifest = {
 
   type: "FINANCIAL_PLATFORM_SERVICE",
   lifecycle: "ACTIVE",
-  runtimeState: "RUNTIME_IMPLEMENTED_EVIDENCE_REQUIRED",
+  runtimeState: "WLT_000_FOUNDATION_RUNTIME_VERIFIED",
 
   ownsFinancialTruth: true,
 
@@ -17,7 +17,13 @@ export const wltServiceManifest = {
   generatedClientReady: false,
   frontendReady: true,
   frontendDshBoundaryReady: true,
-  sliceRuntimeVerified: false,
+
+  // WLT-000 Foundation: reference-only endpoints RUNTIME_VERIFIED (slice:gate PASS, evidence: services/wlt/evidence/WLT-000-runtime-foundation/)
+  // WLT-001+ mutation APIs: NOT_APPROVED_YET — requires separate approval before implementation
+  referenceRuntimeVerified: true,
+  sliceRuntimeVerified: true,
+  mutationRuntimeReady: false,
+  mutationSlicesApproved: false,
 
   boundaries: {
     owns: [
