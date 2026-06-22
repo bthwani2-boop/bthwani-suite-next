@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Service API
-  version: 0.1.0
-  description: Wallet and financial ledger service contract baseline. Foundation-007A defines health and readiness only; financial mutation endpoints are added only after WLT contract review.
+  version: 0.2.0
+  description: Wallet and financial ledger service. Read-only reference endpoints for DSH surface consumption. No mutation endpoints exposed.
 
 x-bthwani-owner: services/wlt
-x-bthwani-contract-state: CONTRACT_DRAFT
-x-bthwani-client-generation: DISABLED_UNTIL_CONTRACT_ACTIVE
-x-bthwani-runtime-dependency: false
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
 
 paths:
@@ -41,8 +41,139 @@ paths:
         "503":
           description: WLT is not ready.
 
+  /wlt/references/payment-status:
+    get:
+      operationId: getWltPaymentStatusRef
+      summary: Return payment status reference for a given orderId. Read-only display surface for DSH.
+      tags:
+        - WltReferences
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment status reference found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPaymentStatusRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/references/settlement-status:
+    get:
+      operationId: getWltSettlementStatusRef
+      summary: Return settlement status reference for a given orderId. Read-only display surface for DSH.
+      tags:
+        - WltReferences
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Settlement status reference found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltSettlementStatusRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/references/refund-status:
+    get:
+      operationId: getWltRefundStatusRef
+      summary: Return refund status reference for a given orderId. Read-only display surface for DSH.
+      tags:
+        - WltReferences
+      parameters:
+        - name: orderId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Refund status reference found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltRefundStatusRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/references/wallet-status:
+    get:
+      operationId: getWltWalletStatusRef
+      summary: Return wallet status reference for a given actor. Read-only display surface for DSH.
+      tags:
+        - WltReferences
+      parameters:
+        - name: actorId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: actorType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - client
+              - partner
+              - captain
+              - field
+      responses:
+        "200":
+          description: Wallet status reference found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltWalletStatusRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
+  responses:
+    BadRequest:
+      description: Invalid request parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WltApiError"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WltApiError"
+
   schemas:
+    WltApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
     WltHealthResponse:
       type: object
       required:
@@ -89,3 +220,141 @@ components:
         checkedAt:
           type: string
           format: date-time
+
+    WltPaymentStatusRef:
+      type: object
+      required:
+        - id
+        - orderId
+        - status
+        - updatedAt
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - authorized
+            - captured
+            - failed
+            - refunded
+            - partially_refunded
+        updatedAt:
+          type: string
+          format: date-time
+
+    WltSettlementStatusRef:
+      type: object
+      required:
+        - id
+        - orderId
+        - status
+        - updatedAt
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - processing
+            - settled
+            - failed
+        updatedAt:
+          type: string
+          format: date-time
+
+    WltRefundStatusRef:
+      type: object
+      required:
+        - id
+        - orderId
+        - status
+        - updatedAt
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        status:
+          type: string
+          enum:
+            - none
+            - requested
+            - approved
+            - completed
+            - rejected
+        updatedAt:
+          type: string
+          format: date-time
+
+    WltWalletStatusRef:
+      type: object
+      required:
+        - id
+        - actorId
+        - actorType
+        - status
+        - currency
+        - updatedAt
+      properties:
+        id:
+          type: string
+        actorId:
+          type: string
+        actorType:
+          type: string
+          enum:
+            - client
+            - partner
+            - captain
+            - field
+        status:
+          type: string
+          enum:
+            - active
+            - suspended
+            - frozen
+            - closed
+        currency:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    WltPaymentStatusRefResponse:
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/WltPaymentStatusRef"
+
+    WltSettlementStatusRefResponse:
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/WltSettlementStatusRef"
+
+    WltRefundStatusRefResponse:
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/WltRefundStatusRef"
+
+    WltWalletStatusRefResponse:
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/WltWalletStatusRef"

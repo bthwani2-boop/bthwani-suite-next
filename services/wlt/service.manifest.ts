@@ -8,14 +8,14 @@ export const wltServiceManifest = {
 
   type: "FINANCIAL_PLATFORM_SERVICE",
   lifecycle: "ACTIVE",
-  runtimeState: "CONTRACT_ONLY",
+  runtimeState: "RUNTIME_IMPLEMENTED_EVIDENCE_REQUIRED",
 
   ownsFinancialTruth: true,
 
-  backendRuntimeReady: false,
-  databaseReady: false,
+  backendRuntimeReady: true,
+  databaseReady: true,
   generatedClientReady: false,
-  frontendReady: false,
+  frontendReady: true,
   frontendDshBoundaryReady: true,
   sliceRuntimeVerified: false,
 

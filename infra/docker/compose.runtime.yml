@@ -54,6 +54,31 @@ services:
     networks:
       - bthwani-runtime
 
+  wlt-api:
+    profiles:
+      - wlt
+    build:
+      context: ../..
+      dockerfile: services/wlt/backend/Dockerfile
+    container_name: ${BTHWANI_WLT_API_CONTAINER:-bthwani-wlt-api-runtime}
+    restart: unless-stopped
+    environment:
+      PORT: "8083"
+      DATABASE_URL: "postgres://${BTHWANI_WLT_DB_USER:-wlt_runtime}:${BTHWANI_WLT_DB_PASSWORD:-wlt_runtime_password}@postgres:5432/${BTHWANI_WLT_DB_NAME:-wlt_runtime}?sslmode=disable"
+      WLT_AUTH_MODE: "public-read-references"
+    ports:
+      - "${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - bthwani-runtime
+
   dsh-api:
     profiles:
       - dsh

@@ -7,8 +7,8 @@
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
-  Supported: dsh, media
-  Example: -Profiles dsh,media
+  Supported: dsh, media, wlt
+  Example: -Profiles dsh,media or -Profiles wlt
 
 .PARAMETER Service
   (Optional) Target a specific service for logs/status.
@@ -39,7 +39,7 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("dsh", "media")
+$AllowedProfiles = @("dsh", "media", "wlt")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
@@ -112,6 +112,73 @@ function Invoke-Seed {
     Write-Host "  $($f.Name): PASS"
   }
   Write-Host "Seed: PASS"
+}
+
+function Wait-ForWltApi {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for WLT API ($i/$max)..."
+    try {
+      $h = Invoke-RestMethod "http://localhost:58083/wlt/health" -TimeoutSec 5 -ErrorAction Stop
+      if ($h.status -eq "healthy") { Write-Host "WLT API: healthy"; return }
+    } catch { }
+    Start-Sleep -Seconds 4
+  }
+  throw "WLT API did not become healthy after $max attempts"
+}
+
+function Invoke-WltMigrate {
+  $MigrationDir = ".\services\wlt\database\migrations"
+  $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
+  if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
+  Write-Host "`n--- Applying WLT migrations ---"
+  foreach ($f in $MigrationFiles) {
+    Write-Host "  Applying: $($f.Name)"
+    Get-Content -LiteralPath $f.FullName -Raw |
+      docker compose @(Get-ComposeBase) exec -T postgres `
+        psql -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw "WLT migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+    Write-Host "  $($f.Name): PASS"
+  }
+  Write-Host "WLT migration: PASS"
+}
+
+function Invoke-WltSeed {
+  $SeedDir = ".\services\wlt\database\seeds\local"
+  $SeedFiles = Get-ChildItem -LiteralPath $SeedDir -Filter "*.sql" | Sort-Object Name
+  if ($SeedFiles.Count -eq 0) { throw "No seed files found in $SeedDir" }
+  Write-Host "`n--- Applying WLT local seeds ---"
+  foreach ($f in $SeedFiles) {
+    Write-Host "  Seeding: $($f.Name)"
+    Get-Content -LiteralPath $f.FullName -Raw |
+      docker compose @(Get-ComposeBase) exec -T postgres `
+        psql -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw "WLT seed failed for $($f.Name) (exit $LASTEXITCODE)" }
+    Write-Host "  $($f.Name): PASS"
+  }
+  Write-Host "WLT seed: PASS"
+}
+
+function Invoke-WltSmoke {
+  Write-Host "`n--- WLT API smoke ---"
+
+  $health = Invoke-RestMethod "http://localhost:58083/wlt/health" -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/health: $($health | ConvertTo-Json -Compress)"
+  if ($health.status -ne "healthy") { throw "/wlt/health not healthy: $($health.status)" }
+
+  $readiness = Invoke-RestMethod "http://localhost:58083/wlt/readiness" -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/readiness: $($readiness | ConvertTo-Json -Compress)"
+  if ($readiness.status -ne "ready") { throw "/wlt/readiness not ready: $($readiness.status)" }
+
+  $payRef = Invoke-RestMethod "http://localhost:58083/wlt/references/payment-status?orderId=order-dev-0001" -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/references/payment-status: $($payRef.reference.status)"
+  if ($payRef.reference.status -ne "captured") { throw "/wlt/references/payment-status wrong status" }
+
+  $walRef = Invoke-RestMethod "http://localhost:58083/wlt/references/wallet-status?actorId=partner-dev-0001&actorType=partner" -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/references/wallet-status: $($walRef.reference.status)"
+  if ($walRef.reference.status -ne "active") { throw "/wlt/references/wallet-status wrong status" }
+
+  Write-Host "WLT API smoke: PASS"
 }
 
 function Invoke-MinioSmoke {
@@ -212,6 +279,12 @@ elseif ($Action -eq "reset") {
     Wait-ForDshApi
     Invoke-DshSmoke
   }
+  if ($ProfileList -contains "wlt") {
+    Invoke-WltMigrate
+    Invoke-WltSeed
+    Wait-ForWltApi
+    Invoke-WltSmoke
+  }
   Write-Host "reset: PASS"
 }
 
@@ -237,14 +310,16 @@ elseif ($Action -eq "logs") {
 elseif ($Action -eq "migrate") {
   Write-Host "=== runtime:migrate"
   Wait-ForPostgres
-  Invoke-Migrate
+  if ($ProfileList -contains "dsh" -or $ProfileList.Count -eq 0) { Invoke-Migrate }
+  if ($ProfileList -contains "wlt") { Invoke-WltMigrate }
 }
 
 # ── Action: seed ──────────────────────────────────────────────────────────────
 elseif ($Action -eq "seed") {
   Write-Host "=== runtime:seed"
   Wait-ForPostgres
-  Invoke-Seed
+  if ($ProfileList -contains "dsh" -or $ProfileList.Count -eq 0) { Invoke-Seed }
+  if ($ProfileList -contains "wlt") { Invoke-WltSeed }
 }
 
 # ── Action: smoke ─────────────────────────────────────────────────────────────
@@ -254,6 +329,10 @@ elseif ($Action -eq "smoke") {
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
     Invoke-DshSmoke
+  }
+  if ($ProfileList -contains "wlt") {
+    Wait-ForWltApi
+    Invoke-WltSmoke
   }
   if ($ProfileList -contains "media") {
     Invoke-MinioSmoke
@@ -277,7 +356,6 @@ elseif ($Action -eq "all") {
   # postgres ready
   Wait-ForPostgres
 
-  # migrate + seed + dsh smoke
   if ($ProfileList -contains "dsh") {
     Invoke-Migrate
     Invoke-Seed
@@ -285,7 +363,13 @@ elseif ($Action -eq "all") {
     Invoke-DshSmoke
   }
 
-  # minio smoke
+  if ($ProfileList -contains "wlt") {
+    Invoke-WltMigrate
+    Invoke-WltSeed
+    Wait-ForWltApi
+    Invoke-WltSmoke
+  }
+
   if ($ProfileList -contains "media") {
     Invoke-DshMediaSeed
     Invoke-MinioSmoke

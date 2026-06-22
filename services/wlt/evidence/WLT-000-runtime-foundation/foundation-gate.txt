@@ -1,0 +1,2 @@
+foundation:gate: PASS
+Evidence: tools/registry/runs/FOUNDATION-GATE-20260622-060337

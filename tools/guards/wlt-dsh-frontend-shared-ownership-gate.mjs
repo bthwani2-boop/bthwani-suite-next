@@ -13,6 +13,9 @@ const REQUIRED_BOUNDARY_FILES = [
   "services/wlt/frontend/dsh/shared/wlt-dsh-boundary.types.ts",
   "services/wlt/frontend/dsh/shared/wlt-dsh-reference.view-model.ts",
   "services/wlt/frontend/dsh/shared/wlt-dsh-reference.states.ts",
+  "services/wlt/frontend/dsh/shared/wlt-dsh-api-base-url.ts",
+  "services/wlt/frontend/dsh/shared/wlt-dsh-reference.api.ts",
+  "services/wlt/frontend/dsh/shared/use-wlt-dsh-reference-controller.tsx",
 ];
 
 for (const rel of REQUIRED_BOUNDARY_FILES) {
@@ -22,27 +25,15 @@ for (const rel of REQUIRED_BOUNDARY_FILES) {
   }
 }
 
-// ── 2. WLT runtime must NOT be falsely claimed active ─────────────────────────
+// ── 2. WLT manifest must not claim sliceRuntimeVerified until evidence is complete ──
 
 const wltManifest = "services/wlt/service.manifest.ts";
 if (fs.existsSync(path.join(root, wltManifest))) {
   const content = read(wltManifest);
-  if (content.includes("backendRuntimeReady: true")) {
-    violations.push({
-      file: wltManifest,
-      message: "FORBIDDEN: backendRuntimeReady must remain false — WLT runtime is CONTRACT_ONLY",
-    });
-  }
-  if (content.includes("databaseReady: true")) {
-    violations.push({
-      file: wltManifest,
-      message: "FORBIDDEN: databaseReady must remain false — WLT runtime is CONTRACT_ONLY",
-    });
-  }
   if (content.includes("sliceRuntimeVerified: true")) {
     violations.push({
       file: wltManifest,
-      message: "FORBIDDEN: sliceRuntimeVerified must remain false — WLT runtime is CONTRACT_ONLY",
+      message: "FORBIDDEN: sliceRuntimeVerified must remain false until WLT-000 evidence directory is complete and verified",
     });
   }
 }

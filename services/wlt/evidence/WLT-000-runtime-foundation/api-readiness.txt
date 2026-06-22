@@ -1,0 +1,1 @@
+{"service":"wlt","status":"ready","dependencies":{"postgres":"ready"},"checkedAt":"2026-06-22T03:06:07.648251071Z"}
