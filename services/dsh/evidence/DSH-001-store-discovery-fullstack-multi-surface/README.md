@@ -9,7 +9,7 @@
 
 ## Implemented Surfaces
 
-All five surfaces are fully implemented. Business logic resides in `services/dsh/frontend/shared`, while the surfaces themselves remain strictly UI-only, free from fetch/env/mutations/Store types.
+DSH-001 store-topic is implemented for all five surfaces. Business logic resides in `services/dsh/frontend/shared` as the sole engine; surfaces are strictly UI-only, free from fetch/env/mutations/Store types. app-partner, app-field, and app-captain implement store-only context — no catalog, orders, delivery, or finance.
 
 1. **app-client**: Client store discovery, feeds, and details.
 2. **control-panel**: Store admin governance dashboard.

@@ -1,0 +1,69 @@
+DSH-001 Control Panel Design Debt Register
+============================================
+Date: 2026-06-22
+Task: DSH-001_SHARED_ENGINE_AND_SURFACE_UI_CLEANUP_GATE
+
+RGBA VIOLATIONS — STATUS: RESOLVED
+------------------------------------
+All raw rgba() values have been moved OUT of services/dsh into shared/app-shell.
+
+FIXED IN THIS TASK:
+  1. StoreManagementScreen.tsx — aside borderInlineStart: "1px solid rgba(0,0,0,0.1)"
+     Resolution: Moved to DataTablePageFrame.sidePanel slot in shared/app-shell (DataTablePageFrame.tsx)
+
+  2. StoreAdminTable.tsx — thStyle.borderBottom: "2px solid rgba(0,0,0,0.15)"
+     Resolution: Moved to CpTableHeaderCell in shared/app-shell (CpPrimitives.tsx)
+
+  3. StoreAdminTable.tsx — tdStyle.borderBottom: "1px solid rgba(0,0,0,0.08)"
+     Resolution: Moved to CpTableCell in shared/app-shell (CpPrimitives.tsx)
+
+  4. StoreAdminFilters.tsx — selectStyle.border: "1px solid rgba(0,0,0,0.2)"
+     Resolution: Moved to CpSelect default style in shared/app-shell (CpPrimitives.tsx)
+
+  5. StoreAdminKpiStrip.tsx — KpiCard border: "1px solid rgba(0,0,0,0.12)"
+     Resolution: Moved to CpKpiCard in shared/app-shell (CpPrimitives.tsx)
+
+REMAINING DESIGN DEBT — SIMPLE LAYOUT/TYPOGRAPHY INLINE STYLES
+----------------------------------------------------------------
+These are spacing/typography values that do not contain rgba/hex violations.
+They are documented as DESIGN_DEBT_WITH_EXACT_PATH and cannot be promoted
+to primitives without a dedicated design-token CSS-variable pass.
+
+DESIGN_DEBT_WITH_EXACT_PATH:
+  path: services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx:18
+  problem: style={{ padding: "1rem 1rem 0" }} on header wrapper div
+  kind: raw spacing literal
+  priority: LOW
+
+  path: services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx:19
+  problem: style={{ margin: "0 0 0.5rem", fontSize: "1.25rem", fontWeight: 700 }} on h1
+  kind: raw typography literals
+  priority: LOW
+
+  path: services/dsh/frontend/control-panel/partners/stores/StoreAdminKpiStrip.tsx:8
+  problem: style={{ display:"flex", gap:"1.5rem", padding:"0.75rem 0", flexWrap:"wrap" }} on strip container
+  kind: raw layout/spacing literals
+  priority: LOW
+
+  path: services/dsh/frontend/control-panel/partners/stores/StoreAdminTable.tsx:22-23
+  problem: style={{ width:"100%", borderCollapse:"collapse", fontSize:"0.875rem" }} on CpTable
+  kind: raw table layout/font literal
+  priority: LOW
+
+  path: services/dsh/frontend/control-panel/partners/stores/StoreAdminTable.tsx:39-41
+  problem: style={{ cursor:"pointer", outline: row.id===selectedStoreId ? "2px solid currentColor" : undefined }} on tr
+  kind: raw interaction style
+  priority: LOW
+
+  path: services/dsh/frontend/control-panel/partners/stores/StoreAdminStateView.tsx:105-114
+  problem: containerStyle with padding/gap/minHeight literals
+  kind: raw layout/spacing literals
+  priority: LOW
+
+  path: services/dsh/frontend/control-panel/partners/stores/StoreDetailAdminPanel.tsx (multiple)
+  problem: padding, fontSize, fontFamily literals on detail rows
+  kind: raw typography/spacing literals
+  priority: LOW
+
+VERDICT: DESIGN_DEBT_DOCUMENTED — no undeclared rgba, no undeclared hex
+All rgba violations resolved. Remaining debt is spacing/typography only.

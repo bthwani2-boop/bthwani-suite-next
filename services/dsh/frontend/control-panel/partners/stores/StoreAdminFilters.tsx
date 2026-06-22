@@ -47,7 +47,6 @@ export function StoreAdminFilters({ filters, onChange }: Props) {
         value={filters.status ?? ""}
         onChange={(v) => onChange({ ...filters, status: v || null })}
         options={STATUS_OPTIONS}
-        style={selectStyle}
       />
 
       <CpSelect
@@ -62,7 +61,6 @@ export function StoreAdminFilters({ filters, onChange }: Props) {
           })
         }
         options={VISIBILITY_OPTIONS}
-        style={selectStyle}
       />
 
       <CpSelect
@@ -70,7 +68,6 @@ export function StoreAdminFilters({ filters, onChange }: Props) {
         value={filters.category ?? ""}
         onChange={(v) => onChange({ ...filters, category: v || null })}
         options={CATEGORY_OPTIONS}
-        style={selectStyle}
       />
 
       <CpSearchInput
@@ -78,17 +75,8 @@ export function StoreAdminFilters({ filters, onChange }: Props) {
         placeholder="بحث بالاسم أو الرمز..."
         value={filters.search ?? ""}
         onChange={(v) => onChange({ ...filters, search: v || null })}
-        style={{ ...selectStyle, minWidth: "14rem" }}
+        style={{ minWidth: "14rem" }}
       />
     </div>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  padding: "0.375rem 0.5rem",
-  border: "1px solid rgba(0, 0, 0, 0.2)",
-  borderRadius: "0.25rem",
-  background: "transparent",
-  fontSize: "0.875rem",
-  cursor: "pointer",
-};

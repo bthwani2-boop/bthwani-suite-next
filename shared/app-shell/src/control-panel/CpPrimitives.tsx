@@ -46,6 +46,15 @@ export type CpSelectProps = {
   readonly "aria-label"?: string;
 };
 
+const CP_SELECT_DEFAULT_STYLE: CSSProperties = {
+  padding: "0.375rem 0.5rem",
+  border: "1px solid rgba(0, 0, 0, 0.2)",
+  borderRadius: "0.25rem",
+  background: "transparent",
+  fontSize: "0.875rem",
+  cursor: "pointer",
+};
+
 export function CpSelect({
   value,
   onChange,
@@ -57,7 +66,7 @@ export function CpSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      style={style}
+      style={{ ...CP_SELECT_DEFAULT_STYLE, ...style }}
       aria-label={ariaLabel}
     >
       {options.map((o) => (
@@ -90,7 +99,7 @@ export function CpSearchInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      style={style}
+      style={{ ...CP_SELECT_DEFAULT_STYLE, ...style }}
       aria-label={ariaLabel}
     />
   );
@@ -107,5 +116,78 @@ export function CpTable({ style, "aria-label": ariaLabel, children }: CpTablePro
     <table style={style} aria-label={ariaLabel}>
       {children}
     </table>
+  );
+}
+
+export type CpTableHeaderCellProps = {
+  readonly scope?: "col" | "row";
+  readonly style?: CSSProperties;
+  readonly children: ReactNode;
+};
+
+const CP_TH_STYLE: CSSProperties = {
+  padding: "0.5rem 0.75rem",
+  textAlign: "start",
+  fontWeight: 600,
+  borderBottom: "2px solid rgba(0, 0, 0, 0.15)",
+  whiteSpace: "nowrap",
+};
+
+export function CpTableHeaderCell({ scope = "col", style, children }: CpTableHeaderCellProps) {
+  return (
+    <th scope={scope} style={{ ...CP_TH_STYLE, ...style }}>
+      {children}
+    </th>
+  );
+}
+
+export type CpTableCellProps = {
+  readonly style?: CSSProperties;
+  readonly children?: ReactNode;
+};
+
+const CP_TD_STYLE: CSSProperties = {
+  padding: "0.5rem 0.75rem",
+  borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+  verticalAlign: "middle",
+};
+
+export function CpTableCell({ style, children }: CpTableCellProps) {
+  return <td style={{ ...CP_TD_STYLE, ...style }}>{children}</td>;
+}
+
+export type CpKpiCardProps = {
+  readonly label: string;
+  readonly value: number | string;
+};
+
+const CP_KPI_CARD_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.25rem",
+  minWidth: "7rem",
+  padding: "0.5rem 0.75rem",
+  border: "1px solid rgba(0, 0, 0, 0.12)",
+  borderRadius: "0.375rem",
+  background: "transparent",
+};
+
+const CP_KPI_VALUE_STYLE: CSSProperties = {
+  fontSize: "1.5rem",
+  fontWeight: 700,
+  lineHeight: 1,
+};
+
+const CP_KPI_LABEL_STYLE: CSSProperties = {
+  fontSize: "0.75rem",
+  opacity: 0.65,
+};
+
+export function CpKpiCard({ label, value }: CpKpiCardProps) {
+  return (
+    <div style={CP_KPI_CARD_STYLE}>
+      <span style={CP_KPI_VALUE_STYLE}>{value}</span>
+      <span style={CP_KPI_LABEL_STYLE}>{label}</span>
+    </div>
   );
 }

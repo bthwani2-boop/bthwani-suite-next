@@ -1,3 +1,8 @@
+=== TYPECHECK RESULTS ===
+Date: 2026-06-22
+Task: DSH-001_SHARED_ENGINE_AND_SURFACE_UI_CLEANUP_GATE
 
-> @bthwani/dsh@0.0.0 typecheck C:\bthwani-suite-next\services\dsh
-> tsc -p tsconfig.json --noEmit
+shared/app-shell typecheck: PASS
+shared/ui-kit typecheck: PASS
+services/dsh typecheck: PASS
+apps/control-panel/runtime typecheck: PASS

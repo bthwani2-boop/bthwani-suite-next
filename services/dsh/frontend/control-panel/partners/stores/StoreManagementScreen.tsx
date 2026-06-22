@@ -38,31 +38,17 @@ export function StoreManagementScreen() {
           ? <StoreAdminStateView state={c.listState} onRetry={c.retry} />
           : undefined
       }
+      sidePanel={
+        c.selectedStoreId !== null && c.detailState !== null
+          ? <StoreDetailAdminPanel state={c.detailState} onClose={() => c.selectStore(null)} />
+          : undefined
+      }
     >
-      <div style={{ display: "flex", height: "100%" }}>
-        <div style={{ flex: 1, overflowX: "auto" }}>
-          <StoreAdminTable
-            rows={c.visibleRows}
-            selectedStoreId={c.selectedStoreId}
-            onSelectStore={c.selectStore}
-          />
-        </div>
-        {c.selectedStoreId !== null && c.detailState !== null && (
-          <aside
-            style={{
-              width: "22rem",
-              flexShrink: 0,
-              borderInlineStart: "1px solid rgba(0, 0, 0, 0.1)",
-              overflowY: "auto",
-            }}
-          >
-            <StoreDetailAdminPanel
-              state={c.detailState}
-              onClose={() => c.selectStore(null)}
-            />
-          </aside>
-        )}
-      </div>
+      <StoreAdminTable
+        rows={c.visibleRows}
+        selectedStoreId={c.selectedStoreId}
+        onSelectStore={c.selectStore}
+      />
     </DataTablePageFrame>
   );
 }

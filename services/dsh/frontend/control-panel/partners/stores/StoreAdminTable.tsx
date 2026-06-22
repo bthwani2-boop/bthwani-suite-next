@@ -1,4 +1,4 @@
-import { CpTable } from "@bthwani/app-shell";
+import { CpTable, CpTableHeaderCell, CpTableCell } from "@bthwani/app-shell";
 import type { DshStoreAdminTableRow } from "../../../shared/store";
 
 type Props = {
@@ -26,9 +26,9 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
       <thead>
         <tr>
           {HEADERS.map((h) => (
-            <th key={h.key} style={thStyle} scope="col">
+            <CpTableHeaderCell key={h.key}>
               {h.label}
-            </th>
+            </CpTableHeaderCell>
           ))}
         </tr>
       </thead>
@@ -39,7 +39,7 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
             onClick={() =>
               onSelectStore(row.id === selectedStoreId ? null : row.id)
             }
-            aria-selected={row.id === selectedStoreId}
+            aria-selected={row.id === selectedStoreId || undefined}
             style={{
               cursor: "pointer",
               outline: row.id === selectedStoreId
@@ -47,26 +47,26 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
                 : undefined,
             }}
           >
-            <td style={tdStyle}>
+            <CpTableCell>
               <code style={{ fontSize: "0.75rem" }}>
                 {row.id.slice(0, 8)}…
               </code>
-            </td>
-            <td style={tdStyle}>{row.displayName}</td>
-            <td style={tdStyle}>{row.categoryLabel}</td>
-            <td style={tdStyle}>
+            </CpTableCell>
+            <CpTableCell>{row.displayName}</CpTableCell>
+            <CpTableCell>{row.categoryLabel}</CpTableCell>
+            <CpTableCell>
               <StatusBadge status={row.status} isVisible={row.isVisible} />
-            </td>
-            <td style={tdStyle}>
+            </CpTableCell>
+            <CpTableCell>
               {row.cityCode} / {row.serviceAreaCode}
-            </td>
-            <td style={tdStyle}>
+            </CpTableCell>
+            <CpTableCell>
               {row.deliveryModes.join("، ")}
-            </td>
-            <td style={tdStyle}>
+            </CpTableCell>
+            <CpTableCell>
               {row.hasProBadge ? "✓ Pro" : ""}
               {row.hasCouponBadge ? " ✓ كوبون" : ""}
-            </td>
+            </CpTableCell>
           </tr>
         ))}
       </tbody>
@@ -109,18 +109,4 @@ const STATUS_LABELS: Record<string, string> = {
   inactive: "غير نشط",
   temporarily_closed: "مغلق مؤقتاً",
   unavailable: "غير متاح",
-};
-
-const thStyle: React.CSSProperties = {
-  padding: "0.5rem 0.75rem",
-  textAlign: "start",
-  fontWeight: 600,
-  borderBottom: "2px solid rgba(0, 0, 0, 0.15)",
-  whiteSpace: "nowrap",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "0.5rem 0.75rem",
-  borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-  verticalAlign: "middle",
 };

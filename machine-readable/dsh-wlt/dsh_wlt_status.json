@@ -4,7 +4,7 @@
     "description": "Current closure status for each DSH/WLT component. Updated after each slice is runtime-verified. Statuses: NOT_STARTED | DISCOVERED | READY_FOR_IMPLEMENTATION | IN_PROGRESS | RUNTIME_VERIFIED | BLOCKED_WITH_REASON",
     "last_updated": "2026-06-22",
     "target_branch": "starting-implementing-slices",
-    "target_head": "16b1dbfadaf7dee15b6f77cc5d05d52e5e9ea15a"
+    "target_head": "708bb5ab19ea11b355be1e6edf04a202c3777cea"
   },
   "foundation": {
     "status": "RUNTIME_VERIFIED",
@@ -178,11 +178,11 @@
     "slices_verified": 3,
     "slices_remaining": 7,
     "surfaces_with_full_implementation": [
-      "app-client (DSH-001, DSH-002)",
-      "control-panel (DSH-001 Stores Admin)",
-      "app-partner (DSH-001 Store-only context)",
-      "app-field (DSH-001 Store-only verification context)",
-      "app-captain (DSH-001 Store-only pickup context)"
+      "app-client (DSH-001 store-topic implemented for this surface only; DSH-002 home-discovery implemented for this surface only)",
+      "control-panel (DSH-001 store-topic implemented for this surface only — store admin/governance)",
+      "app-partner (DSH-001 store-topic implemented for this surface only — store-only readiness context; no catalog/orders/finance)",
+      "app-field (DSH-001 store-topic implemented for this surface only — store-only verification context; no onboarding workflow)",
+      "app-captain (DSH-001 store-topic implemented for this surface only — store-only pickup context; no delivery lifecycle)"
     ],
     "surfaces_pending": ["control-panel (DSH-002+)"],
     "blocking_items": [
