@@ -1,17 +1,14 @@
-﻿Re-extracting code files in . (no LLM needed)...
-  AST extraction: 100/478 uncached files (20%) [8 workers]
-  AST extraction: 200/478 uncached files (41%) [8 workers]
-  AST extraction: 300/478 uncached files (62%) [8 workers]
-  AST extraction: 400/478 uncached files (83%) [8 workers]
-  AST extraction: 1119/1119 files (100%) [8 workers]
-[graphify watch] Skipped graph.html: Graph has 6266 nodes - too large for HTML viz (limit: 5000). Use --no-viz, raise GRAPHIFY_VIZ_NODE_LIMIT, or reduce input size.
-[graphify watch] Rebuilt: 6266 nodes, 6028 edges, 811 communities
-[graphify watch] graph.json and GRAPH_REPORT.md updated in graphify-out
+
+> bthwani-suite-next@0.0.0 graphify C:\bthwani-suite-next
+> graphify update . --force
+
+Re-extracting code files in . (no LLM needed)...
+  AST extraction: 100/388 uncached files (25%) [8 workers]
+  AST extraction: 200/388 uncached files (51%) [8 workers]
+  AST extraction: 300/388 uncached files (77%) [8 workers]
+  AST extraction: 1129/1129 files (100%) [8 workers]
+[graphify watch] Skipped graph.html: Graph has 6263 nodes - too large for HTML viz (limit: 5000). Use --no-viz, raise GRAPHIFY_VIZ_NODE_LIMIT, or reduce input size.
+[graphify watch] Rebuilt: 6263 nodes, 6025 edges, 808 communities
+[graphify watch] graph.json and GRAPH_REPORT.md, 1 callflow HTML updated in graphify-out
 Code graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.
 Tip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.
-Loaded: 6266 nodes, 6028 edges, 16 sections
-Graph: graphify-out\graph.json
-Call-flow HTML written: graphify-out\bthwani-suite-next-callflow.html
-  Sections: 17  |  Mermaid diagrams: 16  |  Call tables: 15
-  Diagrams use Mermaid init directives plus interactive zoom/pan controls.
-callflow HTML written - open in any browser: graphify-out\bthwani-suite-next-callflow.html

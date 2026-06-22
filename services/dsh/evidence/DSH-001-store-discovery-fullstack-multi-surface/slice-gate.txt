@@ -1,5 +1,6 @@
-﻿COMMAND: pnpm run slice:gate
-STATUS: PENDING FINAL RERUN
 
-The first run identified the same stale dsh-service-activation evidence-path
-assertion. This file is replaced with the final result after the rerun.
+> bthwani-suite-next@0.0.0 slice:gate C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-slice-gate.ps1
+
+RESULT: PASS
+Evidence: C:\bthwani-suite-next\tools\registry\runs\SLICE-GATE-20260622-045720

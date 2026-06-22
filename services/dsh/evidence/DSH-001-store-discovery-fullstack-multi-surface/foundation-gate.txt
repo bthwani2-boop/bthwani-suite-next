@@ -1,6 +1,6 @@
-﻿COMMAND: pnpm run foundation:gate
-STATUS: PENDING FINAL RERUN
 
-The first run identified a stale dsh-service-activation evidence-path assertion.
-The guard was corrected to the canonical full-stack evidence path. This file is
-replaced with the final result after the rerun.
+> bthwani-suite-next@0.0.0 foundation:gate C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1
+
+RESULT: PASS
+Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260622-045758

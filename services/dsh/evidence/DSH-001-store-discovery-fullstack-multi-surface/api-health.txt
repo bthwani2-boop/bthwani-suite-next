@@ -1,5 +1,5 @@
-﻿{
-    "service":  "dsh",
-    "status":  "healthy",
-    "checkedAt":  "2026-06-22T01:39:03.816968118Z"
+{
+  "service": "dsh",
+  "status": "healthy",
+  "checkedAt": "2026-06-22T01:57:09.0791543Z"
 }

@@ -2,195 +2,195 @@
 > @bthwani/dsh@0.0.0 test C:\bthwani-suite-next\services\dsh
 > node --test tests/*.test.mjs
 
-Γû╢ admin state constructors
-  Γ£ö adminLoadingState returns kind=loading (12.5082ms)
-  Γ£ö adminEmptyState returns kind=empty (2.5631ms)
-  Γ£ö adminErrorState returns kind=error with message (0.7226ms)
-  Γ£ö adminServiceUnavailableState returns kind=service_unavailable (0.5703ms)
-  Γ£ö adminPermissionDeniedState 401 returns kind=permission_denied statusCode=401 (0.6688ms)
-  Γ£ö adminPermissionDeniedState 403 returns kind=permission_denied statusCode=403 (0.4961ms)
-Γ£ö admin state constructors (34.8784ms)
-Γû╢ adminSuccessState
-  Γ£ö returns success when rows not empty at offset 0 (1.0975ms)
-  Γ£ö returns empty when rows empty and offset=0 (0.5782ms)
-  Γ£ö returns success when rows empty but offset>0 (paginated beyond) (0.5759ms)
-Γ£ö adminSuccessState (3.346ms)
-Γû╢ ADMIN_FILTERS_EMPTY
-  Γ£ö all fields are null (0.7869ms)
-Γ£ö ADMIN_FILTERS_EMPTY (1.1986ms)
-Γû╢ toAdminTableRow
-  Γ£ö active store maps isOpen=true (3.2331ms)
-  Γ£ö inactive store maps isOpen=false (0.642ms)
-  Γ£ö serviceable store maps isServiceable=true (0.5847ms)
-  Γ£ö limited serviceability maps isServiceable=true (0.618ms)
-  Γ£ö out_of_area serviceability maps isServiceable=false (0.7209ms)
-  Γ£ö isVisible is preserved from DTO (0.882ms)
-  Γ£ö heroImageUrl is string or null ΓÇö not { uri } wrapper (0.7843ms)
-  Γ£ö deliveryModes array is copied from DTO (4.593ms)
-  Γ£ö no financial fields in row (18.6295ms)
-Γ£ö toAdminTableRow (36.0483ms)
-Γû╢ toAdminDetail
-  Γ£ö includes all table row fields plus detail fields (1.1709ms)
-  Γ£ö no mutation actions in detail ΓÇö read-only shape (0.3921ms)
-Γ£ö toAdminDetail (2.2243ms)
-Γû╢ toAdminKpiSummary
-  Γ£ö counts totals correctly (1.425ms)
-  Γ£ö empty rows produce zero counts except total (3.4734ms)
-Γ£ö toAdminKpiSummary (5.2709ms)
-Γû╢ applyAdminFilters
-  Γ£ö no filters returns all rows (0.9834ms)
-  Γ£ö status filter narrows results (0.3707ms)
-  Γ£ö isVisible filter narrows results (0.2885ms)
-  Γ£ö category filter narrows results (0.2586ms)
-  Γ£ö search filter matches displayName (0.3964ms)
-  Γ£ö combined filters apply all predicates (0.313ms)
-  Γ£ö pagination summary can be computed from filtered result length (0.2654ms)
-Γ£ö applyAdminFilters (3.6773ms)
-Γû╢ validateDshApiBaseUrl ΓÇö rejects old ports on localhost
-  Γ£ö rejects localhost:8080 (9.3498ms)
-  Γ£ö rejects localhost:8081 (0.583ms)
-  Γ£ö rejects localhost:8082 (1.264ms)
-  Γ£ö rejects localhost:8083 (1.0172ms)
-  Γ£ö rejects localhost:8084 (0.6537ms)
-  Γ£ö rejects localhost:3000 (1.4149ms)
-  Γ£ö rejects 127.0.0.1:8080 (0.6226ms)
-  Γ£ö rejects 127.0.0.1:3000 (0.5737ms)
-  Γ£ö rejects IPv6 localhost old port (28.5946ms)
-Γ£ö validateDshApiBaseUrl ΓÇö rejects old ports on localhost (50.7883ms)
-Γû╢ validateDshApiBaseUrl ΓÇö accepts canonical DSH port
-  Γ£ö accepts localhost:58080 (1.1306ms)
-  Γ£ö accepts 127.0.0.1:58080 (0.5721ms)
-  Γ£ö accepts production HTTPS URL without port restriction (0.577ms)
-  Γ£ö accepts production URL with port 8080 (non-localhost) (0.5839ms)
-  Γ£ö accepts IPv6 localhost canonical port (0.337ms)
-Γ£ö validateDshApiBaseUrl ΓÇö accepts canonical DSH port (4.1464ms)
-Γû╢ validateDshApiBaseUrl ΓÇö rejects malformed URLs
-  Γ£ö rejects empty string (5.3957ms)
-  Γ£ö rejects plain hostname without protocol (0.3955ms)
-  Γ£ö rejects garbage (0.351ms)
-Γ£ö validateDshApiBaseUrl ΓÇö rejects malformed URLs (6.6285ms)
-Γû╢ resolveDshApiBaseUrl ΓÇö defaults to canonical port
-  Γ£ö fallback is http://localhost:58080 (0.7876ms)
-Γ£ö resolveDshApiBaseUrl ΓÇö defaults to canonical port (1.0208ms)
-Γû╢ home discovery controller core
-  Γ£ö uses all as the initial filter (40.2191ms)
-  Γ£ö publishes loading then success (5.4021ms)
-  Γ£ö preserves empty, error, and service unavailable outcomes (1.0593ms)
-Γ£ö home discovery controller core (54.404ms)
-Γû╢ canViewHomeDiscovery
-  Γ£ö always returns true ΓÇö public surface (3.3424ms)
-Γ£ö canViewHomeDiscovery (12.8056ms)
-Γû╢ applyDiscoveryFilter ΓÇö all
-  Γ£ö returns copy of all stores preserving order (1.1577ms)
-  Γ£ö returns new array ΓÇö does not mutate original (1.0081ms)
-Γ£ö applyDiscoveryFilter ΓÇö all (4.4112ms)
-Γû╢ applyDiscoveryFilter ΓÇö favorites
-  Γ£ö returns empty array ΓÇö favorites requires server-side endpoint not yet available (1.2627ms)
-Γ£ö applyDiscoveryFilter ΓÇö favorites (1.7971ms)
-Γû╢ applyDiscoveryFilter ΓÇö nearest
-  Γ£ö stores with distanceDisplay come before stores without (1.0659ms)
-  Γ£ö two stores both without distance preserve relative order (0.8697ms)
-  Γ£ö does not mutate original array (0.7645ms)
-Γ£ö applyDiscoveryFilter ΓÇö nearest (3.9802ms)
-Γû╢ applyDiscoveryFilter ΓÇö offers
-  Γ£ö keeps stores with coupon badge (3.4207ms)
-  Γ£ö keeps stores with free delivery (1.1791ms)
-  Γ£ö keeps stores with both coupon and free delivery (0.9105ms)
-  Γ£ö returns empty when no stores match (0.4954ms)
-Γ£ö applyDiscoveryFilter ΓÇö offers (7.5284ms)
-Γû╢ applyDiscoveryFilter ΓÇö new
-  Γ£ö returns copy preserving order ΓÇö backend seeds newest first (2.781ms)
-Γ£ö applyDiscoveryFilter ΓÇö new (3.1365ms)
-Γû╢ store admin controller core
-  Γ£ö publishes loading then success with canonical pagination (6.9774ms)
-  Γ£ö preserves empty, error, unavailable, and permission outcomes (2.6344ms)
-  Γ£ö derives filters, KPI, and pagination (5.6705ms)
-  Γ£ö moves pagination offsets safely (0.5554ms)
-  Γ£ö loads and clears store detail selection (0.7609ms)
-Γ£ö store admin controller core (49.1912ms)
-Γû╢ createDshStoreClient
-  Γ£ö factory returns an object with listStores and getStore (4.6465ms)
-  Γ£ö factory accepts a base URL and creates a client (2.8276ms)
-Γ£ö createDshStoreClient (22.5957ms)
-Γû╢ client error shape
-  Γ£ö network error shape has kind=network and message (201.1148ms)
-Γ£ö client error shape (203.3142ms)
-Γû╢ error mapping classification
-  Γ£ö HTTP 503 should produce kind=http with status=503 (0.8682ms)
-  Γ£ö error codes are correctly classified (0.6735ms)
-Γ£ö error mapping classification (2.787ms)
-Γû╢ store discovery controller core
-  Γ£ö publishes loading then success (5.9682ms)
-  Γ£ö preserves empty, error, and service unavailable outcomes (1.2325ms)
-  Γ£ö toggles favorites without mutating the previous set (0.7197ms)
-  Γ£ö filters favorites and sorts nearest stores (1.1876ms)
-  Γ£ö returns a filtered success state without changing non-success states (1.2081ms)
-Γ£ö store discovery controller core (24.6716ms)
-Γû╢ validateListQuery
-  Γ£ö accepts valid query (10.102ms)
-  Γ£ö rejects limit < 1 (2.4935ms)
-  Γ£ö rejects limit > 100 (0.6489ms)
-  Γ£ö rejects negative offset (0.7291ms)
-  Γ£ö rejects invalid status (0.6478ms)
-  Γ£ö accepts valid status (0.5973ms)
-Γ£ö validateListQuery (20.19ms)
-Γû╢ isStoreVisibleToClient
-  Γ£ö visible active store (1.4797ms)
-  Γ£ö invisible store (0.7856ms)
-  Γ£ö inactive store (0.6983ms)
-Γ£ö isStoreVisibleToClient (4.0509ms)
-Γû╢ applyClientVisibilityFilter
-  Γ£ö filters out non-visible stores (4.4482ms)
-Γ£ö applyClientVisibilityFilter (4.9736ms)
-Γû╢ rowToSummary
-  Γ£ö maps all fields correctly (1.4729ms)
-  Γ£ö null nullable fields pass through (0.5675ms)
-Γ£ö rowToSummary (2.648ms)
-Γû╢ rowToDetail
-  Γ£ö includes ISO timestamp strings (1.4278ms)
-Γ£ö rowToDetail (1.7562ms)
-Γû╢ state constructors
-  Γ£ö loadingState returns kind=loading (11.9602ms)
-  Γ£ö emptyState returns kind=empty (0.8215ms)
-  Γ£ö errorState returns kind=error with message (0.7717ms)
-  Γ£ö serviceUnavailableState returns kind=service_unavailable (0.6968ms)
-Γ£ö state constructors (18.5061ms)
-Γû╢ successState
-  Γ£ö returns success when stores not empty (0.8129ms)
-  Γ£ö returns empty when stores empty and offset=0 (0.5077ms)
-  Γ£ö returns success when stores empty but offset>0 (paginated) (0.5428ms)
-Γ£ö successState (2.9205ms)
-Γû╢ toCardViewModel
-  Γ£ö active serviceable store is open and serviceable (106.9138ms)
-  Γ£ö inactive store is not open (1.1905ms)
-  Γ£ö temporarily_closed produces statusBadge (1.0932ms)
-  Γ£ö limited serviceability produces statusBadge (1.031ms)
-  Γ£ö out_of_area produces statusBadge (1.0969ms)
-  Γ£ö rating label rendered when rating present (2.443ms)
-  Γ£ö rating label null when no rating (3.0518ms)
-  Γ£ö rating label null when ratingCount is 0 (1.1724ms)
-  Γ£ö eta label rendered when eta present (1.1491ms)
-  Γ£ö eta label null when eta absent (1.4246ms)
-  Γ£ö heroImageSource null when not provided (1.2362ms)
-  Γ£ö logoImageSource null when not provided (0.9853ms)
-  Γ£ö commercial card metadata comes from the API DTO (3.1423ms)
-  Γ£ö display name is not rewritten or inferred by the view-model (0.9273ms)
-Γ£ö toCardViewModel (136.1546ms)
-Γû╢ toDetailViewModel
-  Γ£ö includes all card fields plus timestamps (1.3991ms)
-Γ£ö toDetailViewModel (1.8519ms)
-Γû╢ store role context controller core
-  Γ£ö publishes loading then all role-specific store contexts (9.9277ms)
-  Γ£ö uses storeId directly when provided without calling fetchList (0.9905ms)
-  Γ£ö maps list empty, permission, unavailable, and error states (1.2995ms)
-  Γ£ö maps missing detail to empty and preserves detail failures (1.2077ms)
-  Γ£ö derives surface-neutral state presentation and retry policy (0.803ms)
-Γ£ö store role context controller core (20.8309ms)
-Γä╣ tests 118
-Γä╣ suites 33
-Γä╣ pass 118
-Γä╣ fail 0
-Γä╣ cancelled 0
-Γä╣ skipped 0
-Γä╣ todo 0
-Γä╣ duration_ms 1482.2254
+▶ admin state constructors
+  ✔ adminLoadingState returns kind=loading (14.551ms)
+  ✔ adminEmptyState returns kind=empty (0.5027ms)
+  ✔ adminErrorState returns kind=error with message (0.6474ms)
+  ✔ adminServiceUnavailableState returns kind=service_unavailable (0.5605ms)
+  ✔ adminPermissionDeniedState 401 returns kind=permission_denied statusCode=401 (0.4667ms)
+  ✔ adminPermissionDeniedState 403 returns kind=permission_denied statusCode=403 (0.3739ms)
+✔ admin state constructors (25.9853ms)
+▶ adminSuccessState
+  ✔ returns success when rows not empty at offset 0 (16.2317ms)
+  ✔ returns empty when rows empty and offset=0 (1.537ms)
+  ✔ returns success when rows empty but offset>0 (paginated beyond) (1.811ms)
+✔ adminSuccessState (21.5801ms)
+▶ ADMIN_FILTERS_EMPTY
+  ✔ all fields are null (0.8288ms)
+✔ ADMIN_FILTERS_EMPTY (1.1477ms)
+▶ toAdminTableRow
+  ✔ active store maps isOpen=true (8.6293ms)
+  ✔ inactive store maps isOpen=false (0.4656ms)
+  ✔ serviceable store maps isServiceable=true (0.4124ms)
+  ✔ limited serviceability maps isServiceable=true (0.4885ms)
+  ✔ out_of_area serviceability maps isServiceable=false (0.4481ms)
+  ✔ isVisible is preserved from DTO (0.5964ms)
+  ✔ heroImageUrl is string or null — not { uri } wrapper (0.8081ms)
+  ✔ deliveryModes array is copied from DTO (2.3125ms)
+  ✔ no financial fields in row (0.5142ms)
+✔ toAdminTableRow (18.6976ms)
+▶ toAdminDetail
+  ✔ includes all table row fields plus detail fields (0.9082ms)
+  ✔ no mutation actions in detail — read-only shape (0.3468ms)
+✔ toAdminDetail (1.7785ms)
+▶ toAdminKpiSummary
+  ✔ counts totals correctly (1.08ms)
+  ✔ empty rows produce zero counts except total (0.3453ms)
+✔ toAdminKpiSummary (3.5455ms)
+▶ applyAdminFilters
+  ✔ no filters returns all rows (0.6956ms)
+  ✔ status filter narrows results (0.3057ms)
+  ✔ isVisible filter narrows results (0.2608ms)
+  ✔ category filter narrows results (0.2256ms)
+  ✔ search filter matches displayName (0.2898ms)
+  ✔ combined filters apply all predicates (0.2421ms)
+  ✔ pagination summary can be computed from filtered result length (0.2081ms)
+✔ applyAdminFilters (2.8325ms)
+▶ validateDshApiBaseUrl — rejects old ports on localhost
+  ✔ rejects localhost:8080 (3.5481ms)
+  ✔ rejects localhost:8081 (0.4541ms)
+  ✔ rejects localhost:8082 (0.3848ms)
+  ✔ rejects localhost:8083 (0.4211ms)
+  ✔ rejects localhost:8084 (0.3948ms)
+  ✔ rejects localhost:3000 (0.8098ms)
+  ✔ rejects 127.0.0.1:8080 (0.5969ms)
+  ✔ rejects 127.0.0.1:3000 (0.9566ms)
+  ✔ rejects IPv6 localhost old port (0.6149ms)
+✔ validateDshApiBaseUrl — rejects old ports on localhost (19.965ms)
+▶ validateDshApiBaseUrl — accepts canonical DSH port
+  ✔ accepts localhost:58080 (2.3112ms)
+  ✔ accepts 127.0.0.1:58080 (0.372ms)
+  ✔ accepts production HTTPS URL without port restriction (0.5448ms)
+  ✔ accepts production URL with port 8080 (non-localhost) (13.2089ms)
+  ✔ accepts IPv6 localhost canonical port (1.357ms)
+✔ validateDshApiBaseUrl — accepts canonical DSH port (18.8608ms)
+▶ validateDshApiBaseUrl — rejects malformed URLs
+  ✔ rejects empty string (3.5145ms)
+  ✔ rejects plain hostname without protocol (1.6332ms)
+  ✔ rejects garbage (0.3033ms)
+✔ validateDshApiBaseUrl — rejects malformed URLs (5.9531ms)
+▶ resolveDshApiBaseUrl — defaults to canonical port
+  ✔ fallback is http://localhost:58080 (6.1198ms)
+✔ resolveDshApiBaseUrl — defaults to canonical port (6.3972ms)
+▶ home discovery controller core
+  ✔ uses all as the initial filter (8.9024ms)
+  ✔ publishes loading then success (4.0748ms)
+  ✔ preserves empty, error, and service unavailable outcomes (1.7094ms)
+✔ home discovery controller core (19.4778ms)
+▶ canViewHomeDiscovery
+  ✔ always returns true — public surface (2.6517ms)
+✔ canViewHomeDiscovery (25.7522ms)
+▶ applyDiscoveryFilter — all
+  ✔ returns copy of all stores preserving order (1.7862ms)
+  ✔ returns new array — does not mutate original (2.367ms)
+✔ applyDiscoveryFilter — all (4.9646ms)
+▶ applyDiscoveryFilter — favorites
+  ✔ returns empty array — favorites requires server-side endpoint not yet available (1.9516ms)
+✔ applyDiscoveryFilter — favorites (3.5509ms)
+▶ applyDiscoveryFilter — nearest
+  ✔ stores with distanceDisplay come before stores without (2.0977ms)
+  ✔ two stores both without distance preserve relative order (2.2084ms)
+  ✔ does not mutate original array (0.516ms)
+✔ applyDiscoveryFilter — nearest (5.9055ms)
+▶ applyDiscoveryFilter — offers
+  ✔ keeps stores with coupon badge (1.2547ms)
+  ✔ keeps stores with free delivery (4.849ms)
+  ✔ keeps stores with both coupon and free delivery (1.3211ms)
+  ✔ returns empty when no stores match (3.3417ms)
+✔ applyDiscoveryFilter — offers (14.8578ms)
+▶ applyDiscoveryFilter — new
+  ✔ returns copy preserving order — backend seeds newest first (6.4366ms)
+✔ applyDiscoveryFilter — new (7.2486ms)
+▶ store admin controller core
+  ✔ publishes loading then success with canonical pagination (7.3944ms)
+  ✔ preserves empty, error, unavailable, and permission outcomes (1.778ms)
+  ✔ derives filters, KPI, and pagination (2.1762ms)
+  ✔ moves pagination offsets safely (0.542ms)
+  ✔ loads and clears store detail selection (0.9238ms)
+✔ store admin controller core (22.7271ms)
+▶ createDshStoreClient
+  ✔ factory returns an object with listStores and getStore (7.8969ms)
+  ✔ factory accepts a base URL and creates a client (0.6099ms)
+✔ createDshStoreClient (11.8332ms)
+▶ client error shape
+  ✔ network error shape has kind=network and message (136.0378ms)
+✔ client error shape (136.7229ms)
+▶ error mapping classification
+  ✔ HTTP 503 should produce kind=http with status=503 (0.5174ms)
+  ✔ error codes are correctly classified (0.4932ms)
+✔ error mapping classification (1.5015ms)
+▶ store discovery controller core
+  ✔ publishes loading then success (4.3352ms)
+  ✔ preserves empty, error, and service unavailable outcomes (0.8749ms)
+  ✔ toggles favorites without mutating the previous set (0.5963ms)
+  ✔ filters favorites and sorts nearest stores (0.819ms)
+  ✔ returns a filtered success state without changing non-success states (0.6511ms)
+✔ store discovery controller core (14.948ms)
+▶ validateListQuery
+  ✔ accepts valid query (3.1479ms)
+  ✔ rejects limit < 1 (0.7252ms)
+  ✔ rejects limit > 100 (0.5451ms)
+  ✔ rejects negative offset (0.3913ms)
+  ✔ rejects invalid status (0.6041ms)
+  ✔ accepts valid status (0.5014ms)
+✔ validateListQuery (9.5825ms)
+▶ isStoreVisibleToClient
+  ✔ visible active store (0.7894ms)
+  ✔ invisible store (0.5192ms)
+  ✔ inactive store (0.567ms)
+✔ isStoreVisibleToClient (2.6087ms)
+▶ applyClientVisibilityFilter
+  ✔ filters out non-visible stores (3.5091ms)
+✔ applyClientVisibilityFilter (3.7972ms)
+▶ rowToSummary
+  ✔ maps all fields correctly (0.9189ms)
+  ✔ null nullable fields pass through (0.3613ms)
+✔ rowToSummary (1.6314ms)
+▶ rowToDetail
+  ✔ includes ISO timestamp strings (3.2956ms)
+✔ rowToDetail (3.5602ms)
+▶ state constructors
+  ✔ loadingState returns kind=loading (5.9276ms)
+  ✔ emptyState returns kind=empty (0.5114ms)
+  ✔ errorState returns kind=error with message (0.6604ms)
+  ✔ serviceUnavailableState returns kind=service_unavailable (0.5237ms)
+✔ state constructors (12.3394ms)
+▶ successState
+  ✔ returns success when stores not empty (0.7141ms)
+  ✔ returns empty when stores empty and offset=0 (0.4063ms)
+  ✔ returns success when stores empty but offset>0 (paginated) (0.4918ms)
+✔ successState (2.746ms)
+▶ toCardViewModel
+  ✔ active serviceable store is open and serviceable (44.5989ms)
+  ✔ inactive store is not open (0.6119ms)
+  ✔ temporarily_closed produces statusBadge (0.5033ms)
+  ✔ limited serviceability produces statusBadge (0.4328ms)
+  ✔ out_of_area produces statusBadge (0.4482ms)
+  ✔ rating label rendered when rating present (0.4297ms)
+  ✔ rating label null when no rating (0.5342ms)
+  ✔ rating label null when ratingCount is 0 (0.4464ms)
+  ✔ eta label rendered when eta present (0.4491ms)
+  ✔ eta label null when eta absent (0.5672ms)
+  ✔ heroImageSource null when not provided (0.4271ms)
+  ✔ logoImageSource null when not provided (0.3393ms)
+  ✔ commercial card metadata comes from the API DTO (1.4755ms)
+  ✔ display name is not rewritten or inferred by the view-model (0.5723ms)
+✔ toCardViewModel (55.8759ms)
+▶ toDetailViewModel
+  ✔ includes all card fields plus timestamps (0.6729ms)
+✔ toDetailViewModel (0.9718ms)
+▶ store role context controller core
+  ✔ publishes loading then all role-specific store contexts (5.9546ms)
+  ✔ uses storeId directly when provided without calling fetchList (0.9709ms)
+  ✔ maps list empty, permission, unavailable, and error states (1.0388ms)
+  ✔ maps missing detail to empty and preserves detail failures (1.1214ms)
+  ✔ derives surface-neutral state presentation and retry policy (0.73ms)
+✔ store role context controller core (15.6329ms)
+ℹ tests 118
+ℹ suites 33
+ℹ pass 118
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 739.3884

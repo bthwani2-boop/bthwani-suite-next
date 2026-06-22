@@ -1,5 +1,6 @@
-﻿=== GUARDS VERIFICATION LOG ===
+=== GUARDS VERIFICATION LOG ===
 Running guard:dsh-frontend-shared-ownership...
+
 
 > bthwani-suite-next@0.0.0 guard:dsh-frontend-shared-ownership C:\bthwani-suite-next
 > pnpm --dir services/dsh guard:shared-ownership
@@ -8,72 +9,71 @@ Running guard:dsh-frontend-shared-ownership...
 > @bthwani/dsh@0.0.0 guard:shared-ownership C:\bthwani-suite-next\services\dsh
 > node ../../tools/guards/dsh-frontend-shared-ownership-gate.mjs
 
-node.exe :   ΓÜá services\dsh\frontend\control-panel\partners\stores\StoreAdminFilters.tsx: raw HTML interactive
-element in control-panel surface ΓÇö prefer @bthwani/app-shell components
-At C:\Program Files\nodejs\pnpm.ps1:16 char:5
-+     & "$basedir/node$exe"  "$basedir/node_modules/corepack/dist/pnpm. ...
-+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (  ΓÜá services\...hell components:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
-
-  ΓÜá services\dsh\frontend\control-panel\partners\stores\StoreAdminStateView.tsx: raw HTML interactive element in
-control-panel surface ΓÇö prefer @bthwani/app-shell components
-  ΓÜá services\dsh\frontend\control-panel\partners\stores\StoreAdminTable.tsx: raw HTML interactive element in
-control-panel surface ΓÇö prefer @bthwani/app-shell components
-  ΓÜá services\dsh\frontend\control-panel\partners\stores\StoreDetailAdminPanel.tsx: raw HTML interactive element in
-control-panel surface ΓÇö prefer @bthwani/app-shell components
-
-  4 warning(s) ΓÇö review raw HTML elements in control-panel
 
 DSH Frontend Shared Ownership Gate: PASS
 
+
+
 Running guard:dsh-001-cross-surface-dependency-map...
+
 
 > bthwani-suite-next@0.0.0 guard:dsh-001-cross-surface-dependency-map C:\bthwani-suite-next
 > node tools/guards/dsh-001-cross-surface-dependency-map.mjs
 
 DSH-001 All-Surface Store Role Gate: PASS
+
+
 Running guard:no-financial-mutation-outside-wlt...
+
 
 > bthwani-suite-next@0.0.0 guard:no-financial-mutation-outside-wlt C:\bthwani-suite-next
 > node tools/guards/no-financial-mutation-outside-wlt.mjs
 
 no-financial-mutation-outside-wlt: PASS
+
+
 Running guard:app-shell-control-panel...
+
 
 > bthwani-suite-next@0.0.0 guard:app-shell-control-panel C:\bthwani-suite-next
 > node tools/guards/app-shell-control-panel-contract-gate.mjs
 
 app-shell-control-panel-contract-gate: PASS
+
+
 Running guard:control-panel-design...
+
 
 > bthwani-suite-next@0.0.0 guard:control-panel-design C:\bthwani-suite-next
 > node tools/guards/control-panel-design-gate.mjs
 
 control-panel-design-gate: PASS
+
+
 Running guard:matrix:v3...
+
 
 > bthwani-suite-next@0.0.0 guard:matrix:v3 C:\bthwani-suite-next
 > node tools/guards/guard-slice-master-matrix-v3.mjs
 
-Row count: 1182 Γ£ô
-DSH order lifecycle: 16 states Γ£ô
-DSH canonical-state-machine sentinel: 1 Γ£ô
-WLT financial lifecycle: 16 states Γ£ô
-WLT canonical-state-machine sentinel: 1 Γ£ô
-dispatch_policy rows: 127 Γ£ô
-pricing_policy rows: 173 Γ£ô
-COD policy rows: 5 Γ£ô
-notification_triggers rows: 40 Γ£ô
-external_dependencies rows: 49 Γ£ô
-Screen/journey ui_localization_rules: all 728 rows covered Γ£ô
-RBAC coverage: all 201 object operation rows covered Γ£ô
-Audit/privacy coverage: all 398 auditable rows covered Γ£ô
-Rollback coverage: all 248 critical rows covered Γ£ô
-DSH financial ownership violations: 0 Γ£ô
-Provider decision coverage: all 49 ext-dep rows covered Γ£ô
-Donor aliases: 11/11 represented Γ£ô
-Forbidden service owners: 0 Γ£ô
+Row count: 1182 ✓
+DSH order lifecycle: 16 states ✓
+DSH canonical-state-machine sentinel: 1 ✓
+WLT financial lifecycle: 16 states ✓
+WLT canonical-state-machine sentinel: 1 ✓
+dispatch_policy rows: 127 ✓
+pricing_policy rows: 173 ✓
+COD policy rows: 5 ✓
+notification_triggers rows: 40 ✓
+external_dependencies rows: 49 ✓
+Screen/journey ui_localization_rules: all 728 rows covered ✓
+RBAC coverage: all 201 object operation rows covered ✓
+Audit/privacy coverage: all 398 auditable rows covered ✓
+Rollback coverage: all 248 critical rows covered ✓
+DSH financial ownership violations: 0 ✓
+Provider decision coverage: all 49 ext-dep rows covered ✓
+Donor aliases: 11/11 represented ✓
+Forbidden service owners: 0 ✓
 
 === GUARD V3 RESULTS ===
 {
@@ -97,11 +97,13 @@ Forbidden service owners: 0 Γ£ô
 Errors: 0, Warnings: 0
 
 RESULT: PASS
+
+
 Running foundation:gate...
+
 
 > bthwani-suite-next@0.0.0 foundation:gate C:\bthwani-suite-next
 > pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1
 
-RESULT: FAIL
-Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260622-044246
-ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.
+RESULT: PASS
+Evidence: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260622-050156

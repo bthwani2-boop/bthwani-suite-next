@@ -1,20 +1,13 @@
-﻿ M machine-readable/dsh-wlt/dsh_wlt_status.json
- M services/dsh/capability-map.ts
- M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/git-status.txt
- M services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx
- M services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx
- M services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx
- M services/dsh/frontend/shared/store/store-role-context.controller-core.ts
- M services/dsh/frontend/shared/store/use-store-role-context-controller.tsx
- M services/dsh/runtime-map.ts
- M services/dsh/service.manifest.ts
- M services/dsh/tests/store-role-context-controller.test.mjs
- M tools/guards/dsh-001-cross-surface-dependency-map.mjs
- M tools/guards/dsh-frontend-shared-ownership-gate.mjs
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/app-captain-store-pickup-context.txt
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/app-field-store-verification.txt
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/app-partner-store-context.txt
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/ci-status.txt
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-captain-store-pickup-context.png
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-field-store-verification.png
-?? services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-partner-store-context.png
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-health.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-readiness.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-stores.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/foundation-gate.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/git-diff-check.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/git-status.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/graphify-results.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/guard-results.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/nx-results.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/remote-head.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/runtime-status.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/slice-gate.txt
+M  services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/test-results.txt
