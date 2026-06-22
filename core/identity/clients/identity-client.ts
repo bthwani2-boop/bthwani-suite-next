@@ -1,4 +1,4 @@
-import type { components, paths } from "./generated/identity-api.js";
+import type { components, paths } from "./generated/identity-api.ts";
 
 export type ActorIdentity = components["schemas"]["ActorIdentity"];
 export type LoginRequest = components["schemas"]["LoginRequest"];

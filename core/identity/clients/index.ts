@@ -1,3 +1,3 @@
-export * from "./identity-client.js";
-export * from "./identity-session-store.js";
-export type { paths, components } from "./generated/identity-api.js";
+export * from "./identity-client.ts";
+export * from "./identity-session-store.ts";
+export type { paths, components } from "./generated/identity-api.ts";

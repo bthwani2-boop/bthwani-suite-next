@@ -3,7 +3,7 @@ import {
   type ActorIdentity,
   type IdentityClient,
   type IdentityClientError,
-} from "./identity-client.js";
+} from "./identity-client.ts";
 
 export type IdentitySessionState =
   | { readonly kind: "unconfigured" }

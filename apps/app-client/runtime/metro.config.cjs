@@ -22,6 +22,21 @@ config.resolver.nodeModulesPaths = [
 // directly to its source directory. Metro then uses the package's "main" field.
 config.resolver.extraNodeModules = {
   "@bthwani/ui-kit": path.join(workspaceRoot, "shared/ui-kit"),
+  "@bthwani/core-identity": path.join(workspaceRoot, "core/identity"),
+};
+
+// TypeScript ESM packages (moduleResolution: nodenext) use explicit .js extensions
+// in their source imports. Metro cannot resolve ./foo.js when the actual file is
+// ./foo.ts. Strip the .js extension so Metro can find the TypeScript source file.
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName.endsWith(".js") && !moduleName.startsWith("http")) {
+    try {
+      return context.resolveRequest(context, moduleName.slice(0, -3), platform);
+    } catch {
+      // Fall through to default resolution with original module name
+    }
+  }
+  return context.resolveRequest(context, moduleName, platform);
 };
 
 module.exports = config;
