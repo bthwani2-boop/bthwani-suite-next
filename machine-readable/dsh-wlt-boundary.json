@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-06-22",
+  "principle": "WLT is the sole owner of financial truth. DSH is the operational layer. This boundary is enforced by guard and is a DO_NOT_MERGE condition if violated.",
+
+  "dsh_owns": [
+    "stores",
+    "catalog",
+    "categories",
+    "products",
+    "media_references",
+    "cart",
+    "serviceability",
+    "checkout_intent_shell",
+    "orders",
+    "delivery_lifecycle",
+    "partner_readiness",
+    "captain_execution",
+    "field_readiness_onboarding",
+    "support_operations_visibility"
+  ],
+
+  "wlt_owns_exclusively": [
+    "wallet",
+    "payment_session",
+    "refund",
+    "settlement",
+    "payout",
+    "commission",
+    "COD_financial_state",
+    "ledger",
+    "reconciliation",
+    "financial_audit",
+    "finance_reports"
+  ],
+
+  "dsh_allowed_to_store_or_display": [
+    "paymentSessionId (opaque reference ID only)",
+    "paymentStatus (read-only display label)",
+    "financialReference (opaque reference ID only)",
+    "settlementStatus (read-only label only)"
+  ],
+
+  "dsh_forbidden_financial_operations": [
+    "Computing payment amounts",
+    "Creating payment sessions",
+    "Creating ledger entries",
+    "Triggering payouts",
+    "Calculating commission",
+    "Handling COD collection or mutation",
+    "Running reconciliation",
+    "Finalizing refunds",
+    "Posting settlements",
+    "Any financial mutation outside services/wlt/"
+  ],
+
+  "wlt_runtime_state": {
+    "wlt_000_foundation": "RUNTIME_VERIFIED",
+    "wlt_000_scope": "Reference-only endpoints: payment_status_refs, settlement_status_refs, refund_status_refs, wallet_refs",
+    "wlt_api_port": 58083,
+    "wlt_mutation_apis": "NOT_IMPLEMENTED — WLT-001+ mutation slice NOT_APPROVED_YET",
+    "wlt_generated_client": "NOT_GENERATED — required before any DSH surface consumes WLT reference data",
+    "wlt_mobile_surfaces": "NOT_STARTED — all mobile WLT surfaces have gitkeep only",
+    "wlt_control_panel": "SKELETON_PROOF_ONLY — WltFinanceReadOnlySkeletonProof.tsx present but not a production screen"
+  },
+
+  "dsh_reference_to_wlt": {
+    "shared_reference_controller": "services/wlt/frontend/dsh/shared/use-wlt-dsh-reference-controller.tsx",
+    "reference_api": "services/wlt/frontend/dsh/shared/wlt-dsh-reference.api.ts",
+    "reference_states": "services/wlt/frontend/dsh/shared/wlt-dsh-reference.states.ts",
+    "reference_view_model": "services/wlt/frontend/dsh/shared/wlt-dsh-reference.view-model.ts",
+    "boundary_types": "services/wlt/frontend/dsh/shared/wlt-dsh-boundary.types.ts",
+    "api_base_url": "services/wlt/frontend/dsh/shared/wlt-dsh-api-base-url.ts",
+    "allowed_usage": "DSH surfaces may import from services/wlt/frontend/dsh/shared/ to read WLT reference status. No mutation calls permitted.",
+    "forbidden_usage": "DSH surfaces must NOT call WLT mutation endpoints directly."
+  },
+
+  "donor_boundary_assessment": {
+    "financial_mutations_in_dsh": false,
+    "migration_025_removed_financial_columns": true,
+    "detail": "Donor migration 025 explicitly dropped refund_amount and settlement_amount columns from DSH stores. Donor dsh-wlt-boundary.ts declares mutation: forbidden.",
+    "assessment": "CLEAN — boundary is respected in donor. Adopt donor boundary logic as-is."
+  },
+
+  "guards": {
+    "primary_guard": "tools/guards/no-financial-mutation-outside-wlt.mjs",
+    "secondary_guard": "tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+    "current_violations": 0,
+    "guard_status": "PASS",
+    "last_verified": "2026-06-22",
+    "violation_policy": "DO_NOT_MERGE if any violation found"
+  },
+
+  "dsh_010_constraint": {
+    "topic": "DSH-010 Finance Visibility",
+    "allowed": "Display WLT-provided settlement and payment status summaries in control-panel finance section",
+    "forbidden": "Any calculation, mutation, or aggregation of financial data within DSH",
+    "requires": "WLT settlement-summary read endpoint (NOT_STARTED)",
+    "archetype": "FinanceReadOnlyFrame from shared/app-shell"
+  },
+
+  "wlt_activation_sequence": {
+    "step_1": "WLT-000 Foundation — RUNTIME_VERIFIED (done)",
+    "step_2": "WLT-001 Mutation APIs (payment, refund) — NOT_APPROVED_YET",
+    "step_3": "Generate WLT TypeScript client after WLT-001 contract is defined",
+    "step_4": "DSH-005 Checkout Intent consumes WLT payment-sessions endpoint",
+    "step_5": "DSH-010 Finance Visibility consumes WLT settlement-summary endpoint",
+    "current_step": "step_1 complete. step_2 requires approval."
+  }
+}

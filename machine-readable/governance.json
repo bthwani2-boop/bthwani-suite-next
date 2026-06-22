@@ -1,0 +1,144 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-06-22",
+  "audit_source": "forensic-audit-2026-06-22",
+
+  "topic_definition": {
+    "description": "A Topic is a full-stack operational unit, not a single screen. It covers: backend handler + DB migration + seeds + OpenAPI contract + generated client + frontend shared engine + all required surface UIs + guards + tests + runtime evidence.",
+    "topic_is_NOT": [
+      "a single screen",
+      "a UI component",
+      "a backend handler alone",
+      "a database migration alone"
+    ],
+    "closure_requires": "All required layers and all required surfaces must be runtime-verified with real evidence before a Topic may be declared CLOSED."
+  },
+
+  "full_stack_multi_surface_model": {
+    "principle": "Every DSH Topic must close Full-Stack AND Multi-Surface simultaneously. A Topic is not CLOSED if any required surface is missing or unverified.",
+    "required_layers": [
+      "backend_handler_go",
+      "database_migration",
+      "seed_data_local",
+      "openapi_contract",
+      "generated_typed_client",
+      "frontend_shared_engine",
+      "frontend_surface_ui_per_required_surface",
+      "guards_pass",
+      "tests_pass",
+      "runtime_api_smoke",
+      "visual_evidence_per_surface"
+    ],
+    "shared_brain_rule": "All business logic, controllers, view-models, and state machines live in services/<service>/frontend/shared/. Surfaces consume shared — they do not own logic.",
+    "surface_ui_rule": "Surface files in services/<service>/frontend/<surface>/ are UI-only. They import controllers/hooks from shared. Any business logic in a surface file is an ownership violation.",
+    "wlt_brain_for_dsh_path": "services/wlt/frontend/dsh/shared/",
+    "dsh_shared_brain_path": "services/dsh/frontend/shared/"
+  },
+
+  "closure_states": {
+    "RUNTIME_VERIFIED": {
+      "meaning": "All required layers and surfaces have live runtime evidence. All gates pass. Visual evidence present per surface.",
+      "requires": [
+        "All pre-slice gates: PASS",
+        "All per-slice gates: PASS",
+        "Live API smoke with real DB data (not mock)",
+        "Visual evidence screenshots per surface",
+        "Tests: 0 failures",
+        "git diff --check: PASS"
+      ]
+    },
+    "PARTIAL": {
+      "meaning": "Some surfaces or layers are RUNTIME_VERIFIED, but at least one required surface/layer is NOT_STARTED or BLOCKED.",
+      "action": "Document which surfaces/layers remain and list them as blockers."
+    },
+    "NOT_STARTED": {
+      "meaning": "No implementation has begun for this Topic."
+    },
+    "BLOCKED_WITH_REASON": {
+      "meaning": "Implementation cannot begin because a prerequisite is missing. The blocker must be named explicitly."
+    },
+    "FIX_REQUIRED": {
+      "meaning": "Implementation exists but a gate failure, evidence contradiction, or ownership violation has been found. Cannot be declared CLOSED until fixed.",
+      "forbidden": "Declaring CLOSED while FIX_REQUIRED exists."
+    },
+    "DO_NOT_MERGE": {
+      "meaning": "Branch has a known violation, conflicting evidence, or pending FIX_REQUIRED item. Must not be merged until resolved."
+    }
+  },
+
+  "ci_policy": {
+    "rule": "CI is NOT configured for this branch. This is NOT a gate failure — it is documented as CI_NOT_CONFIGURED.",
+    "forbidden": "Declaring CI: PASS when no CI pipeline has run.",
+    "required_documentation": "CI status must always be CI_NOT_CONFIGURED or CI_PASS with evidence, never assumed.",
+    "current_status": "CI_NOT_CONFIGURED_FOR_BRANCH_starting-implementing-slices",
+    "gate_substitute": "Manual evidence pack (evidence-index.json) is the gate in the absence of CI."
+  },
+
+  "mock_demo_preview_policy": {
+    "rule": "No mock, demo, or preview runtime data in production code paths.",
+    "guard": "tools/guards/no-preview-demo-mock-runtime.mjs",
+    "exception": "Dev-only fixtures inside `_skeleton-proof/` or guarded by `dev-fixtures-isolation-guard.ts` are permitted as DEV_ALLOWED. They must not reach production code paths.",
+    "violation_handling": "Any mock/demo/preview found in runtime = FIX_REQUIRED immediately."
+  },
+
+  "source_of_truth_hierarchy": [
+    "1. GitHub Remote + live code + evidence files",
+    "2. Guard outputs + test results + runtime smoke",
+    "3. machine-readable/*.json (these files)",
+    "4. governance/*.md + docs"
+  ],
+
+  "closed_evidence_requirements": {
+    "no_closed_without_evidence": true,
+    "no_pass_without_output": true,
+    "no_runtime_verified_without_live_api": true,
+    "no_ci_pass_without_pipeline": true,
+    "no_visual_evidence_without_screenshot": true
+  },
+
+  "financial_boundary_rule": {
+    "principle": "WLT is the sole owner of financial truth. DSH is the operational layer.",
+    "dsh_forbidden_financial_domains": [
+      "wallet", "payment_session", "refund", "settlement", "payout",
+      "commission", "COD_financial_state", "ledger", "reconciliation",
+      "finance_report", "audit_reference_mutation"
+    ],
+    "dsh_allowed_reference_fields": [
+      "paymentSessionId", "paymentStatus", "financialReference", "settlementStatus"
+    ],
+    "guard": "tools/guards/no-financial-mutation-outside-wlt.mjs",
+    "violation_handling": "Any financial mutation outside services/wlt/ = DO_NOT_MERGE"
+  },
+
+  "port_policy": {
+    "forbidden_host_ports": [8080, 8081, 8082, 8083, 8084, 3000],
+    "exception": "Container port 8080 inside compose.runtime.yml mapped to host 58080 is permitted. Port 8083 inside compose mapped to host 58083 is permitted. Neither may appear as host ports.",
+    "canonical_ports": {
+      "POSTGRES": 55432,
+      "DSH_API": 58080,
+      "WLT_API": 58083,
+      "MINIO_API": 59000,
+      "MINIO_CONSOLE": 59001,
+      "APP_CLIENT": 18101,
+      "APP_PARTNER": 18102,
+      "APP_CAPTAIN": 18103,
+      "APP_FIELD": 18104,
+      "CONTROL_PANEL": 13000
+    }
+  },
+
+  "readme_contradiction_rule": "If any machine-readable JSON contradicts the actual code or evidence, the code wins and this file must be updated immediately.",
+
+  "ownership_violation_rule": {
+    "business_logic_in_surface": "FIX_REQUIRED — business logic must move to shared/",
+    "tamagui_outside_ui_kit": "FIX_REQUIRED — all UI must go through @bthwani/ui-kit",
+    "fetch_in_screen": "FIX_REQUIRED — screens must use generated typed clients",
+    "financial_mutation_in_dsh": "DO_NOT_MERGE"
+  },
+
+  "wlt_activation_rule": {
+    "condition": "WLT-000 Foundation is RUNTIME_VERIFIED. WLT implementation slices (WLT-001+) require separate approval.",
+    "wlt_000_status": "RUNTIME_VERIFIED — reference endpoints only, no mutation APIs",
+    "wlt_001_plus": "NOT_APPROVED — requires dedicated approval before implementation"
+  }
+}

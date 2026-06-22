@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-06-22",
+  "branch": "starting-implementing-slices",
+  "head_at_audit": "a401420",
+  "note": "CLOSED status requires live runtime evidence. FIX_REQUIRED blocks merge. CI_NOT_CONFIGURED is not a failure.",
+  "overall_merge_safety": "SAFE — no violations, no FIX_REQUIRED items",
+
+  "topics": {
+    "DSH-000": {
+      "status": "RUNTIME_VERIFIED",
+      "summary": "Foundation gates all PASS. Docker runtime UP. Contracts valid.",
+      "evidence": "services/dsh/evidence/DSH-001-store-discovery/ (foundation artifacts)",
+      "blockers": [],
+      "merge_safe": true
+    },
+
+    "WLT-000": {
+      "status": "RUNTIME_VERIFIED",
+      "summary": "WLT Go backend UP at 58083. Migration applied (wlt-000_financial_references.sql). Seeds inserted. Reference endpoints return 200. slice:gate PASS.",
+      "corrected_from": "Previously documented as NOT_IMPLEMENTED in dsh_wlt_status.json — STALE. This file reflects verified reality.",
+      "evidence": "services/wlt/evidence/WLT-000-runtime-foundation/",
+      "pending": "WLT-001+ mutation APIs (payment, refund, settlement) — NOT_APPROVED_YET",
+      "pending_code_update": "services/wlt/service.manifest.ts#sliceRuntimeVerified should be set to true",
+      "blockers": [],
+      "merge_safe": true
+    },
+
+    "DSH-001": {
+      "status": "RUNTIME_VERIFIED",
+      "summary": "Full-stack store discovery CLOSED across all 5 surfaces. 118/118 tests PASS. All guards PASS. Visual evidence present per surface.",
+      "surfaces": {
+        "app-client": "RUNTIME_VERIFIED — StoreDiscoveryScreen, StoreDiscoveryList, StoreCardPremium",
+        "control-panel": "RUNTIME_VERIFIED — StoreManagementScreen at /dsh/partners/stores",
+        "app-partner": "RUNTIME_VERIFIED — PartnerStoreScreen (store-only readiness context)",
+        "app-field": "RUNTIME_VERIFIED — FieldStoreVerificationScreen (store-only verification context)",
+        "app-captain": "RUNTIME_VERIFIED — CaptainStorePickupContextScreen (store-only pickup context)"
+      },
+      "evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+      "design_debt": "Inline styles in control-panel screens — not a gate failure, deferred to pre-DSH-003",
+      "blockers": [],
+      "merge_safe": true,
+      "next_allowed": "DSH-002 control-panel surface (requires explicit approval)"
+    },
+
+    "DSH-002": {
+      "status": "PARTIAL",
+      "summary": "app-client Home Discovery RUNTIME_VERIFIED. control-panel Home Discovery Admin NOT_STARTED.",
+      "surfaces": {
+        "app-client": "RUNTIME_VERIFIED — HomeDiscoveryScreen and all home sections",
+        "control-panel": "NOT_STARTED — home-discovery/banners, home-discovery/promos, home-discovery/categories screens not built"
+      },
+      "evidence": "services/dsh/evidence/DSH-002-client-home-discovery/ (app-client only)",
+      "blockers": [
+        "control-panel Home Discovery Admin screens not started",
+        "Not approved to start DSH-002 control-panel"
+      ],
+      "merge_safe": true,
+      "required_actions": [
+        "Get approval for DSH-002 control-panel",
+        "Implement home discovery admin screens in services/dsh/frontend/control-panel/",
+        "Add tests",
+        "Get visual evidence for control-panel surface"
+      ]
+    },
+
+    "DSH-003": {
+      "status": "NOT_STARTED",
+      "summary": "Catalog management not started. Contract not defined.",
+      "blockers": [
+        "DSH-003 contract not defined in dsh.openapi.yaml",
+        "DSH-003 not approved"
+      ],
+      "required_actions": [
+        "Get approval",
+        "Define catalog API operations in dsh.openapi.yaml",
+        "Regenerate typed client",
+        "Implement backend handlers",
+        "Write migration dsh-003_catalog.sql",
+        "Implement all required surfaces"
+      ]
+    },
+
+    "DSH-004": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-003 not closed"],
+      "required_actions": ["Close DSH-003 first"]
+    },
+
+    "DSH-005": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-004 not closed", "WLT-001 payment-sessions not approved"],
+      "required_actions": ["Close DSH-004 first", "Approve WLT-001"]
+    },
+
+    "DSH-006": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-005 not closed"],
+      "required_actions": ["Close DSH-005 first"]
+    },
+
+    "DSH-007": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-006 not closed"],
+      "required_actions": ["Close DSH-006 first"]
+    },
+
+    "DSH-008": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-008 not approved"],
+      "note": "DSH-001 context layer is done (field verification context). Full field onboarding requires DSH-008 approval.",
+      "required_actions": ["Get DSH-008 approval", "Define field readiness API contract"]
+    },
+
+    "DSH-009": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-006 not closed"],
+      "required_actions": ["Close DSH-006 first"]
+    },
+
+    "DSH-010": {
+      "status": "NOT_STARTED",
+      "blockers": ["DSH-009 not closed", "WLT-001 settlement-summary not approved"],
+      "required_actions": ["Close DSH-009 first", "Approve WLT-001 settlement endpoint"]
+    }
+  },
+
+  "current_gate_summary": {
+    "foundation_gate": "PASS",
+    "slice_gate": "PASS",
+    "contracts_lint": "PASS",
+    "guard_matrix_v3": "PASS",
+    "wlt_boundary": "PASS",
+    "no_old_ports": "PASS",
+    "no_mock_demo": "PASS",
+    "docker_runtime": "PASS",
+    "dsh_api_smoke": "PASS",
+    "typecheck_all": "PASS",
+    "dsh_tests": "118/118 PASS",
+    "ci": "CI_NOT_CONFIGURED",
+    "git_diff_check": "PASS"
+  },
+
+  "next_approved_action": "STOP — no next slice is approved. DSH-002 control-panel or DSH-003 requires explicit approval before implementation begins.",
+
+  "pending_fixes": [
+    {
+      "priority": "LOW",
+      "path": "services/wlt/service.manifest.ts",
+      "field": "sliceRuntimeVerified",
+      "current_value": false,
+      "correct_value": true,
+      "action": "Update to true — WLT-000 slice:gate evidence confirms PASS",
+      "blocking": false
+    }
+  ],
+
+  "verification_commands": {
+    "check_all_gates": "pnpm run foundation:gate && pnpm run slice:gate",
+    "check_wlt": "pnpm run guard:no-financial-mutation-outside-wlt",
+    "check_matrix": "pnpm run guard:matrix:v3",
+    "check_docker": "pnpm runtime:status",
+    "check_dsh_api": "Invoke-RestMethod 'http://localhost:58080/dsh/health'",
+    "check_wlt_api": "Invoke-RestMethod 'http://localhost:58083/wlt/health'",
+    "check_typecheck": "pnpm --dir shared/app-shell typecheck && pnpm --dir shared/ui-kit typecheck && pnpm --dir apps/control-panel/runtime typecheck && pnpm --dir services/dsh typecheck",
+    "check_tests": "pnpm --dir services/dsh test",
+    "check_git": "git diff --check && git status --short"
+  }
+}

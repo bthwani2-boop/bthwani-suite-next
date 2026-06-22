@@ -1,0 +1,277 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-06-22",
+  "note": "Each entry is a full-stack Topic. Status reflects reality at time of audit. Source evidence paths must be verified before trusting any RUNTIME_VERIFIED claim.",
+
+  "topics": {
+    "DSH-000": {
+      "topic_id": "DSH-000",
+      "topic_name": "Pre-DSH Foundation Gate",
+      "purpose": "Verify system integrity before any DSH slice implementation.",
+      "owning_service": "dsh",
+      "current_status": "RUNTIME_VERIFIED",
+      "in_scope": ["foundation gates", "contracts lint", "guard matrix v3", "WLT boundary guard", "port compliance", "docker runtime"],
+      "out_of_scope": ["any frontend screens", "any backend handlers", "any migrations"],
+      "required_surfaces": ["system"],
+      "source_evidence": "services/dsh/evidence/DSH-001-store-discovery/ (includes foundation gate evidence)",
+      "guards_required": ["FOUNDATION_GATE", "CONTRACTS_LINT_GATE", "GUARD_MATRIX_V3", "WLT_BOUNDARY_GATE", "NO_OLD_PORTS_GATE", "NO_MOCK_DEMO_GATE", "DOCKER_RUNTIME_GATE"],
+      "blockers": []
+    },
+
+    "WLT-000": {
+      "topic_id": "WLT-000",
+      "topic_name": "WLT Runtime Foundation",
+      "purpose": "Establish WLT Go backend, DB migrations, reference-only endpoints, DSH shared API layer, Docker runtime.",
+      "owning_service": "wlt",
+      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "current_status": "RUNTIME_VERIFIED",
+      "corrected_from": "dsh_wlt_status.json claimed NOT_IMPLEMENTED — CONTRADICTION RESOLVED: evidence shows WLT-000 is complete",
+      "in_scope": [
+        "WLT Go backend with reference endpoints",
+        "wlt-000_financial_references.sql migration",
+        "wlt_payment_status_refs, wlt_settlement_status_refs, wlt_refund_status_refs, wlt_wallet_refs tables",
+        "WLT seeds",
+        "wlt.openapi.yaml v0.2.0",
+        "DSH shared reference controller (use-wlt-dsh-reference-controller.tsx)",
+        "Docker runtime profile wlt (port 58083)"
+      ],
+      "out_of_scope": [
+        "WLT mutation APIs (payment, refund, settlement, payout)",
+        "WLT mobile surface screens",
+        "WLT control-panel screens (skeleton proof only)",
+        "WLT generated TypeScript client (not yet generated)"
+      ],
+      "related_backend_modules": ["services/wlt/backend/internal/health", "services/wlt/backend/internal/reference"],
+      "related_database_tables": ["wlt_payment_status_refs", "wlt_settlement_status_refs", "wlt_refund_status_refs", "wlt_wallet_refs"],
+      "migrations_applied": ["wlt-000_financial_references.sql"],
+      "api_contracts": {
+        "file": "services/wlt/contracts/wlt.openapi.yaml",
+        "version": "0.2.0",
+        "state": "CONTRACT_ACTIVE",
+        "operations": ["getWltHealth", "getWltReadiness", "reference-read-endpoints"]
+      },
+      "required_surfaces": ["system (runtime only — no UI surface required for WLT-000)"],
+      "primary_control_panel_section": null,
+      "tests_status": "PASS (WLT slice:gate PASS)",
+      "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "DOCKER_RUNTIME_GATE"],
+      "source_evidence": "services/wlt/evidence/WLT-000-runtime-foundation/",
+      "api_port": 58083,
+      "blockers": [],
+      "next_slice": "WLT-001 mutation APIs — NOT_APPROVED_YET. Requires separate approval."
+    },
+
+    "DSH-001": {
+      "topic_id": "DSH-001",
+      "topic_name": "Store Discovery + Store Detail",
+      "purpose": "Full-stack store discovery with all 5 surfaces operational.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/store/",
+      "current_status": "RUNTIME_VERIFIED",
+      "in_scope": [
+        "Store list and store detail backend handlers",
+        "dsh_stores table",
+        "dsh-001_store_discovery.sql migration",
+        "listDshStores + getDshStore API operations",
+        "Generated store-discovery-client.ts",
+        "useStoreDiscoveryController (app-client logic)",
+        "useStoreAdminController (control-panel logic)",
+        "useStoreRoleContextController (partner/captain/field read-only context)",
+        "StoreDiscoveryScreen + StoreDiscoveryList + StoreCardPremium (app-client)",
+        "StoreManagementScreen + StoreAdminKpiStrip + StoreAdminFilters + StoreAdminTable + StoreDetailAdminPanel + StoreAdminStateView (control-panel)",
+        "PartnerStoreScreen (app-partner — store-only readiness context)",
+        "FieldStoreVerificationScreen (app-field — store-only verification context)",
+        "CaptainStorePickupContextScreen (app-captain — store-only pickup context)",
+        "Visual evidence all 5 surfaces"
+      ],
+      "out_of_scope": [
+        "catalog management (DSH-003)",
+        "catalog readiness (DSH-003)",
+        "partner orders (DSH-006)",
+        "order assignment (DSH-007)",
+        "delivery lifecycle (DSH-007)",
+        "field onboarding workflow (DSH-008)",
+        "document upload (DSH-008)",
+        "finance/payment/settlement/wallet (WLT)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/store"],
+      "related_database_tables": ["dsh_stores"],
+      "migrations_required": ["dsh-001_store_discovery.sql"],
+      "api_contracts_required": ["listDshStores", "getDshStore"],
+      "api_clients_required": ["services/dsh/clients/store-discovery-client.ts"],
+      "required_surfaces": ["app-client", "control-panel"],
+      "optional_surfaces": [],
+      "read_only_surfaces": ["app-partner (store-only readiness context)", "app-field (store-only verification context)", "app-captain (store-only pickup context)"],
+      "forbidden_surfaces": ["webapp (not in DSH scope)", "website (not in DSH scope)"],
+      "primary_control_panel_section": "partners",
+      "primary_control_panel_route": "/dsh/partners/stores",
+      "secondary_control_panel_sections": [],
+      "permissions": {
+        "app_client": "public-read-store-discovery",
+        "control_panel": "admin",
+        "app_partner": "store-role-context-read",
+        "app_field": "store-role-context-read",
+        "app_captain": "store-role-context-read"
+      },
+      "states_required": ["loading", "success", "empty", "error", "permission"],
+      "tests_status": "PASS — 118/118 tests, 33 suites, 0 failures",
+      "guards_required": [
+        "FOUNDATION_GATE", "CONTRACTS_LINT_GATE", "GUARD_MATRIX_V3",
+        "WLT_BOUNDARY_GATE", "DOCKER_RUNTIME_GATE", "DSH_API_GATE",
+        "DSH_SLICE_GATE", "UI_KIT_GATE", "VISUAL_EVIDENCE_GATE",
+        "guard:dsh-frontend-shared-ownership",
+        "guard:dsh-001-cross-surface-dependency-map",
+        "guard:app-shell-control-panel",
+        "control-panel:design-gate"
+      ],
+      "evidence_required": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+      "source_evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+      "verified_date": "2026-06-22",
+      "design_debt": [
+        "Inline styles in control-panel screens (not a gate failure — deferred to pre-DSH-003)"
+      ],
+      "blockers": [],
+      "next_allowed": "DSH-002 control-panel surface (requires separate approval)"
+    },
+
+    "DSH-002": {
+      "topic_id": "DSH-002",
+      "topic_name": "Home Discovery",
+      "purpose": "Personalized home screen with banners, promos, categories, and store feed.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/home/",
+      "current_status": "PARTIAL",
+      "partial_detail": {
+        "app_client": "RUNTIME_VERIFIED",
+        "control_panel": "NOT_STARTED"
+      },
+      "in_scope": [
+        "getDshHomeDiscovery API operation",
+        "dsh_home_banners + dsh_home_promos + dsh_categories tables",
+        "dsh-002_home_discovery.sql migration",
+        "Generated home-discovery-client.ts",
+        "useHomeDiscoveryController (app-client)",
+        "HomeDiscoveryScreen + HomeHeroBannerSection + HomePromoSection + HomeCategorySection + HomeFilterRailSection + HomeStoreFeedSection (app-client)",
+        "Home Discovery Admin control-panel screens (NOT_STARTED — DSH-002 control-panel)"
+      ],
+      "out_of_scope": [
+        "Cart (DSH-004)", "Checkout (DSH-005)", "Orders (DSH-006)", "Finance (WLT)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/home"],
+      "related_database_tables": ["dsh_home_banners", "dsh_home_promos", "dsh_categories"],
+      "migrations_required": ["dsh-002_home_discovery.sql"],
+      "api_contracts_required": ["getDshHomeDiscovery"],
+      "api_clients_required": ["services/dsh/clients/home-discovery-client.ts"],
+      "required_surfaces": ["app-client", "control-panel"],
+      "primary_control_panel_section": "marketing",
+      "primary_control_panel_sections_detail": ["home-discovery/banners", "home-discovery/promos", "home-discovery/categories"],
+      "tests_status": "PARTIAL — app-client covered in dsh tests; control-panel tests not yet written",
+      "source_evidence": "services/dsh/evidence/DSH-002-client-home-discovery/",
+      "blockers": [
+        "control-panel Home Discovery Admin screens not started",
+        "control-panel tests not written",
+        "Not approved to start — DSH-001 is CLOSED but DSH-002 control-panel needs approval"
+      ]
+    },
+
+    "DSH-003": {
+      "topic_id": "DSH-003",
+      "topic_name": "Catalog Management",
+      "purpose": "Product catalog browse (app-client), catalog management (app-partner), catalog admin (control-panel).",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-001 CLOSED (done) + approval for DSH-003",
+      "required_surfaces": ["app-client", "app-partner", "control-panel"],
+      "primary_control_panel_section": "catalogs",
+      "related_database_tables": ["dsh_catalog (to be created)", "dsh_products (to be created)", "dsh_product_media (to be created)"],
+      "migrations_required": ["dsh-003_catalog.sql (to be written)"],
+      "api_contracts_required": ["listDshProducts", "getDshProduct", "createDshProduct", "updateDshProduct"],
+      "blockers": ["DSH-003 contract not yet defined", "DSH-003 not approved"]
+    },
+
+    "DSH-004": {
+      "topic_id": "DSH-004",
+      "topic_name": "Cart + Serviceability",
+      "purpose": "Client cart management with zone serviceability check.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-003",
+      "required_surfaces": ["app-client", "control-panel"],
+      "primary_control_panel_section": "operations",
+      "blockers": ["DSH-003 not closed", "DSH-004 contract not defined"]
+    },
+
+    "DSH-005": {
+      "topic_id": "DSH-005",
+      "topic_name": "Checkout Intent + WLT Boundary",
+      "purpose": "Checkout intent shell on DSH side; WLT payment-sessions endpoint required.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-004 + WLT-001 payment-sessions endpoint",
+      "required_surfaces": ["app-client", "control-panel"],
+      "wlt_dependency": "WLT payment-sessions read endpoint required — NOT_STARTED in WLT",
+      "blockers": ["DSH-004 not closed", "WLT-001 not approved", "DSH-005 contract not defined"]
+    },
+
+    "DSH-006": {
+      "topic_id": "DSH-006",
+      "topic_name": "Order Creation + Partner Acceptance",
+      "purpose": "Order lifecycle from creation to partner acceptance.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-005",
+      "required_surfaces": ["app-client", "app-partner", "control-panel"],
+      "primary_control_panel_section": "operations",
+      "blockers": ["DSH-005 not closed"]
+    },
+
+    "DSH-007": {
+      "topic_id": "DSH-007",
+      "topic_name": "Captain Assignment + Delivery Lifecycle",
+      "purpose": "Order assignment to captain, pickup, delivery, PoD submission.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-006",
+      "required_surfaces": ["app-captain", "app-client", "control-panel"],
+      "primary_control_panel_section": "operations",
+      "blockers": ["DSH-006 not closed"]
+    },
+
+    "DSH-008": {
+      "topic_id": "DSH-008",
+      "topic_name": "Field Readiness + Store Onboarding",
+      "purpose": "Field agent store onboarding, visit recording, readiness escalation.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-001 (done — context layer)",
+      "required_surfaces": ["app-field", "control-panel", "app-partner"],
+      "primary_control_panel_section": "partners",
+      "blockers": ["DSH-008 not approved"]
+    },
+
+    "DSH-009": {
+      "topic_id": "DSH-009",
+      "topic_name": "Support + Operations Room",
+      "purpose": "Support ticket queue, case management, operations intervention room.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-006",
+      "required_surfaces": ["control-panel", "app-client", "app-partner", "app-captain"],
+      "primary_control_panel_section": "support",
+      "blockers": ["DSH-006 not closed"]
+    },
+
+    "DSH-010": {
+      "topic_id": "DSH-010",
+      "topic_name": "Finance Visibility",
+      "purpose": "Read-only finance visibility for DSH operations. References WLT settlement data.",
+      "owning_service": "dsh",
+      "current_status": "NOT_STARTED",
+      "blocking_on": "DSH-009 + WLT-001 settlement-summary endpoint",
+      "required_surfaces": ["control-panel", "app-partner"],
+      "primary_control_panel_section": "finance",
+      "wlt_dependency": "WLT settlement-summary read endpoint — NOT_STARTED in WLT",
+      "constraint": "READ-ONLY. No financial mutation. DSH may only display WLT-provided statuses.",
+      "blockers": ["DSH-009 not closed", "WLT-001 not approved"]
+    }
+  }
+}

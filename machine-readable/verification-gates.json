@@ -1,0 +1,253 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-06-22",
+  "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure — it is documented as such.",
+
+  "ci_policy": {
+    "status": "CI_NOT_CONFIGURED_FOR_BRANCH_starting-implementing-slices",
+    "meaning": "No GitHub Actions pipeline is configured for this branch. This is expected. Manual evidence packs replace CI.",
+    "forbidden": "Declaring CI: PASS when no pipeline ran.",
+    "escalation": "Before any production deploy, CI must be configured and green."
+  },
+
+  "gate_sets": {
+    "pre_slice": {
+      "description": "Must all PASS before any new DSH slice implementation begins.",
+      "gates": [
+        "FOUNDATION_GATE",
+        "CONTRACTS_LINT_GATE",
+        "GUARD_MATRIX_V3",
+        "WLT_BOUNDARY_GATE",
+        "NO_OLD_PORTS_GATE",
+        "NO_MOCK_DEMO_GATE"
+      ]
+    },
+    "per_slice": {
+      "description": "Must all PASS before a DSH slice may be declared CLOSED.",
+      "gates": [
+        "DOCKER_RUNTIME_GATE",
+        "DSH_API_GATE",
+        "DSH_SLICE_GATE",
+        "UI_KIT_GATE",
+        "VISUAL_EVIDENCE_GATE"
+      ]
+    },
+    "foundation_guard_set": {
+      "description": "Guards run by foundation:gate script via guard-manifest.json#guardSets.foundation",
+      "guards": [
+        "contracts-foundation",
+        "no-direct-tamagui-outside-ui-kit",
+        "no-ui-kit-deep-imports",
+        "no-local-design-system",
+        "no-raw-hex-outside-ui-kit",
+        "no-expo-in-ui-kit",
+        "no-react-native-runtime-dependency-in-ui-kit",
+        "no-safe-area-in-ui-kit-runtime",
+        "no-vector-icons-direct-in-ui-kit",
+        "no-domain-component-in-ui-kit",
+        "no-unsafe-ui-kit-tamagui-casts",
+        "ui-kit-token-binding",
+        "no-preview-demo-mock-runtime",
+        "no-broken-imports",
+        "service-fullstack-linkage",
+        "dsh-service-activation",
+        "go-backend-runtime",
+        "performance-runtime-baseline",
+        "docker-runtime-profiles"
+      ]
+    },
+    "slice_guard_set": {
+      "description": "Guards run by slice:gate script via guard-manifest.json#guardSets.slice",
+      "guards": [
+        "no-direct-fetch-in-screen",
+        "no-preview-demo-mock-runtime",
+        "no-memory-repo-in-slice-runtime",
+        "no-financial-mutation-outside-wlt",
+        "no-broken-imports",
+        "service-fullstack-linkage",
+        "dsh-service-activation",
+        "go-backend-runtime",
+        "performance-runtime-baseline",
+        "docker-runtime-profiles",
+        "dsh-frontend-shared-ownership",
+        "dsh-001-cross-surface-dependency-map"
+      ]
+    }
+  },
+
+  "gates": {
+    "FOUNDATION_GATE": {
+      "command": "pnpm run foundation:gate",
+      "script": "tools/scripts/run-foundation-gate.ps1",
+      "blocking": true,
+      "required_before": "ANY_DSH_SLICE",
+      "current_status": "PASS",
+      "last_verified": "2026-06-22",
+      "evidence": "tools/registry/runs/FOUNDATION-GATE-20260622-181127"
+    },
+    "CONTRACTS_LINT_GATE": {
+      "command": "pnpm contracts:lint",
+      "script": "tools/important-scripts/contracts-foundation.mjs",
+      "blocking": true,
+      "required_before": "ANY_DSH_SLICE",
+      "current_status": "PASS",
+      "last_verified": "2026-06-22"
+    },
+    "GUARD_MATRIX_V3": {
+      "command": "pnpm run guard:matrix:v3",
+      "script": "tools/guards/guard-slice-master-matrix-v3.mjs",
+      "reads_file": "machine-readable/slice_execution_master_matrix_v3.csv",
+      "blocking": true,
+      "required_before": "ANY_DSH_SLICE",
+      "current_status": "PASS",
+      "note": "This is a standalone guard, NOT part of foundation:gate or slice:gate guard sets."
+    },
+    "WLT_BOUNDARY_GATE": {
+      "command": "pnpm run guard:no-financial-mutation-outside-wlt",
+      "script": "tools/guards/no-financial-mutation-outside-wlt.mjs",
+      "blocking": true,
+      "required_before": "ANY_DSH_SLICE",
+      "current_status": "PASS",
+      "last_verified": "2026-06-22",
+      "violations_found": 0
+    },
+    "NO_OLD_PORTS_GATE": {
+      "command": "foundation:gate includes docker-runtime-profiles guard",
+      "forbidden_ports": [8080, 8081, 8082, 8083, 8084, 3000],
+      "exception": "Container ports 8080→58080 and 8083→58083 inside compose.runtime.yml are permitted",
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "NO_MOCK_DEMO_GATE": {
+      "command": "pnpm run guard:no-preview-demo-mock-runtime",
+      "script": "tools/guards/no-preview-demo-mock-runtime.mjs",
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "DOCKER_RUNTIME_GATE": {
+      "command": "pnpm runtime:all && pnpm runtime:status",
+      "blocking": true,
+      "required_before": "SLICE_CLOSURE",
+      "current_status": "PASS",
+      "last_verified": "2026-06-22",
+      "services_verified": {
+        "postgres": "UP — 55432",
+        "dsh-api": "UP — 58080",
+        "wlt-api": "UP — 58083",
+        "minio": "UP — 59000"
+      }
+    },
+    "DSH_API_GATE": {
+      "commands": [
+        "Invoke-RestMethod 'http://localhost:58080/dsh/health'",
+        "Invoke-RestMethod 'http://localhost:58080/dsh/readiness'",
+        "Invoke-RestMethod 'http://localhost:58080/dsh/stores?limit=10&offset=0'",
+        "Invoke-RestMethod 'http://localhost:58080/dsh/home-discovery'"
+      ],
+      "blocking": true,
+      "required_before": "SLICE_CLOSURE",
+      "current_status": "PASS",
+      "last_verified": "2026-06-22",
+      "results": {
+        "GET /dsh/health": "200 OK",
+        "GET /dsh/readiness": "200 OK",
+        "GET /dsh/stores": "200 OK — 6 stores",
+        "GET /dsh/home-discovery": "200 OK"
+      }
+    },
+    "DSH_SLICE_GATE": {
+      "command": "pnpm run slice:gate",
+      "script": "tools/scripts/run-slice-gate.ps1",
+      "blocking": true,
+      "required_before": "SLICE_CLOSURE",
+      "current_status": "PASS_FOR_DSH-001",
+      "last_verified": "2026-06-22",
+      "evidence": "tools/registry/runs/SLICE-GATE-20260622-172256"
+    },
+    "UI_KIT_GATE": {
+      "command": "pnpm run guard:no-direct-fetch-in-screen",
+      "script": "tools/guards/no-direct-fetch-in-screen.mjs",
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "VISUAL_EVIDENCE_GATE": {
+      "type": "MANUAL",
+      "blocking": true,
+      "required_before": "SLICE_CLOSURE",
+      "current_status": {
+        "DSH-001": "PASS — 5 surface screenshots present",
+        "DSH-002": "PARTIAL — app-client screenshot present, control-panel missing"
+      },
+      "evidence_location": "services/dsh/evidence/{SLICE_ID}/screenshots/"
+    },
+    "CONTROL_PANEL_DESIGN_GATE": {
+      "command": "node tools/guards/control-panel-design-gate.mjs",
+      "reads_files": [
+        "machine-readable/control-panel-design/control_panel_design_gate.json",
+        "machine-readable/control-panel-design/control_panel_section_archetypes.json",
+        "machine-readable/control-panel-design/control_panel_service_ownership_matrix.json",
+        "machine-readable/control-panel-design/control_panel_design_skeleton_reference.json"
+      ],
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "APP_SHELL_CONTRACT_GATE": {
+      "command": "node tools/guards/app-shell-control-panel-contract-gate.mjs",
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "DSH_FRONTEND_SHARED_OWNERSHIP_GATE": {
+      "command": "pnpm run guard:dsh-frontend-shared-ownership",
+      "script": "tools/guards/dsh-frontend-shared-ownership-gate.mjs",
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "DSH_001_CROSS_SURFACE_DEPENDENCY_MAP_GATE": {
+      "command": "node tools/guards/dsh-001-cross-surface-dependency-map.mjs",
+      "reads_file": "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json",
+      "blocking": true,
+      "current_status": "PASS"
+    },
+    "TYPECHECK_GATE": {
+      "commands": {
+        "app_shell": "pnpm --dir shared/app-shell typecheck",
+        "ui_kit": "pnpm --dir shared/ui-kit typecheck",
+        "control_panel": "pnpm --dir apps/control-panel/runtime typecheck",
+        "dsh": "pnpm --dir services/dsh typecheck"
+      },
+      "blocking": true,
+      "current_status": "PASS_FOR_ALL",
+      "last_verified": "2026-06-22"
+    },
+    "GIT_DIFF_CHECK": {
+      "command": "git diff --check",
+      "blocking": true,
+      "current_status": "PASS",
+      "last_verified": "2026-06-22"
+    },
+    "UNSTAGED_CHANGES": {
+      "command": "git status --short",
+      "current_status": "HAS_UNSTAGED_DELETES",
+      "detail": "D services/dsh/frontend/app-captain/.gitkeep, D services/dsh/frontend/app-field/.gitkeep, D services/dsh/frontend/app-partner/.gitkeep, D services/dsh/frontend/control-panel/.gitkeep, D services/wlt/frontend/.gitkeep",
+      "note": "These are deleted .gitkeep files — surfaces have actual implementations. Not a gate failure."
+    }
+  },
+
+  "ownership_guards": {
+    "no-financial-mutation-outside-wlt": {"status": "PASS", "violations": 0},
+    "no-direct-tamagui-outside-ui-kit": {"status": "PASS", "violations": 0},
+    "no-direct-fetch-in-screen": {"status": "PASS", "violations": 0},
+    "no-local-design-system": {"status": "PASS", "violations": 0},
+    "no-raw-hex-outside-ui-kit": {"status": "PASS", "violations": 0},
+    "dsh-frontend-shared-ownership": {"status": "PASS", "violations": 0},
+    "no-preview-demo-mock-runtime": {"status": "PASS", "violations": 0}
+  },
+
+  "overall_gate_status": {
+    "foundation_gate": "PASS",
+    "slice_gate": "PASS",
+    "ci": "CI_NOT_CONFIGURED",
+    "all_pre_slice_gates": "PASS",
+    "last_verified": "2026-06-22"
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-06-22",
+  "principle": "Surfaces are UI-only. All business logic, controllers, view-models, and state machines live in shared brains. A surface importing logic directly from another surface or defining its own business logic is an ownership violation.",
+
+  "surfaces": {
+    "app-client": {
+      "type": "Expo React Native — customer mobile app",
+      "app_runtime_path": "apps/app-client/runtime/",
+      "service_ui_paths": {
+        "dsh": "services/dsh/frontend/app-client/",
+        "wlt": "services/wlt/frontend/app-client/ (gitkeep — not started)"
+      },
+      "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "is_ui_only": true,
+      "role": "Customer-facing mobile experience — browse, discover, order, track",
+      "allowed_in_surface": [
+        "React Native screens consuming controllers/hooks from shared",
+        "Navigation wiring",
+        "UI composition using @bthwani/ui-kit components",
+        "Route params and screen props"
+      ],
+      "forbidden_in_surface": [
+        "Business logic",
+        "Direct API fetch (use generated client via shared controller)",
+        "Local design system or Tamagui direct imports",
+        "Financial mutations",
+        "Raw hex colors",
+        "Mock/demo/preview runtime data"
+      ],
+      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED)", "DSH-002 (RUNTIME_VERIFIED)"],
+      "ownership_violations_found": "NONE",
+      "port": 18101,
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-client/runtime exec expo start --dev-client --host localhost --port 18101 --android --clear"
+    },
+
+    "app-partner": {
+      "type": "Expo React Native — merchant/partner mobile app",
+      "app_runtime_path": "apps/app-partner/runtime/",
+      "service_ui_paths": {
+        "dsh": "services/dsh/frontend/app-partner/",
+        "wlt": "services/wlt/frontend/app-partner/ (gitkeep — not started)"
+      },
+      "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "is_ui_only": true,
+      "role": "Partner-facing mobile — catalog management, order acceptance, store readiness",
+      "allowed_in_surface": [
+        "React Native screens consuming controllers/hooks from shared",
+        "Navigation wiring",
+        "UI composition using @bthwani/ui-kit components"
+      ],
+      "forbidden_in_surface": [
+        "Business logic",
+        "Direct API fetch",
+        "Local design system or Tamagui direct imports",
+        "Financial mutations",
+        "Raw hex colors",
+        "Mock/demo/preview runtime data"
+      ],
+      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only readiness context)"],
+      "dsh_001_scope_note": "DSH-001 in app-partner implements store-only readiness context. Catalog management, partner orders, finance are excluded.",
+      "ownership_violations_found": "NONE",
+      "port": 18102,
+      "start_command": "$env:EXPO_PUBLIC_DSH_API_BASE_URL='http://127.0.0.1:58080'; pnpm --dir apps/app-partner/runtime exec expo start --dev-client --host localhost --port 18102 --android --clear"
+    },
+
+    "app-captain": {
+      "type": "Expo React Native — delivery captain mobile app",
+      "app_runtime_path": "apps/app-captain/runtime/",
+      "service_ui_paths": {
+        "dsh": "services/dsh/frontend/app-captain/",
+        "wlt": "services/wlt/frontend/app-captain/ (gitkeep — not started)"
+      },
+      "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "is_ui_only": true,
+      "role": "Captain-facing mobile — order assignment, pickup, delivery, PoD",
+      "allowed_in_surface": [
+        "React Native screens consuming controllers/hooks from shared",
+        "Navigation wiring",
+        "UI composition using @bthwani/ui-kit components"
+      ],
+      "forbidden_in_surface": [
+        "Business logic",
+        "Direct API fetch",
+        "Financial mutations (earnings, commissions — WLT only)",
+        "Local design system",
+        "Mock/demo/preview runtime data"
+      ],
+      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only pickup context)"],
+      "dsh_001_scope_note": "DSH-001 in app-captain implements read-only store pickup context. Delivery lifecycle and earnings are excluded.",
+      "ownership_violations_found": "NONE",
+      "port": 18103
+    },
+
+    "app-field": {
+      "type": "Expo React Native — field agent mobile app",
+      "app_runtime_path": "apps/app-field/runtime/",
+      "service_ui_paths": {
+        "dsh": "services/dsh/frontend/app-field/",
+        "wlt": "services/wlt/frontend/app-field/ (gitkeep — not started)"
+      },
+      "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "is_ui_only": true,
+      "role": "Field agent — store onboarding, readiness, document upload, store visits",
+      "allowed_in_surface": [
+        "React Native screens consuming controllers/hooks from shared",
+        "Navigation wiring",
+        "UI composition using @bthwani/ui-kit components"
+      ],
+      "forbidden_in_surface": [
+        "Business logic",
+        "Direct API fetch",
+        "Financial mutations",
+        "Local design system",
+        "Approval mutations (belong in backend)"
+      ],
+      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — store-only verification context)"],
+      "dsh_001_scope_note": "DSH-001 in app-field implements store-only verification context. Full field onboarding workflow, document upload, approval mutation are excluded.",
+      "ownership_violations_found": "NONE",
+      "port": 18104
+    },
+
+    "control-panel": {
+      "type": "Next.js 16 web dashboard (App Router)",
+      "app_runtime_path": "apps/control-panel/runtime/",
+      "service_ui_paths": {
+        "dsh": "services/dsh/frontend/control-panel/",
+        "wlt": "services/wlt/frontend/control-panel/ (skeleton proof only)"
+      },
+      "shell_path": "shared/app-shell/src/control-panel/",
+      "archetypes_path": "shared/app-shell/src/control-panel/archetypes/",
+      "dsh_shared_brain": "services/dsh/frontend/shared/",
+      "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "is_ui_only": true,
+      "role": "Operations + management web dashboard — admin, governance, monitoring",
+      "allowed_in_surface": [
+        "Next.js page components consuming controllers from DSH/WLT shared",
+        "Archetype frames from shared/app-shell",
+        "CSS modules for control-panel-specific layout",
+        "Route definitions"
+      ],
+      "forbidden_in_surface": [
+        "Tamagui imports (control-panel uses CSS/Next.js styling, NOT Tamagui)",
+        "Direct fetch or axios (use generated typed clients via shared controllers)",
+        "Business logic",
+        "Local design system",
+        "Financial mutations",
+        "Raw hex colors",
+        "Mock/demo/preview runtime data"
+      ],
+      "current_dsh_slices": ["DSH-001 (RUNTIME_VERIFIED — stores admin at /dsh/partners/stores)"],
+      "implemented_routes": ["/dsh/partners/stores"],
+      "ownership_violations_found": "NONE",
+      "design_debt": "Inline styles in DSH-001 control-panel screens — not a gate failure, deferred to pre-DSH-003",
+      "port": 13000,
+      "start_command": "$env:NEXT_PUBLIC_DSH_API_BASE_URL='http://localhost:58080'; pnpm --dir apps/control-panel/runtime dev --port 13000"
+    },
+
+    "webapp": {
+      "type": "Web app scaffold",
+      "app_runtime_path": "apps/webapp/runtime/",
+      "is_ui_only": true,
+      "role": "SCAFFOLD_ONLY — out of scope for current DSH slices",
+      "current_status": "OUT_OF_SCOPE"
+    },
+
+    "website": {
+      "type": "Website scaffold",
+      "app_runtime_path": "apps/website/runtime/",
+      "is_ui_only": true,
+      "role": "SCAFFOLD_ONLY — out of scope for current DSH slices",
+      "current_status": "OUT_OF_SCOPE"
+    }
+  },
+
+  "shared_packages": {
+    "shared_ui_kit": {
+      "path": "shared/ui-kit/",
+      "role": "VISUAL_PRIMITIVES_OWNER",
+      "is_surface": false,
+      "forbidden": ["business logic", "service-specific screens", "API calls"],
+      "ownership_violations_found": "NONE"
+    },
+    "shared_app_shell": {
+      "path": "shared/app-shell/",
+      "role": "SHELL_AND_CONTRACTS",
+      "is_surface": false,
+      "forbidden": ["business logic", "API clients", "Tamagui", "financial mutation"],
+      "ownership_violations_found": "NONE"
+    }
+  },
+
+  "ownership_violation_audit": {
+    "last_verified": "2026-06-22",
+    "violations_found": 0,
+    "guards_run": [
+      "guard:dsh-frontend-shared-ownership (PASS)",
+      "guard:no-financial-mutation-outside-wlt (PASS)",
+      "guard:no-direct-fetch-in-screen (PASS)",
+      "guard:no-direct-tamagui-outside-ui-kit (PASS)",
+      "guard:no-local-design-system (PASS)"
+    ]
+  }
+}
