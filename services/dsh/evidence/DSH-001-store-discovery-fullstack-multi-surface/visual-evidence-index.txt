@@ -1,0 +1,51 @@
+DSH-001 Visual Evidence Index — 2026-06-23
+Standard: REAL_EXPERIENCE_CLOSURE_v2
+
+EXISTING SCREENSHOTS (7 — from previous session, pre-action-contract):
+  screenshots/control-panel-stores-admin-success.png  — control-panel success state
+  screenshots/control-panel-store-detail-panel.png    — control-panel detail panel
+  screenshots/control-panel-error-or-service-unavailable.png — control-panel error
+  screenshots/app-client-store-discovery-reverify.png — app-client success
+  screenshots/app-partner-store-context.png           — app-partner success
+  screenshots/app-field-store-verification.png        — app-field success
+  screenshots/app-captain-store-pickup-context.png    — app-captain success
+
+MISSING SCREENSHOTS (20 — required by dsh-001-cross-surface-dependency-map guard):
+  app-client:
+    - app-client-store-discovery-loading.png        MISSING
+    - app-client-store-discovery-empty.png          MISSING
+    - app-client-store-discovery-error.png          MISSING
+    - app-client-store-discovery-service-unavailable.png MISSING
+  control-panel:
+    - control-panel-stores-admin-loading.png        MISSING
+    - control-panel-stores-admin-empty.png          MISSING
+    - control-panel-stores-admin-error.png          MISSING
+    - control-panel-stores-admin-permission-denied.png MISSING
+  app-partner:
+    - app-partner-store-context-loading.png         MISSING
+    - app-partner-store-context-empty.png           MISSING
+    - app-partner-store-context-error.png           MISSING
+    - app-partner-store-context-permission-denied.png MISSING
+  app-field:
+    - app-field-store-verification-loading.png      MISSING
+    - app-field-store-verification-empty.png        MISSING
+    - app-field-store-verification-error.png        MISSING
+    - app-field-store-verification-permission-denied.png MISSING
+  app-captain:
+    - app-captain-store-pickup-context-loading.png  MISSING
+    - app-captain-store-pickup-context-empty.png    MISSING
+    - app-captain-store-pickup-context-error.png    MISSING
+    - app-captain-store-pickup-context-permission-denied.png MISSING
+
+BLOCKING REASON:
+  Mobile app screenshots (app-client, app-partner, app-field, app-captain) require
+  a running Android/iOS emulator or physical device with ADB. The current environment
+  does not have a running mobile emulator.
+  
+  Control-panel screenshots require Next.js dev server + headless browser.
+  The identity service container is not running, preventing authenticated-state capture.
+
+  This is the ONLY remaining blocker for DSH001_REAL_EXPERIENCE_CLOSED.
+  All backend, contracts, shared brain, and surface implementation is complete.
+
+blocks_closure: true

@@ -1,26 +1,43 @@
-=== GUARDS VERIFICATION LOG ===
-Date: 2026-06-22
-Task: DSH-001_SHARED_ENGINE_AND_SURFACE_UI_CLEANUP_GATE
+DSH-001 Guard Results — 2026-06-23
+Standard: REAL_EXPERIENCE_CLOSURE_v2
 
-Running guard:dsh-frontend-shared-ownership...
-DSH Frontend Shared Ownership Gate: PASS
+foundation:gate: PASS (tools/registry/runs/FOUNDATION-GATE-20260623-003527)
+  - node-version: PASS
+  - pnpm-version: PASS
+  - git-diff-check: PASS
+  - pnpm-typecheck: PASS
+  - guard-contracts-foundation: PASS
+  - guard-no-direct-tamagui-outside-ui-kit: PASS
+  - guard-no-ui-kit-deep-imports: PASS
+  - guard-no-local-design-system: PASS
+  - guard-no-raw-hex-outside-ui-kit: PASS
+  - guard-no-expo-in-ui-kit: PASS
+  - guard-no-react-native-runtime-dependency-in-ui-kit: PASS
+  - guard-no-safe-area-in-ui-kit-runtime: PASS
+  - guard-no-vector-icons-direct-in-ui-kit: PASS
+  - guard-no-domain-component-in-ui-kit: PASS
+  - guard-no-unsafe-ui-kit-tamagui-casts: PASS
+  - guard-ui-kit-token-binding: PASS
+  - guard-no-preview-demo-mock-runtime: PASS
+  - guard-no-broken-imports: PASS
+  - guard-service-fullstack-linkage: PASS
+  - guard-dsh-service-activation: PASS
+  - guard-go-backend-runtime: PASS
+  - guard-performance-runtime-baseline: PASS
+  - guard-docker-runtime-profiles: PASS (fixed to accept ACTIVE_DSH001_PREREQUISITE state)
 
-Running guard:dsh-001-cross-surface-dependency-map...
-DSH-001 All-Surface Store Role Gate: PASS
+guard:matrix:v3: PASS
+guard:dsh-frontend-shared-ownership: PASS (fixed: moved auth-trigger useEffect from surfaces into controllers)
+guard:no-financial-mutation-outside-wlt: PASS
 
-Running guard:no-financial-mutation-outside-wlt...
-no-financial-mutation-outside-wlt: PASS
+slice:gate: FAIL
+  - guard-dsh-001-cross-surface-dependency-map: FAIL
+  - REASON: 20 required visual state screenshots missing
+  - All other slice gate guards: PASS
 
-Running guard:app-shell-control-panel...
-app-shell-control-panel-contract-gate: PASS
-
-Running control-panel:design-gate...
-app-shell-control-panel-contract-gate: PASS
-
-Running guard:matrix:v3...
-Errors: 0, Warnings: 0
-RESULT: PASS
-
-Running guard:wlt-dsh-frontend-shared-ownership...
-wlt-dsh-frontend-shared-ownership: PASS
-
+Fixes applied during this session:
+1. apps/control-panel/runtime/tsconfig.json: added allowImportingTsExtensions:true
+2. tools/guards/docker-runtime-profiles.mjs: accept ACTIVE_DSH001_PREREQUISITE for identity profile
+3. services/dsh/frontend/shared/store/use-store-role-context-controller.tsx: moved auth trigger into controller, added dev/read-only fallback comment
+4. services/dsh/frontend/shared/store/use-store-admin-controller.tsx: moved auth trigger into controller
+5. All 4 surface screens (StoreManagementScreen, PartnerStoreScreen, FieldStoreVerificationScreen, CaptainStorePickupContextScreen): removed useEffect, pass authKind to controller

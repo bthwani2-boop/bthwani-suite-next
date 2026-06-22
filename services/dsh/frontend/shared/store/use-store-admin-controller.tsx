@@ -45,7 +45,7 @@ export type StoreAdminController = {
   readonly govern: (storeId: string, input: OperatorStoreGovernanceRequest) => Promise<void>;
 };
 
-export function useStoreAdminController(): StoreAdminController {
+export function useStoreAdminController(authKind = "unauthenticated"): StoreAdminController {
   const [listState, setListState] = useState<DshStoreAdminListState>(adminLoadingState());
   const [detailState, setDetailState] = useState<DshStoreAdminDetailState | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -60,8 +60,8 @@ export function useStoreAdminController(): StoreAdminController {
   }, []);
 
   useEffect(() => {
-    void loadStores(offset);
-  }, [loadStores, offset]);
+    if (authKind === "authenticated") void loadStores(offset);
+  }, [loadStores, offset, authKind]);
 
   useEffect(() => {
     void loadStoreAdminDetail(

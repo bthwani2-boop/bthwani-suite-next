@@ -1,17 +1,21 @@
+DSH-001 Runtime Status — 2026-06-23
+Standard: REAL_EXPERIENCE_CLOSURE_v2
 
-> bthwani-suite-next@0.0.0 runtime:status C:\bthwani-suite-next
-> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles dsh,media
+Docker containers (docker ps):
+  bthwani-dsh-api-runtime     Up (healthy)  0.0.0.0:58080->8080/tcp
+  bthwani-postgres-runtime    Up (healthy)  0.0.0.0:55432->5432/tcp
+  bthwani-minio-runtime       Up            0.0.0.0:59000->9000/tcp
+  bthwani-wlt-api-runtime     Up (healthy)  0.0.0.0:58083->8083/tcp
+  bthwani-identity-api-runtime NOT RUNNING  (profile: ACTIVE_DSH001_PREREQUISITE; must be started for auth flows)
 
-=== runtime:status
-NAME                       IMAGE                                      COMMAND                  SERVICE    CREATED          STATUS                    PORTS
-bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    "/app/dsh-api"           dsh-api    3 minutes ago    Up 2 minutes (healthy)    0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
-bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   "/usr/bin/docker-ent…"   minio      3 minutes ago    Up 3 minutes              0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
-bthwani-postgres-runtime   postgres:16-alpine                         "docker-entrypoint.s…"   postgres   3 minutes ago    Up 3 minutes (healthy)    0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-bthwani-wlt-api-runtime    bthwani-runtime-wlt-api                    "/app/wlt-api"           wlt-api    48 minutes ago   Up 48 minutes (healthy)   0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp
+DSH API health: { "service": "dsh", "status": "healthy" }
+DSH API readiness: { "service": "dsh", "status": "ready", "dependencies": { "postgres": "ready" } }
+DSH stores endpoint: 6 stores returned (real DB data, no mock)
 
---- docker ps ---
-NAMES                      IMAGE                                      STATUS                    PORTS
-bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    Up 2 minutes (healthy)    0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
-bthwani-postgres-runtime   postgres:16-alpine                         Up 3 minutes (healthy)    0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
-bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   Up 3 minutes              0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
-bthwani-wlt-api-runtime    bthwani-runtime-wlt-api                    Up 48 minutes (healthy)   0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp
+WLT API health: PASS (port 58083)
+
+Identity service: NOT RUNNING in this session.
+  NOTE: Backend requires identity for all authenticated routes.
+  Auth flows (partner/field/captain/operator) cannot be exercised without identity container.
+  This is the root cause why screenshots for loading/success/permission_denied authenticated states
+  cannot be captured in this environment.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CpButton,
   CpPageHeader,
@@ -19,13 +19,9 @@ import { StoreGovernanceActions } from "./StoreGovernanceActions";
 
 export function StoreManagementScreen() {
   const identity = useIdentitySession();
-  const c = useStoreAdminController();
+  const c = useStoreAdminController(identity.state.kind);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
-  useEffect(() => {
-    if (identity.state.kind === "authenticated") c.retry();
-  }, [identity.state.kind]);
 
   if (identity.state.kind !== "authenticated") {
     return (

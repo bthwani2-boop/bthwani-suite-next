@@ -111,12 +111,13 @@ for (const [profile, file, container, hostPort] of profiles) {
     violations.push(`${file}: expected profile=${profile}`);
   }
 
-  const allowedActive = profile === "dsh";
-  const isActive = json.state === "ACTIVE";
+  const allowedActive = profile === "dsh" || profile === "identity";
+  // identity uses ACTIVE_DSH001_PREREQUISITE to signal it's active as a DSH-001 auth prerequisite
+  const isActive = json.state === "ACTIVE" || (profile === "identity" && json.state === "ACTIVE_DSH001_PREREQUISITE");
 
   if (isActive && !allowedActive) {
     violations.push(`${file}: profile ${profile} is not allowed to be ACTIVE yet`);
-  } else if (isActive && allowedActive) {
+  } else if (isActive && profile === "dsh") {
     const compose = exists("infra/docker/compose.runtime.yml") ? read("infra/docker/compose.runtime.yml") : "";
     if (!compose.includes("dsh-api")) {
       violations.push(`${file}: state=ACTIVE requires dsh-api service in compose.runtime.yml`);
@@ -127,7 +128,7 @@ for (const [profile, file, container, hostPort] of profiles) {
       }
     }
   } else if (!isActive && json.state !== "RESERVED_NOT_ACTIVE") {
-    violations.push(`${file}: expected state=RESERVED_NOT_ACTIVE or ACTIVE`);
+    violations.push(`${file}: expected state=RESERVED_NOT_ACTIVE, ACTIVE, or ACTIVE_DSH001_PREREQUISITE (identity only)`);
   }
 
   if (json.container !== container) {

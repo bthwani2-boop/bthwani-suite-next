@@ -21,13 +21,9 @@ import {
 
 export function FieldStoreVerificationScreen() {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController();
+  const controller = useStoreRoleContextController(identity.state.kind);
   const [notes, setNotes] = React.useState("");
   const state = controller.state;
-
-  React.useEffect(() => {
-    if (identity.state.kind === "authenticated") controller.retry();
-  }, [identity.state.kind]);
 
   if (identity.state.kind !== "authenticated") {
     return (

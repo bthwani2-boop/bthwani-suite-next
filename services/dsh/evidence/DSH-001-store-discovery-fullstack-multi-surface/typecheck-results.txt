@@ -1,8 +1,13 @@
-=== TYPECHECK RESULTS ===
-Date: 2026-06-22
-Task: DSH-001_SHARED_ENGINE_AND_SURFACE_UI_CLEANUP_GATE
+DSH-001 Typecheck Results — 2026-06-23
+Standard: REAL_EXPERIENCE_CLOSURE_v2
 
-shared/app-shell typecheck: PASS
-shared/ui-kit typecheck: PASS
-services/dsh typecheck: PASS
-apps/control-panel/runtime typecheck: PASS
+pnpm --dir services/dsh typecheck: PASS
+pnpm --dir shared/app-shell typecheck: PASS
+pnpm --dir shared/ui-kit typecheck: PASS
+pnpm --dir apps/control-panel/runtime typecheck: PASS (after adding allowImportingTsExtensions to control-panel tsconfig.json)
+
+Fix applied: apps/control-panel/runtime/tsconfig.json lacked allowImportingTsExtensions:true
+inherited from tsconfig.base.json. core/identity/clients/index.ts uses .ts extensions
+in imports (committed in dbbb7ad). Added allowImportingTsExtensions:true to control-panel tsconfig.
+
+Result: ALL_PASS

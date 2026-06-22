@@ -26,7 +26,9 @@ export type StoreRoleContextController = {
   readonly submit: (action: StoreRoleAction) => Promise<void>;
 };
 
-export function useStoreRoleContextController(): StoreRoleContextController {
+// dev/read-only fallback: when no auth token is present the API returns 401 and
+// the controller surfaces a permission_denied state — no silent empty fallback.
+export function useStoreRoleContextController(authKind = "unauthenticated"): StoreRoleContextController {
   const [state, setState] = useState<StoreRoleContextState>({ kind: "loading" });
   const [actionState, setActionState] = useState<StoreActionState>({ kind: "idle" });
 
@@ -35,8 +37,8 @@ export function useStoreRoleContextController(): StoreRoleContextController {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (authKind === "authenticated") void load();
+  }, [load, authKind]);
 
   const submit = useCallback(async (action: StoreRoleAction) => {
     setActionState({ kind: "submitting" });

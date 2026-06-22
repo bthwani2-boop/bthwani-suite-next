@@ -21,15 +21,9 @@ import {
 
 export function PartnerStoreScreen() {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController();
+  const controller = useStoreRoleContextController(identity.state.kind);
   const [reason, setReason] = React.useState("");
   const state = controller.state;
-
-  React.useEffect(() => {
-    if (identity.state.kind === "authenticated") {
-      controller.retry();
-    }
-  }, [identity.state.kind]);
 
   if (identity.state.kind !== "authenticated") {
     return (
