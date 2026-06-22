@@ -1,0 +1,74 @@
+{
+  "topic_id": "DSH-001_STORE_DISCOVERY",
+  "status": "MANUAL_TEST_VERIFIED",
+  "verified_date": "2026-06-22",
+  "branch": "starting-implementing-slices",
+  "head": "dd54117f744a39fd00ad0f3c95c5663ac760cf31",
+  "shared_engine": "services/dsh/frontend/shared/store",
+  "surfaces": {
+    "app-client": "store discovery — StoreDiscoveryScreen consumes useStoreDiscoveryController from shared/store",
+    "control-panel": "store admin/governance — StoreManagementScreen consumes useStoreAdminController from shared/store",
+    "app-partner": "store readiness context only — PartnerStoreScreen consumes useStoreRoleContextController from shared/store",
+    "app-field": "store verification context only — FieldStoreVerificationScreen consumes useStoreRoleContextController from shared/store",
+    "app-captain": "store pickup context only — CaptainStorePickupContextScreen consumes useStoreRoleContextController from shared/store"
+  },
+  "api_endpoints_verified": {
+    "GET /dsh/health": "PASS",
+    "GET /dsh/readiness": "PASS",
+    "GET /dsh/stores": "PASS — 6 stores returned",
+    "GET /dsh/stores/{storeId}": "PASS — store-1005 detail with createdAt/updatedAt"
+  },
+  "guards_verified": {
+    "guard:dsh-frontend-shared-ownership": "PASS",
+    "guard:dsh-001-cross-surface-dependency-map": "PASS",
+    "guard:no-financial-mutation-outside-wlt": "PASS",
+    "guard:app-shell-control-panel": "PASS",
+    "control-panel:design-gate": "PASS",
+    "guard:matrix:v3": "PASS",
+    "foundation:gate": "PASS",
+    "slice:gate": "PASS"
+  },
+  "control_panel_verified": {
+    "url": "http://localhost:13000/dsh/partners/stores",
+    "http_status": 200,
+    "result": "PASS"
+  },
+  "evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
+  "ci_status": "CI_NOT_CONFIGURED_FOR_THIS_BRANCH",
+  "runtime_boundary": {
+    "dsh_required": true,
+    "wlt_required": false,
+    "wlt_runtime_during_test": "STOPPED — isolated before test to prevent evidence contamination"
+  },
+  "typechecks_verified": {
+    "shared/app-shell": "PASS",
+    "shared/ui-kit": "PASS",
+    "services/dsh": "PASS",
+    "apps/control-panel/runtime": "PASS"
+  },
+  "tests_verified": {
+    "services/dsh": "PASS — 118/118 tests, 33 suites, 0 failures"
+  },
+  "design_debt": [
+    "inline styles in StoreManagementScreen, StoreAdminFilters, StoreAdminKpiStrip, StoreAdminStateView, StoreAdminTable, StoreDetailAdminPanel",
+    "no CSS module or Tailwind system defined for control-panel Next.js surfaces yet",
+    "not a gate failure — documented in manual-design-debt.txt, cleanup deferred to pre-DSH-003 slice"
+  ],
+  "forbidden_fields_present": {
+    "catalog": false,
+    "orders": false,
+    "delivery": false,
+    "finance": false,
+    "payment": false,
+    "settlement": false
+  },
+  "next_topic_allowed": "DSH-002_HOME_DISCOVERY_ONLY_AFTER_MANUAL_PASS",
+  "forbidden_next": [
+    "DSH-003",
+    "cart",
+    "checkout",
+    "orders",
+    "delivery",
+    "wlt-runtime"
+  ]
+}

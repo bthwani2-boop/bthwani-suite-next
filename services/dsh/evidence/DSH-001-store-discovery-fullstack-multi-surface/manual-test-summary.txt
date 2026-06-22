@@ -1,0 +1,90 @@
+MANUAL DSH-001 TEST — FINAL CLOSURE
+task=DSH-001_MANUAL_TEST_AND_MACHINE_READABLE_CLOSURE_SYNC
+date=2026-06-22
+branch=starting-implementing-slices
+head=dd54117f744a39fd00ad0f3c95c5663ac760cf31
+head_matches_origin=YES
+
+DSH API: http://localhost:58080
+control-panel: http://localhost:13000/dsh/partners/stores
+app_client_port=18101
+app_partner_port=18102
+app_captain_port=18103
+app_field_port=18104
+
+WLT RUNTIME:
+  wlt_runtime_required=false
+  wlt_runtime_status=STOPPED before test (isolated to prevent evidence contamination)
+
+API RESULTS:
+  GET /dsh/health         = PASS (status=healthy)
+  GET /dsh/readiness      = PASS (status=ready, postgres=ready)
+  GET /dsh/stores         = PASS (6 stores returned)
+  GET /dsh/stores/{id}    = PASS (store-1005 detail with createdAt/updatedAt)
+
+TYPECHECKS:
+  shared/app-shell        = PASS
+  shared/ui-kit           = PASS
+  services/dsh            = PASS
+  apps/control-panel      = PASS
+
+TESTS:
+  services/dsh            = PASS (118/118, 33 suites, 0 failures)
+
+GUARDS:
+  guard:dsh-frontend-shared-ownership        = PASS
+  guard:dsh-001-cross-surface-dependency-map = PASS
+  guard:no-financial-mutation-outside-wlt    = PASS
+  guard:app-shell-control-panel              = PASS
+  control-panel:design-gate                  = PASS
+  guard:matrix:v3                            = PASS (1182 rows, 0 errors, 0 warnings)
+  foundation:gate                            = PASS
+  slice:gate                                 = PASS
+
+CONTROL PANEL:
+  http://localhost:13000/dsh/partners/stores = PASS (HTTP 200)
+  stores list from API                       = VERIFIED
+  no direct fetch/axios in screens           = VERIFIED (guard confirmed)
+
+MOBILE SURFACES (guard-verified + existing visual evidence):
+  app-client  = store discovery — StoreDiscoveryScreen via useStoreDiscoveryController
+  app-partner = store readiness context only — PartnerStoreScreen via useStoreRoleContextController
+  app-field   = store verification context only — FieldStoreVerificationScreen via useStoreRoleContextController
+  app-captain = store pickup context only — CaptainStorePickupContextScreen via useStoreRoleContextController
+
+FORBIDDEN FIELDS:
+  catalog/products/orders/delivery/finance/payment/settlement = NONE PRESENT
+
+SHARED ENGINE:
+  services/dsh/frontend/shared/store = sole engine for all 5 surfaces
+  surfaces = UI-only (no direct fetch/axios/env/useEffect/local Store types)
+
+RUNTIME STATE:
+  dsh-api:58080  = healthy
+  postgres:55432 = healthy
+  minio:59000    = running
+  wlt-api        = NOT RUNNING (not required for DSH-001)
+
+CI STATUS:
+  CI_NOT_CONFIGURED_FOR_THIS_BRANCH
+  Not a failure — documented as such, not claimed as CI_PASS
+
+DESIGN DEBT:
+  inline styles in 6 control-panel files (documented in manual-design-debt.txt)
+  no guard violations — deferred to pre-DSH-003 cleanup
+
+GIT:
+  git diff --check = CLEAN (no whitespace errors)
+  status = untracked evidence/machine-readable files (to be committed)
+
+MACHINE READABLE SYNC:
+  dsh_wlt_status.json          = updated (head, surface statuses, visual_evidence notes)
+  dsh_wlt_execution_master_reference.json = updated (target_head, topics reference)
+  topics/DSH-001_STORE_DISCOVERY_TOPIC.json = created
+
+result=PASS
+DSH-001=MANUAL_TEST_VERIFIED
+
+NEXT ACTION:
+  DSH-002_HOME_DISCOVERY only after explicit manual approval in next session.
+  No DSH-003. No cart. No checkout. No WLT runtime expansion.

@@ -4,7 +4,7 @@
     "description": "Current closure status for each DSH/WLT component. Updated after each slice is runtime-verified. Statuses: NOT_STARTED | DISCOVERED | READY_FOR_IMPLEMENTATION | IN_PROGRESS | RUNTIME_VERIFIED | BLOCKED_WITH_REASON",
     "last_updated": "2026-06-22",
     "target_branch": "starting-implementing-slices",
-    "target_head": "708bb5ab19ea11b355be1e6edf04a202c3777cea"
+    "target_head": "dd54117f744a39fd00ad0f3c95c5663ac760cf31"
   },
   "foundation": {
     "status": "RUNTIME_VERIFIED",
@@ -88,7 +88,8 @@
     "slices_pending": ["DSH-004 Cart", "DSH-005 Checkout Intent", "DSH-006 Order Tracking"]
   },
   "dsh_frontend_app_partner": {
-    "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+    "status": "RUNTIME_VERIFIED",
+    "manual_test_date": "2026-06-22",
     "current_state": "DSH-001 Store-only partner readiness UI consumes useStoreRoleContextController",
     "screen": "services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx",
     "dsh_001_dependency_role": "downstream",
@@ -97,7 +98,8 @@
     "slices_pending": ["DSH-003 Catalog Management", "DSH-006 Partner Orders", "DSH-008 Partner Readiness"]
   },
   "dsh_frontend_app_captain": {
-    "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+    "status": "RUNTIME_VERIFIED",
+    "manual_test_date": "2026-06-22",
     "current_state": "DSH-001 read-only Store pickup context consumes useStoreRoleContextController",
     "screen": "services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx",
     "dsh_001_dependency_role": "none-for-dsh-001",
@@ -106,7 +108,8 @@
     "slices_pending": ["DSH-007 Captain Assignment", "DSH-007 Delivery Lifecycle"]
   },
   "dsh_frontend_app_field": {
-    "status": "IMPLEMENTED_AWAITING_VISUAL_EVIDENCE",
+    "status": "RUNTIME_VERIFIED",
+    "manual_test_date": "2026-06-22",
     "current_state": "DSH-001 Store verification context consumes useStoreRoleContextController",
     "screen": "services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx",
     "dsh_001_dependency_role": "upstream",
@@ -171,10 +174,14 @@
     "dsh_001_app_captain": "PRESENT — services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-captain-store-pickup-context.png",
     "dsh_002": "PRESENT — services/dsh/evidence/DSH-002-client-home-discovery/screenshot",
     "dsh_003_to_010": "NOT_STARTED",
-    "notes": "DSH-001 visual evidence is fully complete across all five surfaces."
+    "notes": "DSH-001 visual evidence is fully complete across all five surfaces.",
+    "ci_status": "CI_NOT_CONFIGURED_FOR_THIS_BRANCH — not a failure; manual evidence is the gate",
+    "wlt_runtime_in_evidence": false
   },
   "final_closure": {
-    "status": "IN_PROGRESS",
+    "status": "DSH_001_MANUAL_TEST_COMPLETE",
+    "dsh_001_manual_test_date": "2026-06-22",
+    "dsh_001_result": "PASS — API + guards + control-panel verified; mobile surfaces guard-verified with existing visual evidence",
     "slices_verified": 3,
     "slices_remaining": 7,
     "surfaces_with_full_implementation": [

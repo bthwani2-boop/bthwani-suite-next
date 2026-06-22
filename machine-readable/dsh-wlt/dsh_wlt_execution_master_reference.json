@@ -7,7 +7,7 @@
     "target_repo": "C:\\bthwani-suite-next",
     "donor_repo": "C:\\bthwani-suite",
     "target_branch": "starting-implementing-slices",
-    "target_head": "a55dd95",
+    "target_head": "dd54117f744a39fd00ad0f3c95c5663ac760cf31",
     "donor_branch": "realtest",
     "donor_head": "e5080831",
     "no_implementation_in_this_file": true,
@@ -50,7 +50,8 @@
       "runtime_ports": "machine-readable/dsh-wlt/dsh_wlt_runtime_ports.json",
       "docker_runtime": "machine-readable/dsh-wlt/dsh_wlt_docker_runtime.json",
       "extraction_matrix_dsh": "machine-readable/dsh-wlt/dsh_wlt_extraction_matrix.csv",
-      "slice_execution_csv": "machine-readable/dsh-wlt/dsh_wlt_slice_execution_matrix.csv"
+      "slice_execution_csv": "machine-readable/dsh-wlt/dsh_wlt_slice_execution_matrix.csv",
+      "dsh_001_topic": "machine-readable/dsh-wlt/topics/DSH-001_STORE_DISCOVERY_TOPIC.json"
     },
     "plan_files": {
       "master_plan_doc": "tools/plan/BTHWANI_NEXT_MASTER_EXECUTION_PLAN_20260618.md",
