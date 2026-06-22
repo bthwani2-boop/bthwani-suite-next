@@ -215,7 +215,34 @@
       "blockers": [],
       "source_evidence": "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/",
       "verified_date": "2026-06-22",
-      "next_allowed": "DSH-002 control-panel surface (requires separate approval)"
+      "next_allowed": "DSH-002 control-panel surface (requires separate approval)",
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/HomeScreen.tsx — DshHomeGetScreen: store feed, category carousel, promos, video reels, inline search, favorites, filter rail. Uses useHomeState, useHomeDerivedStores, useHomeFilterRail, useHomeVideoHandlers.",
+          "dsh/frontend/app-client/screens/StoreScreen.tsx — DshStoreGetScreen: single store with product listings, category filter, search, favorites. Uses useStoreState, useStoreDerivedItems."
+        ],
+        "control_panel": ["dsh/frontend/control-panel/stores/ — store governance table, admin management (equivalent to new repo StoreManagementScreen)"],
+        "app_partner": ["dsh/frontend/app-partner/ — partner own store context (read-only view of store readiness)"],
+        "app_field": ["dsh/frontend/app-field/ — field agent store verification context (read-only)"],
+        "app_captain": ["dsh/frontend/app-captain/ — captain store pickup context with address and store code (read-only)"]
+      },
+      "acceptance_criteria": [
+        "Client sees store list with store name, category, open/closed status, and ETA in RTL layout",
+        "Client sees loading skeleton during store list fetch",
+        "Client sees empty state with descriptive message when no stores available in zone",
+        "Client sees error state with retry action when API fails",
+        "Client can filter stores by category, favorites, or nearest",
+        "Operator sees all stores in paginated admin table with search and status filters",
+        "Operator can open store detail panel with full store information (name, address, status, category)",
+        "Operator sees KPI strip (total stores, active, inactive counts)",
+        "Operator sees error/service-unavailable state when admin API fails",
+        "Partner sees own store readiness context — read-only, no edit capability here",
+        "Field agent sees store physical verification context — read-only address and verification status",
+        "Captain sees store pickup address and code — read-only",
+        "All surfaces enforce RTL layout with Arabic typography",
+        "RBAC: client sees only publicly visible stores; partner sees only own store; captain/field see only assigned store context; operator sees all stores"
+      ],
+      "feature_behavior": "Client opens app → store discovery list loads with active stores in zone → client filters by category → selects store → store detail page; Operator opens partners/stores → admin table with filters → opens detail panel → reviews store status"
     },
 
     "DSH-002": {
@@ -294,7 +321,29 @@
         "control-panel tests not written",
         "DSH-002 control-panel requires explicit approval before implementation"
       ],
-      "source_evidence": "services/dsh/evidence/DSH-002-client-home-discovery/"
+      "source_evidence": "services/dsh/evidence/DSH-002-client-home-discovery/",
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/HomeScreen.tsx — DshHomeGetScreen: full home layout with hero banner carousel, promo rail, category shortcuts, filter rail (all/nearest/offers/favorites/new), store feed, video reels. States: ready (full render), loading (skeleton while fetching). Uses useHomeState, useHomeDerivedStores, useHomePromoHandlers, useHomeFilterRail, useHomeVideoHandlers, useHomeTickerState."
+        ],
+        "control_panel": ["dsh/frontend/control-panel/marketing/ — marketing hub containing home discovery banner/promo/category admin (not fully detailed in donor analysis; expected under marketing section)"]
+      },
+      "acceptance_criteria": [
+        "Client home screen renders hero banner carousel (loading skeleton → banners visible)",
+        "Client home screen renders promo rail with active promotions",
+        "Client home screen renders category shortcuts for navigation",
+        "Client home screen renders filter rail: all / nearest / offers / favorites / new",
+        "Client home screen renders store feed with filtered results per active filter",
+        "Client sees empty state per section when no banners/promos configured for zone",
+        "Client sees error state with retry when home discovery API fails",
+        "Client sees offline state with cached last-known content or clear offline indicator",
+        "Operator can create, edit, delete banners for home screen (control-panel marketing)",
+        "Operator can manage promos: create, target by zone, set start/end date",
+        "Operator can manage category shortcuts: add, reorder, deactivate",
+        "All home content respects zone/city targeting — wrong-zone content never shown",
+        "All home sections render RTL with localized text and formatted dates/numbers"
+      ],
+      "feature_behavior": "Client opens app → home discovery API called with cityCode + serviceAreaCode → banners, promos, categories, stores returned → sections rendered with loading skeletons → filter rail defaults to 'all' → client taps filter → store feed updates with filtered results"
     },
 
     "DSH-003": {
@@ -364,6 +413,50 @@
         "DSH-003 not approved for implementation",
         "dsh-003_catalog.sql migration not written"
       ],
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/StoreItemsScreen.tsx — product listing screen for a single store (browse by category, search, add to cart)"
+        ],
+        "app_partner": [
+          "dsh/frontend/app-partner/screens/InventoryCatalogScreen.tsx — partner catalog management",
+          "dsh/frontend/app-partner/screens/ProductEditScreen.tsx — product create/edit form"
+        ],
+        "control_panel": [
+          "dsh/frontend/control-panel/catalogs/catalogs.screen.tsx — catalog management hub",
+          "dsh/frontend/control-panel/catalogs/catalogs.approvals.tsx — product approval queue",
+          "dsh/frontend/control-panel/catalogs/products/catalog-products-table.tsx — product governance table",
+          "dsh/frontend/control-panel/catalogs/products/item-detail.drawer.tsx — product detail and edit drawer",
+          "dsh/frontend/control-panel/catalogs/products/audit-trail.drawer.tsx — product change audit",
+          "dsh/frontend/control-panel/catalogs/products/bulk-operations.drawer.tsx — bulk archive/activate",
+          "dsh/frontend/control-panel/catalogs/products/publication-readiness.drawer.tsx — readiness gate check",
+          "dsh/frontend/control-panel/catalogs/products/quick-entry-draft.drawer.tsx — quick product draft entry",
+          "dsh/frontend/control-panel/catalogs/products/taxonomy-governance.drawer.tsx — taxonomy assignment",
+          "dsh/frontend/control-panel/catalogs/products/visibility-policy.drawer.tsx — visibility rule configuration",
+          "dsh/frontend/control-panel/catalogs/products/media-governance.drawer.tsx — product media management",
+          "dsh/frontend/control-panel/catalogs/products/duplicate-resolution.drawer.tsx — duplicate product detection",
+          "dsh/frontend/control-panel/catalogs/products/partner-handoff.drawer.tsx — handoff to partner review",
+          "dsh/frontend/control-panel/catalogs/taxonomy/taxonomy.screen.tsx — taxonomy category tree management"
+        ]
+      },
+      "acceptance_criteria": [
+        "Client can browse product catalog for a store filtered by category",
+        "Client sees loading skeleton while catalog loads",
+        "Client sees empty state when no products available in selected category",
+        "Client sees error state with retry when catalog API fails",
+        "Partner can add a new product with name, description, price, category, media",
+        "Partner can edit an existing product's details",
+        "Partner can archive a product (no longer visible to clients)",
+        "Partner sees their own catalog only — cannot access other partner catalogs",
+        "Operator sees all products in governance table with search and status filters",
+        "Operator can review product in detail drawer with full audit trail",
+        "Operator can approve or reject product for publication",
+        "Operator can perform bulk archive or bulk activate operations",
+        "Operator can manage taxonomy tree for category assignment",
+        "Product publication check validates media, pricing, taxonomy before going live",
+        "All product names and descriptions support Arabic (RTL) content",
+        "RBAC: partner sees only own store catalog; operator sees all"
+      ],
+      "feature_behavior": "Partner adds product → product enters draft state → publication readiness check (media + pricing + taxonomy) → partner submits for review → appears in operator approval queue → operator reviews in detail drawer → approves → product becomes visible to clients in store catalog",
       "source_evidence": null
     },
 
@@ -422,6 +515,29 @@
         "DSH-004 API contract not defined",
         "DSH-004 not approved"
       ],
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/CartScreen.tsx — DshCartUnifiedScreen (2419 lines): full cart editor with item list, qty controls, pricing summary (subtotal/delivery/discount/grand total in minor units), payment method selection (COD/wallet/mixed/official-wallets), fulfillment mode picker (bthwani_delivery/partner_delivery/pickup), delivery address, order notes, extra request, scheduling, product recommendations preview.",
+          "States: cart_empty, cart_ready, order_created, order_confirmed, payment_pending, wallet_credit_visible.",
+          "Financial boundary in donor: CartScreen imports useWltDshWalletSession for wallet balance display (read-only reference). Actual ledger mutation delegated to WLT. EXPERIMENTAL_PAYMENT_ENABLED=false flag controls live payment. All pricing shown as preview labels — no DSH-side amount calculation."
+        ]
+      },
+      "acceptance_criteria": [
+        "Client can add items to cart from product catalog",
+        "Client sees cart with itemized list, quantities, and per-item pricing (from WLT reference)",
+        "Client can update quantities (increase/decrease) — cart total recalculated by WLT",
+        "Client sees empty cart state with CTA to browse stores",
+        "Client can select fulfillment mode: bthwani_delivery / partner_delivery / pickup",
+        "Client can select payment method: COD / wallet / official wallet — COD availability determined by zone and order value (WLT)",
+        "Client sees wallet balance display (read-only reference from WLT — no DSH-side wallet balance computation)",
+        "Client sees serviceability check result (in-zone → proceed; out-of-zone → blocked state with change address CTA)",
+        "Client blocked from proceeding if zone is inactive (out-of-zone serviceability state)",
+        "Client sees error state with retry when cart API fails",
+        "Client sees loading state during serviceability check",
+        "All pricing labels are display-only references — DSH never computes amounts",
+        "Fulfillment mode selection affects which delivery fee estimate is shown (from WLT reference)"
+      ],
+      "feature_behavior": "Client selects products → opens cart → reviews items + totals → selects payment method → selects fulfillment mode → serviceability check fires (DSH checks zone) → if in-zone: proceed button enabled → tap proceed → navigate to checkout intent (DSH-005)",
       "source_evidence": null
     },
 
@@ -484,6 +600,28 @@
         "WLT-001 payment-sessions endpoint not approved",
         "DSH-005 API contract not defined"
       ],
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/DshCheckoutIntentScreen.tsx — DshCheckoutIntentScreen.",
+          "States explicitly handled: ready (address + payment method + order summary + confirm button), loading ('Checking availability...'), quote-loading ('Calculating delivery cost...'), order-created (success with 'Track order' CTA), error/payment-failed ('Payment failed' + retry), quote-failed (delivery calculation error + retry), quote-success (delivery confirmed, ready to confirm), blocked/quote-unavailable ('Outside coverage area' + change address CTA).",
+          "CheckoutContextNotice components contain explicit WLT boundary documentation: 'Checkout intent يسلّم قرار الدفع إلى WLT فقط'"
+        ]
+      },
+      "acceptance_criteria": [
+        "Client sees checkout screen with address, payment method, delivery estimate, and order summary",
+        "Loading state shows 'Checking availability...' during serviceability re-check",
+        "Quote-loading state shows 'Calculating delivery cost...' during WLT quote fetch",
+        "Quote-success state shows confirmed delivery fee before client confirms",
+        "Quote-failed state shows error with retry CTA — DSH does not guess delivery fee",
+        "Blocked/quote-unavailable state shows 'Outside coverage area' with 'Change address' CTA",
+        "Order-created success state shows order reference with 'Track order' navigation CTA",
+        "Payment-failed state shows clear failure message with retry option",
+        "Client can navigate back from error/failed states without losing cart",
+        "DSH creates checkout intent with payment session reference from WLT — no financial mutation in DSH",
+        "Timeout state shown if WLT handoff exceeds configurable window",
+        "All 8 states have distinct UI and correct RTL layout"
+      ],
+      "feature_behavior": "Client taps 'Confirm order' in cart → checkout intent created in DSH → DSH calls WLT payment-sessions reference for payment authorization → WLT returns payment session ID → DSH receives session reference (not financial state) → quote confirmed → client taps 'Place order' → order created → order-created state shown → track order",
       "source_evidence": null
     },
 
@@ -545,6 +683,33 @@
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
       "current_status": "NOT_STARTED",
       "blockers": ["DSH-005 not closed"],
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/DshOrdersListScreen.tsx — DshOrdersListScreen: order history list with search, all order status labels",
+          "dsh/frontend/app-client/screens/parts/OrdersTrackingHelpers.tsx — CreateOrderJourneyScreen: order timeline rendering with all journey steps"
+        ],
+        "app_partner": [
+          "dsh/frontend/app-partner/screens/OrdersInboxScreen.tsx — PartnerOrdersHomeScreen: stage filters (all, acceptance, preparation, ready, handoff, delivering, issues). Quick filters: urgent, sla_risk, unread, pickup, partner_delivery, bthwani_delivery, completed, cancelled. Sort: next_action, newest, priority, sla. States: ready | loading | empty | error | offline | disabled | partial.",
+          "dsh/frontend/app-partner/screens/DshPartnerOrderRejectionScreen.tsx — rejection flow with reason selection"
+        ],
+        "control_panel": ["dsh/frontend/control-panel/operations/ — order queue view with fulfillment mode filters"]
+      },
+      "acceptance_criteria": [
+        "Client sees order list with status labels for all 15 order states",
+        "Client sees order detail with timeline showing journey steps",
+        "Client can cancel order when cancellable (CancelOrderSheet appears)",
+        "Client sees loading, empty (no orders), error states",
+        "Partner order inbox shows stage filters: acceptance, preparation, ready, handoff, delivering, issues",
+        "Partner can filter by: urgent, sla_risk, unread, pickup mode, delivery mode",
+        "Partner can sort by: next_action, newest, priority, sla",
+        "Partner sees loading, empty inbox, error, offline, disabled states",
+        "Partner can accept order within acceptance window",
+        "Partner can reject order with mandatory reason selection",
+        "Operator sees live order queue in control-panel operations with all status states",
+        "Order status transitions follow DSH order state machine: pending → store-accepted → preparing → ready-for-pickup → dispatching...",
+        "All state labels are localized (RTL + Arabic)"
+      ],
+      "feature_behavior": "Client places order → order created in DSH with state=pending → partner inbox gets order notification → partner opens inbox → stage filter shows new order in 'acceptance' stage → partner taps accept → state transitions to store-accepted → preparing → marks ready → state=ready-for-pickup → dispatch starts",
       "source_evidence": null
     },
 
@@ -604,6 +769,37 @@
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership", "guard:no-financial-mutation-outside-wlt"],
       "current_status": "NOT_STARTED",
       "blockers": ["DSH-006 not closed"],
+      "donor_screens": {
+        "app_captain": [
+          "dsh/frontend/app-captain/screens/DshCaptainOrdersScreen.tsx — sections: inbox, detail, chat, bell, action, proof, support. States: availability-toggle, loading-assignment, and all DshCaptainOrdersScreenState variants.",
+          "dsh/frontend/app-captain/screens/DshCaptainMapScreen.tsx — map-based delivery view with captain position and destination",
+          "dsh/frontend/app-captain/screens/DshCaptainPickupDropoffScreen.tsx — pickup confirmation and dropoff confirmation flow",
+          "dsh/frontend/app-captain/screens/DshCaptainPoDSubmissionScreen.tsx — Proof of Delivery submission (photo + signature or code)",
+          "dsh/frontend/app-captain/screens/DshCaptainFinanceScreen.tsx — COD reconciliation view (read-only WLT reference)",
+          "dsh/frontend/app-captain/screens/DshCaptainStoreCourierHomeContent.tsx — home content for store courier mode",
+          "dsh/frontend/app-captain/screens/DshCaptainHomeOrderPanel.tsx — order panel on home screen"
+        ],
+        "app_client": ["dsh/frontend/app-client/screens/DshTrackingScreen.tsx — live tracking view with all order lifecycle states, captain position, ETA"],
+        "control_panel": ["dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx — manual captain assignment from operations room"]
+      },
+      "acceptance_criteria": [
+        "Captain can toggle availability (online/offline); only online captains receive dispatch assignments",
+        "Captain receives task assignment; sees order detail with store address and delivery address",
+        "Captain can accept or decline assignment within configurable time window",
+        "Auto-reject fires if captain does not respond within time window",
+        "Captain navigates to store on map; confirms arrival at store",
+        "Captain confirms pickup from partner (order state: picked-up)",
+        "Captain navigates to customer on map; confirms arrival at customer",
+        "Captain submits Proof of Delivery (photo or confirmation code)",
+        "PoD submission transitions order state to delivered",
+        "Captain COD reconciliation view is read-only (WLT reference — no financial mutation in DSH)",
+        "Client sees live tracking screen with captain position and ETA from pickup",
+        "Client sees delivered state after PoD submission",
+        "Operator can manually assign captain from dispatch room if auto-dispatch fails",
+        "All captain screens work in RTL layout",
+        "RBAC: captain sees only their own assigned orders"
+      ],
+      "feature_behavior": "Order state=ready-for-pickup → dispatch engine runs radial search → finds online captain within radius → sends assignment offer → captain accepts → state=driver-assigned → captain navigates to store → confirms arrived (state=driver-arrived-store) → picks up order (state=picked-up) → navigates to customer → confirms arrived (state=arrived-customer) → submits PoD → state=delivered",
       "source_evidence": null
     },
 
@@ -667,6 +863,42 @@
         "DSH-008 not approved for implementation",
         "DSH-008 API contract not defined"
       ],
+      "donor_screens": {
+        "app_field": [
+          "dsh/frontend/app-field/screens/DshFieldStoresScreen.tsx — stores list with filters: today, urgent, completed, all. States: ready | loading | empty | error | offline.",
+          "dsh/frontend/app-field/screens/DshFieldStoreVisitScreen.tsx — store visit recording with checklist",
+          "dsh/frontend/app-field/screens/DshFieldStoreOnboardingScreen.tsx — onboarding wizard entry",
+          "dsh/frontend/app-field/screens/DshFieldStoreOnboardingSteps.tsx — step-by-step onboarding checklist",
+          "dsh/frontend/app-field/screens/DshFieldDocumentUploadScreen.tsx — document photo capture and upload",
+          "dsh/frontend/app-field/screens/DshFieldStoreProductsUploadScreen.tsx — bulk product entry during onboarding",
+          "dsh/frontend/app-field/screens/DshFieldReadinessEscalationScreen.tsx — readiness issue escalation form",
+          "dsh/frontend/app-field/screens/DshFieldProfileHomeScreen.tsx — field agent home with assignment summary"
+        ],
+        "app_partner": ["dsh/frontend/app-partner/screens/StoreProfileScreen.tsx — partner sees own onboarding status and readiness progress"],
+        "control_panel": ["dsh/frontend/control-panel/partners/ — field readiness queue, document review workspace, partner performance screen"]
+      },
+      "shared_brain_contracts": {
+        "model_functions": ["resolveFilteredOnboardingStores", "resolvePriorityOnboardingStore"],
+        "binding_contracts": "DSH_FIELD_BINDING_CONTRACTS — contract gating for field assignment"
+      },
+      "acceptance_criteria": [
+        "Field agent home shows assigned stores with filter: today's visits, urgent, completed, all",
+        "Field agent sees loading, empty (no assignments), error, offline states",
+        "Field agent opens store visit → records visit with timestamped checklist",
+        "Field agent completes store onboarding steps in sequence — cannot skip required steps",
+        "Field agent uploads documents (license, photos) — upload progress shown",
+        "Field agent can escalate readiness issues from escalation screen with mandatory description",
+        "Partner sees their own onboarding status and progress percentage",
+        "Partner sees pending items blocking activation",
+        "Operator sees field readiness queue with pending store visits",
+        "Operator can review submitted documents",
+        "Operator can approve or escalate further",
+        "Readiness escalation triggers admin notification (via DSH-011)",
+        "Field agent sees offline state with queued actions when connection lost",
+        "RTL layout and Arabic labels throughout",
+        "RBAC: field agent sees only their assigned stores; partner sees only own store onboarding"
+      ],
+      "feature_behavior": "Operator assigns field agent to store → agent receives task notification (DSH-011) → agent opens DshFieldStoresScreen → filters by today → opens store → completes visit checklist step by step → uploads documents → if issues: escalates from DshFieldReadinessEscalationScreen → operator notified → operator reviews in readiness queue → approves → partner notified → onboarding status updated",
       "source_evidence": null,
       "note": "DSH-001 app-field context layer is done (store verification context). Full field onboarding workflow is this Topic."
     },
@@ -790,6 +1022,479 @@
       "blockers": [
         "DSH-009 not closed",
         "WLT-001 settlement-summary endpoint not approved"
+      ],
+      "donor_screens": {
+        "control_panel": ["WltFinanceReadOnlySkeletonProof.tsx (skeleton proof only — not production screen)"],
+        "app_partner": ["Partner finance/settlement status display (donor: DshPartnerFinanceScreen — read-only WLT reference)"]
+      },
+      "acceptance_criteria": [
+        "Operator sees settlement summary table sourced from WLT — read-only, no edit/delete actions visible",
+        "Operator sees payment status overview — no mutation buttons anywhere in this section",
+        "WLT unavailable state shown with clear message when WLT API is down",
+        "Partner sees their settlement status display — read-only",
+        "Loading skeleton shown while WLT data fetches",
+        "Error state shown with retry when WLT reference endpoint fails",
+        "FinanceReadOnlyFrame archetype enforced — no custom finance layout permitted",
+        "All amounts displayed in localized format (RTL, Arabic typography)",
+        "Guard: no DSH-side financial calculation or mutation code present"
+      ],
+      "feature_behavior": "Operator opens finance section → DSH reads WLT settlement-summary reference endpoint → displays partner settlement statuses and payment summaries in FinanceReadOnlyFrame → no interactive mutations possible — display only",
+      "source_evidence": null
+    },
+
+    "DSH-011": {
+      "topic_id": "DSH-011",
+      "topic_name": "Notifications & Actor Communication",
+      "purpose": "Push notifications, in-app notification feed, OTP delivery, and system messages across all actor surfaces. Notification configuration and audit in control-panel platform section.",
+      "business_meaning": "Real-time communication is critical to order lifecycle execution. Customers must know when their order is accepted, dispatched, and delivered. Partners must react to incoming orders immediately. Captains need task assignments within seconds. Delayed or missed notifications directly cause order failures and partner SLA breaches.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/notifications/",
+      "wlt_shared_brain": null,
+      "in_scope": [
+        "Notification event backend handler",
+        "dsh_notification_events, dsh_notification_preferences tables",
+        "dsh-011_notifications.sql migration",
+        "Notification API operations: listDshNotifications, markDshNotificationRead, updateDshNotificationPreferences",
+        "Generated notifications typed client",
+        "useNotificationsController (shared — all actors)",
+        "NotificationsScreen + BellScreen (app-client)",
+        "Order notification indicator (app-partner — inbox badge)",
+        "Task assignment notification (app-captain — assignment alert)",
+        "Task notification (app-field — visit assignment alert)",
+        "Notification configuration admin (control-panel platform section)",
+        "Notification audit trail (control-panel)"
+      ],
+      "out_of_scope": [
+        "SMS/email delivery infrastructure (external provider — decided at DSH-011 approval)",
+        "Push notification provider SDK (infrastructure decision — abstract contract only)",
+        "WLT financial notification content (WLT owns wlt.financial.* event routing)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/notifications"],
+      "related_database_tables": ["dsh_notification_events", "dsh_notification_preferences"],
+      "migrations_required": ["dsh-011_notifications.sql"],
+      "api_contracts_required": ["listDshNotifications", "markDshNotificationRead", "markAllDshNotificationsRead", "updateDshNotificationPreferences"],
+      "api_clients_required": ["services/dsh/clients/notifications-client.ts"],
+      "required_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "control-panel"],
+      "optional_surfaces": [],
+      "read_only_surfaces": [],
+      "forbidden_surfaces": ["webapp", "website"],
+      "primary_control_panel_section": "platform",
+      "secondary_control_panel_sections": ["operations"],
+      "read_only_control_panel_sections": [],
+      "forbidden_control_panel_sections": ["dashboard", "finance", "catalogs", "partners", "marketing", "support", "administration", "hr"],
+      "permissions": {
+        "app_client": "client-notifications-read-own",
+        "app_partner": "partner-notifications-read-own",
+        "app_captain": "captain-notifications-read-own",
+        "app_field": "field-notifications-read-own",
+        "control_panel": "admin-notifications-configure-and-audit"
+      },
+      "states_required": {
+        "app_client": ["loading", "bell_unread_count", "notification_list_empty", "notification_list_success", "notification_detail", "error"],
+        "app_partner": ["loading", "unread_count_badge", "success", "empty", "error"],
+        "app_captain": ["loading", "new_task_alert", "success", "empty", "error"],
+        "app_field": ["loading", "task_notification_pending", "success", "empty", "error"],
+        "control_panel": ["loading", "notification_config_view", "audit_trail_view", "empty", "error"]
+      },
+      "real_experience_required": {
+        "app_client": "Client sees bell icon with unread count badge; opens notification center (loading skeleton → list → empty when none); marks individual or all as read; sees notification detail.",
+        "app_partner": "Partner receives order notification; sees unread badge on inbox; opens notification with order summary.",
+        "app_captain": "Captain receives task assignment alert with order details; dismisses; sees empty when no tasks.",
+        "app_field": "Field agent receives store visit assignment; sees loading, notification detail, empty states.",
+        "control_panel": "Operator configures notification rules per event type per actor; views notification audit trail filtered by actor/event/date."
+      },
+      "event_triggers_covered": [
+        "order.state.pending → notify: partner (new order incoming)",
+        "order.state.store-accepted → notify: client",
+        "order.state.preparing → notify: client",
+        "order.state.ready-for-pickup → notify: captain",
+        "order.state.driver-assigned → notify: client",
+        "order.state.dispatching → notify: client",
+        "order.state.driver-arrived-store → notify: partner",
+        "order.state.picked-up → notify: client",
+        "order.state.arrived-customer → notify: client",
+        "order.state.delivered → notify: client + partner",
+        "order.state.cancelled-by-client → notify: partner + captain",
+        "order.state.cancelled-by-store → notify: client + captain",
+        "order.state.cancelled-no-driver → notify: client + partner + operator",
+        "order.state.failed-dispatch → notify: operator",
+        "order.state.failed-payment → notify: client",
+        "wlt.financial.state.captured → notify: partner",
+        "wlt.financial.state.settled → notify: partner",
+        "wlt.financial.state.refund-completed → notify: client",
+        "store.onboarding.submitted → notify: field_team + operator",
+        "store.onboarding.approved → notify: partner",
+        "store.onboarding.rejected → notify: partner",
+        "support.case.escalated → notify: operator",
+        "captain.assigned.new-task → notify: captain",
+        "auth.otp → notify: requesting actor",
+        "partner.activation.approved → notify: partner",
+        "partner.activation.rejected → notify: partner",
+        "partner.document-review.requested → notify: operator",
+        "commission.settlement.processed → notify: partner"
+      ],
+      "donor_screens": {
+        "app_client": [
+          "dsh/frontend/app-client/screens/NotificationsScreen.tsx — notification center feed",
+          "dsh/frontend/app-client/screens/BellScreen.tsx — bell icon notification sheet"
+        ],
+        "app_captain": [
+          "dsh/frontend/app-captain/screens/DshCaptainOrdersScreen.tsx — bell section (task assignment alert inline)"
+        ],
+        "control_panel": ["Notification configuration — platform section; no dedicated screen found in donor; expected in platform section"]
+      },
+      "acceptance_criteria": [
+        "Client bell icon shows accurate unread count badge updated in real-time",
+        "Client notification center shows loading skeleton during fetch",
+        "Client notification center shows empty state with descriptive message when no notifications",
+        "Client can mark individual notification as read; badge count decrements",
+        "Client can mark all notifications as read; badge clears",
+        "Partner receives in-app notification when new order arrives; unread badge appears on inbox",
+        "Captain receives task assignment notification within configurable SLA window (default: 5s)",
+        "Field agent receives store visit assignment notification",
+        "Operator can view notification audit trail filtered by actor_type, event_type, and date range",
+        "Operator can configure which notification types are sent per actor type",
+        "Notification content uses translation keys only — no hardcoded strings",
+        "RTL layout enforced across all notification surfaces",
+        "RBAC: each actor sees only their own notifications; operator sees audit of all"
+      ],
+      "feature_behavior": "Order state transition fires → DSH notification backend emits typed event with correlation_id → notification service picks up event → sends push + in-app notification to actor(s) per trigger rule → actor surface shows unread badge → actor opens notification → marked as read with audit entry",
+      "tests_required": [
+        "Notification list + mark-read controller tests",
+        "Bell unread count accuracy tests",
+        "Mark all read tests",
+        "Notification preference update tests",
+        "Event-to-actor routing rule tests (each trigger fires correct actor set)"
+      ],
+      "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
+      "current_status": "NOT_STARTED",
+      "blockers": [
+        "DSH-006 not closed — order state transitions required before notification routing can be defined",
+        "DSH-011 API contracts not defined in dsh.openapi.yaml",
+        "Push notification provider not configured — infrastructure decision pending DSH-011 approval"
+      ],
+      "source_evidence": null
+    },
+
+    "DSH-012": {
+      "topic_id": "DSH-012",
+      "topic_name": "Marketing Command Deck",
+      "purpose": "Full marketing operations hub in control-panel: campaign management, loyalty programs, partner offers approval, video content governance, smart signal marketing, and extended banner/promo operations beyond home discovery.",
+      "business_meaning": "Marketing drives discovery conversion and repeat orders. Operators run campaigns targeting zones and customer segments. Partners submit promotional offers for approval. Loyalty programs retain customers. Smart signals enable algorithmic content placement. Without this, the platform has no growth lever beyond organic discovery.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/marketing/",
+      "wlt_shared_brain": null,
+      "in_scope": [
+        "Campaign management backend handlers",
+        "dsh_campaigns, dsh_loyalty_config, dsh_partner_offers, dsh_video_assets, dsh_smart_signals tables",
+        "dsh-012_marketing.sql migration",
+        "Marketing API operations: campaigns CRUD, loyalty config, partner offer approval workflow, video assets, smart signals",
+        "Generated marketing typed client",
+        "useMarketingAdminController (control-panel)",
+        "ControlPanelDshMarketingScreen — marketing hub overview",
+        "BannersCommandDeckScreen — full banner lifecycle (draft → scheduled → live → expired)",
+        "PromosCommandDeckScreen — promo management with zone and segment targeting",
+        "CampaignsCommandDeckScreen — campaign manager with scheduling and targeting",
+        "ControlPanelDshMarketingApprovalScreen — approval queue for partner-submitted promotions",
+        "VideosCommandDeckScreen — video content governance and review queue",
+        "SmartSignalLayerScreen — algorithmic content placement configuration",
+        "LoyaltyCommandDeckScreen — loyalty reward program management",
+        "PartnerOffersCommandDeckScreen — partner promotional offer management"
+      ],
+      "out_of_scope": [
+        "Home discovery basic banners/promos/categories (DSH-002 — basic home content management)",
+        "Financial discount application at checkout (WLT — promo codes applied by WLT at payment)",
+        "Customer analytics and segmentation data (future analytics topic)",
+        "External advertising platform integrations (future topic)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/marketing"],
+      "related_database_tables": ["dsh_campaigns", "dsh_loyalty_config", "dsh_partner_offers", "dsh_video_assets", "dsh_smart_signals"],
+      "migrations_required": ["dsh-012_marketing.sql"],
+      "api_contracts_required": [
+        "listDshCampaigns", "createDshCampaign", "updateDshCampaign", "archiveDshCampaign",
+        "listDshPartnerOffers", "approveDshPartnerOffer", "rejectDshPartnerOffer",
+        "getDshLoyaltyConfig", "updateDshLoyaltyConfig",
+        "listDshVideoAssets", "updateDshVideoAssetStatus",
+        "getDshSmartSignalConfig", "updateDshSmartSignalConfig"
+      ],
+      "api_clients_required": ["services/dsh/clients/marketing-client.ts"],
+      "required_surfaces": ["control-panel"],
+      "optional_surfaces": ["app-partner (partner offer submission flow)"],
+      "read_only_surfaces": [],
+      "forbidden_surfaces": ["app-client", "app-captain", "app-field", "webapp", "website"],
+      "primary_control_panel_section": "marketing",
+      "secondary_control_panel_sections": [],
+      "read_only_control_panel_sections": [],
+      "forbidden_control_panel_sections": ["dashboard", "operations", "finance", "catalogs", "partners", "support", "platform", "administration", "hr"],
+      "permissions": {
+        "control_panel": "admin-marketing-manage",
+        "app_partner": "partner-offer-submit-only"
+      },
+      "states_required": {
+        "control_panel_campaigns": ["loading", "success", "empty", "error", "campaign_active", "campaign_paused", "campaign_scheduled", "campaign_completed"],
+        "control_panel_banners": ["loading", "success", "empty", "error", "banner_live", "banner_draft", "banner_scheduled", "banner_expired"],
+        "control_panel_partner_offers": ["loading", "approval_queue", "empty", "error", "offer_pending", "offer_approved", "offer_rejected"],
+        "control_panel_loyalty": ["loading", "config_active", "config_draft", "error"],
+        "control_panel_videos": ["loading", "success", "empty", "error", "video_pending_review", "video_live"],
+        "control_panel_smart_signals": ["loading", "config_active", "error"]
+      },
+      "real_experience_required": {
+        "control_panel_campaigns": "Operator creates campaign with zone, date range, targeting. Views active/paused/completed with counts. Empty state when no campaigns. Error state.",
+        "control_panel_banners": "Operator manages full banner lifecycle: create, schedule publish date, publish, expire. All status states visible.",
+        "control_panel_partner_offers": "Operator reviews partner-submitted promos in approval queue. Approves or rejects with mandatory reason. Rejected offer returns to partner.",
+        "control_panel_loyalty": "Operator configures loyalty reward rules per tier. Updates config. Sees validation errors.",
+        "control_panel_smart_signals": "Operator configures algorithmic placement weights. Reviews live signal distribution."
+      },
+      "donor_screens": {
+        "control_panel": [
+          "dsh/frontend/control-panel/marketing/ControlPanelDshMarketingScreen.tsx — marketing hub",
+          "dsh/frontend/control-panel/marketing/BannersCommandDeckScreen.tsx — banner lifecycle management",
+          "dsh/frontend/control-panel/marketing/PromosCommandDeckScreen.tsx — promo management",
+          "dsh/frontend/control-panel/marketing/CampaignsCommandDeckScreen.tsx — campaign manager",
+          "dsh/frontend/control-panel/marketing/ControlPanelDshMarketingApprovalScreen.tsx — approval queue",
+          "dsh/frontend/control-panel/marketing/VideosCommandDeckScreen.tsx — video content governance",
+          "dsh/frontend/control-panel/marketing/SmartSignalLayerScreen.tsx — algorithmic content placement",
+          "dsh/frontend/control-panel/marketing/LoyaltyCommandDeckScreen.tsx — loyalty program management",
+          "dsh/frontend/control-panel/marketing/PartnerOffersCommandDeckScreen.tsx — partner offer management"
+        ]
+      },
+      "acceptance_criteria": [
+        "Operator can create campaign with zone targeting, start/end date, and content reference",
+        "Campaign status transitions: scheduled → active (on start date) → completed (on end date) → archived",
+        "Operator can pause/resume active campaign",
+        "Empty state shown with CTA when no campaigns exist",
+        "Error state with retry when API fails",
+        "Partner-submitted offers appear in approval queue with submission timestamp",
+        "Operator can approve offer; it becomes live and visible to customers in zone",
+        "Operator can reject offer; rejection reason is mandatory; partner notified via DSH-011",
+        "Loyalty reward rules are configurable per tier with input validation",
+        "Video assets can be reviewed and approved/rejected for use in home feed",
+        "Smart signal weights are configurable; changes take effect within next discovery refresh cycle",
+        "All marketing content respects zone/city targeting — wrong-zone content never surfaces to customers",
+        "Approval actions are audited with actor_id, action, reason, timestamp",
+        "RTL layout and Arabic content support throughout"
+      ],
+      "feature_behavior": "Operator opens marketing hub → navigates to campaigns → creates campaign (zone + schedule + content) → campaign goes live on start date → appears in customer home via DSH-002 discovery layer; separately: partner submits promotional offer → appears in approval queue → operator reviews and approves → offer active in customer zone",
+      "tests_required": [
+        "Campaign CRUD controller tests",
+        "Campaign status transition tests",
+        "Partner offer approval/rejection workflow tests",
+        "Loyalty config validation tests",
+        "Marketing admin controller tests"
+      ],
+      "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
+      "current_status": "NOT_STARTED",
+      "blockers": [
+        "DSH-002 not closed — home discovery content layer must be proven before extended marketing hub",
+        "DSH-012 API contracts not defined in dsh.openapi.yaml",
+        "DSH-012 not approved for implementation"
+      ],
+      "source_evidence": null
+    },
+
+    "DSH-013": {
+      "topic_id": "DSH-013",
+      "topic_name": "Platform Policies & Service Area Management",
+      "purpose": "Service area polygon management, zone configuration, SLA rules, delivery time windows, capacity planning, and operational policies that govern the entire platform's geographic and performance boundaries.",
+      "business_meaning": "Platform policies define where the service operates, at what speed, and under what performance standards. Zone configurations affect serviceability checks for every customer's checkout. SLA rules govern captain and partner performance. Incorrect zone data causes customer frustration at checkout when valid addresses appear unserviced.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/platform-policies/",
+      "wlt_shared_brain": null,
+      "in_scope": [
+        "Service area management backend handlers",
+        "dsh_service_areas, dsh_zone_config, dsh_sla_rules, dsh_capacity_config tables",
+        "dsh-013_platform_policies.sql migration",
+        "Platform policy API operations: zone CRUD, SLA rules, capacity config",
+        "Generated platform-policies typed client",
+        "usePlatformPoliciesController (control-panel)",
+        "ServiceAreaManagementScreen (control-panel platform section — map + zone list)",
+        "ZoneConfigurationScreen (zone rules, delivery windows, polygon editor)",
+        "SLARulesConfigScreen (captain SLA, partner SLA, configuration versioning)",
+        "CapacityPlanningScreen (max concurrent orders per zone, threshold alerts)",
+        "GeoHeatmapScreen (real-time demand view — read-only, linked from operations)"
+      ],
+      "out_of_scope": [
+        "Dispatch assignment execution logic (DSH-007 — uses zone config but owns dispatch)",
+        "Financial pricing rules and delivery fee calculation (WLT — consumes zone data for pricing)",
+        "Administration and role assignments (DSH-014)",
+        "Captain GPS tracking infrastructure (external maps provider)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/platformpolicies"],
+      "related_database_tables": ["dsh_service_areas", "dsh_zone_config", "dsh_sla_rules", "dsh_capacity_config"],
+      "migrations_required": ["dsh-013_platform_policies.sql"],
+      "api_contracts_required": [
+        "listDshServiceAreas", "createDshServiceArea", "updateDshServiceArea",
+        "activateDshZone", "deactivateDshZone",
+        "getDshSLARules", "updateDshSLARules",
+        "getDshCapacityConfig", "updateDshCapacityConfig"
+      ],
+      "api_clients_required": ["services/dsh/clients/platform-policies-client.ts"],
+      "required_surfaces": ["control-panel"],
+      "optional_surfaces": [],
+      "read_only_surfaces": [],
+      "forbidden_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
+      "primary_control_panel_section": "platform",
+      "secondary_control_panel_sections": [],
+      "read_only_control_panel_sections": ["operations"],
+      "forbidden_control_panel_sections": ["dashboard", "finance", "catalogs", "partners", "marketing", "support", "administration", "hr"],
+      "permissions": {
+        "control_panel": "admin-platform-configure"
+      },
+      "states_required": {
+        "control_panel_service_areas": ["loading", "success", "empty", "error", "zone_active", "zone_inactive", "zone_pending_activation"],
+        "control_panel_sla": ["loading", "success", "error", "config_draft", "config_active"],
+        "control_panel_capacity": ["loading", "success", "error"],
+        "control_panel_heatmap": ["loading", "heatmap_active", "heatmap_empty", "error"]
+      },
+      "real_experience_required": {
+        "control_panel_service_areas": "Operator views all service zones on a map with active/inactive status. Can activate or deactivate zones with confirmation prompt. Empty state when no zones defined. Error state.",
+        "control_panel_sla": "Operator views and edits SLA rules per zone and order category. Changes are versioned and audited. Validation error shown for invalid values.",
+        "control_panel_capacity": "Operator configures maximum concurrent orders per zone. Threshold warning configurable.",
+        "control_panel_heatmap": "Real-time demand heatmap overlay; read-only; sourced from live order data."
+      },
+      "donor_screens": {
+        "control_panel": [
+          "dsh/frontend/control-panel/operations/ — area capacity screen (linked from operations room)",
+          "dsh/frontend/control-panel/operations/ — geo heatmap view (accessed from operations context)"
+        ]
+      },
+      "acceptance_criteria": [
+        "Operator can view all service zones on map with status badges (active/inactive)",
+        "Operator can activate a zone; confirmation required; change is audited",
+        "Operator can deactivate a zone; confirmation required; serviceability check for that zone immediately returns 'out of zone'",
+        "Zone deactivation propagates to DSH-005 serviceability check within one request cycle",
+        "SLA rules can be configured per zone with numeric validation",
+        "SLA configuration changes are versioned — previous version preserved in audit",
+        "Capacity thresholds configurable per zone with warning level and hard limit",
+        "Geo heatmap shows real-time demand — read-only, no edits on heatmap view",
+        "Empty state when no zones are configured",
+        "Error state with retry when API fails",
+        "RTL layout and Arabic labels required throughout",
+        "All zone changes logged with actor_id, action, zone_id, from_state, to_state, timestamp"
+      ],
+      "feature_behavior": "Operator opens platform section → views service area map → selects zone → deactivates zone → system updates zone_config → next DSH-005 serviceability check for customer address in that zone returns 'out of zone' → customer sees 'Outside coverage area' state in checkout",
+      "tests_required": [
+        "Zone activation/deactivation controller tests",
+        "Serviceability propagation test (deactivated zone blocks checkout)",
+        "SLA rule validation and versioning tests",
+        "Capacity threshold tests",
+        "Platform policies controller tests"
+      ],
+      "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
+      "current_status": "NOT_STARTED",
+      "blockers": [
+        "DSH-007 not closed — dispatch depends on zone config being stable",
+        "DSH-013 API contracts not defined in dsh.openapi.yaml",
+        "DSH-013 not approved for implementation"
+      ],
+      "source_evidence": null
+    },
+
+    "DSH-014": {
+      "topic_id": "DSH-014",
+      "topic_name": "Administration, Roles & Governance",
+      "purpose": "Staff role management, permission assignment, approval workflows, access governance for operators. Partner activation governance, document review, and onboarding approval workflows.",
+      "business_meaning": "Role-based access control must be governed by a human admin. New operators must be provisioned with appropriate scopes. Partner activations require physical document verification and ops approval. Captain and field agent onboarding requires credentialing review. Without this topic, the platform cannot safely manage its internal staff or grow its partner network.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/administration/",
+      "wlt_shared_brain": null,
+      "in_scope": [
+        "Role and staff management backend handlers",
+        "dsh_staff_roles, dsh_role_assignments, dsh_approval_workflows, dsh_partner_activation_docs tables",
+        "dsh-014_administration.sql migration",
+        "Administration API operations: role CRUD, staff assignment, partner activation workflow",
+        "Generated administration typed client",
+        "useAdministrationController (control-panel)",
+        "RoleManagementScreen (control-panel administration section)",
+        "StaffManagementScreen (operator/staff provisioning)",
+        "PartnerActivationWorkspace (document review, activation lifecycle management)",
+        "CaptainCredentialingWorkspace (captain document review and approval)",
+        "ApprovalWorkflowScreen (workflow configuration and queue)",
+        "AuditTrailAdminScreen (full platform audit with actor/date/action filters)"
+      ],
+      "out_of_scope": [
+        "Customer account management (out of current scope)",
+        "Financial role assignments (WLT — WLT owns financial actor permissions)",
+        "HR management (out of current scope for current slices)",
+        "Field agent store assignment routing (DSH-008 — field readiness topic)",
+        "Marketing approval workflow (DSH-012 — owns partner offer approval)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/administration"],
+      "related_database_tables": ["dsh_staff_roles", "dsh_role_assignments", "dsh_approval_workflows", "dsh_partner_activation_docs"],
+      "migrations_required": ["dsh-014_administration.sql"],
+      "api_contracts_required": [
+        "listDshStaffRoles", "createDshStaffRole", "updateDshStaffRole",
+        "listDshRoleAssignments", "assignDshRole", "revokeAssignment",
+        "listDshPartnerActivations", "getDshPartnerActivationDetail", "approveDshPartnerActivation", "rejectDshPartnerActivation",
+        "listDshAuditTrail"
+      ],
+      "api_clients_required": ["services/dsh/clients/administration-client.ts"],
+      "required_surfaces": ["control-panel"],
+      "optional_surfaces": [],
+      "read_only_surfaces": [],
+      "forbidden_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
+      "primary_control_panel_section": "administration",
+      "secondary_control_panel_sections": ["partners"],
+      "read_only_control_panel_sections": [],
+      "forbidden_control_panel_sections": ["dashboard", "operations", "finance", "catalogs", "marketing", "support", "platform", "hr"],
+      "permissions": {
+        "control_panel": "super-admin-administration"
+      },
+      "states_required": {
+        "control_panel_roles": ["loading", "success", "empty", "error"],
+        "control_panel_partner_activation": [
+          "loading", "approval_queue", "empty", "error",
+          "document_review", "activation_approved", "activation_rejected", "partner_blocked"
+        ],
+        "control_panel_audit": ["loading", "audit_trail_view", "filtered_view", "empty", "error"]
+      },
+      "real_experience_required": {
+        "control_panel_roles": "Super-admin views staff role list. Creates role with permission scope. Assigns role to operator. Empty state. Error state.",
+        "control_panel_partner_activation": "Admin reviews partner onboarding queue. Opens document review workspace. Approves → partner becomes active. Rejects → mandatory reason; partner notified. Blocks partner → all surfaces deny access.",
+        "control_panel_audit": "Admin views complete platform audit trail. Filters by actor_type, action, date range. Exports audit subset."
+      },
+      "partner_activation_states": {
+        "source": "donor: DshPartnerActivationStatus in ControlPanelDshPartnerActivationScreen",
+        "states": ["client_visible", "partner_active", "ops_approved", "blocked"],
+        "transition_rules": "submitted → ops_approved (document check) → partner_active (activation confirmed) → client_visible (public listing); blocked at any point suspends all partner access"
+      },
+      "donor_screens": {
+        "control_panel": [
+          "dsh/frontend/control-panel/partners/PartnerActivationWorkspace.tsx — ControlPanelDshPartnerActivationScreen: manages DshPartnerActivationStatus (client_visible, partner_active, ops_approved, blocked) with marketing eligibility checks",
+          "dsh/frontend/control-panel/partners/ — partner deactivation workspace, document review workspace, complaints handling, performance review, catalog override workspaces",
+          "dsh/frontend/control-panel/support/AuditTrailDetailPanel.tsx — audit trail detail view (reused in administration section)"
+        ]
+      },
+      "acceptance_criteria": [
+        "Super-admin can create staff role with named permission scopes",
+        "Super-admin can assign role to operator; operator receives that scope on next login",
+        "Role assignment and revocation are audited with actor_id, target_actor_id, role, action, timestamp",
+        "Partner activation queue shows submitted partners with submission date",
+        "Admin can open document review workspace showing uploaded partner documents",
+        "Admin can approve partner activation; partner status transitions to partner_active → client_visible",
+        "Admin can reject partner activation; rejection reason is mandatory; partner receives notification via DSH-011",
+        "Admin can block partner at any activation stage; all partner surfaces immediately deny access",
+        "Audit trail is filterable by actor_type, action type, date range",
+        "Audit trail shows all admin actions including role assignments, partner activations, rejections",
+        "Empty state shown when no pending approvals",
+        "Error state with retry when API fails",
+        "RTL layout and Arabic content support throughout"
+      ],
+      "feature_behavior": "Partner submits onboarding documents via DSH-008 → partner activation request appears in admin queue → admin opens document review workspace → reviews documents → approves (partner status: ops_approved → partner_active → client_visible) or rejects with reason → partner receives notification (DSH-011) → all partner surfaces reflect updated activation status",
+      "tests_required": [
+        "Role management controller tests",
+        "Role assignment and revocation tests",
+        "Partner activation state machine transition tests",
+        "Approval/rejection with audit log tests",
+        "Document review workflow tests",
+        "Audit trail filter tests"
+      ],
+      "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
+      "current_status": "NOT_STARTED",
+      "blockers": [
+        "DSH-008 not closed — field readiness enables partner activation document flow",
+        "DSH-014 API contracts not defined in dsh.openapi.yaml",
+        "DSH-014 not approved for implementation"
       ],
       "source_evidence": null
     }
