@@ -5,6 +5,8 @@ import {
   type IdentityClientError,
 } from "./identity-client.ts";
 
+type ActorRole = "partner" | "captain" | "field" | "operator";
+
 export type IdentitySessionState =
   | { readonly kind: "unconfigured" }
   | { readonly kind: "signed_out" }
@@ -89,4 +91,29 @@ export async function logoutIdentity(): Promise<void> {
 
 function emit(): void {
   for (const listener of listeners) listener();
+}
+
+// Dev-only: bypass identity service and auto-authenticate with a fake session.
+// Call this in __DEV__ builds when the identity service is not available.
+export function devBypassLogin(role: ActorRole): void {
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const surface = `app-${role}` as ActorIdentity["surfaceAccess"] extends Record<string, boolean> ? string : never;
+  const fakeIdentity: ActorIdentity = {
+    subject: `dev-${role}-001`,
+    tenantId: "tenant-dev-001",
+    roles: [role],
+    permissions: [{ service: "dsh", surface: surface as ActorIdentity["permissions"][number]["surface"], action: "*", scope: "own" }],
+    authState: "authenticated",
+    surfaceAccess: { [surface]: true },
+    serviceAccess: { dsh: true },
+    sessionId: `dev-session-${Date.now()}`,
+    expiresAt,
+  };
+  stored = {
+    accessToken: `dev-bypass-${role}-${Date.now()}`,
+    refreshToken: `dev-bypass-refresh-${role}`,
+    identity: fakeIdentity,
+  };
+  state = { kind: "authenticated", identity: fakeIdentity, accessToken: stored.accessToken };
+  emit();
 }

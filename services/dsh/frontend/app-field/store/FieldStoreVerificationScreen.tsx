@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/app-shell";
+import { devBypassLogin } from "@bthwani/core-identity";
 import {
   AuthLoginCard,
   Badge,
@@ -35,6 +36,7 @@ export function FieldStoreVerificationScreen() {
           loading={identity.state.kind === "authenticating"}
           {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
           onSubmit={(username, password) => void identity.login(username, password)}
+          onDevBypass={() => devBypassLogin("field")}
         />
       </ScrollScreen>
     );

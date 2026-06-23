@@ -56,7 +56,7 @@ export function StoreManagementScreen() {
           aria-label="كلمة المرور"
         />
         <CpButton
-          disabled={username.trim().length === 0 || password.length < 12 || identity.state.kind === "authenticating"}
+          disabled={username.trim().length === 0 || password.length < 4 || identity.state.kind === "authenticating"}
           onClick={() => void identity.login(username.trim(), password)}
         >
           {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}

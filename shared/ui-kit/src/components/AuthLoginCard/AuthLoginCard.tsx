@@ -11,7 +11,10 @@ export type AuthLoginCardProps = {
   readonly loading?: boolean;
   readonly error?: string;
   readonly onSubmit: (username: string, password: string) => void;
+  readonly onDevBypass?: () => void;
 };
+
+declare const __DEV__: boolean | undefined;
 
 export function AuthLoginCard({
   title,
@@ -19,10 +22,12 @@ export function AuthLoginCard({
   loading = false,
   error,
   onSubmit,
+  onDevBypass,
 }: AuthLoginCardProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const disabled = username.trim().length === 0 || password.length < 12;
+  const disabled = username.trim().length === 0 || password.length < 4;
+  const showDevButton = __DEV__ === true && onDevBypass !== undefined;
 
   return (
     <Card>
@@ -52,6 +57,14 @@ export function AuthLoginCard({
           disabled={disabled}
           onPress={() => onSubmit(username.trim(), password)}
         />
+        {showDevButton && (
+          <Button
+            label="[DEV] دخول المطور بدون كلمة مرور"
+            fullWidth
+            tone="secondary"
+            onPress={onDevBypass}
+          />
+        )}
       </Block>
     </Card>
   );

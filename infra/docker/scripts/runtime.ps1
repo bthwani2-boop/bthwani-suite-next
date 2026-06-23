@@ -120,14 +120,14 @@ function Invoke-IdentitySmoke {
   $readiness = Invoke-RestMethod "http://localhost:58082/identity/readiness" -TimeoutSec 10 -ErrorAction Stop
   if ($readiness.status -ne "ready") { throw "/identity/readiness not ready" }
   $body = @{
-    username = "operator.local"
+    username = "operator"
     password = $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
     deviceFingerprint = "runtime-smoke"
   } | ConvertTo-Json
   if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
     $body = @{
-      username = "operator.local"
-      password = "LocalOnly-ChangeMe-2026!"
+      username = "operator"
+      password = "123456"
       deviceFingerprint = "runtime-smoke"
     } | ConvertTo-Json
   }
@@ -292,7 +292,7 @@ function Invoke-DshSmoke {
   if ($store1.store.id -ne "store-1001") { throw "/dsh/stores/store-1001 returned wrong id" }
 
   $identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-    "LocalOnly-ChangeMe-2026!"
+    "123456"
   } else {
     $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
   }
@@ -306,7 +306,7 @@ function Invoke-DshSmoke {
     return $login.accessToken
   }
 
-  $operatorToken = Get-LocalActorToken "operator.local"
+  $operatorToken = Get-LocalActorToken "operator"
   $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
   $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
   if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
@@ -326,9 +326,9 @@ function Invoke-DshSmoke {
   if ($governance.audit.actorRole -ne "operator") { throw "operator governance audit missing" }
 
   foreach ($actor in @(
-    @{ username = "partner.local"; expectedRole = "partner" },
-    @{ username = "field.local"; expectedRole = "field" },
-    @{ username = "captain.local"; expectedRole = "captain" }
+    @{ username = "bthwani"; expectedRole = "partner" },
+    @{ username = "field"; expectedRole = "field" },
+    @{ username = "captain"; expectedRole = "captain" }
   )) {
     $token = Get-LocalActorToken $actor.username
     $headers = @{ Authorization = "Bearer $token" }
@@ -475,6 +475,12 @@ elseif ($Action -eq "all") {
 
   # postgres ready
   Wait-ForPostgres
+
+  if ($ProfileList -contains "identity") {
+    Invoke-IdentityMigrate
+    Wait-ForIdentityApi
+    Invoke-IdentitySmoke
+  }
 
   if ($ProfileList -contains "dsh") {
     Invoke-Migrate

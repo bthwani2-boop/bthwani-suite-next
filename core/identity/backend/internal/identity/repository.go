@@ -35,8 +35,8 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	if !input.Enabled {
 		return nil
 	}
-	if len(input.Password) < 12 {
-		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 12 characters")
+	if len(input.Password) < 4 {
+		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 4 characters")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -45,10 +45,10 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	actors := []struct {
 		id, username, role, surface, scope string
 	}{
-		{"operator-local-001", "operator.local", "operator", "control-panel", "all"},
-		{"partner-local-001", "partner.local", "partner", "app-partner", "own"},
-		{"field-local-001", "field.local", "field", "app-field", "assigned"},
-		{"captain-local-001", "captain.local", "captain", "app-captain", "assigned"},
+		{"operator-local-001", "operator", "operator", "control-panel", "all"},
+		{"partner-local-001", "bthwani", "partner", "app-partner", "own"},
+		{"field-local-001", "field", "field", "app-field", "assigned"},
+		{"captain-local-001", "captain", "captain", "app-captain", "assigned"},
 	}
 	for _, actor := range actors {
 		permissions, marshalErr := json.Marshal([]Permission{
