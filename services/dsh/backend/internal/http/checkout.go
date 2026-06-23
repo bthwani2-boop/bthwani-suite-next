@@ -1,0 +1,146 @@
+package http
+
+import (
+	"errors"
+	"net/http"
+
+	"dsh-api/internal/checkout"
+	"dsh-api/internal/store"
+)
+
+// POST /dsh/client/checkout-intents
+func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "client")
+	if !ok {
+		return
+	}
+	var body struct {
+		CartID          string `json:"cartId"`
+		StoreID         string `json:"storeId"`
+		FulfillmentMode string `json:"fulfillmentMode"`
+		PaymentMethod   string `json:"paymentMethod"`
+		DeliveryAddress string `json:"deliveryAddress"`
+		Note            string `json:"note"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	if body.CartID == "" || body.StoreID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId and storeId are required")
+		return
+	}
+
+	intent, err := checkout.CreateIntent(s.db, checkout.CreateIntentInput{
+		ClientID:        actor.ID,
+		CartID:          body.CartID,
+		StoreID:         body.StoreID,
+		FulfillmentMode: checkout.FulfillmentMode(body.FulfillmentMode),
+		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
+		DeliveryAddress: body.DeliveryAddress,
+		Note:            body.Note,
+	})
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create checkout intent")
+		return
+	}
+
+	store.SendJSON(w, http.StatusCreated, map[string]any{
+		"intent": marshalIntent(intent),
+	})
+}
+
+// GET /dsh/client/checkout-intents/{intentId}
+func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "client")
+	if !ok {
+		return
+	}
+	intentID := r.PathValue("intentId")
+	if intentID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
+		return
+	}
+
+	intent, err := checkout.GetIntent(s.db, intentID, actor.ID)
+	if errors.Is(err, checkout.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get checkout intent")
+		return
+	}
+
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"intent": marshalIntent(intent),
+	})
+}
+
+// POST /dsh/client/checkout-intents/{intentId}/cancel
+func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "client")
+	if !ok {
+		return
+	}
+	intentID := r.PathValue("intentId")
+	if intentID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
+		return
+	}
+
+	intent, err := checkout.CancelIntent(s.db, intentID, actor.ID)
+	if errors.Is(err, checkout.ErrConflict) {
+		store.SendError(w, http.StatusConflict, "CONFLICT", "intent not found or already closed")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel checkout intent")
+		return
+	}
+
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"intent": marshalIntent(intent),
+	})
+}
+
+// GET /dsh/operator/checkout-intents
+func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	stateFilter := r.URL.Query().Get("state")
+	intents, err := checkout.ListOperatorIntents(s.db, stateFilter, 50)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list checkout intents")
+		return
+	}
+	out := make([]map[string]any, len(intents))
+	for i, intent := range intents {
+		out[i] = marshalIntent(&intent)
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"intents": out,
+	})
+}
+
+func marshalIntent(i *checkout.Intent) map[string]any {
+	return map[string]any{
+		"id":                  i.ID,
+		"clientId":            i.ClientID,
+		"cartId":              i.CartID,
+		"storeId":             i.StoreID,
+		"fulfillmentMode":     string(i.FulfillmentMode),
+		"state":               string(i.State),
+		"paymentMethod":       string(i.PaymentMethod),
+		"wltPaymentSessionId": i.WltPaymentSessionID,
+		"deliveryAddress":     i.DeliveryAddress,
+		"note":                i.Note,
+		"version":             i.Version,
+		"createdAt":           i.CreatedAt,
+		"updatedAt":           i.UpdatedAt,
+	}
+}

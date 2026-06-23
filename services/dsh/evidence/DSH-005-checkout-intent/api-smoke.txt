@@ -1,0 +1,45 @@
+DSH-005-CHECKOUT-INTENT — API SMOKE EVIDENCE
+session: 2026-06-23
+slice: DSH-005
+
+=== Prerequisites applied ===
+dsh-004_cart.sql: CREATE TABLE dsh_carts, CREATE TABLE dsh_cart_items (6 objects)
+dsh-005_checkout_intent.sql: CREATE TABLE dsh_checkout_intents (5 objects)
+identity: client actor seeded (client-local-001, role=client)
+
+=== DSH-004 Cart API ===
+GET  /dsh/client/cart?storeId=store-1001        → 200 {cart: null} (empty, no active cart)
+POST /dsh/client/cart/items                      → 200 {cartId: ae25f3ff-..., item: {qty: 2}}
+GET  /dsh/client/cart?storeId=store-1001        → 200 {cart: {items: 1, fulfillmentMode: bthwani_delivery}}
+POST /dsh/client/cart/serviceability            → 200 {serviceable: false, code: out_of_area}
+GET  /dsh/operator/carts                         → 200 {carts: [...]}
+DSH-004 API smoke: PASS
+
+=== DSH-005 Checkout Intent API ===
+POST /dsh/client/checkout-intents
+  body: {cartId, storeId: store-1001, fulfillmentMode: bthwani_delivery, paymentMethod: cod,
+         deliveryAddress: شارع التحلية، الرياض, note: دق الجرس مرتين}
+  → 201 {intent: {id: ab7dcc0a-5e04-46c5-801d-a7c7981069c0, state: pending,
+                  wltPaymentSessionId: '' (CONTRACT_ONLY placeholder — WLT-001 not yet approved),
+                  paymentMethod: cod, fulfillmentMode: bthwani_delivery}}
+
+GET  /dsh/client/checkout-intents/{intentId}
+  → 200 {intent: {state: pending, paymentMethod: cod}}
+
+POST /dsh/client/checkout-intents/{intentId}/cancel
+  → 200 {intent: {state: cancelled, version: 2}}
+
+GET  /dsh/operator/checkout-intents
+  → 200 {intents: [1 intent]}
+
+DSH-005 API smoke: PASS
+
+=== WLT Boundary ===
+wltPaymentSessionId = '' (empty string) — CONTRACT_ONLY placeholder.
+DSH never executed payment, mutation, refund, or ledger operation.
+guard:no-financial-mutation-outside-wlt: PASS
+
+=== Runtime State ===
+bthwani-dsh-api-runtime: Up (healthy) — rebuilt with DSH-004 + DSH-005 routes
+bthwani-identity-api-runtime: Up (healthy) — rebuilt with client actor bootstrap
+bthwani-postgres-runtime: Up (healthy) — dsh_carts, dsh_cart_items, dsh_checkout_intents: LIVE

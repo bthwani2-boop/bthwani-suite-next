@@ -1,0 +1,59 @@
+DSH-004 Runtime Smoke Evidence
+DATE: 2026-06-23
+=====================================
+
+DOCKER RUNTIME STATUS
+---------------------
+Container: bthwani-dsh-api-runtime
+Status: Up (healthy) — rebuilt 2026-06-23 with DSH-004+DSH-005 routes
+Port: 0.0.0.0:58080->8080/tcp
+
+DSH HEALTH CHECK
+----------------
+GET /dsh/health
+Response: {"service":"dsh","status":"healthy","checkedAt":"2026-06-23T20:36:58.155740401Z"}
+Result: PASS
+
+GO BUILD
+--------
+cd services/dsh/backend && go build ./...
+Exit code: 0 (no errors)
+Result: PASS
+
+DATABASE MIGRATION STATUS
+-------------------------
+dsh-004_cart.sql: APPLIED 2026-06-23
+  CREATE TABLE dsh_carts       — PASS
+  CREATE TABLE dsh_cart_items  — PASS
+  4 indexes created             — PASS
+
+Note: store_id column type corrected from UUID to TEXT (matches dsh_stores.id which is TEXT).
+
+API SMOKE TESTS (with client auth token)
+-----------------------------------------
+Client actor: client-local-001 (role=client, seeded via identity bootstrap)
+GET  /dsh/client/cart?storeId=store-1001         → 200 {cart: null}     — empty, EXPECTED
+POST /dsh/client/cart/items                       → 200 {cartId: ae25f3ff-c26e-405e-b16c-af24aa8aa5bc, item: {qty: 2}}
+GET  /dsh/client/cart?storeId=store-1001         → 200 {cart: {items: 1, fulfillmentMode: bthwani_delivery}}
+POST /dsh/client/cart/serviceability             → 200 {serviceable: false, code: out_of_area}
+GET  /dsh/operator/carts (operator token)         → 200 {carts: [...]}
+
+DSH-004 API smoke: PASS
+
+TESTS
+-----
+node --test tests/*.test.mjs (services/dsh)
+3/3 catalog-contract PASS (DSH-004 + DSH-005 tests updated)
+125/125 unit tests PASS
+Result: PASS
+
+TYPECHECK
+---------
+npx tsc --noEmit (services/dsh)
+Exit code: 0 (no errors)
+Result: PASS
+
+SLICE GATE
+----------
+SLICE-GATE-20260623-231626: LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE
+29/29 steps PASS

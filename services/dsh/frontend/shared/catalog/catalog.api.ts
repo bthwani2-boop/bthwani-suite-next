@@ -11,6 +11,8 @@ import type {
   PartnerCatalog,
 } from "./catalog.types";
 import { fetchAdminStoreDetail } from "../store/store-admin.api";
+import { resolveCatalogError, resolveCatalogSubmissionError } from "./catalog.controller-core";
+import { resolveCatalogSubmissionState, resolvePartnerCatalogState, resolvePublishedCatalogState } from "./catalog.view-model";
 
 const baseUrl = resolveDshApiBaseUrl();
 
@@ -65,9 +67,7 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
       `/dsh/stores/${encodeURIComponent(storeId)}/catalog`,
     );
     const catalog: PartnerCatalog = { storeId, ...response };
-    return catalog.products.length === 0
-      ? { kind: "empty", storeId }
-      : { kind: "success", catalog };
+    return resolvePublishedCatalogState(catalog);
   } catch (error) {
     return classifyCatalogError(error);
   }
@@ -76,10 +76,7 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
 export async function fetchPartnerCatalog(): Promise<CatalogState> {
   try {
     const catalog = await request<PartnerCatalog>("/dsh/partner/catalog");
-    if (catalog.categories.length === 0 && catalog.products.length === 0) {
-      return { kind: "empty", storeId: catalog.storeId };
-    }
-    return { kind: "success", catalog };
+    return resolvePartnerCatalogState(catalog);
   } catch (error) {
     return classifyCatalogError(error);
   }
@@ -209,14 +206,9 @@ export async function fetchCatalogAudit(
 export async function fetchCatalogSubmissions(): Promise<CatalogSubmissionState> {
   try {
     const response = await request<{ submissions: CatalogSubmission[] }>("/dsh/operator/catalog/submissions");
-    return response.submissions.length === 0
-      ? { kind: "empty" }
-      : { kind: "success", submissions: response.submissions };
+    return resolveCatalogSubmissionState(response.submissions);
   } catch (error) {
-    const state = classifyCatalogError(error);
-    if (state.kind === "permission_denied") return state;
-    if (state.kind === "error") return state;
-    return { kind: "error", message: "تعذر تحميل طلبات اعتماد الكتالوج." };
+    return resolveCatalogSubmissionError(error);
   }
 }
 
@@ -240,17 +232,7 @@ export async function decideCatalog(input: {
 }
 
 export function classifyCatalogError(error: unknown): CatalogState {
-  const typed = error as { kind?: string; status?: number; message?: string };
-  if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
-    return { kind: "permission_denied" };
-  }
-  if (typed.kind === "http" && typed.status === 409) {
-    return { kind: "error", message: "تغيّرت نسخة الكتالوج. أعد التحميل ثم حاول مجددًا." };
-  }
-  if (typed.kind === "network") {
-    return { kind: "error", message: "خدمة الكتالوج غير متاحة حاليًا." };
-  }
-  return { kind: "error", message: "تعذر تنفيذ عملية الكتالوج." };
+  return resolveCatalogError(error);
 }
 
 function requestId(prefix: string): string {

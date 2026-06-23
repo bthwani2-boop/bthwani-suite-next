@@ -46,6 +46,37 @@ func NewRouter(db *sql.DB, identityClient *auth.Client) *http.ServeMux {
 	mux.HandleFunc("GET /dsh/operator/catalog/submissions", protected.handleCatalogSubmissions)
 	mux.HandleFunc("POST /dsh/operator/catalog/{storeId}/decision", protected.handleCatalogDecision)
 	mux.HandleFunc("GET /dsh/operator/catalog/{storeId}/audit", protected.handleCatalogAudit)
+	// DSH-004: Cart & Serviceability
+	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
+	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
+	mux.HandleFunc("DELETE /dsh/client/cart/items/{itemId}", protected.handleRemoveCartItem)
+	mux.HandleFunc("DELETE /dsh/client/cart", protected.handleClearCart)
+	mux.HandleFunc("POST /dsh/client/cart/serviceability", protected.handleCartServiceability)
+	mux.HandleFunc("GET /dsh/operator/carts", protected.handleOperatorCarts)
+	// DSH-005: Checkout Intent & WLT Handoff
+	mux.HandleFunc("POST /dsh/client/checkout-intents", protected.handleCreateCheckoutIntent)
+	mux.HandleFunc("GET /dsh/client/checkout-intents/{intentId}", protected.handleGetCheckoutIntent)
+	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/cancel", protected.handleCancelCheckoutIntent)
+	mux.HandleFunc("GET /dsh/operator/checkout-intents", protected.handleOperatorCheckoutIntents)
+	// DSH-006: Order Fulfillment & Partner Acceptance
+	mux.HandleFunc("POST /dsh/client/orders", protected.handleCreateOrder)
+	mux.HandleFunc("GET /dsh/client/orders", protected.handleListClientOrders)
+	mux.HandleFunc("GET /dsh/client/orders/{orderId}", protected.handleGetClientOrder)
+	mux.HandleFunc("GET /dsh/partner/orders", protected.handleListPartnerOrders)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handleAcceptOrder)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handleRejectOrder)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparing", protected.handleMarkPreparing)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/ready", protected.handleMarkReadyForPickup)
+	mux.HandleFunc("GET /dsh/operator/orders", protected.handleListOperatorOrders)
+	// DSH-007: Dispatch & Captain Delivery Lifecycle
+	mux.HandleFunc("POST /dsh/operator/dispatch/assignments", protected.handleCreateDispatchAssignment)
+	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.handleListOperatorDispatchAssignments)
+	mux.HandleFunc("GET /dsh/captain/dispatch/assignments", protected.handleListCaptainDispatchAssignments)
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/accept", protected.handleAcceptDispatchAssignment)
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/decline", protected.handleDeclineDispatchAssignment)
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/status", protected.handleUpdateDeliveryStatus)
+	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/pod", protected.handleSubmitDispatchPoD)
+	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
 
 	// Catch-all 404 handler for routes not found
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

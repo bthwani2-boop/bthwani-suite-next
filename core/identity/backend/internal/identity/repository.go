@@ -49,6 +49,7 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		{"partner-local-001", "bthwani", "partner", "app-partner", "own"},
 		{"field-local-001", "field", "field", "app-field", "assigned"},
 		{"captain-local-001", "captain", "captain", "app-captain", "assigned"},
+		{"client-local-001", "client", "client", "app-client", "own"},
 	}
 	for _, actor := range actors {
 		permissions, marshalErr := json.Marshal([]Permission{
@@ -139,6 +140,9 @@ func resolveDevBypassIdentity(token string, now time.Time) (ActorIdentity, error
 	case "captain":
 		surface = "app-captain"
 		scope = "assigned"
+	case "client":
+		surface = "app-client"
+		scope = "own"
 	case "operator":
 	default:
 		return ActorIdentity{}, ErrUnauthenticated

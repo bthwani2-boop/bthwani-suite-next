@@ -484,6 +484,434 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/client/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the active cart for the authenticated client at a given store. */
+        get: operations["getDshClientCart"];
+        put?: never;
+        post?: never;
+        /** Remove all items from the active cart (cart itself is kept). */
+        delete: operations["clearDshClientCart"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add or update an item in the client cart. Creates cart if not exists. */
+        post: operations["upsertDshCartItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/cart/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a specific item from the client cart. */
+        delete: operations["removeDshCartItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/cart/serviceability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check whether the store can be served in the client's zone. No financial computation. */
+        post: operations["checkDshCartServiceability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/carts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List carts for operator monitoring. No financial mutation. */
+        get: operations["listOperatorCarts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/checkout-intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a checkout intent from an active cart. DSH never executes payment. */
+        post: operations["createDshCheckoutIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/checkout-intents/{intentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a checkout intent by ID (client-scoped). */
+        get: operations["getDshCheckoutIntent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/checkout-intents/{intentId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a checkout intent. Never triggers refund — financial finalization is WLT-owned. */
+        post: operations["cancelDshCheckoutIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/checkout-intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List checkout intents for operator monitoring. No financial mutation. */
+        get: operations["listOperatorCheckoutIntents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the authenticated client's orders. */
+        get: operations["listDshClientOrders"];
+        put?: never;
+        /** Create an order from a confirmed checkout intent (client). */
+        post: operations["createDshOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single order by ID (client-scoped). */
+        get: operations["getDshClientOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List orders for a partner's store. Default status filter is pending. */
+        get: operations["listDshPartnerOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Partner accepts a pending order. Transitions pending → store_accepted. */
+        post: operations["acceptDshOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Partner rejects a pending order with mandatory reason. Transitions pending → cancelled. */
+        post: operations["rejectDshOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/preparing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Partner marks order as preparing. Transitions store_accepted → preparing. */
+        post: operations["markDshOrderPreparing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Partner marks order ready for pickup. Transitions preparing → ready_for_pickup. */
+        post: operations["markDshOrderReadyForPickup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator view of all orders with optional status filter. */
+        get: operations["listDshOperatorOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator dispatch room with active and historical captain assignments. */
+        get: operations["listDshDispatchAssignments"];
+        put?: never;
+        /** Operator assigns a ready-for-pickup order to a captain. */
+        post: operations["createDshAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Captain lists only their own dispatch assignments. */
+        get: operations["listDshCaptainAssignments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Captain accepts an offered assignment. */
+        post: operations["acceptDshAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Captain declines an offered assignment and returns the order to ready-for-pickup. */
+        post: operations["declineDshAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Captain advances assigned delivery lifecycle status. */
+        post: operations["updateDshDeliveryStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/pod": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Captain submits proof of delivery and closes the DSH delivery lifecycle. */
+        post: operations["submitDshPoD"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/tracking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client reads live delivery tracking for their own order. */
+        get: operations["getDshClientOrderTracking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/integrations/wlt/payment-callbacks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Future WLT-owned callback envelope; DSH consumes opaque final references only. */
+        post: operations["acceptWltPaymentCallbackEnvelope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -792,6 +1220,218 @@ export interface components {
             pagination: components["schemas"]["DshPagination"];
             /** Format: date-time */
             generatedAt: string;
+        };
+        DshCartItem: {
+            id: string;
+            cartId: string;
+            productId: string;
+            productName: string;
+            /** @description Display label from catalog — not a computed financial amount. */
+            priceReference: string;
+            quantity: number;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCart: {
+            id: string;
+            clientId: string;
+            storeId: string;
+            /** @enum {string} */
+            fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
+            /** @enum {string} */
+            state: "active" | "checked_out" | "abandoned";
+            note: string;
+            items: components["schemas"]["DshCartItem"][];
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCartResponse: {
+            cart: components["schemas"]["DshCart"] | null;
+        };
+        DshUpsertCartItemRequest: {
+            storeId: string;
+            /** @enum {string} */
+            fulfillmentMode?: "bthwani_delivery" | "partner_delivery" | "pickup";
+            productId: string;
+            productName: string;
+            priceReference?: string;
+            quantity: number;
+        };
+        DshUpsertCartItemResponse: {
+            cartId: string;
+            item: components["schemas"]["DshCartItem"];
+        };
+        DshOperatorCartsResponse: {
+            carts: components["schemas"]["DshCart"][];
+        };
+        CartServiceabilityRequest: {
+            storeId: string;
+            serviceAreaCode?: string;
+        };
+        CartServiceabilityResult: {
+            serviceable: boolean;
+            /** @enum {string} */
+            code: "serviceable" | "store_unavailable" | "out_of_area" | "catalog_unavailable";
+            reason?: string;
+        };
+        DshCheckoutIntent: {
+            id: string;
+            clientId: string;
+            cartId: string;
+            storeId: string;
+            /** @enum {string} */
+            fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
+            /** @enum {string} */
+            state: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+            /** @enum {string} */
+            paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
+            /** @description Opaque WLT reference. Empty string until WLT-001 approved. */
+            wltPaymentSessionId: string;
+            deliveryAddress: string;
+            note: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCreateCheckoutIntentRequest: {
+            cartId: string;
+            storeId: string;
+            /** @enum {string} */
+            fulfillmentMode?: "bthwani_delivery" | "partner_delivery" | "pickup";
+            /** @enum {string} */
+            paymentMethod?: "cod" | "wallet" | "mixed" | "official_wallet";
+            deliveryAddress?: string;
+            note?: string;
+        };
+        DshCheckoutIntentResponse: {
+            intent: components["schemas"]["DshCheckoutIntent"];
+        };
+        DshOperatorCheckoutIntentsResponse: {
+            intents: components["schemas"]["DshCheckoutIntent"][];
+        };
+        /** @enum {string} */
+        DshOrderStatus: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled";
+        DshOrderItem: {
+            id: string;
+            productId: string;
+            productName: string;
+            quantity: number;
+            /** Format: double */
+            unitPrice: number;
+        };
+        DshOrder: {
+            id: string;
+            checkoutIntentId: string;
+            storeId: string;
+            clientId: string;
+            status: components["schemas"]["DshOrderStatus"];
+            rejectionReason?: string;
+            /** @description Opaque WLT payment reference. Empty string until WLT-001 approved. DSH never mutates financial truth. */
+            wltPaymentRefId: string;
+            items?: components["schemas"]["DshOrderItem"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshOrderResponse: {
+            order: components["schemas"]["DshOrder"];
+        };
+        DshOrdersResponse: {
+            orders: components["schemas"]["DshOrder"][];
+        };
+        DshCreateOrderRequest: {
+            checkoutIntentId: string;
+            storeId: string;
+            items: components["schemas"]["DshCreateOrderItemInput"][];
+        };
+        DshCreateOrderItemInput: {
+            productId: string;
+            productName: string;
+            quantity: number;
+            /** Format: double */
+            unitPrice: number;
+        };
+        DshRejectOrderRequest: {
+            /** @description Mandatory rejection reason from partner. */
+            reason: string;
+        };
+        /** @enum {string} */
+        DshAssignmentStatus: "offered" | "accepted" | "declined" | "completed";
+        /** @enum {string} */
+        DshDeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered";
+        DshDelivery: {
+            id: string;
+            assignmentId: string;
+            orderId: string;
+            captainId: string;
+            status: components["schemas"]["DshDeliveryStatus"];
+            podMethod: string;
+            podReference: string;
+            note: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshDispatchAssignment: {
+            id: string;
+            orderId: string;
+            captainId: string;
+            assignedBy: string;
+            status: components["schemas"]["DshAssignmentStatus"];
+            /** Format: date-time */
+            responseDeadlineAt: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            declinedAt?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            delivery: components["schemas"]["DshDelivery"];
+        };
+        DshDispatchAssignmentResponse: {
+            assignment: components["schemas"]["DshDispatchAssignment"];
+        };
+        DshDispatchAssignmentsResponse: {
+            assignments: components["schemas"]["DshDispatchAssignment"][];
+        };
+        DshCreateAssignmentRequest: {
+            orderId: string;
+            captainId: string;
+        };
+        DshDeclineAssignmentRequest: {
+            reason?: string;
+        };
+        DshUpdateDeliveryStatusRequest: {
+            /** @enum {string} */
+            status: "driver_arrived_store" | "picked_up" | "arrived_customer";
+        };
+        DshSubmitPoDRequest: {
+            /** @enum {string} */
+            method: "photo" | "code" | "signature";
+            reference: string;
+            note?: string;
+        };
+        /** @description Contains opaque WLT references only. No amount, ledger, refund, settlement, or signature verification logic belongs to DSH. */
+        WltPaymentCallbackEnvelope: {
+            paymentSessionId: string;
+            paymentStatus: string;
+            checkoutIntentId: string;
+            /** Format: date-time */
+            occurredAt: string;
         };
     };
     responses: {
@@ -1754,6 +2394,710 @@ export interface operations {
         responses: {
             /** @description Catalog audit timeline. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDshClientCart: {
+        parameters: {
+            query: {
+                storeId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active cart or null if no active cart for this store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCartResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    clearDshClientCart: {
+        parameters: {
+            query?: {
+                cartId?: string;
+                storeId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cart cleared. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    upsertDshCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertCartItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Cart item upserted. Returns cartId and updated item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshUpsertCartItemResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    removeDshCartItem: {
+        parameters: {
+            query: {
+                cartId: string;
+            };
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Item removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    checkDshCartServiceability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CartServiceabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Operational serviceability decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartServiceabilityResult"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listOperatorCarts: {
+        parameters: {
+            query?: {
+                state?: "active" | "checked_out" | "abandoned";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cart list for operator review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperatorCartsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createDshCheckoutIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateCheckoutIntentRequest"];
+            };
+        };
+        responses: {
+            /** @description Checkout intent created. wltPaymentSessionId is empty until WLT-001 approved. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshCheckoutIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checkout intent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelDshCheckoutIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                intentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Intent cancelled. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description Intent already closed or not found. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorCheckoutIntents: {
+        parameters: {
+            query?: {
+                state?: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of checkout intents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperatorCheckoutIntentsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshClientOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated list of client orders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrdersResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Order created in pending state, awaiting partner acceptance. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshClientOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order detail with items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerOrders: {
+        parameters: {
+            query: {
+                storeId: string;
+                status?: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "cancelled";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of partner orders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrdersResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    acceptDshOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order accepted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectDshOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshRejectOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Order rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    markDshOrderPreparing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order marked preparing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    markDshOrderReadyForPickup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order ready for pickup. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDshOperatorOrders: {
+        parameters: {
+            query?: {
+                status?: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "delivered" | "cancelled";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of all orders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrdersResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshDispatchAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dispatch assignments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Assignment created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDshCaptainAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Captain assignments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    acceptDshAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Assignment accepted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    declineDshAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DshDeclineAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Assignment declined. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateDshDeliveryStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateDeliveryStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Delivery status updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    submitDshPoD: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshSubmitPoDRequest"];
+            };
+        };
+        responses: {
+            /** @description Proof of delivery submitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDshClientOrderTracking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tracking assignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptWltPaymentCallbackEnvelope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltPaymentCallbackEnvelope"];
+            };
+        };
+        responses: {
+            /** @description Contract-only; signature and payment truth remain WLT-owned. */
+            501: {
                 headers: {
                     [name: string]: unknown;
                 };

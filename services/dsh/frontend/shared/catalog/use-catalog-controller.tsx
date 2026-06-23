@@ -16,35 +16,36 @@ import {
   updateCatalogProduct,
   uploadMediaIntent,
 } from "./catalog.api";
+import {
+  beginCatalogAuditLoad,
+  resolveCatalogAuditError,
+  resolveCatalogAuditSuccess,
+  runCatalogAction,
+  shouldLoadAuthenticatedCatalog,
+} from "./catalog.controller-core";
+import {
+  catalogActionIdleState,
+  catalogLoadingState,
+  type CatalogActionState,
+  type CatalogAuditState,
+} from "./catalog.states";
 import type {
   CatalogState,
-  CatalogSubmission,
   CatalogSubmissionState,
   MediaUploadIntent,
 } from "./catalog.types";
 
-type ActionState = "idle" | "submitting" | "success" | "error" | "conflict";
-
 export function usePartnerCatalogController(authKind = "unauthenticated") {
   const [state, setState] = useState<CatalogState>({ kind: "loading" });
-  const [action, setAction] = useState<ActionState>("idle");
+  const [action, setAction] = useState<CatalogActionState>(catalogActionIdleState());
   const load = useCallback(async () => setState(await fetchPartnerCatalog()), []);
   useEffect(() => {
-    if (authKind === "authenticated") void load();
+    if (shouldLoadAuthenticatedCatalog(authKind)) void load();
   }, [authKind, load]);
 
   const run = useCallback(
-    async (op: () => Promise<unknown>) => {
-      setAction("submitting");
-      try {
-        await op();
-        setAction("success");
-        await load();
-      } catch (err) {
-        const typed = err as { status?: number };
-        setAction(typed.status === 409 ? "conflict" : "error");
-      }
-    },
+    async (op: () => Promise<unknown>) =>
+      runCatalogAction(op, load, setAction, setAction),
     [load],
   );
 
@@ -87,7 +88,7 @@ export function usePartnerCatalogController(authKind = "unauthenticated") {
 }
 
 export function usePublishedCatalogController(storeId: string) {
-  const [state, setState] = useState<CatalogState>({ kind: "loading" });
+  const [state, setState] = useState<CatalogState>(catalogLoadingState());
   const load = useCallback(
     async () => setState(await fetchPublishedCatalog(storeId)),
     [storeId],
@@ -100,28 +101,20 @@ export function usePublishedCatalogController(storeId: string) {
 
 export function useCatalogApprovalController(authKind = "unauthenticated") {
   const [state, setState] = useState<CatalogSubmissionState>({ kind: "loading" });
-  const [action, setAction] = useState<ActionState>("idle");
+  const [action, setAction] = useState<CatalogActionState>(catalogActionIdleState());
   const load = useCallback(
     async () => setState(await fetchCatalogSubmissions()),
     [],
   );
   useEffect(() => {
-    if (authKind === "authenticated") void load();
+    if (shouldLoadAuthenticatedCatalog(authKind)) void load();
   }, [authKind, load]);
   return {
     state,
     action,
     retry: () => void load(),
     decide: async (input: Parameters<typeof decideCatalog>[0]) => {
-      setAction("submitting");
-      try {
-        await decideCatalog(input);
-        setAction("success");
-        await load();
-      } catch (error) {
-        const typed = error as { status?: number };
-        setAction(typed.status === 409 ? "conflict" : "error");
-      }
+      await runCatalogAction(() => decideCatalog(input), load, setAction, setAction);
     },
   };
 }
@@ -130,22 +123,23 @@ export function useCatalogAuditController(
   storeId: string,
   authKind = "unauthenticated",
 ) {
-  const [entries, setEntries] = useState<readonly CatalogSubmission[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [audit, setAudit] = useState<CatalogAuditState>({ kind: "idle", entries: [] });
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setAudit((previous) => beginCatalogAuditLoad(previous.entries));
     try {
-      setEntries(await fetchCatalogAudit(storeId));
+      setAudit(resolveCatalogAuditSuccess(await fetchCatalogAudit(storeId)));
     } catch {
-      setError("تعذر تحميل سجل تدقيق الكتالوج.");
+      setAudit((previous) => resolveCatalogAuditError(previous.entries));
     } finally {
-      setLoading(false);
     }
   }, [storeId]);
   useEffect(() => {
-    if (authKind === "authenticated") void load();
+    if (shouldLoadAuthenticatedCatalog(authKind)) void load();
   }, [authKind, load]);
-  return { entries, loading, error, retry: () => void load() };
+  return {
+    entries: audit.entries,
+    loading: audit.kind === "loading",
+    error: audit.kind === "error" ? audit.message : null,
+    retry: () => void load(),
+  };
 }

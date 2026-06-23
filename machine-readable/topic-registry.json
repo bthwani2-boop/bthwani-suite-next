@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-22",
+  "last_updated": "2026-06-24",
   "evaluation_standard": "REAL_EXPERIENCE_CLOSURE_v2",
   "note": "Each Topic is a full-stack operational unit evaluated under REAL_EXPERIENCE_CLOSURE_v2 without grandfathering. Source evidence must distinguish present runtime proof from planned requirements.",
   "evidence_contract": {
@@ -579,7 +579,7 @@
       "related_database_tables": ["dsh_carts", "dsh_cart_items"],
       "migrations_required": ["dsh-004_cart.sql"],
       "api_contracts_required": ["createDshCart", "updateDshCart", "getDshCart", "checkDshServiceability"],
-      "api_clients_required": ["services/dsh/clients/cart-client.ts"],
+      "api_clients_required": ["services/dsh/clients/generated/dsh-api.ts", "services/dsh/frontend/shared/cart/cart.api.ts"],
       "required_surfaces": ["app-client", "control-panel"],
       "optional_surfaces": [],
       "read_only_surfaces": [],
@@ -602,12 +602,14 @@
       },
       "tests_required": ["Cart controller tests", "Serviceability check tests", "Cart API tests"],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_STARTED",
+      "current_status": "TECHNICAL_WIRING_VERIFIED",
+      "implementation_session": "2026-06-23",
       "blockers": [
-        "DSH-003 not closed",
-        "DSH-004 API contract not defined",
-        "DSH-004 not approved"
+        "Visual state screenshots not yet captured (REAL_EXPERIENCE_CLOSURE_v2)",
+        "dsh-004_cart.sql migration not applied (requires explicit user authorization)",
+        "DSH-001 visual evidence gap blocks global slice:gate"
       ],
+      "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE — 29/29. Evidence: SLICE-GATE-20260623-231626",
       "donor_screens": {
         "app_client": [
           "dsh/frontend/app-client/screens/CartScreen.tsx — DshCartUnifiedScreen (2419 lines): full cart editor with item list, qty controls, pricing summary (subtotal/delivery/discount/grand total in minor units), payment method selection (COD/wallet/mixed/official-wallets), fulfillment mode picker (bthwani_delivery/partner_delivery/pickup), delivery address, order notes, extra request, scheduling, product recommendations preview.",
@@ -664,7 +666,7 @@
       "related_database_tables": ["dsh_checkout_intents"],
       "migrations_required": ["dsh-005_checkout_intent.sql"],
       "api_contracts_required": ["createDshCheckoutIntent", "getDshCheckoutIntent"],
-      "api_clients_required": ["services/dsh/clients/checkout-client.ts"],
+      "api_clients_required": ["services/dsh/clients/generated/dsh-api.ts", "services/dsh/frontend/shared/checkout/checkout.api.ts"],
       "required_surfaces": ["app-client", "control-panel"],
       "optional_surfaces": [],
       "read_only_surfaces": [],
@@ -688,12 +690,16 @@
       "wlt_dependency": "WLT payment-sessions read endpoint required — NOT_STARTED in WLT (requires WLT-001 approval)",
       "tests_required": ["Checkout intent controller tests", "WLT handoff contract tests"],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership", "guard:no-financial-mutation-outside-wlt"],
-      "current_status": "NOT_STARTED",
+      "current_status": "TECHNICAL_WIRING_VERIFIED",
+      "implementation_session": "2026-06-23",
+      "wlt_boundary_note": "wlt_payment_session_id stored as opaque empty string until WLT-001 approved. DSH never executes payment, refund, settlement, or wallet mutation. guard:no-financial-mutation-outside-wlt: PASS.",
       "blockers": [
-        "DSH-004 not closed",
-        "WLT-001 payment-sessions endpoint not approved",
-        "DSH-005 API contract not defined"
+        "Visual state screenshots not yet captured (REAL_EXPERIENCE_CLOSURE_v2)",
+        "dsh-005_checkout_intent.sql migration not applied (requires explicit user authorization)",
+        "WLT-001 payment-sessions endpoint not approved (wlt_payment_session_id placeholder empty until then)",
+        "DSH-001 visual evidence gap blocks global slice:gate"
       ],
+      "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE — 29/29. Evidence: SLICE-GATE-20260623-231626",
       "donor_screens": {
         "app_client": [
           "dsh/frontend/app-client/screens/DshCheckoutIntentScreen.tsx — DshCheckoutIntentScreen.",
@@ -750,7 +756,7 @@
       "related_database_tables": ["dsh_orders", "dsh_order_items"],
       "migrations_required": ["dsh-006_orders.sql"],
       "api_contracts_required": ["createDshOrder", "listDshOrders", "getDshOrder", "updateDshOrderStatus"],
-      "api_clients_required": ["services/dsh/clients/orders-client.ts"],
+      "api_clients_required": ["services/dsh/clients/generated/dsh-api.ts", "services/dsh/frontend/shared/orders/orders.api.ts"],
       "required_surfaces": ["app-client", "app-partner", "control-panel"],
       "optional_surfaces": [],
       "read_only_surfaces": [],
@@ -863,8 +869,26 @@
       },
       "tests_required": ["Captain delivery controller tests", "Dispatch assignment tests", "PoD submission tests"],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership", "guard:no-financial-mutation-outside-wlt"],
-      "current_status": "NOT_STARTED",
-      "blockers": ["DSH-006 not closed"],
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_RUNTIME_API_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "merge_safe": false,
+      "blockers": [
+        "DSH-006 not closed under REAL_EXPERIENCE_CLOSURE_v2",
+        "app-captain required visual states missing: loading, success, no_active_order, error, pickup_in_progress, delivery_in_progress, pod_submitted",
+        "app-client required visual states missing: loading, tracking_active, delivered, error",
+        "control-panel required visual states missing: loading, dispatch_room, live_orders, error",
+        "Manual navigation proof missing for app-captain delivery lifecycle, app-client tracking, and control-panel dispatch room"
+      ],
+      "verified_runtime_summary": {
+        "date": "2026-06-24",
+        "api_smoke": "PASS — local DSH API on 58081 with runtime Postgres/Identity: operator assignment, captain accept/status transitions, client tracking, PoD delivered",
+        "migration": "PASS — dsh-007_dispatch.sql applied by pnpm run runtime:migrate",
+        "tests": "PASS — pnpm --dir services/dsh test 147/147",
+        "backend": "PASS — go test ./... and go build ./...",
+        "frontend_typecheck": "PASS — app-client-runtime, app-captain-runtime, control-panel",
+        "guards": "PASS — contracts:lint, guard:dsh-frontend-shared-ownership, guard:no-financial-mutation-outside-wlt, guard:matrix:v3"
+      },
       "donor_screens": {
         "app_captain": [
           "dsh/frontend/app-captain/screens/DshCaptainOrdersScreen.tsx — sections: inbox, detail, chat, bell, action, proof, support. States: availability-toggle, loading-assignment, and all DshCaptainOrdersScreenState variants.",
@@ -897,7 +921,7 @@
       ],
       "feature_behavior": "Order state=ready-for-pickup → dispatch engine runs radial search → finds online captain within radius → sends assignment offer → captain accepts → state=driver-assigned → captain navigates to store → confirms arrived (state=driver-arrived-store) → picks up order (state=picked-up) → navigates to customer → confirms arrived (state=arrived-customer) → submits PoD → state=delivered",
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "TECHNICAL_AND_API_RUNTIME_EVIDENCE", "path": "services/dsh/evidence/DSH-007-dispatch-delivery-lifecycle/", "status": "PRESENT_BUT_BLOCKING_VISUAL_GAPS"}]
     },
 
     "DSH-008": {

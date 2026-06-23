@@ -1,9 +1,9 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-23",
+  "last_updated": "2026-06-24",
   "branch": "starting-implementing-slices",
   "head_at_audit": "dbbb7ad2b89dde7f54b61c62902edbf0c00cd5f0",
-  "session_note": "Session 2026-06-23 implemented DSH-003 catalog, merged dsh-slice-003 contract into dsh.openapi.yaml, fixed runtime-map/manifest alignment, fixed TypeScript gaps.",
+  "session_note": "Session 2026-06-24 normalized DSH-003/005/006 shared frontend brains toward controller-core/states/view-model separation, fixed DSH OpenAPI response refs for DSH-005/006, regenerated services/dsh/clients/generated/dsh-api.ts so DSH-004/005/006 operations are represented, fixed app-client OrdersListScreen ui-kit prop drift, and implemented DSH-007 dispatch/captain delivery lifecycle technical wiring. Verification now includes DSH-007 migration runtime PASS, local API smoke PASS, services/dsh tests 147/147 PASS, DSH typecheck/build PASS, app-client/app-captain/control-panel typecheck PASS, Go backend test/build PASS, contracts and boundary guards PASS, runtime:status healthy, runtime:smoke PASS. CLOSED/100% remains blocked by required REAL_EXPERIENCE_CLOSURE_v2 visual/manual evidence, DSH-006 non-closure, and remote evidence.",
   "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2 — effective 2026-06-22",
   "note": "CLOSED status requires REAL_EXPERIENCE_CLOSURE_v2 evidence. TECHNICAL_CLOSURE_v1 is historical evidence only. Every required evidence gap blocks closure.",
   "overall_merge_safety": "DO_NOT_MERGE_UNTIL_DSH001_REAL_EXPERIENCE_REWORK",
@@ -170,50 +170,200 @@
 
     "DSH-004": {
       "topic_id": "DSH-004",
-      "current_status": "NOT_STARTED",
-      "reason": "DSH-003 not closed.",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "reason": "Full-stack implementation complete. Visual evidence (device screenshots) and runtime smoke proof required per REAL_EXPERIENCE_CLOSURE_v2 standard.",
       "evidence_matches_claim": true,
-      "merge_safe": true,
-      "blockers": ["DSH-003 not closed", "DSH-004 contract not defined"],
-      "required_actions": ["Close DSH-003 first"],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "merge_safe": false,
+      "what_is_implemented": [
+        "services/dsh/database/migrations/dsh-004_cart.sql — dsh_carts, dsh_cart_items tables with constraints and indexes",
+        "services/dsh/backend/internal/cart/cart.go — full cart domain logic: GetOrCreateActiveCart, UpsertItem, RemoveItem, ClearCart, CheckServiceability, ListOperatorCarts",
+        "services/dsh/backend/internal/http/cart.go — HTTP handlers: GET/DELETE /dsh/client/cart, POST /dsh/client/cart/items, DELETE /dsh/client/cart/items/{itemId}, POST /dsh/client/cart/serviceability, GET /dsh/operator/carts",
+        "services/dsh/backend/internal/http/server.go — 6 cart routes registered",
+        "services/dsh/contracts/dsh.openapi.yaml — 7 cart schemas (DshCart, DshCartItem, DshCartResponse, DshUpsertCartItemRequest, DshUpsertCartItemResponse, DshOperatorCartsResponse, CartServiceabilityResult) + 5 path operations",
+        "services/dsh/frontend/shared/cart/cart.types.ts — DshCart, DshCartItem, DshFulfillmentMode, DshServiceabilityResult, DshCartState, DshServiceabilityState, DSH_FULFILLMENT_MODE_META",
+        "services/dsh/frontend/shared/cart/cart.api.ts — fetchCart, upsertCartItem, removeCartItem, clearCart, checkServiceability, fetchOperatorCarts",
+        "services/dsh/frontend/shared/cart/use-cart-controller.tsx — useCartController, useServiceabilityController, useOperatorCartsController",
+        "services/dsh/frontend/app-client/cart/CartScreen.tsx — 6 states: loading/empty/error/offline/permission_denied/success + serviceability flow",
+        "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx — operator cart activity: loading/empty/error/success (DataTable from ui-kit)"
+      ],
+      "surfaces": {
+        "app-client": "TECHNICAL_WIRING_VERIFIED — CartScreen with loading/empty/error/offline/permission_denied/success + serviceability check flow",
+        "control-panel": "TECHNICAL_WIRING_VERIFIED — CartActivityScreen operations section with loading/empty/error/success"
+      },
+      "blockers": [
+        "Visual state screenshots not yet captured (REAL_EXPERIENCE_CLOSURE_v2)",
+        "Global slice:gate blocked while DSH-001 visual evidence gap remains"
+      ],
+      "required_actions": [
+        "Capture per-surface screenshots: app-client (loading/empty/error/offline/success/serviceability-blocked), control-panel (loading/empty/error/success)",
+        "Close DSH-001 visual evidence gap to unblock global slice:gate"
+      ],
+      "checks": {
+        "dsh_typecheck": "PASS",
+        "dsh_tests": "PASS — 140/140",
+        "contracts_lint": "PASS",
+        "foundation_gate": "PASS — FOUNDATION-GATE-20260623-214656",
+        "guard_matrix_v3": "PASS",
+        "go_build": "PASS — go build ./... (services/dsh/backend): exit 0",
+        "docker_runtime": "HEALTHY — bthwani-dsh-api-runtime rebuilt + Up, GET /dsh/health → {status:healthy}",
+        "migration_applied": "PASS — dsh-004_cart.sql applied 2026-06-23 (store_id TEXT fix applied before migration)",
+        "api_smoke": "PASS — GET /dsh/client/cart → 200 empty; POST /dsh/client/cart/items → 200 cartId=ae25f3ff...; GET /dsh/client/cart → 200 1 item; POST /dsh/client/cart/serviceability → 200 code=out_of_area",
+        "wlt_boundary": "PASS — no financial mutation in DSH cart module",
+        "shared_ownership": "PASS — all logic in services/dsh/frontend/shared/cart/ — CartActivityScreen.tsx uses @bthwani/ui-kit DataTable",
+        "generated_client": "PASS — services/dsh/clients/generated/dsh-api.ts includes DSH-004 cart operations and schemas",
+        "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE. Evidence: SLICE-GATE-20260624-003656",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "wlt_boundary_note": "Cart priceReference is a display label from catalog — not a financial amount. DSH does not compute totals, fees, or wallet balances. Serviceability check is store-level availability only.",
+      "status_updated_from": "session 2026-06-23 DSH-004+DSH-005 implementation"
     },
 
     "DSH-005": {
       "topic_id": "DSH-005",
-      "current_status": "NOT_STARTED",
-      "reason": "DSH-004 not closed. WLT-001 payment-sessions not approved.",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "reason": "Full-stack implementation complete. Visual evidence (device screenshots) and DB migration application required per REAL_EXPERIENCE_CLOSURE_v2 standard.",
       "evidence_matches_claim": true,
-      "merge_safe": true,
-      "blockers": ["DSH-004 not closed", "WLT-001 payment-sessions not approved", "DSH-005 contract not defined"],
-      "required_actions": ["Close DSH-004 first", "Approve WLT-001"],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "merge_safe": false,
+      "what_is_implemented": [
+        "services/dsh/database/migrations/dsh-005_checkout_intent.sql — dsh_checkout_intents table with state/fulfillment/payment_method checks and indexes",
+        "services/dsh/backend/internal/checkout/checkout.go — CreateIntent, GetIntent, CancelIntent, ListOperatorIntents (wlt_payment_session_id = '' placeholder; CONTRACT_ONLY until WLT-001)",
+        "services/dsh/backend/internal/http/checkout.go — 4 HTTP handlers (actor.ID correctly used, not actor.Subject)",
+        "services/dsh/backend/internal/http/server.go — 4 checkout-intent routes registered",
+        "services/dsh/contracts/dsh.openapi.yaml — 4 real operations (createDshCheckoutIntent, getDshCheckoutIntent, cancelDshCheckoutIntent, listOperatorCheckoutIntents) + 4 schemas (DshCheckoutIntent, DshCreateCheckoutIntentRequest, DshCheckoutIntentResponse, DshOperatorCheckoutIntentsResponse). WLT callback remains CONTRACT_DRAFT.",
+        "services/dsh/frontend/shared/checkout/checkout.types.ts — DshCheckoutIntent, DshCreateIntentInput, DshPaymentMethod, DshIntentState, DshFulfillmentMode, DshCheckoutState",
+        "services/dsh/frontend/shared/checkout/checkout.api.ts — createCheckoutIntent, fetchCheckoutIntent, cancelCheckoutIntent, fetchOperatorCheckoutIntents, classifyCheckoutError",
+        "services/dsh/frontend/shared/checkout/use-checkout-controller.tsx — useCheckoutController (submit/cancel/reload/reset), useOperatorCheckoutController",
+        "services/dsh/frontend/shared/checkout/index.ts — barrel export",
+        "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx — states: idle/confirming/loading/success/payment_pending/error/blocked_payment_unavailable/out_of_area",
+        "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx — operator view with DataTable (ui-kit) + loading/empty/error/success states",
+        "services/dsh/tests/catalog-contract.test.mjs — updated DSH-005 test to verify implemented operations + WLT callback CONTRACT_DRAFT"
+      ],
+      "surfaces": {
+        "app-client": "TECHNICAL_WIRING_VERIFIED — CheckoutScreen with 8 states: idle/confirming/loading/success/payment_pending/error/blocked_payment_unavailable/out_of_area",
+        "control-panel": "TECHNICAL_WIRING_VERIFIED — CheckoutActivityScreen with loading/empty/error/success + DataTable from ui-kit"
+      },
+      "wlt_boundary": {
+        "status": "COMPLIANT",
+        "note": "DSH stores wlt_payment_session_id as opaque TEXT reference only. Empty string until WLT-001 approved. DSH never executes payment, refund, settlement, or wallet mutation.",
+        "guard": "no-financial-mutation-outside-wlt: PASS"
+      },
+      "blockers": [
+        "Visual state screenshots not yet captured (REAL_EXPERIENCE_CLOSURE_v2)",
+        "WLT-001 payment-sessions endpoint not approved (wlt_payment_session_id remains empty placeholder)",
+        "Global slice:gate blocked while DSH-001 visual evidence gap remains"
+      ],
+      "required_actions": [
+        "Capture per-surface screenshots: app-client (idle/confirming/success/payment_pending/error), control-panel (loading/empty/error/success)",
+        "Close DSH-001 visual evidence gap to unblock global slice:gate"
+      ],
+      "checks": {
+        "dsh_typecheck": "PASS",
+        "dsh_tests": "PASS — 140/140",
+        "contracts_lint": "PASS",
+        "go_build": "PASS — go build ./... (services/dsh/backend): exit 0",
+        "migration_applied": "PASS — dsh-005_checkout_intent.sql applied 2026-06-23 (store_id TEXT fix applied before migration)",
+        "api_smoke": "PASS — POST /dsh/client/checkout-intents → 201 intentId=ab7dcc0a... state=pending wltPaymentSessionId=''; GET → 200 state=pending; POST /cancel → 200 state=cancelled version=2; GET /dsh/operator/checkout-intents → 200 count=1",
+        "wlt_boundary": "PASS — no-financial-mutation-outside-wlt guard PASS. wltPaymentSessionId='' (CONTRACT_ONLY placeholder — WLT-001 not approved)",
+        "shared_ownership": "PASS — dsh-frontend-shared-ownership-gate PASS",
+        "no_tamagui": "PASS — no-direct-tamagui-outside-ui-kit PASS",
+        "no_hex": "PASS — no-raw-hex-outside-ui-kit PASS",
+        "identity_client_actor": "PASS — client-local-001 seeded in identity bootstrap; dev-bypass-client also supported",
+        "generated_client": "PASS — services/dsh/clients/generated/dsh-api.ts includes DSH-005 checkout-intent operations and schemas",
+        "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE. Evidence: SLICE-GATE-20260624-003656",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "status_updated_from": "session 2026-06-23 DSH-005 implementation"
     },
 
     "DSH-006": {
       "topic_id": "DSH-006",
-      "current_status": "NOT_STARTED",
-      "reason": "DSH-005 not closed.",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "reason": "Full-stack implementation is technically wired and smoke-tested, but CLOSED is blocked by REAL_EXPERIENCE_CLOSURE_v2 visual evidence and remote evidence. Session 2026-06-24 also split shared frontend order logic into controller-core/states/view-model, regenerated the generated DSH client, and fixed app-client OrdersListScreen ui-kit prop drift.",
       "evidence_matches_claim": true,
-      "merge_safe": true,
-      "blockers": ["DSH-005 not closed"],
-      "required_actions": ["Close DSH-005 first"],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "merge_safe": false,
+      "blockers": [
+        "Visual state screenshots not yet captured for app-client, app-partner, and control-panel order surfaces",
+        "Remote/CI evidence not configured or not available; slice gate remains LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE"
+      ],
+      "required_actions": [
+        "Capture DSH-006 required surface-state screenshots",
+        "Attach remote evidence or CI evidence when available before declaring CLOSED"
+      ],
+      "checks": {
+        "go_build": "PASS",
+        "typecheck": "PASS",
+        "guard_dsh_frontend_shared_ownership": "PASS",
+        "guard_no_financial_mutation_outside_wlt": "PASS",
+        "guard_control_panel_design": "PASS",
+        "tests_140_140": "PASS",
+        "catalog_contract_test_dsh006": "PASS — 4/4",
+        "docker_rebuild": "PASS — bthwani-dsh-api-runtime healthy at 58080",
+        "migration_applied": "PASS — 2026-06-24",
+        "api_smoke": "PASS — 9/9 endpoints, 4 state transitions verified",
+        "generated_client": "PASS — services/dsh/clients/generated/dsh-api.ts includes DSH-006 order operations and schemas",
+        "foundation_gate": "PASS — FOUNDATION-GATE-20260624-004120",
+        "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE — SLICE-GATE-20260624-004124"
+      },
+      "wlt_boundary_note": "wlt_payment_ref_id in dsh_orders is TEXT NOT NULL DEFAULT '' — opaque read-only reference from WLT. DSH never executes payment mutation, wallet mutation, refund, or settlement.",
+      "files_created": [
+        "services/dsh/database/migrations/dsh-006_orders.sql",
+        "services/dsh/backend/internal/orders/orders.go",
+        "services/dsh/backend/internal/http/orders.go",
+        "services/dsh/frontend/shared/orders/orders.types.ts",
+        "services/dsh/frontend/shared/orders/orders.api.ts",
+        "services/dsh/frontend/shared/orders/use-orders-controller.ts",
+        "services/dsh/frontend/shared/orders/index.ts",
+        "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+        "services/dsh/frontend/app-partner/orders/PartnerOrdersScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx"
+      ],
+      "files_modified": [
+        "services/dsh/backend/internal/http/server.go — 9 new routes for DSH-006",
+        "services/dsh/contracts/dsh.openapi.yaml — 9 operations + 7 schemas",
+        "services/dsh/tests/catalog-contract.test.mjs — DSH-006 contract test added"
+      ],
+      "next_topic_allowed": false,
+      "status_updated_from": "session 2026-06-24 shared-brain/client-regeneration verification"
     },
 
     "DSH-007": {
       "topic_id": "DSH-007",
-      "current_status": "NOT_STARTED",
-      "reason": "DSH-006 not closed.",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_RUNTIME_API_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "reason": "Backend, OpenAPI, generated client, shared dispatch controller, required thin surfaces, migration, and local API smoke are implemented. CLOSED/100% is blocked by missing visual/manual evidence and DSH-006 not closed.",
       "evidence_matches_claim": true,
-      "merge_safe": true,
-      "blockers": ["DSH-006 not closed"],
-      "required_actions": ["Close DSH-006 first"],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "merge_safe": false,
+      "blockers": [
+        "DSH-006 not closed under REAL_EXPERIENCE_CLOSURE_v2",
+        "app-captain visual state screenshots missing",
+        "app-client tracking visual state screenshots missing",
+        "control-panel dispatch visual state screenshots missing",
+        "Manual navigation proof missing for all DSH-007 required surfaces"
+      ],
+      "required_actions": [
+        "Capture app-captain delivery lifecycle visual states",
+        "Capture app-client tracking_active and delivered states",
+        "Capture control-panel dispatch_room and live_orders states",
+        "Attach manual navigation proof",
+        "Close DSH-006 dependency under REAL_EXPERIENCE_CLOSURE_v2"
+      ],
+      "verified_runtime_summary": {
+        "migration": "PASS — pnpm run runtime:migrate applied dsh-007_dispatch.sql",
+        "api_smoke": "PASS — local DSH API 58081 completed assignment > accept > arrived_store > picked_up > arrived_customer > PoD delivered; client tracking returned arrived_customer and delivered",
+        "tests": "PASS — pnpm --dir services/dsh test 147/147",
+        "typecheck": "PASS — services/dsh build, app-client-runtime, app-captain-runtime, control-panel",
+        "backend": "PASS — go test ./... and go build ./...",
+        "guards": "PASS — contracts:lint, guard:dsh-frontend-shared-ownership, guard:no-financial-mutation-outside-wlt, guard:matrix:v3"
+      },
+      "next_topic_allowed": false,
+      "status_updated_from": "session 2026-06-24 DSH-007 technical runtime implementation"
     },
 
     "DSH-008": {
@@ -254,27 +404,37 @@
   },
 
   "current_gate_summary": {
-    "foundation_gate": "PASS — FOUNDATION-GATE-20260623-205423",
-    "slice_gate": "FAIL — blocked: DSH-001 visual screenshots still missing (same gap as before)",
+    "foundation_gate": "PASS — FOUNDATION-GATE-20260624-004120",
+    "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE — Evidence: SLICE-GATE-20260624-004124",
     "contracts_lint": "PASS",
     "guard_matrix_v3": "PASS",
     "wlt_boundary": "PASS",
     "no_old_ports": "PASS",
     "no_mock_demo": "PASS",
-    "docker_runtime": "PASS (identity profile: ACTIVE_DSH001_PREREQUISITE — container not yet running)",
-    "dsh_api_smoke": "PASS — 6 stores from real DB",
-    "typecheck_all": "PASS — app-shell, ui-kit, control-panel, DSH, app-client",
-    "dsh_tests": "124/124 PASS",
-    "guard_dsh_frontend_shared_ownership": "PASS",
+    "no_direct_tamagui": "PASS",
+    "no_raw_hex": "PASS",
+    "dsh_frontend_shared_ownership": "PASS",
+    "dsh_api_smoke": "PASS — stores from real DB, health: {status:healthy}",
+    "typecheck_all": "PASS — DSH frontend typecheck: exit 0",
+    "dsh_tests": "147/147 PASS",
+    "go_build": "PASS — go build ./... exit 0",
     "ci": "CI_NOT_CONFIGURED",
     "git_diff_check": "PASS",
-    "session_changes_2026_06_23": [
-      "DSH-003 full-stack implementation verified and wired (backend, shared brain, surfaces, manifest, capability-map, surface-map, runtime-map)",
-      "dsh-slice-003.contract.openapi.yaml merged into dsh.openapi.yaml (4 paths + 3 schemas) and deleted",
-      "contracts/master.openapi.yaml updated to remove dead reference",
-      "catalog-contract.test.mjs updated to check merged location",
-      "runtime-map.ts dsh.store.discovery state aligned with manifest (verified)",
-      "PublishedCatalogScreen TypeScript gaps fixed (permission_denied state added)"
+    "session_changes_2026_06_23_dsh004_dsh005": [
+      "DSH-004: Full-stack Cart & Serviceability — migration, Go backend (cart.go), HTTP handlers (http/cart.go), 5 routes in server.go, 7 OpenAPI schemas + 5 paths, shared brain (cart.types.ts, cart.api.ts, use-cart-controller.tsx), CartScreen (app-client), CartActivityScreen (control-panel, DataTable from ui-kit)",
+      "DSH-005: Full-stack Checkout Intent & WLT Handoff — migration (dsh_checkout_intents table), Go backend (checkout.go), HTTP handlers (http/checkout.go, actor.ID fix), 4 routes in server.go, 4 real OpenAPI operations + 4 schemas, WLT callback remains CONTRACT_DRAFT, shared brain (checkout.types.ts, checkout.api.ts, use-checkout-controller.tsx), CheckoutScreen (app-client, 8 states), CheckoutActivityScreen (control-panel, DataTable), updated catalog-contract.test.mjs (3/3 PASS)"
+    ],
+    "session_changes_2026_06_24_dsh006": [
+      "DSH-006: Full-stack Order Fulfillment & Partner Acceptance — migration dsh-006_orders.sql (dsh_orders+dsh_order_items+dsh_order_status_events+6 indexes, store_id TEXT FK, checkout_intent_id UUID FK), Go domain orders.go (CreateOrder tx, GetOrder, GetClientOrder, ListClientOrders, ListPartnerOrders, ListOperatorOrders, AcceptOrder, RejectOrder, MarkPreparing, MarkReadyForPickup with state-machine transitions + audit events), 9 HTTP handlers orders.go (client: create/list/get, partner: list/accept/reject/preparing/ready, operator: list), 9 routes in server.go, OpenAPI 9 operations + 7 schemas, shared brain now split into orders.states.ts, orders.view-model.ts, orders.controller-core.ts, orders.api.ts, use-orders-controller.ts, and index.ts. OrdersListScreen uses current @bthwani/ui-kit props. services/dsh tests 140/140 PASS. Go build/test PASS. TypeScript PASS. Runtime healthy. Status remains FIX_REQUIRED until visual and remote evidence are attached."
+    ],
+    "session_changes_2026_06_24_dsh007": [
+      "DSH-007: Dispatch & Captain Delivery Lifecycle — migration dsh-007_dispatch.sql (dsh_assignments+dsh_deliveries and extended order status constraints), Go domain dispatch.go, HTTP handlers dispatch.go, 8 routes in server.go, OpenAPI DshDispatch operations/schemas, generated dsh-api client regenerated, explicit services/dsh/clients/dispatch-client.ts, shared frontend brain under services/dsh/frontend/shared/dispatch, app-captain DshCaptainOrdersScreen, app-client OrderTrackingScreen, and control-panel DispatchAssignmentScreen. Runtime API smoke PASS on local DSH API 58081 with runtime Postgres/Identity: operator assignment, captain accept/status transitions, client tracking, PoD delivered. Status remains FIX_REQUIRED until visual/manual evidence and DSH-006 dependency closure are complete."
+    ],
+    "session_changes_2026_06_24_shared_brain_and_clients": [
+      "Catalog, checkout, and orders shared frontend logic now has controller-core/states/view-model test coverage.",
+      "OpenAPI response refs for DSH-005/006 now use existing InvalidRequest and Unauthenticated components.",
+      "services/dsh/clients/generated/dsh-api.ts regenerated from services/dsh/contracts/dsh.openapi.yaml and now includes DSH-004 cart, DSH-005 checkout intent, DSH-006 orders, and DSH-007 dispatch operations.",
+      "generated-dsh-api-client.test.mjs prevents generated-client drift for DSH-004/005/006/007."
     ]
   },
 
