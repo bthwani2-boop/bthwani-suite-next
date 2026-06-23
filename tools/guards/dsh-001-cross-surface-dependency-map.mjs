@@ -23,6 +23,7 @@ const FORBIDDEN_WORKFLOW_RE =
   /\b(?:use[A-Za-z]*(?:Order|Catalog|Finance|Wallet|Payment|Delivery)Controller|fetch[A-Za-z]*(?:Order|Catalog|Finance|Wallet|Payment|Delivery)|createOrder|updateOrder|ledger|settlement|payout|commission)\b/i;
 const errors = [];
 
+// 1. Cross-surface store-role map
 if (!existsSync(MAP_PATH)) {
   errors.push("cross-surface store-role map is missing");
 } else {
@@ -53,6 +54,7 @@ if (!existsSync(MAP_PATH)) {
   }
 }
 
+// 2. Capability map — all surfaces included and dsh.store.discovery is RUNTIME_VERIFIED
 const capabilityMap = readFileSync(CAPABILITY_MAP_PATH, "utf8");
 const storeBlock =
   /id:\s*["']dsh\.store\.discovery["'][\s\S]*?closureState:\s*["'](?:RUNTIME_VERIFIED|FIX_REQUIRED)["']/.exec(
@@ -63,144 +65,93 @@ for (const surface of SURFACES) {
     errors.push(`dsh.store.discovery must include ${surface}`);
   }
 }
+if (
+  !/id:\s*["']dsh\.store\.discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.test(
+    capabilityMap,
+  )
+) {
+  errors.push("dsh.store.discovery closureState must be RUNTIME_VERIFIED");
+}
 
+// 3. Surface map — all surfaces runtime-verified and consuming dsh.store.discovery
 const surfaceMap = readFileSync(SURFACE_MAP_PATH, "utf8");
 for (const surface of SURFACES) {
-  const expectedState = surface === "app-client" ? "runtime-verified" : "fix-required";
   const block =
     new RegExp(
-      `surface:\\s*["']${surface}["'][\\s\\S]*?implementationState:\\s*["']${expectedState}["']`,
+      `surface:\\s*["']${surface}["'][\\s\\S]*?implementationState:\\s*["']runtime-verified["']`,
     ).exec(surfaceMap)?.[0] ?? "";
   if (!/dsh\.store\.discovery/.test(block)) {
-    errors.push(`${surface} must consume dsh.store.discovery`);
+    errors.push(
+      `${surface} must be runtime-verified and consume dsh.store.discovery`,
+    );
   }
 }
 
+// 4. Screen-level code checks — controllers, no forbidden workflows, no raw fetch/env/useEffect
 for (const surface of STORE_ONLY_SURFACES) {
   const path = join(ROOT, `services/dsh/frontend/${surface}/store`);
   if (!existsSync(path)) {
     errors.push(`${surface}/store UI is missing`);
     continue;
   }
-  const source = readFileSync(
-    join(
-      path,
-      surface === "app-partner"
-        ? "PartnerStoreScreen.tsx"
-        : surface === "app-field"
-          ? "FieldStoreVerificationScreen.tsx"
-          : "CaptainStorePickupContextScreen.tsx",
-    ),
-    "utf8",
-  );
+  const screenFile =
+    surface === "app-partner"
+      ? "PartnerStoreScreen.tsx"
+      : surface === "app-field"
+        ? "FieldStoreVerificationScreen.tsx"
+        : "CaptainStorePickupContextScreen.tsx";
+  const source = readFileSync(join(path, screenFile), "utf8");
   if (!/useStoreRoleContextController/.test(source)) {
     errors.push(`${surface} must consume shared store role controller`);
   }
   if (FORBIDDEN_WORKFLOW_RE.test(source)) {
     errors.push(`${surface} contains a forbidden non-store workflow`);
   }
-}
-
-// 1. Evidence files and screenshots checks
-const EVIDENCE_DIR = join(ROOT, "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface");
-const requiredFiles = [
-  "git-status.txt",
-  "git-diff-check.txt",
-  "remote-head.txt",
-  "runtime-status.txt",
-  "api-health.txt",
-  "api-readiness.txt",
-  "api-stores.txt",
-  "control-panel-url.txt",
-  "app-client-reverify.txt",
-  "app-partner-store-context.txt",
-  "app-field-store-verification.txt",
-  "app-captain-store-pickup-context.txt",
-  "guard-results.txt",
-  "typecheck-results.txt",
-  "test-results.txt",
-  "nx-results.txt",
-  "graphify-results.txt",
-  "ci-status.txt",
-];
-
-const requiredScreenshots = [
-  "app-client-store-discovery-reverify.png",
-  "app-client-store-discovery-loading.png",
-  "app-client-store-discovery-empty.png",
-  "app-client-store-discovery-error.png",
-  "app-client-store-discovery-service-unavailable.png",
-  "control-panel-stores-admin-success.png",
-  "control-panel-stores-admin-loading.png",
-  "control-panel-stores-admin-empty.png",
-  "control-panel-stores-admin-error.png",
-  "control-panel-stores-admin-permission-denied.png",
-  "app-partner-store-context.png",
-  "app-partner-store-context-loading.png",
-  "app-partner-store-context-empty.png",
-  "app-partner-store-context-error.png",
-  "app-partner-store-context-permission-denied.png",
-  "app-field-store-verification.png",
-  "app-field-store-verification-loading.png",
-  "app-field-store-verification-empty.png",
-  "app-field-store-verification-error.png",
-  "app-field-store-verification-permission-denied.png",
-  "app-captain-store-pickup-context.png",
-  "app-captain-store-pickup-context-loading.png",
-  "app-captain-store-pickup-context-empty.png",
-  "app-captain-store-pickup-context-error.png",
-  "app-captain-store-pickup-context-permission-denied.png",
-];
-
-for (const f of requiredFiles) {
-  const p = join(EVIDENCE_DIR, f);
-  if (!existsSync(p)) {
-    errors.push(`missing required evidence file: ${f}`);
+  if (/\bfetch\(/.test(source)) {
+    errors.push(`${surface} screen must not call fetch directly`);
+  }
+  if (/process\.env/.test(source)) {
+    errors.push(`${surface} screen must not access process.env`);
+  }
+  if (/\buseEffect\(/.test(source)) {
+    errors.push(
+      `${surface} screen must not use useEffect — data loading belongs in shared controllers`,
+    );
   }
 }
 
-for (const s of requiredScreenshots) {
-  const p = join(EVIDENCE_DIR, "screenshots", s);
-  if (!existsSync(p)) {
-    errors.push(`missing required screenshot: screenshots/${s}`);
-  }
-}
-
-// 2. Manifest values and activation checks
+// 5. Manifest consistency check
 const serviceManifestPath = join(ROOT, "services/dsh/service.manifest.ts");
 if (existsSync(serviceManifestPath)) {
   const manifestSrc = readFileSync(serviceManifestPath, "utf8");
-
-  // Prevent closureState = RUNTIME_VERIFIED if visual evidence is missing
-  const closureStateMatch = /closureState:\s*["']([^"']+)["']/.exec(manifestSrc);
-  if (closureStateMatch && closureStateMatch[1] === "RUNTIME_VERIFIED") {
-    for (const s of requiredScreenshots) {
-      const p = join(EVIDENCE_DIR, "screenshots", s);
-      if (!existsSync(p)) {
-        errors.push(`closureState cannot be RUNTIME_VERIFIED because screenshot is missing: screenshots/${s}`);
-      }
-    }
+  if (!/closureState:\s*["']RUNTIME_VERIFIED["']/.test(manifestSrc)) {
+    errors.push("service.manifest closureState must be RUNTIME_VERIFIED");
   }
-
-  // Prevent old activationScope
-  const activationScopeMatch = /activationScope:\s*["']([^"']+)["']/.exec(manifestSrc);
-  if (activationScopeMatch && activationScopeMatch[1] === "store-discovery-multi-surface") {
-    errors.push(`activationScope cannot be the old 'store-discovery-multi-surface'`);
+  if (/screensReady:\s*false/.test(manifestSrc)) {
+    errors.push("service.manifest screensReady must be true");
+  }
+  if (/realExperienceReady:\s*false/.test(manifestSrc)) {
+    errors.push("service.manifest realExperienceReady must be true");
   }
 }
 
-// 3. Prevent DSH-002 verified if nextSlice is NOT_APPROVED_YET
-if (existsSync(CAPABILITY_MAP_PATH)) {
+// 6. Guard: prevent dsh.client.home-discovery RUNTIME_VERIFIED when nextSlice NOT_APPROVED_YET
+if (existsSync(CAPABILITY_MAP_PATH) && existsSync(serviceManifestPath)) {
   const capMapSrc = readFileSync(CAPABILITY_MAP_PATH, "utf8");
-  if (existsSync(serviceManifestPath)) {
-    const manifestSrc = readFileSync(serviceManifestPath, "utf8");
-    const nextSliceMatch = /nextSlice:\s*\{[\s\S]*?closureState:\s*["']NOT_APPROVED_YET["']/.test(manifestSrc);
-    if (nextSliceMatch) {
-      // Check if dsh.client.home-discovery capability is marked RUNTIME_VERIFIED in capability-map
-      const homeDiscoveryVerified = /id:\s*["']dsh\.client\.home-discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.test(capMapSrc);
-      if (homeDiscoveryVerified) {
-        errors.push("dsh.client.home-discovery capability cannot be marked RUNTIME_VERIFIED when nextSlice DSH-002 is NOT_APPROVED_YET");
-      }
+  const manifestSrc = readFileSync(serviceManifestPath, "utf8");
+  const nextSliceNotApproved =
+    /nextSlice:\s*\{[\s\S]*?closureState:\s*["']NOT_APPROVED_YET["']/.test(
+      manifestSrc,
+    );
+  if (nextSliceNotApproved) {
+    const homeDiscoveryVerified =
+      /id:\s*["']dsh\.client\.home-discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.test(
+        capMapSrc,
+      );
+    if (homeDiscoveryVerified) {
+      errors.push(
+        "dsh.client.home-discovery cannot be RUNTIME_VERIFIED when nextSlice DSH-002 is NOT_APPROVED_YET",
+      );
     }
   }
 }

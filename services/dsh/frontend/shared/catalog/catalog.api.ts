@@ -2,10 +2,12 @@ import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type {
   CatalogCategory,
+  CatalogMedia,
   CatalogProduct,
   CatalogState,
   CatalogSubmission,
   CatalogSubmissionState,
+  MediaUploadIntent,
   PartnerCatalog,
 } from "./catalog.types";
 import { fetchAdminStoreDetail } from "../store/store-admin.api";
@@ -109,8 +111,99 @@ export async function createCatalogProduct(input: {
   return response.product;
 }
 
+export async function updateCatalogCategory(
+  categoryId: string,
+  input: {
+    readonly name?: string;
+    readonly description?: string;
+    readonly sortOrder?: number;
+    readonly isActive?: boolean;
+    readonly expectedVersion: number;
+  },
+): Promise<CatalogCategory> {
+  const response = await request<{ category: CatalogCategory }>(
+    `/dsh/partner/catalog/categories/${encodeURIComponent(categoryId)}`,
+    { method: "PATCH", body: input },
+  );
+  return response.category;
+}
+
+export async function deleteCatalogCategory(
+  categoryId: string,
+  expectedVersion: number,
+): Promise<void> {
+  await request(
+    `/dsh/partner/catalog/categories/${encodeURIComponent(categoryId)}`,
+    { method: "DELETE", body: { expectedVersion } },
+  );
+}
+
+export async function updateCatalogProduct(
+  productId: string,
+  input: {
+    readonly name?: string;
+    readonly description?: string;
+    readonly sku?: string;
+    readonly priceReference?: string;
+    readonly categoryId?: string | null;
+    readonly isActive?: boolean;
+    readonly expectedVersion: number;
+  },
+): Promise<CatalogProduct> {
+  const response = await request<{ product: CatalogProduct }>(
+    `/dsh/partner/catalog/products/${encodeURIComponent(productId)}`,
+    { method: "PATCH", body: input },
+  );
+  return response.product;
+}
+
+export async function deleteCatalogProduct(
+  productId: string,
+  expectedVersion: number,
+): Promise<void> {
+  await request(
+    `/dsh/partner/catalog/products/${encodeURIComponent(productId)}`,
+    { method: "DELETE", body: { expectedVersion } },
+  );
+}
+
+export async function uploadMediaIntent(input: {
+  readonly productId: string | null;
+  readonly contentType: string;
+  readonly fileName: string;
+}): Promise<MediaUploadIntent> {
+  return request<MediaUploadIntent>("/dsh/partner/catalog/media/upload-intents", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function completeMedia(mediaId: string): Promise<CatalogMedia> {
+  const response = await request<{ media: CatalogMedia }>(
+    `/dsh/partner/catalog/media/${encodeURIComponent(mediaId)}/complete`,
+    { method: "PATCH" },
+  );
+  return response.media;
+}
+
+export async function deleteMedia(mediaId: string): Promise<void> {
+  await request(
+    `/dsh/partner/catalog/media/${encodeURIComponent(mediaId)}`,
+    { method: "DELETE" },
+  );
+}
+
 export async function submitCatalog(): Promise<void> {
   await request("/dsh/partner/catalog/submit", { method: "POST" });
+}
+
+export async function fetchCatalogAudit(
+  storeId: string,
+): Promise<readonly CatalogSubmission[]> {
+  const response = await request<{ entries: CatalogSubmission[] }>(
+    `/dsh/operator/catalog/${encodeURIComponent(storeId)}/audit`,
+  );
+  return response.entries;
 }
 
 export async function fetchCatalogSubmissions(): Promise<CatalogSubmissionState> {

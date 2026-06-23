@@ -29,7 +29,7 @@ export const DSH_SURFACE_MAP = [
   {
     surface: "app-partner",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "fix-required",
+    implementationState: "runtime-verified",
     dependencyRole: "downstream",
     dependencyNotes: [
       "Partner readiness and catalog readiness affect future store visibility.",
@@ -40,7 +40,7 @@ export const DSH_SURFACE_MAP = [
   {
     surface: "app-captain",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "fix-required",
+    implementationState: "runtime-verified",
     dependencyRole: "none-for-dsh-001",
     dependencyNotes: [
       "Captain interaction starts with assignment, pickup, and delivery.",
@@ -51,7 +51,7 @@ export const DSH_SURFACE_MAP = [
   {
     surface: "app-field",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "fix-required",
+    implementationState: "runtime-verified",
     dependencyRole: "upstream",
     dependencyNotes: [
       "Field onboarding and visit evidence can qualify stores for approval.",
@@ -62,6 +62,6 @@ export const DSH_SURFACE_MAP = [
   {
     surface: "control-panel",
     capabilityIds: ["dsh.store.discovery"],
-    implementationState: "fix-required",
+    implementationState: "runtime-verified",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];

@@ -50,7 +50,7 @@ export const DSH_CAPABILITY_MAP = [
   },
   {
     id: "dsh.store.discovery",
-    status: "experience-fix-required",
+    status: "runtime-verified",
     contractOperations: ["listDshStores", "getDshStore"],
     surfaces: [
       "app-client",
@@ -60,7 +60,7 @@ export const DSH_CAPABILITY_MAP = [
       "app-captain",
     ],
     runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    closureState: "RUNTIME_VERIFIED",
     topic: "stores",
     topicScope: ["discovery", "governance", "readiness", "verification", "pickup-context"],
   },

@@ -8,6 +8,13 @@ export type CatalogCategory = {
   readonly version: number;
 };
 
+export type MediaUploadIntent = {
+  readonly mediaId: string;
+  readonly uploadUrl: string;
+  readonly objectKey: string;
+  readonly expiresAt: string;
+};
+
 export type CatalogMedia = {
   readonly id: string;
   readonly productId: string | null;
