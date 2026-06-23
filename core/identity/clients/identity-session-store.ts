@@ -25,11 +25,48 @@ let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 const listeners = new Set<() => void>();
 
+function detectAppRole(): ActorRole {
+  if (typeof globalThis !== "undefined" && (globalThis as any).__BTHWANI_APP_NAME__) {
+    const val = (globalThis as any).__BTHWANI_APP_NAME__;
+    if (val === "partner" || val === "captain" || val === "field" || val === "operator") {
+      return val;
+    }
+  }
+
+  const stack = new Error().stack || "";
+  if (stack.includes("app-captain") || stack.includes("CaptainStorePickupContextScreen")) {
+    return "captain";
+  }
+  if (stack.includes("app-field") || stack.includes("FieldStoreVerificationScreen")) {
+    return "field";
+  }
+  if (stack.includes("app-partner") || stack.includes("PartnerStoreScreen")) {
+    return "partner";
+  }
+  if (stack.includes("control-panel") || stack.includes("StoreManagementScreen")) {
+    return "operator";
+  }
+
+  if (typeof window !== "undefined" && window.location) {
+    const href = window.location.href;
+    if (href.includes("partner")) return "partner";
+    if (href.includes("captain")) return "captain";
+    if (href.includes("field")) return "field";
+    return "operator";
+  }
+
+  return "operator";
+}
+
 export function configureIdentitySession(baseUrl: string): void {
   if (!baseUrl || client !== null) return;
   client = createIdentityClient(baseUrl);
   state = { kind: "signed_out" };
   emit();
+
+  // Temporarily bypass login automatically:
+  const role = detectAppRole();
+  devBypassLogin(role);
 }
 
 export function getIdentityAccessToken(): string | null {
@@ -97,12 +134,13 @@ function emit(): void {
 // Call this in __DEV__ builds when the identity service is not available.
 export function devBypassLogin(role: ActorRole): void {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  const surface = `app-${role}` as ActorIdentity["surfaceAccess"] extends Record<string, boolean> ? string : never;
+  const surface = (role === "operator" ? "control-panel" : `app-${role}`) as ActorIdentity["surfaceAccess"] extends Record<string, boolean> ? string : never;
+  const scope = role === "operator" ? "all" : (role === "partner" ? "own" : "assigned");
   const fakeIdentity: ActorIdentity = {
     subject: `dev-${role}-001`,
     tenantId: "tenant-dev-001",
     roles: [role],
-    permissions: [{ service: "dsh", surface: surface as ActorIdentity["permissions"][number]["surface"], action: "*", scope: "own" }],
+    permissions: [{ service: "dsh", surface: surface as ActorIdentity["permissions"][number]["surface"], action: "*", scope }],
     authState: "authenticated",
     surfaceAccess: { [surface]: true },
     serviceAccess: { dsh: true },
