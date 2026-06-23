@@ -1,3 +1,5 @@
+"use client";
+
 import { CatalogApprovalScreen } from "@dsh-cp/catalogs/CatalogApprovalScreen";
 import {
   ControlPanelNavigation,

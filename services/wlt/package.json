@@ -3,9 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "typecheck": "node -e \"console.log('wlt registered; no typecheck configured yet')\"",
-    "build": "node -e \"console.log('wlt registered; no build configured yet')\"",
-    "test": "node -e \"console.log('wlt registered; no tests configured yet')\"",
-    "lint": "node -e \"console.log('wlt registered; no lint configured yet')\""
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "pnpm run typecheck && cd backend && go build ./...",
+    "test": "cd backend && go test ./...",
+    "lint": "node ../../tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs && node ../../tools/guards/no-financial-mutation-outside-wlt.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.16.0",
+    "@types/react": "19.2.17",
+    "typescript": "~6.0.3"
   }
 }
