@@ -472,11 +472,12 @@
         "API contract tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "CONTRACTS_LINT_GATE", "GUARD_MATRIX_V3", "WLT_BOUNDARY_GATE", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_STARTED",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
       "blockers": [
-        "DSH-003 API contract not defined in dsh.openapi.yaml",
-        "DSH-003 not approved for implementation",
-        "dsh-003_catalog.sql migration not written"
+        "Visual state screenshots required per REAL_EXPERIENCE_CLOSURE_v2 standard",
+        "Global slice:gate blocked while DSH-001 remains FIX_REQUIRED"
       ],
       "donor_screens": {
         "app_client": [
@@ -530,9 +531,24 @@
       ],
       "source_evidence": [
         {
-          "type": "PLANNED_TOPIC_EVIDENCE",
-          "path": null,
-          "status": "NOT_PRESENT"
+          "type": "TECHNICAL_IMPLEMENTATION_EVIDENCE",
+          "path": "services/dsh/frontend/shared/catalog/",
+          "status": "PRESENT"
+        },
+        {
+          "type": "TECHNICAL_IMPLEMENTATION_EVIDENCE",
+          "path": "services/dsh/backend/internal/catalog/catalog.go",
+          "status": "PRESENT"
+        },
+        {
+          "type": "TECHNICAL_IMPLEMENTATION_EVIDENCE",
+          "path": "services/dsh/database/migrations/dsh-002b_storefront_catalog.sql",
+          "status": "PRESENT"
+        },
+        {
+          "type": "VISUAL_EVIDENCE",
+          "path": "services/dsh/evidence/DSH-003-catalog-fullstack/",
+          "status": "NOT_PRESENT — screenshots required"
         }
       ]
     },

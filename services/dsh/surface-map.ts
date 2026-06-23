@@ -23,19 +23,19 @@ export type DshSurfaceDefinition = {
 export const DSH_SURFACE_MAP = [
   {
     surface: "app-client",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog"],
     implementationState: "runtime-verified",
   },
   {
     surface: "app-partner",
-    capabilityIds: ["dsh.store.discovery"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog"],
     implementationState: "runtime-verified",
     dependencyRole: "downstream",
     dependencyNotes: [
-      "Partner readiness and catalog readiness affect future store visibility.",
-      "DSH-001 requires authenticated own-store operations; catalog and orders remain excluded.",
+      "Partner manages own-store catalog; catalog readiness affects store publication eligibility.",
+      "DSH-001 owns store role context; DSH-003 owns catalog CRUD and submission workflow.",
     ],
-    firstExecutableSlices: ["DSH-003", "DSH-006", "DSH-008"],
+    firstExecutableSlices: ["DSH-006", "DSH-008"],
   },
   {
     surface: "app-captain",
@@ -61,7 +61,7 @@ export const DSH_SURFACE_MAP = [
   },
   {
     surface: "control-panel",
-    capabilityIds: ["dsh.store.discovery"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog"],
     implementationState: "runtime-verified",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];

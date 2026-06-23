@@ -7,6 +7,7 @@ import {
   Card,
   Header,
   ListItem,
+  LoadingState,
   ScrollScreen,
   StateView,
   Text,
@@ -24,12 +25,27 @@ export function PartnerCatalogManagementScreen() {
   const [priceReference, setPriceReference] = React.useState("");
 
   if (identity.state.kind !== "authenticated") return null;
-  if (controller.state.kind !== "success" && controller.state.kind !== "empty") {
+
+  if (controller.state.kind === "loading") {
+    return <LoadingState title="جاري تحميل كتالوج المتجر…" />;
+  }
+
+  if (controller.state.kind === "permission_denied") {
     return (
       <StateView
-        title={controller.state.kind === "permission_denied" ? "لا تملك صلاحية إدارة الكتالوج" : "تعذر تحميل الكتالوج"}
-        description={controller.state.kind === "error" ? controller.state.message : "جاري تحميل البيانات الفعلية"}
-        {...(controller.state.kind === "error" ? { actionLabel: "إعادة المحاولة", onActionPress: controller.retry } : {})}
+        title="لا تملك صلاحية إدارة الكتالوج"
+        description="تأكد من أنك مسجّل كشريك نشط ومرتبط بمتجر."
+      />
+    );
+  }
+
+  if (controller.state.kind === "error") {
+    return (
+      <StateView
+        title="تعذر تحميل الكتالوج"
+        description={controller.state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={controller.retry}
       />
     );
   }

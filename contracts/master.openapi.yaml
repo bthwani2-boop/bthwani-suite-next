@@ -14,5 +14,4 @@ x-bthwani-contracts:
     providers: ../core/providers/contracts/providers.openapi.yaml
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
-    dsh_slice_003_contract: ../services/dsh/contracts/dsh-slice-003.contract.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml

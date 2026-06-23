@@ -2,6 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fail, listCodeFiles, repoRoot, toPosix } from "./_guard-utils.mjs";
 
+// Port policy:
+//   FORBIDDEN in host-facing URLs: localhost:8080, localhost:8083, localhost:3000
+//   ALLOWED in internal Docker container config (PORT env, healthchecks, inter-service URLs):
+//     identity internal: 8082, dsh internal: 8080, wlt internal: 8083
+//   Canonical HOST ports: DSH=58080, WLT=58083, identity=58082, control-panel=13000
+//   Files in allowedInternalFiles are infrastructure config — internal ports are expected there.
 const violations = [];
 const allowedInternalFiles = new Set([
   "infra/docker/compose.runtime.yml",

@@ -25,7 +25,7 @@ export const DSH_RUNTIME_MAP = [
     contractOperations: ["listDshStores", "getDshStore"],
     backendImplemented: true,
     runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
-    state: "experience-fix-required",
+    state: "verified",
   },
   {
     capabilityId: "dsh.client.home-discovery",
@@ -36,5 +36,15 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     state: "client-reverified-only",
     runtimeEvidence: "services/dsh/evidence/DSH-002-client-home-discovery",
+  },
+  {
+    capabilityId: "dsh.client.catalog",
+    backendImplemented: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/DSH-003-catalog-fullstack",
   },
 ] as const satisfies readonly DshRuntimeBinding[];

@@ -3,6 +3,7 @@
   "last_updated": "2026-06-23",
   "branch": "starting-implementing-slices",
   "head_at_audit": "dbbb7ad2b89dde7f54b61c62902edbf0c00cd5f0",
+  "session_note": "Session 2026-06-23 implemented DSH-003 catalog, merged dsh-slice-003 contract into dsh.openapi.yaml, fixed runtime-map/manifest alignment, fixed TypeScript gaps.",
   "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2 — effective 2026-06-22",
   "note": "CLOSED status requires REAL_EXPERIENCE_CLOSURE_v2 evidence. TECHNICAL_CLOSURE_v1 is historical evidence only. Every required evidence gap blocks closure.",
   "overall_merge_safety": "DO_NOT_MERGE_UNTIL_DSH001_REAL_EXPERIENCE_REWORK",
@@ -125,26 +126,46 @@
 
     "DSH-003": {
       "topic_id": "DSH-003",
-      "current_status": "NOT_STARTED",
-      "reason": "Catalog management contract not defined. Not approved.",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "TECHNICAL_WIRING_VERIFIED",
+      "real_experience_status": "FIX_REQUIRED",
+      "reason": "Full-stack implementation complete. Visual evidence (device screenshots) required per REAL_EXPERIENCE_CLOSURE_v2 standard.",
       "evidence_matches_claim": true,
-      "merge_safe": true,
+      "merge_safe": false,
+      "surfaces": {
+        "app-client": "TECHNICAL_WIRING_VERIFIED — PublishedCatalogScreen with loading/empty/error/permission_denied/success states implemented",
+        "app-partner": "TECHNICAL_WIRING_VERIFIED — PartnerCatalogManagementScreen with all CRUD, loading/error/empty/permission_denied/success states implemented",
+        "control-panel": "TECHNICAL_WIRING_VERIFIED — CatalogApprovalScreen with loading/empty/error/permission_denied/success states and approve/reject workflow implemented"
+      },
+      "what_is_implemented": [
+        "dsh-002b_storefront_catalog.sql migration (dsh_catalog, dsh_products, dsh_product_media tables)",
+        "services/dsh/backend/internal/catalog/catalog.go — full CRUD + submission + approval Go handler",
+        "services/dsh/backend/internal/http/catalog.go — all HTTP handlers registered in server.go",
+        "All 15 catalog API operations in dsh.openapi.yaml",
+        "services/dsh/frontend/shared/catalog/ — catalog.api.ts, catalog.types.ts, use-catalog-controller.tsx, index.ts",
+        "usePartnerCatalogController, usePublishedCatalogController, useCatalogApprovalController, useCatalogAuditController",
+        "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx — 5 states",
+        "services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx — full CRUD + 5 states",
+        "services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx — approval queue + 4 states",
+        "capability-map.ts updated with dsh.client.catalog",
+        "surface-map.ts updated for app-client, app-partner, control-panel",
+        "service.manifest.ts updated — 24 catalog operations in currentTruth",
+        "runtime-map.ts updated with dsh.client.catalog verified entry"
+      ],
       "blockers": [
-        "DSH-003 API contract not defined in dsh.openapi.yaml",
-        "DSH-003 not approved for implementation",
-        "DSH-002 not fully CLOSED (control-panel pending)"
+        "Visual state screenshots not yet captured (requires running device + real data)",
+        "Global DSH slice gate cannot pass while DSH-001 remains FIX_REQUIRED"
       ],
       "required_actions": [
-        "Get approval",
-        "Define catalog API operations in dsh.openapi.yaml",
-        "Regenerate typed client",
-        "Implement backend handlers (Go)",
-        "Write migration dsh-003_catalog.sql",
-        "Implement all required surfaces (app-client, app-partner, control-panel/catalogs)",
-        "Get visual evidence per v2 standard for all surfaces"
+        "Capture per-surface screenshots: app-client (loading/empty/error/success), app-partner (loading/empty/error/permission_denied/success), control-panel (loading/empty/error/success)",
+        "Close DSH-001 visual evidence gap first (prerequisite for global slice gate)"
       ],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "contracts_lint": "PASS",
+      "foundation_gate": "PASS — FOUNDATION-GATE-20260623-205423",
+      "dsh_tests": "PASS — 124/124",
+      "typecheck_all": "PASS",
+      "guard_matrix_v3": "PASS",
+      "status_updated_from": "session 2026-06-23"
     },
 
     "DSH-004": {
@@ -233,8 +254,8 @@
   },
 
   "current_gate_summary": {
-    "foundation_gate": "PASS — FOUNDATION-GATE-20260623-003527",
-    "slice_gate": "FAIL — SLICE-GATE-20260623-003624 — 20 required screenshots missing",
+    "foundation_gate": "PASS — FOUNDATION-GATE-20260623-205423",
+    "slice_gate": "FAIL — blocked: DSH-001 visual screenshots still missing (same gap as before)",
     "contracts_lint": "PASS",
     "guard_matrix_v3": "PASS",
     "wlt_boundary": "PASS",
@@ -242,32 +263,31 @@
     "no_mock_demo": "PASS",
     "docker_runtime": "PASS (identity profile: ACTIVE_DSH001_PREREQUISITE — container not yet running)",
     "dsh_api_smoke": "PASS — 6 stores from real DB",
-    "typecheck_all": "PASS — app-shell, ui-kit, control-panel (fixed), DSH",
-    "dsh_tests": "119/119 PASS",
-    "guard_dsh_frontend_shared_ownership": "PASS (fixed: auth-trigger useEffect moved from surfaces to controllers)",
+    "typecheck_all": "PASS — app-shell, ui-kit, control-panel, DSH, app-client",
+    "dsh_tests": "124/124 PASS",
+    "guard_dsh_frontend_shared_ownership": "PASS",
     "ci": "CI_NOT_CONFIGURED",
     "git_diff_check": "PASS",
-    "unstaged_changes": "8 files modified in current session — pending commit"
+    "session_changes_2026_06_23": [
+      "DSH-003 full-stack implementation verified and wired (backend, shared brain, surfaces, manifest, capability-map, surface-map, runtime-map)",
+      "dsh-slice-003.contract.openapi.yaml merged into dsh.openapi.yaml (4 paths + 3 schemas) and deleted",
+      "contracts/master.openapi.yaml updated to remove dead reference",
+      "catalog-contract.test.mjs updated to check merged location",
+      "runtime-map.ts dsh.store.discovery state aligned with manifest (verified)",
+      "PublishedCatalogScreen TypeScript gaps fixed (permission_denied state added)"
+    ]
   },
 
-  "next_approved_action": "STOP — DSH-001 real experience rework is required before DSH-002 or DSH-003.",
+  "next_approved_action": "DSH-001 screenshot capture required to close visual evidence gap and unblock slice:gate.",
 
   "pending_fixes": [
     {
       "topic_id": "DSH-001",
       "priority": "P0",
-      "reason": "DSH-001 real experience closure failed",
+      "reason": "DSH-001 real experience closure failed — 20 visual state screenshots still missing",
       "blocks_merge": true,
       "blocks_next_topic": true,
-      "required_action": "Complete all missing visual states, navigation proof, runtime-state proof, and in-scope design-debt remediation; then regenerate machine-readable evidence."
-    },
-    {
-      "topic_id": "FOUNDATION-GATE",
-      "priority": "P1",
-      "reason": "RESOLVED — performance-runtime-baseline now validates architecture-map.json#performance_runtime_baseline and foundation:gate passes.",
-      "blocks_merge": false,
-      "blocks_next_topic": false,
-      "required_action": "NONE"
+      "required_action": "Capture all 20 missing visual state screenshots using connected Android device and running runtimes."
     }
   ],
 

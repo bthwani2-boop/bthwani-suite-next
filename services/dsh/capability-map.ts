@@ -9,7 +9,11 @@ export const DSH_CAPABILITY_STATUS = [
 export type DshCapabilityStatus = (typeof DSH_CAPABILITY_STATUS)[number];
 
 export type DshCapability = {
-  readonly id: "dsh.system.readiness" | "dsh.store.discovery" | "dsh.client.home-discovery";
+  readonly id:
+    | "dsh.system.readiness"
+    | "dsh.store.discovery"
+    | "dsh.client.home-discovery"
+    | "dsh.client.catalog";
   readonly status: DshCapabilityStatus;
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
@@ -23,14 +27,18 @@ export type DshCapability = {
     | "FIX_REQUIRED"
     | "CLIENT_REVERIFIED_ONLY"
     | "CONTROL_PANEL_NOT_STARTED"
-    | "TOPIC_CLOSURE_NOT_APPROVED";
-  readonly topic?: "stores";
+    | "TOPIC_CLOSURE_NOT_APPROVED"
+    | "IMPLEMENTED_MULTI_SURFACE";
+  readonly topic?: "stores" | "catalog";
   readonly topicScope?: readonly (
     | "discovery"
     | "governance"
     | "readiness"
     | "verification"
     | "pickup-context"
+    | "browse"
+    | "partner-manage"
+    | "operator-govern"
   )[];
 };
 
@@ -71,5 +79,31 @@ export const DSH_CAPABILITY_MAP = [
     surfaces: ["app-client"],
     runtimeBound: true,
     closureState: "CLIENT_REVERIFIED_ONLY",
+  },
+  {
+    id: "dsh.client.catalog",
+    status: "runtime-verified",
+    contractOperations: [
+      "getPublishedDshCatalog",
+      "getPartnerDshCatalog",
+      "createPartnerCatalogCategory",
+      "updatePartnerCatalogCategory",
+      "deletePartnerCatalogCategory",
+      "createPartnerCatalogProduct",
+      "updatePartnerCatalogProduct",
+      "deletePartnerCatalogProduct",
+      "createPartnerCatalogMediaUploadIntent",
+      "completePartnerCatalogMedia",
+      "deletePartnerCatalogMedia",
+      "submitPartnerCatalog",
+      "listOperatorCatalogSubmissions",
+      "decideOperatorCatalogSubmission",
+      "listOperatorCatalogAudit",
+    ],
+    surfaces: ["app-client", "app-partner", "control-panel"],
+    runtimeBound: true,
+    closureState: "IMPLEMENTED_MULTI_SURFACE",
+    topic: "catalog",
+    topicScope: ["browse", "partner-manage", "operator-govern"],
   },
 ] as const satisfies readonly DshCapability[];

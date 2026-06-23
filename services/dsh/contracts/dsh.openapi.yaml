@@ -1,8 +1,12 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Service API
-  version: 0.4.0
-  description: Delivery and shopping hub service contract. DSH-001 includes public discovery and protected store-role governance actions.
+  version: 0.5.0
+  description: >
+    Delivery and shopping hub service contract. DSH-001 store discovery and governance,
+    DSH-002 home discovery, DSH-003 catalog management. DSH-004/005 cart serviceability
+    and checkout intent operations are CONTRACT_ONLY (x-contract-state: CONTRACT_DRAFT) —
+    runtime handlers not registered; client generation disabled for those paths.
 
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -757,6 +761,73 @@ paths:
       parameters: [{ $ref: "#/components/parameters/StoreId" }]
       responses:
         "200": { description: Catalog audit timeline. }
+
+  # ─── DSH-004 / DSH-005 CONTRACT-ONLY ──────────────────────────────────────
+  # x-contract-state: CONTRACT_DRAFT — runtime handlers NOT registered.
+  # x-bthwani-client-generation: DISABLED for these paths.
+  # Approval required before implementation.
+  # ──────────────────────────────────────────────────────────────────────────
+
+  /dsh/carts/serviceability:
+    post:
+      operationId: evaluateDshCartServiceability
+      summary: Evaluate whether a cart can be served without creating payment state.
+      tags: [DshCart]
+      x-contract-state: CONTRACT_DRAFT
+      x-bthwani-client-generation: DISABLED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartServiceabilityRequest" }
+      responses:
+        "200":
+          description: Operational serviceability decision.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CartServiceabilityResult" }
+        "501":
+          description: Contract-only until DSH-004 approval. Runtime handler not registered.
+
+  /dsh/checkout-intents:
+    post:
+      operationId: createDshCheckoutIntentDraft
+      summary: DSH-004 handoff draft only; no runtime handler is registered.
+      tags: [DshCheckout]
+      x-contract-state: CONTRACT_DRAFT
+      x-bthwani-client-generation: DISABLED
+      responses:
+        "501": { description: Contract-only until DSH-004 approval. }
+
+  /dsh/checkout-intents/{checkoutIntentId}/cancel:
+    post:
+      operationId: cancelDshCheckoutIntentDraft
+      summary: Operational cancellation contract; never performs a refund.
+      tags: [DshCheckout]
+      x-contract-state: CONTRACT_DRAFT
+      x-bthwani-client-generation: DISABLED
+      parameters:
+        - name: checkoutIntentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "501": { description: Contract-only until DSH-004 approval. }
+
+  /dsh/integrations/wlt/payment-callbacks:
+    post:
+      operationId: acceptWltPaymentCallbackEnvelope
+      summary: Future WLT-owned callback envelope; DSH consumes opaque final references only.
+      tags: [DshCheckout]
+      x-contract-state: CONTRACT_DRAFT
+      x-bthwani-client-generation: DISABLED
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WltPaymentCallbackEnvelope" }
+      responses:
+        "501": { description: Contract-only; signature and payment truth remain WLT-owned. }
 
 components:
   securitySchemes:
@@ -1525,3 +1596,42 @@ components:
         generatedAt:
           type: string
           format: date-time
+
+    # ─── DSH-004/005 CONTRACT-DRAFT schemas ───────────────────────────────────
+    CartServiceabilityRequest:
+      type: object
+      required: [storeId, serviceAreaCode, items]
+      properties:
+        storeId: { type: string }
+        serviceAreaCode: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string }
+              quantity: { type: integer, minimum: 1 }
+
+    CartServiceabilityResult:
+      type: object
+      required: [serviceable, code]
+      properties:
+        serviceable: { type: boolean }
+        code:
+          type: string
+          enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
+        reason: { type: string }
+
+    WltPaymentCallbackEnvelope:
+      type: object
+      required: [paymentSessionId, paymentStatus, checkoutIntentId, occurredAt]
+      properties:
+        paymentSessionId: { type: string }
+        paymentStatus: { type: string }
+        checkoutIntentId: { type: string }
+        occurredAt: { type: string, format: date-time }
+      description: >
+        Contains opaque WLT references only. No amount, ledger, refund, settlement,
+        or signature verification logic belongs to DSH.
