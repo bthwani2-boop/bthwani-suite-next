@@ -13,6 +13,7 @@ const storeColumns = `id, slug, display_name, status, city_code, service_area_co
 	delivery_eta_max, is_visible, hero_image_url, logo_url, category,
 	delivery_modes, is_free_delivery, distance_km, follower_count,
 	has_pro_badge, has_coupon_badge, points_multiplier, is_popular, version,
+	partner_readiness, catalog_approval_status, marketing_visibility,
 	created_at, updated_at`
 
 func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
@@ -25,6 +26,7 @@ func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 		&row.IsFreeDelivery, &row.DistanceKM, &row.FollowerCount, &row.HasProBadge,
 		&row.HasCouponBadge, &row.PointsMultiplier, &row.IsPopular,
 		&row.Version,
+		&row.PartnerReadiness, &row.CatalogApprovalStatus, &row.MarketingVisibility,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	return row, err
@@ -41,7 +43,14 @@ func ListAllStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) 
 func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListResult, error) {
 	conditions := []string{}
 	if publicOnly {
-		conditions = append(conditions, "is_visible = true")
+		conditions = append(conditions,
+			"is_visible = true",
+			"status = 'active'",
+			"serviceability_status IN ('serviceable','limited')",
+			"partner_readiness = 'ready'",
+			"catalog_approval_status = 'approved'",
+			"marketing_visibility = 'visible'",
+		)
 	}
 	params := []any{}
 	idx := 1
@@ -102,7 +111,14 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 }
 
 func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
-	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1 AND is_visible = true", storeID))
+	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+` FROM dsh_stores
+		WHERE id = $1
+		  AND is_visible = true
+		  AND status = 'active'
+		  AND serviceability_status IN ('serviceable','limited')
+		  AND partner_readiness = 'ready'
+		  AND catalog_approval_status = 'approved'
+		  AND marketing_visibility = 'visible'`, storeID))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

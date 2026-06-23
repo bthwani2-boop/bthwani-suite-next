@@ -14,7 +14,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "dev": "next dev",
+    "dev": "next dev --port 13000",
     "build": "next build"
   },
   "name": "@bthwani/control-panel",

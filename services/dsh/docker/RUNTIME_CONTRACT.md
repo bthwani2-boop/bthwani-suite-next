@@ -14,6 +14,9 @@ Reserved runtime:
 - database: dsh_runtime
 - network: bthwani-runtime
 
+`8080` is container-internal only. Host processes, browser clients, mobile
+clients, smoke scripts, and operator documentation must use `58080`.
+
 Activation is forbidden until:
 
 - DSH backend runtime exists

@@ -12,6 +12,7 @@ import {
 } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDiscoveryRoute";
+import { PublishedCatalogScreen } from "../../../../services/dsh/frontend/app-client/catalog";
 
 // ─── Inline icon helpers ───────────────────────────────────────
 const ICON_SIZE          = 22;
@@ -150,6 +151,7 @@ const NAV_ITEMS: BottomNavItem[] = [
 function App() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<string>("home");
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
   return (
     <View style={styles.root}>
@@ -183,7 +185,9 @@ function App() {
         {activeTab === "home" ? (
           <HomeDiscoveryRoute />
         ) : activeTab === "stores" ? (
-          <StoreDiscoveryRoute />
+          selectedStoreId === null
+            ? <StoreDiscoveryRoute onStorePress={setSelectedStoreId} />
+            : <PublishedCatalogScreen storeId={selectedStoreId} />
         ) : (
           <View style={styles.placeholder} />
         )}

@@ -205,6 +205,21 @@ func GovernStore(
 					return fmt.Errorf("invalid serviceability value")
 				}
 				query = `UPDATE dsh_stores SET serviceability_status = $1, version = version + 1, updated_at = now() WHERE id = $2 AND version = $3`
+			case "partner-readiness":
+				if input.Value != "pending" && input.Value != "ready" && input.Value != "blocked" {
+					return fmt.Errorf("invalid partner readiness value")
+				}
+				query = `UPDATE dsh_stores SET partner_readiness = $1, version = version + 1, updated_at = now() WHERE id = $2 AND version = $3`
+			case "catalog-approval":
+				if input.Value != "draft" && input.Value != "submitted" && input.Value != "approved" && input.Value != "rejected" {
+					return fmt.Errorf("invalid catalog approval value")
+				}
+				query = `UPDATE dsh_stores SET catalog_approval_status = $1, version = version + 1, updated_at = now() WHERE id = $2 AND version = $3`
+			case "marketing-visibility":
+				if input.Value != "visible" && input.Value != "hidden" {
+					return fmt.Errorf("invalid marketing visibility value")
+				}
+				query = `UPDATE dsh_stores SET marketing_visibility = $1, version = version + 1, updated_at = now() WHERE id = $2 AND version = $3`
 			default:
 				return fmt.Errorf("invalid governance action")
 			}
@@ -378,7 +393,10 @@ func storeState(row *DshStoreRow) map[string]any {
 	return map[string]any{
 		"status": row.Status, "isVisible": row.IsVisible,
 		"serviceability": row.ServiceabilityStatus, "deliveryModes": row.DeliveryModes,
-		"version": row.Version,
+		"partnerReadiness":      row.PartnerReadiness,
+		"catalogApprovalStatus": row.CatalogApprovalStatus,
+		"marketingVisibility":   row.MarketingVisibility,
+		"version":               row.Version,
 	}
 }
 

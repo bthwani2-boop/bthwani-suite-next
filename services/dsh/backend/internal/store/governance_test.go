@@ -17,6 +17,11 @@ func TestStoreGovernanceValidationSets(t *testing.T) {
 	if validDeliveryModes([]string{"delivery", "drone"}) {
 		t.Fatal("unknown delivery mode must be rejected")
 	}
+	for _, actionValue := range []string{"pending", "ready", "blocked"} {
+		if actionValue == "" {
+			t.Fatal("readiness values must remain explicit")
+		}
+	}
 }
 
 func TestRequestHashIsStableAndSensitiveToPayload(t *testing.T) {

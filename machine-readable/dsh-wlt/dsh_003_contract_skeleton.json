@@ -1,0 +1,16 @@
+{
+  "$schema": "dsh-003-contract-skeleton/v1",
+  "slice": "DSH-003",
+  "canonical_capability": "cart-serviceability",
+  "state": "CONTRACT_ONLY",
+  "dsh_brain": "services/dsh/frontend/shared/checkout",
+  "wlt_link_brain": "services/wlt/frontend/dsh/shared",
+  "future_dsh_004_contracts": [
+    "checkout-intent-draft",
+    "cancel-checkout-intent",
+    "wlt-payment-callback-envelope"
+  ],
+  "runtime_handlers_registered": false,
+  "database_migrations_created": false,
+  "financial_mutation_in_dsh": false
+}

@@ -325,6 +325,84 @@ function Invoke-DshSmoke {
   $governance = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $governanceHeaders -ContentType "application/json" -Body $governanceBody -TimeoutSec 10
   if ($governance.audit.actorRole -ne "operator") { throw "operator governance audit missing" }
 
+  # DSH-SLICE-001: prove the publication gate changes persisted state.
+  $hideHeaders = @{
+    Authorization = "Bearer $operatorToken"
+    "Idempotency-Key" = "smoke-hide-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "smoke-hide-$([guid]::NewGuid())"
+  }
+  $hideBody = @{
+    expectedVersion = $governance.store.version
+    action = "marketing-visibility"
+    value = "hidden"
+    reason = "runtime publication gate verification"
+  } | ConvertTo-Json
+  $hidden = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
+  try {
+    Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    throw "store remained publicly visible after marketing gate was hidden"
+  } catch {
+    if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
+  }
+  $showHeaders = @{
+    Authorization = "Bearer $operatorToken"
+    "Idempotency-Key" = "smoke-show-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "smoke-show-$([guid]::NewGuid())"
+  }
+  $showBody = @{
+    expectedVersion = $hidden.store.version
+    action = "marketing-visibility"
+    value = "visible"
+    reason = "restore runtime publication gate"
+  } | ConvertTo-Json
+  $visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
+  $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10
+  if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
+
+  # DSH-SLICE-002: partner writes real catalog rows, submits, and operator approves.
+  $partnerToken = Get-LocalActorToken "bthwani"
+  $partnerHeaders = @{
+    Authorization = "Bearer $partnerToken"
+    "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
+  }
+  $categoryBody = @{
+    name = "تصنيف فحص $([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
+    description = "runtime smoke"
+    sortOrder = 90
+    isActive = $true
+    expectedVersion = 0
+  } | ConvertTo-Json
+  $category = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/categories" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $categoryBody -TimeoutSec 10
+  $productBody = @{
+    categoryId = $category.category.id
+    name = "منتج فحص"
+    description = "runtime smoke"
+    sku = "SMOKE-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    priceReference = "wlt-price-ref-smoke"
+    isActive = $true
+    expectedVersion = 0
+  } | ConvertTo-Json
+  $product = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/products" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $productBody -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($product.product.id)) { throw "catalog product create did not persist" }
+  $submission = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/submit" -Method Post -Headers $partnerHeaders -TimeoutSec 10
+  if ($submission.revision.status -ne "submitted") { throw "catalog submission was not persisted" }
+  $storeAfterSubmit = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001" -Headers $operatorHeaders -TimeoutSec 10
+  $decisionHeaders = @{
+    Authorization = "Bearer $operatorToken"
+    "X-Correlation-ID" = "smoke-approve-$([guid]::NewGuid())"
+  }
+  $decisionBody = @{
+    decision = "approved"
+    reason = "runtime catalog approval verification"
+    expectedVersion = $storeAfterSubmit.store.version
+  } | ConvertTo-Json
+  $decision = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/decision" -Method Post -Headers $decisionHeaders -ContentType "application/json" -Body $decisionBody -TimeoutSec 10
+  if ($decision.revision.status -ne "approved") { throw "catalog approval was not persisted" }
+  $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001/catalog" -TimeoutSec 10
+  if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
+  $catalogAudit = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/audit" -Headers $operatorHeaders -TimeoutSec 10
+  if ($catalogAudit.events.Count -lt 1) { throw "catalog audit evidence is missing" }
+
   foreach ($actor in @(
     @{ username = "bthwani"; expectedRole = "partner" },
     @{ username = "field"; expectedRole = "field" },

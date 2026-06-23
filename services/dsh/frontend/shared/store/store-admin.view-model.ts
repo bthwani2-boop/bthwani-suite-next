@@ -18,6 +18,10 @@ export type DshStoreAdminTableRow = {
   readonly heroImageUrl: string | null;
   readonly hasProBadge: boolean;
   readonly hasCouponBadge: boolean;
+  readonly partnerReadiness: "pending" | "ready" | "blocked";
+  readonly catalogApprovalStatus: "draft" | "submitted" | "approved" | "rejected";
+  readonly marketingVisibility: "hidden" | "visible";
+  readonly publicationEligible: boolean;
 };
 
 export type DshStoreAdminDetail = DshStoreAdminTableRow & {
@@ -125,6 +129,10 @@ export function toAdminTableRow(dto: DshStoreSummaryDto): DshStoreAdminTableRow 
     heroImageUrl: dto.heroImageUrl ?? null,
     hasProBadge: dto.hasProBadge,
     hasCouponBadge: dto.hasCouponBadge,
+    partnerReadiness: dto.partnerReadiness,
+    catalogApprovalStatus: dto.catalogApprovalStatus,
+    marketingVisibility: dto.marketingVisibility,
+    publicationEligible: dto.publicationEligible,
   };
 }
 

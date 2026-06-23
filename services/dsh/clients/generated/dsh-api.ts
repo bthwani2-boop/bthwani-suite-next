@@ -266,6 +266,224 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/stores/{storeId}/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the approved, active catalog for a publicly eligible store. */
+        get: operations["getPublishedDshCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated partner's complete catalog. */
+        get: operations["getPartnerDshCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createPartnerCatalogCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/categories/{categoryId}": {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deletePartnerCatalogCategory"];
+        options?: never;
+        head?: never;
+        patch: operations["updatePartnerCatalogCategory"];
+        trace?: never;
+    };
+    "/dsh/partner/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createPartnerCatalogProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/products/{productId}": {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deletePartnerCatalogProduct"];
+        options?: never;
+        head?: never;
+        patch: operations["updatePartnerCatalogProduct"];
+        trace?: never;
+    };
+    "/dsh/partner/catalog/media/upload-intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createPartnerCatalogMediaUploadIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/media/{mediaId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["completePartnerCatalogMedia"];
+        trace?: never;
+    };
+    "/dsh/partner/catalog/media/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deletePartnerCatalogMedia"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitPartnerCatalog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperatorCatalogSubmissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/{storeId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["decideOperatorCatalogSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/{storeId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperatorCatalogAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -305,6 +523,13 @@ export interface components {
             hasCouponBadge: boolean;
             pointsMultiplier?: number | null;
             isPopular: boolean;
+            /** @enum {string} */
+            partnerReadiness: "pending" | "ready" | "blocked";
+            /** @enum {string} */
+            catalogApprovalStatus: "draft" | "submitted" | "approved" | "rejected";
+            /** @enum {string} */
+            marketingVisibility: "hidden" | "visible";
+            publicationEligible: boolean;
         };
         /** @enum {string} */
         DshStoreCategory: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
@@ -364,7 +589,7 @@ export interface components {
         OperatorStoreGovernanceRequest: {
             expectedVersion: number;
             /** @enum {string} */
-            action: "lifecycle" | "visibility" | "serviceability";
+            action: "lifecycle" | "visibility" | "serviceability" | "partner-readiness" | "catalog-approval" | "marketing-visibility";
             value: string;
             reason: string;
         };
@@ -392,6 +617,88 @@ export interface components {
         };
         DshStoreAuditResponse: {
             events: components["schemas"]["DshStoreAuditEvent"][];
+        };
+        DshCatalogCategory: {
+            id: string;
+            storeId: string;
+            name: string;
+            description: string;
+            sortOrder: number;
+            isActive: boolean;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCatalogMedia: {
+            id: string;
+            storeId: string;
+            productId?: string | null;
+            objectKey: string;
+            contentType: string;
+            /** @enum {string} */
+            state: "pending" | "complete" | "deleted";
+            publicUrl?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCatalogProduct: {
+            id: string;
+            storeId: string;
+            categoryId?: string | null;
+            name: string;
+            description: string;
+            sku: string;
+            /** @description Opaque WLT-owned price reference; DSH does not calculate monetary truth. */
+            priceReference: string;
+            isActive: boolean;
+            version: number;
+            media: components["schemas"]["DshCatalogMedia"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCatalogResponse: {
+            storeId?: string;
+            categories: components["schemas"]["DshCatalogCategory"][];
+            products: components["schemas"]["DshCatalogProduct"][];
+        };
+        DshCatalogCategoryInput: {
+            name: string;
+            description: string;
+            sortOrder: number;
+            isActive: boolean;
+            expectedVersion: number;
+        };
+        DshCatalogProductInput: {
+            categoryId?: string | null;
+            name: string;
+            description: string;
+            sku: string;
+            priceReference: string;
+            isActive: boolean;
+            expectedVersion: number;
+        };
+        DshMediaUploadIntentInput: {
+            productId?: string | null;
+            fileName: string;
+            contentType: string;
+        };
+        DshMediaCompleteInput: {
+            /** Format: uri */
+            publicUrl: string;
+            expectedVersion: number;
+        };
+        DshCatalogDecisionInput: {
+            /** @enum {string} */
+            decision: "approved" | "rejected";
+            reason: string;
+            expectedVersion: number;
         };
         DshHealthResponse: {
             /** @constant */
@@ -1091,6 +1398,367 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getPublishedDshCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published categories and products. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCatalogResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPartnerDshCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner catalog including draft and inactive items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCatalogResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPartnerCatalogCategory: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCatalogCategoryInput"];
+            };
+        };
+        responses: {
+            /** @description Category created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        category: components["schemas"]["DshCatalogCategory"];
+                    };
+                };
+            };
+        };
+    };
+    deletePartnerCatalogCategory: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updatePartnerCatalogCategory: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCatalogCategoryInput"];
+            };
+        };
+        responses: {
+            /** @description Category updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createPartnerCatalogProduct: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCatalogProductInput"];
+            };
+        };
+        responses: {
+            /** @description Product created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deletePartnerCatalogProduct: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updatePartnerCatalogProduct: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCatalogProductInput"];
+            };
+        };
+        responses: {
+            /** @description Product updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createPartnerCatalogMediaUploadIntent: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshMediaUploadIntentInput"];
+            };
+        };
+        responses: {
+            /** @description Object-storage upload intent created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    completePartnerCatalogMedia: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshMediaCompleteInput"];
+            };
+        };
+        responses: {
+            /** @description Media reference completed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deletePartnerCatalogMedia: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Media reference deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    submitPartnerCatalog: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog submitted for operator review. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorCatalogSubmissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog submission queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    decideOperatorCatalogSubmission: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCatalogDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Submission approved or rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listOperatorCatalogAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog audit timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
 }

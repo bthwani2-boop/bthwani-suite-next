@@ -28,12 +28,25 @@ export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) 
         { value: "temporarily_closed", label: "إغلاق مؤقت" },
         { value: "unavailable", label: "غير متاح" },
       ]
-    : action === "visibility"
+    : action === "visibility" || action === "marketing-visibility"
       ? [
           { value: "visible", label: "ظاهر للعملاء" },
           { value: "hidden", label: "مخفي عن العملاء" },
         ]
-      : [
+      : action === "partner-readiness"
+        ? [
+            { value: "pending", label: "بانتظار الجاهزية" },
+            { value: "ready", label: "جاهز" },
+            { value: "blocked", label: "محظور" },
+          ]
+        : action === "catalog-approval"
+          ? [
+              { value: "draft", label: "مسودة" },
+              { value: "submitted", label: "مرسل للمراجعة" },
+              { value: "approved", label: "معتمد" },
+              { value: "rejected", label: "مرفوض" },
+            ]
+          : [
           { value: "serviceable", label: "قابل للخدمة" },
           { value: "limited", label: "خدمة محدودة" },
           { value: "out_of_area", label: "خارج النطاق" },
@@ -66,11 +79,20 @@ export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) 
             { value: "lifecycle", label: "دورة حياة المتجر" },
             { value: "visibility", label: "الرؤية للعملاء" },
             { value: "serviceability", label: "قابلية الخدمة" },
+            { value: "partner-readiness", label: "جاهزية الشريك" },
+            { value: "catalog-approval", label: "اعتماد الكتالوج" },
+            { value: "marketing-visibility", label: "الظهور التسويقي" },
           ]}
           onChange={(next) => {
             const nextAction = next as OperatorStoreGovernanceRequest["action"];
             setAction(nextAction);
-            setValue(nextAction === "visibility" ? "visible" : nextAction === "serviceability" ? "serviceable" : "active");
+            setValue(
+              nextAction === "visibility" || nextAction === "marketing-visibility" ? "visible"
+                : nextAction === "serviceability" ? "serviceable"
+                : nextAction === "partner-readiness" ? "pending"
+                : nextAction === "catalog-approval" ? "draft"
+                : "active",
+            );
           }}
         />
         <CpSelect

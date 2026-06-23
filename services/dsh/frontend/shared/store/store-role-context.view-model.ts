@@ -167,5 +167,23 @@ function createReadinessChecks(
           ? "مرئي وقابل للخدمة"
           : "يلزم مراجعة الرؤية أو قابلية الخدمة",
     },
+    {
+      id: "partner-readiness",
+      label: "جاهزية الشريك",
+      ready: store.partnerReadiness === "ready",
+      detail: store.partnerReadiness === "ready" ? "جاهزية الشريك مكتملة" : `الحالة: ${store.partnerReadiness}`,
+    },
+    {
+      id: "catalog-approval",
+      label: "اعتماد الكتالوج",
+      ready: store.catalogApprovalStatus === "approved",
+      detail: store.catalogApprovalStatus === "approved" ? "الكتالوج معتمد" : `الحالة: ${store.catalogApprovalStatus}`,
+    },
+    {
+      id: "marketing-visibility",
+      label: "الظهور التسويقي",
+      ready: store.marketingVisibility === "visible",
+      detail: store.marketingVisibility === "visible" ? "الظهور التسويقي مفعل" : "الظهور التسويقي مخفي",
+    },
   ];
 }

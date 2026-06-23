@@ -14,6 +14,9 @@ Reserved runtime:
 - database: wlt_runtime
 - network: bthwani-runtime
 
+`8083` is container-internal only. Host processes, browser clients, mobile
+clients, smoke scripts, and operator documentation must use `58083`.
+
 WLT owns:
 
 - wallet

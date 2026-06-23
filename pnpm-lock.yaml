@@ -270,7 +270,11 @@ importers:
 
   contracts: {}
 
-  core/identity: {}
+  core/identity:
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
 
   services/amn: {}
 

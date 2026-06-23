@@ -13,30 +13,33 @@ func TestRowToSummary(t *testing.T) {
 	logo := "http://localhost:59000/dsh-media/logo.png"
 
 	row := DshStoreRow{
-		ID:                   "store-001",
-		Slug:                 "test-store",
-		DisplayName:          "Test Store",
-		Status:               StatusActive,
-		CityCode:             "sana",
-		ServiceAreaCode:      "haddah",
-		ServiceabilityStatus: ServiceabilityServiceable,
-		RatingAverage:        &rating,
-		RatingCount:          200,
-		DeliveryEtaMin:       &etaMin,
-		DeliveryEtaMax:       &etaMax,
-		IsVisible:            true,
-		HeroImageURL:         &hero,
-		LogoURL:              &logo,
-		Category:             CategoryGrocery,
-		DeliveryModes:        []string{"delivery", "pickup"},
-		IsFreeDelivery:       true,
-		DistanceKM:           ptrFloat(2.1),
-		FollowerCount:        3100,
-		HasProBadge:          true,
-		PointsMultiplier:     ptrInt(2),
-		IsPopular:            true,
-		CreatedAt:            time.Date(2026, 6, 21, 10, 0, 0, 0, time.UTC),
-		UpdatedAt:            time.Date(2026, 6, 21, 11, 0, 0, 0, time.UTC),
+		ID:                    "store-001",
+		Slug:                  "test-store",
+		DisplayName:           "Test Store",
+		Status:                StatusActive,
+		CityCode:              "sana",
+		ServiceAreaCode:       "haddah",
+		ServiceabilityStatus:  ServiceabilityServiceable,
+		RatingAverage:         &rating,
+		RatingCount:           200,
+		DeliveryEtaMin:        &etaMin,
+		DeliveryEtaMax:        &etaMax,
+		IsVisible:             true,
+		HeroImageURL:          &hero,
+		LogoURL:               &logo,
+		Category:              CategoryGrocery,
+		DeliveryModes:         []string{"delivery", "pickup"},
+		IsFreeDelivery:        true,
+		DistanceKM:            ptrFloat(2.1),
+		FollowerCount:         3100,
+		HasProBadge:           true,
+		PointsMultiplier:      ptrInt(2),
+		IsPopular:             true,
+		PartnerReadiness:      "ready",
+		CatalogApprovalStatus: "approved",
+		MarketingVisibility:   "visible",
+		CreatedAt:             time.Date(2026, 6, 21, 10, 0, 0, 0, time.UTC),
+		UpdatedAt:             time.Date(2026, 6, 21, 11, 0, 0, 0, time.UTC),
 	}
 
 	summary := RowToSummary(row)
@@ -55,6 +58,25 @@ func TestRowToSummary(t *testing.T) {
 	}
 	if !summary.IsFreeDelivery || summary.FollowerCount != 3100 || !summary.HasProBadge {
 		t.Errorf("expected API-backed premium metadata, got %+v", summary)
+	}
+	if !summary.PublicationEligible {
+		t.Fatal("expected store with all publication gates to be eligible")
+	}
+}
+
+func TestPublicationEligibilityRequiresAllGates(t *testing.T) {
+	row := DshStoreRow{
+		Status: StatusActive, IsVisible: true,
+		ServiceabilityStatus: ServiceabilityServiceable,
+		PartnerReadiness:     "ready", CatalogApprovalStatus: "approved",
+		MarketingVisibility: "visible",
+	}
+	if !IsPublicationEligible(row) {
+		t.Fatal("all gates should publish the store")
+	}
+	row.CatalogApprovalStatus = "submitted"
+	if IsPublicationEligible(row) {
+		t.Fatal("unapproved catalog must hide the store")
 	}
 }
 

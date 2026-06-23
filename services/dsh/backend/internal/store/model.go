@@ -29,32 +29,35 @@ const (
 )
 
 type DshStoreRow struct {
-	ID                   string
-	Slug                 string
-	DisplayName          string
-	Status               DshStoreStatus
-	CityCode             string
-	ServiceAreaCode      string
-	ServiceabilityStatus DshServiceabilityStatus
-	RatingAverage        *float64
-	RatingCount          int
-	DeliveryEtaMin       *int
-	DeliveryEtaMax       *int
-	IsVisible            bool
-	HeroImageURL         *string
-	LogoURL              *string
-	Category             DshStoreCategory
-	DeliveryModes        []string
-	IsFreeDelivery       bool
-	DistanceKM           *float64
-	FollowerCount        int
-	HasProBadge          bool
-	HasCouponBadge       bool
-	PointsMultiplier     *int
-	IsPopular            bool
-	Version              int
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                    string
+	Slug                  string
+	DisplayName           string
+	Status                DshStoreStatus
+	CityCode              string
+	ServiceAreaCode       string
+	ServiceabilityStatus  DshServiceabilityStatus
+	RatingAverage         *float64
+	RatingCount           int
+	DeliveryEtaMin        *int
+	DeliveryEtaMax        *int
+	IsVisible             bool
+	HeroImageURL          *string
+	LogoURL               *string
+	Category              DshStoreCategory
+	DeliveryModes         []string
+	IsFreeDelivery        bool
+	DistanceKM            *float64
+	FollowerCount         int
+	HasProBadge           bool
+	HasCouponBadge        bool
+	PointsMultiplier      *int
+	IsPopular             bool
+	PartnerReadiness      string
+	CatalogApprovalStatus string
+	MarketingVisibility   string
+	Version               int
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 type ServiceabilityInfo struct {
@@ -62,30 +65,34 @@ type ServiceabilityInfo struct {
 }
 
 type DshStoreSummary struct {
-	ID               string             `json:"id"`
-	Slug             string             `json:"slug"`
-	DisplayName      string             `json:"displayName"`
-	Status           DshStoreStatus     `json:"status"`
-	CityCode         string             `json:"cityCode"`
-	ServiceAreaCode  string             `json:"serviceAreaCode"`
-	Serviceability   ServiceabilityInfo `json:"serviceability"`
-	RatingAverage    *float64           `json:"ratingAverage"`
-	RatingCount      int                `json:"ratingCount"`
-	DeliveryEtaMin   *int               `json:"deliveryEtaMin"`
-	DeliveryEtaMax   *int               `json:"deliveryEtaMax"`
-	IsVisible        bool               `json:"isVisible"`
-	HeroImageURL     *string            `json:"heroImageUrl"`
-	LogoURL          *string            `json:"logoUrl"`
-	Category         DshStoreCategory   `json:"category"`
-	DeliveryModes    []string           `json:"deliveryModes"`
-	IsFreeDelivery   bool               `json:"isFreeDelivery"`
-	DistanceKM       *float64           `json:"distanceKm"`
-	FollowerCount    int                `json:"followerCount"`
-	HasProBadge      bool               `json:"hasProBadge"`
-	HasCouponBadge   bool               `json:"hasCouponBadge"`
-	PointsMultiplier *int               `json:"pointsMultiplier"`
-	IsPopular        bool               `json:"isPopular"`
-	Version          int                `json:"version"`
+	ID                    string             `json:"id"`
+	Slug                  string             `json:"slug"`
+	DisplayName           string             `json:"displayName"`
+	Status                DshStoreStatus     `json:"status"`
+	CityCode              string             `json:"cityCode"`
+	ServiceAreaCode       string             `json:"serviceAreaCode"`
+	Serviceability        ServiceabilityInfo `json:"serviceability"`
+	RatingAverage         *float64           `json:"ratingAverage"`
+	RatingCount           int                `json:"ratingCount"`
+	DeliveryEtaMin        *int               `json:"deliveryEtaMin"`
+	DeliveryEtaMax        *int               `json:"deliveryEtaMax"`
+	IsVisible             bool               `json:"isVisible"`
+	HeroImageURL          *string            `json:"heroImageUrl"`
+	LogoURL               *string            `json:"logoUrl"`
+	Category              DshStoreCategory   `json:"category"`
+	DeliveryModes         []string           `json:"deliveryModes"`
+	IsFreeDelivery        bool               `json:"isFreeDelivery"`
+	DistanceKM            *float64           `json:"distanceKm"`
+	FollowerCount         int                `json:"followerCount"`
+	HasProBadge           bool               `json:"hasProBadge"`
+	HasCouponBadge        bool               `json:"hasCouponBadge"`
+	PointsMultiplier      *int               `json:"pointsMultiplier"`
+	IsPopular             bool               `json:"isPopular"`
+	PartnerReadiness      string             `json:"partnerReadiness"`
+	CatalogApprovalStatus string             `json:"catalogApprovalStatus"`
+	MarketingVisibility   string             `json:"marketingVisibility"`
+	PublicationEligible   bool               `json:"publicationEligible"`
+	Version               int                `json:"version"`
 }
 
 type DshStoreDetail struct {
@@ -126,9 +133,22 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		IsFreeDelivery: row.IsFreeDelivery, DistanceKM: row.DistanceKM,
 		FollowerCount: row.FollowerCount, HasProBadge: row.HasProBadge,
 		HasCouponBadge: row.HasCouponBadge, PointsMultiplier: row.PointsMultiplier,
-		IsPopular: row.IsPopular,
-		Version:   row.Version,
+		IsPopular:             row.IsPopular,
+		PartnerReadiness:      row.PartnerReadiness,
+		CatalogApprovalStatus: row.CatalogApprovalStatus,
+		MarketingVisibility:   row.MarketingVisibility,
+		PublicationEligible:   IsPublicationEligible(row),
+		Version:               row.Version,
 	}
+}
+
+func IsPublicationEligible(row DshStoreRow) bool {
+	return row.Status == StatusActive &&
+		row.IsVisible &&
+		(row.ServiceabilityStatus == ServiceabilityServiceable || row.ServiceabilityStatus == ServiceabilityLimited) &&
+		row.PartnerReadiness == "ready" &&
+		row.CatalogApprovalStatus == "approved" &&
+		row.MarketingVisibility == "visible"
 }
 
 func RowToDetail(row DshStoreRow) DshStoreDetail {

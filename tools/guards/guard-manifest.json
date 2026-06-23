@@ -40,7 +40,10 @@
       "performance-runtime-baseline",
       "docker-runtime-profiles",
       "dsh-frontend-shared-ownership",
-      "dsh-001-cross-surface-dependency-map"
+      "wlt-dsh-frontend-shared-ownership",
+      "canonical-host-ports",
+      "dsh-001-cross-surface-dependency-map",
+      "dsh-002-catalog-ownership"
     ]
   },
   "guards": [
@@ -160,9 +163,24 @@
       "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     },
     {
+      "id": "wlt-dsh-frontend-shared-ownership",
+      "path": "tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "canonical-host-ports",
+      "path": "tools/guards/canonical-host-ports.mjs",
+      "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
       "id": "dsh-001-cross-surface-dependency-map",
       "path": "tools/guards/dsh-001-cross-surface-dependency-map.mjs",
       "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "dsh-002-catalog-ownership",
+      "path": "tools/guards/dsh-002-catalog-ownership-gate.mjs",
+      "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
     }
   ]
 }
