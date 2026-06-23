@@ -1,6 +1,9 @@
 import type { DshStoreSummaryDto, DshStoreDetailDto } from "./store-discovery.types";
 import { resolveDshImageSource } from "../_kernel/dsh-media-url";
-import { formatServiceArea } from "./store-discovery.formatters";
+import {
+  formatDeliveryMode,
+  formatServiceArea,
+} from "./store-discovery.formatters";
 
 type StoreTone = "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
 type PlaceholderTone = "brandAction" | "success" | "info" | "warning" | "default";
@@ -66,12 +69,6 @@ const CATEGORY_TONE: Record<StoreTone, PlaceholderTone> = {
   default: "default",
 };
 
-const DELIVERY_MODE_LABELS = {
-  delivery: "توصيل",
-  pickup: "استلام",
-  express: "⚡ ثواني",
-} as const;
-
 function formatFollowerCount(count: number): string | null {
   if (count <= 0) return null;
   if (count >= 1000) {
@@ -127,7 +124,7 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     isFreeDelivery: dto.isFreeDelivery,
     placeholderEmoji: CATEGORY_EMOJI[category] ?? CATEGORY_EMOJI.default,
     placeholderTone: CATEGORY_TONE[category] ?? CATEGORY_TONE.default,
-    deliveryModeLabels: dto.deliveryModes.map((mode) => DELIVERY_MODE_LABELS[mode]),
+    deliveryModeLabels: dto.deliveryModes.map(formatDeliveryMode),
     distanceLabel: dto.distanceKm == null ? null : `${dto.distanceKm.toFixed(1)} كم`,
     distanceKm: dto.distanceKm ?? null,
     followerCountLabel: formatFollowerCount(dto.followerCount),

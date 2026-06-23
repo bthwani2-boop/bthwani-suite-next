@@ -7,7 +7,10 @@ import {
   CpTableHeaderCell,
   CpTableCell,
 } from "@bthwani/app-shell";
-import type { DshStoreAdminTableRow } from "../../../shared/store";
+import {
+  formatDeliveryModes,
+  type DshStoreAdminTableRow,
+} from "../../../shared/store";
 
 type Props = {
   readonly rows: readonly DshStoreAdminTableRow[];
@@ -58,7 +61,7 @@ export function StoreAdminTable({ rows, selectedStoreId, onSelectStore }: Props)
               {row.cityCode} / {row.serviceAreaCode}
             </CpTableCell>
             <CpTableCell>
-              {row.deliveryModes.join("، ")}
+              {formatDeliveryModes(row.deliveryModes)}
             </CpTableCell>
             <CpTableCell>
               {row.hasProBadge ? "✓ Pro" : ""}

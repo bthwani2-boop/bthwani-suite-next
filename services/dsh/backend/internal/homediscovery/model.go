@@ -33,6 +33,30 @@ type HomeCategory struct {
 	SortOrder int    `json:"sortOrder"`
 }
 
+type AdminContentItem struct {
+	ID           string `json:"id"`
+	Kind         string `json:"kind"`
+	Title        string `json:"title"`
+	Subtitle     string `json:"subtitle,omitempty"`
+	BadgeLabel   string `json:"badgeLabel,omitempty"`
+	ImageURL     string `json:"imageUrl,omitempty"`
+	ActionType   string `json:"actionType"`
+	ActionTarget string `json:"actionTarget"`
+	SortOrder    int    `json:"sortOrder"`
+	IsActive     bool   `json:"isActive"`
+}
+
+type AdminContentInput struct {
+	Title        string `json:"title"`
+	Subtitle     string `json:"subtitle"`
+	BadgeLabel   string `json:"badgeLabel"`
+	ImageURL     string `json:"imageUrl"`
+	ActionType   string `json:"actionType"`
+	ActionTarget string `json:"actionTarget"`
+	SortOrder    int    `json:"sortOrder"`
+	IsActive     bool   `json:"isActive"`
+}
+
 type HomeDiscoveryQuery struct {
 	CityCode        string
 	ServiceAreaCode string

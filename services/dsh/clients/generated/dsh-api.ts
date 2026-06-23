@@ -72,6 +72,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/home-discovery/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+            };
+            cookie?: never;
+        };
+        /** List all home discovery content including inactive items. */
+        get: operations["listOperatorHomeDiscoveryContent"];
+        put?: never;
+        /** Create a banner, promotion, or category. */
+        post: operations["createOperatorHomeDiscoveryContent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/home-discovery/{kind}/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a home discovery content item. */
+        delete: operations["deleteOperatorHomeDiscoveryContent"];
+        options?: never;
+        head?: never;
+        /** Update a home discovery content item. */
+        patch: operations["updateOperatorHomeDiscoveryContent"];
+        trace?: never;
+    };
     "/dsh/stores/{storeId}": {
         parameters: {
             query?: never;
@@ -404,6 +445,37 @@ export interface components {
             iconUrl?: string;
             sortOrder: number;
         };
+        DshHomeAdminContentItem: {
+            id: string;
+            /** @enum {string} */
+            kind: "banners" | "promos" | "categories";
+            title: string;
+            subtitle?: string;
+            badgeLabel?: string;
+            imageUrl?: string;
+            /** @enum {string} */
+            actionType: "store" | "category" | "external" | "none";
+            actionTarget: string;
+            sortOrder: number;
+            isActive: boolean;
+        };
+        DshHomeAdminContentInput: {
+            title: string;
+            subtitle: string;
+            badgeLabel: string;
+            imageUrl: string;
+            /** @enum {string} */
+            actionType: "store" | "category" | "external" | "none";
+            actionTarget: string;
+            sortOrder: number;
+            isActive: boolean;
+        };
+        DshHomeAdminListResponse: {
+            items: components["schemas"]["DshHomeAdminContentItem"][];
+        };
+        DshHomeAdminItemResponse: {
+            item: components["schemas"]["DshHomeAdminContentItem"];
+        };
         DshHomeDiscoveryResponse: {
             banners: components["schemas"]["DshHomeBanner"][];
             promos: components["schemas"]["DshHomePromo"][];
@@ -472,6 +544,7 @@ export interface components {
         };
     };
     parameters: {
+        HomeContentKind: "banners" | "promos" | "categories";
         StoreId: string;
         IdempotencyKey: string;
         CorrelationId: string;
@@ -623,6 +696,120 @@ export interface operations {
                     "application/json": components["schemas"]["DshErrorResponse"];
                 };
             };
+        };
+    };
+    listOperatorHomeDiscoveryContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Administrative home discovery content. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeAdminListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createOperatorHomeDiscoveryContent: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshHomeAdminContentInput"];
+            };
+        };
+        responses: {
+            /** @description Content created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeAdminItemResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteOperatorHomeDiscoveryContent: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Content deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateOperatorHomeDiscoveryContent: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshHomeAdminContentInput"];
+            };
+        };
+        responses: {
+            /** @description Content updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeAdminItemResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getDshStore: {

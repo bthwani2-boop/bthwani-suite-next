@@ -54,10 +54,10 @@
       "evidence_quality_note": {
         "standard": "REAL_EXPERIENCE_CLOSURE_v2",
         "gap": "VISUAL_STATE_SCREENSHOTS_INCOMPLETE",
-        "detail": "All backend handlers, OpenAPI contracts, typed client, shared brain, auth/idempotency/audit, and all 5 surface UIs with full state handling are implemented. The sole remaining gap is 20 missing per-surface visual state screenshots. Mobile screenshots require a running Android/iOS emulator; identity container must be running for authenticated-state capture.",
-        "what_is_verified": "Full backend implementation (partner settings, field verification, captain readiness, operator governance, audit). Auth via identity service with role-based access. Idempotency-Key + X-Correlation-ID on all mutations. Version conflict handling. All 5 surfaces with loading/error/empty/permission_denied + action UI. All guards PASS except dsh-001-cross-surface-dependency-map (screenshot check). 119/119 tests PASS.",
-        "v2_gap": "20 required screenshots missing: 4 per surface × 5 surfaces. Mobile app screenshots require emulator; control-panel requires dev server + headless browser + running identity service.",
-        "action_required": "SCREENSHOT_CAPTURE_REQUIRED — run mobile apps in emulator and capture all required states",
+        "detail": "All backend handlers, OpenAPI contracts, typed client, shared brain, auth/idempotency/audit, and all 5 surface UIs with full state handling are implemented. Live identity and DSH runtime proof passed for partner, field, captain, and operator actions. The remaining gap is 15 missing visual-state screenshots.",
+        "what_is_verified": "Full backend implementation (partner settings, field verification, captain readiness, operator governance, audit). Real identity login and role-scoped store contexts passed. Partner, field, and captain mutations produced audit events. Idempotency-Key + X-Correlation-ID are required on all mutations. Version conflict handling is implemented. 120/120 DSH tests PASS.",
+        "v2_gap": "15 required screenshots missing: app-client loading/empty/error plus loading/empty/error/permission_denied for partner, field, and captain.",
+        "action_required": "SCREENSHOT_CAPTURE_REQUIRED — capture the 15 exact missing states and rerun slice:gate",
         "escalation": "BLOCKING — screenshots are the only remaining evidence gap."
       },
       "surfaces": {
@@ -72,14 +72,14 @@
         "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/"
       ],
       "blockers": [
-        "20 required per-surface visual state screenshots missing (4 states × 5 surfaces)",
-        "Mobile emulator not running — cannot screenshot app-client, app-partner, app-field, app-captain",
-        "Identity service container not running — cannot exercise authenticated flows for screenshot capture"
+        "15 required visual-state screenshots missing",
+        "dsh-001-cross-surface-dependency-map fails on the exact missing screenshot filenames",
+        "slice:gate fails until visual-state coverage reaches 25/25"
       ],
       "required_actions": [
-        "Start identity service container (bthwani-identity-api-runtime)",
-        "Run mobile apps in Android/iOS emulator with ADB access",
-        "Capture all 20 missing screenshots: loading, empty, error, and permission_denied (or service_unavailable for app-client) per surface",
+        "Keep identity and DSH runtimes healthy",
+        "Use the connected Android device and control-panel runtime",
+        "Capture all 15 missing screenshots named by guard:dsh-001-cross-surface-dependency-map",
         "All implementation is complete — only screenshot capture remains"
       ],
       "design_debt": "IMPLEMENTATION_REMEDIATED_NEEDS_VISUAL_EVIDENCE — DSH-001 layout/typography compositions moved to shared/app-shell; quality is not accepted until recaptured.",
@@ -96,31 +96,30 @@
 
     "DSH-002": {
       "topic_id": "DSH-002",
-      "current_status": "PARTIAL",
-      "reason": "app-client Home Discovery RUNTIME_VERIFIED. control-panel Home Discovery Admin NOT_STARTED.",
+      "current_status": "FIX_REQUIRED",
+      "technical_status": "IMPLEMENTED_MULTI_SURFACE_RUNTIME_VERIFIED",
+      "reason": "app-client and control-panel Home Discovery are implemented and runtime-verified; global slice closure remains blocked while DSH-001 slice gate is failing.",
       "evidence_matches_claim": true,
       "merge_safe": true,
       "surfaces": {
         "app-client": "RUNTIME_VERIFIED — HomeDiscoveryScreen and all home sections",
-        "control-panel": "NOT_STARTED — home-discovery/banners, home-discovery/promos, home-discovery/categories screens not built"
+        "control-panel": "RUNTIME_VERIFIED — banners/promos/categories CRUD, audit, routes, and 12/12 required state screenshots present"
       },
-      "exact_paths": ["services/dsh/evidence/DSH-002-client-home-discovery/"],
+      "exact_paths": ["services/dsh/evidence/DSH-002-client-home-discovery/", "services/dsh/evidence/DSH-002-home-discovery-fullstack/"],
       "blockers": [
-        "control-panel Home Discovery Admin screens not started",
-        "DSH-002 control-panel requires explicit approval before implementation"
+        "Global DSH slice gate remains unavailable as closure proof while DSH-001 is FIX_REQUIRED"
       ],
       "required_actions": [
-        "Get approval for DSH-002 control-panel",
-        "Implement home discovery admin screens in services/dsh/frontend/control-panel/marketing/",
-        "Add tests for home discovery admin controllers",
-        "Get visual evidence for control-panel marketing section (all states per v2 standard)"
+        "Close DSH-001 visual-state gap",
+        "Rerun global slice:gate",
+        "Promote DSH-002 only after the required global gate passes"
       ],
       "verification_commands": [
         "pnpm run foundation:gate",
         "Invoke-RestMethod 'http://localhost:58080/dsh/home-discovery'",
         "pnpm --dir services/dsh test"
       ],
-      "next_topic_allowed": "DSH-002 control-panel after approval. OR DSH-003 (requires separate approval).",
+      "next_topic_allowed": false,
       "status_updated_from": "git commit 06e64cf"
     },
 

@@ -2,14 +2,14 @@
 
 **Slice:** DSH-001_STORES_TOPIC_FIX_REQUIRED  
 **Branch:** starting-implementing-slices  
-**Date:** 2026-06-22  
+**Date:** 2026-06-23  
 **Surfaces:** app-client, control-panel, app-partner, app-field, app-captain
 
 ---
 
 ## Implemented Surfaces
 
-DSH-001 has technical GET wiring for all five surfaces, but it is not closed. Business logic resides in `services/dsh/frontend/shared`; surfaces remain UI-only. Partner, field, captain, and control-panel still lack approved store-domain mutation/auth/audit contracts and therefore remain `FIX_REQUIRED`.
+DSH-001 has full bounded store-role implementation for all five surfaces, but it is not closed. Business logic resides in `services/dsh/frontend/shared`; surfaces remain UI-only. Authenticated partner, field, captain, and operator actions were exercised against the live identity and DSH runtimes with scoped stores and persisted audit events.
 
 1. **app-client**: Client store discovery, feeds, and details.
 2. **control-panel**: Store admin governance dashboard.
@@ -67,22 +67,22 @@ The role surfaces also require real authenticated actions:
 - captain: assigned pickup-point readiness report;
 - control-panel: activation, suspension, visibility, and serviceability governance.
 
-These actions are not implemented in the current API contract. Do not report this evidence pack as closure.
+These actions are implemented and runtime-verified. Do not report this evidence pack as closure until the visual-state gate has all required screenshots.
 
 ---
 
 ## Guards Passed
 
-The following results are historical and must be rerun after the current rework:
+The following results were rerun on 2026-06-23:
 - `guard:dsh-frontend-shared-ownership` — zero raw HTML warnings (CpPrimitives via app-shell)
-- `guard:dsh-001-cross-surface-dependency-map`
+- `guard:dsh-001-cross-surface-dependency-map` — FAIL: 15 required visual-state screenshots missing
 - `guard:no-financial-mutation-outside-wlt`
 - `guard:app-shell-control-panel`
 - `guard:control-panel-design`
 - `guard:matrix:v3`
 - `guard:wlt-dsh-frontend-shared-ownership` — NEW: WLT-for-DSH boundary verified
-- `foundation:gate`
-- `slice:gate`
+- `foundation:gate` — PASS (`FOUNDATION-GATE-20260623-041826`)
+- `slice:gate` — FAIL (`SLICE-GATE-20260623-043525`) because visual-state coverage is incomplete
 
 ## CI Status
 
@@ -118,7 +118,19 @@ or financial mutation is active.
 
 ## Test Verification
 
-All unit/integration tests are passing:
-- `pnpm --dir services/dsh test` → 118 pass / 0 fail
-  Includes: role-context controller core, direct fetch bypass, and status mapping.
+All targeted unit/integration tests are passing:
+- `pnpm --dir services/dsh test` → 120 pass / 0 fail
+  Includes expected-role enforcement, role-context controller core, and status mapping.
 - `pnpm --dir services/dsh typecheck` → 0 errors
+- `pnpm --dir core/identity test` → PASS
+- `pnpm --dir core/identity typecheck` → 0 errors
+
+## Runtime Action Proof
+
+- partner `own` store `store-1001` → `partner.settings.update`
+- field `assigned` store `store-1002` → `field.verification.submit`
+- captain `assigned` store `store-1005` → `captain.pickup-readiness.report`
+- identity and DSH runtime smoke → PASS
+- DSH API returned 6 real database stores
+
+The attached success captures show the current partner, field, captain, and control-panel success experiences. They do not replace the missing loading/empty/error/permission state captures required by the gate.

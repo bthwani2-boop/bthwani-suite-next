@@ -22,7 +22,7 @@ import {
 
 export function FieldStoreVerificationScreen() {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController(identity.state.kind);
+  const controller = useStoreRoleContextController("field", identity.state.kind);
   const [notes, setNotes] = React.useState("");
   const state = controller.state;
 
@@ -127,8 +127,15 @@ export function FieldStoreVerificationScreen() {
               })}
             />
           </View>
+          {controller.actionState.kind === "submitting" && (
+            <Text tone="secondary">جاري رفع نتيجة التحقق وربطها بالمهمة…</Text>
+          )}
           {controller.actionState.kind === "success" && (
-            <Text tone="success">تم تسجيل نتيجة التحقق وربطها بهويتك.</Text>
+            <Text tone="success">
+              {controller.actionState.replayed
+                ? "تم تأكيد نتيجة التحقق السابقة دون إنشاء سجل مكرر."
+                : "تم تسجيل نتيجة التحقق وربطها بهويتك."}
+            </Text>
           )}
           {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") && (
             <Text tone="danger">{controller.actionState.message}</Text>

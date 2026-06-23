@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 const {
+  enforceExpectedStoreRole,
   loadStoreRoleContext,
   toStoreRoleExperience,
   toStoreRoleStatePresentation,
@@ -60,6 +61,10 @@ describe("store role context controller core", () => {
     const experience = toStoreRoleExperience(success);
     assert.equal(experience.captain.pickupEnabled, true);
     assert.equal(experience.partner.checks.every((check) => check.ready), true);
+    assert.equal(
+      experience.partner.serviceModesLabel,
+      "توصيل المتجر (الشريك)، استلم بنفسك",
+    );
   });
 
   test("preserves empty, permission, unavailable, and error states", async () => {
@@ -73,6 +78,28 @@ describe("store role context controller core", () => {
       await loadStoreRoleContext(async () => expected, (state) => published.push(state));
       assert.deepEqual(published.at(-1), expected);
     }
+  });
+
+  test("rejects a successful context issued for another role", async () => {
+    const success = {
+      kind: "success",
+      actorRole: "partner",
+      scope: "own",
+      store: detail,
+      latestAction: null,
+    };
+    assert.deepEqual(enforceExpectedStoreRole(success, "field"), {
+      kind: "permission_denied",
+      statusCode: 403,
+    });
+    assert.equal(enforceExpectedStoreRole(success, "partner"), success);
+
+    const published = [];
+    await loadStoreRoleContext(async () => success, (state) => published.push(state), "captain");
+    assert.deepEqual(published, [
+      { kind: "loading" },
+      { kind: "permission_denied", statusCode: 403 },
+    ]);
   });
 
   test("derives surface-neutral state presentation and retry policy", () => {

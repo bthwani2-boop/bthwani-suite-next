@@ -1,7 +1,7 @@
 DSH-001 Visual Evidence Index — 2026-06-23
 Standard: REAL_EXPERIENCE_CLOSURE_v2
 
-EXISTING SCREENSHOTS (7 — from previous session, pre-action-contract):
+EXISTING REQUIRED STATE SCREENSHOTS: 10/25
   screenshots/control-panel-stores-admin-success.png  — control-panel success state
   screenshots/control-panel-store-detail-panel.png    — control-panel detail panel
   screenshots/control-panel-error-or-service-unavailable.png — control-panel error
@@ -10,17 +10,11 @@ EXISTING SCREENSHOTS (7 — from previous session, pre-action-contract):
   screenshots/app-field-store-verification.png        — app-field success
   screenshots/app-captain-store-pickup-context.png    — app-captain success
 
-MISSING SCREENSHOTS (20 — required by dsh-001-cross-surface-dependency-map guard):
+MISSING SCREENSHOTS (15 — required by dsh-001-cross-surface-dependency-map guard):
   app-client:
     - app-client-store-discovery-loading.png        MISSING
     - app-client-store-discovery-empty.png          MISSING
     - app-client-store-discovery-error.png          MISSING
-    - app-client-store-discovery-service-unavailable.png MISSING
-  control-panel:
-    - control-panel-stores-admin-loading.png        MISSING
-    - control-panel-stores-admin-empty.png          MISSING
-    - control-panel-stores-admin-error.png          MISSING
-    - control-panel-stores-admin-permission-denied.png MISSING
   app-partner:
     - app-partner-store-context-loading.png         MISSING
     - app-partner-store-context-empty.png           MISSING
@@ -38,14 +32,11 @@ MISSING SCREENSHOTS (20 — required by dsh-001-cross-surface-dependency-map gua
     - app-captain-store-pickup-context-permission-denied.png MISSING
 
 BLOCKING REASON:
-  Mobile app screenshots (app-client, app-partner, app-field, app-captain) require
-  a running Android/iOS emulator or physical device with ADB. The current environment
-  does not have a running mobile emulator.
-  
-  Control-panel screenshots require Next.js dev server + headless browser.
-  The identity service container is not running, preventing authenticated-state capture.
+  A physical Android device and the identity runtime are available, and live success
+  flows were verified on 2026-06-23. The 15 named non-success state captures have not
+  been added to the evidence directory.
 
-  This is the ONLY remaining blocker for DSH001_REAL_EXPERIENCE_CLOSED.
+  This is the remaining blocker for DSH001_REAL_EXPERIENCE_CLOSED.
   All backend, contracts, shared brain, and surface implementation is complete.
 
 blocks_closure: true

@@ -158,6 +158,109 @@ paths:
               schema:
                 $ref: "#/components/schemas/DshErrorResponse"
 
+  /dsh/operator/home-discovery/{kind}:
+    parameters:
+      - $ref: "#/components/parameters/HomeContentKind"
+    get:
+      operationId: listOperatorHomeDiscoveryContent
+      summary: List all home discovery content including inactive items.
+      tags: [DshHomeDiscovery]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Administrative home discovery content.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshHomeAdminListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createOperatorHomeDiscoveryContent
+      summary: Create a banner, promotion, or category.
+      tags: [DshHomeDiscovery]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DshHomeAdminContentInput"
+      responses:
+        "201":
+          description: Content created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshHomeAdminItemResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /dsh/operator/home-discovery/{kind}/{itemId}:
+    parameters:
+      - $ref: "#/components/parameters/HomeContentKind"
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      operationId: updateOperatorHomeDiscoveryContent
+      summary: Update a home discovery content item.
+      tags: [DshHomeDiscovery]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DshHomeAdminContentInput"
+      responses:
+        "200":
+          description: Content updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshHomeAdminItemResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteOperatorHomeDiscoveryContent
+      summary: Delete a home discovery content item.
+      tags: [DshHomeDiscovery]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "204":
+          description: Content deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /dsh/stores/{storeId}:
     get:
       operationId: getDshStore
@@ -429,6 +532,13 @@ components:
       type: http
       scheme: bearer
   parameters:
+    HomeContentKind:
+      name: kind
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [banners, promos, categories]
     StoreId:
       name: storeId
       in: path
@@ -951,6 +1061,74 @@ components:
           type: string
         sortOrder:
           type: integer
+
+    DshHomeAdminContentItem:
+      type: object
+      required: [id, kind, title, actionType, actionTarget, sortOrder, isActive]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [banners, promos, categories]
+        title:
+          type: string
+        subtitle:
+          type: string
+        badgeLabel:
+          type: string
+        imageUrl:
+          type: string
+        actionType:
+          type: string
+          enum: [store, category, external, none]
+        actionTarget:
+          type: string
+        sortOrder:
+          type: integer
+          minimum: 0
+        isActive:
+          type: boolean
+
+    DshHomeAdminContentInput:
+      type: object
+      required: [title, subtitle, badgeLabel, imageUrl, actionType, actionTarget, sortOrder, isActive]
+      properties:
+        title:
+          type: string
+          minLength: 2
+        subtitle:
+          type: string
+        badgeLabel:
+          type: string
+        imageUrl:
+          type: string
+        actionType:
+          type: string
+          enum: [store, category, external, none]
+        actionTarget:
+          type: string
+        sortOrder:
+          type: integer
+          minimum: 0
+        isActive:
+          type: boolean
+
+    DshHomeAdminListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DshHomeAdminContentItem"
+
+    DshHomeAdminItemResponse:
+      type: object
+      required: [item]
+      properties:
+        item:
+          $ref: "#/components/schemas/DshHomeAdminContentItem"
 
     DshHomeDiscoveryResponse:
       type: object

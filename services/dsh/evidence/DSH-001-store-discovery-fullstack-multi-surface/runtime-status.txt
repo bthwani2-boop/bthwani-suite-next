@@ -6,7 +6,7 @@ Docker containers (docker ps):
   bthwani-postgres-runtime    Up (healthy)  0.0.0.0:55432->5432/tcp
   bthwani-minio-runtime       Up            0.0.0.0:59000->9000/tcp
   bthwani-wlt-api-runtime     Up (healthy)  0.0.0.0:58083->8083/tcp
-  bthwani-identity-api-runtime NOT RUNNING  (profile: ACTIVE_DSH001_PREREQUISITE; must be started for auth flows)
+  bthwani-identity-api-runtime Up and smoke-verified on port 58082
 
 DSH API health: { "service": "dsh", "status": "healthy" }
 DSH API readiness: { "service": "dsh", "status": "ready", "dependencies": { "postgres": "ready" } }
@@ -14,8 +14,10 @@ DSH stores endpoint: 6 stores returned (real DB data, no mock)
 
 WLT API health: PASS (port 58083)
 
-Identity service: NOT RUNNING in this session.
-  NOTE: Backend requires identity for all authenticated routes.
-  Auth flows (partner/field/captain/operator) cannot be exercised without identity container.
-  This is the root cause why screenshots for loading/success/permission_denied authenticated states
-  cannot be captured in this environment.
+Identity service: PASS.
+Authenticated store-role runtime proof:
+  partner-local-001 -> store-1001 (own) -> partner.settings.update audit PASS
+  field-local-001 -> store-1002 (assigned) -> field.verification.submit audit PASS
+  captain-local-001 -> store-1005 (assigned) -> captain.pickup-readiness.report audit PASS
+
+Visual state gate remains FAIL because 15 required screenshot files are missing.

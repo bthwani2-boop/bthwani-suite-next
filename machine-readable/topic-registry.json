@@ -374,18 +374,19 @@
         "guard:app-shell-control-panel",
         "control-panel:design-gate"
       ],
-      "current_status": "PARTIAL",
+      "current_status": "FIX_REQUIRED",
       "partial_detail": {
         "app_client": "RUNTIME_VERIFIED — HomeDiscoveryScreen and all home sections",
-        "control_panel": "NOT_STARTED — home discovery admin screens not built"
+        "control_panel": "RUNTIME_VERIFIED — banners/promos/categories CRUD, audit, routes, and required visual states implemented"
       },
-      "evidence_required": ["App-client runtime and visual evidence", "Control-panel evidence after separate approval", "Passing tests and guards"],
+      "evidence_required": ["App-client runtime and visual evidence", "Control-panel full-stack evidence", "Passing tests and guards", "Global slice gate PASS"],
       "blockers": [
-        "control-panel Home Discovery Admin screens not started",
-        "control-panel tests not written",
-        "DSH-002 control-panel requires explicit approval before implementation"
+        "Global DSH slice gate cannot pass while DSH-001 remains FIX_REQUIRED"
       ],
-      "source_evidence": [{"type": "PARTIAL_APP_CLIENT_EVIDENCE", "path": "services/dsh/evidence/DSH-002-client-home-discovery/", "status": "PRESENT_PARTIAL"}],
+      "source_evidence": [
+        {"type": "APP_CLIENT_EVIDENCE", "path": "services/dsh/evidence/DSH-002-client-home-discovery/", "status": "PRESENT"},
+        {"type": "FULLSTACK_CONTROL_PANEL_EVIDENCE", "path": "services/dsh/evidence/DSH-002-home-discovery-fullstack/", "status": "PRESENT"}
+      ],
       "donor_screens": {
         "app_client": [
           "dsh/frontend/app-client/screens/HomeScreen.tsx — DshHomeGetScreen: full home layout with hero banner carousel, promo rail, category shortcuts, filter rail (all/nearest/offers/favorites/new), store feed, video reels. States: ready (full render), loading (skeleton while fetching). Uses useHomeState, useHomeDerivedStores, useHomePromoHandlers, useHomeFilterRail, useHomeVideoHandlers, useHomeTickerState."

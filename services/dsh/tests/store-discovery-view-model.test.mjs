@@ -98,7 +98,10 @@ describe("toCardViewModel", () => {
 
   test("commercial card metadata comes from the API DTO", () => {
     const vm = toCardViewModel(makeDto());
-    assert.deepEqual(vm.deliveryModeLabels, ["توصيل", "استلام"]);
+    assert.deepEqual(vm.deliveryModeLabels, [
+      "توصيل المتجر (الشريك)",
+      "استلم بنفسك",
+    ]);
     assert.equal(vm.isFreeDelivery, true);
     assert.equal(vm.distanceLabel, "2.1 كم");
     assert.equal(vm.hasProBadge, true);

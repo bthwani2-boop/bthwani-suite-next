@@ -147,8 +147,8 @@
       "blocking": true,
       "required_before": "SLICE_CLOSURE",
       "current_status": "FAIL_FOR_DSH-001_REAL_EXPERIENCE",
-      "last_verified": "2026-06-22",
-      "evidence": "tools/registry/runs/SLICE-GATE-20260622-211225"
+      "last_verified": "2026-06-23",
+      "evidence": "tools/registry/runs/SLICE-GATE-20260623-043525"
     },
     "UI_KIT_GATE": {
       "command": "pnpm run guard:no-direct-fetch-in-screen",
@@ -166,12 +166,12 @@
       "screenshot_location": "services/<service>/evidence/<TOPIC_ID>/screenshots/",
       "current_status": {
         "DSH-001_app_client": "FAIL_v2 — loading, empty, error, and service_unavailable screenshots missing",
-        "DSH-001_control_panel": "FAIL_v2 — loading, empty, permission-denied, and authenticated governance actions missing",
-        "DSH-001_app_partner": "FAIL_v2 — loading/empty/error/permission screenshots and actionable own-store flow missing",
-        "DSH-001_app_field": "FAIL_v2 — loading/empty/error/permission screenshots and verification submission flow missing",
-        "DSH-001_app_captain": "FAIL_v2 — loading/empty/error/permission screenshots and pickup-point readiness reporting missing",
+        "DSH-001_control_panel": "PASS_v2 — required state screenshots and authenticated governance evidence present",
+        "DSH-001_app_partner": "FAIL_v2 — own-store action runtime-verified; loading/empty/error/permission screenshots missing",
+        "DSH-001_app_field": "FAIL_v2 — verification submission runtime-verified; loading/empty/error/permission screenshots missing",
+        "DSH-001_app_captain": "FAIL_v2 — pickup readiness runtime-verified; loading/empty/error/permission screenshots missing",
         "DSH-002_app_client": "RUNTIME_VERIFIED — app-client verified",
-        "DSH-002_control_panel": "NOT_STARTED"
+        "DSH-002_control_panel": "PASS_v2 — banners/promos/categories loading/success/empty/error screenshots present"
       },
       "enforcement_note": "v2 applies retroactively without grandfathering. Every missing required state is a closure blocker."
     },
@@ -184,7 +184,7 @@
       "verification_method": "Manual review of screenshots/ directory in evidence pack",
       "current_status": {
         "DSH-001": "FAIL_v2 — required states missing across all five surfaces",
-        "DSH-002": "NOT_STARTED"
+        "DSH-002": "PASS_SURFACE_STATES — global slice gate still blocked by DSH-001"
       }
     },
     "MANUAL_NAVIGATION_PROOF": {

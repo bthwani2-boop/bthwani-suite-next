@@ -77,7 +77,7 @@ export function useStoreAdminController(authKind = "unauthenticated"): StoreAdmi
   const prevPage = useCallback(() => setOffset(previousStoreAdminOffset), []);
   const derived = deriveStoreAdminView(listState, filters, offset);
   const govern = useCallback(async (storeId: string, input: OperatorStoreGovernanceRequest) => {
-    setActionState({ kind: "submitting" });
+    setActionState({ kind: "submitting", actionKind: "operator" });
     try {
       const response = await submitStoreRoleAction({ kind: "operator", storeId, input });
       setActionState({ kind: "success", replayed: response.replayed });

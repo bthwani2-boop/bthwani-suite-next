@@ -6,7 +6,7 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-001_REAL_EXPERIENCE_FIX_REQUIRED",
+  stage: "DSH-002_IMPLEMENTED_DSH-001_FIX_REQUIRED",
   closureState: "FIX_REQUIRED",
   activationScope: "stores-topic-all-surfaces",
   contract: "contracts/dsh.openapi.yaml",
@@ -21,6 +21,10 @@ export const dshServiceManifest = {
       "listDshStores",
       "getDshStore",
       "getDshHomeDiscovery",
+      "listOperatorHomeDiscoveryContent",
+      "createOperatorHomeDiscoveryContent",
+      "updateOperatorHomeDiscoveryContent",
+      "deleteOperatorHomeDiscoveryContent",
     ],
     backendRuntimeReady: true,
     generatedClientReady: true,
@@ -34,6 +38,7 @@ export const dshServiceManifest = {
       "useStoreDiscoveryController",
       "useStoreRoleContextController",
       "useHomeDiscoveryController",
+      "useHomeDiscoveryAdminController",
     ],
     primarySurfaces: [
       "app-client",
@@ -55,7 +60,7 @@ export const dshServiceManifest = {
   nextSlice: {
     id: "DSH-002",
     name: "DSH-002 Home Discovery Admin — control-panel",
-    closureState: "NOT_APPROVED_YET",
+    closureState: "IMPLEMENTED_MULTI_SURFACE_NEEDS_GLOBAL_SLICE_GATE",
   },
   boundaries: {
     ownsOperationalCommerceTruth: true,

@@ -1,5 +1,8 @@
 import type { DshStoreAdminDetail } from "./store-admin.view-model";
-import { formatServiceArea } from "./store-discovery.formatters";
+import {
+  formatDeliveryModes,
+  formatServiceArea,
+} from "./store-discovery.formatters";
 
 export type StoreReadinessCheck = {
   readonly id: string;
@@ -57,7 +60,7 @@ export function toPartnerStoreContext(
       : "يلزم استكمال بيانات المتجر قبل ربط الكتالوج",
     readinessPercent: Math.round((readyCount / checks.length) * 100),
     attentionCount,
-    serviceModesLabel: store.deliveryModes.join("، ") || "لا توجد طرق خدمة مفعلة",
+    serviceModesLabel: formatDeliveryModes(store.deliveryModes),
     nextAction:
       attentionCount === 0
         ? "حافظ على البيانات محدثة وراجع ظهور المتجر للعملاء."
@@ -115,7 +118,7 @@ export function toCaptainStoreContext(
       : "الاستلام من المتجر غير متاح",
     locationLabel: formatServiceArea(store.cityCode, store.serviceAreaCode),
     operatingLabel: store.isOpen ? "مفتوح للاستلام" : "غير متاح للاستلام",
-    serviceModesLabel: store.deliveryModes.join("، ") || "غير محددة",
+    serviceModesLabel: formatDeliveryModes(store.deliveryModes, "غير محددة"),
     estimatedWindowLabel:
       store.deliveryEtaMin !== null && store.deliveryEtaMax !== null
         ? `${store.deliveryEtaMin}–${store.deliveryEtaMax} دقيقة`
@@ -153,7 +156,7 @@ function createReadinessChecks(
       id: "delivery",
       label: "طرق الخدمة",
       ready: store.deliveryModes.length > 0,
-      detail: store.deliveryModes.join("، ") || "لا توجد طرق خدمة",
+      detail: formatDeliveryModes(store.deliveryModes, "لا توجد طرق خدمة"),
     },
     {
       id: "visibility",

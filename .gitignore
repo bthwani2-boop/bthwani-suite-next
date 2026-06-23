@@ -29,7 +29,9 @@ graphify-out/
 *.gif
 *.ico
 !services/dsh/evidence/**/*.png
+services/dsh/evidence/DSH-002-home-discovery-fullstack/screenshots/
 services/dsh/database/seeds/local/media/
 
 .gocache*/
 .gomodcache*/
+.cache/

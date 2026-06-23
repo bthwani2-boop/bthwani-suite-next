@@ -94,7 +94,7 @@ WLT is the sole owner of financial truth:
 
 **Machine-readable result:** `MACHINE_READABLE_FIX_REQUIRED`
 
-DSH-001 remains `FIX_REQUIRED`. Implementation is complete: all backend handlers, OpenAPI contracts, typed client, shared brain (auth/idempotency/audit), all 5 surface UIs with full state handling. Foundation gate PASSES. All guards PASS except `dsh-001-cross-surface-dependency-map` which requires 20 missing screenshots (4 states × 5 surfaces). Screenshots require a running mobile emulator (Android/iOS) and identity service container.
+DSH-001 remains `FIX_REQUIRED`. Implementation is complete: all backend handlers, OpenAPI contracts, typed client, shared brain (auth/idempotency/audit), all 5 surface UIs with full state handling. Foundation gate PASSES. Live identity + DSH runtime proof passed for partner, field, captain, and operator actions. `dsh-001-cross-surface-dependency-map` and `slice:gate` still fail because 15 required visual-state screenshots are missing.
 
 Session fixes (2026-06-23):
 - `apps/control-panel/runtime/tsconfig.json`: added `allowImportingTsExtensions:true` (typecheck now PASS)
@@ -106,8 +106,8 @@ Session fixes (2026-06-23):
 | ----- | ------ | ----- |
 | DSH-000 | RUNTIME_VERIFIED | Foundation gates all pass |
 | WLT-000 | RUNTIME_VERIFIED | Reference endpoints only — no mutations |
-| DSH-001 | FIX_REQUIRED | Full implementation done; sole blocker = 20 missing screenshots requiring emulator |
-| DSH-002 | PARTIAL | app-client verified. control-panel NOT_STARTED — needs approval. |
+| DSH-001 | FIX_REQUIRED | Full implementation and authenticated role actions verified; 15 required visual-state screenshots remain missing |
+| DSH-002 | FIX_REQUIRED | app-client + control-panel full-stack implemented and runtime-verified; global slice gate remains blocked by DSH-001 |
 | DSH-003 to DSH-010 | NOT_STARTED | See topic-registry.json for dependencies |
 
 **Next approved action:** STOP — DSH-001 real experience rework is required before DSH-002 or DSH-003.

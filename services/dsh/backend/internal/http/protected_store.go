@@ -8,12 +8,81 @@ import (
 	"strings"
 
 	"dsh-api/internal/auth"
+	"dsh-api/internal/homediscovery"
 	"dsh-api/internal/store"
 )
 
 type protectedStoreServer struct {
 	db       *sql.DB
 	identity *auth.Client
+}
+
+func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	items, err := homediscovery.ListAdminContent(r.Context(), s.db, r.PathValue("kind"))
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (s *protectedStoreServer) handleHomeDiscoveryAdminCreate(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	var input homediscovery.AdminContentInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	item, err := homediscovery.CreateAdminContent(r.Context(), s.db, r.PathValue("kind"), actor.ID, r.Header.Get("X-Correlation-ID"), input)
+	s.writeHomeDiscoveryAdminResult(w, http.StatusCreated, item, err)
+}
+
+func (s *protectedStoreServer) handleHomeDiscoveryAdminUpdate(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	var input homediscovery.AdminContentInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	item, err := homediscovery.UpdateAdminContent(r.Context(), s.db, r.PathValue("kind"), r.PathValue("itemId"), actor.ID, r.Header.Get("X-Correlation-ID"), input)
+	s.writeHomeDiscoveryAdminResult(w, http.StatusOK, item, err)
+}
+
+func (s *protectedStoreServer) handleHomeDiscoveryAdminDelete(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	err := homediscovery.DeleteAdminContent(r.Context(), s.db, r.PathValue("kind"), r.PathValue("itemId"), actor.ID, r.Header.Get("X-Correlation-ID"))
+	if errors.Is(err, homediscovery.ErrAdminContentNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWriter, status int, item homediscovery.AdminContentItem, err error) {
+	if errors.Is(err, homediscovery.ErrAdminContentNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
 func newProtectedStoreServer(db *sql.DB, identity *auth.Client) *protectedStoreServer {

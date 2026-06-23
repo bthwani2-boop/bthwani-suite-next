@@ -90,40 +90,7 @@ func (r *Repository) Login(ctx context.Context, username, password, fingerprint 
 
 func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (ActorIdentity, error) {
 	if strings.HasPrefix(token, "dev-bypass-") {
-		parts := strings.Split(token, "-")
-		role := "operator"
-		if len(parts) >= 3 {
-			role = parts[2]
-		}
-		surface := "control-panel"
-		scope := "all"
-		if role == "partner" {
-			surface = "app-partner"
-			scope = "own"
-		} else if role == "field" {
-			surface = "app-field"
-			scope = "assigned"
-		} else if role == "captain" {
-			surface = "app-captain"
-			scope = "assigned"
-		}
-		return ActorIdentity{
-			Subject:  "dev-" + role + "-001",
-			TenantID: "tenant-dev-001",
-			Roles:    []string{role},
-			Permissions: []Permission{
-				{Service: "dsh", Surface: surface, Action: "*", Scope: scope},
-			},
-			AuthState: "authenticated",
-			SurfaceAccess: map[string]bool{
-				surface: true,
-			},
-			ServiceAccess: map[string]bool{
-				"dsh": true,
-			},
-			SessionID: "dev-session-bypass",
-			ExpiresAt: r.now().Add(24 * time.Hour),
-		}, nil
+		return resolveDevBypassIdentity(token, r.now())
 	}
 
 	hash := tokenHash(token)
@@ -152,6 +119,47 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 		return ActorIdentity{}, err
 	}
 	return toIdentity(actor, sessionID, expiresAt), nil
+}
+
+func resolveDevBypassIdentity(token string, now time.Time) (ActorIdentity, error) {
+	parts := strings.Split(token, "-")
+	role := "operator"
+	if len(parts) >= 3 {
+		role = parts[2]
+	}
+	surface := "control-panel"
+	scope := "all"
+	switch role {
+	case "partner":
+		surface = "app-partner"
+		scope = "own"
+	case "field":
+		surface = "app-field"
+		scope = "assigned"
+	case "captain":
+		surface = "app-captain"
+		scope = "assigned"
+	case "operator":
+	default:
+		return ActorIdentity{}, ErrUnauthenticated
+	}
+	return ActorIdentity{
+		Subject:  role + "-local-001",
+		TenantID: "tenant-dev-001",
+		Roles:    []string{role},
+		Permissions: []Permission{
+			{Service: "dsh", Surface: surface, Action: "*", Scope: scope},
+		},
+		AuthState: "authenticated",
+		SurfaceAccess: map[string]bool{
+			surface: true,
+		},
+		ServiceAccess: map[string]bool{
+			"dsh": true,
+		},
+		SessionID: "dev-session-bypass",
+		ExpiresAt: now.Add(24 * time.Hour),
+	}, nil
 }
 
 func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPair, error) {

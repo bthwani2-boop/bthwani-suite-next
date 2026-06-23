@@ -22,11 +22,23 @@ export type StoreRoleContextState =
       readonly latestAction: unknown | null;
     };
 
+export type StoreRole = "partner" | "field" | "captain" | "operator";
+
 export type StoreRoleExperience = {
   readonly partner: PartnerStoreContextViewModel;
   readonly field: FieldStoreContextViewModel;
   readonly captain: CaptainStoreContextViewModel;
 };
+
+export function enforceExpectedStoreRole(
+  state: StoreRoleContextState,
+  expectedRole: StoreRole,
+): StoreRoleContextState {
+  if (state.kind !== "success" || state.actorRole === expectedRole) {
+    return state;
+  }
+  return { kind: "permission_denied", statusCode: 403 };
+}
 
 export type StoreRoleStatePresentation = {
   readonly title: string;
@@ -84,7 +96,9 @@ export function toStoreRoleStatePresentation(
 export async function loadStoreRoleContext(
   fetchContext: () => Promise<StoreRoleContextState>,
   publish: (state: StoreRoleContextState) => void,
+  expectedRole?: StoreRole,
 ): Promise<void> {
   publish({ kind: "loading" });
-  publish(await fetchContext());
+  const state = await fetchContext();
+  publish(expectedRole ? enforceExpectedStoreRole(state, expectedRole) : state);
 }

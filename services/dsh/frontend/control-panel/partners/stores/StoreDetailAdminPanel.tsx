@@ -7,7 +7,10 @@ import {
   CpExternalLink,
   CpInlineCode,
 } from "@bthwani/app-shell";
-import type { DshStoreAdminDetailState } from "../../../shared/store";
+import {
+  formatDeliveryModes,
+  type DshStoreAdminDetailState,
+} from "../../../shared/store";
 
 type Props = {
   readonly state: DshStoreAdminDetailState;
@@ -56,7 +59,7 @@ export function StoreDetailAdminPanel({ state, onClose }: Props) {
             {state.detail.cityCode} / {state.detail.serviceAreaCode}
           </CpDescriptionRow>
           <CpDescriptionRow label="طرق التوصيل">
-            {state.detail.deliveryModes.join("، ") || "—"}
+            {formatDeliveryModes(state.detail.deliveryModes, "—")}
           </CpDescriptionRow>
           {state.detail.deliveryEtaMin !== null &&
             state.detail.deliveryEtaMax !== null && (

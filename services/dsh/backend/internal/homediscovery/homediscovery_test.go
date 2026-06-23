@@ -23,3 +23,23 @@ func TestDefaultFilters(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateAdminInputByContentKind(t *testing.T) {
+	valid := AdminContentInput{
+		Title: "عرض صالح", ImageURL: "https://example.test/image.jpg",
+		ActionType: "none", SortOrder: 1, IsActive: true,
+	}
+	for _, kind := range []string{"banners", "promos"} {
+		if err := validateAdminInput(kind, valid); err != nil {
+			t.Fatalf("%s should be valid: %v", kind, err)
+		}
+	}
+	category := valid
+	category.ImageURL = ""
+	if err := validateAdminInput("categories", category); err != nil {
+		t.Fatalf("category icon must be optional: %v", err)
+	}
+	if err := validateAdminInput("unknown", valid); err == nil {
+		t.Fatal("unknown content kind must fail")
+	}
+}

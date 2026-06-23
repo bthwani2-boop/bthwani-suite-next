@@ -22,7 +22,7 @@ import {
 
 export function PartnerStoreScreen() {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController(identity.state.kind);
+  const controller = useStoreRoleContextController("partner", identity.state.kind);
   const [reason, setReason] = React.useState("");
   const state = controller.state;
 
@@ -182,8 +182,15 @@ export function PartnerStoreScreen() {
               })}
             />
           </View>
+          {controller.actionState.kind === "submitting" && (
+            <Text tone="secondary">جاري حفظ حالة التشغيل وتسجيل التدقيق…</Text>
+          )}
           {controller.actionState.kind === "success" && (
-            <Text tone="success">تم حفظ الإجراء وتسجيله في سجل التدقيق.</Text>
+            <Text tone="success">
+              {controller.actionState.replayed
+                ? "تم تأكيد الإجراء السابق دون تكرار التغيير."
+                : "تم حفظ الإجراء وتسجيله في سجل التدقيق."}
+            </Text>
           )}
           {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") && (
             <Text tone="danger">{controller.actionState.message}</Text>

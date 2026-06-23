@@ -22,7 +22,7 @@ import {
 
 export function CaptainStorePickupContextScreen() {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController(identity.state.kind);
+  const controller = useStoreRoleContextController("captain", identity.state.kind);
   const [reason, setReason] = React.useState("");
   const state = controller.state;
 
@@ -122,8 +122,15 @@ export function CaptainStorePickupContextScreen() {
               })}
             />
           </View>
+          {controller.actionState.kind === "submitting" && (
+            <Text tone="secondary">جاري إرسال تقرير جاهزية نقطة الاستلام…</Text>
+          )}
           {controller.actionState.kind === "success" && (
-            <Text tone="success">تم إرسال تقرير الجاهزية دون تغيير دورة الطلب.</Text>
+            <Text tone="success">
+              {controller.actionState.replayed
+                ? "تم تأكيد تقرير الجاهزية السابق دون إنشاء سجل مكرر."
+                : "تم إرسال تقرير الجاهزية دون تغيير دورة الطلب."}
+            </Text>
           )}
           {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") && (
             <Text tone="danger">{controller.actionState.message}</Text>
