@@ -5,12 +5,13 @@ info:
   description: >
     Delivery and shopping hub service contract. DSH-001 store discovery and governance
     (RUNTIME_VERIFIED). DSH-002 home discovery (RUNTIME_VERIFIED). DSH-003 catalog
-    management (RUNTIME_VERIFIED). DSH-004 cart and serviceability, DSH-005 checkout
-    intent and WLT handoff, DSH-006 order fulfillment, DSH-007 dispatch and captain
-    delivery — backend handlers registered, frontend surface UI not yet approved
-    (NOT_APPROVED_YET). DSH-008 field verification and store quality assurance,
-    DSH-009 support incidents and escalation room — backend handlers registered,
-    shared brain implemented, screens implemented, surface binding NOT_APPROVED_YET.
+    management (RUNTIME_VERIFIED). DSH-004 cart and serviceability (RUNTIME_VERIFIED).
+    DSH-005 checkout intent and WLT handoff, DSH-006 order fulfillment, DSH-007
+    dispatch and captain delivery — backend handlers registered, frontend surface UI
+    not yet approved (NOT_APPROVED_YET). DSH-008 field verification and store quality
+    assurance (RUNTIME_VERIFIED). DSH-009 support incidents and escalation room
+    (RUNTIME_VERIFIED). DSH-010 platform analytics and operational reporting —
+    backend implementation NOT_APPROVED_YET, handlers inactive.
     WLT handoff uses reference fields only; no financial mutation inside DSH.
 
 x-bthwani-owner: services/dsh

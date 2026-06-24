@@ -6,7 +6,7 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-001_RUNTIME_VERIFIED_DSH-002_RUNTIME_VERIFIED_DSH-003_RUNTIME_VERIFIED_DSH-004_SCREENS_IMPLEMENTED_DSH-005_SCREENS_IMPLEMENTED_DSH-006_SCREENS_IMPLEMENTED_DSH-007_SCREENS_IMPLEMENTED_DSH-008_RUNTIME_VERIFIED_DSH-009_RUNTIME_VERIFIED",
+  stage: "DSH-001_RUNTIME_VERIFIED_DSH-002_RUNTIME_VERIFIED_DSH-003_RUNTIME_VERIFIED_DSH-004_RUNTIME_VERIFIED_DSH-005_SCREENS_IMPLEMENTED_DSH-006_SCREENS_IMPLEMENTED_DSH-007_SCREENS_IMPLEMENTED_DSH-008_RUNTIME_VERIFIED_DSH-009_RUNTIME_VERIFIED",
   closureState: "RUNTIME_VERIFIED",
   activationScope: "stores-topic-all-surfaces-home-discovery-topic-two-surfaces-catalog-topic-three-surfaces",
   contract: "contracts/dsh.openapi.yaml",
@@ -60,6 +60,9 @@ export const dshServiceManifest = {
       "usePublishedCatalogController",
       "useCatalogApprovalController",
       "useCatalogAuditController",
+      "useCartController",
+      "useServiceabilityController",
+      "useOperatorCartsController",
     ],
     primarySurfaces: [
       "app-client",
@@ -74,8 +77,8 @@ export const dshServiceManifest = {
       "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json",
   },
   nextSlice: {
-    id: "DSH-004",
-    name: "DSH-004 Cart & Serviceability Quote",
+    id: "DSH-005",
+    name: "DSH-005 Checkout Intent & WLT Handoff",
     closureState: "NOT_APPROVED_YET",
   },
   boundaries: {

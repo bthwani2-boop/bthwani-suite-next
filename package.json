@@ -38,6 +38,7 @@
     "guard:dsh-frontend-shared-ownership": "pnpm --dir services/dsh guard:shared-ownership",
     "guard:dsh-001-cross-surface-dependency-map": "node tools/guards/dsh-001-cross-surface-dependency-map.mjs",
     "guard:dsh-003-catalog-ownership": "node tools/guards/dsh-003-catalog-ownership-gate.mjs",
+    "guard:dsh-004-cart-serviceability": "node tools/guards/dsh-004-cart-serviceability-gate.mjs",
     "guard:no-financial-mutation-outside-wlt": "node tools/guards/no-financial-mutation-outside-wlt.mjs",
     "guard:wlt-dsh-frontend-shared-ownership": "node tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
     "runtime:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt",

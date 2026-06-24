@@ -529,6 +529,8 @@ elseif ($Action -eq "smoke") {
     Invoke-DshSmoke
   }
   if ($ProfileList -contains "wlt") {
+    Invoke-WltMigrate
+    Invoke-WltSeed
     Wait-ForWltApi
     Invoke-WltSmoke
   }

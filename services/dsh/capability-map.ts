@@ -146,7 +146,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── DSH-004: Cart & Serviceability ───────────────────────────────────────
   {
     id: "dsh.client.cart",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: [
       "getDshClientCart",
       "upsertDshCartItem",
@@ -156,8 +156,8 @@ export const DSH_CAPABILITY_MAP = [
       "listOperatorCarts",
     ],
     surfaces: ["app-client", "control-panel"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
     topic: "commerce",
     topicScope: ["cart", "serviceability"],
   },

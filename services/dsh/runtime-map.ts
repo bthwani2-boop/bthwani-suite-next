@@ -54,13 +54,13 @@ export const DSH_RUNTIME_MAP = [
     capabilityId: "dsh.client.cart",
     backendImplemented: true,
     sharedBrainReady: true,
-    runtimeBound: false,
+    runtimeBound: true,
     screensReady: true,
     databaseReady: true,
-    generatedClientReady: false,
-    surfaceBindingApproved: false,
-    state: "blocked",
-    runtimeEvidence: null,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/DSH-004-cart-serviceability",
   },
   // ── DSH-005: Checkout Intent & WLT Handoff ──────────────────────────────
   {
