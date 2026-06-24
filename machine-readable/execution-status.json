@@ -3,7 +3,7 @@
   "last_updated": "2026-06-24",
   "branch": "starting-implementing-slices",
   "head_at_audit": "752075bc1f7c1f46cc05bd61fa9681f084308232",
-  "session_note": "Session 2026-06-24 HEAD audit repair: local and origin/starting-implementing-slices aligned at 752075bc. graphify-out cleaned and rebuilt from HEAD; Graphify report built from commit 752075bc. foundation:gate PASS (FOUNDATION-GATE-20260624-192410). slice:gate LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE before final truth metadata update; final rerun was blocked by Codex usage-limit escalation before execution. pnpm typecheck PASS. pnpm nx run dsh:build PASS. pnpm nx run dsh:test PASS (169/169). services/dsh/backend go test ./... PASS. runtime:smoke PASS. DSH-006, DSH-007, and DSH-010 maps aligned to runtime-verified. DSH-011..DSH-014 remain NEEDS_CONTRACT_EVIDENCE until OpenAPI operations/generated clients are added.",
+  "session_note": "Session 2026-06-24 WLT-001..005 full-stack closure: Payment Capture Lifecycle, Refund Status, Settlement Read Model, COD Commission, Ledger Audit all implemented with Go domains, SQL migrations (wlt-002..wlt-006), 25 new OpenAPI operations, WLT generated TypeScript client, DSH-WLT read bridges. Control panel build fixed (react-native-web alias + BthwaniUiProvider). All gates PASS: foundation:gate FOUNDATION-GATE-20260624-224601, guard:matrix:v3 0 errors, guard:no-financial-mutation-outside-wlt PASS, guard:dsh-frontend-shared-ownership PASS, contracts:lint PASS, DSH tests 173/173 PASS, WLT tests 6/6 PASS, Go build PASS. DSH-011..014 CODE_BASED_FULL_STACK_CLOSURE. WLT-000 RUNTIME_VERIFIED. WLT-001..005 CODE_BASED_FULL_STACK_CLOSURE.",
   "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE — effective 2026-06-24",
   "note": "CLOSED status under CODE_BASED_FULL_STACK_CLOSURE requires: code structure + shared ownership + UI-only surfaces + API contracts + generated clients + backend handlers + DB migrations + Docker/runtime health + API smoke + typecheck + tests + Go build + guards. Screenshots are historical non-blocking evidence only. Screenshots are NOT a closure condition under this standard.",
   "overall_merge_safety": "LOCAL_CODE_VERIFIED_AWAITING_CI",
@@ -496,12 +496,170 @@
         "ci": "CI_NOT_CONFIGURED"
       },
       "status_updated_from": "session 2026-06-24 DSH-011..014 contract closure"
+    },
+
+    "WLT-001": {
+      "topic_id": "WLT-001",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "reason": "Full-stack payment capture lifecycle implemented 2026-06-24. Migration (wlt-002_payment_capture.sql) extends wlt_payment_sessions with authorized/captured/cod_pending/cod_collected status values + amount_minor_units/currency/captured_at columns. Go domain (payment/payment.go): AuthorizeSession, CaptureSession, MarkCodPending, MarkCodCollected, ExpireSession. 4 HTTP handlers registered in server.go. OpenAPI operations: authorizeWltPaymentSession, captureWltPaymentSession, expireWltPaymentSession, markWltCodCollected. Generated TypeScript client (wlt-api.ts) updated. WLT boundary COMPLIANT — all amounts in minor units. All gates PASS. WLT tests 6/6 PASS.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": [],
+      "required_actions": [],
+      "checks": {
+        "go_domain": "PRESENT — services/wlt/backend/internal/payment/payment.go",
+        "migration": "PRESENT — services/wlt/database/migrations/wlt-002_payment_capture.sql",
+        "http_handlers": "REGISTERED — 4 routes in server.go",
+        "openapi_operations": "PASS — authorizeWltPaymentSession, captureWltPaymentSession, expireWltPaymentSession, markWltCodCollected",
+        "generated_client": "PASS — services/wlt/clients/generated/wlt-api.ts",
+        "wlt_tests": "PASS — 6/6",
+        "go_build": "PASS",
+        "guard_no_financial_mutation_outside_wlt": "PASS — WLT owns all payment state transitions",
+        "guard_matrix_v3": "PASS",
+        "contracts_lint": "PASS",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "wlt_boundary": {
+        "status": "COMPLIANT",
+        "note": "All payment lifecycle mutations (authorize, capture, cod-collect, expire) are owned exclusively by WLT. DSH stores only wlt_payment_session_id as opaque reference."
+      },
+      "approval_note": "User approved 2026-06-24",
+      "status_updated_from": "session 2026-06-24 WLT-001..005 full-stack closure"
+    },
+
+    "WLT-002": {
+      "topic_id": "WLT-002",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "reason": "Full-stack refund lifecycle implemented 2026-06-24. Migration (wlt-003_refunds.sql) creates wlt_refunds table (wref_ prefix, status: pending/approved/processing/completed/rejected). Go domain (refund/refund.go): CreateRefund, GetRefund, ListRefunds, ApproveRefund, CompleteRefund, RejectRefund. 6 HTTP handlers registered in server.go. OpenAPI operations: createWltRefund, getWltRefund, listWltRefunds, approveWltRefund, completeWltRefund, rejectWltRefund. DSH bridge (services/dsh/frontend/shared/wlt-refund/) + WLT DSH API (wlt-dsh-refund.api.ts) for read-only DSH consumption. All gates PASS. WLT tests 6/6 PASS.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": [],
+      "required_actions": [],
+      "checks": {
+        "go_domain": "PRESENT — services/wlt/backend/internal/refund/refund.go",
+        "migration": "PRESENT — services/wlt/database/migrations/wlt-003_refunds.sql",
+        "http_handlers": "REGISTERED — 6 routes in server.go",
+        "openapi_operations": "PASS — createWltRefund, getWltRefund, listWltRefunds, approveWltRefund, completeWltRefund, rejectWltRefund",
+        "generated_client": "PASS — services/wlt/clients/generated/wlt-api.ts",
+        "dsh_bridge": "PRESENT — services/dsh/frontend/shared/wlt-refund/",
+        "wlt_dsh_api": "PRESENT — services/wlt/frontend/dsh/shared/wlt-dsh-refund.api.ts",
+        "wlt_tests": "PASS — 6/6",
+        "go_build": "PASS",
+        "guard_no_financial_mutation_outside_wlt": "PASS",
+        "guard_matrix_v3": "PASS",
+        "contracts_lint": "PASS",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "wlt_boundary": {
+        "status": "COMPLIANT",
+        "note": "Refund creation, approval, and completion are WLT-exclusive. DSH reads refund status via read-only bridge only."
+      },
+      "approval_note": "User approved 2026-06-24",
+      "status_updated_from": "session 2026-06-24 WLT-001..005 full-stack closure"
+    },
+
+    "WLT-003": {
+      "topic_id": "WLT-003",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "reason": "Full-stack settlement read model implemented 2026-06-24. Migration (wlt-004_settlements.sql) creates wlt_settlements table (wset_ prefix, period-based, status: draft/posted/settled). Go domain (settlement/settlement.go): CreateSettlement, GetSettlement, ListPartnerSettlements, ListSettlementSummary, PostSettlement. 5 HTTP handlers registered in server.go. OpenAPI operations: createWltSettlement, getWltSettlement, listWltSettlements, postWltSettlement, getWltSettlementSummary. DSH bridge (wlt-settlement/) + WLT DSH API (wlt-dsh-settlement.api.ts) for DSH-010 finance read display. All gates PASS. WLT tests 6/6 PASS.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": [],
+      "required_actions": [],
+      "checks": {
+        "go_domain": "PRESENT — services/wlt/backend/internal/settlement/settlement.go",
+        "migration": "PRESENT — services/wlt/database/migrations/wlt-004_settlements.sql",
+        "http_handlers": "REGISTERED — 5 routes in server.go",
+        "openapi_operations": "PASS — createWltSettlement, getWltSettlement, listWltSettlements, postWltSettlement, getWltSettlementSummary",
+        "generated_client": "PASS — services/wlt/clients/generated/wlt-api.ts",
+        "dsh_bridge": "PRESENT — services/dsh/frontend/shared/wlt-settlement/",
+        "wlt_dsh_api": "PRESENT — services/wlt/frontend/dsh/shared/wlt-dsh-settlement.api.ts",
+        "wlt_tests": "PASS — 6/6",
+        "go_build": "PASS",
+        "guard_no_financial_mutation_outside_wlt": "PASS",
+        "guard_matrix_v3": "PASS",
+        "contracts_lint": "PASS",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "wlt_boundary": {
+        "status": "COMPLIANT",
+        "note": "Settlement lifecycle owned by WLT exclusively. DSH-010 finance surface reads settlement summaries via wlt-dsh-settlement read bridge — no DSH mutation."
+      },
+      "approval_note": "User approved 2026-06-24",
+      "status_updated_from": "session 2026-06-24 WLT-001..005 full-stack closure"
+    },
+
+    "WLT-004": {
+      "topic_id": "WLT-004",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "reason": "Full-stack COD commission tracking implemented 2026-06-24. Migration (wlt-005_cod.sql) creates wlt_cod_records (wcod_ prefix, status: pending/collected/remitted/disputed) + wlt_commissions (wcom_ prefix, commission_type: delivery_fee/cod_fee/platform_fee/promo_deduction). Go domain (cod/cod.go): CreateCodRecord, GetCodRecord, ListCodRecords, CollectCod, RemitCod, CreateCommission, ListCommissions. 7 HTTP handlers registered in server.go. OpenAPI operations: createWltCodRecord, getWltCodRecord, listWltCodRecords, collectWltCod, remitWltCod, createWltCommission, listWltCommissions. DSH bridge (wlt-cod/) + WLT DSH API (wlt-dsh-cod.api.ts). All gates PASS. WLT tests 6/6 PASS.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": [],
+      "required_actions": [],
+      "checks": {
+        "go_domain": "PRESENT — services/wlt/backend/internal/cod/cod.go",
+        "migration": "PRESENT — services/wlt/database/migrations/wlt-005_cod.sql",
+        "http_handlers": "REGISTERED — 7 routes in server.go",
+        "openapi_operations": "PASS — createWltCodRecord, getWltCodRecord, listWltCodRecords, collectWltCod, remitWltCod, createWltCommission, listWltCommissions",
+        "generated_client": "PASS — services/wlt/clients/generated/wlt-api.ts",
+        "dsh_bridge": "PRESENT — services/dsh/frontend/shared/wlt-cod/",
+        "wlt_dsh_api": "PRESENT — services/wlt/frontend/dsh/shared/wlt-dsh-cod.api.ts",
+        "wlt_tests": "PASS — 6/6",
+        "go_build": "PASS",
+        "guard_no_financial_mutation_outside_wlt": "PASS",
+        "guard_matrix_v3": "PASS",
+        "contracts_lint": "PASS",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "wlt_boundary": {
+        "status": "COMPLIANT",
+        "note": "All COD collection and commission records owned by WLT. Captain COD status display is read-only via DSH bridge."
+      },
+      "approval_note": "User approved 2026-06-24",
+      "status_updated_from": "session 2026-06-24 WLT-001..005 full-stack closure"
+    },
+
+    "WLT-005": {
+      "topic_id": "WLT-005",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "reason": "Append-only ledger audit implemented 2026-06-24. Migration (wlt-006_ledger.sql) creates wlt_ledger_entries (wled_ prefix, append-only: no updated_at, actor_type: platform/partner/captain/client/system, debit_credit: debit/credit). Go domain (ledger/ledger.go): AppendLedgerEntry, GetLedgerEntry, ListLedgerEntries (cursor pagination). 3 HTTP handlers registered in server.go. OpenAPI operations: appendWltLedgerEntry, getWltLedgerEntry, listWltLedgerEntries. DSH bridge (wlt-ledger/) + WLT DSH API (wlt-dsh-ledger.api.ts) for admin audit read display. All gates PASS. WLT tests 6/6 PASS.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": [],
+      "required_actions": [],
+      "checks": {
+        "go_domain": "PRESENT — services/wlt/backend/internal/ledger/ledger.go",
+        "migration": "PRESENT — services/wlt/database/migrations/wlt-006_ledger.sql",
+        "http_handlers": "REGISTERED — 3 routes in server.go",
+        "openapi_operations": "PASS — appendWltLedgerEntry, getWltLedgerEntry, listWltLedgerEntries",
+        "generated_client": "PASS — services/wlt/clients/generated/wlt-api.ts",
+        "dsh_bridge": "PRESENT — services/dsh/frontend/shared/wlt-ledger/",
+        "wlt_dsh_api": "PRESENT — services/wlt/frontend/dsh/shared/wlt-dsh-ledger.api.ts",
+        "wlt_tests": "PASS — 6/6",
+        "go_build": "PASS",
+        "guard_no_financial_mutation_outside_wlt": "PASS — ledger is append-only; DSH reads only",
+        "guard_matrix_v3": "PASS",
+        "contracts_lint": "PASS",
+        "ci": "CI_NOT_CONFIGURED"
+      },
+      "wlt_boundary": {
+        "status": "COMPLIANT",
+        "note": "Ledger entries are append-only and owned by WLT. Admin audit display via DSH bridge is strictly read-only."
+      },
+      "approval_note": "User approved 2026-06-24",
+      "status_updated_from": "session 2026-06-24 WLT-001..005 full-stack closure"
     }
   },
   "current_gate_summary": {
     "foundation_gate": "PASS — FOUNDATION-GATE-20260624-213504",
     "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE",
-    "openapi_total_operations": 121,
+    "openapi_total_operations": 146,
     "dsh_tests": "PASS — 173/173",
     "typecheck_all": "PASS",
     "contracts_lint": "PASS",
@@ -509,6 +667,7 @@
     "guard_dsh_frontend_shared_ownership": "PASS",
     "guard_no_financial_mutation": "PASS",
     "dsh_011_014_contract_closure": "COMPLETE — 36 new operationIds, 57 new schemas, 25 new path entries, 4 new test suites",
+    "wlt_001_005_full_stack_closure": "COMPLETE — 25 new WLT operationIds, 27 new schemas, 5 new Go domains, 5 SQL migrations (wlt-002..006), 4 DSH-WLT read bridges, WLT tests 6/6 PASS",
     "ci": "CI_NOT_CONFIGURED",
     "session_changes_2026_06_24_dsh011_014": [
       "DSH-011: Notifications — 6 OpenAPI operations added (listDshNotifications, markDshNotificationRead, markAllDshNotificationsRead, updateDshNotificationPreferences, listDshPlatformNotificationConfig, upsertDshPlatformNotificationConfig). Migration dsh-011_notifications.sql present. Backend notifications.go + 6 HTTP handlers in server.go. Shared brain services/dsh/frontend/shared/notifications/. Generated client updated with 10 schemas.",

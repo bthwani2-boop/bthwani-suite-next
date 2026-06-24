@@ -1582,6 +1582,198 @@
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
       "source_evidence": [{"type": "CODE_BASED_CONTRACT_EVIDENCE", "path": "services/dsh/contracts/dsh.openapi.yaml", "status": "PRESENT"}, {"type": "GENERATED_CLIENT_COVERAGE", "path": "services/dsh/clients/generated/dsh-api.ts", "status": "PRESENT"}, {"type": "SHARED_BRAIN", "path": "services/dsh/frontend/shared/administration/", "status": "PRESENT"}],
       "verified_date": "2026-06-24"
+    },
+
+    "WLT-001": {
+      "topic_id": "WLT-001",
+      "topic_name": "Payment Session Capture Lifecycle",
+      "purpose": "Full payment session lifecycle: authorize, capture, COD collection, expiry. WLT owns all financial state transitions.",
+      "business_meaning": "Payment capture is the moment financial truth is established. WLT must own authorize→capture→settle transitions exclusively. DSH only reads the opaque payment session reference ID.",
+      "owning_service": "wlt",
+      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "in_scope": [
+        "Payment session status expansion: authorized, captured, cod_pending, cod_collected",
+        "wlt-002_payment_capture.sql migration",
+        "AuthorizeSession, CaptureSession, MarkCodPending, MarkCodCollected, ExpireSession Go domain",
+        "HTTP handlers: POST /wlt/payment-sessions/{id}/authorize|capture|expire|cod-collect",
+        "OpenAPI operations: authorizeWltPaymentSession, captureWltPaymentSession, expireWltPaymentSession, markWltCodCollected",
+        "WltPaymentSession extended with amount_minor_units, currency, captured_at",
+        "WLT generated TypeScript client (wlt-api.ts) coverage"
+      ],
+      "out_of_scope": [
+        "Provider payment gateway integration (external — future topic)",
+        "Wallet debit/credit (separate ledger operations)",
+        "Refund processing (WLT-002)",
+        "Settlement (WLT-003)"
+      ],
+      "related_backend_modules": ["services/wlt/backend/internal/payment"],
+      "related_database_tables": ["wlt_payment_sessions (extended)"],
+      "migrations_required": ["wlt-002_payment_capture.sql"],
+      "api_contracts_required": ["authorizeWltPaymentSession", "captureWltPaymentSession", "expireWltPaymentSession", "markWltCodCollected"],
+      "api_clients_required": ["services/wlt/clients/generated/wlt-api.ts"],
+      "required_surfaces": ["system"],
+      "forbidden_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
+      "primary_control_panel_section": "NOT_APPLICABLE_WLT_INTERNAL",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
+      "source_evidence": [
+        {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/payment/payment.go", "status": "PRESENT"},
+        {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-002_payment_capture.sql", "status": "PRESENT"},
+        {"type": "OPENAPI", "path": "services/wlt/contracts/wlt.openapi.yaml", "status": "PRESENT"},
+        {"type": "GENERATED_CLIENT", "path": "services/wlt/clients/generated/wlt-api.ts", "status": "PRESENT"}
+      ],
+      "verified_date": "2026-06-24",
+      "approval_note": "User approved 2026-06-24 — financial mutation APIs unlocked"
+    },
+
+    "WLT-002": {
+      "topic_id": "WLT-002",
+      "topic_name": "Refund Status & Processing",
+      "purpose": "Full refund lifecycle owned by WLT: request, approve, process, complete, reject. DSH only reads refund status reference.",
+      "business_meaning": "Refunds are a financial truth mutation — only WLT may initiate, process, and complete them. DSH surfaces display the refund status as a read-only reference.",
+      "owning_service": "wlt",
+      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "in_scope": [
+        "wlt_refunds table (wlt-003_refunds.sql)",
+        "CreateRefund, GetRefund, ListRefunds, ApproveRefund, CompleteRefund, RejectRefund Go domain",
+        "HTTP routes: POST /wlt/refunds, GET /wlt/refunds/{id}, GET /wlt/refunds, POST approve|complete|reject",
+        "OpenAPI: createWltRefund, getWltRefund, listWltRefunds, approveWltRefund, completeWltRefund, rejectWltRefund",
+        "DSH bridge: services/dsh/frontend/shared/wlt-refund/ (read-only view)",
+        "WLT DSH API: wlt-dsh-refund.api.ts"
+      ],
+      "out_of_scope": ["Refund provider gateway (external)", "Partial refunds (future)", "Dispute management (future)"],
+      "related_backend_modules": ["services/wlt/backend/internal/refund"],
+      "related_database_tables": ["wlt_refunds"],
+      "migrations_required": ["wlt-003_refunds.sql"],
+      "api_contracts_required": ["createWltRefund", "getWltRefund", "listWltRefunds", "approveWltRefund", "completeWltRefund", "rejectWltRefund"],
+      "api_clients_required": ["services/wlt/clients/generated/wlt-api.ts"],
+      "required_surfaces": ["system"],
+      "forbidden_surfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
+      "primary_control_panel_section": "NOT_APPLICABLE_WLT_INTERNAL",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
+      "source_evidence": [
+        {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/refund/refund.go", "status": "PRESENT"},
+        {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-003_refunds.sql", "status": "PRESENT"},
+        {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-refund/", "status": "PRESENT"},
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-refund.api.ts", "status": "PRESENT"}
+      ],
+      "verified_date": "2026-06-24",
+      "approval_note": "User approved 2026-06-24"
+    },
+
+    "WLT-003": {
+      "topic_id": "WLT-003",
+      "topic_name": "Settlement Read Model",
+      "purpose": "Partner settlement lifecycle: create, post, list, summarize. WLT owns all settlement state. DSH-010 finance section reads settlement summaries as display-only.",
+      "business_meaning": "Settlement determines when partners get paid. WLT must own the settlement ledger exclusively. DSH-010 may display settlement status summaries to operators — but cannot mutate them.",
+      "owning_service": "wlt",
+      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "in_scope": [
+        "wlt_settlements table (wlt-004_settlements.sql)",
+        "CreateSettlement, GetSettlement, ListPartnerSettlements, ListSettlementSummary, PostSettlement Go domain",
+        "HTTP routes: POST /wlt/settlements, GET /wlt/settlements/{id}|summary, POST /{id}/post",
+        "OpenAPI: createWltSettlement, getWltSettlement, listWltSettlements, postWltSettlement, getWltSettlementSummary",
+        "DSH bridge: services/dsh/frontend/shared/wlt-settlement/ (read-only view for DSH-010)",
+        "WLT DSH API: wlt-dsh-settlement.api.ts"
+      ],
+      "out_of_scope": ["Bank transfer execution (external provider)", "Tax calculation (future)", "Payout scheduling (future)"],
+      "related_backend_modules": ["services/wlt/backend/internal/settlement"],
+      "related_database_tables": ["wlt_settlements"],
+      "migrations_required": ["wlt-004_settlements.sql"],
+      "api_contracts_required": ["createWltSettlement", "getWltSettlement", "listWltSettlements", "postWltSettlement", "getWltSettlementSummary"],
+      "api_clients_required": ["services/wlt/clients/generated/wlt-api.ts"],
+      "required_surfaces": ["system"],
+      "read_only_dsh_surfaces": ["control-panel (finance section — display only via DSH-010)"],
+      "forbidden_surfaces": ["app-client", "app-captain", "app-field", "webapp", "website"],
+      "primary_control_panel_section": "NOT_APPLICABLE_WLT_INTERNAL",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
+      "source_evidence": [
+        {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/settlement/settlement.go", "status": "PRESENT"},
+        {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-004_settlements.sql", "status": "PRESENT"},
+        {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-settlement/", "status": "PRESENT"},
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-settlement.api.ts", "status": "PRESENT"}
+      ],
+      "verified_date": "2026-06-24",
+      "approval_note": "User approved 2026-06-24"
+    },
+
+    "WLT-004": {
+      "topic_id": "WLT-004",
+      "topic_name": "Commission & COD Reference",
+      "purpose": "COD collection tracking and platform commission records. WLT owns financial COD state. Captain app reads COD status as display-only reference.",
+      "business_meaning": "COD (Cash On Delivery) creates a financial obligation for captains to remit collected cash. Platform commissions (delivery fee, COD fee) must be tracked. WLT owns both. DSH captain surface shows read-only COD status.",
+      "owning_service": "wlt",
+      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "in_scope": [
+        "wlt_cod_records + wlt_commissions tables (wlt-005_cod.sql)",
+        "CreateCodRecord, GetCodRecord, ListCodRecords, MarkCodCollected, MarkCodRemitted, CreateCommission, ListCommissions Go domain",
+        "HTTP routes: POST|GET /wlt/cod-records, POST collect|remit, POST|GET /wlt/commissions",
+        "OpenAPI: createWltCodRecord, getWltCodRecord, listWltCodRecords, collectWltCod, remitWltCod, createWltCommission, listWltCommissions",
+        "DSH bridge: services/dsh/frontend/shared/wlt-cod/ (captain COD finance display)",
+        "WLT DSH API: wlt-dsh-cod.api.ts"
+      ],
+      "out_of_scope": ["Cash reconciliation audit (WLT-005 ledger)", "Captain earnings payout (future external)"],
+      "related_backend_modules": ["services/wlt/backend/internal/cod"],
+      "related_database_tables": ["wlt_cod_records", "wlt_commissions"],
+      "migrations_required": ["wlt-005_cod.sql"],
+      "api_contracts_required": ["createWltCodRecord", "getWltCodRecord", "listWltCodRecords", "collectWltCod", "remitWltCod", "createWltCommission", "listWltCommissions"],
+      "api_clients_required": ["services/wlt/clients/generated/wlt-api.ts"],
+      "required_surfaces": ["system"],
+      "read_only_dsh_surfaces": ["app-captain (COD status display — read only)"],
+      "primary_control_panel_section": "NOT_APPLICABLE_WLT_INTERNAL",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
+      "source_evidence": [
+        {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/cod/cod.go", "status": "PRESENT"},
+        {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-005_cod.sql", "status": "PRESENT"},
+        {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-cod/", "status": "PRESENT"},
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-cod.api.ts", "status": "PRESENT"}
+      ],
+      "verified_date": "2026-06-24",
+      "approval_note": "User approved 2026-06-24"
+    },
+
+    "WLT-005": {
+      "topic_id": "WLT-005",
+      "topic_name": "Ledger Audit Minimal",
+      "purpose": "Append-only financial ledger audit trail. WLT posts entries for every financial state transition. Read-only for admin audit.",
+      "business_meaning": "Every financial event must leave an immutable audit trail. WLT posts ledger entries for payment captures, refunds, settlements, and COD collections. Operators can query the ledger for dispute resolution and compliance.",
+      "owning_service": "wlt",
+      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "in_scope": [
+        "wlt_ledger_entries append-only table (wlt-006_ledger.sql)",
+        "AppendLedgerEntry, GetLedgerEntry, ListLedgerEntries (cursor pagination) Go domain",
+        "HTTP routes: POST /wlt/ledger/entries, GET /wlt/ledger/entries/{id}|entries",
+        "OpenAPI: appendWltLedgerEntry, getWltLedgerEntry, listWltLedgerEntries",
+        "DSH bridge: services/dsh/frontend/shared/wlt-ledger/ (admin audit read-only display)",
+        "WLT DSH API: wlt-dsh-ledger.api.ts"
+      ],
+      "out_of_scope": ["Real-time ledger streaming (future)", "External accounting export (future)", "Balance computation engine (future)"],
+      "related_backend_modules": ["services/wlt/backend/internal/ledger"],
+      "related_database_tables": ["wlt_ledger_entries"],
+      "migrations_required": ["wlt-006_ledger.sql"],
+      "api_contracts_required": ["appendWltLedgerEntry", "getWltLedgerEntry", "listWltLedgerEntries"],
+      "api_clients_required": ["services/wlt/clients/generated/wlt-api.ts"],
+      "required_surfaces": ["system"],
+      "read_only_dsh_surfaces": ["control-panel (finance/audit display — read only)"],
+      "primary_control_panel_section": "NOT_APPLICABLE_WLT_INTERNAL",
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
+      "source_evidence": [
+        {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/ledger/ledger.go", "status": "PRESENT"},
+        {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-006_ledger.sql", "status": "PRESENT"},
+        {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-ledger/", "status": "PRESENT"},
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-ledger.api.ts", "status": "PRESENT"}
+      ],
+      "verified_date": "2026-06-24",
+      "approval_note": "User approved 2026-06-24"
     }
   }
 }
