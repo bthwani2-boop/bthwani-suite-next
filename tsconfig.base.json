@@ -22,6 +22,9 @@
       "@bthwani/ui-kit": [
         "shared/ui-kit/src/index.ts"
       ],
+      "@bthwani/ui-kit/web": [
+        "shared/ui-kit/src/web/index.ts"
+      ],
       "@bthwani/app-shell": [
         "shared/app-shell/src/index.ts"
       ],

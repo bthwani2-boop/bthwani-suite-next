@@ -110,6 +110,50 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/analytics/stores", protected.handleStoreAnalytics)
 	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.handlePartnerPerformance)
 
+	// DSH-011: Notifications & Actor Communication
+	mux.HandleFunc("GET /dsh/notifications", protected.handleListNotifications)
+	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
+	mux.HandleFunc("POST /dsh/notifications/read-all", protected.handleMarkAllNotificationsRead)
+	mux.HandleFunc("PUT /dsh/notifications/preferences", protected.handleUpdateNotificationPreferences)
+	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
+	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.handleUpsertPlatformNotificationConfig)
+
+	// DSH-012: Marketing Command Deck
+	mux.HandleFunc("GET /dsh/operator/marketing/campaigns", protected.handleListCampaigns)
+	mux.HandleFunc("POST /dsh/operator/marketing/campaigns", protected.handleCreateCampaign)
+	mux.HandleFunc("GET /dsh/operator/marketing/campaigns/{campaignId}", protected.handleGetCampaign)
+	mux.HandleFunc("PATCH /dsh/operator/marketing/campaigns/{campaignId}", protected.handleUpdateCampaign)
+	mux.HandleFunc("DELETE /dsh/operator/marketing/campaigns/{campaignId}", protected.handleDeleteCampaign)
+	mux.HandleFunc("GET /dsh/operator/marketing/banners", protected.handleListBanners)
+	mux.HandleFunc("POST /dsh/operator/marketing/banners", protected.handleCreateBanner)
+	mux.HandleFunc("PATCH /dsh/operator/marketing/banners/{bannerId}", protected.handleUpdateBanner)
+	mux.HandleFunc("DELETE /dsh/operator/marketing/banners/{bannerId}", protected.handleDeleteBanner)
+	mux.HandleFunc("GET /dsh/operator/marketing/promos", protected.handleListPromos)
+	mux.HandleFunc("POST /dsh/operator/marketing/promos", protected.handleCreatePromo)
+	mux.HandleFunc("PATCH /dsh/operator/marketing/promos/{promoId}", protected.handleUpdatePromo)
+
+	// DSH-013: Platform Policies & Service Area Management
+	mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
+	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
+	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
+	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", protected.handleListSlaRules)
+	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleUpsertSlaRules)
+	mux.HandleFunc("GET /dsh/operator/platform/capacity", protected.handleGetCapacityConfig)
+	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
+	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
+
+	// DSH-014: Administration, Roles & Activation
+	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)
+	mux.HandleFunc("POST /dsh/operator/admin/roles", protected.handleCreateRole)
+	mux.HandleFunc("GET /dsh/operator/admin/staff", protected.handleListStaff)
+	mux.HandleFunc("POST /dsh/operator/admin/staff/{staffId}/roles", protected.handleAssignStaffRole)
+	mux.HandleFunc("GET /dsh/operator/admin/partners", protected.handleListPartnerActivations)
+	mux.HandleFunc("POST /dsh/operator/admin/partners/{partnerId}/activate", protected.handleActivatePartner)
+	mux.HandleFunc("POST /dsh/operator/admin/partners/{partnerId}/block", protected.handleBlockPartner)
+	mux.HandleFunc("GET /dsh/operator/admin/captains", protected.handleListCaptainCredentials)
+	mux.HandleFunc("POST /dsh/operator/admin/captains/{captainId}/credential", protected.handleUpsertCaptainCredential)
+	mux.HandleFunc("GET /dsh/operator/admin/audit", protected.handleListAdminAudit)
+
 	// Catch-all 404 handler for routes not found
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")

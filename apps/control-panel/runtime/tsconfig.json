@@ -18,6 +18,8 @@
     "paths": {
       "@bthwani/app-shell": ["../../../shared/app-shell/src/index.ts"],
       "@bthwani/core-identity": ["../../../core/identity/clients/index.ts"],
+      "@bthwani/ui-kit": ["../../../shared/ui-kit/src/web/index.ts"],
+      "@bthwani/ui-kit/web": ["../../../shared/ui-kit/src/web/index.ts"],
       "@dsh-cp/*": ["../../../services/dsh/frontend/control-panel/*"],
       "@dsh-shared/*": ["../../../services/dsh/frontend/shared/*"],
       "@dsh-clients/*": ["../../../services/dsh/clients/*"]
