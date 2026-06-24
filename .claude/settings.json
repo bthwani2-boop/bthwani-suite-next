@@ -6,10 +6,7 @@
     ".agents/AUTHORITY_BOUNDARY.md"
   ],
   "permissions": {
-    "allow": [
-      "Bash(*)",
-      "PowerShell(*)"
-    ]
+    "allow": []
   },
   "hooks": {
     "PreToolUse": [
@@ -18,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .agents/hooks/graphify-pretool.ps1"
+            "command": "pwsh -NoProfile -File .agents/hooks/graphify-pretool.ps1"
           }
         ]
       },
@@ -27,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .agents/hooks/graphify-pretool.ps1"
+            "command": "pwsh -NoProfile -File .agents/hooks/graphify-pretool.ps1"
           }
         ]
       }
