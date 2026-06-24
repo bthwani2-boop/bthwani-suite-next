@@ -13,7 +13,8 @@
     "react": "19.2.3"
   },
   "dependencies": {
-    "@bthwani/core-identity": "workspace:*"
+    "@bthwani/core-identity": "workspace:*",
+    "react-native-safe-area-context": "~5.7.0"
   },
   "devDependencies": {
     "@types/node": "22.16.0",

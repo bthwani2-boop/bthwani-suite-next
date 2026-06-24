@@ -14,6 +14,7 @@ export type SurfaceProps = {
   onPress?: () => void;
   hoverStyle?: Record<string, unknown>;
   pressStyle?: Record<string, unknown>;
+  style?: unknown;
 };
 
 export function Surface({ centered, ...props }: SurfaceProps) {

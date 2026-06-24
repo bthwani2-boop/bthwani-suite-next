@@ -24,3 +24,18 @@ export function Chip({ label, selected = false, disabled, icon, onPress }: ChipP
     />
   );
 }
+
+export type MetricChipProps = {
+  readonly icon?: ReactNode;
+  readonly label: string;
+};
+
+export function MetricChip({ icon, label }: MetricChipProps) {
+  return (
+    <Chip
+      label={label}
+      icon={icon}
+      disabled
+    />
+  );
+}

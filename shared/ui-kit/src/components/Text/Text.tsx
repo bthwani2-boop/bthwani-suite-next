@@ -16,6 +16,8 @@ export type TextProps = {
   direction?: Direction;
   htmlFor?: string;
   numberOfLines?: number;
+  style?: unknown;
+  weight?: unknown;
 };
 
 export function Text({

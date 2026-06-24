@@ -6,7 +6,7 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-001_TO_DSH-010_RUNTIME_VERIFIED_DSH-011_TO_DSH-014_NEED_CONTRACT_EVIDENCE",
+  stage: "DSH-001_TO_DSH-010_RUNTIME_VERIFIED_DSH-011_TO_DSH-014_NEED_CONTRACT_EVIDENCE DSH-002_RUNTIME_VERIFIED",
   closureState: "RUNTIME_VERIFIED",
   activationScope: "stores-home-discovery-catalog-cart-checkout-wlt-handoff-orders-dispatch-field-readiness-support-analytics",
   contract: "contracts/dsh.openapi.yaml",

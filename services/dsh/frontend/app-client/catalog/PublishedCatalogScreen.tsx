@@ -1,84 +1,445 @@
-import React from "react";
-import { Badge, Card, Header, ListItem, LoadingState, ScrollScreen, StateView, Text } from "@bthwani/ui-kit";
+import React, { useState } from "react";
+import { Alert, Image, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  BannerCarousel,
+  BannerCarouselItem,
+  FilterRail,
+  FilterRailItem,
+  FloatingActionCircle,
+  HeroCover,
+  LoadingState,
+  MetricChip,
+  ProductCard,
+  ScrollScreen,
+  ServiceModeSegment,
+  StateView,
+  StatusBadge,
+  Text,
+  colorRoles,
+} from "@bthwani/ui-kit";
 import { usePublishedCatalogController } from "../../shared/catalog";
+import { useStoreDetailController } from "../../shared/store";
+import type { CatalogCategory, CatalogProduct } from "../../shared/catalog/catalog.types";
 
-export function PublishedCatalogScreen({ storeId }: { readonly storeId: string }) {
-  const controller = usePublishedCatalogController(storeId);
+type PublishedCatalogScreenProps = {
+  readonly storeId: string;
+  readonly onBack?: () => void;
+};
 
-  if (controller.state.kind === "loading") {
-    return <LoadingState title="جاري تحميل الكتالوج…" />;
+export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScreenProps) {
+  const storeCtrl = useStoreDetailController(storeId);
+  const catalogCtrl = usePublishedCatalogController(storeId);
+  const insets = useSafeAreaInsets();
+
+  const [selectedServiceMode, setSelectedServiceMode] = useState<string>("delivery");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+
+  const handleRetry = React.useCallback(() => {
+    storeCtrl.retry();
+    catalogCtrl.retry();
+  }, [storeCtrl, catalogCtrl]);
+
+  // Loading States
+  if (storeCtrl.state.kind === "loading" || catalogCtrl.state.kind === "loading") {
+    return <LoadingState title="جاري تحميل واجهة المتجر…" />;
   }
 
-  if (controller.state.kind === "empty") {
+  // Error States
+  if (storeCtrl.state.kind === "error" || storeCtrl.state.kind === "service_unavailable") {
+    const errorMsg = storeCtrl.state.kind === "error" ? storeCtrl.state.message : "تعذر الوصول إلى الخادم.";
     return (
       <StateView
-        title="لا توجد منتجات منشورة"
-        description="لم يُعتمد أي منتج لهذا المتجر حتى الآن."
-      />
-    );
-  }
-
-  if (controller.state.kind === "error") {
-    return (
-      <StateView
-        title="تعذر تحميل الكتالوج"
-        description={controller.state.message}
+        title="عذراً، فشل تحميل المتجر"
+        description={errorMsg}
         actionLabel="إعادة المحاولة"
-        onActionPress={controller.retry}
+        onActionPress={handleRetry}
       />
     );
   }
 
-  if (controller.state.kind === "permission_denied") {
+  if (catalogCtrl.state.kind === "error" || catalogCtrl.state.kind === "permission_denied") {
+    const errorMsg = catalogCtrl.state.kind === "error" ? catalogCtrl.state.message : "ليس لديك الصلاحيات لعرض كتالوج هذا المتجر.";
     return (
       <StateView
-        title="الكتالوج غير متاح"
-        description="لا يمكن تحميل هذا الكتالوج حاليًا."
+        title="عذراً، فشل تحميل المنتجات"
+        description={errorMsg}
+        actionLabel="إعادة المحاولة"
+        onActionPress={handleRetry}
       />
     );
   }
 
-  const { categories, products } = controller.state.catalog;
-  const activeCategoryIds = new Set(categories.filter((c) => c.isActive).map((c) => c.id));
+  // Type narrowing for typescript
+  if (storeCtrl.state.kind !== "success" || catalogCtrl.state.kind !== "success") {
+    return null;
+  }
+
+  const store = storeCtrl.state.store;
+  const isStoreOpen = store.isOpen;
+
+  // Catalog categories & products mapping
+  const catalog = catalogCtrl.state.catalog;
+  const categories = catalog?.categories.filter((c: CatalogCategory) => c.isActive) || [];
+  const products = catalog?.products.filter((p: CatalogProduct) => p.isActive) || [];
+
+  // Filter Rail categories
+  const filterRailItems: readonly FilterRailItem[] = [
+    {
+      id: "all",
+      label: "جميع الأقسام",
+      icon: (
+        <Text style={{ fontSize: 13, color: selectedCategoryId === "all" ? colorRoles.textInverse : colorRoles.brandAction }}>
+          ≡
+        </Text>
+      ),
+    },
+    {
+      id: "popular",
+      label: "الأكثر طلباً",
+      icon: <Text style={{ fontSize: 13 }}>🔥</Text>,
+    },
+    {
+      id: "favorites",
+      label: "المفضلة",
+      icon: <Text style={{ fontSize: 13 }}>🤍</Text>,
+    },
+    ...categories.map((c: CatalogCategory) => ({ id: c.id, label: c.name })),
+  ];
+
+  // Filter products by selected category
+  const filteredProducts = products.filter((p: CatalogProduct) => {
+    if (selectedCategoryId === "all") return true;
+    if (selectedCategoryId === "favorites") {
+      return storeCtrl.favoriteIds.has(p.id);
+    }
+    if (selectedCategoryId === "popular") {
+      return p.isActive;
+    }
+    return p.categoryId === selectedCategoryId;
+  });
+
+  // Construct promo BannerCarousel items from catalog products or defaults
+  const bannerCarouselItems: readonly BannerCarouselItem[] = products
+    .filter((p: CatalogProduct) => p.media && p.media.length > 0)
+    .slice(0, 3)
+    .map((p: CatalogProduct) => {
+      const firstMedia = p.media[0];
+      return {
+        id: p.id,
+        title: p.name,
+        subtitle: p.description,
+        badge: "عرض خاص",
+        image: (firstMedia && firstMedia.publicUrl) ? { uri: firstMedia.publicUrl } : null,
+        cta: "اطلب الآن",
+        onPress: () => {
+          Alert.alert("معاينة المنتج", p.name);
+        },
+      };
+    });
 
   return (
-    <ScrollScreen>
-      <Header title="كتالوج المتجر" subtitle="منتجات وتصنيفات معتمدة ومنشورة فقط" />
-      {categories.filter((c) => c.isActive).map((category) => {
-        const categoryProducts = products.filter(
-          (p) => p.categoryId === category.id && p.isActive,
-        );
-        if (categoryProducts.length === 0) return null;
-        return (
-          <React.Fragment key={category.id}>
-            <Text role="titleMd">{category.name}</Text>
-            <Card>
-              {categoryProducts.map((product) => (
-                <ListItem
-                  key={product.id}
-                  title={product.name}
-                  subtitle={product.description || product.sku}
-                  trailing={<Badge label="معتمد" tone="success" />}
-                />
-              ))}
-            </Card>
-          </React.Fragment>
-        );
-      })}
-      {products.filter((p) => p.isActive && (p.categoryId === null || !activeCategoryIds.has(p.categoryId))).length > 0 && (
-        <Card>
-          {products
-            .filter((p) => p.isActive && (p.categoryId === null || !activeCategoryIds.has(p.categoryId)))
-            .map((product) => (
-              <ListItem
-                key={product.id}
-                title={product.name}
-                subtitle={product.description || product.sku}
-                trailing={<Badge label="معتمد" tone="success" />}
+    <View style={styles.root}>
+      {/* Parallax Hero Area */}
+      <View style={styles.heroWrapper}>
+        <HeroCover coverImage={store.heroImageSource} />
+
+        {/* Floating Top Header Toolbar */}
+        <View style={[styles.floatingHeader, { top: Math.max(insets.top, 16) }]}>
+          <View style={styles.floatingHeaderLeft}>
+            <FloatingActionCircle
+              icon={<Text style={styles.headerIconText}>🔍</Text>}
+              accessibilityLabel="بحث"
+              onPress={() => Alert.alert("بحث", "البحث متوفر قريباً داخل المتجر.")}
+            />
+            <FloatingActionCircle
+              icon={<Text style={styles.headerIconText}>🛒</Text>}
+              accessibilityLabel="عربة التسوق"
+              onPress={() => Alert.alert("العربة", "عربة التسوق ستتوفر قريباً.")}
+            />
+            <FloatingActionCircle
+              icon={<Text style={styles.headerIconText}>🔗</Text>}
+              accessibilityLabel="مشاركة"
+              onPress={() => Alert.alert("مشاركة", `مشاركة متجر ${store.displayName}`)}
+            />
+          </View>
+          {onBack ? (
+            <FloatingActionCircle
+              icon={<Text style={styles.headerIconText}>↩</Text>}
+              accessibilityLabel="رجوع"
+              onPress={onBack}
+            />
+          ) : null}
+        </View>
+      </View>
+
+      <ScrollScreen>
+        <View style={styles.contentWrap}>
+          {/* Overlapping Rounded Store Info Card */}
+          <View style={styles.identityCard}>
+            <View style={styles.identityRow}>
+              {store.logoImageSource ? (
+                <View style={styles.logoContainer}>
+                  <Image source={store.logoImageSource} style={styles.logoImage} />
+                </View>
+              ) : null}
+
+              <View style={styles.nameContainer}>
+                <Text role="titleMd" weight="900" style={styles.storeName}>
+                  {store.displayName}
+                </Text>
+                <Text role="bodySm" tone="secondary" style={styles.storeLocation}>
+                  📍 {store.locationLabel}
+                </Text>
+              </View>
+            </View>
+
+            {/* Status indicators */}
+            <View style={styles.statusRow}>
+              <StatusBadge
+                label={isStoreOpen ? "مفتوح الآن" : "مغلق الآن"}
+                type={isStoreOpen ? "success" : "danger"}
               />
-            ))}
-        </Card>
-      )}
-    </ScrollScreen>
+              <StatusBadge label="+967-1-444333" type="brand" />
+            </View>
+
+            {/* Service Delivery Modes */}
+            <ServiceModeSegment
+              options={[
+                { id: "delivery", label: "توصيل بثواني", icon: <Text style={{ fontSize: 13 }}>🚲</Text> },
+                { id: "pickup", label: "استلام", icon: <Text style={{ fontSize: 13 }}>🏪</Text> },
+              ]}
+              selectedId={selectedServiceMode}
+              onChange={setSelectedServiceMode}
+            />
+
+            {/* Metrics Chips Row */}
+            <View style={styles.metricsRow}>
+              {store.distanceLabel ? (
+                <MetricChip label={store.distanceLabel} />
+              ) : null}
+              {store.etaLabel ? (
+                <MetricChip label={store.etaLabel} />
+              ) : null}
+              {store.ratingLabel ? (
+                <MetricChip label={`⭐️ ${store.ratingLabel}`} />
+              ) : null}
+            </View>
+          </View>
+
+          {/* Opening hours & store summary Single Box */}
+          <View style={styles.infoBox}>
+            <View style={styles.infoRow}>
+              <Text role="bodySm" tone="secondary" style={styles.infoText}>
+                أوقات العمل: 08:00 - 23:00
+              </Text>
+              <Text style={styles.infoIcon}>🕒</Text>
+            </View>
+            <View style={[styles.infoRow, { borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle, paddingTop: 10, marginTop: 10 }]}>
+              <Text role="bodySm" tone="secondary" style={styles.infoText}>
+                ملخص المتجر: Over 1,200 fresh groceries and daily essentials
+              </Text>
+              <Text style={styles.infoIcon}>🛍️</Text>
+            </View>
+          </View>
+
+          {/* Promotions Banner Carousel */}
+          {bannerCarouselItems.length > 0 ? (
+            <View style={styles.carouselSection}>
+              <BannerCarousel banners={bannerCarouselItems} />
+            </View>
+          ) : null}
+
+          {/* Categories Title */}
+          <View style={styles.sectionHeader}>
+            <Text role="titleSm" weight="900" style={styles.sectionTitle}>
+              قائمة الأصناف
+            </Text>
+          </View>
+
+          {/* Filter Rail categories */}
+          {filterRailItems.length > 1 ? (
+            <FilterRail
+              items={filterRailItems}
+              selectedId={selectedCategoryId}
+              onChange={setSelectedCategoryId}
+            />
+          ) : null}
+
+          {/* Product Feed Grid */}
+          <View style={styles.productsGrid}>
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((p: CatalogProduct) => {
+                const firstMedia = p.media[0];
+                const imageSource = (firstMedia && firstMedia.publicUrl)
+                  ? { uri: firstMedia.publicUrl }
+                  : null;
+                const isFav = storeCtrl.favoriteIds.has(p.id);
+
+                return (
+                  <ProductCard
+                    key={p.id}
+                    id={p.id}
+                    title={p.name}
+                    subtitle={p.description}
+                    imageSource={imageSource}
+                    categoryLabel={categories.find((c: CatalogCategory) => c.id === p.categoryId)?.name || "عام"}
+                    price={{ value: parseFloat(p.priceReference || "0"), currency: "ر.ي" }}
+                    isFavorited={isFav}
+                    onFavorite={() => storeCtrl.toggleFavorite(p.id)}
+                    onAdd={() => Alert.alert("السلة", `تمت إضافة ${p.name} بنجاح.`)}
+                    onImagePress={() => Alert.alert("معاينة", p.name)}
+                  />
+                );
+              })
+            ) : (
+              <View style={styles.emptyProducts}>
+                <Text role="body" tone="secondary" style={styles.emptyText}>
+                  🍽️ لا توجد منتجات متوفرة حالياً في هذا القسم.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollScreen>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colorRoles.surfaceWarm,
+  },
+  heroWrapper: {
+    height: 260,
+    width: "100%",
+    position: "relative",
+  },
+  floatingHeader: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    zIndex: 100,
+  },
+  floatingHeaderLeft: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerIconText: {
+    fontSize: 16,
+    color: colorRoles.brandStructure,
+  },
+  contentWrap: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: colorRoles.surfaceWarm,
+    paddingBottom: 40,
+  },
+  identityCard: {
+    backgroundColor: colorRoles.surfaceBase,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    padding: 16,
+    gap: 12,
+    shadowColor: colorRoles.brandStructure,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  identityRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 12,
+  },
+  logoContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colorRoles.brandAction,
+    overflow: "hidden",
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+  },
+  nameContainer: {
+    flex: 1,
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  storeName: {
+    color: colorRoles.brandStructure,
+    textAlign: "right",
+  },
+  storeLocation: {
+    textAlign: "right",
+  },
+  statusRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  metricsRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  infoBox: {
+    backgroundColor: colorRoles.surfaceBase,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+  },
+  infoRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  infoText: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: 12,
+    color: colorRoles.textSecondary,
+  },
+  infoIcon: {
+    fontSize: 16,
+  },
+  carouselSection: {
+    marginTop: 16,
+  },
+  sectionHeader: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: colorRoles.brandStructure,
+    textAlign: "right",
+  },
+  productsGrid: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    gap: 12,
+  },
+  emptyProducts: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    textAlign: "center",
+  },
+});

@@ -1,4 +1,4 @@
-import type { DshStoreCardViewModel } from "./store-discovery.view-model";
+import type { DshStoreCardViewModel, DshStoreDetailViewModel } from "./store-discovery.view-model";
 
 export type DshStoreListState =
   | { readonly kind: "loading" }
@@ -12,6 +12,13 @@ export type DshStoreListState =
       readonly limit: number;
       readonly offset: number;
     };
+
+export type DshStoreDetailState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "service_unavailable" }
+  | { readonly kind: "success"; readonly store: DshStoreDetailViewModel };
+
 
 export function loadingState(): DshStoreListState {
   return { kind: "loading" };

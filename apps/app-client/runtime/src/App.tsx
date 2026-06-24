@@ -155,41 +155,53 @@ function App() {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const commerceStoreId = selectedStoreId ?? "store-1001";
 
+  const isViewingStorefront = activeTab === "stores" && selectedStoreId !== null;
+
   return (
     <View style={styles.root}>
       {/* Header — RTL: right=actions(search+notification+cart), center=title+location, left=avatar */}
-      <AppHeader
-        title="بثواني"
-        locationLabel="صنعاء، حي الأصبحي"
-        topInset={insets.top}
-        direction="rtl"
-        tickerMessage="مباشر"
-        tickerStatusLabel="مباشر"
-        actions={[
-          {
-            icon: <SearchIcon />,
-            accessibilityLabel: "بحث",
-          },
-          {
-            icon: <NotificationIcon />,
-            accessibilityLabel: "الإشعارات",
-            badgeCount: 0,
-          },
-          {
-            icon: <CartIcon />,
-            accessibilityLabel: "عربة التسوق",
-            badgeCount: 0,
-          },
-        ]}
-      />
+      {!isViewingStorefront && (
+        <AppHeader
+          title="بثواني"
+          locationLabel="صنعاء، حي الأصبحي"
+          topInset={insets.top}
+          direction="rtl"
+          tickerMessage="مباشر"
+          tickerStatusLabel="مباشر"
+          actions={[
+            {
+              icon: <SearchIcon />,
+              accessibilityLabel: "بحث",
+            },
+            {
+              icon: <NotificationIcon />,
+              accessibilityLabel: "الإشعارات",
+              badgeCount: 0,
+            },
+            {
+              icon: <CartIcon />,
+              accessibilityLabel: "عربة التسوق",
+              badgeCount: 0,
+            },
+          ]}
+        />
+      )}
 
       <View style={styles.content}>
         {activeTab === "home" ? (
-          <HomeDiscoveryRoute />
+          <HomeDiscoveryRoute
+            onStorePress={(storeId) => {
+              setSelectedStoreId(storeId);
+              setActiveTab("stores");
+            }}
+          />
         ) : activeTab === "stores" ? (
           selectedStoreId === null
             ? <StoreDiscoveryRoute onStorePress={setSelectedStoreId} />
-            : <PublishedCatalogScreen storeId={selectedStoreId} />
+            : <PublishedCatalogScreen
+                storeId={selectedStoreId}
+                onBack={() => setSelectedStoreId(null)}
+              />
         ) : activeTab === "wallet" ? (
           <ClientCheckoutRoute
             storeId={commerceStoreId}
@@ -203,16 +215,18 @@ function App() {
 
       {/* Bottom nav — RTL: الرئيسية | طلباتي | الخدمات | المحفظة | حسابي */}
       {/* Launcher opens StoreDiscovery (DSH-001 surface) */}
-      <BottomNavBar
-        items={NAV_ITEMS}
-        activeId={activeTab}
-        onSelect={setActiveTab}
-        launcherIcon={<ServicesIcon />}
-        launcherLabel="الخدمات"
-        onLauncherPress={() => setActiveTab(activeTab === "stores" ? "home" : "stores")}
-        direction="rtl"
-        bottomInset={insets.bottom}
-      />
+      {!isViewingStorefront && (
+        <BottomNavBar
+          items={NAV_ITEMS}
+          activeId={activeTab}
+          onSelect={setActiveTab}
+          launcherIcon={<ServicesIcon />}
+          launcherLabel="الخدمات"
+          onLauncherPress={() => setActiveTab(activeTab === "stores" ? "home" : "stores")}
+          direction="rtl"
+          bottomInset={insets.bottom}
+        />
+      )}
     </View>
   );
 }

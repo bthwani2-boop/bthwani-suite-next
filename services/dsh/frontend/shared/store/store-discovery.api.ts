@@ -1,11 +1,12 @@
 import { createDshStoreClient } from "../../../clients/store-discovery-client";
-import { toCardViewModel } from "./store-discovery.view-model";
+import { toCardViewModel, toDetailViewModel } from "./store-discovery.view-model";
 import {
   loadingState,
   errorState,
   serviceUnavailableState,
   successState,
   type DshStoreListState,
+  type DshStoreDetailState,
 } from "./store-discovery.states";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 
@@ -104,4 +105,27 @@ export function classifyStoreDiscoveryError(err: unknown): DshStoreListState {
     return errorState("INVALID_RESPONSE: numeric type mismatch in API response");
   }
   return errorState(`UNEXPECTED_ERROR: ${errMsg}`);
+}
+
+export async function fetchStoreDetail(storeId: string): Promise<DshStoreDetailState> {
+  if (!client) {
+    return {
+      kind: "error",
+      message: `API_CONFIG_ERROR: DSH API base URL is invalid ("${DSH_API_BASE_URL}").`,
+    };
+  }
+
+  try {
+    const response = await client.getStore(storeId);
+    if (!response || !response.store) {
+      return { kind: "error", message: "INVALID_RESPONSE: store detail missing" };
+    }
+    return { kind: "success", store: toDetailViewModel(response.store) };
+  } catch (err: unknown) {
+    const listErr = classifyStoreDiscoveryError(err);
+    if (listErr.kind === "service_unavailable") {
+      return { kind: "service_unavailable" };
+    }
+    return { kind: "error", message: listErr.kind === "error" ? listErr.message : "unknown error" };
+  }
 }

@@ -23,6 +23,7 @@ export type ButtonProps = {
   onPress?: () => void;
   circular?: boolean;
   pill?: boolean;
+  style?: unknown;
 };
 
 export function Button({
@@ -39,7 +40,8 @@ export function Button({
   accessibilityState,
   onPress,
   circular = false,
-  pill = false
+  pill = false,
+  style
 }: ButtonProps) {
   const resolvedDisabled = Boolean(disabled || loading);
 
@@ -61,8 +63,38 @@ export function Button({
       fullWidth={fullWidth}
       tone={tone}
       onPress={onPress}
+      style={style}
     >
       {label ?? children}
     </StyledButton>
+  );
+}
+
+export type FloatingActionCircleProps = {
+  readonly icon: ReactNode;
+  readonly onPress?: () => void;
+  readonly accessibilityLabel: string;
+};
+
+export function FloatingActionCircle({ icon, onPress, accessibilityLabel }: FloatingActionCircleProps) {
+  return (
+    <Button
+      accessibilityLabel={accessibilityLabel}
+      circular
+      tone="secondary"
+      {...(onPress ? { onPress } : {})}
+      style={{
+        backgroundColor: "rgba(255, 255, 255, 0.45)",
+        borderColor: "rgba(0, 0, 0, 0.12)",
+        borderWidth: 1.5,
+        width: 44,
+        height: 44,
+        paddingHorizontal: 0,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      {icon}
+    </Button>
   );
 }
