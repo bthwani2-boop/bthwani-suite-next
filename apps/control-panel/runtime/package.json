@@ -4,7 +4,8 @@
     "@bthwani/core-identity": "workspace:*",
     "next": "16.2.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-native-web": "^0.19.13"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
