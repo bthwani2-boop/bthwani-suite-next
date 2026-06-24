@@ -37,4 +37,32 @@ describe("generated DSH API client coverage", () => {
     assert.match(source, /submitDshPoD/);
     assert.match(source, /DshDispatchAssignmentResponse/);
   });
+
+  test("includes DSH-011 notification operations and schemas", () => {
+    assert.match(source, /listDshNotifications/);
+    assert.match(source, /markDshNotificationRead/);
+    assert.match(source, /markAllDshNotificationsRead/);
+    assert.match(source, /DshNotificationsListResponse/);
+  });
+
+  test("includes DSH-012 marketing operations and schemas", () => {
+    assert.match(source, /listDshCampaigns/);
+    assert.match(source, /createDshCampaign/);
+    assert.match(source, /listDshMarketingBanners/);
+    assert.match(source, /DshCampaignsListResponse/);
+  });
+
+  test("includes DSH-013 platform policy operations and schemas", () => {
+    assert.match(source, /listDshZones/);
+    assert.match(source, /getDshSlaRules/);
+    assert.match(source, /getDshCapacityConfig/);
+    assert.match(source, /DshZonesListResponse/);
+  });
+
+  test("includes DSH-014 administration operations and schemas", () => {
+    assert.match(source, /listDshAdminRoles/);
+    assert.match(source, /listDshPartnerActivations/);
+    assert.match(source, /activateDshPartner/);
+    assert.match(source, /DshAdminAuditListResponse/);
+  });
 });

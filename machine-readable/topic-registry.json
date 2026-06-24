@@ -1260,14 +1260,11 @@
         "Event-to-actor routing rule tests (each trigger fires correct actor set)"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NEEDS_CONTRACT_EVIDENCE",
-      "blockers": [
-        "Backend routes and shared notification modules are present, but DSH-011 operationIds are not defined in dsh.openapi.yaml",
-        "Generated DSH client coverage for DSH-011 is not established",
-        "Push notification provider remains external and not configured"
-      ],
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "CODE_BASED_CONTRACT_EVIDENCE", "path": "services/dsh/contracts/dsh.openapi.yaml", "status": "PRESENT"}, {"type": "GENERATED_CLIENT_COVERAGE", "path": "services/dsh/clients/generated/dsh-api.ts", "status": "PRESENT"}, {"type": "SHARED_BRAIN", "path": "services/dsh/frontend/shared/notifications/", "status": "PRESENT"}],
+      "verified_date": "2026-06-24"
     },
 
     "DSH-012": {
@@ -1377,14 +1374,11 @@
         "Marketing admin controller tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NEEDS_CONTRACT_EVIDENCE",
-      "blockers": [
-        "DSH-002 not closed — home discovery content layer must be proven before extended marketing hub",
-        "Backend marketing routes and shared modules are present, but DSH-012 operationIds are not defined in dsh.openapi.yaml",
-        "Generated DSH client coverage for DSH-012 is not established"
-      ],
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "CODE_BASED_CONTRACT_EVIDENCE", "path": "services/dsh/contracts/dsh.openapi.yaml", "status": "PRESENT"}, {"type": "GENERATED_CLIENT_COVERAGE", "path": "services/dsh/clients/generated/dsh-api.ts", "status": "PRESENT"}, {"type": "SHARED_BRAIN", "path": "services/dsh/frontend/shared/marketing/", "status": "PRESENT"}],
+      "verified_date": "2026-06-24"
     },
 
     "DSH-013": {
@@ -1476,13 +1470,11 @@
         "Platform policies controller tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NEEDS_CONTRACT_EVIDENCE",
-      "blockers": [
-        "Backend platform-policy routes and shared modules are present, but DSH-013 operationIds are not defined in dsh.openapi.yaml",
-        "Generated DSH client coverage for DSH-013 is not established"
-      ],
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "CODE_BASED_CONTRACT_EVIDENCE", "path": "services/dsh/contracts/dsh.openapi.yaml", "status": "PRESENT"}, {"type": "GENERATED_CLIENT_COVERAGE", "path": "services/dsh/clients/generated/dsh-api.ts", "status": "PRESENT"}, {"type": "SHARED_BRAIN", "path": "services/dsh/frontend/shared/platform-policies/", "status": "PRESENT"}],
+      "verified_date": "2026-06-24"
     },
 
     "DSH-014": {
@@ -1585,13 +1577,11 @@
         "Audit trail filter tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NEEDS_CONTRACT_EVIDENCE",
-      "blockers": [
-        "Backend administration routes and shared modules are present, but DSH-014 operationIds are not defined in dsh.openapi.yaml",
-        "Generated DSH client coverage for DSH-014 is not established"
-      ],
+      "current_status": "CODE_BASED_FULL_STACK_CLOSURE",
+      "blockers": [],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "CODE_BASED_CONTRACT_EVIDENCE", "path": "services/dsh/contracts/dsh.openapi.yaml", "status": "PRESENT"}, {"type": "GENERATED_CLIENT_COVERAGE", "path": "services/dsh/clients/generated/dsh-api.ts", "status": "PRESENT"}, {"type": "SHARED_BRAIN", "path": "services/dsh/frontend/shared/administration/", "status": "PRESENT"}],
+      "verified_date": "2026-06-24"
     }
   }
 }

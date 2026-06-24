@@ -1871,6 +1871,718 @@ paths:
       responses:
         "501": { description: Contract-only; signature and payment truth remain WLT-owned. }
 
+  # ── DSH-011: Notifications ─────────────────────────────────────────────────
+  /dsh/notifications:
+    get:
+      operationId: listDshNotifications
+      summary: List notifications for the authenticated actor.
+      tags: [notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshNotificationsListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/notifications/{notificationId}/read:
+    post:
+      operationId: markDshNotificationRead
+      summary: Mark a single notification as read.
+      tags: [notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Notification marked read.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshNotificationResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/notifications/read-all:
+    post:
+      operationId: markAllDshNotificationsRead
+      summary: Mark all notifications read for the authenticated actor.
+      tags: [notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All notifications marked read.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [markedCount]
+                properties:
+                  markedCount: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/notifications/preferences:
+    put:
+      operationId: updateDshNotificationPreferences
+      summary: Update notification preferences for the authenticated actor.
+      tags: [notifications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateNotificationPreferenceRequest" }
+      responses:
+        "200":
+          description: Preference updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshNotificationPreferenceResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/notifications/config:
+    get:
+      operationId: listDshPlatformNotificationConfig
+      summary: List platform-level notification topic configurations.
+      tags: [notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Platform notification config list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPlatformNotificationConfigListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    put:
+      operationId: upsertDshPlatformNotificationConfig
+      summary: Upsert platform-level notification config for a topic.
+      tags: [notifications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpsertPlatformNotificationConfigRequest" }
+      responses:
+        "200":
+          description: Config upserted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPlatformNotificationConfigResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  # ── DSH-012: Marketing ─────────────────────────────────────────────────────
+  /dsh/operator/marketing/campaigns:
+    get:
+      operationId: listDshCampaigns
+      summary: List marketing campaigns.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Campaigns list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCampaignsListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createDshCampaign
+      summary: Create a marketing campaign.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateCampaignRequest" }
+      responses:
+        "200":
+          description: Campaign created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCampaignResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/marketing/campaigns/{campaignId}:
+    get:
+      operationId: getDshCampaign
+      summary: Get a single marketing campaign.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Campaign detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCampaignResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateDshCampaign
+      summary: Update a marketing campaign.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateCampaignRequest" }
+      responses:
+        "200":
+          description: Campaign updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCampaignResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: archiveDshCampaign
+      summary: Archive a marketing campaign.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Campaign archived.
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/marketing/banners:
+    get:
+      operationId: listDshMarketingBanners
+      summary: List marketing banners.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Banners list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMarketingBannersListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createDshMarketingBanner
+      summary: Create a marketing banner.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateMarketingBannerRequest" }
+      responses:
+        "200":
+          description: Banner created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMarketingBannerResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/marketing/banners/{bannerId}:
+    patch:
+      operationId: updateDshMarketingBanner
+      summary: Update a marketing banner.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bannerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateMarketingBannerRequest" }
+      responses:
+        "200":
+          description: Banner updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMarketingBannerResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteDshMarketingBanner
+      summary: Delete a marketing banner.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bannerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Banner deleted.
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/marketing/promos:
+    get:
+      operationId: listDshMarketingPromos
+      summary: List marketing promos.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Promos list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMarketingPromosListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createDshMarketingPromo
+      summary: Create a marketing promo.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateMarketingPromoRequest" }
+      responses:
+        "200":
+          description: Promo created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMarketingPromoResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/marketing/promos/{promoId}:
+    patch:
+      operationId: updateDshMarketingPromo
+      summary: Update a marketing promo.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: promoId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateMarketingPromoRequest" }
+      responses:
+        "200":
+          description: Promo updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMarketingPromoResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── DSH-013: Platform Policies ────────────────────────────────────────────
+  /dsh/operator/platform/zones:
+    get:
+      operationId: listDshZones
+      summary: List service zones.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Zones list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshZonesListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createDshZone
+      summary: Create a service zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateZoneRequest" }
+      responses:
+        "200":
+          description: Zone created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshZoneResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/platform/zones/{zoneId}:
+    patch:
+      operationId: updateDshZone
+      summary: Update a service zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateZoneRequest" }
+      responses:
+        "200":
+          description: Zone updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshZoneResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/platform/sla-rules:
+    get:
+      operationId: getDshSlaRules
+      summary: Get SLA rules for a zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: zoneId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: SLA rules.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSlaRulesResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: upsertDshSlaRules
+      summary: Upsert SLA rules for a zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpsertSlaRulesRequest" }
+      responses:
+        "200":
+          description: SLA rules upserted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSlaRulesResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/platform/capacity:
+    get:
+      operationId: getDshCapacityConfig
+      summary: Get capacity configuration for a zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: zoneId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Capacity config.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCapacityConfigResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: upsertDshCapacityConfig
+      summary: Upsert capacity configuration for a zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpsertCapacityConfigRequest" }
+      responses:
+        "200":
+          description: Capacity config upserted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCapacityConfigResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/platform/serviceability/{zoneId}:
+    get:
+      operationId: getDshZoneServiceability
+      summary: Get live serviceability state for a zone.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Zone serviceability state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshZoneServiceabilityResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── DSH-014: Administration ────────────────────────────────────────────────
+  /dsh/operator/admin/roles:
+    get:
+      operationId: listDshAdminRoles
+      summary: List admin roles.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin roles list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshAdminRolesListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createDshAdminRole
+      summary: Create an admin role.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateAdminRoleRequest" }
+      responses:
+        "200":
+          description: Admin role created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshAdminRoleResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/admin/staff:
+    get:
+      operationId: listDshAdminStaff
+      summary: List admin staff members.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Staff list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshStaffListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/admin/staff/{staffId}/roles:
+    post:
+      operationId: assignDshStaffRole
+      summary: Assign a role to a staff member.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAssignStaffRoleRequest" }
+      responses:
+        "200":
+          description: Role assigned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshStaffMember" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/admin/partners:
+    get:
+      operationId: listDshPartnerActivations
+      summary: List partner activation requests.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Partner activations list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerActivationsListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/admin/partners/{partnerId}/activate:
+    post:
+      operationId: activateDshPartner
+      summary: Activate a partner.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshActivatePartnerRequest" }
+      responses:
+        "200":
+          description: Partner activated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerActivation" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/admin/partners/{partnerId}/block:
+    post:
+      operationId: blockDshPartner
+      summary: Block a partner.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshBlockPartnerRequest" }
+      responses:
+        "200":
+          description: Partner blocked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerActivation" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/admin/captains:
+    get:
+      operationId: listDshCaptainCredentials
+      summary: List captain credentials.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Captain credentials list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCaptainCredentialsListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/admin/captains/{captainId}/credential:
+    post:
+      operationId: upsertDshCaptainCredential
+      summary: Upsert credential for a captain.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: captainId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpsertCaptainCredentialRequest" }
+      responses:
+        "200":
+          description: Captain credential upserted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCaptainCredential" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/admin/audit:
+    get:
+      operationId: listDshAdminAudit
+      summary: List admin audit log entries.
+      tags: [DshAdministration]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Audit log entries.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshAdminAuditListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3379,3 +4091,485 @@ components:
       description: >
         Contains opaque WLT references only. No amount, ledger, refund, settlement,
         or signature verification logic belongs to DSH.
+
+    # ── DSH-011: Notification Schemas ─────────────────────────────────────────
+    DshNotification:
+      type: object
+      required: [id, actorId, actorType, topic, title, body, actionUrl, isRead, createdAt]
+      properties:
+        id: { type: string }
+        actorId: { type: string }
+        actorType: { type: string }
+        topic: { type: string }
+        title: { type: string }
+        body: { type: string }
+        actionUrl: { type: string }
+        isRead: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, "null"], format: date-time }
+
+    DshNotificationsListResponse:
+      type: object
+      required: [notifications, unreadCount]
+      properties:
+        notifications:
+          type: array
+          items: { $ref: "#/components/schemas/DshNotification" }
+        unreadCount: { type: integer }
+
+    DshNotificationResponse:
+      type: object
+      required: [notification]
+      properties:
+        notification: { $ref: "#/components/schemas/DshNotification" }
+
+    DshUpdateNotificationPreferenceRequest:
+      type: object
+      required: [topic, enabled]
+      properties:
+        topic: { type: string }
+        enabled: { type: boolean }
+
+    DshNotificationPreference:
+      type: object
+      required: [actorId, actorType, topic, enabled, updatedAt]
+      properties:
+        actorId: { type: string }
+        actorType: { type: string }
+        topic: { type: string }
+        enabled: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+
+    DshNotificationPreferenceResponse:
+      type: object
+      required: [preference]
+      properties:
+        preference: { $ref: "#/components/schemas/DshNotificationPreference" }
+
+    DshPlatformNotificationConfig:
+      type: object
+      required: [id, topic, actorTypes, isEnabled, description, updatedBy, updatedAt]
+      properties:
+        id: { type: string }
+        topic: { type: string }
+        actorTypes:
+          type: array
+          items: { type: string }
+        isEnabled: { type: boolean }
+        description: { type: string }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    DshPlatformNotificationConfigListResponse:
+      type: object
+      required: [configs]
+      properties:
+        configs:
+          type: array
+          items: { $ref: "#/components/schemas/DshPlatformNotificationConfig" }
+
+    DshPlatformNotificationConfigResponse:
+      type: object
+      required: [config]
+      properties:
+        config: { $ref: "#/components/schemas/DshPlatformNotificationConfig" }
+
+    DshUpsertPlatformNotificationConfigRequest:
+      type: object
+      required: [topic, actorTypes, isEnabled, description]
+      properties:
+        topic: { type: string }
+        actorTypes:
+          type: array
+          items: { type: string }
+        isEnabled: { type: boolean }
+        description: { type: string }
+
+    # ── DSH-012: Marketing Schemas ─────────────────────────────────────────────
+    DshCampaign:
+      type: object
+      required: [id, name, status, zoneId, startDate, endDate, contentRef, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string }
+        zoneId: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        contentRef: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshCampaignsListResponse:
+      type: object
+      required: [campaigns, total]
+      properties:
+        campaigns:
+          type: array
+          items: { $ref: "#/components/schemas/DshCampaign" }
+        total: { type: integer }
+
+    DshCampaignResponse:
+      type: object
+      required: [campaign]
+      properties:
+        campaign: { $ref: "#/components/schemas/DshCampaign" }
+
+    DshCreateCampaignRequest:
+      type: object
+      required: [name, zoneId, startDate, endDate, contentRef]
+      properties:
+        name: { type: string, minLength: 1 }
+        zoneId: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        contentRef: { type: string }
+
+    DshUpdateCampaignRequest:
+      type: object
+      properties:
+        name: { type: string }
+        status: { type: string }
+        endDate: { type: string, format: date }
+        contentRef: { type: string }
+
+    DshMarketingBanner:
+      type: object
+      required: [id, title, imageUrl, targetUrl, zone, status, publishAt, expiresAt, createdAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        imageUrl: { type: string }
+        targetUrl: { type: string }
+        zone: { type: string }
+        status: { type: string }
+        publishAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    DshMarketingBannersListResponse:
+      type: object
+      required: [banners, total]
+      properties:
+        banners:
+          type: array
+          items: { $ref: "#/components/schemas/DshMarketingBanner" }
+        total: { type: integer }
+
+    DshMarketingBannerResponse:
+      type: object
+      required: [banner]
+      properties:
+        banner: { $ref: "#/components/schemas/DshMarketingBanner" }
+
+    DshCreateMarketingBannerRequest:
+      type: object
+      required: [title, imageUrl, targetUrl, zone, publishAt, expiresAt]
+      properties:
+        title: { type: string, minLength: 1 }
+        imageUrl: { type: string }
+        targetUrl: { type: string }
+        zone: { type: string }
+        publishAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+
+    DshUpdateMarketingBannerRequest:
+      type: object
+      properties:
+        title: { type: string }
+        status: { type: string }
+        expiresAt: { type: string, format: date-time }
+
+    DshMarketingPromo:
+      type: object
+      required: [id, title, code, discountType, discountValue, zone, status, startDate, endDate, createdAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        code: { type: string }
+        discountType: { type: string }
+        discountValue: { type: number }
+        zone: { type: string }
+        status: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
+
+    DshMarketingPromosListResponse:
+      type: object
+      required: [promos, total]
+      properties:
+        promos:
+          type: array
+          items: { $ref: "#/components/schemas/DshMarketingPromo" }
+        total: { type: integer }
+
+    DshMarketingPromoResponse:
+      type: object
+      required: [promo]
+      properties:
+        promo: { $ref: "#/components/schemas/DshMarketingPromo" }
+
+    DshCreateMarketingPromoRequest:
+      type: object
+      required: [title, code, discountType, discountValue, zone, startDate, endDate]
+      properties:
+        title: { type: string, minLength: 1 }
+        code: { type: string, minLength: 1 }
+        discountType: { type: string }
+        discountValue: { type: number }
+        zone: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    DshUpdateMarketingPromoRequest:
+      type: object
+      properties:
+        title: { type: string }
+        status: { type: string }
+        endDate: { type: string, format: date }
+
+    # ── DSH-013: Platform Policies Schemas ────────────────────────────────────
+    DshZone:
+      type: object
+      required: [id, name, status, polygon, cityCode, serviceAreaCode, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string }
+        polygon: { type: string }
+        cityCode: { type: string }
+        serviceAreaCode: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshZonesListResponse:
+      type: object
+      required: [zones, total]
+      properties:
+        zones:
+          type: array
+          items: { $ref: "#/components/schemas/DshZone" }
+        total: { type: integer }
+
+    DshZoneResponse:
+      type: object
+      required: [zone]
+      properties:
+        zone: { $ref: "#/components/schemas/DshZone" }
+
+    DshCreateZoneRequest:
+      type: object
+      required: [name, polygon, cityCode, serviceAreaCode]
+      properties:
+        name: { type: string, minLength: 1 }
+        polygon: { type: string }
+        cityCode: { type: string }
+        serviceAreaCode: { type: string }
+
+    DshUpdateZoneRequest:
+      type: object
+      properties:
+        name: { type: string }
+        status: { type: string }
+        polygon: { type: string }
+
+    DshSlaRule:
+      type: object
+      required: [zoneId, captainSlaMinutes, partnerSlaMinutes, version, updatedAt]
+      properties:
+        zoneId: { type: string }
+        captainSlaMinutes: { type: integer }
+        partnerSlaMinutes: { type: integer }
+        version: { type: integer }
+        updatedAt: { type: string, format: date-time }
+
+    DshSlaRulesResponse:
+      type: object
+      required: [rules]
+      properties:
+        rules: { $ref: "#/components/schemas/DshSlaRule" }
+
+    DshUpsertSlaRulesRequest:
+      type: object
+      required: [zoneId, captainSlaMinutes, partnerSlaMinutes]
+      properties:
+        zoneId: { type: string }
+        captainSlaMinutes: { type: integer }
+        partnerSlaMinutes: { type: integer }
+
+    DshCapacityConfig:
+      type: object
+      required: [zoneId, maxConcurrentOrders, warningThreshold, updatedAt]
+      properties:
+        zoneId: { type: string }
+        maxConcurrentOrders: { type: integer }
+        warningThreshold: { type: number }
+        updatedAt: { type: string, format: date-time }
+
+    DshCapacityConfigResponse:
+      type: object
+      required: [config]
+      properties:
+        config: { $ref: "#/components/schemas/DshCapacityConfig" }
+
+    DshUpsertCapacityConfigRequest:
+      type: object
+      required: [zoneId, maxConcurrentOrders, warningThreshold]
+      properties:
+        zoneId: { type: string }
+        maxConcurrentOrders: { type: integer }
+        warningThreshold: { type: number }
+
+    DshZoneServiceabilityResponse:
+      type: object
+      required: [zoneId, isActive, activeOrders, capacityPct]
+      properties:
+        zoneId: { type: string }
+        isActive: { type: boolean }
+        activeOrders: { type: integer }
+        capacityPct: { type: number }
+
+    # ── DSH-014: Administration Schemas ───────────────────────────────────────
+    DshAdminRole:
+      type: object
+      required: [id, name, permissions, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DshAdminRolesListResponse:
+      type: object
+      required: [roles, total]
+      properties:
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/DshAdminRole" }
+        total: { type: integer }
+
+    DshAdminRoleResponse:
+      type: object
+      required: [role]
+      properties:
+        role: { $ref: "#/components/schemas/DshAdminRole" }
+
+    DshCreateAdminRoleRequest:
+      type: object
+      required: [name, permissions]
+      properties:
+        name: { type: string, minLength: 1 }
+        permissions:
+          type: array
+          items: { type: string }
+
+    DshStaffMember:
+      type: object
+      required: [id, username, roles, createdAt]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DshStaffListResponse:
+      type: object
+      required: [staff, total]
+      properties:
+        staff:
+          type: array
+          items: { $ref: "#/components/schemas/DshStaffMember" }
+        total: { type: integer }
+
+    DshAssignStaffRoleRequest:
+      type: object
+      required: [roleId]
+      properties:
+        roleId: { type: string }
+
+    DshPartnerActivation:
+      type: object
+      required: [partnerId, status, submittedAt]
+      properties:
+        partnerId: { type: string }
+        status: { type: string }
+        submittedAt: { type: string, format: date-time }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        reviewedBy: { type: string }
+        rejectionReason: { type: string }
+
+    DshPartnerActivationsListResponse:
+      type: object
+      required: [partners, total]
+      properties:
+        partners:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartnerActivation" }
+        total: { type: integer }
+
+    DshActivatePartnerRequest:
+      type: object
+      required: [note]
+      properties:
+        note: { type: string }
+
+    DshBlockPartnerRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+
+    DshCaptainCredential:
+      type: object
+      required: [captainId, licenseNumber, vehicleType, vehiclePlate, status]
+      properties:
+        captainId: { type: string }
+        licenseNumber: { type: string }
+        vehicleType: { type: string }
+        vehiclePlate: { type: string }
+        status: { type: string }
+        verifiedAt: { type: [string, "null"], format: date-time }
+
+    DshCaptainCredentialsListResponse:
+      type: object
+      required: [captains, total]
+      properties:
+        captains:
+          type: array
+          items: { $ref: "#/components/schemas/DshCaptainCredential" }
+        total: { type: integer }
+
+    DshUpsertCaptainCredentialRequest:
+      type: object
+      required: [licenseNumber, vehicleType, vehiclePlate]
+      properties:
+        licenseNumber: { type: string, minLength: 1 }
+        vehicleType: { type: string }
+        vehiclePlate: { type: string, minLength: 1 }
+
+    DshAdminAuditEntry:
+      type: object
+      required: [id, actorId, actorType, action, targetId, targetType, details, createdAt]
+      properties:
+        id: { type: string }
+        actorId: { type: string }
+        actorType: { type: string }
+        action: { type: string }
+        targetId: { type: string }
+        targetType: { type: string }
+        details: { type: object }
+        createdAt: { type: string, format: date-time }
+
+    DshAdminAuditListResponse:
+      type: object
+      required: [entries, total]
+      properties:
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/DshAdminAuditEntry" }
+        total: { type: integer }

@@ -912,6 +912,161 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/notifications": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshNotifications"];
+        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/notifications/{notificationId}/read": {
+        parameters: { query?: never; header?: never; path: { notificationId: string; }; cookie?: never; };
+        get?: never; put?: never;
+        post: operations["markDshNotificationRead"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/notifications/read-all": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get?: never; put?: never;
+        post: operations["markAllDshNotificationsRead"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/notifications/preferences": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get?: never;
+        put: operations["updateDshNotificationPreferences"];
+        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/notifications/config": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshPlatformNotificationConfig"];
+        put: operations["upsertDshPlatformNotificationConfig"];
+        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/marketing/campaigns": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshCampaigns"];
+        put?: never;
+        post: operations["createDshCampaign"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/marketing/campaigns/{campaignId}": {
+        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        get: operations["getDshCampaign"];
+        put?: never;
+        post?: never;
+        delete: operations["archiveDshCampaign"];
+        options?: never; head?: never;
+        patch: operations["updateDshCampaign"];
+        trace?: never;
+    };
+    "/dsh/operator/marketing/banners": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshMarketingBanners"];
+        put?: never;
+        post: operations["createDshMarketingBanner"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/marketing/banners/{bannerId}": {
+        parameters: { query?: never; header?: never; path: { bannerId: string; }; cookie?: never; };
+        get?: never; put?: never; post?: never;
+        delete: operations["deleteDshMarketingBanner"];
+        options?: never; head?: never;
+        patch: operations["updateDshMarketingBanner"];
+        trace?: never;
+    };
+    "/dsh/operator/marketing/promos": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshMarketingPromos"];
+        put?: never;
+        post: operations["createDshMarketingPromo"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/marketing/promos/{promoId}": {
+        parameters: { query?: never; header?: never; path: { promoId: string; }; cookie?: never; };
+        get?: never; put?: never; post?: never; delete?: never; options?: never; head?: never;
+        patch: operations["updateDshMarketingPromo"];
+        trace?: never;
+    };
+    "/dsh/operator/platform/zones": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshZones"];
+        put?: never;
+        post: operations["createDshZone"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/platform/zones/{zoneId}": {
+        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
+        get?: never; put?: never; post?: never; delete?: never; options?: never; head?: never;
+        patch: operations["updateDshZone"];
+        trace?: never;
+    };
+    "/dsh/operator/platform/sla-rules": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["getDshSlaRules"];
+        put: operations["upsertDshSlaRules"];
+        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/platform/capacity": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["getDshCapacityConfig"];
+        put: operations["upsertDshCapacityConfig"];
+        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/platform/serviceability/{zoneId}": {
+        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
+        get: operations["getDshZoneServiceability"];
+        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/roles": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshAdminRoles"];
+        put?: never;
+        post: operations["createDshAdminRole"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/staff": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshAdminStaff"];
+        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/staff/{staffId}/roles": {
+        parameters: { query?: never; header?: never; path: { staffId: string; }; cookie?: never; };
+        get?: never; put?: never;
+        post: operations["assignDshStaffRole"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/partners": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshPartnerActivations"];
+        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/partners/{partnerId}/activate": {
+        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
+        get?: never; put?: never;
+        post: operations["activateDshPartner"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/partners/{partnerId}/block": {
+        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
+        get?: never; put?: never;
+        post: operations["blockDshPartner"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/captains": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshCaptainCredentials"];
+        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/captains/{captainId}/credential": {
+        parameters: { query?: never; header?: never; path: { captainId: string; }; cookie?: never; };
+        get?: never; put?: never;
+        post: operations["upsertDshCaptainCredential"];
+        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
+    "/dsh/operator/admin/audit": {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        get: operations["listDshAdminAudit"];
+        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1432,6 +1587,297 @@ export interface components {
             checkoutIntentId: string;
             /** Format: date-time */
             occurredAt: string;
+        };
+        DshNotification: {
+            id: string;
+            actorId: string;
+            actorType: string;
+            topic: string;
+            title: string;
+            body: string;
+            actionUrl: string;
+            isRead: boolean;
+            createdAt: string;
+            readAt?: string;
+        };
+        DshNotificationsListResponse: {
+            notifications: components["schemas"]["DshNotification"][];
+            unreadCount: number;
+        };
+        DshNotificationResponse: {
+            notification: components["schemas"]["DshNotification"];
+        };
+        DshUpdateNotificationPreferenceRequest: {
+            topic: string;
+            enabled: boolean;
+        };
+        DshNotificationPreference: {
+            actorId: string;
+            actorType: string;
+            topic: string;
+            enabled: boolean;
+            updatedAt: string;
+        };
+        DshNotificationPreferenceResponse: {
+            preference: components["schemas"]["DshNotificationPreference"];
+        };
+        DshPlatformNotificationConfig: {
+            id: string;
+            topic: string;
+            actorTypes: string[];
+            isEnabled: boolean;
+            description: string;
+            updatedBy: string;
+            updatedAt: string;
+        };
+        DshPlatformNotificationConfigListResponse: {
+            configs: components["schemas"]["DshPlatformNotificationConfig"][];
+        };
+        DshPlatformNotificationConfigResponse: {
+            config: components["schemas"]["DshPlatformNotificationConfig"];
+        };
+        DshUpsertPlatformNotificationConfigRequest: {
+            topic: string;
+            actorTypes: string[];
+            isEnabled: boolean;
+            description: string;
+        };
+        DshCampaign: {
+            id: string;
+            name: string;
+            status: string;
+            zoneId: string;
+            startDate: string;
+            endDate: string;
+            contentRef: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DshCampaignsListResponse: {
+            campaigns: components["schemas"]["DshCampaign"][];
+            total: number;
+        };
+        DshCampaignResponse: {
+            campaign: components["schemas"]["DshCampaign"];
+        };
+        DshCreateCampaignRequest: {
+            name: string;
+            zoneId: string;
+            startDate: string;
+            endDate: string;
+            contentRef: string;
+        };
+        DshUpdateCampaignRequest: {
+            name?: string;
+            status?: string;
+            endDate?: string;
+            contentRef?: string;
+        };
+        DshMarketingBanner: {
+            id: string;
+            title: string;
+            imageUrl: string;
+            targetUrl: string;
+            zone: string;
+            status: string;
+            publishAt: string;
+            expiresAt: string;
+            createdAt: string;
+        };
+        DshMarketingBannersListResponse: {
+            banners: components["schemas"]["DshMarketingBanner"][];
+            total: number;
+        };
+        DshMarketingBannerResponse: {
+            banner: components["schemas"]["DshMarketingBanner"];
+        };
+        DshCreateMarketingBannerRequest: {
+            title: string;
+            imageUrl: string;
+            targetUrl: string;
+            zone: string;
+            publishAt: string;
+            expiresAt: string;
+        };
+        DshUpdateMarketingBannerRequest: {
+            title?: string;
+            status?: string;
+            expiresAt?: string;
+        };
+        DshMarketingPromo: {
+            id: string;
+            title: string;
+            code: string;
+            discountType: string;
+            discountValue: number;
+            zone: string;
+            status: string;
+            startDate: string;
+            endDate: string;
+            createdAt: string;
+        };
+        DshMarketingPromosListResponse: {
+            promos: components["schemas"]["DshMarketingPromo"][];
+            total: number;
+        };
+        DshMarketingPromoResponse: {
+            promo: components["schemas"]["DshMarketingPromo"];
+        };
+        DshCreateMarketingPromoRequest: {
+            title: string;
+            code: string;
+            discountType: string;
+            discountValue: number;
+            zone: string;
+            startDate: string;
+            endDate: string;
+        };
+        DshUpdateMarketingPromoRequest: {
+            title?: string;
+            status?: string;
+            endDate?: string;
+        };
+        DshZone: {
+            id: string;
+            name: string;
+            status: string;
+            polygon: string;
+            cityCode: string;
+            serviceAreaCode: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DshZonesListResponse: {
+            zones: components["schemas"]["DshZone"][];
+            total: number;
+        };
+        DshZoneResponse: {
+            zone: components["schemas"]["DshZone"];
+        };
+        DshCreateZoneRequest: {
+            name: string;
+            polygon: string;
+            cityCode: string;
+            serviceAreaCode: string;
+        };
+        DshUpdateZoneRequest: {
+            name?: string;
+            status?: string;
+            polygon?: string;
+        };
+        DshSlaRule: {
+            zoneId: string;
+            captainSlaMinutes: number;
+            partnerSlaMinutes: number;
+            version: number;
+            updatedAt: string;
+        };
+        DshSlaRulesResponse: {
+            rules: components["schemas"]["DshSlaRule"][];
+        };
+        DshUpsertSlaRulesRequest: {
+            zoneId: string;
+            captainSlaMinutes: number;
+            partnerSlaMinutes: number;
+        };
+        DshCapacityConfig: {
+            zoneId: string;
+            maxConcurrentOrders: number;
+            warningThreshold: number;
+            updatedAt: string;
+        };
+        DshCapacityConfigResponse: {
+            config: components["schemas"]["DshCapacityConfig"];
+        };
+        DshUpsertCapacityConfigRequest: {
+            zoneId: string;
+            maxConcurrentOrders: number;
+            warningThreshold: number;
+        };
+        DshZoneServiceabilityResponse: {
+            zoneId: string;
+            isActive: boolean;
+            activeOrders: number;
+            capacityPct: number;
+        };
+        DshAdminRole: {
+            id: string;
+            name: string;
+            permissions: string[];
+            createdAt: string;
+        };
+        DshAdminRolesListResponse: {
+            roles: components["schemas"]["DshAdminRole"][];
+            total: number;
+        };
+        DshAdminRoleResponse: {
+            role: components["schemas"]["DshAdminRole"];
+        };
+        DshCreateAdminRoleRequest: {
+            name: string;
+            permissions: string[];
+        };
+        DshStaffMember: {
+            id: string;
+            username: string;
+            roles: string[];
+            createdAt: string;
+        };
+        DshStaffListResponse: {
+            staff: components["schemas"]["DshStaffMember"][];
+            total: number;
+        };
+        DshAssignStaffRoleRequest: {
+            roleId: string;
+        };
+        DshPartnerActivation: {
+            partnerId: string;
+            status: string;
+            submittedAt: string;
+            reviewedAt?: string;
+            reviewedBy?: string;
+            rejectionReason?: string;
+        };
+        DshPartnerActivationsListResponse: {
+            partners: components["schemas"]["DshPartnerActivation"][];
+            total: number;
+        };
+        DshActivatePartnerRequest: {
+            note?: string;
+        };
+        DshBlockPartnerRequest: {
+            reason: string;
+        };
+        DshCaptainCredential: {
+            captainId: string;
+            licenseNumber: string;
+            vehicleType: string;
+            vehiclePlate: string;
+            status: string;
+            verifiedAt?: string;
+        };
+        DshCaptainCredentialsListResponse: {
+            captains: components["schemas"]["DshCaptainCredential"][];
+            total: number;
+        };
+        DshUpsertCaptainCredentialRequest: {
+            licenseNumber: string;
+            vehicleType: string;
+            vehiclePlate: string;
+        };
+        DshAdminAuditEntry: {
+            id: string;
+            actorId: string;
+            actorType: string;
+            action: string;
+            targetId: string;
+            targetType: string;
+            details: string;
+            createdAt: string;
+        };
+        DshAdminAuditListResponse: {
+            entries: components["schemas"]["DshAdminAuditEntry"][];
+            total: number;
         };
     };
     responses: {
@@ -3103,6 +3549,324 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    listDshNotifications: {
+        parameters: { query?: { limit?: number; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshNotificationsListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    markDshNotificationRead: {
+        parameters: { query?: never; header?: never; path: { notificationId: string; }; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshNotificationResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markAllDshNotificationsRead: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": { markedCount: number; }; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshNotificationPreferences: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpdateNotificationPreferenceRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshNotificationPreferenceResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshPlatformNotificationConfig: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshPlatformNotificationConfigListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    upsertDshPlatformNotificationConfig: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpsertPlatformNotificationConfigRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshPlatformNotificationConfigResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshCampaigns: {
+        parameters: { query?: { limit?: number; status?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignsListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshCampaign: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshCreateCampaignRequest"]; }; };
+        responses: {
+            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshCampaign: {
+        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateDshCampaign: {
+        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpdateCampaignRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    archiveDshCampaign: {
+        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            204: { headers: { [name: string]: unknown; }; content?: never; };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshMarketingBanners: {
+        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingBannersListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshMarketingBanner: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshCreateMarketingBannerRequest"]; }; };
+        responses: {
+            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingBannerResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshMarketingBanner: {
+        parameters: { query?: never; header?: never; path: { bannerId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpdateMarketingBannerRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingBannerResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteDshMarketingBanner: {
+        parameters: { query?: never; header?: never; path: { bannerId: string; }; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            204: { headers: { [name: string]: unknown; }; content?: never; };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshMarketingPromos: {
+        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingPromosListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshMarketingPromo: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshCreateMarketingPromoRequest"]; }; };
+        responses: {
+            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingPromoResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshMarketingPromo: {
+        parameters: { query?: never; header?: never; path: { promoId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpdateMarketingPromoRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingPromoResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshZones: {
+        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZonesListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshZone: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshCreateZoneRequest"]; }; };
+        responses: {
+            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZoneResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshZone: {
+        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpdateZoneRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZoneResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshSlaRules: {
+        parameters: { query?: { zoneId?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshSlaRulesResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    upsertDshSlaRules: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpsertSlaRulesRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshSlaRulesResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshCapacityConfig: {
+        parameters: { query?: { zoneId?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCapacityConfigResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    upsertDshCapacityConfig: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpsertCapacityConfigRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCapacityConfigResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshZoneServiceability: {
+        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZoneServiceabilityResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshAdminRoles: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshAdminRolesListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshAdminRole: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshCreateAdminRoleRequest"]; }; };
+        responses: {
+            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshAdminRoleResponse"]; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshAdminStaff: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshStaffListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    assignDshStaffRole: {
+        parameters: { query?: never; header?: never; path: { staffId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshAssignStaffRoleRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; }; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerActivations: {
+        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshPartnerActivationsListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    activateDshPartner: {
+        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshActivatePartnerRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; status: string; }; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    blockDshPartner: {
+        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshBlockPartnerRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; }; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshCaptainCredentials: {
+        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCaptainCredentialsListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    upsertDshCaptainCredential: {
+        parameters: { query?: never; header?: never; path: { captainId: string; }; cookie?: never; };
+        requestBody: { content: { "application/json": components["schemas"]["DshUpsertCaptainCredentialRequest"]; }; };
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; }; }; };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshAdminAudit: {
+        parameters: { query?: { actorType?: string; action?: string; limit?: number; }; header?: never; path?: never; cookie?: never; };
+        requestBody?: never;
+        responses: {
+            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshAdminAuditListResponse"]; }; };
+            401: components["responses"]["Unauthenticated"];
         };
     };
 }
