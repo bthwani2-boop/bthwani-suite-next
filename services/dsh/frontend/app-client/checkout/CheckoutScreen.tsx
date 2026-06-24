@@ -20,6 +20,8 @@ const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
   pickup: "استلم بنفسك",
 };
 
+const PAYMENT_METHOD_LABEL = "الدفع عند الاستلام";
+
 type Props = {
   readonly cart: DshCart;
   readonly deliveryAddress?: string;
@@ -51,14 +53,22 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", onSucces
     const { intent } = controller.state;
     return (
       <ScrollScreen>
-        <Header title="تم إرسال الطلب" />
-        <StateView
-          title="تم الطلب"
-          description={`رقم الطلب: ${intent.id}`}
+        <Header
+          title="تم تثبيت نية الدفع"
+          subtitle="تم إنشاء مرجع WLT بدون تنفيذ أي عملية مالية داخل DSH"
+          actions={<Badge label="WLT reference" tone="success" />}
         />
-        <Badge label="الدفع عند الاستلام" tone="neutral" />
+        <StateView
+          title="الطلب جاهز للمتابعة"
+          description={`رقم النية: ${intent.id} · مرجع WLT: ${intent.wltPaymentSessionId}`}
+          tone="success"
+        />
+        <Card>
+          <Text role="label">حالة الدفع</Text>
+          <Text role="body">تم إنشاء مرجع جلسة الدفع داخل WLT. لا توجد محفظة أو دفتر أستاذ تم تعديله داخل DSH.</Text>
+        </Card>
         {onSuccess && (
-          <Button tone="primary" label="متابعة" onPress={() => onSuccess(intent.id)} />
+          <Button tone="primary" label="متابعة الطلب" onPress={() => onSuccess(intent.id)} fullWidth />
         )}
       </ScrollScreen>
     );
@@ -68,12 +78,12 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", onSucces
     const { intent } = controller.state;
     return (
       <ScrollScreen>
-        <Header title="في انتظار الدفع" />
+        <Header title="في انتظار مرجع WLT" actions={<Badge label="payment_pending" tone="warning" />} />
         <StateView
-          title="جلسة الدفع قيد الإعداد"
-          description="سيتم تفعيل خيار الدفع الإلكتروني قريبًا."
+          title="لم يصل مرجع الدفع بعد"
+          description="DSH أنشأ نية checkout فقط. المتابعة المالية تبقى مملوكة لـ WLT."
+          tone="warning"
         />
-        <Badge label="payment_pending" tone="warning" />
         <Button
           tone="ghost"
           label="إلغاء الطلب"
@@ -87,8 +97,9 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", onSucces
   if (controller.state.kind === "blocked_payment_unavailable") {
     return (
       <StateView
-        title="خدمة الدفع غير متاحة"
-        description="عذرًا، خدمة الدفع الإلكتروني غير متاحة حاليًا. يمكنك الدفع عند الاستلام."
+        title="WLT غير متاح"
+        description="لا يمكن إنشاء نية الدفع بدون مرجع WLT. حاول مرة أخرى عند عودة الخدمة."
+        tone="danger"
         actionLabel="رجوع"
         {...(onCancel ? { onActionPress: onCancel } : {})}
       />
@@ -119,9 +130,14 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", onSucces
 
   return (
     <ScrollScreen>
-      <Header title="تأكيد الطلب" subtitle={`${cart.items.length} منتج`} />
+      <Header
+        title="تأكيد الطلب"
+        subtitle={`${cart.items.length} منتج · ${FULFILLMENT_LABELS[cart.fulfillmentMode]}`}
+        actions={<Badge label="DSH-005" tone="action" />}
+      />
 
       <Card>
+        <Text role="label">ملخص السلة</Text>
         {cart.items.map((item) => (
           <ListItem
             key={item.id}
@@ -133,13 +149,17 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", onSucces
       </Card>
 
       <Card>
-        <Text role="label">طريقة التوصيل</Text>
-        <Text role="body">{FULFILLMENT_LABELS[cart.fulfillmentMode]}</Text>
+        <Text role="label">تفاصيل التنفيذ</Text>
+        <ListItem title="طريقة التوصيل" subtitle={FULFILLMENT_LABELS[cart.fulfillmentMode]} />
+        <ListItem title="طريقة الدفع" subtitle={PAYMENT_METHOD_LABEL} />
+        {deliveryAddress ? <ListItem title="عنوان التسليم" subtitle={deliveryAddress} /> : null}
       </Card>
 
       <Card>
-        <Text role="label">طريقة الدفع</Text>
-        <Text role="body">الدفع عند الاستلام</Text>
+        <Text role="label">حدود WLT</Text>
+        <Text role="body">
+          عند التأكيد ينشئ DSH نية checkout فقط، ثم يأخذ مرجع جلسة دفع مملوك من WLT بدون أي خصم أو تسوية أو تعديل دفتر أستاذ داخل DSH.
+        </Text>
       </Card>
 
       {onCancel && (
@@ -148,8 +168,9 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", onSucces
 
       <Button
         tone="primary"
-        label="تأكيد الطلب"
+        label="تأكيد وإنشاء مرجع WLT"
         onPress={handleSubmit}
+        fullWidth
       />
     </ScrollScreen>
   );

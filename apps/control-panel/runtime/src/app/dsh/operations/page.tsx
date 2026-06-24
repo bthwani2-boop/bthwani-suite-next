@@ -1,6 +1,6 @@
 "use client";
 
-import { CatalogApprovalScreen } from "@dsh-cp/catalogs/CatalogApprovalScreen";
+import { CheckoutActivityScreen } from "@dsh-cp/operations/CheckoutActivityScreen";
 import {
   ControlPanelNavigation,
   ControlPanelShell,
@@ -8,7 +8,7 @@ import {
 } from "@bthwani/app-shell";
 import { useRouter } from "next/navigation";
 
-export default function DshCatalogsPage() {
+export default function DshOperationsPage() {
   const router = useRouter();
 
   const handleSectionPress = (section: string) => {
@@ -22,7 +22,7 @@ export default function DshCatalogsPage() {
   return (
     <ControlPanelShell
       dir="rtl"
-      topBar={<ControlPanelTopBar title={<strong>لوحة التحكم — DSH</strong>} serviceLabel={<span>catalogs / approvals</span>} />}
+      topBar={<ControlPanelTopBar title={<strong>لوحة التحكم — DSH</strong>} serviceLabel={<span>operations / checkout</span>} />}
       navigation={
         <ControlPanelNavigation
           dir="rtl"
@@ -33,11 +33,11 @@ export default function DshCatalogsPage() {
             { section: "catalogs", label: "اعتماد الكتالوجات" },
             { section: "marketing", label: "التسويق واكتشاف الصفحة" },
           ]}
-          activeSection="catalogs"
+          activeSection="operations"
           onSectionPress={handleSectionPress}
         />
       }
-      main={<CatalogApprovalScreen />}
+      main={<CheckoutActivityScreen />}
     />
   );
 }

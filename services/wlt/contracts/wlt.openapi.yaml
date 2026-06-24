@@ -147,6 +147,53 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wlt/payment-sessions:
+    post:
+      operationId: createWltPaymentSessionReference
+      summary: Create a WLT-owned payment-session reference for DSH checkout handoff.
+      description: Creates an opaque payment-session reference only. No wallet debit, ledger posting, provider capture, refund, or settlement occurs here.
+      tags:
+        - WltPaymentSessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCreatePaymentSessionRequest"
+      responses:
+        "201":
+          description: Payment-session reference created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPaymentSessionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /wlt/payment-sessions/{paymentSessionId}:
+    get:
+      operationId: getWltPaymentSessionReference
+      summary: Read a WLT-owned payment-session reference.
+      tags:
+        - WltPaymentSessions
+      parameters:
+        - name: paymentSessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment-session reference.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPaymentSessionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   responses:
     BadRequest:
@@ -327,6 +374,72 @@ components:
           type: string
           format: date-time
 
+    WltPaymentSession:
+      type: object
+      required:
+        - id
+        - checkoutIntentId
+        - clientId
+        - storeId
+        - paymentMethod
+        - status
+        - providerReference
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        checkoutIntentId:
+          type: string
+        clientId:
+          type: string
+        storeId:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+            - cod
+            - wallet
+            - mixed
+            - official_wallet
+        status:
+          type: string
+          enum:
+            - reference_created
+            - pending_provider
+            - failed
+            - expired
+        providerReference:
+          type: string
+          description: Empty unless a future WLT-owned provider integration attaches an external reference.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WltCreatePaymentSessionRequest:
+      type: object
+      required:
+        - checkoutIntentId
+        - clientId
+        - storeId
+      properties:
+        checkoutIntentId:
+          type: string
+        clientId:
+          type: string
+        storeId:
+          type: string
+        paymentMethod:
+          type: string
+          enum:
+            - cod
+            - wallet
+            - mixed
+            - official_wallet
+
     WltPaymentStatusRefResponse:
       type: object
       required:
@@ -358,3 +471,11 @@ components:
       properties:
         reference:
           $ref: "#/components/schemas/WltWalletStatusRef"
+
+    WltPaymentSessionResponse:
+      type: object
+      required:
+        - paymentSession
+      properties:
+        paymentSession:
+          $ref: "#/components/schemas/WltPaymentSession"

@@ -25,7 +25,7 @@ export type DshOrder = {
   readonly clientId: string;
   readonly status: DshOrderStatus;
   readonly rejectionReason: string;
-  /** Opaque WLT payment reference. Empty string until WLT-001 approved. DSH never mutates financial truth. */
+  /** Opaque WLT payment reference. DSH never mutates financial truth. */
   readonly wltPaymentRefId: string;
   readonly items: readonly DshOrderItem[];
   readonly createdAt: string;

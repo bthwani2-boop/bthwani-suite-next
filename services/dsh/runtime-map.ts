@@ -67,13 +67,13 @@ export const DSH_RUNTIME_MAP = [
     capabilityId: "dsh.client.checkout",
     backendImplemented: true,
     sharedBrainReady: true,
-    runtimeBound: false,
+    runtimeBound: true,
     screensReady: true,
     databaseReady: true,
-    generatedClientReady: false,
-    surfaceBindingApproved: false,
-    state: "blocked",
-    runtimeEvidence: null,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/DSH-005-checkout-intent",
   },
   // ── DSH-006: Order Fulfillment & Partner Acceptance ─────────────────────
   {

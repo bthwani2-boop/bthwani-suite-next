@@ -17,7 +17,7 @@ export type DshCheckoutIntent = {
   readonly fulfillmentMode: DshFulfillmentMode;
   readonly state: DshIntentState;
   readonly paymentMethod: DshPaymentMethod;
-  /** Opaque reference from WLT. Empty string until WLT-001 approved. */
+  /** Opaque WLT-owned payment-session reference. */
   readonly wltPaymentSessionId: string;
   readonly deliveryAddress: string;
   readonly note: string;

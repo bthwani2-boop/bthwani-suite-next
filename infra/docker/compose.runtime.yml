@@ -118,6 +118,7 @@ services:
       DATABASE_URL: "postgres://${BTHWANI_DSH_DB_USER:-dsh_runtime}:${BTHWANI_DSH_DB_PASSWORD:-dsh_runtime_password}@postgres:5432/${BTHWANI_DSH_DB_NAME:-dsh_runtime}?sslmode=disable"
       DSH_AUTH_MODE: "identity-required-for-protected-store-actions"
       DSH_IDENTITY_BASE_URL: "http://identity-api:8082"
+      DSH_WLT_BASE_URL: "${DSH_WLT_BASE_URL:-http://wlt-api:8083}"
     ports:
       - "${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
     depends_on:

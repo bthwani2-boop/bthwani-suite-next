@@ -236,6 +236,19 @@ function Invoke-WltSmoke {
   Write-Host "  /wlt/references/wallet-status: $($walRef.reference.status)"
   if ($walRef.reference.status -ne "active") { throw "/wlt/references/wallet-status wrong status" }
 
+  $sessionBody = @{
+    checkoutIntentId = "checkout-smoke-0001"
+    clientId = "client-local-001"
+    storeId = "store-1001"
+    paymentMethod = "cod"
+  } | ConvertTo-Json
+  $session = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions" -Method Post -ContentType "application/json" -Body $sessionBody -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/payment-sessions POST: $($session.paymentSession.id)"
+  if ([string]::IsNullOrWhiteSpace($session.paymentSession.id)) { throw "/wlt/payment-sessions did not return id" }
+  $sessionRead = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions/$($session.paymentSession.id)" -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /wlt/payment-sessions GET: $($sessionRead.paymentSession.status)"
+  if ($sessionRead.paymentSession.status -ne "reference_created") { throw "/wlt/payment-sessions wrong status" }
+
   Write-Host "WLT API smoke: PASS"
 }
 
@@ -403,6 +416,39 @@ function Invoke-DshSmoke {
   $catalogAudit = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/audit" -Headers $operatorHeaders -TimeoutSec 10
   if ($catalogAudit.events.Count -lt 1) { throw "catalog audit evidence is missing" }
 
+  if ($script:ProfileList -contains "wlt") {
+    $clientToken = Get-LocalActorToken "client"
+    $clientHeaders = @{
+      Authorization = "Bearer $clientToken"
+      "X-Correlation-ID" = "smoke-checkout-$([guid]::NewGuid())"
+    }
+    $cartBody = @{
+      storeId = "store-1001"
+      fulfillmentMode = "bthwani_delivery"
+      productId = $product.product.id
+      productName = $product.product.name
+      priceReference = "wlt-price-ref-smoke"
+      quantity = 1
+    } | ConvertTo-Json
+    $cartItem = Invoke-RestMethod "http://localhost:58080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
+    if ([string]::IsNullOrWhiteSpace($cartItem.cartId)) { throw "cart item did not return cartId" }
+    $checkoutBody = @{
+      cartId = $cartItem.cartId
+      storeId = "store-1001"
+      fulfillmentMode = "bthwani_delivery"
+      paymentMethod = "cod"
+      deliveryAddress = "runtime smoke checkout address"
+      note = "runtime DSH-005 smoke"
+    } | ConvertTo-Json
+    $checkout = Invoke-RestMethod "http://localhost:58080/dsh/client/checkout-intents" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
+    Write-Host "  /dsh/client/checkout-intents: $($checkout.intent.id) / WLT=$($checkout.intent.wltPaymentSessionId)"
+    if ([string]::IsNullOrWhiteSpace($checkout.intent.wltPaymentSessionId)) { throw "checkout intent missing WLT payment session reference" }
+    $operatorCheckout = Invoke-RestMethod "http://localhost:58080/dsh/operator/checkout-intents" -Headers $operatorHeaders -TimeoutSec 10
+    if ($operatorCheckout.intents.Count -lt 1) { throw "operator checkout intent list returned no rows" }
+  } else {
+    Write-Host "  DSH-005 checkout handoff smoke skipped because wlt profile is not active."
+  }
+
   foreach ($actor in @(
     @{ username = "bthwani"; expectedRole = "partner" },
     @{ username = "field"; expectedRole = "field" },
@@ -524,15 +570,15 @@ elseif ($Action -eq "smoke") {
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
   }
-  if ($ProfileList -contains "dsh") {
-    Wait-ForDshApi
-    Invoke-DshSmoke
-  }
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
     Invoke-WltSeed
     Wait-ForWltApi
     Invoke-WltSmoke
+  }
+  if ($ProfileList -contains "dsh") {
+    Wait-ForDshApi
+    Invoke-DshSmoke
   }
   if ($ProfileList -contains "media") {
     Invoke-MinioSmoke
@@ -562,18 +608,18 @@ elseif ($Action -eq "all") {
     Invoke-IdentitySmoke
   }
 
-  if ($ProfileList -contains "dsh") {
-    Invoke-Migrate
-    Invoke-Seed
-    Wait-ForDshApi
-    Invoke-DshSmoke
-  }
-
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
     Invoke-WltSeed
     Wait-ForWltApi
     Invoke-WltSmoke
+  }
+
+  if ($ProfileList -contains "dsh") {
+    Invoke-Migrate
+    Invoke-Seed
+    Wait-ForDshApi
+    Invoke-DshSmoke
   }
 
   if ($ProfileList -contains "media") {

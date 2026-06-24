@@ -657,7 +657,7 @@
         "Checkout activity in control-panel operations"
       ],
       "out_of_scope": [
-        "WLT payment execution (WLT-001)",
+        "WLT payment execution/capture",
         "Order fulfillment (DSH-006)",
         "Refund flow (WLT)",
         "COD collection (WLT)"
@@ -687,19 +687,17 @@
         "app_client": "Customer reaches checkout, sees intent confirmation, WLT handoff reference, success and error paths.",
         "control_panel": "Operator sees checkout intent activity with payment reference status."
       },
-      "wlt_dependency": "WLT payment-sessions read endpoint required — NOT_STARTED in WLT (requires WLT-001 approval)",
+      "wlt_dependency": "WLT-001 minimal payment-session reference create/read is active. Payment execution, capture, refunds, settlement, wallet balance mutation, and ledger posting remain out of scope.",
       "tests_required": ["Checkout intent controller tests", "WLT handoff contract tests"],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "VISUAL_EVIDENCE_GATE", "guard:dsh-frontend-shared-ownership", "guard:no-financial-mutation-outside-wlt"],
-      "current_status": "TECHNICAL_WIRING_VERIFIED",
-      "implementation_session": "2026-06-23",
-      "wlt_boundary_note": "wlt_payment_session_id stored as opaque empty string until WLT-001 approved. DSH never executes payment, refund, settlement, or wallet mutation. guard:no-financial-mutation-outside-wlt: PASS.",
+      "current_status": "RUNTIME_VERIFIED_NEEDS_VISUAL_EVIDENCE",
+      "implementation_session": "2026-06-24",
+      "wlt_boundary_note": "wlt_payment_session_id stores an opaque WLT-owned payment-session reference created by services/wlt. DSH never executes payment, refund, settlement, wallet mutation, ledger posting, provider capture, or financial truth mutation. guard:no-financial-mutation-outside-wlt: PASS.",
       "blockers": [
         "Visual state screenshots not yet captured (REAL_EXPERIENCE_CLOSURE_v2)",
-        "dsh-005_checkout_intent.sql migration not applied (requires explicit user authorization)",
-        "WLT-001 payment-sessions endpoint not approved (wlt_payment_session_id placeholder empty until then)",
         "DSH-001 visual evidence gap blocks global slice:gate"
       ],
-      "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE — 29/29. Evidence: SLICE-GATE-20260623-231626",
+      "slice_gate": "Runtime smoke PASS on 2026-06-24 for WLT payment-session create/read and DSH checkout intent creation with non-empty wltPaymentSessionId. Global closure still needs visual evidence.",
       "donor_screens": {
         "app_client": [
           "dsh/frontend/app-client/screens/DshCheckoutIntentScreen.tsx — DshCheckoutIntentScreen.",
@@ -723,7 +721,7 @@
       ],
       "feature_behavior": "Client taps 'Confirm order' in cart → checkout intent created in DSH → DSH calls WLT payment-sessions reference for payment authorization → WLT returns payment session ID → DSH receives session reference (not financial state) → quote confirmed → client taps 'Place order' → order created → order-created state shown → track order",
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "RUNTIME_TOPIC_EVIDENCE", "path": "services/dsh/evidence/DSH-005-checkout-intent/", "status": "PRESENT_NEEDS_VISUAL_EVIDENCE"}]
     },
 
     "DSH-006": {

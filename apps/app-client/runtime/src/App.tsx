@@ -13,6 +13,7 @@ import {
 import { HomeDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDiscoveryRoute";
 import { PublishedCatalogScreen } from "../../../../services/dsh/frontend/app-client/catalog";
+import { ClientCheckoutRoute } from "../../../../services/dsh/frontend/app-client/checkout/ClientCheckoutRoute";
 
 // ─── Inline icon helpers ───────────────────────────────────────
 const ICON_SIZE          = 22;
@@ -152,6 +153,7 @@ function App() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<string>("home");
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const commerceStoreId = selectedStoreId ?? "store-1001";
 
   return (
     <View style={styles.root}>
@@ -188,6 +190,12 @@ function App() {
           selectedStoreId === null
             ? <StoreDiscoveryRoute onStorePress={setSelectedStoreId} />
             : <PublishedCatalogScreen storeId={selectedStoreId} />
+        ) : activeTab === "wallet" ? (
+          <ClientCheckoutRoute
+            storeId={commerceStoreId}
+            serviceAreaCode="sana"
+            onBrowseCatalog={() => setActiveTab("stores")}
+          />
         ) : (
           <View style={styles.placeholder} />
         )}

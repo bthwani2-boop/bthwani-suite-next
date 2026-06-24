@@ -12,6 +12,8 @@
     "typescript": "~6.0.3"
   },
   "dependencies": {
+    "@bthwani/app-shell": "workspace:*",
+    "@bthwani/core-identity": "workspace:*",
     "expo": "~56.0.12",
     "expo-dev-client": "~56.0.20",
     "react": "19.2.3",

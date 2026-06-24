@@ -13,6 +13,7 @@ export default function DshStoresPage() {
 
   const handleSectionPress = (section: string) => {
     if (section === "dashboard") router.push("/");
+    if (section === "operations") router.push("/dsh/operations");
     if (section === "partners") router.push("/dsh/partners/stores");
     if (section === "catalogs") router.push("/dsh/catalogs");
     if (section === "marketing") router.push("/dsh/marketing");
@@ -32,6 +33,7 @@ export default function DshStoresPage() {
           dir="rtl"
           items={[
             { section: "dashboard", label: "الرئيسية" },
+            { section: "operations", label: "العمليات" },
             { section: "partners", label: "إدارة المتاجر" },
             { section: "catalogs", label: "اعتماد الكتالوجات" },
             { section: "marketing", label: "التسويق واكتشاف الصفحة" },

@@ -16,9 +16,9 @@ var (
 type PaymentMethod string
 
 const (
-	MethodCOD           PaymentMethod = "cod"
-	MethodWallet        PaymentMethod = "wallet"
-	MethodMixed         PaymentMethod = "mixed"
+	MethodCOD            PaymentMethod = "cod"
+	MethodWallet         PaymentMethod = "wallet"
+	MethodMixed          PaymentMethod = "mixed"
 	MethodOfficialWallet PaymentMethod = "official_wallet"
 )
 
@@ -35,39 +35,49 @@ const (
 type FulfillmentMode string
 
 const (
-	ModeBthwaniDelivery  FulfillmentMode = "bthwani_delivery"
-	ModePartnerDelivery  FulfillmentMode = "partner_delivery"
-	ModePickup           FulfillmentMode = "pickup"
+	ModeBthwaniDelivery FulfillmentMode = "bthwani_delivery"
+	ModePartnerDelivery FulfillmentMode = "partner_delivery"
+	ModePickup          FulfillmentMode = "pickup"
 )
 
 type Intent struct {
-	ID                   string
-	ClientID             string
-	CartID               string
-	StoreID              string
-	FulfillmentMode      FulfillmentMode
-	State                IntentState
-	PaymentMethod        PaymentMethod
-	WltPaymentSessionID  string // opaque reference from WLT — empty until WLT-001 approved
-	DeliveryAddress      string
-	Note                 string
-	Version              int
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                  string
+	ClientID            string
+	CartID              string
+	StoreID             string
+	FulfillmentMode     FulfillmentMode
+	State               IntentState
+	PaymentMethod       PaymentMethod
+	WltPaymentSessionID string // opaque WLT-owned payment-session reference
+	DeliveryAddress     string
+	Note                string
+	Version             int
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type CreateIntentInput struct {
-	ClientID        string
-	CartID          string
-	StoreID         string
-	FulfillmentMode FulfillmentMode
-	PaymentMethod   PaymentMethod
-	DeliveryAddress string
-	Note            string
+	ID                  string
+	ClientID            string
+	CartID              string
+	StoreID             string
+	FulfillmentMode     FulfillmentMode
+	PaymentMethod       PaymentMethod
+	WltPaymentSessionID string
+	DeliveryAddress     string
+	Note                string
+}
+
+func NewIntentID(db *sql.DB) (string, error) {
+	var id string
+	if err := db.QueryRow(`SELECT gen_random_uuid()::text`).Scan(&id); err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
-	if input.ClientID == "" || input.CartID == "" || input.StoreID == "" {
+	if input.ID == "" || input.ClientID == "" || input.CartID == "" || input.StoreID == "" {
 		return nil, ErrInvalid
 	}
 	if input.FulfillmentMode == "" {
@@ -79,21 +89,17 @@ func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
 
 	const q = `
 		INSERT INTO dsh_checkout_intents
-			(client_id, cart_id, store_id, fulfillment_mode, state, payment_method,
+			(id, client_id, cart_id, store_id, fulfillment_mode, state, payment_method,
 			 wlt_payment_session_id, delivery_address, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 
-	// WLT payment session: CONTRACT_ONLY until WLT-001 approved.
-	// Stored as empty string; frontend treats empty as "payment_pending" display state.
-	wltSessionID := ""
-
 	row := db.QueryRow(q,
-		input.ClientID, input.CartID, input.StoreID,
+		input.ID, input.ClientID, input.CartID, input.StoreID,
 		string(input.FulfillmentMode), string(StatePending), string(input.PaymentMethod),
-		wltSessionID, input.DeliveryAddress, input.Note,
+		input.WltPaymentSessionID, input.DeliveryAddress, input.Note,
 	)
 	return scanIntent(row)
 }

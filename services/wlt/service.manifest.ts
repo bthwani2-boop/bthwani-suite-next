@@ -8,7 +8,7 @@ export const wltServiceManifest = {
 
   type: "FINANCIAL_PLATFORM_SERVICE",
   lifecycle: "ACTIVE",
-  runtimeState: "WLT_000_FOUNDATION_RUNTIME_VERIFIED",
+  runtimeState: "WLT_000_FOUNDATION_RUNTIME_VERIFIED_WLT_001_PAYMENT_SESSION_REFERENCE_ACTIVE",
 
   ownsFinancialTruth: true,
 
@@ -19,9 +19,11 @@ export const wltServiceManifest = {
   frontendDshBoundaryReady: true,
 
   // WLT-000 Foundation: reference-only endpoints RUNTIME_VERIFIED (slice:gate PASS, evidence: services/wlt/evidence/WLT-000-runtime-foundation/)
-  // WLT-001+ mutation APIs: NOT_APPROVED_YET — requires separate approval before implementation
+  // WLT-001: minimal payment-session reference create/read is active for DSH-005 handoff.
+  // WLT-001+ financial mutations remain NOT_APPROVED_YET and out of scope.
   referenceRuntimeVerified: true,
   sliceRuntimeVerified: true,
+  paymentSessionReferenceReady: true,
   mutationRuntimeReady: false,
   mutationSlicesApproved: false,
 
@@ -50,6 +52,7 @@ export const wltServiceManifest = {
     ],
     allowedForDsh: [
       "wlt_reference",
+      "payment_session_reference",
       "payment_status_reference",
       "settlement_status_reference",
       "refund_status_reference"

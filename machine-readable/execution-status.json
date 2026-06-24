@@ -33,7 +33,7 @@
       "merge_safe": true,
       "blockers": [],
       "required_actions": [],
-      "pending": "WLT-001+ mutation APIs (payment, refund, settlement) — NOT_APPROVED_YET",
+      "pending": "WLT-001 minimal payment-session reference create/read is active for DSH-005. WLT-001+ financial mutation APIs (capture, wallet debit, refund, settlement, ledger posting) remain NOT_APPROVED_YET",
       "exact_paths": [
         "services/wlt/evidence/WLT-000-runtime-foundation/"
       ],
@@ -42,7 +42,7 @@
         "Invoke-RestMethod 'http://localhost:58083/wlt/health'",
         "Invoke-RestMethod 'http://localhost:58083/wlt/readiness'"
       ],
-      "next_topic_allowed": "WLT-001 requires separate approval before any mutation implementation",
+      "next_topic_allowed": "WLT-001 payment-session reference is active. Any financial mutation still requires separate approval",
       "status_updated_from": "git commit 06e64cf"
     },
     "DSH-001": {
@@ -226,21 +226,24 @@
       "current_status": "FIX_REQUIRED",
       "technical_status": "TECHNICAL_WIRING_VERIFIED",
       "real_experience_status": "FIX_REQUIRED",
-      "reason": "Full-stack implementation complete. Visual evidence (device screenshots) and DB migration application required per REAL_EXPERIENCE_CLOSURE_v2 standard.",
+      "reason": "Full-stack implementation and WLT payment-session reference handoff are runtime-verified. Visual evidence remains required per REAL_EXPERIENCE_CLOSURE_v2 standard.",
       "evidence_matches_claim": true,
       "merge_safe": false,
       "what_is_implemented": [
         "services/dsh/database/migrations/dsh-005_checkout_intent.sql — dsh_checkout_intents table with state/fulfillment/payment_method checks and indexes",
-        "services/dsh/backend/internal/checkout/checkout.go — CreateIntent, GetIntent, CancelIntent, ListOperatorIntents (wlt_payment_session_id = '' placeholder; CONTRACT_ONLY until WLT-001)",
+        "services/dsh/backend/internal/checkout/checkout.go — CreateIntent, GetIntent, CancelIntent, ListOperatorIntents, explicit intent ID allocation, and opaque WLT payment-session reference storage",
+        "services/dsh/backend/internal/wlt/client.go — DSH-side minimal WLT payment-session client; no financial truth mutation",
         "services/dsh/backend/internal/http/checkout.go — 4 HTTP handlers (actor.ID correctly used, not actor.Subject)",
         "services/dsh/backend/internal/http/server.go — 4 checkout-intent routes registered",
-        "services/dsh/contracts/dsh.openapi.yaml — 4 real operations (createDshCheckoutIntent, getDshCheckoutIntent, cancelDshCheckoutIntent, listOperatorCheckoutIntents) + 4 schemas (DshCheckoutIntent, DshCreateCheckoutIntentRequest, DshCheckoutIntentResponse, DshOperatorCheckoutIntentsResponse). WLT callback remains CONTRACT_DRAFT.",
+        "services/dsh/contracts/dsh.openapi.yaml — 4 real checkout operations + 503 WLT handoff unavailable response + checkout schemas",
+        "services/wlt/contracts/wlt.openapi.yaml — POST /wlt/payment-sessions and GET /wlt/payment-sessions/{id} with reference-only payment-session schemas",
         "services/dsh/frontend/shared/checkout/checkout.types.ts — DshCheckoutIntent, DshCreateIntentInput, DshPaymentMethod, DshIntentState, DshFulfillmentMode, DshCheckoutState",
         "services/dsh/frontend/shared/checkout/checkout.api.ts — createCheckoutIntent, fetchCheckoutIntent, cancelCheckoutIntent, fetchOperatorCheckoutIntents, classifyCheckoutError",
         "services/dsh/frontend/shared/checkout/use-checkout-controller.tsx — useCheckoutController (submit/cancel/reload/reset), useOperatorCheckoutController",
         "services/dsh/frontend/shared/checkout/index.ts — barrel export",
         "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx — states: idle/confirming/loading/success/payment_pending/error/blocked_payment_unavailable/out_of_area",
-        "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx — operator view with DataTable (ui-kit) + loading/empty/error/success states",
+        "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx — operator view with DataTable (ui-kit), WLT reference column, and loading/empty/error/success states",
+        "services/wlt/frontend/dsh/shared/ — WLT-owned payment-session reference and handoff contract",
         "services/dsh/tests/catalog-contract.test.mjs — updated DSH-005 test to verify implemented operations + WLT callback CONTRACT_DRAFT"
       ],
       "surfaces": {
@@ -249,12 +252,11 @@
       },
       "wlt_boundary": {
         "status": "COMPLIANT",
-        "note": "DSH stores wlt_payment_session_id as opaque TEXT reference only. Empty string until WLT-001 approved. DSH never executes payment, refund, settlement, or wallet mutation.",
+        "note": "DSH stores wlt_payment_session_id as an opaque WLT-owned TEXT reference only. DSH never executes payment, refund, settlement, wallet mutation, provider capture, or ledger posting.",
         "guard": "no-financial-mutation-outside-wlt: PASS"
       },
       "blockers": [
         "Visual state screenshots not yet captured (REAL_EXPERIENCE_CLOSURE_v2)",
-        "WLT-001 payment-sessions endpoint not approved (wlt_payment_session_id remains empty placeholder)",
         "Global slice:gate blocked while DSH-001 visual evidence gap remains"
       ],
       "required_actions": [
@@ -263,21 +265,28 @@
       ],
       "checks": {
         "dsh_typecheck": "PASS",
-        "dsh_tests": "PASS — 140/140",
+        "dsh_tests": "PASS — 147/147",
+        "wlt_typecheck": "PASS",
+        "wlt_build": "PASS",
+        "wlt_go_test": "PASS — go test ./... with workspace GOCACHE",
         "contracts_lint": "PASS",
-        "go_build": "PASS — go build ./... (services/dsh/backend): exit 0",
-        "migration_applied": "PASS — dsh-005_checkout_intent.sql applied 2026-06-23 (store_id TEXT fix applied before migration)",
-        "api_smoke": "PASS — POST /dsh/client/checkout-intents → 201 intentId=ab7dcc0a... state=pending wltPaymentSessionId=''; GET → 200 state=pending; POST /cancel → 200 state=cancelled version=2; GET /dsh/operator/checkout-intents → 200 count=1",
-        "wlt_boundary": "PASS — no-financial-mutation-outside-wlt guard PASS. wltPaymentSessionId='' (CONTRACT_ONLY placeholder — WLT-001 not approved)",
+        "go_build": "PASS — go build ./... (services/dsh/backend): exit 0 with workspace GOCACHE",
+        "migration_applied": "PASS — dsh-005_checkout_intent.sql and wlt-001_payment_sessions.sql applied 2026-06-24",
+        "api_smoke": "PASS — POST /wlt/payment-sessions → 201 wps_...; GET /wlt/payment-sessions/{id} → reference_created; POST /dsh/client/checkout-intents → 201 intentId=2a0744c7... wltPaymentSessionId=wps_9eee7ffd...; GET /dsh/operator/checkout-intents → rows present",
+        "wlt_boundary": "PASS — no-financial-mutation-outside-wlt guard PASS. wltPaymentSessionId is a non-empty opaque WLT reference, not financial truth.",
         "shared_ownership": "PASS — dsh-frontend-shared-ownership-gate PASS",
         "no_tamagui": "PASS — no-direct-tamagui-outside-ui-kit PASS",
         "no_hex": "PASS — no-raw-hex-outside-ui-kit PASS",
         "identity_client_actor": "PASS — client-local-001 seeded in identity bootstrap; dev-bypass-client also supported",
         "generated_client": "PASS — services/dsh/clients/generated/dsh-api.ts includes DSH-005 checkout-intent operations and schemas",
-        "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE. Evidence: SLICE-GATE-20260624-003656",
+        "guard_dsh_frontend_shared_ownership": "PASS",
+        "guard_wlt_dsh_frontend_shared_ownership": "PASS",
+        "guard_matrix_v3": "PASS",
+        "runtime_smoke": "PASS — infra/docker/scripts/runtime.ps1 -Action smoke -Profiles identity,dsh,wlt",
+        "slice_gate": "NOT_RUN — global slice gate remains blocked by unrelated DSH-001 visual evidence gap",
         "ci": "CI_NOT_CONFIGURED"
       },
-      "status_updated_from": "session 2026-06-23 DSH-005 implementation"
+      "status_updated_from": "session 2026-06-24 DSH-005 WLT handoff runtime verification"
     },
     "DSH-006": {
       "topic_id": "DSH-006",

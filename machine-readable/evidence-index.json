@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-22",
+  "last_updated": "2026-06-24",
   "note": "Each entry has a path, status, topic_id, and last_verified_source. supports_claims lists what each evidence file proves. Missing required evidence is always blocking under REAL_EXPERIENCE_CLOSURE_v2.",
   "evidence_entry_contract": {
     "required_fields": ["required_states", "existing_screenshots", "missing_screenshots", "missing_manual_navigation", "missing_runtime_state_proof", "blocks_closure", "blocking_reason"],
@@ -225,6 +225,48 @@
       ],
       "contradictions": "CONTRADICTION-001 + CONTRADICTION-002 resolved (see contradictions_resolved above)",
       "required_update": "NONE"
+    },
+
+    "DSH-005_CHECKOUT_INTENT_WLT_HANDOFF": {
+      "evidence_id": "DSH-005-CHECKOUT-WLT-001",
+      "path": "services/dsh/evidence/DSH-005-checkout-intent/",
+      "topic_id": "DSH-005",
+      "service": "dsh+wlt",
+      "surface": "app-client+control-panel",
+      "control_panel_section": "operations",
+      "evidence_type": "RUNTIME_HANDOFF_PACK",
+      "status": "PRESENT_NEEDS_VISUAL_EVIDENCE",
+      "contents": ["api-smoke.txt", "runtime-handoff-2026-06-24.txt", "screenshots/control-panel-checkout-activity-auth-required.png"],
+      "last_verified_source": "local runtime smoke 2026-06-24",
+      "command_used": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles identity,dsh,wlt",
+      "supports_claims": [
+        "WLT payment-session create/read reference endpoint is active",
+        "DSH checkout intent creation stores a non-empty opaque WLT payment-session reference",
+        "Operator checkout listing returns checkout activity",
+        "DSH does not mutate financial truth"
+      ],
+      "required_states": {
+        "app-client": ["loading", "success", "error", "blocked_payment_unavailable", "payment_pending", "timeout"],
+        "control-panel": ["loading", "success", "empty", "error"]
+      },
+      "existing_screenshots": ["control-panel:auth_required"],
+      "missing_screenshots": [
+        "app-client:loading",
+        "app-client:success",
+        "app-client:error",
+        "app-client:blocked_payment_unavailable",
+        "app-client:payment_pending",
+        "app-client:timeout",
+        "control-panel:success",
+        "control-panel:empty",
+        "control-panel:error"
+      ],
+      "missing_manual_navigation": ["app-client checkout handoff", "control-panel checkout activity"],
+      "missing_runtime_state_proof": [],
+      "blocks_closure": true,
+      "blocking_reason": "Runtime handoff is verified, but REAL_EXPERIENCE_CLOSURE_v2 requires visual state screenshots before PASS/CLOSED.",
+      "contradictions": "NONE",
+      "required_update": "Capture mobile/desktop RTL visual evidence for the required states."
     },
 
     "GUARD_RUN_ARCHIVE": {

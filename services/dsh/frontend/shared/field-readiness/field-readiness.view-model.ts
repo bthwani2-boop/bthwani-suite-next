@@ -45,7 +45,7 @@ export function buildVisitViewModel(visit: DshFieldVisit): DshFieldVisitViewMode
     id: visit.id,
     storeId: visit.storeId,
     statusLabel: VISIT_STATUS_LABELS[visit.status],
-    visitTypeLabel: VISIT_TYPE_LABELS[visit.visitType],
+    visitTypeLabel: VISIT_TYPE_LABELS[visit.visitType] ?? visit.visitType,
     isInProgress: visit.status === "in_progress",
     isComplete: visit.status === "complete",
     startedAt: visit.startedAt,
@@ -80,7 +80,7 @@ export function buildChecklistViewModel(visit: DshFieldVisit, checks: readonly D
 export function buildOnboardingStatusViewModel(status: DshOnboardingStatus): DshOnboardingStatusViewModel {
   return {
     storeId: status.storeId,
-    statusLabel: ONBOARDING_STATUS_LABELS[status.status],
+    statusLabel: ONBOARDING_STATUS_LABELS[status.status] ?? status.status,
     isComplete: status.onboardingComplete,
     hasOpenEscalations: status.openEscalations > 0,
     completedVisits: status.completedVisits,

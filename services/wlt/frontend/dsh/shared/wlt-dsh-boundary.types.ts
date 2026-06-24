@@ -25,9 +25,35 @@ export type WltRefundStatusReference =
 
 export type WltReferenceField =
   | "wlt_reference"
+  | "payment_session_reference"
   | "payment_status_reference"
   | "settlement_status_reference"
   | "refund_status_reference";
+
+export type WltPaymentSessionStatusReference =
+  | "reference_created"
+  | "pending_provider"
+  | "failed"
+  | "expired";
+
+export type WltDshPaymentSessionReference = {
+  readonly id: string;
+  readonly checkoutIntentId: string;
+  readonly clientId: string;
+  readonly storeId: string;
+  readonly paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
+  readonly status: WltPaymentSessionStatusReference;
+  readonly providerReference: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type WltCreatePaymentSessionReferenceInput = {
+  readonly checkoutIntentId: string;
+  readonly clientId: string;
+  readonly storeId: string;
+  readonly paymentMethod?: "cod" | "wallet" | "mixed" | "official_wallet";
+};
 
 export type WltDshReferenceContext = {
   readonly orderId: string;

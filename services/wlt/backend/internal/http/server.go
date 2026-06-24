@@ -19,6 +19,8 @@ func NewRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/references/settlement-status", reference.HandleGetSettlementStatus(db))
 	mux.HandleFunc("GET /wlt/references/refund-status", reference.HandleGetRefundStatus(db))
 	mux.HandleFunc("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
+	mux.HandleFunc("POST /wlt/payment-sessions", reference.HandleCreatePaymentSession(db))
+	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSession(db))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
@@ -39,7 +41,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			w.Header().Set("Vary", "Origin")
 		}

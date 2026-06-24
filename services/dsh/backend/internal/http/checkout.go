@@ -6,6 +6,7 @@ import (
 
 	"dsh-api/internal/checkout"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 // POST /dsh/client/checkout-intents
@@ -30,14 +31,32 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
+	intentID, err := checkout.NewIntentID(s.db)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
+		return
+	}
+	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
+		CheckoutIntentID: intentID,
+		ClientID:         actor.ID,
+		StoreID:          body.StoreID,
+		PaymentMethod:    body.PaymentMethod,
+	})
+	if err != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
+		return
+	}
+
 	intent, err := checkout.CreateIntent(s.db, checkout.CreateIntentInput{
-		ClientID:        actor.ID,
-		CartID:          body.CartID,
-		StoreID:         body.StoreID,
-		FulfillmentMode: checkout.FulfillmentMode(body.FulfillmentMode),
-		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
-		DeliveryAddress: body.DeliveryAddress,
-		Note:            body.Note,
+		ID:                  intentID,
+		ClientID:            actor.ID,
+		CartID:              body.CartID,
+		StoreID:             body.StoreID,
+		FulfillmentMode:     checkout.FulfillmentMode(body.FulfillmentMode),
+		PaymentMethod:       checkout.PaymentMethod(body.PaymentMethod),
+		WltPaymentSessionID: paymentSession.ID,
+		DeliveryAddress:     body.DeliveryAddress,
+		Note:                body.Note,
 	})
 	if errors.Is(err, checkout.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())

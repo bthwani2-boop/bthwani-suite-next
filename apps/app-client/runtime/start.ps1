@@ -3,6 +3,8 @@ Set-Location -LiteralPath "$PSScriptRoot"
 $env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
 $env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
 $env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
+$env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58081"
+$env:NEXT_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58081"
 
 $AdbPath = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 if (Test-Path -LiteralPath $AdbPath) {

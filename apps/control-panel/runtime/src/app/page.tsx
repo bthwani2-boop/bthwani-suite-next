@@ -12,12 +12,21 @@ export default function RootPage() {
 
   const handleSectionPress = (section: string) => {
     if (section === "dashboard") router.push("/");
+    if (section === "operations") router.push("/dsh/operations");
     if (section === "partners") router.push("/dsh/partners/stores");
     if (section === "catalogs") router.push("/dsh/catalogs");
     if (section === "marketing") router.push("/dsh/marketing");
   };
 
   const cards = [
+    {
+      title: "العمليات و checkout",
+      description: "متابعة نوايا checkout ومرجع WLT التشغيلي بدون أي أزرار مالية أو تسويات.",
+      metric: "DSH-005 نشط",
+      link: "/dsh/operations",
+      buttonText: "فتح غرفة العمليات",
+      color: "linear-gradient(135deg, #0f766e, #14b8a6)",
+    },
     {
       title: "إدارة المتاجر",
       description: "إدارة وإعداد المتاجر، وعرض إحصائيات النشاط الحالي والتفاصيل الجغرافية.",
@@ -58,6 +67,7 @@ export default function RootPage() {
           dir="rtl"
           items={[
             { section: "dashboard", label: "الرئيسية" },
+            { section: "operations", label: "العمليات" },
             { section: "partners", label: "إدارة المتاجر" },
             { section: "catalogs", label: "اعتماد الكتالوجات" },
             { section: "marketing", label: "التسويق واكتشاف الصفحة" },

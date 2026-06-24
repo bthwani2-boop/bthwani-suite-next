@@ -1291,7 +1291,7 @@ export interface components {
             state: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
-            /** @description Opaque WLT reference. Empty string until WLT-001 approved. */
+            /** @description Opaque WLT-owned payment-session reference. */
             wltPaymentSessionId: string;
             deliveryAddress: string;
             note: string;
@@ -1334,7 +1334,7 @@ export interface components {
             clientId: string;
             status: components["schemas"]["DshOrderStatus"];
             rejectionReason?: string;
-            /** @description Opaque WLT payment reference. Empty string until WLT-001 approved. DSH never mutates financial truth. */
+            /** @description Opaque WLT payment reference. DSH never mutates financial truth. */
             wltPaymentRefId: string;
             items?: components["schemas"]["DshOrderItem"][];
             /** Format: date-time */
@@ -2561,7 +2561,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Checkout intent created. wltPaymentSessionId is empty until WLT-001 approved. */
+            /** @description Checkout intent created with opaque WLT payment-session reference. */
             201: {
                 headers: {
                     [name: string]: unknown;

@@ -64,7 +64,7 @@ test("DSH-007 dispatch routes are implemented and registered at runtime", () => 
   assert.doesNotMatch(contract, /\bcaptain earnings\b|\bCOD collection\b|\bledger mutation\b|\bsettlement posting\b/i);
 });
 
-test("DSH-005 checkout intent routes are implemented and registered at runtime; WLT callback remains CONTRACT_DRAFT", () => {
+test("DSH-005 checkout intent routes are implemented and registered at runtime; future WLT callback remains CONTRACT_DRAFT", () => {
   const contract = fs.readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
   const router = fs.readFileSync(new URL("../backend/internal/http/server.go", import.meta.url), "utf8");
   // DSH-005 real operations are in the contract
@@ -74,7 +74,8 @@ test("DSH-005 checkout intent routes are implemented and registered at runtime; 
   assert.match(contract, /listOperatorCheckoutIntents/);
   // DSH-005 checkout-intent routes are registered at runtime
   assert.match(router, /checkout-intents/);
-  // WLT payment callback remains CONTRACT_DRAFT — WLT-001 not yet approved
+  // Future WLT payment callback remains CONTRACT_DRAFT; WLT-001 payment-session
+  // references are handled by the WLT service, not by this DSH callback route.
   assert.match(contract, /x-contract-state: CONTRACT_DRAFT/);
   assert.match(contract, /acceptWltPaymentCallbackEnvelope/);
   // WLT callback is never registered at runtime

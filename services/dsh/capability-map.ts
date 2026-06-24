@@ -164,7 +164,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── DSH-005: Checkout Intent & WLT Handoff ───────────────────────────────
   {
     id: "dsh.client.checkout",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: [
       "createDshCheckoutIntent",
       "getDshCheckoutIntent",
@@ -172,8 +172,8 @@ export const DSH_CAPABILITY_MAP = [
       "listOperatorCheckoutIntents",
     ],
     surfaces: ["app-client", "control-panel"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
     topic: "commerce",
     topicScope: ["checkout", "wlt-handoff"],
   },

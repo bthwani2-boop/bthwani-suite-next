@@ -893,7 +893,7 @@ paths:
 
   # ─── DSH-005: Checkout Intent & WLT Handoff ──────────────────────────────
   # Implemented. DSH creates intent records only; payment truth is WLT-owned.
-  # wltPaymentSessionId = "" until WLT-001 approved (CONTRACT_ONLY placeholder).
+  # wltPaymentSessionId is an opaque WLT-owned payment-session reference.
   # ──────────────────────────────────────────────────────────────────────────
 
   /dsh/client/checkout-intents:
@@ -910,12 +910,13 @@ paths:
             schema: { $ref: "#/components/schemas/DshCreateCheckoutIntentRequest" }
       responses:
         "201":
-          description: Checkout intent created. wltPaymentSessionId is empty until WLT-001 approved.
+          description: Checkout intent created with opaque WLT payment-session reference.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshCheckoutIntentResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "503": { description: WLT payment-session handoff is unavailable. }
 
   /dsh/client/checkout-intents/{intentId}:
     get:
@@ -2753,7 +2754,7 @@ components:
           enum: [cod, wallet, mixed, official_wallet]
         wltPaymentSessionId:
           type: string
-          description: "Opaque WLT reference. Empty string until WLT-001 approved."
+          description: "Opaque WLT-owned payment-session reference. DSH never mutates financial truth."
         deliveryAddress: { type: string }
         note: { type: string }
         version: { type: integer }
@@ -2818,7 +2819,7 @@ components:
         rejectionReason: { type: string }
         wltPaymentRefId:
           type: string
-          description: "Opaque WLT payment reference. Empty string until WLT-001 approved. DSH never mutates financial truth."
+          description: "Opaque WLT payment reference. DSH never mutates financial truth."
         items:
           type: array
           items: { $ref: "#/components/schemas/DshOrderItem" }

@@ -14,6 +14,7 @@ import (
 
 	"dsh-api/internal/auth"
 	dshHttp "dsh-api/internal/http"
+	"dsh-api/internal/wlt"
 )
 
 func main() {
@@ -29,6 +30,7 @@ func main() {
 
 	authMode := os.Getenv("DSH_AUTH_MODE")
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
+	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -45,7 +47,7 @@ func main() {
 	}
 	log.Println("[dsh-api] database connected successfully")
 
-	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL))
+	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wlt.NewClient(wltBaseURL))
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	server := &http.Server{

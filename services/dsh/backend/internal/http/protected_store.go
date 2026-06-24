@@ -10,11 +10,13 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/homediscovery"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 type protectedStoreServer struct {
 	db       *sql.DB
 	identity *auth.Client
+	wlt      *wlt.Client
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWriter, r *http.Request) {
@@ -85,8 +87,8 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
-func newProtectedStoreServer(db *sql.DB, identity *auth.Client) *protectedStoreServer {
-	return &protectedStoreServer{db: db, identity: identity}
+func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client) *protectedStoreServer {
+	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient}
 }
 
 func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http.Request) {
