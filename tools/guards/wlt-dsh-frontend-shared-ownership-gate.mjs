@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, listCodeFiles, read, toPosix } from "./_guard-utils.mjs";
+import { fail, listCodeFiles, read, toPosix, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "wlt-dsh-frontend-shared-ownership";
 const violations = [];
-const root = process.cwd();
+const root = repoRoot;
 
 // ── 1. WLT-for-DSH shared boundary must exist ─────────────────────────────────
 

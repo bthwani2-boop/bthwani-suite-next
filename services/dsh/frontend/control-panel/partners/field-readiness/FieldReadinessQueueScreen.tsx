@@ -119,6 +119,6 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" },
   description: { paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
   actions: { flexDirection: "row-reverse", gap: spacing[2], paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
-  resolveForm: { padding: spacing[3], gap: spacing[2], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#E5E7EB" },
+  resolveForm: { padding: spacing[3], gap: spacing[2], borderTopWidth: StyleSheet.hairlineWidth },
   formActions: { flexDirection: "row-reverse", gap: spacing[2] },
 });

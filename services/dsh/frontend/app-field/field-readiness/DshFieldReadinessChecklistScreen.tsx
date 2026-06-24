@@ -121,6 +121,6 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", padding: spacing[3] },
   checkInfo: { flex: 1, gap: spacing[1] },
   checkActions: { flexDirection: "row-reverse", alignItems: "center", gap: spacing[2] },
-  checkForm: { padding: spacing[3], gap: spacing[2], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#E5E7EB" },
+  checkForm: { padding: spacing[3], gap: spacing[2], borderTopWidth: StyleSheet.hairlineWidth },
   formActions: { flexDirection: "row-reverse", gap: spacing[2] },
 });

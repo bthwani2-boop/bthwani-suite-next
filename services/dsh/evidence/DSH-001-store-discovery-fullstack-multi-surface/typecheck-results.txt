@@ -1,13 +1,18 @@
-DSH-001 Typecheck Results — 2026-06-23
-Standard: REAL_EXPERIENCE_CLOSURE_v2
+DSH-001 Typecheck Results — 2026-06-24
+Standard: CODE_BASED_FULL_STACK_CLOSURE
+Session: FOUNDATION-GATE-20260624-075608
 
-pnpm --dir services/dsh typecheck: PASS
-pnpm --dir shared/app-shell typecheck: PASS
-pnpm --dir shared/ui-kit typecheck: PASS
-pnpm --dir apps/control-panel/runtime typecheck: PASS (after adding allowImportingTsExtensions to control-panel tsconfig.json)
+pnpm typecheck (workspace-wide): PASS
+  - contracts: PASS (spectral lint: 0 errors, 210 warnings — warnings are non-blocking)
+  - core/identity: PASS (0 errors)
+  - services/wlt: PASS (0 errors)
+  - shared/ui-kit: PASS (0 errors)
+  - services/dsh: PASS (0 errors)
+  - apps/control-panel: PASS (0 errors)
 
-Fix applied: apps/control-panel/runtime/tsconfig.json lacked allowImportingTsExtensions:true
-inherited from tsconfig.base.json. core/identity/clients/index.ts uses .ts extensions
-in imports (committed in dbbb7ad). Added allowImportingTsExtensions:true to control-panel tsconfig.
+FIX APPLIED (2026-06-24): services/dsh/contracts/dsh.openapi.yaml
+  - 4 occurrences of $ref: "#/components/responses/BadRequest" replaced with $ref: "#/components/responses/InvalidRequest"
+  - BadRequest was undefined; InvalidRequest is the established 400 pattern in this file
+  - After fix: spectral lint 0 errors (210 warnings, non-blocking by policy)
 
-Result: ALL_PASS
+Result: TYPECHECK_PASS

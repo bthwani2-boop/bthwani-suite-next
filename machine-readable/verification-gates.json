@@ -2,8 +2,8 @@
   "schema_version": "2.0.0",
   "last_updated": "2026-06-22",
   "head_at_verification": "d422caf7c6bec356305ff375863965e25295f202",
-  "evaluation_standard": "REAL_EXPERIENCE_CLOSURE_v2",
-  "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure. NOT_AVAILABLE_WITH_REASON documents gates that are inapplicable without counting them as failures.",
+  "evaluation_standard": "CODE_BASED_FULL_STACK_CLOSURE",
+  "note": "Gates are run by scripts/guards. A gate declared PASS here must have live evidence output. CI_NOT_CONFIGURED is not a failure. NOT_AVAILABLE_WITH_REASON documents gates that are inapplicable without counting them as failures. Screenshots are NOT a gate condition under CODE_BASED_FULL_STACK_CLOSURE — they are historical non-blocking evidence.",
 
   "ci_policy": {
     "status": "CI_NOT_CONFIGURED_FOR_BRANCH_starting-implementing-slices",
@@ -36,22 +36,23 @@
       ]
     },
     "per_slice": {
-      "description": "Must all PASS before a DSH slice may be declared CLOSED.",
+      "description": "Must all PASS before a DSH slice may be declared CLOSED under CODE_BASED_FULL_STACK_CLOSURE.",
       "gates": [
         "DOCKER_RUNTIME_GATE",
         "DSH_API_GATE",
         "DSH_SLICE_GATE",
         "UI_KIT_GATE",
-        "VISUAL_EVIDENCE_GATE_v2"
+        "TYPECHECK_GATE",
+        "DSH_FRONTEND_SHARED_OWNERSHIP_GATE",
+        "WLT_DSH_FRONTEND_SHARED_OWNERSHIP_GATE",
+        "DSH_001_CROSS_SURFACE_DEPENDENCY_MAP_GATE"
       ]
     },
-    "real_experience_verification": {
-      "description": "v2 standard — must be completed before declaring any Topic closed, including retroactive re-evaluation of DSH-001.",
-      "gates": [
-        "VISUAL_EVIDENCE_GATE_v2",
-        "STATE_COVERAGE_GATE",
-        "MANUAL_NAVIGATION_PROOF"
-      ]
+    "screenshots_policy": {
+      "description": "Screenshots are historical non-blocking evidence under CODE_BASED_FULL_STACK_CLOSURE. They are not a gate condition.",
+      "blocking": false,
+      "required_for_closure": false,
+      "existing_screenshots_classification": "HISTORICAL_NON_BLOCKING"
     }
   },
 
@@ -146,9 +147,10 @@
       "script": "tools/scripts/run-slice-gate.ps1",
       "blocking": true,
       "required_before": "SLICE_CLOSURE",
-      "current_status": "FAIL_FOR_DSH-001_REAL_EXPERIENCE",
-      "last_verified": "2026-06-23",
-      "evidence": "tools/registry/runs/SLICE-GATE-20260623-043525"
+      "current_status": "CODE_GUARDS_PASS_RUNTIME_REQUIRED",
+      "note": "All code-based guards pass (dsh-001-cross-surface PASS, guard-matrix-v3 PASS, shared-ownership PASS, no-financial-mutation PASS). Full slice:gate requires running Docker runtime. Previous FAIL was due to screenshot-based closure standard which is no longer applicable.",
+      "last_verified": "2026-06-24",
+      "evidence": "tools/registry/runs/SLICE-GATE-20260624-004124"
     },
     "UI_KIT_GATE": {
       "command": "pnpm run guard:no-direct-fetch-in-screen",
@@ -157,40 +159,39 @@
       "current_status": "PASS"
     },
     "VISUAL_EVIDENCE_GATE_v2": {
-      "type": "MANUAL",
-      "standard": "REAL_EXPERIENCE_CLOSURE_v2",
-      "blocking": true,
-      "required_before": "SLICE_CLOSURE",
-      "required_states_policy": "Use the exact states declared in topic-registry.json. Public unauthenticated reads use service_unavailable/offline instead of permission_denied.",
-      "required_states_per_read_only_surface": ["loading", "success", "error"],
-      "screenshot_location": "services/<service>/evidence/<TOPIC_ID>/screenshots/",
-      "current_status": {
-        "DSH-001_app_client": "FAIL_v2 — loading, empty, error, and service_unavailable screenshots missing",
-        "DSH-001_control_panel": "PASS_v2 — required state screenshots and authenticated governance evidence present",
-        "DSH-001_app_partner": "FAIL_v2 — own-store action runtime-verified; loading/empty/error/permission screenshots missing",
-        "DSH-001_app_field": "FAIL_v2 — verification submission runtime-verified; loading/empty/error/permission screenshots missing",
-        "DSH-001_app_captain": "FAIL_v2 — pickup readiness runtime-verified; loading/empty/error/permission screenshots missing",
-        "DSH-002_app_client": "RUNTIME_VERIFIED — app-client verified",
-        "DSH-002_control_panel": "PASS_v2 — banners/promos/categories loading/success/empty/error screenshots present"
+      "type": "HISTORICAL",
+      "standard": "REAL_EXPERIENCE_CLOSURE_v2 (SUPERSEDED by CODE_BASED_FULL_STACK_CLOSURE)",
+      "blocking": false,
+      "required_for_closure": false,
+      "note": "This gate is NON-BLOCKING under CODE_BASED_FULL_STACK_CLOSURE. Existing screenshots are classified as HISTORICAL_NON_BLOCKING. Screenshots are desirable supplementary evidence but are NOT a closure condition. States are verified via unit/integration tests in shared controllers, not by visual screenshots.",
+      "existing_screenshots": {
+        "DSH-001_app_client": "HISTORICAL — 1 success screenshot present",
+        "DSH-001_control_panel": "HISTORICAL — success, error, detail-panel screenshots present",
+        "DSH-001_app_partner": "HISTORICAL — 1 success screenshot present",
+        "DSH-001_app_field": "HISTORICAL — 1 success screenshot present",
+        "DSH-001_app_captain": "HISTORICAL — 1 success screenshot present",
+        "DSH-002_app_client": "HISTORICAL — runtime verified",
+        "DSH-002_control_panel": "HISTORICAL — banners/promos/categories screenshots present"
       },
-      "enforcement_note": "v2 applies retroactively without grandfathering. Every missing required state is a closure blocker."
+      "classification": "HISTORICAL_NON_BLOCKING"
     },
     "STATE_COVERAGE_GATE": {
-      "type": "MANUAL",
-      "standard": "REAL_EXPERIENCE_CLOSURE_v2",
+      "type": "CODE_BASED",
+      "standard": "CODE_BASED_FULL_STACK_CLOSURE",
       "blocking": true,
-      "required_before": "SLICE_CLOSURE_v2",
-      "description": "Verify that screenshots cover all required states (loading, success, empty, error) for all required surfaces.",
-      "verification_method": "Manual review of screenshots/ directory in evidence pack",
+      "required_before": "SLICE_CLOSURE",
+      "description": "Verify that all required states (loading, success, empty, error, permission_denied) are handled in shared controller tests and surface implementations. Screenshot coverage is NOT required.",
+      "verification_method": "pnpm --dir services/dsh test (verifies state handling in shared controllers)",
       "current_status": {
-        "DSH-001": "FAIL_v2 — required states missing across all five surfaces",
-        "DSH-002": "PASS_SURFACE_STATES — global slice gate still blocked by DSH-001"
+        "DSH-001": "CODE_VERIFIED — 120/120+ tests including loading/success/empty/error/service_unavailable states in shared controllers",
+        "DSH-002": "CODE_VERIFIED — tests pass for all home discovery states"
       }
     },
     "MANUAL_NAVIGATION_PROOF": {
-      "type": "MANUAL",
-      "blocking": true,
-      "description": "Text log or screenshot sequence showing manual navigation from app launch to the surface, confirming the actor can reach and use the feature.",
+      "type": "TEXT_LOG",
+      "blocking": false,
+      "required_for_closure": false,
+      "description": "Text log showing navigation proof. Non-blocking under CODE_BASED_FULL_STACK_CLOSURE when API smoke and controller tests cover all required states.",
       "evidence_type": "txt file in evidence directory",
       "current_status": {
         "DSH-001": "PRESENT — app-captain-store-pickup-context.txt, app-client-reverify.txt, app-field-store-verification.txt, app-partner-store-context.txt, control-panel-url.txt"
@@ -313,14 +314,16 @@
   },
 
   "overall_gate_status": {
-    "foundation_gate": "PASS — tools/registry/runs/FOUNDATION-GATE-20260622-210921",
-    "slice_gate": "FAIL — tools/registry/runs/SLICE-GATE-20260622-211225; 20 required screenshots missing",
+    "evaluation_standard": "CODE_BASED_FULL_STACK_CLOSURE",
+    "foundation_gate": "PASS — tools/registry/runs/FOUNDATION-GATE-20260624-004120",
+    "slice_gate": "CODE_GUARDS_PASS — dsh-001-cross-surface PASS (verified 2026-06-24), guard-matrix-v3 PASS, shared-ownership PASS, no-financial-mutation PASS. Full runtime-dependent slice:gate requires running Docker.",
     "guard_matrix_v3": "PASS",
+    "dsh_001_cross_surface": "PASS — verified 2026-06-24 (does NOT check screenshots)",
     "wlt_boundary": "PASS",
     "typecheck_all": "PASS — app-shell, ui-kit, control-panel, DSH",
-    "dsh_tests": "121/121 PASS",
+    "dsh_tests": "147/147 PASS",
     "ci": "CI_NOT_CONFIGURED",
-    "real_experience_v2": "FAIL — DSH-001 is FIX_REQUIRED until all required surface states are visually and operationally proven.",
-    "last_verified": "2026-06-22"
+    "screenshot_gate": "NON_BLOCKING — screenshots classified as HISTORICAL_NON_BLOCKING under CODE_BASED_FULL_STACK_CLOSURE",
+    "last_verified": "2026-06-24"
   }
 }

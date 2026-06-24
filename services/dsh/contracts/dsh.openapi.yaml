@@ -1362,7 +1362,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshFieldVisitResponse" }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
     get:
       operationId: listDshFieldVisits
@@ -1465,7 +1465,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshEscalationResponse" }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/operator/field-readiness/escalations:
@@ -1553,7 +1553,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshTicketResponse" }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
     get:
       operationId: listDshMyTickets
@@ -1700,7 +1700,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshIncidentResponse" }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
     get:
       operationId: listDshIncidents

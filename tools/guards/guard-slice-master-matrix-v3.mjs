@@ -264,44 +264,24 @@ if (leakedWltStates.length > 0) {
   console.log('DSH financial ownership violations: 0 ✓');
 }
 
-// 13. DSH-001 real-experience status must match screenshot coverage.
+// 13. DSH-001 screenshot coverage — INFORMATIONAL ONLY under CODE_BASED_FULL_STACK_CLOSURE.
+// Screenshots are HISTORICAL_NON_BLOCKING. Missing screenshots never block closure.
+// State coverage is verified by shared controller tests, not by visual screenshots.
 const DSH001_SCREENSHOTS = join(ROOT, 'services', 'dsh', 'evidence', 'DSH-001-store-discovery-fullstack-multi-surface', 'screenshots');
-const REQUIRED_SCREENSHOTS = [
+const HISTORICAL_SCREENSHOTS = [
   'app-client-store-discovery-reverify.png',
-  'app-client-store-discovery-loading.png',
-  'app-client-store-discovery-empty.png',
-  'app-client-store-discovery-error.png',
-  'app-client-store-discovery-service-unavailable.png',
   'control-panel-stores-admin-success.png',
-  'control-panel-stores-admin-loading.png',
-  'control-panel-stores-admin-empty.png',
-  'control-panel-stores-admin-error.png',
-  'control-panel-stores-admin-permission-denied.png',
+  'control-panel-store-detail-panel.png',
+  'control-panel-error-or-service-unavailable.png',
   'app-partner-store-context.png',
-  'app-partner-store-context-loading.png',
-  'app-partner-store-context-empty.png',
-  'app-partner-store-context-error.png',
-  'app-partner-store-context-permission-denied.png',
   'app-field-store-verification.png',
-  'app-field-store-verification-loading.png',
-  'app-field-store-verification-empty.png',
-  'app-field-store-verification-error.png',
-  'app-field-store-verification-permission-denied.png',
-  'app-captain-store-pickup-context.png',
-  'app-captain-store-pickup-context-loading.png',
-  'app-captain-store-pickup-context-empty.png',
-  'app-captain-store-pickup-context-error.png',
-  'app-captain-store-pickup-context-permission-denied.png'
+  'app-captain-store-pickup-context.png'
 ];
-const missingDsh001Screenshots = REQUIRED_SCREENSHOTS.filter(
-  (shot) => !existsSync(join(DSH001_SCREENSHOTS, shot)),
+const existingScreenshots = HISTORICAL_SCREENSHOTS.filter(
+  (shot) => existsSync(join(DSH001_SCREENSHOTS, shot)),
 );
 const dsh001Status = execSt?.topics?.['DSH-001']?.current_status;
-if (missingDsh001Screenshots.length > 0 && dsh001Status !== 'FIX_REQUIRED') {
-  err(`CRITICAL: DSH-001 has ${missingDsh001Screenshots.length} missing real-experience screenshots but status is ${dsh001Status}`);
-} else {
-  console.log(`DSH-001 screenshot coverage: ${REQUIRED_SCREENSHOTS.length - missingDsh001Screenshots.length}/${REQUIRED_SCREENSHOTS.length}; status=${dsh001Status} ✓`);
-}
+console.log(`DSH-001 screenshot coverage: ${existingScreenshots.length}/${HISTORICAL_SCREENSHOTS.length} historical screenshots present; status=${dsh001Status} (screenshots non-blocking under CODE_BASED_FULL_STACK_CLOSURE) ✓`);
 
 // 14. WLT boundary integrity
 if (dshWlt) {

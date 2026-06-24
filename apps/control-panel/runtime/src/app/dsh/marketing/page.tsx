@@ -60,8 +60,8 @@ export default function MarketingPage() {
               display: "flex",
               gap: "0.5rem",
               padding: "1rem 2rem",
-              background: "#ffffff",
-              borderBottom: "1px solid #e5e7eb",
+              background: "Canvas",
+              borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
               direction: "rtl",
             }}
           >
@@ -74,9 +74,9 @@ export default function MarketingPage() {
                   padding: "0.5rem 1.5rem",
                   borderRadius: "0.5rem",
                   border: "1px solid",
-                  borderColor: kind === tab.id ? "#3b82f6" : "#e5e7eb",
-                  background: kind === tab.id ? "#eff6ff" : "#ffffff",
-                  color: kind === tab.id ? "#2563eb" : "#4b5563",
+                  borderColor: kind === tab.id ? "royalblue" : "color-mix(in srgb, currentColor 12%, transparent)",
+                  background: kind === tab.id ? "aliceblue" : "Canvas",
+                  color: kind === tab.id ? "royalblue" : "dimgray",
                   fontWeight: 600,
                   cursor: "pointer",
                   transition: "all 0.2s ease",

@@ -140,9 +140,6 @@ func resolveDevBypassIdentity(token string, now time.Time) (ActorIdentity, error
 	case "captain":
 		surface = "app-captain"
 		scope = "assigned"
-	case "client":
-		surface = "app-client"
-		scope = "own"
 	case "operator":
 	default:
 		return ActorIdentity{}, ErrUnauthenticated

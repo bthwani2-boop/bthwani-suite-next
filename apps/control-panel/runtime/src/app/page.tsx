@@ -25,7 +25,7 @@ export default function RootPage() {
       metric: "DSH-005 نشط",
       link: "/dsh/operations",
       buttonText: "فتح غرفة العمليات",
-      color: "linear-gradient(135deg, #0f766e, #14b8a6)",
+      color: "linear-gradient(135deg, teal, cadetblue)",
     },
     {
       title: "إدارة المتاجر",
@@ -33,7 +33,7 @@ export default function RootPage() {
       metric: "6 متاجر نشطة",
       link: "/dsh/partners/stores",
       buttonText: "دخول لإدارة المتاجر",
-      color: "linear-gradient(135deg, #1e3a8a, #3b82f6)",
+      color: "linear-gradient(135deg, darkblue, dodgerblue)",
     },
     {
       title: "اعتماد الكتالوجات",
@@ -41,7 +41,7 @@ export default function RootPage() {
       metric: "بانتظار المراجعة",
       link: "/dsh/catalogs",
       buttonText: "مراجعة الكتالوجات",
-      color: "linear-gradient(135deg, #854d0e, #eab308)",
+      color: "linear-gradient(135deg, saddlebrown, gold)",
     },
     {
       title: "التسويق واكتشاف الصفحة",
@@ -49,7 +49,7 @@ export default function RootPage() {
       metric: "3 أقسام نشطة",
       link: "/dsh/marketing",
       buttonText: "إدارة الترويج",
-      color: "linear-gradient(135deg, #15803d, #22c55e)",
+      color: "linear-gradient(135deg, darkgreen, limegreen)",
     },
   ];
 
@@ -79,10 +79,10 @@ export default function RootPage() {
       main={
         <div style={{ padding: "2rem", direction: "rtl", fontFamily: "system-ui, sans-serif" }}>
           <header style={{ marginBottom: "2.5rem" }}>
-            <h1 style={{ margin: 0, fontSize: "2rem", color: "#111827", fontWeight: 700 }}>
+            <h1 style={{ margin: 0, fontSize: "2rem", color: "CanvasText", fontWeight: 700 }}>
               مرحباً بك في لوحة تحكم DSH 👋
             </h1>
-            <p style={{ margin: "0.5rem 0 0", color: "#6b7280", fontSize: "1.1rem" }}>
+            <p style={{ margin: "0.5rem 0 0", color: "GrayText", fontSize: "1.1rem" }}>
               اختر أحد الأقسام التالية لإدارة المتاجر والمنتجات والحملات الترويجية للمنصة.
             </p>
           </header>
@@ -98,8 +98,8 @@ export default function RootPage() {
               <div
                 key={card.title}
                 style={{
-                  background: "#ffffff",
-                  border: "1px solid #e5e7eb",
+                  background: "Canvas",
+                  border: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
                   borderRadius: "1rem",
                   padding: "1.75rem",
                   boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
@@ -129,10 +129,10 @@ export default function RootPage() {
                       marginBottom: "1rem",
                     }}
                   />
-                  <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.35rem", color: "#1f2937", fontWeight: 600 }}>
+                  <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.35rem", color: "CanvasText", fontWeight: 600 }}>
                     {card.title}
                   </h3>
-                  <p style={{ margin: "0 0 1.5rem", color: "#4b5563", fontSize: "0.95rem", lineHeight: 1.5 }}>
+                  <p style={{ margin: "0 0 1.5rem", color: "GrayText", fontSize: "0.95rem", lineHeight: 1.5 }}>
                     {card.description}
                   </p>
                 </div>
@@ -144,10 +144,10 @@ export default function RootPage() {
                     justifyContent: "space-between",
                     marginTop: "auto",
                     paddingTop: "1rem",
-                    borderTop: "1px solid #f3f4f6",
+                    borderTop: "1px solid color-mix(in srgb, currentColor 6%, transparent)",
                   }}
                 >
-                  <span style={{ fontSize: "0.85rem", color: "#9ca3af", fontWeight: 500 }}>
+                  <span style={{ fontSize: "0.85rem", color: "GrayText", fontWeight: 500 }}>
                     {card.metric}
                   </span>
                   <button
@@ -156,15 +156,15 @@ export default function RootPage() {
                       padding: "0.5rem 1rem",
                       borderRadius: "0.5rem",
                       border: "none",
-                      background: "#f3f4f6",
-                      color: "#1f2937",
+                      background: "color-mix(in srgb, currentColor 6%, Canvas)",
+                      color: "CanvasText",
                       fontSize: "0.9rem",
                       fontWeight: 600,
                       cursor: "pointer",
                       transition: "background 0.2s ease",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#e5e7eb")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "color-mix(in srgb, currentColor 12%, Canvas)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "color-mix(in srgb, currentColor 6%, Canvas)")}
                   >
                     {card.buttonText}
                   </button>

@@ -51,15 +51,7 @@ export function HomeDiscoveryAdminScreen({ kind }: { readonly kind: DshHomeAdmin
           </CpButton>
           <CpButton
             onClick={() => devBypassLogin("operator")}
-            style={{
-              flex: 1,
-              background: "linear-gradient(135deg, #10b981, #059669)",
-              color: "#ffffff",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              borderRadius: "0.75rem",
-            }}
+            style={{ flex: 1 }}
           >
             تجاوز تسجيل الدخول (مطور)
           </CpButton>

@@ -1,14 +1,10 @@
+DSH-001 Graphify Results — 2026-06-24
+Standard: CODE_BASED_FULL_STACK_CLOSURE
 
-> bthwani-suite-next@0.0.0 graphify C:\bthwani-suite-next
-> graphify update . --force
+pnpm run graphify:code: PASS
+  AST extraction: 1427/1427 files (100%) [8 workers]
+  [graphify watch] No code-graph topology changes detected; outputs left untouched.
+  Code graph updated. No LLM needed for code-only extraction.
 
-Re-extracting code files in . (no LLM needed)...
-  AST extraction: 100/388 uncached files (25%) [8 workers]
-  AST extraction: 200/388 uncached files (51%) [8 workers]
-  AST extraction: 300/388 uncached files (77%) [8 workers]
-  AST extraction: 1129/1129 files (100%) [8 workers]
-[graphify watch] Skipped graph.html: Graph has 6263 nodes - too large for HTML viz (limit: 5000). Use --no-viz, raise GRAPHIFY_VIZ_NODE_LIMIT, or reduce input size.
-[graphify watch] Rebuilt: 6263 nodes, 6025 edges, 808 communities
-[graphify watch] graph.json and GRAPH_REPORT.md, 1 callflow HTML updated in graphify-out
-Code graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.
-Tip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.
+Result: GRAPHIFY_CODE_PASS (no topology changes after all fixes applied)
+CI: CI_NOT_CONFIGURED — non-blocking by policy.
