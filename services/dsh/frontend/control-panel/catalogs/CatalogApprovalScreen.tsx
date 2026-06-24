@@ -7,6 +7,7 @@ import {
   CpTextInput,
   DataTablePageFrame,
   useIdentitySession,
+  devBypassLogin,
 } from "@bthwani/app-shell";
 import { useCatalogApprovalController } from "../../shared/catalog";
 
@@ -14,9 +15,67 @@ export function CatalogApprovalScreen() {
   const identity = useIdentitySession();
   const controller = useCatalogApprovalController(identity.state.kind);
   const [reasonByStore, setReasonByStore] = useState<Record<string, string>>({});
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   if (identity.state.kind !== "authenticated") {
-    return <p dir="rtl">سجّل الدخول بحساب operator لمراجعة الكتالوجات.</p>;
+    return (
+      <section
+        dir="rtl"
+        style={{
+          maxWidth: "32rem",
+          margin: "4rem auto",
+          display: "grid",
+          gap: "1rem",
+          padding: "1.5rem",
+          border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
+          borderRadius: "1rem",
+          background: "Canvas",
+        }}
+      >
+        <div>
+          <h1 style={{ margin: 0 }}>مراجعة واعتماد الكتالوجات</h1>
+          <p style={{ opacity: 0.7 }}>يتطلب حساب operator مصرح به لمراجعة الكتالوجات.</p>
+        </div>
+        <CpTextInput
+          value={username}
+          onChange={setUsername}
+          placeholder="اسم المستخدم"
+          aria-label="اسم المستخدم"
+        />
+        <CpTextInput
+          value={password}
+          onChange={setPassword}
+          placeholder="كلمة المرور"
+          type="password"
+          aria-label="كلمة المرور"
+        />
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <CpButton
+            disabled={username.trim().length === 0 || password.length < 4 || identity.state.kind === "authenticating"}
+            onClick={() => void identity.login(username.trim(), password)}
+            style={{ flex: 1 }}
+          >
+            {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}
+          </CpButton>
+          <CpButton
+            onClick={() => devBypassLogin("operator")}
+            style={{
+              flex: 1,
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              color: "#ffffff",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              borderRadius: "0.75rem",
+            }}
+          >
+            تجاوز تسجيل الدخول (مطور)
+          </CpButton>
+        </div>
+        {identity.state.kind === "error" && <p role="alert">{identity.state.message}</p>}
+      </section>
+    );
   }
 
   return (

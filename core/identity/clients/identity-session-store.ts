@@ -25,10 +25,50 @@ let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 const listeners = new Set<() => void>();
 
+const IS_BROWSER = typeof window !== "undefined" && typeof localStorage !== "undefined";
+const STORAGE_KEY = "bthwani-identity-session";
+
+function loadStoredSession(): StoredSession | null {
+  if (!IS_BROWSER) return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw) as StoredSession;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
+
+function saveStoredSession(session: StoredSession | null): void {
+  if (!IS_BROWSER) return;
+  try {
+    if (session) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
 export function configureIdentitySession(baseUrl: string): void {
   if (!baseUrl || client !== null) return;
   client = createIdentityClient(baseUrl);
-  state = { kind: "signed_out" };
+  
+  const saved = loadStoredSession();
+  if (saved) {
+    stored = saved;
+    state = {
+      kind: "authenticated",
+      identity: saved.identity,
+      accessToken: saved.accessToken,
+    };
+  } else {
+    state = { kind: "signed_out" };
+  }
   emit();
 }
 
@@ -64,6 +104,7 @@ export async function loginIdentity(username: string, password: string): Promise
       refreshToken: response.refreshToken,
       identity: response.identity,
     };
+    saveStoredSession(stored);
     state = {
       kind: "authenticated",
       identity: response.identity,
@@ -82,6 +123,7 @@ export async function loginIdentity(username: string, password: string): Promise
 export async function logoutIdentity(): Promise<void> {
   const accessToken = stored?.accessToken;
   stored = null;
+  saveStoredSession(null);
   state = { kind: "signed_out" };
   emit();
   if (client !== null && accessToken !== undefined) {
@@ -116,6 +158,7 @@ export function devBypassLogin(role: ActorRole): void {
     refreshToken: `dev-bypass-refresh-${role}`,
     identity: fakeIdentity,
   };
+  saveStoredSession(stored);
   state = { kind: "authenticated", identity: fakeIdentity, accessToken: stored.accessToken };
   emit();
 }

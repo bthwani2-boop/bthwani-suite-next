@@ -13,6 +13,7 @@ import {
   CpTextInput,
   DataTablePageFrame,
   useIdentitySession,
+  devBypassLogin,
 } from "@bthwani/app-shell";
 import {
   useHomeDiscoveryAdminController,
@@ -40,12 +41,29 @@ export function HomeDiscoveryAdminScreen({ kind }: { readonly kind: DshHomeAdmin
         <p>سجّل الدخول بحساب operator لإدارة محتوى الواجهة.</p>
         <CpTextInput value={username} onChange={setUsername} placeholder="اسم المستخدم" aria-label="اسم المستخدم" />
         <CpTextInput value={password} onChange={setPassword} placeholder="كلمة المرور" type="password" aria-label="كلمة المرور" />
-        <CpButton
-          disabled={username.trim().length === 0 || password.length < 4}
-          onClick={() => void identity.login(username.trim(), password)}
-        >
-          {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}
-        </CpButton>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <CpButton
+            disabled={username.trim().length === 0 || password.length < 4 || identity.state.kind === "authenticating"}
+            onClick={() => void identity.login(username.trim(), password)}
+            style={{ flex: 1 }}
+          >
+            {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}
+          </CpButton>
+          <CpButton
+            onClick={() => devBypassLogin("operator")}
+            style={{
+              flex: 1,
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              color: "#ffffff",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              borderRadius: "0.75rem",
+            }}
+          >
+            تجاوز تسجيل الدخول (مطور)
+          </CpButton>
+        </div>
         {identity.state.kind === "error" && <p role="alert">{identity.state.message}</p>}
       </section>
     );

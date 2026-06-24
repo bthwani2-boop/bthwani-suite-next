@@ -14,7 +14,7 @@ export default function RootPage() {
     if (section === "dashboard") router.push("/");
     if (section === "partners") router.push("/dsh/partners/stores");
     if (section === "catalogs") router.push("/dsh/catalogs");
-    if (section === "marketing") router.push("/dsh/marketing/home-discovery/banners");
+    if (section === "marketing") router.push("/dsh/marketing");
   };
 
   const cards = [
@@ -38,7 +38,7 @@ export default function RootPage() {
       title: "التسويق واكتشاف الصفحة",
       description: "إدارة البنرات الإعلانية، العروض الخاصة، والتصنيفات الترويجية للصفحة الرئيسية.",
       metric: "3 أقسام نشطة",
-      link: "/dsh/marketing/home-discovery/banners",
+      link: "/dsh/marketing",
       buttonText: "إدارة الترويج",
       color: "linear-gradient(135deg, #15803d, #22c55e)",
     },

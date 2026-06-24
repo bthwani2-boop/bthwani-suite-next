@@ -6,6 +6,7 @@ import {
   loginIdentity,
   logoutIdentity,
   subscribeIdentityState,
+  devBypassLogin,
   type IdentitySessionState,
 } from "@bthwani/core-identity";
 
@@ -13,6 +14,7 @@ export {
   configureIdentitySession,
   getIdentityAccessToken,
   getIdentityState,
+  devBypassLogin,
   type IdentitySessionState,
 };
 

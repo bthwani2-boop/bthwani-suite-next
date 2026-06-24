@@ -12,9 +12,10 @@ export default function DshCatalogsPage() {
   const router = useRouter();
 
   const handleSectionPress = (section: string) => {
+    if (section === "dashboard") router.push("/");
     if (section === "partners") router.push("/dsh/partners/stores");
     if (section === "catalogs") router.push("/dsh/catalogs");
-    if (section === "marketing") router.push("/dsh/marketing/home-discovery/banners");
+    if (section === "marketing") router.push("/dsh/marketing");
   };
 
   return (
