@@ -27,10 +27,10 @@ export type { StateViewProps } from "./StateView";
 export { DataTable } from "./DataTable";
 export type { DataTableProps, DataTableColumn } from "./DataTable";
 
-export { spacing } from "../tokens/spacing";
-export { lightThemeColors } from "../tokens/colors";
-export type { SpacingToken } from "../tokens/spacing";
-export type { TypographyRole } from "../tokens/typography";
+export { spacing } from "../../tokens/spacing";
+export { lightThemeColors } from "../../tokens/colors";
+export type { SpacingToken } from "../../tokens/spacing";
+export type { TypographyRole } from "../../tokens/typography";
 
 export * from "./CpPrimitives";
 

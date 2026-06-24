@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CpButton, CpPageHeader, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit/web";
+import { CpButton, CpPageHeader, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit";
 import { useIdentitySession, devBypassLogin } from "@bthwani/app-shell";
 import { useCatalogApprovalController } from "../../shared/catalog";
 

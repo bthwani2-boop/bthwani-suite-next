@@ -18,6 +18,8 @@
       "no-safe-area-in-ui-kit-runtime",
       "no-vector-icons-direct-in-ui-kit",
       "no-domain-component-in-ui-kit",
+      "no-app-shell-design-ownership",
+      "no-duplicate-design-primitives",
       "no-unsafe-ui-kit-tamagui-casts",
       "ui-kit-token-binding",
       "no-preview-demo-mock-runtime",
@@ -96,6 +98,16 @@
     {
       "id": "no-domain-component-in-ui-kit",
       "path": "tools/guards/no-domain-component-in-ui-kit.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-app-shell-design-ownership",
+      "path": "tools/guards/no-app-shell-design-ownership.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-duplicate-design-primitives",
+      "path": "tools/guards/no-duplicate-design-primitives.mjs",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {

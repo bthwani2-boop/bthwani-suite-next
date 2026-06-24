@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { lightThemeColors } from "../tokens/colors";
+import { lightThemeColors } from "../../tokens/colors";
 
 export type DataTableColumn<T extends Record<string, unknown>> = {
   readonly key: keyof T & string;

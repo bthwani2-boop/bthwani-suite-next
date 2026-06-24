@@ -3,7 +3,7 @@ import {
   CpButton,
   CpSelect,
   CpTextInput,
-} from "@bthwani/ui-kit/web";
+} from "@bthwani/ui-kit";
 import type {
   DshStoreAdminDetail,
   StoreActionState,

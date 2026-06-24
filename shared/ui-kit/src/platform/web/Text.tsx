@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { typography, type TypographyRole } from "../tokens/typography";
-import { lightThemeColors } from "../tokens/colors";
+import { typography, type TypographyRole } from "../../tokens/typography";
+import { lightThemeColors } from "../../tokens/colors";
 
 export type TextProps = {
   readonly children?: ReactNode;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CpButton, CpEmptyTableMessage, CpPageHeader, CpSelect, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit/web";
+import { CpButton, CpEmptyTableMessage, CpPageHeader, CpSelect, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit";
 import { useIdentitySession, devBypassLogin } from "@bthwani/app-shell";
 import {
   useHomeDiscoveryAdminController,

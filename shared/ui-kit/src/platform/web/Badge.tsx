@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { lightThemeColors } from "../tokens/colors";
+import { lightThemeColors } from "../../tokens/colors";
 
 export type BadgeTone = "neutral" | "action" | "success" | "warning" | "danger" | "info";
 

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { lightThemeColors } from "../tokens/colors";
+import { lightThemeColors } from "../../tokens/colors";
 
 export type ButtonTone = "primary" | "secondary" | "ghost" | "danger" | "success";
 export type ButtonSize = "sm" | "md" | "lg";
