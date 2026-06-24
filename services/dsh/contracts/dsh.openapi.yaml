@@ -3,10 +3,15 @@ info:
   title: BThwani DSH Service API
   version: 0.5.0
   description: >
-    Delivery and shopping hub service contract. DSH-001 store discovery and governance,
-    DSH-002 home discovery, DSH-003 catalog management. DSH-004/005 cart serviceability
-    and checkout intent operations are CONTRACT_ONLY (x-contract-state: CONTRACT_DRAFT) —
-    runtime handlers not registered; client generation disabled for those paths.
+    Delivery and shopping hub service contract. DSH-001 store discovery and governance
+    (RUNTIME_VERIFIED). DSH-002 home discovery (RUNTIME_VERIFIED). DSH-003 catalog
+    management (RUNTIME_VERIFIED). DSH-004 cart and serviceability, DSH-005 checkout
+    intent and WLT handoff, DSH-006 order fulfillment, DSH-007 dispatch and captain
+    delivery — backend handlers registered, frontend surface UI not yet approved
+    (NOT_APPROVED_YET). DSH-008 field verification and store quality assurance,
+    DSH-009 support incidents and escalation room — backend handlers registered,
+    shared brain implemented, screens implemented, surface binding NOT_APPROVED_YET.
+    WLT handoff uses reference fields only; no financial mutation inside DSH.
 
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -1333,6 +1338,522 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ── DSH-008: Field Verification & Store Quality Assurance ──────────────────
+
+  /dsh/field/stores/{storeId}/visits:
+    post:
+      operationId: createDshFieldVisit
+      summary: Field agent starts a new store visit.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateFieldVisitRequest" }
+      responses:
+        "201":
+          description: Visit created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshFieldVisitResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    get:
+      operationId: listDshFieldVisits
+      summary: List field visits for a store.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: List of visits.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshFieldVisitsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/field/visits/{visitId}/complete:
+    post:
+      operationId: completeDshFieldVisit
+      summary: Field agent marks a visit complete.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: visitId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Visit marked complete.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshFieldVisitResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/visits/{visitId}/checks:
+    put:
+      operationId: upsertDshReadinessCheck
+      summary: Field agent records or updates a readiness checklist item.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: visitId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpsertReadinessCheckRequest" }
+      responses:
+        "200":
+          description: Check recorded.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshReadinessCheckResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      operationId: listDshVisitChecks
+      summary: List all readiness checks for a visit.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: visitId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of checks.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshReadinessChecksResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/field/stores/{storeId}/escalations:
+    post:
+      operationId: createDshReadinessEscalation
+      summary: Field agent raises a quality escalation for a store.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateEscalationRequest" }
+      responses:
+        "201":
+          description: Escalation created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshEscalationResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/field-readiness/escalations:
+    get:
+      operationId: listDshOperatorEscalations
+      summary: Operator views all field readiness escalations with optional status filter.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, acknowledged, resolved, escalated_further]
+      responses:
+        "200":
+          description: List of escalations.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshEscalationsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/field-readiness/escalations/{escalationId}:
+    patch:
+      operationId: updateDshOperatorEscalation
+      summary: Operator acknowledges or resolves an escalation.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: escalationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateEscalationRequest" }
+      responses:
+        "200":
+          description: Escalation updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshEscalationResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/stores/{storeId}/onboarding-status:
+    get:
+      operationId: getDshPartnerOnboardingStatus
+      summary: Partner views their store's field onboarding status.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Onboarding status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshOnboardingStatusResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  # ── DSH-009: Support, Incidents & Escalation Room ──────────────────────────
+
+  /dsh/support/tickets:
+    post:
+      operationId: createDshSupportTicket
+      summary: Any authenticated user creates a support ticket.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateTicketRequest" }
+      responses:
+        "201":
+          description: Ticket created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshTicketResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    get:
+      operationId: listDshMyTickets
+      summary: List support tickets submitted by the current user.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of tickets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshTicketsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/support/tickets/{ticketId}:
+    get:
+      operationId: getDshSupportTicket
+      summary: Get a single support ticket.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Ticket detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshTicketResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/support/tickets/{ticketId}/messages:
+    post:
+      operationId: addDshTicketMessage
+      summary: Add a message to a support ticket thread.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAddMessageRequest" }
+      responses:
+        "201":
+          description: Message added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMessageResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      operationId: listDshTicketMessages
+      summary: List messages in a support ticket thread.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of messages.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshMessagesResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/support/tickets:
+    get:
+      operationId: listDshOperatorTickets
+      summary: Operator lists all support tickets with optional status filter.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, in_review, pending_user, resolved, closed]
+      responses:
+        "200":
+          description: List of tickets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshTicketsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/support/tickets/{ticketId}:
+    patch:
+      operationId: updateDshOperatorTicket
+      summary: Operator updates ticket status or assignee.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateTicketRequest" }
+      responses:
+        "200":
+          description: Ticket updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshTicketResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/incidents:
+    post:
+      operationId: createDshIncident
+      summary: Operator raises a new operational incident.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateIncidentRequest" }
+      responses:
+        "201":
+          description: Incident created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshIncidentResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    get:
+      operationId: listDshIncidents
+      summary: Operator lists incidents with optional status filter.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, monitoring, resolved]
+      responses:
+        "200":
+          description: List of incidents.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshIncidentsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/incidents/{incidentId}:
+    patch:
+      operationId: updateDshIncident
+      summary: Operator resolves or sets an incident to monitoring.
+      tags: [DshSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: incidentId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateIncidentRequest" }
+      responses:
+        "200":
+          description: Incident updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshIncidentResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── DSH-010: Platform Analytics & Operational Reporting ────────────────────
+  /dsh/operator/analytics/platform:
+    get:
+      operationId: getDshPlatformKpis
+      summary: Platform-wide operational KPIs for the operator dashboard.
+      tags: [DshAnalytics]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Platform KPIs snapshot.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPlatformKpisResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/analytics/orders:
+    get:
+      operationId: getDshOrderAnalytics
+      summary: Order volume and fulfillment analytics for a given period.
+      tags: [DshAnalytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [today, week, month], default: today }
+      responses:
+        "200":
+          description: Order analytics breakdown.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshOrderAnalyticsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/analytics/delivery:
+    get:
+      operationId: getDshDeliveryAnalytics
+      summary: Delivery assignment and completion analytics.
+      tags: [DshAnalytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [today, week, month], default: today }
+      responses:
+        "200":
+          description: Delivery analytics breakdown.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDeliveryAnalyticsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/analytics/support:
+    get:
+      operationId: getDshSupportAnalytics
+      summary: Support ticket volume and resolution analytics.
+      tags: [DshAnalytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [today, week, month], default: today }
+      responses:
+        "200":
+          description: Support analytics breakdown.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSupportAnalyticsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/analytics/stores:
+    get:
+      operationId: getDshStoreAnalytics
+      summary: Store activity and readiness analytics.
+      tags: [DshAnalytics]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Store analytics snapshot.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshStoreAnalyticsResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/analytics/performance:
+    get:
+      operationId: getDshPartnerPerformance
+      summary: Authenticated partner's own store performance summary.
+      tags: [DshAnalytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [today, week, month], default: today }
+      responses:
+        "200":
+          description: Partner performance metrics for their own store.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerPerformanceResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
   /dsh/integrations/wlt/payment-callbacks:
     post:
       operationId: acceptWltPaymentCallbackEnvelope
@@ -2379,9 +2900,9 @@ components:
         assignedBy: { type: string }
         status: { $ref: "#/components/schemas/DshAssignmentStatus" }
         responseDeadlineAt: { type: string, format: date-time }
-        acceptedAt: { type: string, format: date-time, nullable: true }
-        declinedAt: { type: string, format: date-time, nullable: true }
-        completedAt: { type: string, format: date-time, nullable: true }
+        acceptedAt: { type: [string, "null"], format: date-time }
+        declinedAt: { type: [string, "null"], format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         delivery: { $ref: "#/components/schemas/DshDelivery" }
@@ -2432,6 +2953,418 @@ components:
           minLength: 2
         note:
           type: string
+
+    # ── DSH-008: Field Readiness ──────────────────────────────────────────────
+
+    DshVisitType:
+      type: string
+      enum: [onboarding, periodic, escalation_followup]
+
+    DshVisitStatus:
+      type: string
+      enum: [in_progress, complete, escalated]
+
+    DshCheckType:
+      type: string
+      enum: [location_verified, documents_uploaded, product_list_submitted, equipment_checked, safety_compliant, hygiene_compliant]
+
+    DshCheckStatus:
+      type: string
+      enum: [pending, passed, failed]
+
+    DshEscalationStatus:
+      type: string
+      enum: [open, acknowledged, resolved, escalated_further]
+
+    DshEscalationSeverity:
+      type: string
+      enum: [low, medium, high, critical]
+
+    DshEscalationCategory:
+      type: string
+      enum: [document_missing, safety_violation, location_mismatch, product_compliance, equipment_failure, other]
+
+    DshFieldVisit:
+      type: object
+      required: [id, storeId, fieldAgentId, visitType, status, notes, startedAt, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        fieldAgentId: { type: string }
+        visitType: { $ref: "#/components/schemas/DshVisitType" }
+        status: { $ref: "#/components/schemas/DshVisitStatus" }
+        notes: { type: string }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshFieldVisitResponse:
+      type: object
+      required: [visit]
+      properties:
+        visit: { $ref: "#/components/schemas/DshFieldVisit" }
+
+    DshFieldVisitsResponse:
+      type: object
+      required: [visits]
+      properties:
+        visits:
+          type: array
+          items: { $ref: "#/components/schemas/DshFieldVisit" }
+
+    DshCreateFieldVisitRequest:
+      type: object
+      properties:
+        visitType: { $ref: "#/components/schemas/DshVisitType" }
+
+    DshReadinessCheck:
+      type: object
+      required: [id, visitId, storeId, checkType, status, evidenceUrl, notes, verifiedBy, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        visitId: { type: string }
+        storeId: { type: string }
+        checkType: { $ref: "#/components/schemas/DshCheckType" }
+        status: { $ref: "#/components/schemas/DshCheckStatus" }
+        evidenceUrl: { type: string }
+        notes: { type: string }
+        verifiedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshReadinessCheckResponse:
+      type: object
+      required: [check]
+      properties:
+        check: { $ref: "#/components/schemas/DshReadinessCheck" }
+
+    DshReadinessChecksResponse:
+      type: object
+      required: [checks]
+      properties:
+        checks:
+          type: array
+          items: { $ref: "#/components/schemas/DshReadinessCheck" }
+
+    DshUpsertReadinessCheckRequest:
+      type: object
+      required: [checkType, status]
+      properties:
+        checkType: { $ref: "#/components/schemas/DshCheckType" }
+        status: { $ref: "#/components/schemas/DshCheckStatus" }
+        evidenceUrl: { type: string }
+        notes: { type: string }
+
+    DshReadinessEscalation:
+      type: object
+      required: [id, visitId, storeId, raisedBy, severity, category, description, status, resolutionNote, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        visitId: { type: string }
+        storeId: { type: string }
+        raisedBy: { type: string }
+        severity: { $ref: "#/components/schemas/DshEscalationSeverity" }
+        category: { $ref: "#/components/schemas/DshEscalationCategory" }
+        description: { type: string }
+        status: { $ref: "#/components/schemas/DshEscalationStatus" }
+        resolvedBy: { type: string }
+        resolvedAt: { type: [string, "null"], format: date-time }
+        resolutionNote: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshEscalationResponse:
+      type: object
+      required: [escalation]
+      properties:
+        escalation: { $ref: "#/components/schemas/DshReadinessEscalation" }
+
+    DshEscalationsResponse:
+      type: object
+      required: [escalations]
+      properties:
+        escalations:
+          type: array
+          items: { $ref: "#/components/schemas/DshReadinessEscalation" }
+
+    DshCreateEscalationRequest:
+      type: object
+      required: [severity, category, description]
+      properties:
+        visitId: { type: string }
+        severity: { $ref: "#/components/schemas/DshEscalationSeverity" }
+        category: { $ref: "#/components/schemas/DshEscalationCategory" }
+        description: { type: string, minLength: 10 }
+
+    DshUpdateEscalationRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/DshEscalationStatus" }
+        resolutionNote: { type: string }
+
+    DshOnboardingStatusResponse:
+      type: object
+      required: [storeId, totalVisits, completedVisits, openEscalations, onboardingComplete, status]
+      properties:
+        storeId: { type: string }
+        totalVisits: { type: integer }
+        completedVisits: { type: integer }
+        openEscalations: { type: integer }
+        onboardingComplete: { type: boolean }
+        status:
+          type: string
+          enum: [pending, complete, escalation_required]
+
+    # ── DSH-009: Support ──────────────────────────────────────────────────────
+
+    DshTicketStatus:
+      type: string
+      enum: [open, in_review, pending_user, resolved, closed]
+
+    DshTicketPriority:
+      type: string
+      enum: [low, normal, high, urgent]
+
+    DshTicketCategory:
+      type: string
+      enum: [order_issue, delivery_issue, store_quality, payment_reference, account_access, app_bug, other]
+
+    DshSenderRole:
+      type: string
+      enum: [client, partner, captain, operator, system]
+
+    DshIncidentStatus:
+      type: string
+      enum: [open, monitoring, resolved]
+
+    DshIncidentSeverity:
+      type: string
+      enum: [low, medium, high, critical]
+
+    DshIncidentScope:
+      type: string
+      enum: [delivery, stores, payments, platform, unknown]
+
+    DshSupportTicket:
+      type: object
+      required: [id, storeId, reporterId, reporterRole, subject, description, category, priority, status, assignedTo, orderId, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        storeId: { type: string }
+        reporterId: { type: string }
+        reporterRole: { type: string }
+        subject: { type: string }
+        description: { type: string }
+        category: { $ref: "#/components/schemas/DshTicketCategory" }
+        priority: { $ref: "#/components/schemas/DshTicketPriority" }
+        status: { $ref: "#/components/schemas/DshTicketStatus" }
+        assignedTo: { type: string }
+        orderId: { type: string }
+        resolvedAt: { type: [string, "null"], format: date-time }
+        closedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshTicketResponse:
+      type: object
+      required: [ticket]
+      properties:
+        ticket: { $ref: "#/components/schemas/DshSupportTicket" }
+
+    DshTicketsResponse:
+      type: object
+      required: [tickets]
+      properties:
+        tickets:
+          type: array
+          items: { $ref: "#/components/schemas/DshSupportTicket" }
+
+    DshCreateTicketRequest:
+      type: object
+      required: [subject, description, category]
+      properties:
+        subject: { type: string, minLength: 3 }
+        description: { type: string, minLength: 10 }
+        category: { $ref: "#/components/schemas/DshTicketCategory" }
+        priority: { $ref: "#/components/schemas/DshTicketPriority" }
+        storeId: { type: string }
+        orderId: { type: string }
+
+    DshUpdateTicketRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/DshTicketStatus" }
+        assignedTo: { type: string }
+
+    DshSupportMessage:
+      type: object
+      required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+      properties:
+        id: { type: string }
+        ticketId: { type: string }
+        senderId: { type: string }
+        senderRole: { $ref: "#/components/schemas/DshSenderRole" }
+        body: { type: string }
+        isInternal: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    DshMessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { $ref: "#/components/schemas/DshSupportMessage" }
+
+    DshMessagesResponse:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/DshSupportMessage" }
+
+    DshAddMessageRequest:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 2 }
+        isInternal: { type: boolean }
+
+    DshIncident:
+      type: object
+      required: [id, title, description, severity, status, affectedScope, raisedBy, postmortemUrl, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        severity: { $ref: "#/components/schemas/DshIncidentSeverity" }
+        status: { $ref: "#/components/schemas/DshIncidentStatus" }
+        affectedScope: { $ref: "#/components/schemas/DshIncidentScope" }
+        raisedBy: { type: string }
+        resolvedBy: { type: string }
+        resolvedAt: { type: [string, "null"], format: date-time }
+        postmortemUrl: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshIncidentResponse:
+      type: object
+      required: [incident]
+      properties:
+        incident: { $ref: "#/components/schemas/DshIncident" }
+
+    DshIncidentsResponse:
+      type: object
+      required: [incidents]
+      properties:
+        incidents:
+          type: array
+          items: { $ref: "#/components/schemas/DshIncident" }
+
+    DshCreateIncidentRequest:
+      type: object
+      required: [title, description, severity]
+      properties:
+        title: { type: string, minLength: 3 }
+        description: { type: string }
+        severity: { $ref: "#/components/schemas/DshIncidentSeverity" }
+        affectedScope: { $ref: "#/components/schemas/DshIncidentScope" }
+
+    DshUpdateIncidentRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/DshIncidentStatus" }
+        postmortemUrl: { type: string }
+
+    # ── DSH-010: Analytics Schemas ─────────────────────────────────────────
+    DshPlatformKpisResponse:
+      type: object
+      required: [totalOrders, deliveredOrders, cancelledOrders, activeStores, openTickets, fieldVisitsCompleted, openEscalations, openIncidents, period, generatedAt]
+      properties:
+        totalOrders: { type: integer }
+        deliveredOrders: { type: integer }
+        cancelledOrders: { type: integer }
+        activeStores: { type: integer }
+        openTickets: { type: integer }
+        fieldVisitsCompleted: { type: integer }
+        openEscalations: { type: integer }
+        openIncidents: { type: integer }
+        period: { type: string }
+        generatedAt: { type: string, format: date-time }
+
+    DshOrderStatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status: { type: string }
+        count: { type: integer }
+
+    DshOrderAnalyticsResponse:
+      type: object
+      required: [totalOrders, byStatus, period, generatedAt]
+      properties:
+        totalOrders: { type: integer }
+        byStatus:
+          type: array
+          items: { $ref: "#/components/schemas/DshOrderStatusCount" }
+        period: { type: string }
+        generatedAt: { type: string, format: date-time }
+
+    DshDeliveryAnalyticsResponse:
+      type: object
+      required: [totalAssignments, acceptedAssignments, completedAssignments, declinedAssignments, period, generatedAt]
+      properties:
+        totalAssignments: { type: integer }
+        acceptedAssignments: { type: integer }
+        completedAssignments: { type: integer }
+        declinedAssignments: { type: integer }
+        period: { type: string }
+        generatedAt: { type: string, format: date-time }
+
+    DshTicketCategoryCount:
+      type: object
+      required: [category, count]
+      properties:
+        category: { type: string }
+        count: { type: integer }
+
+    DshSupportAnalyticsResponse:
+      type: object
+      required: [totalTickets, openTickets, resolvedTickets, byCategory, period, generatedAt]
+      properties:
+        totalTickets: { type: integer }
+        openTickets: { type: integer }
+        resolvedTickets: { type: integer }
+        byCategory:
+          type: array
+          items: { $ref: "#/components/schemas/DshTicketCategoryCount" }
+        period: { type: string }
+        generatedAt: { type: string, format: date-time }
+
+    DshStoreAnalyticsResponse:
+      type: object
+      required: [totalStores, activeStores, suspendedStores, pendingReadiness, readinessComplete, generatedAt]
+      properties:
+        totalStores: { type: integer }
+        activeStores: { type: integer }
+        suspendedStores: { type: integer }
+        pendingReadiness: { type: integer }
+        readinessComplete: { type: integer }
+        generatedAt: { type: string, format: date-time }
+
+    DshPartnerPerformanceResponse:
+      type: object
+      required: [storeId, totalOrders, acceptedOrders, rejectedOrders, period, generatedAt]
+      properties:
+        storeId: { type: string }
+        totalOrders: { type: integer }
+        acceptedOrders: { type: integer }
+        rejectedOrders: { type: integer }
+        period: { type: string }
+        generatedAt: { type: string, format: date-time }
 
     WltPaymentCallbackEnvelope:
       type: object

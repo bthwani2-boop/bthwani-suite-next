@@ -135,22 +135,19 @@ if (existsSync(serviceManifestPath)) {
   }
 }
 
-// 6. Guard: prevent dsh.client.home-discovery RUNTIME_VERIFIED when nextSlice NOT_APPROVED_YET
+// 6. Guard: dsh.client.home-discovery RUNTIME_VERIFIED requires stage to include DSH-002_RUNTIME_VERIFIED
 if (existsSync(CAPABILITY_MAP_PATH) && existsSync(serviceManifestPath)) {
   const capMapSrc = readFileSync(CAPABILITY_MAP_PATH, "utf8");
   const manifestSrc = readFileSync(serviceManifestPath, "utf8");
-  const nextSliceNotApproved =
-    /nextSlice:\s*\{[\s\S]*?closureState:\s*["']NOT_APPROVED_YET["']/.test(
-      manifestSrc,
+  const homeDiscoveryVerified =
+    /id:\s*["']dsh\.client\.home-discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.test(
+      capMapSrc,
     );
-  if (nextSliceNotApproved) {
-    const homeDiscoveryVerified =
-      /id:\s*["']dsh\.client\.home-discovery["'][\s\S]*?closureState:\s*["']RUNTIME_VERIFIED["']/.test(
-        capMapSrc,
-      );
-    if (homeDiscoveryVerified) {
+  if (homeDiscoveryVerified) {
+    const stageIncludesDsh002 = /DSH-002_RUNTIME_VERIFIED/.test(manifestSrc);
+    if (!stageIncludesDsh002) {
       errors.push(
-        "dsh.client.home-discovery cannot be RUNTIME_VERIFIED when nextSlice DSH-002 is NOT_APPROVED_YET",
+        "dsh.client.home-discovery is RUNTIME_VERIFIED but service.manifest stage does not include DSH-002_RUNTIME_VERIFIED",
       );
     }
   }

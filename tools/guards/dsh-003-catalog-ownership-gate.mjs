@@ -50,4 +50,4 @@ for (const required of [
   }
 }
 
-fail("dsh-002-catalog-ownership", violations);
+fail("dsh-003-catalog-ownership", violations);

@@ -43,7 +43,7 @@
       "wlt-dsh-frontend-shared-ownership",
       "canonical-host-ports",
       "dsh-001-cross-surface-dependency-map",
-      "dsh-002-catalog-ownership"
+      "dsh-003-catalog-ownership"
     ]
   },
   "guards": [
@@ -178,8 +178,8 @@
       "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     },
     {
-      "id": "dsh-002-catalog-ownership",
-      "path": "tools/guards/dsh-002-catalog-ownership-gate.mjs",
+      "id": "dsh-003-catalog-ownership",
+      "path": "tools/guards/dsh-003-catalog-ownership-gate.mjs",
       "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
     }
   ]

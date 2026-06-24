@@ -78,6 +78,37 @@ func NewRouter(db *sql.DB, identityClient *auth.Client) *http.ServeMux {
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/pod", protected.handleSubmitDispatchPoD)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
 
+	// DSH-008: Field Verification & Store Quality Assurance
+	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateFieldVisit)
+	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)
+	mux.HandleFunc("POST /dsh/field/visits/{visitId}/complete", protected.handleCompleteFieldVisit)
+	mux.HandleFunc("PUT /dsh/field/visits/{visitId}/checks", protected.handleUpsertReadinessCheck)
+	mux.HandleFunc("GET /dsh/field/visits/{visitId}/checks", protected.handleListVisitChecks)
+	mux.HandleFunc("POST /dsh/field/stores/{storeId}/escalations", protected.handleCreateReadinessEscalation)
+	mux.HandleFunc("GET /dsh/operator/field-readiness/escalations", protected.handleListOperatorEscalations)
+	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.handleUpdateEscalation)
+	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/onboarding-status", protected.handlePartnerOnboardingStatus)
+
+	// DSH-009: Support, Incidents & Escalation Room
+	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateSupportTicket)
+	mux.HandleFunc("GET /dsh/support/tickets", protected.handleListMyTickets)
+	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}", protected.handleGetTicket)
+	mux.HandleFunc("POST /dsh/support/tickets/{ticketId}/messages", protected.handleAddTicketMessage)
+	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}/messages", protected.handleListTicketMessages)
+	mux.HandleFunc("GET /dsh/operator/support/tickets", protected.handleOperatorListTickets)
+	mux.HandleFunc("PATCH /dsh/operator/support/tickets/{ticketId}", protected.handleOperatorUpdateTicket)
+	mux.HandleFunc("POST /dsh/operator/incidents", protected.handleCreateIncident)
+	mux.HandleFunc("GET /dsh/operator/incidents", protected.handleListIncidents)
+	mux.HandleFunc("PATCH /dsh/operator/incidents/{incidentId}", protected.handleUpdateIncident)
+
+	// DSH-010: Platform Analytics & Operational Reporting
+	mux.HandleFunc("GET /dsh/operator/analytics/platform", protected.handlePlatformKpis)
+	mux.HandleFunc("GET /dsh/operator/analytics/orders", protected.handleOrderAnalytics)
+	mux.HandleFunc("GET /dsh/operator/analytics/delivery", protected.handleDeliveryAnalytics)
+	mux.HandleFunc("GET /dsh/operator/analytics/support", protected.handleSupportAnalytics)
+	mux.HandleFunc("GET /dsh/operator/analytics/stores", protected.handleStoreAnalytics)
+	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.handlePartnerPerformance)
+
 	// Catch-all 404 handler for routes not found
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")

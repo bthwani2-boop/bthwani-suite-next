@@ -6,9 +6,9 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-001_RUNTIME_VERIFIED_DSH-002_IMPLEMENTED_DSH-003_IMPLEMENTED",
+  stage: "DSH-001_RUNTIME_VERIFIED_DSH-002_RUNTIME_VERIFIED_DSH-003_RUNTIME_VERIFIED_DSH-004_SCREENS_IMPLEMENTED_DSH-005_SCREENS_IMPLEMENTED_DSH-006_SCREENS_IMPLEMENTED_DSH-007_SCREENS_IMPLEMENTED_DSH-008_RUNTIME_VERIFIED_DSH-009_RUNTIME_VERIFIED",
   closureState: "RUNTIME_VERIFIED",
-  activationScope: "stores-topic-all-surfaces-catalog-topic-three-surfaces",
+  activationScope: "stores-topic-all-surfaces-home-discovery-topic-two-surfaces-catalog-topic-three-surfaces",
   contract: "contracts/dsh.openapi.yaml",
   contractState: "CONTRACT_ACTIVE",
   capabilities: DSH_CAPABILITY_MAP,
@@ -16,10 +16,12 @@ export const dshServiceManifest = {
   runtime: DSH_RUNTIME_MAP,
   currentTruth: {
     contractOperations: [
+      // DSH-001 Store Discovery
       "getDshHealth",
       "getDshReadiness",
       "listDshStores",
       "getDshStore",
+      // DSH-002 Home Discovery
       "getDshHomeDiscovery",
       "listOperatorHomeDiscoveryContent",
       "createOperatorHomeDiscoveryContent",

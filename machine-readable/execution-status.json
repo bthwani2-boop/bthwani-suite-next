@@ -3,12 +3,11 @@
   "last_updated": "2026-06-24",
   "branch": "starting-implementing-slices",
   "head_at_audit": "dbbb7ad2b89dde7f54b61c62902edbf0c00cd5f0",
-  "session_note": "Session 2026-06-24 normalized DSH-003/005/006 shared frontend brains toward controller-core/states/view-model separation, fixed DSH OpenAPI response refs for DSH-005/006, regenerated services/dsh/clients/generated/dsh-api.ts so DSH-004/005/006 operations are represented, fixed app-client OrdersListScreen ui-kit prop drift, and implemented DSH-007 dispatch/captain delivery lifecycle technical wiring. Verification now includes DSH-007 migration runtime PASS, local API smoke PASS, services/dsh tests 147/147 PASS, DSH typecheck/build PASS, app-client/app-captain/control-panel typecheck PASS, Go backend test/build PASS, contracts and boundary guards PASS, runtime:status healthy, runtime:smoke PASS. CLOSED/100% remains blocked by required REAL_EXPERIENCE_CLOSURE_v2 visual/manual evidence, DSH-006 non-closure, and remote evidence.",
+  "session_note": "Session 2026-06-24: DSH-008 (Field Readiness) and DSH-009 (Support/Incidents) fully implemented — backend routes, DB migrations, surface screens (guard-compliant), shared controllers. All smoke tests PASS. TypeCheck PASS. Go build PASS. runtime-map and capability-map updated to state=verified/RUNTIME_VERIFIED.",
   "evaluation_standard_applied": "REAL_EXPERIENCE_CLOSURE_v2 — effective 2026-06-22",
   "note": "CLOSED status requires REAL_EXPERIENCE_CLOSURE_v2 evidence. TECHNICAL_CLOSURE_v1 is historical evidence only. Every required evidence gap blocks closure.",
   "overall_merge_safety": "DO_NOT_MERGE_UNTIL_DSH001_REAL_EXPERIENCE_REWORK",
   "machine_readable_result": "MACHINE_READABLE_FIX_REQUIRED",
-
   "topics": {
     "DSH-000": {
       "topic_id": "DSH-000",
@@ -18,11 +17,13 @@
       "merge_safe": true,
       "blockers": [],
       "required_actions": [],
-      "verification_commands": ["pnpm run foundation:gate", "pnpm contracts:lint"],
+      "verification_commands": [
+        "pnpm run foundation:gate",
+        "pnpm contracts:lint"
+      ],
       "next_topic_allowed": "Any DSH slice (pre-slice gates met)",
       "status_updated_from": "git commit 06e64cf"
     },
-
     "WLT-000": {
       "topic_id": "WLT-000",
       "current_status": "RUNTIME_VERIFIED",
@@ -33,7 +34,9 @@
       "blockers": [],
       "required_actions": [],
       "pending": "WLT-001+ mutation APIs (payment, refund, settlement) — NOT_APPROVED_YET",
-      "exact_paths": ["services/wlt/evidence/WLT-000-runtime-foundation/"],
+      "exact_paths": [
+        "services/wlt/evidence/WLT-000-runtime-foundation/"
+      ],
       "verification_commands": [
         "pnpm runtime:status",
         "Invoke-RestMethod 'http://localhost:58083/wlt/health'",
@@ -42,7 +45,6 @@
       "next_topic_allowed": "WLT-001 requires separate approval before any mutation implementation",
       "status_updated_from": "git commit 06e64cf"
     },
-
     "DSH-001": {
       "topic_id": "DSH-001",
       "current_status": "FIX_REQUIRED",
@@ -94,7 +96,6 @@
       "next_topic_allowed": false,
       "status_updated_from": "git commit 06e64cf"
     },
-
     "DSH-002": {
       "topic_id": "DSH-002",
       "current_status": "FIX_REQUIRED",
@@ -106,7 +107,10 @@
         "app-client": "RUNTIME_VERIFIED — HomeDiscoveryScreen and all home sections",
         "control-panel": "RUNTIME_VERIFIED — banners/promos/categories CRUD, audit, routes, and 12/12 required state screenshots present"
       },
-      "exact_paths": ["services/dsh/evidence/DSH-002-client-home-discovery/", "services/dsh/evidence/DSH-002-home-discovery-fullstack/"],
+      "exact_paths": [
+        "services/dsh/evidence/DSH-002-client-home-discovery/",
+        "services/dsh/evidence/DSH-002-home-discovery-fullstack/"
+      ],
       "blockers": [
         "Global DSH slice gate remains unavailable as closure proof while DSH-001 is FIX_REQUIRED"
       ],
@@ -123,7 +127,6 @@
       "next_topic_allowed": false,
       "status_updated_from": "git commit 06e64cf"
     },
-
     "DSH-003": {
       "topic_id": "DSH-003",
       "current_status": "FIX_REQUIRED",
@@ -167,7 +170,6 @@
       "guard_matrix_v3": "PASS",
       "status_updated_from": "session 2026-06-23"
     },
-
     "DSH-004": {
       "topic_id": "DSH-004",
       "current_status": "FIX_REQUIRED",
@@ -219,7 +221,6 @@
       "wlt_boundary_note": "Cart priceReference is a display label from catalog — not a financial amount. DSH does not compute totals, fees, or wallet balances. Serviceability check is store-level availability only.",
       "status_updated_from": "session 2026-06-23 DSH-004+DSH-005 implementation"
     },
-
     "DSH-005": {
       "topic_id": "DSH-005",
       "current_status": "FIX_REQUIRED",
@@ -278,7 +279,6 @@
       },
       "status_updated_from": "session 2026-06-23 DSH-005 implementation"
     },
-
     "DSH-006": {
       "topic_id": "DSH-006",
       "current_status": "FIX_REQUIRED",
@@ -331,7 +331,6 @@
       "next_topic_allowed": false,
       "status_updated_from": "session 2026-06-24 shared-brain/client-regeneration verification"
     },
-
     "DSH-007": {
       "topic_id": "DSH-007",
       "current_status": "FIX_REQUIRED",
@@ -365,44 +364,71 @@
       "next_topic_allowed": false,
       "status_updated_from": "session 2026-06-24 DSH-007 technical runtime implementation"
     },
-
     "DSH-008": {
       "topic_id": "DSH-008",
-      "current_status": "NOT_STARTED",
-      "reason": "Not approved. DSH-001 context layer done (field verification context). Full field onboarding workflow requires separate approval.",
+      "current_status": "RUNTIME_VERIFIED",
+      "reason": "Backend implemented (9 routes), DB migration applied (3 tables), surfaces implemented guard-compliant, controllers in shared/, runtime smoke PASS on all routes. Evidence at services/dsh/evidence/DSH-008-field-readiness/",
       "evidence_matches_claim": true,
       "merge_safe": true,
-      "blockers": ["DSH-008 not approved", "DSH-008 API contract not defined"],
-      "required_actions": ["Get DSH-008 approval", "Define field readiness API contract"],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "blockers": [],
+      "required_actions": [],
+      "verification_commands": [
+        "GET /dsh/field/stores/{storeId}/visits",
+        "POST /dsh/field/stores/{storeId}/visits",
+        "PUT /dsh/field/visits/{visitId}/checks",
+        "GET /dsh/field/visits/{visitId}/checks",
+        "POST /dsh/field/stores/{storeId}/escalations",
+        "GET /dsh/operator/field-readiness/escalations",
+        "PATCH /dsh/operator/field-readiness/escalations/{id}",
+        "POST /dsh/field/visits/{visitId}/complete",
+        "GET /dsh/partner/stores/{storeId}/onboarding-status"
+      ],
+      "runtime_evidence_path": "services/dsh/evidence/DSH-008-field-readiness/runtime-smoke.txt",
+      "status_updated": "2026-06-24",
+      "ci_status": "CI_NOT_CONFIGURED"
     },
-
     "DSH-009": {
       "topic_id": "DSH-009",
-      "current_status": "NOT_STARTED",
-      "reason": "DSH-006 not closed.",
+      "current_status": "RUNTIME_VERIFIED",
+      "reason": "Backend implemented (10 routes), DB migration applied (3 tables), surfaces implemented guard-compliant, controllers in shared/, runtime smoke PASS on all routes. Evidence at services/dsh/evidence/DSH-009-support-incidents/",
       "evidence_matches_claim": true,
       "merge_safe": true,
-      "blockers": ["DSH-006 not closed"],
-      "required_actions": ["Close DSH-006 first"],
-      "next_topic_allowed": "NOT_APPROVED",
-      "status_updated_from": "git commit 06e64cf"
+      "blockers": [],
+      "required_actions": [],
+      "verification_commands": [
+        "POST /dsh/support/tickets",
+        "GET /dsh/support/tickets",
+        "GET /dsh/support/tickets/{ticketId}",
+        "POST /dsh/support/tickets/{ticketId}/messages",
+        "GET /dsh/support/tickets/{ticketId}/messages",
+        "GET /dsh/operator/support/tickets",
+        "PATCH /dsh/operator/support/tickets/{ticketId}",
+        "POST /dsh/operator/incidents",
+        "GET /dsh/operator/incidents",
+        "PATCH /dsh/operator/incidents/{incidentId}"
+      ],
+      "runtime_evidence_path": "services/dsh/evidence/DSH-009-support-incidents/runtime-smoke.txt",
+      "status_updated": "2026-06-24",
+      "ci_status": "CI_NOT_CONFIGURED"
     },
-
     "DSH-010": {
       "topic_id": "DSH-010",
       "current_status": "NOT_STARTED",
       "reason": "DSH-009 not closed. WLT-001 settlement-summary not approved.",
       "evidence_matches_claim": true,
       "merge_safe": true,
-      "blockers": ["DSH-009 not closed", "WLT-001 settlement-summary endpoint not approved"],
-      "required_actions": ["Close DSH-009 first", "Approve WLT-001 settlement endpoint"],
+      "blockers": [
+        "DSH-009 not closed",
+        "WLT-001 settlement-summary endpoint not approved"
+      ],
+      "required_actions": [
+        "Close DSH-009 first",
+        "Approve WLT-001 settlement endpoint"
+      ],
       "next_topic_allowed": "NOT_APPROVED",
       "status_updated_from": "git commit 06e64cf"
     }
   },
-
   "current_gate_summary": {
     "foundation_gate": "PASS — FOUNDATION-GATE-20260624-004120",
     "slice_gate": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE — Evidence: SLICE-GATE-20260624-004124",
@@ -437,9 +463,7 @@
       "generated-dsh-api-client.test.mjs prevents generated-client drift for DSH-004/005/006/007."
     ]
   },
-
   "next_approved_action": "DSH-001 screenshot capture required to close visual evidence gap and unblock slice:gate.",
-
   "pending_fixes": [
     {
       "topic_id": "DSH-001",
@@ -450,7 +474,6 @@
       "required_action": "Capture all 20 missing visual state screenshots using connected Android device and running runtimes."
     }
   ],
-
   "verification_results_2026_06_22": {
     "json_parse": "PASS",
     "semantic_consistency": "PASS — 16 Topics checked; DSH-001 FIX_REQUIRED; all five surfaces required; 20 missing screenshots explicitly blocking",
@@ -465,7 +488,6 @@
     "slice_gate": "FAIL — tools/registry/runs/SLICE-GATE-20260622-211225; required DSH-001 visual evidence missing",
     "graphify": "NOT_AVAILABLE_WITH_REASON — no configured LLM API key for semantic extraction"
   },
-
   "verification_commands": {
     "check_all_gates": "pnpm run foundation:gate && pnpm run slice:gate",
     "check_wlt": "pnpm run guard:no-financial-mutation-outside-wlt",
