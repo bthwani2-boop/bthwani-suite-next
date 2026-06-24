@@ -103,6 +103,12 @@ importers:
 
   apps/app-client/runtime:
     dependencies:
+      '@bthwani/app-shell':
+        specifier: workspace:*
+        version: link:../../../shared/app-shell
+      '@bthwani/core-identity':
+        specifier: workspace:*
+        version: link:../../../core/identity
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../../shared/ui-kit

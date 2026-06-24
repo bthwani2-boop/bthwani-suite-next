@@ -8,8 +8,8 @@ import {
   ScrollScreen,
   StateView,
   Text,
-  View,
-  StyleSheet,
+  WebView as View,
+  WebStyleSheet as StyleSheet,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -56,13 +56,14 @@ export function AdministrationScreen() {
         {partnerState.kind === "success" && (
           <DataTable
             columns={[
-              { key: "partnerId", label: "معرّف الشريك" },
-              { key: "status", label: "الحالة", render: (v) => (
-                <Badge label={ACTIVATION_LABELS[String(v)] ?? String(v)} tone={ACTIVATION_BADGE[String(v)] ?? "neutral"} />
+              { key: "partnerId", header: "معرّف الشريك", render: (row) => String(row.partnerId ?? "") },
+              { key: "status", header: "الحالة", render: (row) => (
+                <Badge label={ACTIVATION_LABELS[String(row.status)] ?? String(row.status)} tone={ACTIVATION_BADGE[String(row.status)] ?? "neutral"} />
               )},
-              { key: "reviewedBy", label: "راجعه" },
+              { key: "reviewedBy", header: "راجعه", render: (row) => String(row.reviewedBy ?? "") },
             ]}
             rows={partnerState.data as Record<string, unknown>[]}
+            getRowKey={(row) => String(row.partnerId)}
           />
         )}
       </View>
@@ -73,12 +74,13 @@ export function AdministrationScreen() {
         {captainState.kind === "success" && (
           <DataTable
             columns={[
-              { key: "captainId", label: "معرّف القبطان" },
-              { key: "licenseNumber", label: "رقم الرخصة" },
-              { key: "vehicleType", label: "نوع المركبة" },
-              { key: "status", label: "الحالة", render: (v) => <Badge label={String(v)} tone="neutral" /> },
+              { key: "captainId", header: "معرّف القبطان", render: (row) => String(row.captainId ?? "") },
+              { key: "licenseNumber", header: "رقم الرخصة", render: (row) => String(row.licenseNumber ?? "") },
+              { key: "vehicleType", header: "نوع المركبة", render: (row) => String(row.vehicleType ?? "") },
+              { key: "status", header: "الحالة", render: (row) => <Badge label={String(row.status)} tone="neutral" /> },
             ]}
             rows={captainState.data as Record<string, unknown>[]}
+            getRowKey={(row) => String(row.captainId)}
           />
         )}
       </View>
@@ -89,12 +91,13 @@ export function AdministrationScreen() {
         {auditState.kind === "success" && (
           <DataTable
             columns={[
-              { key: "actorId", label: "المنفّذ" },
-              { key: "action", label: "الإجراء" },
-              { key: "targetId", label: "الهدف" },
-              { key: "createdAt", label: "التاريخ" },
+              { key: "actorId", header: "المنفّذ", render: (row) => String(row.actorId ?? "") },
+              { key: "action", header: "الإجراء", render: (row) => String(row.action ?? "") },
+              { key: "targetId", header: "الهدف", render: (row) => String(row.targetId ?? "") },
+              { key: "createdAt", header: "التاريخ", render: (row) => String(row.createdAt ?? "") },
             ]}
             rows={auditState.data as Record<string, unknown>[]}
+            getRowKey={(row) => `${String(row.actorId)}-${String(row.action)}-${String(row.createdAt)}`}
           />
         )}
       </View>

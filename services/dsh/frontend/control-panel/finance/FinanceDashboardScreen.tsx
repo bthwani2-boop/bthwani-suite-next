@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useIdentitySession } from "@bthwani/app-shell";
 import {
   Badge,
-  Card,
+  CpButton,
   Header,
   ScrollScreen,
   StateView,
   Text,
-  View,
-  StyleSheet,
+  WebView as View,
+  WebStyleSheet as StyleSheet,
   spacing,
   lightThemeColors,
 } from "@bthwani/ui-kit";
@@ -64,7 +64,7 @@ export function FinanceDashboardScreen() {
       <Header title="لوحة المالية" />
       <View style={styles.periodRow}>
         {(["today", "week", "month"] as DshAnalyticsPeriod[]).map((p) => (
-          <button
+          <CpButton
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
@@ -81,7 +81,7 @@ export function FinanceDashboardScreen() {
             }}
           >
             {PERIOD_LABELS[p]}
-          </button>
+          </CpButton>
         ))}
       </View>
 
@@ -93,19 +93,19 @@ export function FinanceDashboardScreen() {
 
       {vm ? (
         <View style={styles.grid}>
-          <Card style={styles.kpiCard}>
+          <View style={styles.kpiCard}>
             <Text role="caption">معدّل التوصيل</Text>
             <Text role="titleMd">{vm.fulfillmentRate}</Text>
             <Badge label={vm.healthTone === "success" ? "جيد" : vm.healthTone === "warning" ? "تحذير" : "تنبيه"} tone={vm.healthTone} />
-          </Card>
-          <Card style={styles.kpiCard}>
+          </View>
+          <View style={styles.kpiCard}>
             <Text role="caption">معدّل الإلغاء</Text>
             <Text role="titleMd">{vm.cancellationRate}</Text>
-          </Card>
-          <Card style={styles.kpiCard}>
+          </View>
+          <View style={styles.kpiCard}>
             <Text role="caption">المتاجر</Text>
             <Text role="titleMd">{vm.platformLabel}</Text>
-          </Card>
+          </View>
         </View>
       ) : (
         <StateView title="لا توجد بيانات" description="لم يُعثر على بيانات للفترة المحددة." />
@@ -136,6 +136,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 140,
     padding: spacing[4],
+    background: lightThemeColors.surface,
+    border: `1px solid ${lightThemeColors.borderColor}`,
+    borderRadius: 8,
     alignItems: "center",
     display: "flex",
     flexDirection: "column",

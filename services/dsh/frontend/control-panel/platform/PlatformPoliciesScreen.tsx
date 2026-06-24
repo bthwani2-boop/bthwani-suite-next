@@ -8,8 +8,8 @@ import {
   ScrollScreen,
   StateView,
   Text,
-  View,
-  StyleSheet,
+  WebView as View,
+  WebStyleSheet as StyleSheet,
   spacing,
 } from "@bthwani/ui-kit";
 import { useZonesController, useSlaRulesController } from "../../shared/platform-policies";
@@ -37,15 +37,15 @@ export function PlatformPoliciesScreen() {
         {zonesState.kind === "success" && (
           <DataTable<DshZone & Record<string, unknown>>
             columns={[
-              { key: "name", label: "المنطقة" },
-              { key: "cityCode", label: "رمز المدينة" },
-              { key: "isActive", label: "الحالة", render: (v) => (
-                <Badge label={v ? "نشطة" : "معطّلة"} tone={v ? "success" : "neutral"} />
+              { key: "name", header: "المنطقة", render: (row) => row.name },
+              { key: "cityCode", header: "رمز المدينة", render: (row) => row.cityCode },
+              { key: "isActive", header: "الحالة", render: (row) => (
+                <Badge label={row.isActive ? "نشطة" : "معطّلة"} tone={row.isActive ? "success" : "neutral"} />
               )},
             ]}
             rows={zonesState.data as (DshZone & Record<string, unknown>)[]}
-            onRowAction={(row) => toggle((row as DshZone).id, !(row as DshZone).isActive)}
-            rowActionLabel="تبديل"
+            getRowKey={(row) => row.id}
+            onRowPress={(row) => toggle(row.id, !row.isActive)}
           />
         )}
       </View>
@@ -57,12 +57,13 @@ export function PlatformPoliciesScreen() {
         {slaState.kind === "success" && (
           <DataTable<DshSlaRule & Record<string, unknown>>
             columns={[
-              { key: "zoneId", label: "المنطقة" },
-              { key: "category", label: "الفئة" },
-              { key: "maxPrepMins", label: "حد التحضير (د)" },
-              { key: "maxDeliveryMins", label: "حد التوصيل (د)" },
+              { key: "zoneId", header: "المنطقة", render: (row) => row.zoneId },
+              { key: "category", header: "الفئة", render: (row) => row.category },
+              { key: "maxPrepMins", header: "حد التحضير (د)", render: (row) => String(row.maxPrepMins) },
+              { key: "maxDeliveryMins", header: "حد التوصيل (د)", render: (row) => String(row.maxDeliveryMins) },
             ]}
             rows={slaState.data as (DshSlaRule & Record<string, unknown>)[]}
+            getRowKey={(row) => `${row.zoneId}-${row.category}`}
           />
         )}
       </View>

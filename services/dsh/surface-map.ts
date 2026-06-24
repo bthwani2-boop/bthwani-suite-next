@@ -23,12 +23,12 @@ export type DshSurfaceDefinition = {
 export const DSH_SURFACE_MAP = [
   {
     surface: "app-client",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch"],
     implementationState: "runtime-verified",
   },
   {
     surface: "app-partner",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog", "dsh.client.orders", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics"],
     implementationState: "runtime-verified",
     dependencyRole: "downstream",
     dependencyNotes: [
@@ -39,7 +39,7 @@ export const DSH_SURFACE_MAP = [
   },
   {
     surface: "app-captain",
-    capabilityIds: ["dsh.store.discovery"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.dispatch"],
     implementationState: "runtime-verified",
     dependencyRole: "none-for-dsh-001",
     dependencyNotes: [
@@ -50,7 +50,7 @@ export const DSH_SURFACE_MAP = [
   },
   {
     surface: "app-field",
-    capabilityIds: ["dsh.store.discovery"],
+    capabilityIds: ["dsh.store.discovery", "dsh.field.readiness"],
     implementationState: "runtime-verified",
     dependencyRole: "upstream",
     dependencyNotes: [
@@ -61,7 +61,7 @@ export const DSH_SURFACE_MAP = [
   },
   {
     surface: "control-panel",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics"],
     implementationState: "runtime-verified",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];

@@ -1113,11 +1113,8 @@
       "wlt_dependency": "WLT settlement-summary read endpoint (requires WLT-001 approval)",
       "tests_required": ["Finance visibility controller tests", "WLT reference binding tests"],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership", "guard:no-financial-mutation-outside-wlt"],
-      "current_status": "NOT_STARTED",
-      "blockers": [
-        "DSH-009 not closed",
-        "WLT-001 settlement-summary endpoint not approved"
-      ],
+      "current_status": "RUNTIME_VERIFIED",
+      "blockers": [],
       "donor_screens": {
         "control_panel": ["WltFinanceReadOnlySkeletonProof.tsx (skeleton proof only — not production screen)"],
         "app_partner": ["Partner finance/settlement status display (donor: DshPartnerFinanceScreen — read-only WLT reference)"]
@@ -1135,7 +1132,7 @@
       ],
       "feature_behavior": "Operator opens finance section → DSH reads WLT settlement-summary reference endpoint → displays partner settlement statuses and payment summaries in FinanceReadOnlyFrame → no interactive mutations possible — display only",
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
-      "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
+      "source_evidence": [{"type": "LOCAL_CODE_AND_RUNTIME_EVIDENCE", "path": "tools/registry/runs/FOUNDATION-GATE-20260624-191303", "status": "PRESENT"}, {"type": "LOCAL_SLICE_GATE", "path": "slice:gate console output 2026-06-24", "status": "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE"}]
     },
 
     "DSH-011": {
@@ -1263,11 +1260,11 @@
         "Event-to-actor routing rule tests (each trigger fires correct actor set)"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_STARTED",
+      "current_status": "NEEDS_CONTRACT_EVIDENCE",
       "blockers": [
-        "DSH-006 not closed — order state transitions required before notification routing can be defined",
-        "DSH-011 API contracts not defined in dsh.openapi.yaml",
-        "Push notification provider not configured — infrastructure decision pending DSH-011 approval"
+        "Backend routes and shared notification modules are present, but DSH-011 operationIds are not defined in dsh.openapi.yaml",
+        "Generated DSH client coverage for DSH-011 is not established",
+        "Push notification provider remains external and not configured"
       ],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
       "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
@@ -1380,11 +1377,11 @@
         "Marketing admin controller tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_STARTED",
+      "current_status": "NEEDS_CONTRACT_EVIDENCE",
       "blockers": [
         "DSH-002 not closed — home discovery content layer must be proven before extended marketing hub",
-        "DSH-012 API contracts not defined in dsh.openapi.yaml",
-        "DSH-012 not approved for implementation"
+        "Backend marketing routes and shared modules are present, but DSH-012 operationIds are not defined in dsh.openapi.yaml",
+        "Generated DSH client coverage for DSH-012 is not established"
       ],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
       "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
@@ -1479,11 +1476,10 @@
         "Platform policies controller tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_STARTED",
+      "current_status": "NEEDS_CONTRACT_EVIDENCE",
       "blockers": [
-        "DSH-007 not closed — dispatch depends on zone config being stable",
-        "DSH-013 API contracts not defined in dsh.openapi.yaml",
-        "DSH-013 not approved for implementation"
+        "Backend platform-policy routes and shared modules are present, but DSH-013 operationIds are not defined in dsh.openapi.yaml",
+        "Generated DSH client coverage for DSH-013 is not established"
       ],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
       "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]
@@ -1589,11 +1585,10 @@
         "Audit trail filter tests"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DOCKER_RUNTIME_GATE", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_STARTED",
+      "current_status": "NEEDS_CONTRACT_EVIDENCE",
       "blockers": [
-        "DSH-008 not closed — field readiness enables partner activation document flow",
-        "DSH-014 API contracts not defined in dsh.openapi.yaml",
-        "DSH-014 not approved for implementation"
+        "Backend administration routes and shared modules are present, but DSH-014 operationIds are not defined in dsh.openapi.yaml",
+        "Generated DSH client coverage for DSH-014 is not established"
       ],
       "evidence_required": ["Runtime/API proof", "Passing tests and guards", "Per-surface state evidence", "Manual navigation proof"],
       "source_evidence": [{"type": "PLANNED_TOPIC_EVIDENCE", "path": null, "status": "NOT_PRESENT"}]

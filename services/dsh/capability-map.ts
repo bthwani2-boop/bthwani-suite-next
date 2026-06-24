@@ -180,7 +180,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── DSH-006: Order Fulfillment & Partner Acceptance ──────────────────────
   {
     id: "dsh.client.orders",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: [
       "createDshOrder",
       "listDshClientOrders",
@@ -193,15 +193,15 @@ export const DSH_CAPABILITY_MAP = [
       "listDshOperatorOrders",
     ],
     surfaces: ["app-client", "app-partner", "control-panel"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
     topic: "commerce",
     topicScope: ["order-fulfillment", "partner-acceptance"],
   },
   // ── DSH-007: Dispatch & Captain Delivery Lifecycle ───────────────────────
   {
     id: "dsh.client.dispatch",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: [
       "createDshDispatchAssignment",
       "listDshOperatorDispatchAssignments",
@@ -213,8 +213,8 @@ export const DSH_CAPABILITY_MAP = [
       "getDshClientTracking",
     ],
     surfaces: ["app-client", "app-captain", "control-panel"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
     topic: "commerce",
     topicScope: ["dispatch", "captain-delivery", "client-tracking"],
   },
@@ -264,7 +264,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── DSH-010: Platform Analytics & Operational Reporting ──────────────────
   {
     id: "dsh.operator.analytics",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: [
       "getDshPlatformKpis",
       "getDshOrderAnalytics",
@@ -274,8 +274,8 @@ export const DSH_CAPABILITY_MAP = [
       "getDshPartnerPerformance",
     ],
     surfaces: ["control-panel", "app-partner"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
     topic: "analytics",
     topicScope: ["platform-kpis", "order-analytics", "delivery-analytics", "support-analytics", "store-analytics", "partner-performance"],
   },

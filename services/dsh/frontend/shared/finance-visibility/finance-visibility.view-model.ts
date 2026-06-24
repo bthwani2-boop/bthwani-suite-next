@@ -7,14 +7,14 @@ import type {
 
 export type FinanceStatusLabel = {
   readonly label: string;
-  readonly badge: "success" | "warning" | "danger" | "neutral";
+  readonly badge: "success" | "warning" | "error" | "neutral";
 };
 
 const PAYMENT_LABELS: Record<string, FinanceStatusLabel> = {
   pending: { label: "في انتظار الدفع", badge: "warning" },
   authorized: { label: "مرخّص", badge: "warning" },
   captured: { label: "تم التحصيل", badge: "success" },
-  failed: { label: "فشل الدفع", badge: "danger" },
+  failed: { label: "فشل الدفع", badge: "error" },
   refunded: { label: "مُسترجع", badge: "neutral" },
   cancelled: { label: "ملغي", badge: "neutral" },
 };
@@ -23,7 +23,7 @@ const SETTLEMENT_LABELS: Record<string, FinanceStatusLabel> = {
   pending: { label: "في انتظار التسوية", badge: "warning" },
   processing: { label: "جارٍ التسوية", badge: "warning" },
   settled: { label: "تمّت التسوية", badge: "success" },
-  failed: { label: "فشل التسوية", badge: "danger" },
+  failed: { label: "فشل التسوية", badge: "error" },
   on_hold: { label: "موقوفة مؤقتاً", badge: "warning" },
 };
 
