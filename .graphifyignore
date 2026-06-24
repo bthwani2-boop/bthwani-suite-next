@@ -1,0 +1,87 @@
+.git/
+node_modules/
+.next/
+.expo/
+dist/
+build/
+out/
+.nx/
+.turbo/
+coverage/
+.cache/
+tmp/
+temp/
+.diagnostics/
+graphify-out/
+
+# Go caches
+.gocache*/
+.gomodcache*/
+
+# Registry / archived diagnostics
+tools/registry/runs/
+
+# Binary / media / archive / logs
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.ico
+*.mp4
+*.mov
+*.avi
+*.pdf
+*.log
+*.har
+*.sqlite
+*.db
+*.db-shm
+*.db-wal
+*.tsbuildinfo
+
+# Reduce non-code graph noise
+docs/
+**/docs/
+**/*.md
+**/*.mdx
+**/*.csv
+**/*.jsonl
+**/*.txt
+
+# Evidence / reports / generated operational records
+evidence/
+**/evidence/
+reports/
+**/reports/
+tools/registry/runs/
+
+# Agent/skill documentation noise
+.agents/
+**/.agents/
+
+# Reduce non-code graph noise
+docs/
+**/docs/
+**/*.md
+**/*.mdx
+**/*.csv
+**/*.jsonl
+**/*.txt
+
+# Evidence / reports / generated operational records
+evidence/
+**/evidence/
+reports/
+**/reports/
+tools/registry/runs/
+
+# Agent/skill documentation noise
+.agents/
+**/.agents/
