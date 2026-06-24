@@ -6,7 +6,7 @@ This directory supports agent routing, boundaries, adapters, and task-specific s
 
 ## Command Safety Policy
 
-All operations must strictly conform to the [Command Safety Policy](file:///c:/bthwani-suite-next/.agents/COMMAND_SAFETY_POLICY.md).
+All operations must strictly conform to the [Command Safety Policy](./COMMAND_SAFETY_POLICY.md).
 
 ## Branch rule
 

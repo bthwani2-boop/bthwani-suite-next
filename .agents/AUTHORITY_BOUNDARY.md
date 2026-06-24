@@ -34,5 +34,5 @@ If still unclear, mark `NEEDS_EVIDENCE` and state the exact missing proof.
 
 ## Command safety
 
-- Executed commands must strictly comply with the [Command Safety Policy](file:///c:/bthwani-suite-next/.agents/COMMAND_SAFETY_POLICY.md).
+- Executed commands must strictly comply with the [Command Safety Policy](./COMMAND_SAFETY_POLICY.md).
 

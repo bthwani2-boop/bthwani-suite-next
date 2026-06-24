@@ -2,7 +2,7 @@
 
 ## Command Safety Policy
 
-All agents must strictly adhere to the [Command Safety Policy](file:///c:/bthwani-suite-next/.agents/COMMAND_SAFETY_POLICY.md).
+All agents must strictly adhere to the [Command Safety Policy](.agents/COMMAND_SAFETY_POLICY.md).
 
 ## Shared skills root
 
@@ -10,7 +10,7 @@ All agents must use shared project skills from:
 
     .agents/skills
 
-Also refer to [BThwani Harness Patterns](file:///c:/bthwani-suite-next/.agents/BTHWANI_HARNESS_PATTERNS.md) for architectural and routing context.
+Also refer to [BThwani Harness Patterns](.agents/BTHWANI_HARNESS_PATTERNS.md) for architectural and routing context.
 
 ## Graphify
 
