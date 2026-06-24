@@ -1,11 +1,8 @@
 "use client";
 
 import React from "react";
-import {
-  CpPageHeader,
-  DataTablePageFrame,
-  useIdentitySession,
-} from "@bthwani/app-shell";
+import { CpPageHeader, DataTablePageFrame } from "@bthwani/ui-kit/web";
+import { useIdentitySession } from "@bthwani/app-shell";
 import { Badge, Button, Card, DataTable, Text, TextField } from "@bthwani/ui-kit";
 import {
   ASSIGNMENT_STATUS_LABELS,

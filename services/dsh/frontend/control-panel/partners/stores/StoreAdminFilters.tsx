@@ -1,4 +1,4 @@
-import { CpFilterBar, CpSelect, CpSearchInput } from "@bthwani/app-shell";
+import { CpFilterBar, CpSelect, CpSearchInput } from "@bthwani/ui-kit/web";
 import type { DshStoreAdminFilters } from "../../../shared/store";
 
 type Props = {

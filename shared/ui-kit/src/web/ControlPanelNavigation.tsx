@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import type { ControlPanelSection } from "./ControlPanelSectionRegistry";
 
 export type ControlPanelNavigationItem = {
-  readonly section: ControlPanelSection;
+  readonly section: string;
   readonly label: string;
   readonly icon?: ReactNode;
   readonly badge?: ReactNode;
@@ -11,8 +10,8 @@ export type ControlPanelNavigationItem = {
 
 export type ControlPanelNavigationProps = {
   readonly items: ReadonlyArray<ControlPanelNavigationItem>;
-  readonly activeSection?: ControlPanelSection;
-  readonly onSectionPress?: (section: ControlPanelSection) => void;
+  readonly activeSection?: string;
+  readonly onSectionPress?: (section: string) => void;
   readonly header?: ReactNode;
   readonly footer?: ReactNode;
   readonly dir?: "ltr" | "rtl";

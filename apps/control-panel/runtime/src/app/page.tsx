@@ -4,7 +4,7 @@ import {
   ControlPanelShell,
   ControlPanelNavigation,
   ControlPanelTopBar,
-} from "@bthwani/app-shell";
+} from "@bthwani/ui-kit/web";
 import { useRouter } from "next/navigation";
 
 export default function RootPage() {

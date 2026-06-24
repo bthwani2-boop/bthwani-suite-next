@@ -1,17 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  CpButton,
-  CpPageHeader,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell,
-  CpTextInput,
-  DataTablePageFrame,
-  devBypassLogin,
-  useIdentitySession,
-} from "@bthwani/app-shell";
+import { CpButton, CpPageHeader, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit/web";
+import { devBypassLogin, useIdentitySession } from "@bthwani/app-shell";
 import { useOperatorCheckoutController } from "../../shared/checkout";
 import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../shared/checkout";
 

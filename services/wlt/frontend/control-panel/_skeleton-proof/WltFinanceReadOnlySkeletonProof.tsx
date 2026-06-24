@@ -10,7 +10,7 @@
  * Not a registered route. WLT runtime is CONTRACT_ONLY until activation gate passes.
  */
 import type { ReactNode } from "react";
-import { FinanceReadOnlyFrame } from "@bthwani/app-shell";
+import { FinanceReadOnlyFrame } from "@bthwani/ui-kit/web";
 
 type WltFinanceReadOnlyProofProps = {
   readonly headerSlot: ReactNode;

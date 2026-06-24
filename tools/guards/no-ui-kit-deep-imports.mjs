@@ -7,7 +7,8 @@ for (const file of listCodeFiles()) {
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     const spec = item.specifier;
-    const isDeepAlias = spec.startsWith("@bthwani/ui-kit/");
+    // @bthwani/ui-kit/web is the official web entry point, not a deep internal path
+    const isDeepAlias = spec.startsWith("@bthwani/ui-kit/") && spec !== "@bthwani/ui-kit/web";
     const isDeepPath = spec.includes("shared/ui-kit/src/") || spec.includes("shared/ui-kit/tokens/");
 
     if (isDeepAlias || isDeepPath) {

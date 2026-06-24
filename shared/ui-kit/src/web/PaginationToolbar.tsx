@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type PaginationToolbarProps = {
   readonly label: string;
@@ -46,7 +46,7 @@ function PaginationButton({ label, onClick }: { label: string; onClick: () => vo
   );
 }
 
-const toolbarStyle: React.CSSProperties = {
+const toolbarStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
@@ -55,16 +55,16 @@ const toolbarStyle: React.CSSProperties = {
   opacity: 0.75,
 };
 
-const labelStyle: React.CSSProperties = {
+const labelStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-const actionsStyle: React.CSSProperties = {
+const actionsStyle: CSSProperties = {
   display: "flex",
   gap: "0.5rem",
 };
 
-const btnStyle: React.CSSProperties = {
+const btnStyle: CSSProperties = {
   background: "none",
   border: "1px solid currentColor",
   borderRadius: "0.25rem",

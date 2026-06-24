@@ -1,10 +1,5 @@
 import type { ReactNode } from "react";
 
-/**
- * READ-ONLY frame for finance visibility.
- * No financial mutations, payments, refunds, settlements, or ledger writes allowed.
- * DSH cannot use this frame for financial mutations — WLT boundary enforced separately.
- */
 export type FinanceReadOnlyFrameProps = {
   readonly header?: ReactNode;
   readonly summary?: ReactNode;

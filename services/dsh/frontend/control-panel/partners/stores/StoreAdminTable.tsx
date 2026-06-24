@@ -6,7 +6,7 @@ import {
   CpTable,
   CpTableHeaderCell,
   CpTableCell,
-} from "@bthwani/app-shell";
+} from "@bthwani/ui-kit/web";
 import {
   formatDeliveryModes,
   type DshStoreAdminTableRow,

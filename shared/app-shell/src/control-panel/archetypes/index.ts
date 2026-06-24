@@ -1,11 +1,1 @@
-export * from "./OverviewPageFrame";
-export * from "./DataTablePageFrame";
-export * from "./QueuePageFrame";
-export * from "./OperationsRoomFrame";
-export * from "./DetailPageFrame";
-export * from "./EditorPageFrame";
-export * from "./ReviewPageFrame";
-export * from "./MetricsPageFrame";
-export * from "./SettingsPageFrame";
-export * from "./FinanceReadOnlyFrame";
-export * from "./PaginationToolbar";
+// Page frame archetypes live in @bthwani/ui-kit/web — import from there.

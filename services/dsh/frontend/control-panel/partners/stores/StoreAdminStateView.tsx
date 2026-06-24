@@ -1,4 +1,4 @@
-import { CpRetryButton, CpStatePanel } from "@bthwani/app-shell";
+import { CpRetryButton, CpStatePanel } from "@bthwani/ui-kit/web";
 import type { DshStoreAdminListState } from "../../../shared/store";
 
 type Props = {

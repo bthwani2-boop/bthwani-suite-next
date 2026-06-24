@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  CpPageHeader,
-  DataTablePageFrame,
-  useIdentitySession,
-} from "@bthwani/app-shell";
+import { CpPageHeader, DataTablePageFrame } from "@bthwani/ui-kit/web";
+import { useIdentitySession } from "@bthwani/app-shell";
 import { DataTable, Text } from "@bthwani/ui-kit";
 import { useOperatorOrdersController } from "../../shared/orders";
 import type { DshOrder, DshOrderStatus } from "../../shared/orders";
