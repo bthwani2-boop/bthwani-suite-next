@@ -37,6 +37,7 @@ export function HomeDiscoveryAdminRoute({ kind }: { readonly kind: HomeDiscovery
         <ControlPanelNavigation
           dir="rtl"
           items={[
+            { section: "dashboard", label: "الرئيسية" },
             { section: "partners", label: "إدارة المتاجر" },
             { section: "catalogs", label: "اعتماد الكتالوجات" },
             { section: "marketing", label: "التسويق واكتشاف الصفحة" },
