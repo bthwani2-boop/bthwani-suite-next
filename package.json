@@ -71,7 +71,12 @@
     "mobile:apps:sync": "node tools/scripts/sync-mobile-apps.mjs --apply",
     "mobile:eas:build:captain:dev": "pnpm --dir apps/app-captain/runtime dlx eas-cli@latest build --platform android --profile development --clear-cache --non-interactive",
     "mobile:eas:build:field:dev": "pnpm --dir apps/app-field/runtime dlx eas-cli@latest build --platform android --profile development --clear-cache --non-interactive",
-    "mobile:eas:build": "node tools/scripts/eas-build-mobile.mjs"
+    "mobile:eas:build": "node tools/scripts/eas-build-mobile.mjs",
+    "client": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1",
+    "captain": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1",
+    "field": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1",
+    "partner": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1",
+    "control": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/control-panel/runtime/start.ps1"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
