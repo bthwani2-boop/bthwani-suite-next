@@ -19,6 +19,7 @@ Use this file to select the smallest relevant skill set.
 
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
 - Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
+- Task closure/dimension evidence check → `bthwani-final-slice-closure-judge`
 
 ## Repository foundation
 
@@ -55,23 +56,16 @@ Add more only when the task crosses boundaries.
 Use these skills only for Nx-specific tasks. BThwani project rules override generic Nx examples.
 
 Active:
-- 
-x-workspace — inspect Nx workspace, projects, targets, and graph.
-- 
-x-run-tasks — run 
-x run, un-many, ffected, filters, and task debugging.
-- 
-x-import — controlled import/migration from donor or external repos.
-- 
-x-plugins — evaluate and add Nx plugins only when required.
-- 
-x-generate — use generators only after dry-run and pattern check.
+- `nx-workspace` — inspect Nx workspace, projects, targets, and graph.
+- `nx-run-tasks` — run `nx run`, `run-many`, `affected`, filters, and task debugging.
+- `nx-import` — controlled import/migration from donor or external repos.
+- `nx-plugins` — evaluate and add Nx plugins only when required.
+- `nx-generate` — use generators only after dry-run and pattern check.
 
 Deferred:
-- monitor-ci — preserved under .agents/skills-deferred/monitor-ci; activate only after CI/Nx Cloud is intentionally configured.
+- `monitor-ci` — activate only after CI/Nx Cloud is intentionally configured.
 
 Rules:
 - Do not open Nx skills for normal feature work unless Nx routing, project graph, targets, generators, imports, plugins, or CI are involved.
 - Do not let generic Nx examples override BThwani ownership, WLT finance rules, Graphify routing, or live-code closure rules.
 <!-- BTHWANI_NX_SKILLS_END -->
-

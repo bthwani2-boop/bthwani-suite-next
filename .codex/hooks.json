@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:\\Users\\b\\.local\\bin\\graphify.EXE hook-check"
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .agents/hooks/graphify-hook-check.ps1"
           }
         ]
       }

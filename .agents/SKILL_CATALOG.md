@@ -1,6 +1,6 @@
 # BThwani Skill Catalog
 
-Version: 2026.06.19-clean
+Version: 2026.06.24-v1
 
 ## Active skills
 
@@ -23,6 +23,13 @@ Version: 2026.06.19-clean
 - `bthwani-ui-kit-design-lock` — Enforce shared/ui-kit ownership, brand lock, and no local design systems.
 - `bthwani-screen-flow-binding` — Bind routes/screens/view-models/states/visual evidence for UI flows.
 - `bthwani-dsh-wlt-finance-boundary` — Protect WLT financial truth and DSH/WLT integration boundaries.
+- `bthwani-frontend-design-excellence` — Enforce premium, modern, dynamic, mobile-first, RTL-correct, and visually stunning frontend design quality.
+- `bthwani-final-slice-closure-judge` — Judge if a slice is fully closed and ready by verifying multi-dimensional evidence.
+- `nx-workspace` — Inspect Nx workspace, projects, targets, and graph.
+- `nx-run-tasks` — Run `nx run`, `run-many`, `affected`, filters, and task debugging.
+- `nx-import` — Controlled import/migration from donor or external repos.
+- `nx-plugins` — Evaluate and add Nx plugins only when required.
+- `nx-generate` — Use generators only after dry-run and pattern check.
 
 ## Catalog rule
 
