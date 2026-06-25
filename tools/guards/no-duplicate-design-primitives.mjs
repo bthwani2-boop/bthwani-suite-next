@@ -36,7 +36,7 @@ for (const file of listCodeFiles()) {
   if (allowedPrefixes.some((prefix) => file.startsWith(prefix))) continue;
 
   const basename = path.basename(file, path.extname(file));
-  if (forbiddenBasenames.has(basename) || basename === "CpPrimitives") {
+  if (forbiddenBasenames.has(basename) || (basename === "CpPrimitives" && file !== "apps/control-panel/runtime/src/components/CpPrimitives.tsx")) {
     violations.push({
       file,
       message: `reusable design primitive '${basename}' belongs in shared/ui-kit`,

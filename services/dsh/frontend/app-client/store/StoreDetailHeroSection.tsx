@@ -1,7 +1,7 @@
 import React from 'react';
 import { type Animated } from 'react-native';
-import { StoreHero, type StoreHeroFulfillmentMode } from './StoreHero';
-import type { DshStoreDetailViewModel } from '../../shared/store';
+import { StoreHero } from './StoreHero';
+import type { DshStoreDetailViewModel, StoreHeroFulfillmentMode } from '../../shared/store';
 
 const DELIVERY_MODES: readonly StoreHeroFulfillmentMode[] = [
   { id: 'bthwani_delivery', label: 'توصيل بثواني', icon: '🚲' },

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colorRoles, spacing, radius } from "@bthwani/ui-kit";
+import { colorRoles, spacing, radius, colorPalette } from "@bthwani/ui-kit";
 
 type BadgeType = "success" | "danger" | "brand" | "warning" | "muted";
 
@@ -10,18 +10,18 @@ type Props = {
 };
 
 const BG: Record<BadgeType, string> = {
-  success: "#E6F9F0",
-  danger: "#FEE8E8",
-  brand: "#EAF0FB",
-  warning: "#FEF6E4",
-  muted: "#F3F4F6",
+  success: colorPalette.greenSoft,
+  danger: colorPalette.dangerSoft,
+  brand: colorPalette.infoSoft,
+  warning: colorPalette.warningSoft,
+  muted: colorPalette.graySoft,
 };
 
 const FG: Record<BadgeType, string> = {
-  success: "#0E7A45",
-  danger: "#C0392B",
+  success: colorPalette.greenStrong,
+  danger: colorPalette.dangerStrong,
   brand: colorRoles.brandAction,
-  warning: "#B45309",
+  warning: colorPalette.warningStrong,
   muted: colorRoles.textSecondary,
 };
 

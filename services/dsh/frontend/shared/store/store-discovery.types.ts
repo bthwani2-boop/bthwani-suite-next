@@ -11,3 +11,9 @@ export type DshPaginationDto = {
   readonly offset: number;
   readonly total: number;
 };
+
+export type StoreHeroFulfillmentMode = {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: string;
+};

@@ -1,7 +1,6 @@
 import React, { memo, type ReactNode } from "react";
-import { Image } from "react-native";
-import { YStack, XStack } from "tamagui";
-import { colorRoles } from "../../tokens/colors";
+import { YStack, XStack, Image } from "tamagui";
+import { colorRoles, colorPalette } from "../../tokens/colors";
 import { Surface, SurfaceProps } from "../Surface";
 import { Text } from "../Text";
 import { Inline } from "../_shared";
@@ -195,7 +194,7 @@ const styles = {
     textAlign: "right",
   },
   productMetaBadge: {
-    backgroundColor: "#ECECEC",
+    backgroundColor: colorPalette.grayBorder,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -219,7 +218,7 @@ const styles = {
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
     overflow: "hidden", // Clip image
-    backgroundColor: "#F5ECE3", // Sand placeholder color
+    backgroundColor: colorPalette.tanBg, // Sand placeholder color
   },
   productImage: {
     width: "100%",
@@ -229,7 +228,7 @@ const styles = {
   productImagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#F5ECE3",
+    backgroundColor: colorPalette.tanBg,
   },
   productFavoriteButton: {
     position: "absolute",
@@ -287,7 +286,7 @@ const styles = {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colorPalette.white,
     justifyContent: "center",
     alignItems: "center",
   },

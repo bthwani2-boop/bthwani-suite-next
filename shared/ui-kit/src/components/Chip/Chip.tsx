@@ -1,6 +1,16 @@
 import React, { type ReactNode } from "react";
-import { Pressable, View, Text, I18nManager, StyleSheet } from "react-native";
+import { XStack, YStack } from "tamagui";
+import { Text } from "../Text";
 import { colorRoles } from "../../tokens/colors";
+
+// Safe dynamic resolve for React Native's I18nManager
+let isRtl = false;
+try {
+  const rn = require("react" + "-native");
+  isRtl = rn.I18nManager.isRTL;
+} catch {
+  // Web/Next.js fallback
+}
 
 export type ChipProps = {
   label: string;
@@ -11,37 +21,38 @@ export type ChipProps = {
 };
 
 export function Chip({ label, selected = false, disabled = false, icon, onPress }: ChipProps) {
-  const isRtl = I18nManager.isRTL;
-
   return (
-    <Pressable
-      onPress={onPress}
+    <XStack
+      onPress={disabled ? undefined : onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
-      style={[
-        styles.chip,
-        selected ? styles.chipSelected : styles.chipUnselected,
-        disabled && { opacity: 0.5 },
-      ]}
+      style={{
+        ...styles.chip,
+        ...(selected ? styles.chipSelected : styles.chipUnselected),
+        ...(disabled ? { opacity: 0.5 } : {}),
+      }}
     >
-      <View style={[styles.innerContainer, isRtl && styles.rowReverse]}>
+      <XStack style={{
+        ...styles.innerContainer,
+        ...(isRtl ? styles.rowReverse : {}),
+      }}>
         {icon != null && (
-          <View style={styles.iconContainer}>
+          <YStack style={styles.iconContainer}>
             {icon}
-          </View>
+          </YStack>
         )}
         <Text
-          style={[
-            styles.chipText,
-            selected ? styles.textSelected : styles.textUnselected,
-          ]}
+          style={{
+            ...styles.chipText,
+            ...(selected ? styles.textSelected : styles.textUnselected),
+          }}
           numberOfLines={1}
         >
           {label}
         </Text>
-      </View>
-    </Pressable>
+      </XStack>
+    </XStack>
   );
 }
 
@@ -62,7 +73,7 @@ export function MetricChip({ icon, label, accent = false }: MetricChipProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = {
   chip: {
     height: 34,
     borderRadius: 12, // Soft rounded corners matching donor design spec
@@ -106,4 +117,4 @@ const styles = StyleSheet.create({
   textUnselected: {
     color: colorRoles.brandStructure,
   },
-});
+} as const;

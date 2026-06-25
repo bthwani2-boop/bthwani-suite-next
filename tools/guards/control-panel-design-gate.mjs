@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, findImportSpecifiers, lineNumber, listCodeFiles, read, toPosix } from "./_guard-utils.mjs";
+import { fail, findImportSpecifiers, lineNumber, listCodeFiles, read, toPosix, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "control-panel-design-gate";
 const violations = [];
-const root = process.cwd();
+const root = repoRoot;
 
 // ── 1. Required files ─────────────────────────────────────────────────────────
 

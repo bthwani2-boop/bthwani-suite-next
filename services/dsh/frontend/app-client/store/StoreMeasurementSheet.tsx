@@ -8,7 +8,7 @@ import {
   View,
   Text,
 } from 'react-native';
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, colorPalette } from '@bthwani/ui-kit';
 import type { CatalogProduct } from '../../shared/catalog/catalog.types';
 
 export type StoreMeasurementSheetProps = {
@@ -166,7 +166,7 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
                       <Text
                         style={[
                           styles.optionLabel,
-                          { color: selected ? '#FFFFFF' : colorRoles.brandStructure },
+                          { color: selected ? colorPalette.white : colorRoles.brandStructure },
                         ]}
                       >
                         {option}
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   qtyBtnTextWhite: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: colorPalette.white,
     lineHeight: 24,
   },
   qtyValue: {
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   confirmBtnText: {
-    color: '#FFFFFF',
+    color: colorPalette.white,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorPalette.white,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   goToCartText: {
-    color: '#FFFFFF',
+    color: colorPalette.white,
     fontSize: 14,
     fontWeight: '900',
   },

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export type ReviewPageFrameProps = {
   readonly header?: ReactNode;
-  readonly preview?: ReactNode;
+  readonly reviewContent?: ReactNode;
   readonly actionBar?: ReactNode;
   readonly stateView?: ReactNode;
   readonly dir?: "ltr" | "rtl";
@@ -10,7 +10,7 @@ export type ReviewPageFrameProps = {
 
 export function ReviewPageFrame({
   header,
-  preview,
+  reviewContent,
   actionBar,
   stateView,
   dir = "rtl",
@@ -19,7 +19,7 @@ export function ReviewPageFrame({
     <section dir={dir} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {header != null ? <div style={{ flexShrink: 0 }}>{header}</div> : null}
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {stateView != null ? stateView : preview}
+        {stateView != null ? stateView : reviewContent}
       </div>
       {actionBar != null ? <div style={{ flexShrink: 0 }}>{actionBar}</div> : null}
     </section>

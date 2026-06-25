@@ -11,14 +11,15 @@ import {
   type ImageSourcePropType,
 } from 'react-native';
 import { Svg, Circle, Path } from 'react-native-svg';
-import { colorRoles, statusScale } from '@bthwani/ui-kit';
+import { colorRoles, statusScale, colorPalette } from '@bthwani/ui-kit';
+import type { StoreHeroFulfillmentMode } from '../../shared/store';
 
 const ORANGE = colorRoles.brandAction;
 const NAVY = colorRoles.brandStructure;
-const GOLD = '#F59E0B';
+const GOLD = colorPalette.orangeMuted;
 
 function hexToRgba(hex: string, alpha = 0.9): string {
-  const clean = (hex || '#ffffff').replace('#', '').trim();
+  const clean = (hex || colorPalette.white).replace('#', '').trim();
   const short = clean.length === 3;
   const r = parseInt(short ? clean.slice(0, 1).repeat(2) : clean.slice(0, 2), 16);
   const g = parseInt(short ? clean.slice(1, 2).repeat(2) : clean.slice(2, 4), 16);
@@ -55,11 +56,6 @@ function ShareIcon({ color }: { readonly color: string }) {
   );
 }
 
-export type StoreHeroFulfillmentMode = {
-  readonly id: string;
-  readonly label: string;
-  readonly icon: string;
-};
 
 export type StoreHeroProps = {
   readonly coverImage?: ImageSourcePropType | null | undefined;
@@ -108,8 +104,8 @@ export function StoreHero({
   const activeScrollY = scrollY ?? localScrollY;
 
   // Light-mode glass action buttons — exactly matching donor lightPremium chrome
-  const actionBg = hexToRgba('#FFFFFF', 0.45);
-  const actionBorder = hexToRgba('#000000', 0.12);
+  const actionBg = hexToRgba(colorPalette.white, 0.45);
+  const actionBorder = hexToRgba(colorPalette.black, 0.12);
   const primaryText = NAVY;
   const secondaryText = colorRoles.textSecondary;
 
@@ -312,7 +308,7 @@ export function StoreHero({
                 style={[
                   styles.heroFeatureChip,
                   isRTL && styles.rowReverse,
-                  { backgroundColor: hexToRgba('#000000', 0.04) },
+                  { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
                 ]}
               >
                 <Text style={[styles.heroFeatureIcon, { color: secondaryText }]}>↗</Text>
@@ -324,7 +320,7 @@ export function StoreHero({
                 style={[
                   styles.heroFeatureChip,
                   isRTL && styles.rowReverse,
-                  { backgroundColor: hexToRgba('#000000', 0.04) },
+                  { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
                 ]}
               >
                 <Text style={[styles.heroFeatureIcon, { color: secondaryText }]}>⏱</Text>
@@ -336,7 +332,7 @@ export function StoreHero({
                 style={[
                   styles.heroFeatureChip,
                   isRTL && styles.rowReverse,
-                  { backgroundColor: hexToRgba('#000000', 0.04) },
+                  { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
                 ]}
               >
                 <Text style={[styles.heroFeatureIcon, { color: GOLD }]}>⭐</Text>
@@ -353,7 +349,7 @@ export function StoreHero({
               style={[
                 styles.heroLuxuryDeliveryRow,
                 isRTL && styles.rowReverse,
-                { backgroundColor: hexToRgba('#000000', 0.04) },
+                { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
               ]}
             >
               {deliveryModes.map((mode) => {
@@ -364,10 +360,10 @@ export function StoreHero({
                     style={[
                       styles.heroLuxuryDeliveryChip,
                       active && {
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: colorPalette.white,
                         ...Platform.select({
                           ios: {
-                            shadowColor: '#000',
+                            shadowColor: colorPalette.black,
                             shadowOpacity: 0.08,
                             shadowRadius: 4,
                             shadowOffset: { width: 0, height: 2 },
@@ -471,7 +467,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.90)',
     borderWidth: 1,
     borderColor: 'rgba(10, 47, 92, 0.08)',
-    shadowColor: colorRoles.shadowBase || '#000',
+    shadowColor: colorRoles.shadowBase,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -484,7 +480,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorPalette.white,
   },
   heroLuxuryCard: {
     paddingTop: 16,
@@ -549,7 +545,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorPalette.white,
     borderWidth: 2,
     borderColor: ORANGE,
     justifyContent: 'center',
@@ -557,7 +553,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: colorPalette.black,
         shadowOpacity: 0.15,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
@@ -605,7 +601,7 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: colorPalette.white,
     fontFamily: 'Outfit-Bold',
   },
 

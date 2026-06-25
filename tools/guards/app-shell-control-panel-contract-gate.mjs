@@ -8,11 +8,12 @@ import {
   listCodeFiles,
   read,
   toPosix,
+  repoRoot,
 } from "./_guard-utils.mjs";
 
 const guardId = "app-shell-control-panel-contract-gate";
 const violations = [];
-const root = process.cwd();
+const root = repoRoot;
 
 function exists(rel) {
   return fs.existsSync(path.join(root, rel));
@@ -51,17 +52,17 @@ if (!exists(cpIndex)) {
 // ── 3. All required archetype files present ───────────────────────────────────
 
 const REQUIRED_ARCHETYPES = [
-  "shared/app-shell/src/control-panel/archetypes/OverviewPageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/DataTablePageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/QueuePageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/OperationsRoomFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/DetailPageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/EditorPageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/ReviewPageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/MetricsPageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/SettingsPageFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/FinanceReadOnlyFrame.tsx",
-  "shared/app-shell/src/control-panel/archetypes/index.ts",
+  "apps/control-panel/runtime/src/shell/OverviewPageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/DataTablePageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/QueuePageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/OperationsRoomFrame.tsx",
+  "apps/control-panel/runtime/src/shell/DetailPageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/EditorPageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/ReviewPageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/MetricsPageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/SettingsPageFrame.tsx",
+  "apps/control-panel/runtime/src/shell/FinanceReadOnlyFrame.tsx",
+  "apps/control-panel/runtime/src/shell/index.ts",
 ];
 
 for (const rel of REQUIRED_ARCHETYPES) {
@@ -72,10 +73,9 @@ for (const rel of REQUIRED_ARCHETYPES) {
 
 // Required shell files
 const REQUIRED_SHELL_FILES = [
-  "shared/app-shell/src/control-panel/ControlPanelShell.tsx",
-  "shared/app-shell/src/control-panel/ControlPanelNavigation.tsx",
-  "shared/app-shell/src/control-panel/ControlPanelTopBar.tsx",
-  "shared/app-shell/src/control-panel/ControlPanelServiceContext.tsx",
+  "apps/control-panel/runtime/src/shell/ControlPanelShell.tsx",
+  "apps/control-panel/runtime/src/shell/ControlPanelNavigation.tsx",
+  "apps/control-panel/runtime/src/shell/ControlPanelTopBar.tsx",
   "shared/app-shell/src/control-panel/ControlPanelSectionRegistry.ts",
   "shared/app-shell/src/control-panel/ControlPanelServiceRegistry.ts",
 ];

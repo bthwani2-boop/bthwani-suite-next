@@ -7,23 +7,23 @@ import {
   StyleSheet,
   type ImageSourcePropType,
 } from "react-native";
-import { colorRoles, spacing, radius } from "@bthwani/ui-kit";
+import { colorRoles, spacing, radius, colorPalette } from "@bthwani/ui-kit";
 
 type Props = {
   readonly id: string;
   readonly title: string;
-  readonly subtitle?: string;
-  readonly unitLabel?: string;
-  readonly imageSource?: ImageSourcePropType | null;
-  readonly categoryLabel?: string;
+  readonly subtitle?: string | undefined;
+  readonly unitLabel?: string | undefined;
+  readonly imageSource?: ImageSourcePropType | null | undefined;
+  readonly categoryLabel?: string | undefined;
   readonly price: { readonly value: number; readonly currency: string };
-  readonly originalPrice?: number;
-  readonly discountPercent?: number;
-  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
-  readonly isFavorited?: boolean;
-  readonly onFavorite?: () => void;
-  readonly onAdd?: () => void;
-  readonly onImagePress?: () => void;
+  readonly originalPrice?: number | undefined;
+  readonly discountPercent?: number | undefined;
+  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock" | undefined;
+  readonly isFavorited?: boolean | undefined;
+  readonly onFavorite?: (() => void) | undefined;
+  readonly onAdd?: (() => void) | undefined;
+  readonly onImagePress?: (() => void) | undefined;
 };
 
 function DiscountBadge({ percent }: { readonly percent: number }) {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     flexDirection: "row-reverse",   // RTL: info on right, image on left
-    shadowColor: "#000",
+    shadowColor: colorPalette.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: spacing[2],
     left: spacing[2],
-    backgroundColor: colorRoles.dangerAction ?? "#E53935",
+    backgroundColor: colorRoles.danger,
     borderRadius: radius.sm,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   discountBadgeText: {
-    color: "#fff",
+    color: colorPalette.white,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: colorRoles.surfaceBase,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: colorPalette.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
 
   // ── Category chip ─────────────────────────────────
   categoryChip: {
-    backgroundColor: colorRoles.brandSubtle ?? "#FFF3E0",
+    backgroundColor: colorRoles.brandActionSoft,
     borderRadius: radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -279,10 +279,10 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   stockLabelOut: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: colorPalette.redSoft,
   },
   stockLabelLow: {
-    backgroundColor: "#FFF8E1",
+    backgroundColor: colorPalette.yellowSoft,
   },
   stockLabelText: {
     fontSize: 10,

@@ -1,7 +1,7 @@
 import fs from "node:fs";
-import path from "node:path";
+import path from "node:path";import { fileURLToPath } from "node:url";
 
-const repoRoot = process.cwd();
+const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const ACTIVE_SERVICES = ["dsh", "wlt"];
 const RESERVED_SERVICES = ["knz", "arb", "amn", "esf", "mrf", "snd", "kwd"];
