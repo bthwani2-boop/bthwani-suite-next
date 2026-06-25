@@ -1,7 +1,8 @@
 "use client";
 
-import { CpPageHeader, DataTablePageFrame } from "@bthwani/ui-kit";
-import { useIdentitySession } from "@bthwani/app-shell";
+import { CpPageHeader } from "@bthwani/control-panel/components";
+import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { DataTable, Text } from "@bthwani/ui-kit";
 import { useOperatorCartsController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { useIdentitySession } from "@bthwani/app-shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Button,

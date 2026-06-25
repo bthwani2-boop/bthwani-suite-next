@@ -5,7 +5,7 @@ import {
   ControlPanelShell,
   ControlPanelNavigation,
   ControlPanelTopBar,
-} from "@bthwani/ui-kit";
+} from "../../../../shell";
 import { useRouter } from "next/navigation";
 
 export default function DshStoresPage() {

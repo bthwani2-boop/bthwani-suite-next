@@ -5,7 +5,7 @@ import {
   ControlPanelNavigation,
   ControlPanelShell,
   ControlPanelTopBar,
-} from "@bthwani/ui-kit";
+} from "../../../shell";
 import { HomeDiscoveryAdminScreen } from "@dsh-cp/marketing/home-discovery";
 import { useRouter } from "next/navigation";
 

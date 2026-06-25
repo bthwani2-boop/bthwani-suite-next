@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CpButton, CpPageHeader, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit";
-import { useIdentitySession, devBypassLogin } from "@bthwani/app-shell";
+import { CpButton, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
+import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import { useCatalogApprovalController } from "../../shared/catalog";
 
 export function CatalogApprovalScreen() {

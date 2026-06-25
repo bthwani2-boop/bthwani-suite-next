@@ -21,8 +21,7 @@
   "include": [
     "domain/**/*.ts",
     "clients/**/*.ts",
-    "frontend/shared/**/*.ts",
-    "frontend/shared/**/*.tsx"
+    "frontend/shared/**/*.ts"
   ],
   "exclude": [
     "node_modules",

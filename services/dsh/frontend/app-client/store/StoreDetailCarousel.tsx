@@ -1,6 +1,5 @@
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BannerCarousel } from '@bthwani/ui-kit';
+import { BannerCarousel } from '../shared/ui';
 
 export type CarouselBannerItem = {
   readonly id: string;

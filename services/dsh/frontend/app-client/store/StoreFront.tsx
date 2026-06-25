@@ -1,12 +1,6 @@
-import React, { memo, useRef, useState, useEffect } from "react";
-import { Image, ScrollView, YStack, XStack } from "tamagui";
-import { Dimensions, Animated, Pressable } from "react-native";
-import { colorRoles, neutralScale } from "../tokens/colors";
-import { StyledText } from "./_shared";
-import { asUiComponent } from "../internal/tamagui-compat";
-
-const FlexYStack = asUiComponent(YStack);
-const FlexXStack = asUiComponent(XStack);
+import React, { memo, useRef, useState } from "react";
+import { Animated, Dimensions, Image, Pressable, Text, View } from "react-native";
+import { colorRoles, neutralScale } from "@bthwani/ui-kit";
 
 // ─── 1. HERO COVER ───
 export type HeroCoverProps = {
@@ -15,35 +9,30 @@ export type HeroCoverProps = {
 
 export function HeroCover({ coverImage }: HeroCoverProps) {
   return (
-    <YStack style={styles.heroCoverContainer}>
+    <View style={styles.heroCoverContainer}>
       {coverImage ? (
-        <Image source={coverImage} style={styles.heroCoverImage} />
+        <Image source={coverImage as any} style={styles.heroCoverImage} />
       ) : (
-        <YStack style={styles.heroCoverPlaceholder} />
+        <View style={styles.heroCoverPlaceholder} />
       )}
-      <YStack style={styles.heroCoverOverlay} />
-
-      {/* Feathered fade effect matching donor's premium look */}
-      <FlexYStack style={styles.heroCoverFadeContainer} pointerEvents="none">
+      <View style={styles.heroCoverOverlay} />
+      <View style={styles.heroCoverFadeContainer} pointerEvents="none">
         {Array.from({ length: 80 }, (_, i) => {
           const t = i / 79;
           const alpha = Math.pow(t, 1.5) * 0.88;
           const bg = `rgba(255, 252, 248, ${alpha.toFixed(3)})`;
           return (
-            <YStack
+            <View
               key={i}
               style={[
                 styles.heroCoverFadeBand,
-                {
-                  top: `${(t * 100).toFixed(2)}%`,
-                  backgroundColor: bg,
-                },
+                { top: `${(t * 100).toFixed(2)}%` as any, backgroundColor: bg },
               ]}
             />
           );
         })}
-      </FlexYStack>
-    </YStack>
+      </View>
+    </View>
   );
 }
 
@@ -62,36 +51,30 @@ export type ServiceModeSegmentProps = {
 
 export function ServiceModeSegment({ options, selectedId, onChange }: ServiceModeSegmentProps) {
   return (
-    <XStack style={styles.segmentContainer}>
+    <View style={styles.segmentContainer}>
       {options.map((opt) => {
         const isActive = opt.id === selectedId;
         return (
-          <FlexYStack
+          <Pressable
             key={opt.id}
             onPress={() => onChange?.(opt.id)}
-            pressStyle={{ opacity: 0.85 }}
-            style={[
-              styles.segmentChip,
-              isActive && styles.segmentChipActive,
-            ]}
+            style={[styles.segmentChip, isActive && styles.segmentChipActive]}
           >
-            <XStack style={styles.segmentContent}>
+            <View style={styles.segmentContent}>
               {opt.icon ? opt.icon : null}
-              <StyledText
-                role="bodySm"
-                weight="800"
+              <Text
                 style={[
                   styles.segmentText,
                   { color: isActive ? colorRoles.brandAction : colorRoles.textSecondary },
                 ]}
               >
                 {opt.label}
-              </StyledText>
-            </XStack>
-          </FlexYStack>
+              </Text>
+            </View>
+          </Pressable>
         );
       })}
-    </XStack>
+    </View>
   );
 }
 
@@ -114,7 +97,12 @@ export type BannerCarouselProps = {
   readonly itemGap?: number;
 };
 
-export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }: BannerCarouselProps) {
+export const BannerCarousel = memo(function BannerCarousel({
+  banners,
+  variant = "main",
+  itemWidth,
+  itemGap,
+}: BannerCarouselProps) {
   const { width: windowWidth } = Dimensions.get("window");
   const isSecondary = variant === "secondary";
   const count = banners.length;
@@ -122,13 +110,11 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
 
-  // Premium design spacing
   const finalItemWidth = itemWidth ?? (isSecondary ? Math.round(windowWidth * 0.62) : 260);
-  const finalItemGap = itemGap ?? (isSecondary ? 12 : 12);
+  const finalItemGap = itemGap ?? 12;
   const snapInterval = finalItemWidth + finalItemGap;
   const sidePadding = isSecondary ? (windowWidth - finalItemWidth) / 2 : 16;
 
-  // Tracks current page index on scroll
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
     {
@@ -146,7 +132,7 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
   if (count === 0) return null;
 
   return (
-    <YStack style={{ width: "100%", alignItems: "stretch", overflow: "visible" }}>
+    <View style={{ width: "100%", alignItems: "stretch", overflow: "hidden" }}>
       <Animated.ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -166,7 +152,6 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
             ? "transparent"
             : (item.accentColor ?? colorRoles.brandAction);
 
-          // Centered active item animations
           const scale = scrollX.interpolate({
             inputRange: [
               (index - 1) * snapInterval,
@@ -197,11 +182,7 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
                   backgroundColor: cardBackground,
                   marginRight: index === count - 1 ? 0 : finalItemGap,
                 },
-                isSecondary && {
-                  borderRadius: 28,
-                  opacity: opacity,
-                  transform: [{ scale }],
-                },
+                isSecondary && { borderRadius: 28, opacity, transform: [{ scale }] },
               ]}
             >
               <Pressable
@@ -209,11 +190,10 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
                 style={{ width: "100%", height: "100%", position: "relative" }}
               >
                 {item.image ? (
-                  <Image source={item.image} style={styles.carouselImage} />
+                  <Image source={item.image as any} style={styles.carouselImage} />
                 ) : null}
 
-                {/* Scrim Overlay */}
-                <YStack
+                <View
                   style={[
                     styles.carouselOverlay,
                     isSecondary && styles.carouselOverlaySecondary,
@@ -221,81 +201,50 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
                 />
 
                 {isSecondary ? (
-                  <YStack style={styles.carouselContentSecondary}>
+                  <View style={styles.carouselContentSecondary}>
                     {item.badge ? (
-                      <YStack style={styles.carouselBadgeSecondary}>
-                        <StyledText
-                          role="label"
-                          weight="900"
-                          style={styles.carouselBadgeTextSecondary}
-                        >
-                          {item.badge}
-                        </StyledText>
-                      </YStack>
+                      <View style={styles.carouselBadgeSecondary}>
+                        <Text style={styles.carouselBadgeTextSecondary}>{item.badge}</Text>
+                      </View>
                     ) : null}
-
-                    <YStack style={styles.carouselMiddleCopy}>
-                      <StyledText
-                        role="bodyStrong"
-                        weight="900"
-                        style={styles.carouselTitleSecondary}
-                        numberOfLines={2}
-                      >
+                    <View style={styles.carouselMiddleCopy}>
+                      <Text style={styles.carouselTitleSecondary} numberOfLines={2}>
                         {item.title}
-                      </StyledText>
+                      </Text>
                       {item.subtitle ? (
-                        <StyledText
-                          role="bodySm"
-                          style={styles.carouselSubtitleSecondary}
-                          numberOfLines={2}
-                        >
+                        <Text style={styles.carouselSubtitleSecondary} numberOfLines={2}>
                           {item.subtitle}
-                        </StyledText>
+                        </Text>
                       ) : null}
-                    </YStack>
-
+                    </View>
                     {item.cta ? (
-                      <YStack
+                      <View
                         style={[
                           styles.carouselCtaSecondary,
                           { backgroundColor: item.accentColor ?? colorRoles.brandAction },
                         ]}
                       >
-                        <StyledText
-                          role="label"
-                          weight="900"
-                          style={styles.carouselCtaTextSecondary}
-                        >
-                          {item.cta}
-                        </StyledText>
-                      </YStack>
+                        <Text style={styles.carouselCtaTextSecondary}>{item.cta}</Text>
+                      </View>
                     ) : null}
-                  </YStack>
+                  </View>
                 ) : (
-                  <YStack style={styles.carouselContent}>
+                  <View style={styles.carouselContent}>
                     {item.badge ? (
-                      <YStack style={styles.carouselBadge}>
-                        <StyledText role="label" weight="900" style={styles.carouselBadgeText}>
-                          {item.badge}
-                        </StyledText>
-                      </YStack>
+                      <View style={styles.carouselBadge}>
+                        <Text style={styles.carouselBadgeText}>{item.badge}</Text>
+                      </View>
                     ) : null}
-                    <StyledText role="bodyStrong" style={styles.carouselTitle} numberOfLines={1}>
-                      {item.title}
-                    </StyledText>
+                    <Text style={styles.carouselTitle} numberOfLines={1}>{item.title}</Text>
                     {item.subtitle ? (
-                      <StyledText role="bodySm" style={styles.carouselSubtitle} numberOfLines={1}>
-                        {item.subtitle}
-                      </StyledText>
+                      <Text style={styles.carouselSubtitle} numberOfLines={1}>{item.subtitle}</Text>
                     ) : null}
                     {item.cta ? (
-                      <YStack style={styles.carouselCta}>
-                        <StyledText role="label" weight="900" style={styles.carouselCtaText}>
-                          {item.cta}
-                        </StyledText>
-                      </YStack>
+                      <View style={styles.carouselCta}>
+                        <Text style={styles.carouselCtaText}>{item.cta}</Text>
+                      </View>
                     ) : null}
-                  </YStack>
+                  </View>
                 )}
               </Pressable>
             </Animated.View>
@@ -303,13 +252,12 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
         })}
       </Animated.ScrollView>
 
-      {/* Progress Page Indicators */}
       {isSecondary && count > 1 ? (
-        <XStack style={styles.progressRow}>
+        <View style={styles.progressRow}>
           {banners.map((item, idx) => {
             const isActive = idx === activeIndex;
             return (
-              <YStack
+              <View
                 key={item.id}
                 style={[
                   styles.progressTrack,
@@ -321,26 +269,25 @@ export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }
               />
             );
           })}
-        </XStack>
+        </View>
       ) : null}
-    </YStack>
+    </View>
   );
-}
+});
 
-// ─── STYLESHEETS ───
+// ─── STYLES ───
 const styles = {
-  // Hero Cover
   heroCoverContainer: {
     height: 380,
     width: "100%",
-    position: "relative",
+    position: "relative" as const,
     backgroundColor: "transparent",
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   heroCoverImage: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
+    resizeMode: "cover" as const,
   },
   heroCoverPlaceholder: {
     width: "100%",
@@ -348,32 +295,23 @@ const styles = {
     backgroundColor: colorRoles.brandStructure,
   },
   heroCoverOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute" as const,
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(10, 47, 92, 0.4)",
   },
   heroCoverFadeContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+    position: "absolute" as const,
+    bottom: 0, left: 0, right: 0,
     height: 120,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
   heroCoverFadeBand: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute" as const,
+    left: 0, right: 0, bottom: 0,
     height: 2,
   },
-
-  // Service Mode Segment
   segmentContainer: {
-    flexDirection: "row-reverse",
+    flexDirection: "row-reverse" as const,
     backgroundColor: colorRoles.surfaceBase,
     padding: 2,
     borderRadius: 14,
@@ -385,8 +323,8 @@ const styles = {
     flex: 1,
     height: 42,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   segmentChipActive: {
     backgroundColor: colorRoles.surfaceBase,
@@ -397,77 +335,59 @@ const styles = {
     elevation: 1,
   },
   segmentContent: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
+    flexDirection: "row-reverse" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   segmentText: {
     fontSize: 11,
+    fontWeight: "800" as const,
     fontFamily: "Outfit-Bold",
-  },
-
-  // Banner Carousel
-  carouselScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    flexDirection: "row",
-    gap: 12,
   },
   carouselCard: {
     height: 142,
     borderRadius: 16,
-    overflow: "hidden",
-    position: "relative",
+    overflow: "hidden" as const,
+    position: "relative" as const,
   },
   carouselImage: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
+    resizeMode: "cover" as const,
   },
   carouselOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute" as const,
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(0,0,0,0.35)",
   },
   carouselOverlaySecondary: {
     backgroundColor: "rgba(0, 0, 0, 0.24)",
   },
   carouselContent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute" as const,
+    top: 0, left: 0, right: 0, bottom: 0,
     padding: 12,
-    justifyContent: "flex-end",
-    alignItems: "flex-end",
+    justifyContent: "flex-end" as const,
+    alignItems: "flex-end" as const,
   },
   carouselContentSecondary: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute" as const,
+    top: 0, left: 0, right: 0, bottom: 0,
     padding: 16,
-    justifyContent: "space-between",
-    alignItems: "stretch",
+    justifyContent: "space-between" as const,
+    alignItems: "stretch" as const,
   },
   carouselBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
+    position: "absolute" as const,
+    top: 12, right: 12,
     backgroundColor: colorRoles.surfaceBase,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   carouselBadgeSecondary: {
-    position: "absolute",
-    top: 16,
-    left: 16,
+    position: "absolute" as const,
+    top: 16, left: 16,
     backgroundColor: colorRoles.surfaceBase,
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -479,47 +399,47 @@ const styles = {
     color: colorRoles.brandStructure,
     fontSize: 10,
     fontFamily: "Outfit-Bold",
+    fontWeight: "900" as const,
   },
   carouselBadgeTextSecondary: {
     color: neutralScale[900],
     fontSize: 11,
     fontFamily: "Outfit-Bold",
+    fontWeight: "900" as const,
   },
   carouselMiddleCopy: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
+    position: "absolute" as const,
+    top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 54,
   },
   carouselTitle: {
     color: colorRoles.textOnMediaStrong,
     fontSize: 16,
     fontFamily: "Outfit-Bold",
-    textAlign: "right",
+    textAlign: "right" as const,
+    fontWeight: "700" as const,
   },
   carouselTitleSecondary: {
     color: colorRoles.textInverse,
     fontSize: 20,
     fontFamily: "Outfit-Bold",
-    textAlign: "center",
+    textAlign: "center" as const,
     lineHeight: 25,
-    fontWeight: "900",
+    fontWeight: "900" as const,
   },
   carouselSubtitle: {
     color: colorRoles.textOnMediaMuted,
     fontSize: 12,
     marginTop: 2,
-    textAlign: "right",
+    textAlign: "right" as const,
   },
   carouselSubtitleSecondary: {
     color: "rgba(255, 255, 255, 0.92)",
     fontSize: 13,
     fontFamily: "Outfit",
-    textAlign: "center",
+    textAlign: "center" as const,
     marginTop: 4,
     lineHeight: 16,
   },
@@ -531,9 +451,8 @@ const styles = {
     borderRadius: 12,
   },
   carouselCtaSecondary: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
+    position: "absolute" as const,
+    bottom: 16, right: 16,
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 5,
@@ -541,16 +460,18 @@ const styles = {
   carouselCtaText: {
     color: colorRoles.textInverse,
     fontSize: 11,
+    fontWeight: "900" as const,
   },
   carouselCtaTextSecondary: {
     color: colorRoles.textInverse,
     fontSize: 11,
     fontFamily: "Outfit-Bold",
+    fontWeight: "900" as const,
   },
   progressRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
     gap: 6,
     marginTop: 12,
     width: "100%",

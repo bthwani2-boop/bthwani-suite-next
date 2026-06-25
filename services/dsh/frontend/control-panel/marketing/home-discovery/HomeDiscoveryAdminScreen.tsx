@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CpButton, CpEmptyTableMessage, CpPageHeader, CpSelect, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput, DataTablePageFrame } from "@bthwani/ui-kit";
-import { useIdentitySession, devBypassLogin } from "@bthwani/app-shell";
+import { CpButton, CpEmptyTableMessage, CpPageHeader, CpSelect, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
+import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   useHomeDiscoveryAdminController,
   type DshHomeAdminContentInput,

@@ -1,22 +1,10 @@
 import { useCallback, useSyncExternalStore } from "react";
 import {
-  configureIdentitySession,
-  getIdentityAccessToken,
+  subscribeIdentityState,
   getIdentityState,
   loginIdentity,
   logoutIdentity,
-  subscribeIdentityState,
-  devBypassLogin,
-  type IdentitySessionState,
-} from "@bthwani/core-identity";
-
-export {
-  configureIdentitySession,
-  getIdentityAccessToken,
-  getIdentityState,
-  devBypassLogin,
-  type IdentitySessionState,
-};
+} from "./identity-session-store.ts";
 
 export function useIdentitySession() {
   const state = useSyncExternalStore(

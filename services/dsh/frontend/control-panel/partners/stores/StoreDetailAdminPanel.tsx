@@ -6,7 +6,7 @@ import {
   CpDetailPanel,
   CpExternalLink,
   CpInlineCode,
-} from "@bthwani/ui-kit";
+} from "@bthwani/control-panel/components";
 import {
   formatDeliveryModes,
   type DshStoreAdminDetailState,

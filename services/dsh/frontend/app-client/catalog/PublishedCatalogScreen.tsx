@@ -2,23 +2,19 @@ import React, { useState } from "react";
 import { Alert, Image, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Svg, Circle, Path } from "react-native-svg";
+import { LoadingState, ScrollScreen, StateView, Text, colorRoles } from "@bthwani/ui-kit";
 import {
   BannerCarousel,
-  BannerCarouselItem,
+  type BannerCarouselItem,
   FilterRail,
-  FilterRailItem,
+  type FilterRailItem,
   FloatingActionCircle,
   HeroCover,
-  LoadingState,
   MetricChip,
   ProductCard,
-  ScrollScreen,
   ServiceModeSegment,
-  StateView,
   StatusBadge,
-  Text,
-  colorRoles,
-} from "@bthwani/ui-kit";
+} from "../shared/ui";
 import { usePublishedCatalogController } from "../../shared/catalog";
 import { useStoreDetailController } from "../../shared/store";
 import type { CatalogCategory, CatalogProduct } from "../../shared/catalog/catalog.types";

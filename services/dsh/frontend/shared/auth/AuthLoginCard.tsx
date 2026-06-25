@@ -1,9 +1,6 @@
 import { useState } from "react";
-import { Card } from "../Card";
-import { Text } from "../Text";
-import { TextField } from "../TextField";
-import { Button } from "../Button";
-import { Block } from "../_shared";
+import { View } from "react-native";
+import { Card, Text, TextField, Button, spacing } from "@bthwani/ui-kit";
 
 export type AuthLoginCardProps = {
   readonly title: string;
@@ -31,11 +28,11 @@ export function AuthLoginCard({
 
   return (
     <Card>
-      <Block gap="$4" padding="$4">
-        <Block gap="$1">
+      <View style={{ gap: spacing[4], padding: spacing[4] }}>
+        <View style={{ gap: spacing[1] }}>
           <Text role="titleLg" align="start">{title}</Text>
           <Text tone="secondary" align="start">{subtitle}</Text>
-        </Block>
+        </View>
         <TextField
           label="اسم المستخدم"
           value={username}
@@ -65,7 +62,7 @@ export function AuthLoginCard({
             onPress={onDevBypass}
           />
         )}
-      </Block>
+      </View>
     </Card>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CpButton, CpPageHeader, CpTextInput, DataTablePageFrame, PaginationToolbar } from "@bthwani/ui-kit";
-import { useIdentitySession, devBypassLogin } from "@bthwani/app-shell";
+import { CpButton, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
+import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
+import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import { useStoreAdminController } from "../../../shared/store";
 import { StoreAdminKpiStrip } from "./StoreAdminKpiStrip";
 import { StoreAdminFilters } from "./StoreAdminFilters";

@@ -1,4 +1,4 @@
-import { CpKpiCard, CpKpiStrip } from "@bthwani/ui-kit";
+import { CpKpiCard, CpKpiStrip } from "@bthwani/control-panel/components";
 import type { DshStoreAdminKpiSummary } from "../../../shared/store";
 
 type Props = { readonly kpi: DshStoreAdminKpiSummary };

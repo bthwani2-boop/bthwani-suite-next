@@ -64,6 +64,11 @@ Required:
 - patch review
 - targeted verification
 - evidence pack when useful
+- boundary guard output when ownership lines are crossed:
+  - `pnpm --filter @bthwani/app-shell lint` (no auth runtime, no design ownership)
+  - `pnpm --filter @bthwani/ui-kit lint` (no Cp*, no domain components, no deep imports)
+  - `pnpm --filter @bthwani/control-panel lint` (required files present, no Tamagui)
+  - `pnpm --filter @bthwani/dsh guard:shared-ownership` (DSH shared ownership)
 
 ### CRITICAL — remote writes, branch mutation, force operations
 

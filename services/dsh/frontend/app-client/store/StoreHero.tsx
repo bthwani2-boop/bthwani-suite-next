@@ -10,7 +10,7 @@ import {
   type DimensionValue,
   type ImageSourcePropType,
 } from 'react-native';
-import { colorRoles, statusScale } from '../tokens/colors';
+import { colorRoles, statusScale } from '@bthwani/ui-kit';
 
 const ORANGE = colorRoles.brandAction;
 const NAVY = colorRoles.brandStructure;

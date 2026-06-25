@@ -1,6 +1,6 @@
 import React from 'react';
 import { type Animated } from 'react-native';
-import { StoreHero, type StoreHeroFulfillmentMode } from '@bthwani/ui-kit';
+import { StoreHero, type StoreHeroFulfillmentMode } from './StoreHero';
 import type { DshStoreDetailViewModel } from '../../shared/store';
 
 const DELIVERY_MODES: readonly StoreHeroFulfillmentMode[] = [

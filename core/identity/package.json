@@ -10,7 +10,11 @@
     "build": "cd backend && go build ./...",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
   "devDependencies": {
+    "@types/react": "19.2.17",
     "typescript": "~6.0.3"
   }
 }

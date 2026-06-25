@@ -1,6 +1,6 @@
 "use client";
 
-import { useIdentitySession } from "@bthwani/app-shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   DataTable,
@@ -8,10 +8,9 @@ import {
   ScrollScreen,
   StateView,
   Text,
-  WebView as View,
-  WebStyleSheet as StyleSheet,
   spacing,
 } from "@bthwani/ui-kit";
+import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import { useZonesController, useSlaRulesController } from "../../shared/platform-policies";
 import type { DshZone, DshSlaRule } from "../../shared/platform-policies";
 

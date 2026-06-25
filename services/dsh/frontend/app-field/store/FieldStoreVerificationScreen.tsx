@@ -1,9 +1,8 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { useIdentitySession } from "@bthwani/app-shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { devBypassLogin } from "@bthwani/core-identity";
 import {
-  AuthLoginCard,
   Badge,
   Button,
   Card,
@@ -15,6 +14,7 @@ import {
   TextField,
   spacing,
 } from "@bthwani/ui-kit";
+import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import {
   toStoreRoleStatePresentation,
   useStoreRoleContextController,

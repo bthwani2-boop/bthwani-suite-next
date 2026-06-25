@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useIdentitySession } from "@bthwani/app-shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
-  CpButton,
   Header,
   ScrollScreen,
   StateView,
   Text,
-  WebView as View,
-  WebStyleSheet as StyleSheet,
   spacing,
   lightThemeColors,
 } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
+import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
   useOperatorAnalyticsDashboardController,
   buildPlatformKpisViewModel,

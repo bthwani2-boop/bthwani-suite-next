@@ -1,6 +1,7 @@
 import React from "react";
-import { useIdentitySession } from "@bthwani/app-shell";
-import { AuthLoginCard, Header, ScrollScreen } from "@bthwani/ui-kit";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { Header, ScrollScreen } from "@bthwani/ui-kit";
+import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { CartScreen } from "../cart";
 import { CheckoutScreen } from "./CheckoutScreen";
 import type { DshCart } from "../../shared/cart";

@@ -2,14 +2,9 @@ import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Svg, Circle, Rect, Path } from "react-native-svg";
-import {
-  AppHeader,
-  BottomNavBar,
-  brandRoots,
-  brandScale,
-  colorRoles,
-  type BottomNavItem,
-} from "@bthwani/ui-kit";
+import { AppHeader } from "./shell/AppHeader";
+import { BottomNavBar, type BottomNavItem } from "./shell/BottomNavBar";
+import { brandRoots, brandScale, colorRoles } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDiscoveryRoute";
 import { StoreDetailRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDetailRoute";
