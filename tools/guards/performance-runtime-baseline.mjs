@@ -1,5 +1,5 @@
 // performance-runtime-baseline.mjs
-// Validates Phase 13 Performance & Runtime Baseline rules against the V3 matrix
+// Validates Phase 13 Performance & Runtime Baseline rules against canonical JSON.
 // Node.js — no external dependencies
 // Exit 0 = PASS, Exit 1 = FAIL
 
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
-const V3_PATH = join(ROOT, 'machine-readable', 'slice_execution_master_matrix_v3.csv');
+const ARCHITECTURE_PATH = join(ROOT, 'machine-readable', 'architecture-map.json');
 const EVIDENCE_ROOT = process.env.BTH_EVIDENCE_ROOT || null;
 
 const errors = [];
@@ -17,167 +17,130 @@ const warnings = [];
 function err(msg) { errors.push(msg); }
 function warn(msg) { warnings.push(msg); }
 
-if (!existsSync(V3_PATH)) {
-  err('CRITICAL: slice_execution_master_matrix_v3.csv does not exist');
-  console.error('FAIL — missing V3 matrix');
+if (!existsSync(ARCHITECTURE_PATH)) {
+  err('CRITICAL: machine-readable/architecture-map.json does not exist');
+  console.error('FAIL — missing canonical architecture map');
   process.exit(1);
 }
 
-// RFC 4180 compliant CSV parser
-function parseCSV(content) {
-  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const result = [];
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const row = [];
-    let inQuotes = false, field = '';
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
-        else { inQuotes = !inQuotes; }
-      } else if (ch === ',' && !inQuotes) {
-        row.push(field); field = '';
-      } else {
-        field += ch;
-      }
-    }
-    row.push(field);
-    result.push(row);
-  }
-  return result;
+let architecture;
+try {
+  architecture = JSON.parse(readFileSync(ARCHITECTURE_PATH, 'utf8'));
+} catch (error) {
+  err(`CRITICAL: invalid architecture-map.json: ${error.message}`);
 }
 
-const content = readFileSync(V3_PATH, 'utf8');
-const allRows = parseCSV(content);
-const headers = allRows[0];
-const dataRows = allRows.slice(1);
-
-const colIdx = {};
-headers.forEach((h, i) => colIdx[h.replace(/"/g, '')] = i);
-
-function get(row, col) {
-  const i = colIdx[col];
-  return i !== undefined ? (row[i] || '').replace(/^"|"$/g, '').trim() : '';
+const baseline = architecture?.performance_runtime_baseline;
+if (!baseline) {
+  err('CRITICAL: architecture-map.json missing performance_runtime_baseline');
 }
 
-let checkedListCount = 0;
-let checkedProviderCount = 0;
-let checkedMutationCount = 0;
-let checkedBackendCount = 0;
+function requireTrue(value, path) {
+  if (value !== true) err(`CRITICAL: ${path} must be true`);
+}
 
-for (const row of dataRows) {
-  const id = get(row, 'master_v3_id');
-  const service = get(row, 'service');
-  const layer = get(row, 'layer');
-  const artifactType = get(row, 'artifact_type');
-  const op = get(row, 'operation').toLowerCase();
-  const cap = get(row, 'capability').toLowerCase();
-  const perf = get(row, 'performance_rule');
-  const obs = get(row, 'observability_rule');
-  const db = get(row, 'db_objects');
-  const ext = get(row, 'external_dependencies');
-  const idxReq = get(row, 'idempotency_required');
-  const status = get(row, 'status');
-  const decision = get(row, 'decision');
-  const notes = get(row, 'notes').toLowerCase();
+function requirePositiveNumber(value, path) {
+  if (typeof value !== 'number' || value <= 0) {
+    err(`CRITICAL: ${path} must be a positive number`);
+  }
+}
 
-  const isBlocked = status.startsWith('BLOCKED_') || decision.startsWith('BLOCKED_') || status === 'RESERVED_INVENTORY';
-  const isNA = perf.startsWith('N/A') || perf === 'not-applicable' || status === 'REJECTED';
+const targets = baseline?.targets ?? {};
+for (const key of [
+  'p95_api_reads_ms',
+  'p95_api_writes_ms',
+  'db_basic_query_ms',
+  'cpu_utilization_percent_max',
+  'ram_stability_window_minutes',
+  'error_rate_percent_max',
+]) {
+  requirePositiveNumber(targets[key], `performance_runtime_baseline.targets.${key}`);
+}
 
-  if (isNA) continue;
+const backend = baseline?.backend_rules ?? {};
+for (const key of [
+  'independent_runtimes',
+  'server_timeouts_required',
+  'context_scoped_timeouts_required',
+  'health_and_readiness_required',
+  'bounded_concurrency_required',
+  'rate_limits_required',
+]) {
+  requireTrue(backend[key], `performance_runtime_baseline.backend_rules.${key}`);
+}
+const requiredLogFields = ['timestamp', 'level', 'service', 'correlation_id', 'actor_id'];
+for (const field of requiredLogFields) {
+  if (!backend.structured_log_fields?.includes(field)) {
+    err(`CRITICAL: structured_log_fields missing ${field}`);
+  }
+}
 
-  // 1. Validate List Operations
-  const isListOp = /\blist\b/.test(op) || op.includes('query') || op.includes('get /dsh/stores') || op.includes('get /wlt/refunds') || op.includes('get /wlt/settlements') || /\blist\b/.test(cap) || cap.includes('read model') || cap.includes('read-model');
-  const isReadLayer = layer.includes('backend') || layer.includes('logic') || layer.includes('database') || layer.includes('domain');
+const database = baseline?.database_rules ?? {};
+for (const key of [
+  'pagination_required_for_lists',
+  'strict_default_and_max_limits_required',
+  'indexes_required_for_filters_sorts_and_foreign_keys',
+  'n_plus_one_forbidden',
+  'optimized_read_models_required_for_heavy_reads',
+]) {
+  requireTrue(database[key], `performance_runtime_baseline.database_rules.${key}`);
+}
 
-  if (isListOp && isReadLayer) {
-    checkedListCount++;
-    const lowerPerf = perf.toLowerCase();
-    
-    // Check pagination & limits (except if blocked/pending contract)
-    if (!isBlocked) {
-      const hasPagination = lowerPerf.includes('pagination') || lowerPerf.includes('cursor') || lowerPerf.includes('offset') || lowerPerf.includes('page');
-      const hasLimit = lowerPerf.includes('limit') || lowerPerf.includes('page size') || lowerPerf.includes('max');
-      
-      if (!hasPagination) {
-        err(`ROW ${id} (${service}): List operation '${op}' must specify pagination in performance_rule. Got: '${perf}'`);
-      }
-      if (!hasLimit) {
-        err(`ROW ${id} (${service}): List operation '${op}' must specify default/strict limits in performance_rule. Got: '${perf}'`);
-      }
+const providers = baseline?.provider_rules ?? {};
+for (const key of [
+  'timeouts_required',
+  'bounded_retries_required',
+  'idempotency_required_for_mutations',
+  'circuit_breakers_required',
+  'audit_metadata_required',
+  'health_checks_required',
+  'controlled_failover_required',
+]) {
+  requireTrue(providers[key], `performance_runtime_baseline.provider_rules.${key}`);
+}
+if (providers.retry_max_attempts > 3 || providers.retry_max_attempts < 1) {
+  err('CRITICAL: provider retry_max_attempts must be between 1 and 3');
+}
+
+const operations = baseline?.active_operation_contracts;
+if (!Array.isArray(operations) || operations.length === 0) {
+  err('CRITICAL: performance_runtime_baseline.active_operation_contracts must not be empty');
+}
+
+const operationIds = new Set();
+for (const operation of operations ?? []) {
+  if (!operation.operation_id || operationIds.has(operation.operation_id)) {
+    err(`CRITICAL: duplicate or missing operation_id: ${operation.operation_id ?? '<missing>'}`);
+  }
+  operationIds.add(operation.operation_id);
+  if (!['dsh', 'wlt'].includes(operation.service)) {
+    err(`CRITICAL: ${operation.operation_id} has unsupported service ${operation.service}`);
+  }
+  if (operation.structured_logging !== 'REQUIRED') {
+    err(`CRITICAL: ${operation.operation_id} must require structured logging`);
+  }
+  if (operation.kind === 'list_read') {
+    if (!['limit-offset', 'cursor'].includes(operation.pagination)) {
+      err(`CRITICAL: ${operation.operation_id} must declare pagination`);
     }
-
-    // Check indexes for database reads
-    if (db && db !== 'N/A' && !db.includes('not-applicable') && !isBlocked) {
-      const hasIndex = lowerPerf.includes('index') || lowerPerf.includes('indexed') || db.includes('index');
-      if (!hasIndex) {
-        warn(`ROW ${id} (${service}): Read operation accessing '${db}' should specify index/indexing in performance_rule.`);
-      }
-    }
-
-    // Check read models for heavy queries (settlement, ledger, catalogs)
-    const isHeavy = cap.includes('settlement') || cap.includes('ledger') || cap.includes('catalog') || cap.includes('history');
-    if (isHeavy && !isBlocked) {
-      const hasReadModel = lowerPerf.includes('read model') || lowerPerf.includes('read-model') || lowerPerf.includes('view') || lowerPerf.includes('materialized') || lowerPerf.includes('summary') || lowerPerf.includes('lookup');
-      if (!hasReadModel) {
-        warn(`ROW ${id} (${service}): Heavy list capability '${cap}' should utilize a read-model or optimized view.`);
-      }
+    if (!(operation.default_limit > 0) || !(operation.max_limit >= operation.default_limit)) {
+      err(`CRITICAL: ${operation.operation_id} has invalid default/max limits`);
     }
   }
-
-  // 2. Validate External Dependencies & Providers
-  const hasExtDep = ext && ext !== 'N/A' && !ext.includes('not-applicable') && ext !== 'N/A_POLICY_CANONICAL';
-  if (hasExtDep && !isBlocked) {
-    checkedProviderCount++;
-    const lowerPerf = perf.toLowerCase();
-    const lowerNotes = notes.toLowerCase();
-    const lowerRollback = get(row, 'rollback_compensation_rule').toLowerCase();
-
-    const hasTimeout = lowerPerf.includes('timeout') || lowerNotes.includes('timeout') || lowerRollback.includes('timeout');
-    const hasCircuitBreaker = lowerPerf.includes('circuit') || lowerNotes.includes('circuit') || lowerRollback.includes('circuit') || lowerPerf.includes('failover') || lowerNotes.includes('failover');
-    const hasRetry = lowerPerf.includes('retry') || lowerNotes.includes('retry') || lowerRollback.includes('retry') || lowerPerf.includes('backoff') || lowerNotes.includes('backoff');
-
-    if (!hasTimeout) {
-      err(`ROW ${id} (${service}): External dependency '${ext}' must specify timeouts. Got: '${perf}'`);
-    }
-    if (!hasRetry && !hasCircuitBreaker) {
-      warn(`ROW ${id} (${service}): External dependency '${ext}' should specify retries or circuit breakers.`);
-    }
+  if (operation.external_provider !== 'NONE') {
+    err(`CRITICAL: ${operation.operation_id} activates an unapproved external provider`);
   }
+}
 
-  // 3. Validate Mutating/Write Operations (Idempotency and Rollback)
-  const isMutation = op.includes('create') || op.includes('update') || op.includes('delete') || op.includes('post') || op.includes('put') || op.includes('patch') || op.includes('cancel') || op.includes('settle') || op.includes('payout');
-  if (isMutation && isReadLayer && !isBlocked) {
-    checkedMutationCount++;
-    const lowerIdx = idxReq.toLowerCase();
-    
-    // Check idempotency for critical services
-    if (service === 'wlt' || service === 'dsh') {
-      const hasIdempotency = lowerIdx.includes('true') || lowerIdx.includes('idempotent') || lowerIdx.includes('idempotency') || lowerIdx === 'yes';
-      if (!hasIdempotency) {
-        err(`ROW ${id} (${service}): Mutating operation '${op}' must require idempotency (idempotency_required).`);
-      }
-    }
-  }
-
-  // 4. Validate Structured Logs & Observability
-  if (isReadLayer && !isBlocked) {
-    checkedBackendCount++;
-    const lowerObs = obs.toLowerCase();
-    const hasLogs = lowerObs.includes('log') || lowerObs.includes('structured') || lowerObs.includes('json') || lowerObs.includes('trace') || lowerObs.includes('emit') || lowerObs.includes('alert');
-    if (!hasLogs) {
-      warn(`ROW ${id} (${service}): Backend layer row should specify structured logging/observability rules.`);
-    }
-  }
+if (baseline?.measurement_status !== 'NOT_MEASURED') {
+  err('CRITICAL: measurement_status must remain NOT_MEASURED until load-test evidence exists');
 }
 
 const counts = {
-  total_rows: dataRows.length,
-  list_operations_checked: checkedListCount,
-  external_providers_checked: checkedProviderCount,
-  mutations_checked: checkedMutationCount,
-  backend_rows_checked: checkedBackendCount
+  active_operations_checked: operations?.length ?? 0,
+  list_operations_checked: (operations ?? []).filter((operation) => operation.kind === 'list_read').length,
+  external_providers_active: (operations ?? []).filter((operation) => operation.external_provider !== 'NONE').length,
+  measurement_status: baseline?.measurement_status ?? 'MISSING',
 };
 
 const output = {

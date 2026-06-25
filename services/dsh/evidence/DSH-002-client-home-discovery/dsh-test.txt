@@ -1,0 +1,75 @@
+> @bthwani/dsh@0.0.0 test C:\bthwani-suite-next\services\dsh
+> node --test tests/*.test.mjs
+
+▶ createDshStoreClient
+  ✔ factory returns an object with listStores and getStore (3.5983ms)
+  ✔ factory accepts a base URL and creates a client (0.568ms)
+✔ createDshStoreClient (7.2969ms)
+▶ client error shape
+  ✔ network error shape has kind=network and message (133.1285ms)
+✔ client error shape (133.7753ms)
+▶ error mapping classification
+  ✔ HTTP 503 should produce kind=http with status=503 (0.5348ms)
+  ✔ error codes are correctly classified (0.4171ms)
+✔ error mapping classification (1.8947ms)
+▶ validateListQuery
+  ✔ accepts valid query (2.4095ms)
+  ✔ rejects limit < 1 (14.0925ms)
+  ✔ rejects limit > 100 (1.2548ms)
+  ✔ rejects negative offset (1.4554ms)
+  ✔ rejects invalid status (0.5902ms)
+  ✔ accepts valid status (3.0139ms)
+✔ validateListQuery (32.6225ms)
+▶ isStoreVisibleToClient
+  ✔ visible active store (0.932ms)
+  ✔ invisible store (0.4798ms)
+  ✔ inactive store (2.2436ms)
+✔ isStoreVisibleToClient (4.5214ms)
+▶ applyClientVisibilityFilter
+  ✔ filters out non-visible stores (3.9184ms)
+✔ applyClientVisibilityFilter (4.2474ms)
+▶ rowToSummary
+  ✔ maps all fields correctly (1.4466ms)
+  ✔ null nullable fields pass through (0.3748ms)
+✔ rowToSummary (2.1213ms)
+▶ rowToDetail
+  ✔ includes ISO timestamp strings (1.2851ms)
+✔ rowToDetail (7.4579ms)
+▶ state constructors
+  ✔ loadingState returns kind=loading (7.0383ms)
+  ✔ emptyState returns kind=empty (0.4868ms)
+  ✔ errorState returns kind=error with message (0.5948ms)
+  ✔ serviceUnavailableState returns kind=service_unavailable (0.4294ms)
+✔ state constructors (13.5966ms)
+▶ successState
+  ✔ returns success when stores not empty (0.6236ms)
+  ✔ returns empty when stores empty and offset=0 (0.3685ms)
+  ✔ returns success when stores empty but offset>0 (paginated) (0.4088ms)
+✔ successState (3.2848ms)
+▶ toCardViewModel
+  ✔ active serviceable store is open and serviceable (61.7158ms)
+  ✔ inactive store is not open (0.8894ms)
+  ✔ temporarily_closed produces statusBadge (0.903ms)
+  ✔ limited serviceability produces statusBadge (0.8288ms)
+  ✔ out_of_area produces statusBadge (0.8546ms)
+  ✔ rating label rendered when rating present (0.8503ms)
+  ✔ rating label null when no rating (0.8788ms)
+  ✔ rating label null when ratingCount is 0 (0.7243ms)
+  ✔ eta label rendered when eta present (0.7393ms)
+  ✔ eta label null when eta absent (0.925ms)
+  ✔ heroImageSource null when not provided (0.8832ms)
+  ✔ logoImageSource null when not provided (0.5392ms)
+  ✔ commercial card metadata comes from the API DTO (2.3411ms)
+  ✔ display name is not rewritten or inferred by the view-model (0.5503ms)
+✔ toCardViewModel (78.5115ms)
+▶ toDetailViewModel
+  ✔ includes all card fields plus timestamps (0.8598ms)
+✔ toDetailViewModel (3.0509ms)
+ℹ tests 40
+ℹ suites 12
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 351.8575

@@ -1,0 +1,15 @@
+﻿COMMAND: pnpm run runtime:all
+RESULT: PASS
+DATE: 2026-06-22
+
+Verified:
+- Postgres healthy on host port 55432.
+- DSH API healthy on host port 58080.
+- MinIO live and ready on host ports 59000/59001.
+- DSH migrations applied.
+- DSH local seeds applied.
+- GET /dsh/health PASS.
+- GET /dsh/readiness PASS.
+- GET /dsh/stores returned 6 stores.
+- GET /dsh/stores/store-1001 returned Ø£Ø³ÙˆØ§Ù‚ Ø­Ø¯Ø© Ø§Ù„Ù…Ø±ÙƒØ²ÙŠØ©.
+- MinIO media seed and smoke PASS.

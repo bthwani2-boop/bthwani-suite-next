@@ -1,0 +1,35 @@
+{
+    "store":  {
+                  "id":  "store-1001",
+                  "slug":  "haddah-central-market",
+                  "displayName":  "Ã˜Â£Ã˜Â³Ã™ÂˆÃ˜Â§Ã™Â‚ Ã˜Â­Ã˜Â¯Ã˜Â© Ã˜Â§Ã™Â„Ã™\u0085Ã˜Â±Ã™ÂƒÃ˜Â²Ã™ÂŠÃ˜Â©",
+                  "status":  "active",
+                  "cityCode":  "sana",
+                  "serviceAreaCode":  "haddah",
+                  "serviceability":  {
+                                         "status":  "serviceable"
+                                     },
+                  "ratingAverage":  4.8,
+                  "ratingCount":  312,
+                  "deliveryEtaMin":  25,
+                  "deliveryEtaMax":  40,
+                  "isVisible":  true,
+                  "heroImageUrl":  "http://localhost:59000/dsh-media/store-1001-hero.jpg",
+                  "logoUrl":  "http://localhost:59000/dsh-media/store-1001-logo.jpg",
+                  "category":  "grocery",
+                  "deliveryModes":  [
+                                        "delivery",
+                                        "pickup",
+                                        "express"
+                                    ],
+                  "isFreeDelivery":  true,
+                  "distanceKm":  2.1,
+                  "followerCount":  3100,
+                  "hasProBadge":  true,
+                  "hasCouponBadge":  false,
+                  "pointsMultiplier":  2,
+                  "isPopular":  true,
+                  "createdAt":  "2026-06-21T06:11:12.650602Z",
+                  "updatedAt":  "2026-06-21T06:11:12.650602Z"
+              }
+}

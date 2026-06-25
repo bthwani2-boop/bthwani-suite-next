@@ -39,7 +39,7 @@ services:
   minio:
     profiles:
       - media
-    image: ${BTHWANI_MINIO_IMAGE:-minio/minio:RELEASE.2026-06-13T11-33-47Z}
+    image: ${BTHWANI_MINIO_IMAGE:-minio/minio:RELEASE.2024-11-07T00-52-20Z}
     container_name: ${BTHWANI_MINIO_CONTAINER:-bthwani-minio-runtime}
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -51,6 +51,86 @@ services:
       - "${BTHWANI_MINIO_CONSOLE_PORT:-59001}:9001"
     volumes:
       - bthwani-minio-runtime-data:/data
+    networks:
+      - bthwani-runtime
+
+  identity-api:
+    profiles:
+      - identity
+    build:
+      context: ../..
+      dockerfile: core/identity/backend/Dockerfile
+    container_name: ${BTHWANI_IDENTITY_API_CONTAINER:-bthwani-identity-api-runtime}
+    restart: unless-stopped
+    environment:
+      PORT: "8082"
+      DATABASE_URL: "postgres://${BTHWANI_IDENTITY_DB_USER:-identity_runtime}:${BTHWANI_IDENTITY_DB_PASSWORD:-identity_runtime_password}@postgres:5432/${BTHWANI_IDENTITY_DB_NAME:-identity_runtime}?sslmode=disable"
+      IDENTITY_LOCAL_BOOTSTRAP: "${IDENTITY_LOCAL_BOOTSTRAP:-true}"
+      IDENTITY_LOCAL_BOOTSTRAP_PASSWORD: "${IDENTITY_LOCAL_BOOTSTRAP_PASSWORD:-123456}"
+    ports:
+      - "${BTHWANI_IDENTITY_API_HOST_PORT:-58082}:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/identity/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - bthwani-runtime
+
+  wlt-api:
+    profiles:
+      - wlt
+    build:
+      context: ../..
+      dockerfile: services/wlt/backend/Dockerfile
+    container_name: ${BTHWANI_WLT_API_CONTAINER:-bthwani-wlt-api-runtime}
+    restart: unless-stopped
+    environment:
+      PORT: "8083"
+      DATABASE_URL: "postgres://${BTHWANI_WLT_DB_USER:-wlt_runtime}:${BTHWANI_WLT_DB_PASSWORD:-wlt_runtime_password}@postgres:5432/${BTHWANI_WLT_DB_NAME:-wlt_runtime}?sslmode=disable"
+      WLT_AUTH_MODE: "public-read-references"
+    ports:
+      - "${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - bthwani-runtime
+
+  dsh-api:
+    profiles:
+      - dsh
+    build:
+      context: ../..
+      dockerfile: services/dsh/backend/Dockerfile
+    container_name: ${BTHWANI_DSH_API_CONTAINER:-bthwani-dsh-api-runtime}
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://${BTHWANI_DSH_DB_USER:-dsh_runtime}:${BTHWANI_DSH_DB_PASSWORD:-dsh_runtime_password}@postgres:5432/${BTHWANI_DSH_DB_NAME:-dsh_runtime}?sslmode=disable"
+      DSH_AUTH_MODE: "identity-required-for-protected-store-actions"
+      DSH_IDENTITY_BASE_URL: "http://identity-api:8082"
+      DSH_WLT_BASE_URL: "${DSH_WLT_BASE_URL:-http://wlt-api:8083}"
+    ports:
+      - "${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
     networks:
       - bthwani-runtime
 

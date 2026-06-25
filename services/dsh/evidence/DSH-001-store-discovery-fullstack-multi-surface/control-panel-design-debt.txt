@@ -1,0 +1,34 @@
+DSH-001 Control Panel Design Debt Register
+============================================
+Date: 2026-06-22
+Task: DSH-001_SHARED_ENGINE_AND_SURFACE_UI_CLEANUP_GATE
+
+RGBA VIOLATIONS — STATUS: RESOLVED
+------------------------------------
+All raw rgba() values have been moved OUT of services/dsh into shared/app-shell.
+
+FIXED IN THIS TASK:
+  1. StoreManagementScreen.tsx — aside borderInlineStart: "1px solid rgba(0,0,0,0.1)"
+     Resolution: Moved to DataTablePageFrame.sidePanel slot in shared/app-shell (DataTablePageFrame.tsx)
+
+  2. StoreAdminTable.tsx — thStyle.borderBottom: "2px solid rgba(0,0,0,0.15)"
+     Resolution: Moved to CpTableHeaderCell in shared/app-shell (CpPrimitives.tsx)
+
+  3. StoreAdminTable.tsx — tdStyle.borderBottom: "1px solid rgba(0,0,0,0.08)"
+     Resolution: Moved to CpTableCell in shared/app-shell (CpPrimitives.tsx)
+
+  4. StoreAdminFilters.tsx — selectStyle.border: "1px solid rgba(0,0,0,0.2)"
+     Resolution: Moved to CpSelect default style in shared/app-shell (CpPrimitives.tsx)
+
+  5. StoreAdminKpiStrip.tsx — KpiCard border: "1px solid rgba(0,0,0,0.12)"
+     Resolution: Moved to CpKpiCard in shared/app-shell (CpPrimitives.tsx)
+
+REMEDIATION UPDATE — 2026-06-22
+-------------------------------
+The DSH-001 control-panel files no longer own the listed layout and typography
+compositions. They now consume shared/app-shell primitives such as CpPageHeader,
+CpKpiStrip, CpFilterBar, CpStatePanel, CpSelectableTableRow, and CpDetailPanel.
+
+VERDICT: IMPLEMENTATION_REMEDIATED_NEEDS_VISUAL_EVIDENCE
+The ownership debt is removed from DSH surface files. Visual quality and
+responsive behavior are not accepted until fresh screenshots are reviewed.

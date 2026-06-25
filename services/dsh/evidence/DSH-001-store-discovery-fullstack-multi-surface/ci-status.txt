@@ -1,0 +1,7 @@
+CI_NOT_CONFIGURED_FOR_THIS_BRANCH
+CI_NOT_BLOCKING_BY_POLICY
+
+All closure gates are verified locally under CODE_BASED_FULL_STACK_CLOSURE.
+CI/GitHub Actions is not configured for this branch.
+This is non-blocking: local foundation:gate, slice:gate, typecheck, tests,
+build, lint, guards, runtime:smoke, and graphify all PASS.

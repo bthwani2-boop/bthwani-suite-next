@@ -1,0 +1,33 @@
+ M apps/app-captain/runtime/src/App.tsx
+ M apps/app-client/runtime/src/App.tsx
+ M apps/app-field/runtime/src/App.tsx
+ M apps/app-partner/runtime/src/App.tsx
+ M package.json
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-health.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-readiness.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-stores.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/foundation-gate.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/git-diff-check.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/git-status.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/guard-results.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/nx-results.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/remote-head.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/runtime-status.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/slice-gate.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/test-results.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/typecheck-results.txt
+ M services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx
+ M services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx
+ M services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx
+ M services/dsh/frontend/control-panel/partners/stores/StoreAdminFilters.tsx
+ M services/dsh/frontend/control-panel/partners/stores/StoreAdminStateView.tsx
+ M services/dsh/frontend/control-panel/partners/stores/StoreAdminTable.tsx
+ M services/dsh/frontend/control-panel/partners/stores/StoreDetailAdminPanel.tsx
+ M services/wlt/service.manifest.ts
+ M shared/app-shell/src/control-panel/index.ts
+?? services/wlt/frontend/dsh/shared/index.ts
+?? services/wlt/frontend/dsh/shared/wlt-dsh-boundary.types.ts
+?? services/wlt/frontend/dsh/shared/wlt-dsh-reference.states.ts
+?? services/wlt/frontend/dsh/shared/wlt-dsh-reference.view-model.ts
+?? shared/app-shell/src/control-panel/CpPrimitives.tsx
+?? tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs

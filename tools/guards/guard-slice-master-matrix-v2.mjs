@@ -1,249 +1,197 @@
 // guard-slice-master-matrix-v2.mjs
-// Validates machine-readable/slice_execution_master_matrix.csv (V2 repaired)
+// Validates canonical machine-readable JSON governance files
+// Replaces: slice_execution_master_matrix.csv (deleted 2026-06-22)
+// Cross-cutting rules extracted to governance.json#cross_cutting_rules
 // Node.js — no external dependencies
 // Exit 0 = PASS, Exit 1 = FAIL
 
-import { createReadStream } from 'fs';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
-
-const V2_PATH = join(ROOT, 'machine-readable', 'slice_execution_master_matrix.csv');
-const MR_DIR = join(ROOT, 'machine-readable');
-
 const EVIDENCE_ROOT = process.env.BTH_EVIDENCE_ROOT || null;
 
 const errors = [];
 const warnings = [];
-
 function err(msg) { errors.push(msg); }
 function warn(msg) { warnings.push(msg); }
 
-// --- CSV parser (RFC 4180 compliant) ---
-function parseCSV(content) {
-  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const result = [];
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const row = [];
-    let inQuotes = false, field = '';
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
-        else { inQuotes = !inQuotes; }
-      } else if (ch === ',' && !inQuotes) {
-        row.push(field); field = '';
-      } else {
-        field += ch;
+function readJSON(relPath) {
+  const p = join(ROOT, relPath);
+  if (!existsSync(p)) { err(`CRITICAL: Required file not found: ${relPath}`); return null; }
+  try { return JSON.parse(readFileSync(p, 'utf8')); }
+  catch (e) { err(`CRITICAL: Invalid JSON in ${relPath}: ${e.message}`); return null; }
+}
+
+// --- Load canonical files ---
+const govn     = readJSON('machine-readable/governance.json');
+const archMap  = readJSON('machine-readable/architecture-map.json');
+const surfMap  = readJSON('machine-readable/surface-ownership-map.json');
+const topicReg = readJSON('machine-readable/topic-registry.json');
+
+// 1. cross_cutting_rules present and complete
+const cr = govn?.cross_cutting_rules;
+if (!cr) {
+  err('CRITICAL: governance.json missing cross_cutting_rules');
+} else {
+  const required = ['rtl_i18n', 'rbac_tenant', 'audit_privacy', 'idempotency', 'build_targets', 'rollback_compensation'];
+  const missing = required.filter(k => !cr[k]);
+  if (missing.length > 0) {
+    err(`CRITICAL: governance.json cross_cutting_rules missing keys: ${missing.join(', ')}`);
+  } else {
+    console.log(`Cross-cutting rules: all ${required.length} rule categories present ✓`);
+  }
+}
+
+// 2. RTL i18n rule is defined
+if (cr?.rtl_i18n?.rule) {
+  console.log(`RTL/i18n rule: defined ✓`);
+} else {
+  err('CRITICAL: governance.json cross_cutting_rules.rtl_i18n.rule not defined');
+}
+
+// 3. RBAC rules are defined for all actors
+const rbac = cr?.rbac_tenant;
+if (rbac) {
+  const requiredActors = ['client_actor', 'operator_actor', 'captain_actor', 'partner_actor', 'field_actor', 'auth_source'];
+  const missingActors = requiredActors.filter(a => !rbac[a]);
+  if (missingActors.length > 0) {
+    warn(`WARNING: cross_cutting_rules.rbac_tenant missing actor rules: ${missingActors.join(', ')}`);
+  } else {
+    console.log(`RBAC actor rules: ${requiredActors.length} actors defined ✓`);
+  }
+}
+
+// 4. Audit/privacy rule defined
+if (cr?.audit_privacy?.rule) {
+  console.log(`Audit/privacy rule: defined ✓`);
+} else {
+  err('CRITICAL: governance.json cross_cutting_rules.audit_privacy.rule not defined');
+}
+
+// 5. Rollback/compensation rules defined
+const rollback = cr?.rollback_compensation;
+if (rollback && Object.keys(rollback).length >= 3) {
+  console.log(`Rollback/compensation rules: ${Object.keys(rollback).length} scenarios defined ✓`);
+} else {
+  warn('WARNING: cross_cutting_rules.rollback_compensation should have >= 3 scenarios');
+}
+
+// 6. Surface ownership map — all DSH surfaces are UI-only
+const REQUIRED_SURFACES = ['app-client', 'app-partner', 'app-captain', 'app-field', 'control-panel'];
+if (surfMap) {
+  const surfacesObj = surfMap.surfaces || surfMap;
+  for (const surf of REQUIRED_SURFACES) {
+    const s = surfacesObj[surf];
+    if (!s) { warn(`WARNING: surface-ownership-map.json missing surface: ${surf}`); continue; }
+    if (!s.is_ui_only) {
+      err(`CRITICAL: surface '${surf}' in surface-ownership-map.json is not declared is_ui_only: true`);
+    }
+    if (!s.dsh_shared_brain && !s.owning_shared_brain) {
+      warn(`WARNING: surface '${surf}' missing dsh_shared_brain or owning_shared_brain`);
+    }
+    if (!s.forbidden_content || !Array.isArray(s.forbidden_content)) {
+      warn(`WARNING: surface '${surf}' missing forbidden_content array`);
+    }
+  }
+  console.log(`Surface UI-only enforcement: checked ${REQUIRED_SURFACES.length} surfaces ✓`);
+}
+
+// 7. Topic registry — no topic references control-panel without sections
+if (topicReg) {
+  const topicsObj = topicReg.topics || topicReg;
+  const topics = Array.isArray(topicsObj) ? topicsObj : Object.values(topicsObj);
+  const cpMissing = topics.filter(t =>
+    t && Array.isArray(t.required_surfaces) &&
+    (t.required_surfaces.includes('control-panel') || t.optional_surfaces?.includes('control-panel')) &&
+    !t.primary_control_panel_section
+  );
+  if (cpMissing.length > 0) {
+    err(`CRITICAL: ${cpMissing.length} topics have control-panel surface but no primary_control_panel_section`);
+  } else {
+    console.log(`Topic control-panel section naming: all topics properly scoped ✓`);
+  }
+
+  // No topic declares wlt financial domains as DSH-owned
+  const DSH_FORBIDDEN_CAPS = ['wallet', 'payment_session', 'refund', 'settlement', 'payout', 'commission', 'COD_financial', 'ledger', 'reconciliation'];
+  const dshTopics = topics.filter(t => t && t.owning_service === 'dsh');
+  const dshFinViolations = [];
+  for (const t of dshTopics) {
+    const scopeStr = JSON.stringify(t.in_scope || '').toLowerCase();
+    for (const cap of DSH_FORBIDDEN_CAPS) {
+      if (scopeStr.includes(cap.toLowerCase()) && !scopeStr.includes('reference') && !scopeStr.includes('display') && !scopeStr.includes('read-only')) {
+        dshFinViolations.push(`${t.topic_id}:${cap}`);
       }
     }
-    row.push(field);
-    result.push(row);
   }
-  return result;
-}
-
-// 1. File existence
-if (!existsSync(V2_PATH)) {
-  err('CRITICAL: slice_execution_master_matrix.csv does not exist');
-  console.error('FAIL — missing V2 matrix');
-  process.exit(1);
-}
-
-const content = readFileSync(V2_PATH, 'utf8');
-const allRows = parseCSV(content);
-const headers = allRows[0];
-const dataRows = allRows.slice(1);
-
-const colIdx = {};
-headers.forEach((h, i) => colIdx[h] = i);
-
-function get(row, col) {
-  const i = colIdx[col];
-  return i !== undefined ? (row[i] || '').trim() : '';
-}
-
-// 2. Critical columns
-const CRITICAL_COLS = [
-  'master_id','service','slice_id','surface','execution_domain','app',
-  'decision','status','state_transitions','auth_rule','idempotency_required',
-  'observability_rule','risk','rollback','error_cases','negative_cases',
-  'performance_rule','ui_kit_compliance','evidence_required','notes'
-];
-const missingCritical = CRITICAL_COLS.filter(c => !colIdx.hasOwnProperty(c));
-if (missingCritical.length > 0) {
-  err(`CRITICAL: Missing critical columns: ${missingCritical.join(', ')}`);
-}
-
-// 3. master_id uniqueness
-const masterIds = dataRows.map(r => get(r, 'master_id'));
-const masterIdCounts = {};
-masterIds.forEach(id => masterIdCounts[id] = (masterIdCounts[id] || 0) + 1);
-const dupMasterIds = Object.entries(masterIdCounts).filter(([k,v]) => v > 1);
-if (dupMasterIds.length > 0) {
-  err(`CRITICAL: Duplicate master_id values: ${dupMasterIds.map(([k,v]) => `${k}(x${v})`).join(', ')}`);
-}
-
-// 4. duplicate_key uniqueness
-if (colIdx['duplicate_key']) {
-  const dupKeys = {};
-  dataRows.forEach(r => {
-    const k = get(r, 'duplicate_key');
-    if (k) dupKeys[k] = (dupKeys[k] || 0) + 1;
-  });
-  const dups = Object.entries(dupKeys).filter(([k,v]) => v > 1);
-  if (dups.length > 0) {
-    warn(`WARNING: Duplicate duplicate_key values: ${dups.map(([k,v]) => `${k}(x${v})`).join(', ')}`);
+  if (dshFinViolations.length > 0) {
+    err(`CRITICAL: DSH topics with financial ownership violations: ${dshFinViolations.join(', ')}`);
+  } else {
+    console.log('DSH topic financial ownership violations: 0 ✓');
   }
 }
 
-// 5. Allowed decision enum
-const ALLOWED_DECISIONS = new Set([
-  'ADOPT_AS_IS','ADAPT_NORMALIZE','REWRITE_FROM_SPEC','REFERENCE_ONLY',
-  'REJECT','BLOCKED_NEEDS_EVIDENCE','BLOCKED_NEEDS_API_CONTRACT',
-  'BLOCKED_NEEDS_WLT','BLOCKED_NEEDS_DOMAIN_MODEL','BLOCKED_NEEDS_DB_SHAPE',
-  'BLOCKED_NEEDS_PROVIDER_DECISION','BLOCKED_NEEDS_VISUAL_EVIDENCE',''
-]);
-const invalidDecisions = dataRows.filter(r => !ALLOWED_DECISIONS.has(get(r, 'decision')));
-if (invalidDecisions.length > 0) {
-  err(`CRITICAL: ${invalidDecisions.length} rows with invalid decision values: ${[...new Set(invalidDecisions.map(r => get(r, 'decision')))].join(', ')}`);
-}
-
-// 6. Allowed surface enum
-const ALLOWED_SURFACES = new Set([
-  'app-client','app-partner','app-captain','app-field','control-panel',
-  'webapp','website','shared','all-surfaces','system','N/A',''
-]);
-const invalidSurfaces = dataRows.filter(r => !ALLOWED_SURFACES.has(get(r, 'surface')));
-if (invalidSurfaces.length > 0) {
-  err(`CRITICAL: ${invalidSurfaces.length} rows with invalid surface values: ${[...new Set(invalidSurfaces.map(r => get(r, 'surface')))].join(', ')}`);
-}
-
-// 7. Prevent backend/infra/evidence/reference in surface
-const invalidSurfaceBackend = dataRows.filter(r => ['backend','infra','evidence','reference'].includes(get(r, 'surface')));
-if (invalidSurfaceBackend.length > 0) {
-  err(`CRITICAL: ${invalidSurfaceBackend.length} rows have backend/infra/evidence/reference in surface column`);
-}
-
-// 8. execution_domain must exist
-if (!colIdx.hasOwnProperty('execution_domain')) {
-  err('CRITICAL: execution_domain column missing');
-}
-
-// 9. DSH-011 must not appear in DSH-015/marketing rows
-const dsh015Rows = dataRows.filter(r => get(r, 'slice_id').includes('DSH-015') || get(r, 'section').toLowerCase().includes('marketing'));
-const dsh015WithDsh011 = dsh015Rows.filter(r =>
-  (get(r, 'api_contract') + get(r, 'notes')).includes('DSH-011') &&
-  !get(r, 'notes').includes('FIXED:')
-);
-if (dsh015WithDsh011.length > 0) {
-  err(`CRITICAL: ${dsh015WithDsh011.length} DSH-015/marketing rows still reference DSH-011`);
-}
-
-// 10. Source coverage from each CSV source
-const SOURCE_FILES = [
-  'extraction_matrix','dsh_wlt_logic_coverage_matrix','control_panel_coverage_matrix',
-  'mobile_ux_journey_matrix','screen_state_coverage_matrix','donor_control_panel_alias_matrix'
-];
-const sourceCoverage = {};
-dataRows.forEach(r => {
-  const sm = get(r, 'source_matrix');
-  sourceCoverage[sm] = (sourceCoverage[sm] || 0) + 1;
-});
-SOURCE_FILES.forEach(sf => {
-  if (!sourceCoverage[sf]) {
-    warn(`WARNING: No rows traced to source: ${sf}`);
-  }
-});
-
-// 11. Financial/WLT/DSH-WLT rows missing idempotency/rollback/state_transitions
-const financialRows = dataRows.filter(r =>
-  get(r, 'service') === 'wlt' || get(r, 'wlt_boundary') || get(r, 'wlt_dependency') ||
-  get(r, 'slice_id').startsWith('WLT') || get(r, 'slice_id').startsWith('DSH-WLT')
-);
-const finMissingIdempotency = financialRows.filter(r => !get(r, 'idempotency_required'));
-const finMissingRollback = financialRows.filter(r => !get(r, 'rollback'));
-const finMissingState = financialRows.filter(r => !get(r, 'state_transitions'));
-if (finMissingIdempotency.length > 0) {
-  err(`CRITICAL: ${finMissingIdempotency.length} financial rows missing idempotency_required`);
-}
-if (finMissingRollback.length > 0) {
-  warn(`WARNING: ${finMissingRollback.length} financial rows missing rollback`);
-}
-if (finMissingState.length > 0) {
-  warn(`WARNING: ${finMissingState.length} financial rows missing state_transitions`);
-}
-
-// 12. UI rows: i18n_rtl_rules and ui_kit_compliance
-const uiSurfaces = new Set(['app-client','app-partner','app-captain','app-field','control-panel','webapp','website']);
-const uiRows = dataRows.filter(r => uiSurfaces.has(get(r, 'surface')));
-if (colIdx.hasOwnProperty('i18n_rtl_rules')) {
-  const uiMissingRtl = uiRows.filter(r => !get(r, 'i18n_rtl_rules'));
-  if (uiMissingRtl.length > 0) {
-    warn(`WARNING: ${uiMissingRtl.length} UI rows missing i18n_rtl_rules`);
+// 8. Architecture map — reserved services must not be active
+const RESERVED_SERVICES = ['knz', 'arb', 'amn', 'esf', 'mrf', 'snd', 'kwd'];
+if (archMap) {
+  const stubServices = archMap.services?.stub_services?.services || [];
+  const notReserved = RESERVED_SERVICES.filter(s => !stubServices.includes(s));
+  if (notReserved.length > 0) {
+    warn(`WARNING: Reserved services not listed in stub_services: ${notReserved.join(', ')}`);
+  } else {
+    console.log(`Reserved services: ${RESERVED_SERVICES.length} services correctly listed as stub_services ✓`);
   }
 }
-const uiMissingKitComp = uiRows.filter(r => !get(r, 'ui_kit_compliance'));
-if (uiMissingKitComp.length > 0) {
-  warn(`WARNING: ${uiMissingKitComp.length} UI rows missing ui_kit_compliance`);
+
+// 9. DSH order state machine defined
+const orderSM = archMap?.dsh_order_state_machine;
+if (!orderSM || !Array.isArray(orderSM.states) || orderSM.states.length < 10) {
+  err('CRITICAL: architecture-map.json dsh_order_state_machine missing or insufficient states');
+} else {
+  console.log(`DSH order state machine: ${orderSM.states.length} states ✓`);
 }
 
-// 13. API/backend rows: auth_rule/error_cases/negative_cases/performance_rule
-const backendRows = dataRows.filter(r => get(r, 'layer').includes('backend') || get(r, 'artifact_type').includes('handler') || get(r, 'artifact_type').includes('route'));
-const backendMissingAuth = backendRows.filter(r => !get(r, 'auth_rule'));
-if (backendMissingAuth.length > 0) {
-  warn(`WARNING: ${backendMissingAuth.length} backend rows missing auth_rule`);
+// 10. Notification triggers defined
+const notifTriggers = archMap?.notification_triggers_summary?.triggers;
+if (!Array.isArray(notifTriggers) || notifTriggers.length < 20) {
+  err(`CRITICAL: notification_triggers_summary.triggers has ${notifTriggers?.length ?? 0} entries — needs >= 20`);
+} else {
+  console.log(`Notification triggers: ${notifTriggers.length} entries ✓`);
 }
 
-// Summary
-const blankDecision = dataRows.filter(r => !get(r, 'decision')).length;
-
-console.log('\n=== GUARD V2 RESULTS ===');
-console.log(`Rows: ${dataRows.length}`);
-console.log(`Columns: ${headers.length}`);
-console.log(`master_id unique: ${dupMasterIds.length === 0}`);
-console.log(`Invalid decisions: ${invalidDecisions.length}`);
-console.log(`Blank decisions: ${blankDecision}`);
-console.log(`Invalid surfaces: ${invalidSurfaces.length}`);
-console.log(`DSH-015 refs to DSH-011: ${dsh015WithDsh011.length}`);
-console.log(`Financial rows missing idempotency: ${finMissingIdempotency.length}`);
-console.log(`Source coverage: ${JSON.stringify(sourceCoverage)}`);
-console.log(`Errors: ${errors.length}`);
-console.log(`Warnings: ${warnings.length}`);
+// --- Summary ---
+const output = {
+  timestamp: new Date().toISOString(),
+  guard: 'v2-json',
+  result: errors.length === 0 ? 'PASS' : 'FAIL',
+  errors,
+  warnings,
+  counts: {
+    cross_cutting_rules: Object.keys(cr || {}).length,
+    surfaces_checked: REQUIRED_SURFACES.length,
+    notification_triggers: notifTriggers?.length ?? 0,
+    dsh_order_states: orderSM?.states?.length ?? 0,
+    dsh_financial_violations: 0
+  }
+};
 
 if (EVIDENCE_ROOT) {
-  const output = {
-    timestamp: new Date().toISOString(),
-    guard: 'v2',
-    result: errors.length === 0 ? 'PASS' : 'FAIL',
-    row_count: dataRows.length,
-    col_count: headers.length,
-    errors,
-    warnings,
-    source_coverage: sourceCoverage,
-    counts: {
-      invalid_decisions: invalidDecisions.length,
-      blank_decisions: blankDecision,
-      invalid_surfaces: invalidSurfaces.length,
-      dsh015_refs_dsh011: dsh015WithDsh011.length,
-      financial_missing_idempotency: finMissingIdempotency.length
-    }
-  };
   try {
     mkdirSync(EVIDENCE_ROOT, { recursive: true });
     writeFileSync(join(EVIDENCE_ROOT, 'guard-v2-output.json'), JSON.stringify(output, null, 2));
   } catch(e) {
-    warn(`Could not write evidence: ${e.message}`);
+    console.warn(`Could not write evidence: ${e.message}`);
   }
 }
 
+console.log('\n=== GUARD V2 (JSON) RESULTS ===');
+console.log(JSON.stringify(output.counts, null, 2));
+console.log(`\nErrors: ${errors.length}, Warnings: ${warnings.length}`);
+
 if (errors.length === 0) {
   console.log('\nRESULT: PASS');
-  console.log(`Errors: 0, Warnings: ${warnings.length}`);
   process.exit(0);
 } else {
   console.log('\nRESULT: FAIL');

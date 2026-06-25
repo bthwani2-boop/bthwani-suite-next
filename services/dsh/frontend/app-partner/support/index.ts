@@ -1,0 +1,1 @@
+export { PartnerSupportScreen } from "./PartnerSupportScreen";

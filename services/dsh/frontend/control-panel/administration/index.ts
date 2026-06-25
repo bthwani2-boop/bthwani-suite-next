@@ -1,0 +1,1 @@
+export { AdministrationScreen } from "./AdministrationScreen";

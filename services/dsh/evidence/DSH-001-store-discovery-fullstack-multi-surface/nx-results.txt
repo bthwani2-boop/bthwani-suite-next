@@ -1,0 +1,23 @@
+
+> bthwani-suite-next@0.0.0 nx:projects C:\bthwani-suite-next
+> nx show projects
+
+control-panel
+app-captain
+app-partner
+app-client
+app-field
+website
+webapp
+app-shell
+ui-kit
+amn
+arb
+dsh
+esf
+knz
+kwd
+mrf
+snd
+wlt
+contracts

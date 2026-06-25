@@ -1,0 +1,180 @@
+{
+  "schema_version": "2.0.0",
+  "last_updated": "2026-06-22",
+  "principle": "WLT is the sole owner of financial truth. DSH is the operational layer. This boundary is enforced by guard and is a DO_NOT_MERGE condition if violated.",
+
+  "dsh_owns": [
+    "stores",
+    "catalog",
+    "categories",
+    "products",
+    "media_references",
+    "cart",
+    "serviceability",
+    "checkout_intent_shell",
+    "orders",
+    "delivery_lifecycle",
+    "partner_readiness",
+    "captain_execution",
+    "field_readiness_onboarding",
+    "support_operations_visibility"
+  ],
+
+  "wlt_owns_exclusively": [
+    "wallet",
+    "payment_session",
+    "refund",
+    "settlement",
+    "payout",
+    "commission",
+    "COD_financial_state",
+    "ledger",
+    "reconciliation",
+    "financial_audit",
+    "finance_reports"
+  ],
+
+  "dsh_allowed_to_store_or_display": [
+    "paymentSessionId (opaque reference ID only — no financial content)",
+    "paymentStatus (read-only display label — no mutation)",
+    "financialReference (opaque reference ID only)",
+    "settlementStatus (read-only label only)"
+  ],
+
+  "dsh_forbidden_financial_operations": [
+    "Computing payment amounts",
+    "Creating payment sessions",
+    "Creating ledger entries",
+    "Triggering payouts",
+    "Calculating commission",
+    "Handling COD collection or mutation",
+    "Running reconciliation",
+    "Finalizing refunds",
+    "Posting settlements",
+    "Any financial mutation outside services/wlt/"
+  ],
+
+  "wlt_runtime_state": {
+    "wlt_000_foundation": "RUNTIME_VERIFIED",
+    "wlt_000_scope": "Reference-only endpoints: payment_status_refs, settlement_status_refs, refund_status_refs, wallet_refs",
+    "wlt_api_port": 58083,
+    "wlt_manifest_state": {
+      "runtimeState": "WLT_000_FOUNDATION_RUNTIME_VERIFIED",
+      "referenceRuntimeVerified": true,
+      "sliceRuntimeVerified": true,
+      "mutationRuntimeReady": false,
+      "mutationSlicesApproved": false,
+      "generatedClientReady": false
+    },
+    "wlt_mutation_apis": "NOT_IMPLEMENTED — WLT-001+ mutation slice NOT_APPROVED_YET",
+    "wlt_generated_client": "NOT_GENERATED — required before any DSH surface consumes WLT data at runtime",
+    "runtime_consumption_allowed": false,
+    "runtime_consumption_blockers": [
+      "WLT-001 is not approved",
+      "mutationRuntimeReady is false",
+      "generatedClientReady is false"
+    ],
+    "wlt_mobile_surfaces": "NOT_STARTED — all mobile WLT surfaces have gitkeep only",
+    "wlt_control_panel": "SKELETON_PROOF_ONLY — WltFinanceReadOnlySkeletonProof.tsx present but not a production screen"
+  },
+
+  "dsh_reference_to_wlt": {
+    "shared_reference_controller": "services/wlt/frontend/shared/dsh/use-wlt-dsh-reference-controller.tsx",
+    "reference_api": "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts",
+    "reference_states": "services/wlt/frontend/shared/dsh/wlt-dsh-reference.states.ts",
+    "reference_view_model": "services/wlt/frontend/shared/dsh/wlt-dsh-reference.view-model.ts",
+    "boundary_types": "services/wlt/frontend/shared/dsh/wlt-dsh-boundary.types.ts",
+    "api_base_url": "services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts",
+    "allowed_usage": "DSH surfaces may import from services/wlt/frontend/shared/dsh/ to read WLT reference status for display. No mutation calls permitted.",
+    "forbidden_usage": "DSH surfaces must NOT call WLT mutation endpoints directly. DSH must NOT own financial state.",
+    "current_active_usage": "NOT_YET_ACTIVE_IN_SURFACES — WLT reference controller is wired but no DSH surface yet renders WLT data (WLT-000 only provides the reference layer)"
+  },
+
+  "wlt_contract_only_rules": {
+    "when_applicable": "When WLT is in CONTRACT_ONLY or foundation-only state (WLT-000)",
+    "forbidden_in_this_state": [
+      "Activating WLT mutation runtime",
+      "Claiming WLT payment/settlement readiness",
+      "Creating financial backend, database, or API within DSH",
+      "Registering PASS for financial mutation tests",
+      "Placing financial mutation inside any DSH layer",
+      "Generating a WLT TypeScript client with mutation operations"
+    ],
+    "current_state": "WLT-000 Foundation RUNTIME_VERIFIED — reference endpoints only"
+  },
+
+  "donor_boundary_assessment": {
+    "financial_mutations_in_dsh": false,
+    "migration_025_removed_financial_columns": true,
+    "detail": "Donor migration 025 explicitly dropped refund_amount and settlement_amount columns from DSH stores. Donor dsh-wlt-boundary.ts declares mutation: forbidden.",
+    "assessment": "CLEAN — boundary is respected in donor. Boundary logic adopted in new repo."
+  },
+
+  "guards": {
+    "primary_guard": "tools/guards/no-financial-mutation-outside-wlt.mjs",
+    "secondary_guard": "tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+    "current_violations": 0,
+    "guard_status": "PASS",
+    "last_verified": "2026-06-22",
+    "violation_policy": "DO_NOT_MERGE if any violation found"
+  },
+
+  "dsh_010_constraint": {
+    "topic": "DSH-010 Finance Visibility",
+    "allowed": "Display WLT-provided settlement and payment status summaries in control-panel finance section using FinanceReadOnlyFrame archetype",
+    "forbidden": "Any calculation, mutation, or aggregation of financial data within DSH",
+    "requires": "WLT settlement-summary and payment-status-summary read endpoints (require WLT-001 approval)",
+    "archetype": "FinanceReadOnlyFrame from shared/app-shell"
+  },
+
+  "wlt_activation_sequence": {
+    "step_1": "WLT-000 Foundation — RUNTIME_VERIFIED (done — reference endpoints only)",
+    "step_2": "WLT-001 Mutation APIs (payment, refund) — NOT_APPROVED_YET",
+    "step_3": "Generate WLT TypeScript client after WLT-001 contract is defined",
+    "step_4": "DSH-005 Checkout Intent consumes WLT payment-sessions reference",
+    "step_5": "DSH-010 Finance Visibility consumes WLT settlement-summary read endpoint",
+    "current_step": "step_1 reference-only foundation complete. Runtime consumption and all mutation readiness remain blocked until step_2 approval and step_3 generated client completion."
+  },
+
+  "violations_register": {
+    "active_violations": 0,
+    "last_checked": "2026-06-22",
+    "note": "No DSH/WLT boundary violations found in current codebase audit."
+  },
+
+  "wlt_financial_state_machine": {
+    "owner": "wlt",
+    "principle": "WLT owns all financial state. DSH references paymentSessionId/paymentStatus only. DSH must not replicate, compute, or store financial state calculations.",
+    "db_table": "payment_sessions",
+    "db_columns": ["state", "audit_log", "idempotency_keys"],
+    "idempotency_key": "payment_session_id + idempotency_key",
+    "event_on_every_transition": "wlt.financial.state.changed (with correlation_id)",
+    "provider_decision": "TBD_CONFIG_REQUIRED — abstract provider contract; decided at WLT-001 approval",
+    "error_cases": ["duplicate_idempotency_key", "provider_timeout", "auth_failure", "insufficient_balance", "invalid_transition"],
+    "negative_cases": ["partial capture", "provider callback late", "settlement mismatch", "COD reconciliation failure"],
+    "rollback_rule": "partial refund -> recalculate commission/tax/settlement through WLT; invalid transition -> no state mutation",
+    "states": [
+      "payment-initiated",
+      "authorization-hold",
+      "authorized",
+      "capture-in-progress",
+      "captured",
+      "settlement-in-progress",
+      "settled",
+      "refund-requested",
+      "refund-in-progress",
+      "refund-completed",
+      "refund-failed",
+      "reversal-requested",
+      "reversal-completed",
+      "failed",
+      "expired"
+    ],
+    "dsh_reference_policy": {
+      "allowed": "DSH surfaces may display paymentSessionId and paymentStatus (read-only reference). No other financial state visible to DSH.",
+      "forbidden": "DSH must not consume, store, or react to WLT internal state transitions other than final paymentStatus references."
+    },
+    "required_for_topic": "WLT-001 (Payment Sessions), WLT-002 (Settlements), WLT-003 (Refunds) — all require separate approval",
+    "note": "Full WLT financial state machine diagram required before WLT-001 execution. Currently BLOCKED_NEEDS_WLT."
+  }
+}

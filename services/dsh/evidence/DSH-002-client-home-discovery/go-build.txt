@@ -1,0 +1,1 @@
+(no output — go build ./... passed with 0 errors)

@@ -1,0 +1,40 @@
+DSH-001 Remote CI Status
+=========================
+Date: 2026-06-22
+Branch: starting-implementing-slices
+HEAD: 708bb5ab19ea11b355be1e6edf04a202c3777cea
+
+CI_NOT_CONFIGURED_FOR_THIS_BRANCH
+REMOTE_CI_NOT_AVAILABLE
+LOCAL_GATES_PUSHED_AS_EVIDENCE
+
+GitHub Actions workflows are not configured for the starting-implementing-slices branch.
+No workflow_runs are available for this branch in the remote CI.
+
+VERIFICATION METHOD:
+  RUNTIME_VERIFIED_BY_LOCAL_EVIDENCE_PUSHED_TO_REMOTE
+  (NOT: VERIFIED_BY_REMOTE_CI)
+
+LOCAL VERIFICATION CHAIN (all PASS):
+  git diff --check                            PASS (0 whitespace errors)
+  pnpm --dir shared/app-shell typecheck       PASS (0 errors)
+  pnpm --dir shared/ui-kit typecheck          PASS (0 errors)
+  pnpm --dir services/dsh typecheck           PASS (0 errors)
+  pnpm --dir apps/control-panel/runtime typecheck  PASS (0 errors)
+  pnpm --dir services/dsh test                PASS (118 pass / 0 fail)
+  guard:dsh-frontend-shared-ownership         PASS
+  guard:dsh-001-cross-surface-dependency-map  PASS
+  guard:no-financial-mutation-outside-wlt     PASS
+  guard:app-shell-control-panel               PASS
+  control-panel:design-gate                   PASS
+  guard:matrix:v3                             PASS
+  guard:wlt-dsh-frontend-shared-ownership     PASS
+  foundation:gate                             PASS
+  slice:gate                                  PASS
+  runtime:all                                 PASS
+  /dsh/health                                 healthy
+  /dsh/readiness                              ready
+  /dsh/stores?limit=10&offset=0               6 stores returned
+
+This evidence is pushed to:
+  origin/starting-implementing-slices @ 708bb5ab19ea11b355be1e6edf04a202c3777cea

@@ -1,0 +1,91 @@
+DSH-006 Order Fulfillment & Partner Acceptance — API Smoke Evidence
+DATE: 2026-06-24
+====================================================================
+
+=== Prerequisites ===
+Migration dsh-006_orders.sql: APPLIED 2026-06-24
+  CREATE TABLE dsh_orders           — PASS
+  CREATE TABLE dsh_order_items      — PASS
+  CREATE TABLE dsh_order_status_events — PASS
+  6 indexes created                 — PASS
+
+store_id: TEXT (matches dsh_stores.id which is TEXT)
+checkout_intent_id: UUID FK (matches dsh_checkout_intents.id which is UUID)
+wlt_payment_ref_id: TEXT DEFAULT '' (opaque read-only WLT reference — never mutated by DSH)
+
+=== DSH-006 Full API Smoke ===
+Actor: dev-bypass-client (role=client), dev-bypass-partner (role=partner), dev-bypass-operator (role=operator)
+
+POST /dsh/client/checkout-intents
+  → 201 {intent: {id: bdfe07df-b657-4e28-9a65-e8d0fbadfb0c, state: pending}}
+
+POST /dsh/client/orders
+  body: {checkoutIntentId, storeId: store-1001, items: [{productId: prod-001, quantity: 2, unitPrice: 18.50}]}
+  → 201 {order: {id: a0b44a21-..., status: pending, items: [1 item], wltPaymentRefId: ""}}
+  Result: PASS
+
+GET /dsh/client/orders
+  → 200 {orders: [1 order, status: pending]}
+  Result: PASS
+
+GET /dsh/client/orders/{orderId}
+  → 200 {order: {status: pending, items: 1}}
+  Result: PASS
+
+GET /dsh/partner/orders?storeId=store-1001
+  → 200 {orders: [1 order, status: pending]}
+  Result: PASS
+
+POST /dsh/partner/orders/{orderId}/accept
+  → 200 {order: {status: store_accepted}}
+  Transition: pending → store_accepted — PASS
+
+POST /dsh/partner/orders/{orderId}/preparing
+  → 200 {order: {status: preparing}}
+  Transition: store_accepted → preparing — PASS
+
+POST /dsh/partner/orders/{orderId}/ready
+  → 200 {order: {status: ready_for_pickup}}
+  Transition: preparing → ready_for_pickup — PASS
+
+POST /dsh/partner/orders/{orderId}/reject (with reason)
+  body: {reason: "المنتج غير متاح حالياً"}
+  → 200 {order: {status: cancelled, rejectionReason: "المنتج غير متاح حالياً"}}
+  Transition: pending → cancelled — PASS
+
+POST /dsh/partner/orders/{orderId}/reject (no reason — validation)
+  body: {reason: ""}
+  → 400 {code: INVALID_REQUEST}
+  Mandatory rejection reason enforced — PASS
+
+GET /dsh/operator/orders
+  → 200 {orders: [1 order]}
+  Result: PASS
+
+GET /dsh/operator/orders?status=ready_for_pickup
+  → 200 {orders: [1 order, count: 1]}
+  Status filter working — PASS
+
+=== State Machine Verification ===
+pending → store_accepted (via accept): PASS
+store_accepted → preparing (via preparing): PASS
+preparing → ready_for_pickup (via ready): PASS
+pending → cancelled (via reject with reason): PASS
+reject with empty reason → 400 INVALID_REQUEST: PASS
+
+=== WLT Boundary ===
+wltPaymentRefId = '' (empty string) in all orders — CONTRACT_ONLY reference.
+DSH never executed payment, wallet mutation, refund, settlement, or ledger operation.
+guard:no-financial-mutation-outside-wlt: PASS
+
+=== Runtime State ===
+bthwani-dsh-api-runtime: Up (healthy) — rebuilt with DSH-006 routes at port 58080
+bthwani-postgres-runtime: Up — dsh_orders, dsh_order_items, dsh_order_status_events: LIVE
+bthwani-identity-api-runtime: Up (healthy)
+
+=== Summary ===
+9/9 DSH-006 endpoints smoke-tested: PASS
+State machine transitions: PASS (4/4)
+Validation guard (reject no reason): PASS
+WLT boundary: PASS
+DSH-006 API smoke: PASS

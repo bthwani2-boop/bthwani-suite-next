@@ -2,36 +2,281 @@ export const DSH_CAPABILITY_STATUS = [
   "contract-active",
   "planned",
   "blocked-runtime",
+  "runtime-verified",
+  "experience-fix-required",
 ] as const;
 
 export type DshCapabilityStatus = (typeof DSH_CAPABILITY_STATUS)[number];
 
 export type DshCapability = {
-  readonly id: "dsh.system.readiness" | "dsh.store.discovery";
+  readonly id:
+    | "dsh.system.readiness"
+    | "dsh.store.discovery"
+    | "dsh.client.home-discovery"
+    | "dsh.client.catalog"
+    | "dsh.client.cart"
+    | "dsh.client.checkout"
+    | "dsh.client.orders"
+    | "dsh.client.dispatch"
+    | "dsh.field.readiness"
+    | "dsh.support.hub"
+    | "dsh.operator.analytics";
   readonly status: DshCapabilityStatus;
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
   readonly runtimeBound: boolean;
+  readonly relatedFutureSurfaces?: readonly DshSurfaceDependency[];
+  readonly relatedFutureCapabilities?: readonly string[];
   readonly closureState:
     | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
-    | "NOT_APPROVED_YET";
+    | "NOT_APPROVED_YET"
+    | "RUNTIME_VERIFIED"
+    | "FIX_REQUIRED"
+    | "CLIENT_REVERIFIED_ONLY"
+    | "CONTROL_PANEL_NOT_STARTED"
+    | "TOPIC_CLOSURE_NOT_APPROVED"
+    | "IMPLEMENTED_MULTI_SURFACE";
+  readonly topic?: "stores" | "catalog" | "commerce" | "field-ops" | "support" | "analytics";
+  readonly topicScope?: readonly (
+    | "discovery"
+    | "governance"
+    | "readiness"
+    | "verification"
+    | "pickup-context"
+    | "browse"
+    | "partner-manage"
+    | "operator-govern"
+    | "cart"
+    | "serviceability"
+    | "checkout"
+    | "wlt-handoff"
+    | "order-fulfillment"
+    | "partner-acceptance"
+    | "dispatch"
+    | "captain-delivery"
+    | "client-tracking"
+    | "field-visits"
+    | "readiness-checklist"
+    | "escalation"
+    | "partner-onboarding"
+    | "ticket-submission"
+    | "ticket-management"
+    | "incident-management"
+    | "platform-kpis"
+    | "order-analytics"
+    | "delivery-analytics"
+    | "support-analytics"
+    | "store-analytics"
+    | "partner-performance"
+  )[];
 };
+
+export type DshSurfaceDependency =
+  | "app-partner"
+  | "app-field"
+  | "app-captain";
 
 export const DSH_CAPABILITY_MAP = [
   {
     id: "dsh.system.readiness",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: ["getDshHealth", "getDshReadiness"],
     surfaces: [],
-    runtimeBound: false,
-    closureState: "CONTRACT_ACTIVE_RUNTIME_BLOCKED",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
   },
   {
     id: "dsh.store.discovery",
-    status: "planned",
-    contractOperations: [],
-    surfaces: ["app-client"],
-    runtimeBound: false,
-    closureState: "NOT_APPROVED_YET",
+    status: "runtime-verified",
+    contractOperations: ["listDshStores", "getDshStore"],
+    surfaces: [
+      "app-client",
+      "control-panel",
+      "app-partner",
+      "app-field",
+      "app-captain",
+    ],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "stores",
+    topicScope: ["discovery", "governance", "readiness", "verification", "pickup-context"],
+  },
+  {
+    id: "dsh.client.home-discovery",
+    status: "runtime-verified",
+    contractOperations: [
+      "getDshHomeDiscovery",
+      "listOperatorHomeDiscoveryContent",
+      "createOperatorHomeDiscoveryContent",
+      "updateOperatorHomeDiscoveryContent",
+      "deleteOperatorHomeDiscoveryContent",
+    ],
+    surfaces: ["app-client", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "stores",
+    topicScope: ["discovery"],
+  },
+  {
+    id: "dsh.client.catalog",
+    status: "runtime-verified",
+    contractOperations: [
+      "getPublishedDshCatalog",
+      "getPartnerDshCatalog",
+      "createPartnerCatalogCategory",
+      "updatePartnerCatalogCategory",
+      "deletePartnerCatalogCategory",
+      "createPartnerCatalogProduct",
+      "updatePartnerCatalogProduct",
+      "deletePartnerCatalogProduct",
+      "createPartnerCatalogMediaUploadIntent",
+      "completePartnerCatalogMedia",
+      "deletePartnerCatalogMedia",
+      "submitPartnerCatalog",
+      "listOperatorCatalogSubmissions",
+      "decideOperatorCatalogSubmission",
+      "listOperatorCatalogAudit",
+    ],
+    surfaces: ["app-client", "app-partner", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "catalog",
+    topicScope: ["browse", "partner-manage", "operator-govern"],
+  },
+  // ── DSH-004: Cart & Serviceability ───────────────────────────────────────
+  {
+    id: "dsh.client.cart",
+    status: "runtime-verified",
+    contractOperations: [
+      "getDshClientCart",
+      "upsertDshCartItem",
+      "removeDshCartItem",
+      "clearDshCart",
+      "checkDshCartServiceability",
+      "listOperatorCarts",
+    ],
+    surfaces: ["app-client", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "commerce",
+    topicScope: ["cart", "serviceability"],
+  },
+  // ── DSH-005: Checkout Intent & WLT Handoff ───────────────────────────────
+  {
+    id: "dsh.client.checkout",
+    status: "runtime-verified",
+    contractOperations: [
+      "createDshCheckoutIntent",
+      "getDshCheckoutIntent",
+      "cancelDshCheckoutIntent",
+      "listOperatorCheckoutIntents",
+    ],
+    surfaces: ["app-client", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "commerce",
+    topicScope: ["checkout", "wlt-handoff"],
+  },
+  // ── DSH-006: Order Fulfillment & Partner Acceptance ──────────────────────
+  {
+    id: "dsh.client.orders",
+    status: "runtime-verified",
+    contractOperations: [
+      "createDshOrder",
+      "listDshClientOrders",
+      "getDshClientOrder",
+      "listDshPartnerOrders",
+      "acceptDshPartnerOrder",
+      "rejectDshPartnerOrder",
+      "markDshOrderPreparing",
+      "markDshOrderReadyForPickup",
+      "listDshOperatorOrders",
+    ],
+    surfaces: ["app-client", "app-partner", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "commerce",
+    topicScope: ["order-fulfillment", "partner-acceptance"],
+  },
+  // ── DSH-007: Dispatch & Captain Delivery Lifecycle ───────────────────────
+  {
+    id: "dsh.client.dispatch",
+    status: "runtime-verified",
+    contractOperations: [
+      "createDshDispatchAssignment",
+      "listDshOperatorDispatchAssignments",
+      "listDshCaptainDispatchAssignments",
+      "acceptDshDispatchAssignment",
+      "declineDshDispatchAssignment",
+      "updateDshDeliveryStatus",
+      "submitDshDispatchPoD",
+      "getDshClientTracking",
+    ],
+    surfaces: ["app-client", "app-captain", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "commerce",
+    topicScope: ["dispatch", "captain-delivery", "client-tracking"],
+  },
+  // ── DSH-008: Field Verification & Store Quality Assurance ────────────────
+  {
+    id: "dsh.field.readiness",
+    status: "runtime-verified",
+    contractOperations: [
+      "createDshFieldVisit",
+      "listDshFieldVisits",
+      "completeDshFieldVisit",
+      "upsertDshReadinessCheck",
+      "listDshVisitChecks",
+      "createDshReadinessEscalation",
+      "listDshOperatorEscalations",
+      "updateDshOperatorEscalation",
+      "getDshPartnerOnboardingStatus",
+    ],
+    surfaces: ["app-field", "app-partner", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "field-ops",
+    topicScope: ["field-visits", "readiness-checklist", "escalation", "partner-onboarding"],
+  },
+  // ── DSH-009: Support, Incidents & Escalation Room ────────────────────────
+  {
+    id: "dsh.support.hub",
+    status: "runtime-verified",
+    contractOperations: [
+      "createDshSupportTicket",
+      "listDshMyTickets",
+      "getDshSupportTicket",
+      "addDshTicketMessage",
+      "listDshTicketMessages",
+      "listDshOperatorTickets",
+      "updateDshOperatorTicket",
+      "createDshIncident",
+      "listDshIncidents",
+      "updateDshIncident",
+    ],
+    surfaces: ["app-client", "app-partner", "control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "support",
+    topicScope: ["ticket-submission", "ticket-management", "incident-management"],
+  },
+  // ── DSH-010: Platform Analytics & Operational Reporting ──────────────────
+  {
+    id: "dsh.operator.analytics",
+    status: "runtime-verified",
+    contractOperations: [
+      "getDshPlatformKpis",
+      "getDshOrderAnalytics",
+      "getDshDeliveryAnalytics",
+      "getDshSupportAnalytics",
+      "getDshStoreAnalytics",
+      "getDshPartnerPerformance",
+    ],
+    surfaces: ["control-panel", "app-partner"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "analytics",
+    topicScope: ["platform-kpis", "order-analytics", "delivery-analytics", "support-analytics", "store-analytics", "partner-performance"],
   },
 ] as const satisfies readonly DshCapability[];

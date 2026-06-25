@@ -1,0 +1,44 @@
+TEST RESULTS — DSH-001 Manual Closure
+date=2026-06-22
+head=dd54117f744a39fd00ad0f3c95c5663ac760cf31
+command=pnpm --dir services/dsh test
+
+tests=118
+suites=33
+pass=118
+fail=0
+cancelled=0
+skipped=0
+todo=0
+duration_ms=2238
+
+Test suites:
+- admin state constructors (6 tests)
+- adminSuccessState (3 tests)
+- ADMIN_FILTERS_EMPTY (1 test)
+- toAdminTableRow (9 tests)
+- toAdminDetail (2 tests)
+- toAdminKpiSummary (2 tests)
+- applyAdminFilters (7 tests)
+- validateDshApiBaseUrl rejects old ports (9 tests)
+- validateDshApiBaseUrl accepts canonical port (5 tests)
+- validateDshApiBaseUrl rejects malformed (3 tests)
+- resolveDshApiBaseUrl defaults (1 test)
+- home discovery controller core (3 tests)
+- canViewHomeDiscovery (1 test)
+- applyDiscoveryFilter all/favorites/nearest/offers/new (7 tests)
+- store admin controller core (5 tests)
+- createDshStoreClient (2 tests)
+- client error shape (1 test)
+- error mapping classification (2 tests)
+- store discovery controller core (5 tests)
+- validateListQuery (6 tests)
+- isStoreVisibleToClient (3 tests)
+- applyClientVisibilityFilter (1 test)
+- rowToSummary (2 tests)
+- rowToDetail (1 test)
+- state constructors (4 tests)
+- successState (3 tests)
+- toCardViewModel (14 tests)
+- toDetailViewModel (1 test)
+- store role context controller core (5 tests)

@@ -1,0 +1,8 @@
+﻿SURFACE: app-captain
+ROLE: captain-store-pickup-context
+SCOPE: store-name, pickup-location, operating-state, service-modes
+FORBIDDEN: order-assignment, delivery-lifecycle, earnings, finance
+RESULT: PASS (UI-only screen consumes useStoreRoleContextController)
+
+Screenshot:
+screenshots/app-captain-store-pickup-context.png

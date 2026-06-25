@@ -18,12 +18,15 @@
       "no-safe-area-in-ui-kit-runtime",
       "no-vector-icons-direct-in-ui-kit",
       "no-domain-component-in-ui-kit",
+      "no-app-shell-design-ownership",
+      "no-duplicate-design-primitives",
       "no-unsafe-ui-kit-tamagui-casts",
       "ui-kit-token-binding",
       "no-preview-demo-mock-runtime",
       "no-broken-imports",
       "service-fullstack-linkage",
       "dsh-service-activation",
+      "go-backend-runtime",
       "performance-runtime-baseline",
       "docker-runtime-profiles"
     ],
@@ -35,8 +38,15 @@
       "no-broken-imports",
       "service-fullstack-linkage",
       "dsh-service-activation",
+      "go-backend-runtime",
       "performance-runtime-baseline",
-      "docker-runtime-profiles"
+      "docker-runtime-profiles",
+      "dsh-frontend-shared-ownership",
+      "wlt-dsh-frontend-shared-ownership",
+      "canonical-host-ports",
+      "dsh-001-cross-surface-dependency-map",
+      "dsh-003-catalog-ownership",
+      "dsh-004-cart-serviceability"
     ]
   },
   "guards": [
@@ -91,6 +101,16 @@
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {
+      "id": "no-app-shell-design-ownership",
+      "path": "tools/guards/no-app-shell-design-ownership.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
+      "id": "no-duplicate-design-primitives",
+      "path": "tools/guards/no-duplicate-design-primitives.mjs",
+      "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
+    },
+    {
       "id": "no-unsafe-ui-kit-tamagui-casts",
       "path": "tools/guards/no-unsafe-ui-kit-tamagui-casts.mjs",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
@@ -136,6 +156,11 @@
       "policySource": "governance/13_DSH_SERVICE_ACTIVATION.md"
     },
     {
+      "id": "go-backend-runtime",
+      "path": "tools/guards/guard-go-backend-runtime.mjs",
+      "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
       "id": "performance-runtime-baseline",
       "path": "tools/guards/performance-runtime-baseline.mjs",
       "policySource": "governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md"
@@ -144,6 +169,36 @@
       "id": "docker-runtime-profiles",
       "path": "tools/guards/docker-runtime-profiles.mjs",
       "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
+      "id": "dsh-frontend-shared-ownership",
+      "path": "tools/guards/dsh-frontend-shared-ownership-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "wlt-dsh-frontend-shared-ownership",
+      "path": "tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "canonical-host-ports",
+      "path": "tools/guards/canonical-host-ports.mjs",
+      "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
+      "id": "dsh-001-cross-surface-dependency-map",
+      "path": "tools/guards/dsh-001-cross-surface-dependency-map.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "dsh-003-catalog-ownership",
+      "path": "tools/guards/dsh-003-catalog-ownership-gate.mjs",
+      "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
+    },
+    {
+      "id": "dsh-004-cart-serviceability",
+      "path": "tools/guards/dsh-004-cart-serviceability-gate.mjs",
+      "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
     }
   ]
 }

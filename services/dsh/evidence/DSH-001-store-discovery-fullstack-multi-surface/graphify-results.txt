@@ -1,0 +1,10 @@
+DSH-001 Graphify Results — 2026-06-24
+Standard: CODE_BASED_FULL_STACK_CLOSURE
+
+pnpm run graphify:code: PASS
+  AST extraction: 1427/1427 files (100%) [8 workers]
+  [graphify watch] No code-graph topology changes detected; outputs left untouched.
+  Code graph updated. No LLM needed for code-only extraction.
+
+Result: GRAPHIFY_CODE_PASS (no topology changes after all fixes applied)
+CI: CI_NOT_CONFIGURED — non-blocking by policy.

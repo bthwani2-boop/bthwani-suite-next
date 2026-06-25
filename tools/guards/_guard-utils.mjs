@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-export const repoRoot = process.cwd();
+// Anchor root to this file's location (tools/guards/ → repo root) so guards work
+// correctly whether invoked from the repo root or from a package subdirectory.
+export const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const EXCLUDED_DIRS = new Set([
   ".git",
@@ -131,6 +134,12 @@ export function existsResolved(baseFile, specifier) {
     path.join(target, "index.jsx"),
     path.join(target, "index.mjs")
   ];
+
+  // NodeNext TS-to-JS: a .js import may resolve to a .ts source file
+  if (specifier.endsWith(".js")) {
+    const tsBase = target.slice(0, -3);
+    candidates.push(`${tsBase}.ts`, `${tsBase}.tsx`);
+  }
 
   return candidates.some((candidate) => fs.existsSync(candidate));
 }

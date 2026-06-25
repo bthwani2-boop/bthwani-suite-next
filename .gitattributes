@@ -1,0 +1,3 @@
+# Evidence files contain raw API/command output that legitimately has trailing whitespace.
+services/*/evidence/**  -whitespace
+tools/registry/runs/**  -whitespace

@@ -1,0 +1,8 @@
+﻿SURFACE: app-field
+ROLE: field-store-verification
+SCOPE: store-location, media-evidence-readiness, verification-checklist
+FORBIDDEN: unrelated-field-workflow, orders, finance
+RESULT: PASS (UI-only screen consumes useStoreRoleContextController)
+
+Screenshot:
+screenshots/app-field-store-verification.png

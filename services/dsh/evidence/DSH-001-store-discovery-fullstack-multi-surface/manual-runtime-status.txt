@@ -1,0 +1,17 @@
+
+> bthwani-suite-next@0.0.0 runtime:status C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles dsh,media
+
+=== runtime:status
+NAME                       IMAGE                                      COMMAND                  SERVICE    CREATED             STATUS                    PORTS
+bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    "/app/dsh-api"           dsh-api    24 minutes ago      Up 23 minutes (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   "/usr/bin/docker-ent…"   minio      24 minutes ago      Up 23 minutes             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
+bthwani-postgres-runtime   postgres:16-alpine                         "docker-entrypoint.s…"   postgres   24 minutes ago      Up 23 minutes (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-wlt-api-runtime    bthwani-runtime-wlt-api                    "/app/wlt-api"           wlt-api    About an hour ago   Up 55 minutes (healthy)   0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp
+
+--- docker ps ---
+NAMES                      IMAGE                                      STATUS                    PORTS
+bthwani-dsh-api-runtime    bthwani-runtime-dsh-api                    Up 23 minutes (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-postgres-runtime   postgres:16-alpine                         Up 24 minutes (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-minio-runtime      minio/minio:RELEASE.2024-11-07T00-52-20Z   Up 24 minutes             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
+bthwani-wlt-api-runtime    bthwani-runtime-wlt-api                    Up 55 minutes (healthy)   0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp

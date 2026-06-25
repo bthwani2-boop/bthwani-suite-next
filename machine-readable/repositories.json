@@ -1,0 +1,180 @@
+{
+  "schema_version": "2.0.0",
+  "last_updated": "2026-06-22",
+
+  "new_repo": {
+    "name": "bthwani-suite-next",
+    "remote": "bthwani2-boop/bthwani-suite-next",
+    "local_path": "C:\\bthwani-suite-next",
+    "active_branch": "starting-implementing-slices",
+    "base_branch": "master",
+    "role": "CANONICAL_IMPLEMENTATION_TARGET",
+    "head_at_audit": "f40ef7362a459cfe058919ab37a47816e738a3be",
+    "policy": "All implementation happens here. This is the source of architectural truth.",
+    "forbidden": [
+      "Copy old repo structure wholesale",
+      "Import bthwani-suite paths directly",
+      "Use donor port mapping (8080-8084, 3000) as host ports",
+      "Carry over donor mock/demo/preview runtime data",
+      "Import donor memory repositories",
+      "Copy donor CORS wildcard"
+    ],
+    "github_remote_first_policy": "Always check GitHub remote state before relying on local cache. Run git fetch origin before any status assessment."
+  },
+
+  "donor_repo": {
+    "name": "bthwani-suite",
+    "remote": "READ_ONLY — donor reference only",
+    "local_path": "C:\\bthwani-suite",
+    "branch": "realtest",
+    "head_at_audit": "e5080831",
+    "last_commit": "Remove fake runtime actor id fallbacks",
+    "role": "DONOR_REFERENCE_READ_ONLY",
+    "policy": "NEVER modify the donor repo. Read for analysis and extraction only.",
+    "dirty_files_at_audit": ["control-panel/runtime/next-env.d.ts"],
+    "extraction_summary": {
+      "total_items_analyzed": 57,
+      "ADOPT_AS_IS": 28,
+      "ADAPT_NORMALIZE": 18,
+      "REJECT_RUNTIME_RISK": 3,
+      "REFERENCE_ONLY": 8
+    }
+  },
+
+  "source_of_truth_hierarchy": [
+    "1. GitHub Remote + live code (new repo)",
+    "2. Guard outputs + tests + runtime evidence",
+    "3. machine-readable/*.json",
+    "4. governance/*.md"
+  ],
+
+  "no_donor_mutation_policy": "NEVER write to or modify the donor repo. It is read-only analysis source.",
+
+  "donor_extraction_decisions": {
+    "ADOPT_AS_IS": {
+      "items": [
+        "dsh/backend/internal/store/postgres_*.go — production SQL repos",
+        "dsh/backend/migrations/001-032 — 32 migrations with clean finance boundary",
+        "dsh/domain/*.go — clean Go domain types",
+        "dsh/frontend/app-client/screens/ — clean screens with typed clients",
+        "dsh/frontend/app-partner/screens/ — clean (runtime violations were fixed)",
+        "dsh/frontend/app-captain/screens/ (except FinanceScreen preview label)",
+        "dsh/frontend/app-field/screens/ — clean",
+        "dsh/frontend/shared/finance-boundary/ — boundary explicitly enforced",
+        "wlt/backend/internal/store/postgres_repository.go — production repo",
+        "wlt/backend/migrations/001-007 — 7 clean migrations",
+        "wlt/domain/wallet.go — clean domain types",
+        "wlt/frontend/dsh/ bridge components — clean typed clients",
+        "ui-kit/ — single design system, no bypasses"
+      ]
+    },
+    "ADAPT_NORMALIZE": {
+      "items": [
+        "dsh/backend/internal/http/*.go (14 handler files) — CORS wildcard must be replaced",
+        "dsh/backend/docker-compose.local.yml — port remapping needed",
+        "wlt/backend/cmd/wlt-api/main.go — CORS wildcard at server level",
+        "wlt/frontend/dsh/contracts/wlt-dsh-client.ts — hardcoded port 8083",
+        "dsh/frontend/app-captain/DshCaptainFinanceScreen.tsx — preview label only"
+      ],
+      "normalizations_required": [
+        "CORS: Replace Access-Control-Allow-Origin: * with explicit origin list in all DSH handlers",
+        "CORS: Fix WLT main.go corsHandler wildcard",
+        "PORTS: Remap Docker compose internal → host per canonical spec",
+        "URL: Fix wlt-dsh-client.ts hardcoded http://localhost:8083 → env var"
+      ]
+    },
+    "REJECT_RUNTIME_RISK": {
+      "items": [
+        "dsh/backend/internal/store/memory_repository.go — NOT thread-safe, dev only",
+        "dsh/backend/internal/store/memory_checkout_repository.go — dev only",
+        "wlt/backend/internal/store/memory_repository.go — dev only (thread-safe but rand-seeded)"
+      ],
+      "rule": "NEVER deploy without DATABASE_URL set. Memory repos are dev fallbacks only."
+    },
+    "REFERENCE_ONLY": {
+      "items": [
+        "dsh/backend/cmd/auth-service/ — belongs in core/identity, not DSH",
+        "donor checkout screens — visual reference for DSH-005 only",
+        "donor control-panel catalogs — visual reference for DSH-003 only",
+        "wlt/frontend/dsh/app-field/WltDshFieldBridge.tsx — WLT field bridge reference",
+        "wlt/backend/.data/wlt_dsh.db — SQLite dev artifact, REJECT as noise"
+      ]
+    },
+    "REJECTED_PATTERNS": {
+      "description": "Patterns from donor that must NOT be imported to the new repo",
+      "patterns": [
+        "Donor port mappings (8080-8084, 3000 as host ports)",
+        "Donor CORS wildcard Access-Control-Allow-Origin: *",
+        "Donor memory repositories in production code paths",
+        "Donor mock/demo/preview runtime data",
+        "Donor local design system duplications",
+        "Donor financial mutations outside services/wlt/",
+        "Donor SQLite databases",
+        "Donor hardcoded localhost URLs",
+        "Donor auth-service code inside DSH"
+      ]
+    },
+    "DONOR_SCREENS_EXTRACTED_FOR_REFERENCE": {
+      "mapping_policy": {
+        "required_fields": ["topic_id", "use_as", "accepted_value", "rejected_parts", "target_new_repo_mapping", "implementation_requirement"],
+        "default_for_unmapped_item": "REFERENCE_ONLY",
+        "runtime_authority": false
+      },
+      "control_panel_sections": [
+        "dashboard", "operations", "finance (read-only)", "catalogs", "partners",
+        "marketing", "support", "platform", "administration", "hr"
+      ],
+      "control_panel_notable_screens": [
+        "LiveOrdersScreen", "DispatchAssignmentScreen", "CommandCenterScreen",
+        "PartnerStoresScreen", "CatalogGovernanceScreens", "SupportHubScreens",
+        "BannersCommandDeckScreen", "GeoHeatmapScreen"
+      ],
+      "mobile_screens_per_surface": {
+        "app_client": [
+          "HomeScreen", "StoreScreen", "StoreItemsScreen", "CartScreen",
+          "DshCheckoutIntentScreen", "DshOrdersListScreen", "DshTrackingScreen",
+          "BellScreen", "NotificationsScreen"
+        ],
+        "app_partner": [
+          "InventoryCatalogScreen", "OrdersInboxScreen", "CategoryManagementScreen",
+          "ProductEditScreen", "PromotionsScreen", "StoreProfileScreen"
+        ],
+        "app_captain": [
+          "DshCaptainMapScreen", "DshCaptainOrdersScreen", "DshCaptainPickupDropoffScreen",
+          "DshCaptainPoDSubmissionScreen", "DshCaptainOperationsScreen"
+        ],
+        "app_field": [
+          "DshFieldStoresScreen", "DshFieldStoreOnboardingScreen", "DshFieldDocumentUploadScreen",
+          "DshFieldReadinessEscalationScreen", "DshFieldStoreVisitScreen"
+        ]
+      },
+      "topic_mappings": [
+        {
+          "topic_id": "DSH-001",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Store discovery, store detail, role-specific store context, and store governance concepts",
+          "rejected_parts": ["Donor runtime wiring", "mock/demo/preview data", "copy-verbatim UI", "financial behavior"],
+          "target_new_repo_mapping": "services/dsh/frontend/shared/store and DSH-001 declared surfaces",
+          "implementation_requirement": "Use generated clients and shared controllers; satisfy every REAL_EXPERIENCE_CLOSURE_v2 state."
+        },
+        {
+          "topic_id": "DSH-002",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Home discovery section composition and content-management concepts",
+          "rejected_parts": ["Donor runtime wiring", "hardcoded data", "copy-verbatim UI"],
+          "target_new_repo_mapping": "DSH-002 app-client and control-panel home-discovery surfaces",
+          "implementation_requirement": "No execution until DSH-001 rework is closed and DSH-002 is separately approved."
+        },
+        {
+          "topic_id": "DSH-003_TO_DSH-014",
+          "use_as": "REFERENCE_ONLY",
+          "accepted_value": "Domain workflows, screen inventories, state vocabulary, and control-panel section concepts",
+          "rejected_parts": ["Any unverified runtime behavior", "financial mutation outside WLT", "direct donor imports", "copy-verbatim UI"],
+          "target_new_repo_mapping": "The owning Topic entry in topic-registry.json",
+          "implementation_requirement": "Each item remains non-executable until its Topic has exact contracts, approval, state coverage, and evidence requirements."
+        }
+      ],
+      "note": "Every listed donor screen inherits REFERENCE_ONLY unless a topic_mappings record explicitly narrows its accepted value. Donor material never establishes implementation readiness."
+    }
+  }
+}

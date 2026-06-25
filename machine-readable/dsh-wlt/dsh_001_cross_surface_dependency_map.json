@@ -1,0 +1,45 @@
+{
+  "$schema": "dsh-001-cross-surface-store-role-map/v2",
+  "slice": "DSH-001",
+  "domain": "stores",
+  "capability": "dsh.store.discovery",
+  "shared_engine": "services/dsh/frontend/shared/store",
+  "executed_surfaces": {
+    "app-client": {
+      "role": "store-discovery",
+      "scope": ["store-list", "store-card", "store-status", "serviceability"]
+    },
+    "control-panel": {
+      "role": "store-governance-read",
+      "scope": ["store-list", "store-detail", "visibility-review", "readiness-review"]
+    },
+    "app-partner": {
+      "role": "partner-own-store-operations",
+      "scope": ["store-profile", "operating-status-update", "media-readiness", "service-mode-settings"],
+      "forbidden": ["full-catalog", "partner-orders", "finance"]
+    },
+    "app-field": {
+      "role": "field-store-verification-action",
+      "scope": ["assigned-store-location", "media-evidence-readiness", "verification-checklist-submit"],
+      "forbidden": ["unrelated-field-workflow", "orders", "finance"]
+    },
+    "app-captain": {
+      "role": "captain-pickup-point-readiness",
+      "scope": ["assigned-store-name", "pickup-location", "operating-state", "pickup-readiness-report"],
+      "forbidden": ["order-assignment", "delivery-lifecycle", "earnings", "finance"]
+    }
+  },
+  "invariants": {
+    "all_surfaces_ui_only": true,
+    "no_surface_fetch": true,
+    "no_surface_env": true,
+    "no_surface_store_types": true,
+    "no_orders": true,
+    "no_full_catalog": true,
+    "no_finance": true,
+    "control_panel_route": "/dsh/partners/stores",
+    "store_domain_actions_required": true,
+    "authentication_authorization_required": true,
+    "idempotency_and_audit_required": true
+  }
+}

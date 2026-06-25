@@ -7,7 +7,9 @@ for (const file of listCodeFiles()) {
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     const spec = item.specifier;
-    const isDeepAlias = spec.startsWith("@bthwani/ui-kit/");
+    // Allow the four declared public subpath exports
+    const ALLOWED_SUBPATHS = ["@bthwani/ui-kit/web", "@bthwani/ui-kit/mobile", "@bthwani/ui-kit/next"];
+    const isDeepAlias = spec.startsWith("@bthwani/ui-kit/") && !ALLOWED_SUBPATHS.includes(spec);
     const isDeepPath = spec.includes("shared/ui-kit/src/") || spec.includes("shared/ui-kit/tokens/");
 
     if (isDeepAlias || isDeepPath) {

@@ -1,0 +1,4 @@
+WLT seeds: PASS
+Applied: wlt-000_financial_references.local.sql
+Inserted: 4 payment refs, 4 settlement refs, 4 refund refs, 6 wallet refs
+Smoke verified: payment captured, settlement settled, refund completed, wallet active

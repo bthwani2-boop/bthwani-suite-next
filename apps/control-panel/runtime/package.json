@@ -1,8 +1,11 @@
 {
   "dependencies": {
+    "@bthwani/app-shell": "workspace:*",
+    "@bthwani/core-identity": "workspace:*",
     "next": "16.2.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-native-web": "^0.19.13"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
@@ -12,9 +15,14 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "dev": "next dev",
-    "build": "next build"
+    "dev": "next dev --port 13000",
+    "build": "next build",
+    "lint": "node ../../../tools/guards/control-panel-design-gate.mjs"
   },
   "name": "@bthwani/control-panel",
-  "private": true
+  "private": true,
+  "exports": {
+    "./shell": "./src/shell/index.ts",
+    "./components": "./src/components/index.ts"
+  }
 }

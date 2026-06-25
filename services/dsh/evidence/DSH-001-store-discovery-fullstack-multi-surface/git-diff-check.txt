@@ -1,0 +1,24 @@
+DSH-001 Git State — 2026-06-23
+
+git diff --check: PASS (no whitespace errors)
+
+git status --short (changes staged for this session's fixes):
+ M apps/control-panel/runtime/tsconfig.json
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/guard-results.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/runtime-status.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/test-results.txt
+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/typecheck-results.txt
+ M services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx
+ M services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx
+ M services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx
+ M services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx
+ M services/dsh/frontend/shared/store/use-store-admin-controller.tsx
+ M services/dsh/frontend/shared/store/use-store-role-context-controller.tsx
+ M tools/guards/docker-runtime-profiles.mjs
+
+Changes in this session:
+- apps/control-panel/runtime/tsconfig.json: allowImportingTsExtensions fix
+- tools/guards/docker-runtime-profiles.mjs: identity ACTIVE_DSH001_PREREQUISITE support
+- services/dsh/frontend/shared/store/use-store-role-context-controller.tsx: auth trigger + fallback comment
+- services/dsh/frontend/shared/store/use-store-admin-controller.tsx: auth trigger
+- 4 surface screens: removed useEffect violations

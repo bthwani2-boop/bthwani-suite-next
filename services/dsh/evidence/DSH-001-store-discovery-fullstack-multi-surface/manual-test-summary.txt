@@ -1,0 +1,56 @@
+DSH-001 MANUAL TEST SUMMARY
+
+branch=starting-implementing-slices
+head=dac1586c75b046907ce3a5afaa907338e35cf0dc
+origin_head=dac1586c75b046907ce3a5afaa907338e35cf0dc
+head_matches_origin=True
+
+storeId=store-1005
+dsh_api=http://localhost:58080
+control_panel=http://localhost:13000/dsh/partners/stores
+
+api_health=PASS
+api_readiness=PASS
+api_stores=PASS (count=6)
+api_store_detail=PASS
+
+adb_reverse=
+host-16 tcp:58080 tcp:58080
+host-16 tcp:59000 tcp:59000
+host-16 tcp:18101 tcp:18101
+host-16 tcp:18102 tcp:18102
+host-16 tcp:18104 tcp:18104
+host-16 tcp:18103 tcp:18103
+
+
+visual_control_panel_store_admin=PASS
+visual_app_client_store_discovery=PASS
+visual_app_partner_store_readiness_context_only=PASS
+visual_app_field_store_verification_context_only=PASS
+visual_app_captain_store_pickup_context_only=PASS
+
+catalog_in_dsh_001=NOT_PRESENT
+orders_in_dsh_001=NOT_PRESENT
+delivery_in_dsh_001=NOT_PRESENT
+finance_in_dsh_001=NOT_PRESENT
+wlt_runtime_required=false
+
+foundation_gate=PASS
+slice_gate=PASS
+dsh_typecheck=PASS
+dsh_tests=PASS
+guard_shared_ownership=PASS
+guard_cross_surface=PASS
+guard_wlt_boundary=PASS
+guard_app_shell=PASS
+guard_matrix_v3=PASS
+git_diff_check=PASS (after adding .gitattributes to exclude evidence/ from whitespace check)
+
+ci_status=CI_NOT_CONFIGURED_FOR_THIS_BRANCH
+result=MANUAL_TEST_VERIFIED
+
+notes=
+- DSH-001 tested manually across five surfaces.
+- .gitattributes added at root to exclude services/*/evidence/** from git whitespace check.
+- All gates PASS, all guards PASS.
+- Minor top-screen comma artifact visible in screenshots — may be screenshot artifact, not real UI defect.

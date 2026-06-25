@@ -1,0 +1,6 @@
+Checking services/dsh/clients/generated/dsh-api.ts for "getDshHomeDiscovery"...
+
+FOUND at line 66:  get: operations["getDshHomeDiscovery"];
+FOUND at line 276: getDshHomeDiscovery: {
+
+Result: PASS — getDshHomeDiscovery is present in the generated client (2 occurrences)

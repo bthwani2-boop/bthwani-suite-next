@@ -6,6 +6,7 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -14,6 +15,18 @@
     "jsx": "react-jsx",
     "incremental": false,
     "types": ["node", "react", "react-dom"],
+    "paths": {
+      "@bthwani/app-shell": ["../../../shared/app-shell/src/index.ts"],
+      "@bthwani/core-identity": ["../../../core/identity/clients/index.ts"],
+      "@bthwani/ui-kit": ["../../../shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["../../../shared/ui-kit/src/web.ts"],
+      "@bthwani/control-panel/shell": ["./src/shell/index.ts"],
+      "@bthwani/control-panel/components": ["./src/components/index.ts"],
+      "@dsh-cp/*": ["../../../services/dsh/frontend/control-panel/*"],
+      "@dsh-shared/*": ["../../../services/dsh/frontend/shared/*"],
+      "@dsh-clients/*": ["../../../services/dsh/clients/*"],
+      "react-native": ["../../app-client/runtime/node_modules/react-native"]
+    },
     "plugins": [
       {
         "name": "next"
@@ -29,4 +42,3 @@
   ],
   "exclude": ["node_modules", ".next", "dist", "build"]
 }
-

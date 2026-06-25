@@ -1,0 +1,69 @@
+{
+  "$schema": "control-panel-design/v1",
+  "_meta": {
+    "description": "Machine-readable gate specification for the control panel design guard. The guard at tools/guards/control-panel-design-gate.mjs reads this contract.",
+    "last_updated": "2026-06-21"
+  },
+  "required_files": [
+    "shared/app-shell/src/control-panel/index.ts",
+    "apps/control-panel/runtime/src/shell/ControlPanelShell.tsx",
+    "apps/control-panel/runtime/src/shell/ControlPanelNavigation.tsx",
+    "apps/control-panel/runtime/src/shell/ControlPanelTopBar.tsx",
+    "shared/app-shell/src/control-panel/ControlPanelSectionRegistry.ts",
+    "shared/app-shell/src/control-panel/ControlPanelServiceRegistry.ts",
+    "apps/control-panel/runtime/src/shell/OverviewPageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/DataTablePageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/QueuePageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/OperationsRoomFrame.tsx",
+    "apps/control-panel/runtime/src/shell/DetailPageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/EditorPageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/ReviewPageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/MetricsPageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/SettingsPageFrame.tsx",
+    "apps/control-panel/runtime/src/shell/FinanceReadOnlyFrame.tsx",
+    "apps/control-panel/runtime/src/shell/index.ts",
+    "machine-readable/control-panel-design/control_panel_design_skeleton_reference.json",
+    "machine-readable/control-panel-design/control_panel_section_archetypes.json",
+    "machine-readable/control-panel-design/control_panel_service_ownership_matrix.json",
+    "machine-readable/control-panel-design/control_panel_design_gate.json"
+  ],
+  "required_exports_from_app_shell_index": [
+    "ControlPanelSectionRegistry",
+    "ControlPanelServiceRegistry"
+  ],
+  "forbidden_imports_in_scopes": {
+    "tamagui_forbidden_in": [
+      "shared/app-shell/",
+      "apps/control-panel/runtime/",
+      "services/dsh/frontend/control-panel/",
+      "services/wlt/frontend/control-panel/"
+    ],
+    "fetch_axios_forbidden_in": [
+      "services/dsh/frontend/control-panel/",
+      "services/wlt/frontend/control-panel/",
+      "apps/control-panel/runtime/src/"
+    ],
+    "raw_hex_forbidden_in": [
+      "shared/app-shell/",
+      "services/dsh/frontend/control-panel/",
+      "services/wlt/frontend/control-panel/",
+      "apps/control-panel/runtime/src/"
+    ]
+  },
+  "forbidden_local_names": [
+    "LocalDesignSystem",
+    "CustomDashboardShell",
+    "DshLocalShell",
+    "WltLocalShell",
+    "PreviewDashboard",
+    "DemoDashboard"
+  ],
+  "forbidden_ports": [8080, 8081, 8082, 8083, 8084, 3000],
+  "guard_script": "tools/guards/control-panel-design-gate.mjs",
+  "commands_to_run": [
+    "node tools/guards/control-panel-design-gate.mjs",
+    "pnpm --dir shared/app-shell typecheck",
+    "pnpm run foundation:gate"
+  ],
+  "acceptance_condition": "All required files present, all JSON files valid, no forbidden imports, guard exits 0"
+}

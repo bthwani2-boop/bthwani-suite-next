@@ -1,0 +1,5 @@
+
+> bthwani-suite-next@0.0.0 guard:no-financial-mutation-outside-wlt C:\bthwani-suite-next
+> node tools/guards/no-financial-mutation-outside-wlt.mjs
+
+no-financial-mutation-outside-wlt: PASS

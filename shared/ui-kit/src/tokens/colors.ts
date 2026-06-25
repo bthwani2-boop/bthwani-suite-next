@@ -74,6 +74,7 @@ export const colorRoles = {
   surfaceMuted: brandScale.surface[100],
   surfaceInset: brandScale.surface[200],
   surfaceOverlay: alpha(brandRoots.surfaceBase, 0.86),
+  mediaScrimStrong: alpha("#0F172A", 0.78),
 
   brandStructure: brandRoots.brandStructure,
   brandStructureElevated: brandScale.structure[500],
@@ -84,6 +85,8 @@ export const colorRoles = {
   textSecondary: brandScale.structure[500],
   textMuted: alpha(brandRoots.brandStructure, 0.68),
   textInverse: brandRoots.surfaceBase,
+  textOnMediaMuted: alpha(brandRoots.surfaceBase, 0.4),
+  textOnMediaStrong: alpha(brandRoots.surfaceBase, 0.9),
 
   borderSubtle: alpha(brandRoots.brandStructure, 0.1),
   borderStrong: alpha(brandRoots.brandStructure, 0.18),
@@ -194,4 +197,24 @@ export const darkThemeColors = {
 export const tamaguiColorTokens = {
   ...colorRoles,
   ...statusScale
+} as const;
+
+export const colorPalette = {
+  white: "#FFFFFF",
+  black: "#000000",
+  redMuted: "#E53935",
+  orangeMuted: "#F59E0B",
+  orangeSoft: "#FFF3E0",
+  redSoft: "#FFEBEE",
+  yellowSoft: "#FFF8E1",
+  greenSoft: "#E6F9F0",
+  dangerSoft: "#FEE8E8",
+  infoSoft: "#EAF0FB",
+  warningSoft: "#FEF6E4",
+  graySoft: "#F3F4F6",
+  greenStrong: "#0E7A45",
+  dangerStrong: "#C0392B",
+  warningStrong: "#B45309",
+  grayBorder: "#ECECEC",
+  tanBg: "#F5ECE3",
 } as const;

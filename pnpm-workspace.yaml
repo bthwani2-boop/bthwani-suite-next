@@ -4,6 +4,7 @@ packages:
   - "shared/app-shell"
   - "shared/ui-kit"
   - "services/*"
+  - "core/identity"
   - "contracts"
 
 verifyDepsBeforeRun: false

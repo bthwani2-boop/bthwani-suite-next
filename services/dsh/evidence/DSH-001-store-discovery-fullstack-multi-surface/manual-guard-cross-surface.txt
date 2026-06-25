@@ -1,0 +1,5 @@
+
+> bthwani-suite-next@0.0.0 guard:dsh-001-cross-surface-dependency-map C:\bthwani-suite-next
+> node tools/guards/dsh-001-cross-surface-dependency-map.mjs
+
+DSH-001 All-Surface Store Role Gate: PASS

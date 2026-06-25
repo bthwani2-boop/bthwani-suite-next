@@ -40,3 +40,14 @@ export function Badge({ label, tone = "neutral", icon }: BadgeProps) {
     </BadgeFrame>
   );
 }
+
+export type StatusBadgeProps = {
+  readonly label: string;
+  readonly type?: "success" | "danger" | "brand";
+  readonly icon?: ReactNode;
+};
+
+export function StatusBadge({ label, type = "brand", icon }: StatusBadgeProps) {
+  const tone = type === "success" ? "success" : type === "danger" ? "danger" : "action";
+  return <Badge label={label} tone={tone} icon={icon} />;
+}

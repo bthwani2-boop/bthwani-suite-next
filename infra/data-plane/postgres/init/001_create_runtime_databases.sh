@@ -12,6 +12,10 @@ BEGIN
     CREATE ROLE dsh_runtime LOGIN PASSWORD 'dsh_runtime_password';
   END IF;
 
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'dsh_local') THEN
+    CREATE ROLE dsh_local LOGIN PASSWORD 'dsh_local_password';
+  END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'wlt_runtime') THEN
     CREATE ROLE wlt_runtime LOGIN PASSWORD 'wlt_runtime_password';
   END IF;
@@ -23,6 +27,9 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'identity_runtime')\ge
 
 SELECT 'CREATE DATABASE dsh_runtime OWNER dsh_runtime'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'dsh_runtime')\gexec
+
+SELECT 'CREATE DATABASE dsh_local OWNER dsh_local'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'dsh_local')\gexec
 
 SELECT 'CREATE DATABASE wlt_runtime OWNER wlt_runtime'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wlt_runtime')\gexec

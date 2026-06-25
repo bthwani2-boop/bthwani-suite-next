@@ -14,6 +14,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
@@ -23,6 +24,9 @@
       ],
       "@bthwani/app-shell": [
         "shared/app-shell/src/index.ts"
+      ],
+      "@bthwani/core-identity": [
+        "core/identity/clients/index.ts"
       ],
       "@bthwani/app-captain-runtime": [
         "apps/app-captain/runtime/src/index.ts"
@@ -35,6 +39,9 @@
       ],
       "@bthwani/app-partner-runtime": [
         "apps/app-partner/runtime/src/index.ts"
+      ],
+      "react-native": [
+        "apps/app-client/runtime/node_modules/react-native"
       ]
     }
   }

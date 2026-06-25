@@ -5,9 +5,16 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./web": "./src/web.ts",
+    "./mobile": "./src/mobile.tsx",
+    "./next": "./src/next.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:contracts": "tsc --noEmit -p tsconfig.contracts.json"
+    "typecheck:contracts": "tsc --noEmit -p tsconfig.contracts.json",
+    "lint": "node ../../tools/guards/no-cp-primitives-in-ui-kit.mjs && node ../../tools/guards/no-domain-component-in-ui-kit.mjs && node ../../tools/guards/no-direct-tamagui-outside-ui-kit.mjs && node ../../tools/guards/no-ui-kit-deep-imports.mjs"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

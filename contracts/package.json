@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "echo contracts-ok"
+    "typecheck": "node ../tools/important-scripts/contracts-typecheck.mjs"
   }
 }

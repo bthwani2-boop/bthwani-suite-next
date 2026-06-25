@@ -31,3 +31,8 @@ When ownership is unclear, use this order:
 5. donor/reference material after classification
 
 If still unclear, mark `NEEDS_EVIDENCE` and state the exact missing proof.
+
+## Command safety
+
+- Executed commands must strictly comply with the [Command Safety Policy](./COMMAND_SAFETY_POLICY.md).
+

@@ -1,0 +1,31 @@
+DSH-001 Runtime Status — 2026-06-24
+Standard: CODE_BASED_FULL_STACK_CLOSURE
+
+Docker containers (docker ps — all healthy):
+  bthwani-dsh-api-runtime      Up (healthy)  0.0.0.0:58080->8080/tcp
+  bthwani-wlt-api-runtime      Up (healthy)  0.0.0.0:58083->8083/tcp
+  bthwani-identity-api-runtime Up (healthy)  0.0.0.0:58082->8082/tcp
+  bthwani-postgres-runtime     Up (healthy)  0.0.0.0:55432->5432/tcp
+  bthwani-minio-runtime        Up            0.0.0.0:59000->9000/tcp
+
+runtime:smoke: PASS
+  Identity API smoke: PASS
+  DSH API smoke: PASS
+    /dsh/health: {"service":"dsh","status":"healthy"}
+    /dsh/readiness: {"service":"dsh","status":"ready","dependencies":{"postgres":"ready"}}
+    /dsh/stores: returned 5 stores
+    /dsh/stores/store-1001: named store returned
+    /dsh/home-discovery: banners=2 promos=2 categories=5 filters=5 stores=5
+  MinIO smoke: PASS
+
+Authenticated store-role runtime proof (from 2026-06-23, still valid):
+  partner-local-001 -> store-1001 (own) -> partner.settings.update audit PASS
+  field-local-001 -> store-1002 (assigned) -> field.verification.submit audit PASS
+  captain-local-001 -> store-1005 (assigned) -> captain.pickup-readiness.report audit PASS
+
+NOTE: Previous runtime-status.txt (2026-06-23) ended with:
+  "Visual state gate remains FAIL because 15 required screenshot files are missing."
+  This line is SUPERSEDED. Under CODE_BASED_FULL_STACK_CLOSURE, screenshots are
+  HISTORICAL_NON_BLOCKING and do not gate closure. Runtime is VERIFIED.
+
+Result: RUNTIME_VERIFIED

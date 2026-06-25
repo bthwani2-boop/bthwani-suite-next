@@ -1,0 +1,76 @@
+export type CatalogCategory = {
+  readonly id: string;
+  readonly storeId: string;
+  readonly name: string;
+  readonly description: string;
+  readonly sortOrder: number;
+  readonly isActive: boolean;
+  readonly version: number;
+};
+
+export type MediaUploadIntent = {
+  readonly mediaId: string;
+  readonly uploadUrl: string;
+  readonly objectKey: string;
+  readonly expiresAt: string;
+};
+
+export type CatalogMedia = {
+  readonly id: string;
+  readonly productId: string | null;
+  readonly objectKey: string;
+  readonly contentType: string;
+  readonly state: "pending" | "complete" | "deleted";
+  readonly publicUrl: string | null;
+  readonly version: number;
+};
+export type CatalogProduct = {
+  readonly id: string;
+  readonly storeId: string;
+  readonly categoryId: string | null;
+  readonly name: string;
+  readonly description: string;
+  readonly sku: string;
+  readonly priceReference: string;
+  /** Original price before discount. If present and greater than priceReference, a discount is active. */
+  readonly originalPriceReference?: string;
+  /** Discount percentage label (e.g. "15%"). Derived by API or computed locally. */
+  readonly discountPercent?: number;
+  /** Unit label shown beside the product name (e.g. "500g", "1L", "كغ"). */
+  readonly unitLabel?: string;
+  /** Stock availability. Defaults to "in_stock" when absent. */
+  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  readonly isActive: boolean;
+  readonly version: number;
+  readonly media: readonly CatalogMedia[];
+};
+
+export type PartnerCatalog = {
+  readonly storeId: string;
+  readonly categories: readonly CatalogCategory[];
+  readonly products: readonly CatalogProduct[];
+};
+
+export type CatalogSubmission = {
+  readonly id: string;
+  readonly storeId: string;
+  readonly revision: number;
+  readonly status: "submitted" | "approved" | "rejected";
+  readonly submittedBy: string;
+  readonly reviewReason: string;
+  readonly createdAt: string;
+};
+
+export type CatalogState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "permission_denied" }
+  | { readonly kind: "empty"; readonly storeId?: string }
+  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "success"; readonly catalog: PartnerCatalog };
+
+export type CatalogSubmissionState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "permission_denied" }
+  | { readonly kind: "empty" }
+  | { readonly kind: "error"; readonly message: string }
+  | { readonly kind: "success"; readonly submissions: readonly CatalogSubmission[] };

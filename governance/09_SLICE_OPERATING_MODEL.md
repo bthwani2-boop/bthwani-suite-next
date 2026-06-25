@@ -14,11 +14,12 @@ A slice may include governance link, blueprint, domain, database, OpenAPI, backe
 2. FOUNDATION-002 — core identity contract
 3. FOUNDATION-003 — provider contract/control baseline
 4. FOUNDATION-004 — ui-kit baseline
-5. DSH-001 — store discovery
-6. DSH-002 — storefront/catalog
-7. DSH-003 — cart/serviceability
-8. WLT-001 — payment session/status
-9. DSH-WLT-001 — checkout/payment binding
+5. DSH-001 — store discovery (public + role governance)
+6. DSH-002 — home discovery admin (operator banners/promos/categories)
+7. DSH-003 — storefront catalog (products, categories, media, overrides)
+8. DSH-004 — cart/serviceability
+9. WLT-001 — payment session/status
+10. DSH-WLT-001 — checkout/payment binding
 
 ## Stop rule
 

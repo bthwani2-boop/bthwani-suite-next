@@ -1,8 +1,12 @@
 # Claude Code Instructions
 
+All agent commands must respect the [Command Safety Policy](.agents/COMMAND_SAFETY_POLICY.md).
+
 Use shared project skills from:
 
     .agents/skills
+
+Also refer to [BThwani Harness Patterns](.agents/BTHWANI_HARNESS_PATTERNS.md).
 
 For Graphify, read and follow:
 

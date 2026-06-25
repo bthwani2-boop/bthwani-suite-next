@@ -1,7 +1,7 @@
 # DSH Service Blueprint
 
 Status: ACTIVE_SERVICE_CONTRACT
-Stage: PHASE-10A_DSH_SERVICE_ACTIVATION
+Stage: SLICE_002_IMPLEMENTED
 
 ## Purpose
 
@@ -9,45 +9,56 @@ DSH owns operational commerce and delivery truth: store discovery, catalog, cart
 
 WLT exclusively owns wallet, payment, refund, settlement, payout, commission, COD financial truth, ledger, reconciliation, and finance reporting.
 
-## Current activation
+## Active contract endpoints
 
-The active repository contract currently covers:
+### System
 
 - `GET /dsh/health`
 - `GET /dsh/readiness`
 
-These are contract declarations. Backend/runtime binding remains blocked until implementation and runtime evidence exist.
+### Store Discovery (DSH-001)
+
+- `GET /dsh/stores` — public store list
+- `GET /dsh/stores/{storeId}` — public store detail
+- `GET /dsh/store-context` — actor-scoped store context (bearerAuth)
+- `GET /dsh/operator/stores` — operator store list (bearerAuth)
+- `GET /dsh/operator/stores/{storeId}` — operator store detail (bearerAuth)
+- `PATCH /dsh/partner/stores/{storeId}/settings` — partner operating settings (bearerAuth)
+- `POST /dsh/field/stores/{storeId}/verifications` — field verification (bearerAuth)
+- `POST /dsh/captain/stores/{storeId}/pickup-readiness` — captain readiness (bearerAuth)
+- `POST /dsh/operator/stores/{storeId}/governance` — lifecycle/visibility/serviceability (bearerAuth)
+- `GET /dsh/operator/stores/{storeId}/audit` — audit timeline (bearerAuth)
+
+### Home Discovery (DSH-002)
+
+- `GET /dsh/home-discovery` — public home discovery payload
+- `GET /dsh/operator/home-discovery/{kind}` — operator admin list (bearerAuth)
+- `POST /dsh/operator/home-discovery/{kind}` — operator admin create (bearerAuth)
+- `PATCH /dsh/operator/home-discovery/{kind}/{itemId}` — operator admin update (bearerAuth)
+- `DELETE /dsh/operator/home-discovery/{kind}/{itemId}` — operator admin delete (bearerAuth)
 
 ## Active surfaces
 
-- app-client
-- app-partner
-- app-captain
-- app-field
-- control-panel
+- app-client — store discovery + home discovery (consumer)
+- app-partner — store role context (partner)
+- app-captain — store role context (captain)
+- app-field — store role context (field)
+- control-panel — store governance + home discovery admin (operator)
 
-The surfaces are ownership boundaries, not proof that screens exist.
+## Security boundary
 
-## Next product slice
+All mutating and role-scoped endpoints require `Authorization: Bearer <token>`.
+Public read endpoints (`/stores`, `/stores/{id}`, `/home-discovery`) require no authentication.
 
-`DSH-001 Store Discovery` is the next product slice.
+## Port
 
-It remains blocked from closure until the complete chain exists:
+DSH API canonical runtime port: `58080` (container internal: `8080`, mapped to `58080`).
 
-```text
-OpenAPI
-→ backend
-→ generated client
-→ adapter
-→ view-model
-→ app-client screen state
-→ tests
-→ runtime and visual evidence
-```
+## Exclusions from current slices
 
-## Exclusions
-
-Phase 10A creates no store endpoint, business migration, provider integration, generated client, or screen.
+- Storefront catalog (products, categories, media, overrides) — DSH-003
+- Cart/serviceability — DSH-004
+- Financial mutations — WLT-owned exclusively
 
 ## Evidence
 

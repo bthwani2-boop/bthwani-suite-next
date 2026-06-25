@@ -1,0 +1,76 @@
+
+> @bthwani/dsh@0.0.0 test C:\bthwani-suite-next\services\dsh
+> node --test tests/*.test.mjs
+
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ createDshStoreClient
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ factory returns an object with listStores and getStore (6.8702ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ factory accepts a base URL and creates a client (0.8576ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ createDshStoreClient (16.3215ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ client error shape
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ network error shape has kind=network and message (209.1254ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ client error shape (209.8937ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ error mapping classification
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ HTTP 503 should produce kind=http with status=503 (0.6829ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ error codes are correctly classified (0.5711ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ error mapping classification (1.8072ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ validateListQuery
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ accepts valid query (3.664ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rejects limit < 1 (0.8696ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rejects limit > 100 (0.5404ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rejects negative offset (0.3793ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rejects invalid status (0.5294ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ accepts valid status (0.5568ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ validateListQuery (17.1356ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ isStoreVisibleToClient
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ visible active store (1.933ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ invisible store (0.4445ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ inactive store (0.6728ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ isStoreVisibleToClient (3.8585ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ applyClientVisibilityFilter
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ filters out non-visible stores (3.2619ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ applyClientVisibilityFilter (3.6316ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ rowToSummary
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ maps all fields correctly (1.4877ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ null nullable fields pass through (1.5659ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ rowToSummary (3.4483ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ rowToDetail
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ includes ISO timestamp strings (4.8491ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ rowToDetail (8.4642ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ state constructors
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ loadingState returns kind=loading (10.7765ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ emptyState returns kind=empty (0.5908ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ errorState returns kind=error with message (0.7122ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ serviceUnavailableState returns kind=service_unavailable (0.4805ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ state constructors (17.3772ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ successState
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ returns success when stores not empty (0.9577ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ returns empty when stores empty and offset=0 (0.4511ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ returns success when stores empty but offset>0 (paginated) (0.4938ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ successState (2.8259ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ toCardViewModel
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ active serviceable store is open and serviceable (250.9614ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ inactive store is not open (1.0932ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ temporarily_closed produces statusBadge (1.0375ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ limited serviceability produces statusBadge (0.9139ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ out_of_area produces statusBadge (0.7187ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rating label rendered when rating present (0.7052ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rating label null when no rating (0.5919ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ rating label null when ratingCount is 0 (0.5832ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ eta label rendered when eta present (0.6232ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ eta label null when eta absent (0.6862ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ heroImageSource null when not provided (0.5356ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ logoImageSource null when not provided (0.3898ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ commercial card metadata comes from the API DTO (1.9438ms)
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ display name is not rewritten or inferred by the view-model (0.5137ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ toCardViewModel (266.3047ms)
+ÃŽâ€œÃƒÂ»Ã¢â€¢Â¢ toDetailViewModel
+  ÃŽâ€œÃ‚Â£ÃƒÂ¶ includes all card fields plus timestamps (0.6243ms)
+ÃŽâ€œÃ‚Â£ÃƒÂ¶ toDetailViewModel (2.4415ms)
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ tests 40
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ suites 12
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ pass 40
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ fail 0
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ cancelled 0
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ skipped 0
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ todo 0
+ÃŽâ€œÃƒÂ¤Ã¢â€¢Â£ duration_ms 606.9851

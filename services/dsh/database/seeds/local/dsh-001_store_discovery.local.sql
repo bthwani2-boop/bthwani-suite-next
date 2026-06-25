@@ -1,0 +1,97 @@
+INSERT INTO dsh_stores (
+  id,
+  slug,
+  display_name,
+  status,
+  city_code,
+  service_area_code,
+  serviceability_status,
+  rating_average,
+  rating_count,
+  delivery_eta_min,
+  delivery_eta_max,
+  is_visible,
+  hero_image_url,
+  logo_url,
+  category,
+  delivery_modes,
+  is_free_delivery,
+  distance_km,
+  follower_count,
+  has_pro_badge,
+  has_coupon_badge,
+  points_multiplier,
+  is_popular
+) VALUES
+  (
+    'store-1001', 'haddah-central-market', 'أسواق حدة المركزية', 'active',
+    'sana', 'haddah', 'serviceable', 4.80, 312, 25, 40, true,
+    'http://localhost:59000/dsh-media/store-1001-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1001-logo.jpg',
+    'grocery', ARRAY['delivery','pickup','express'], true,
+    2.10, 3100, true, false, 2, true
+  ),
+  (
+    'store-1002', 'al-sabeen-bakery', 'مخبز السبعين', 'active',
+    'sana', 'sabeen', 'serviceable', 4.60, 189, 20, 35, true,
+    'http://localhost:59000/dsh-media/store-1002-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1002-logo.jpg',
+    'bakery', ARRAY['delivery','pickup'], true,
+    1.80, 1200, true, true, null, false
+  ),
+  (
+    'store-1003', 'taiz-street-market', 'سوق شارع تعز', 'active',
+    'sana', 'taiz-st', 'limited', 4.20, 97, 35, 55, true,
+    'http://localhost:59000/dsh-media/store-1003-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1003-logo.jpg',
+    'grocery', ARRAY['delivery','pickup'], false,
+    3.50, 850, false, false, null, false
+  ),
+  (
+    'store-1004', 'al-zubairi-grocery', 'بقالة الزبيري', 'temporarily_closed',
+    'sana', 'zubairi', 'unavailable', 4.50, 241, null, null, true,
+    'http://localhost:59000/dsh-media/store-1004-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1004-logo.jpg',
+    'grocery', ARRAY['delivery'], false,
+    1.20, 2400, true, false, null, false
+  ),
+  (
+    'store-1005', 'old-city-restaurant', 'مطعم المدينة القديمة', 'active',
+    'sana', 'old-city', 'serviceable', 4.90, 524, 15, 30, true,
+    'http://localhost:59000/dsh-media/store-1005-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1005-logo.jpg',
+    'restaurant', ARRAY['delivery','pickup','express'], true,
+    0.50, 5200, true, true, 3, true
+  ),
+  (
+    'store-1006', 'maeen-pharmacy', 'صيدلية معين', 'active',
+    'sana', 'maeen', 'serviceable', 4.70, 88, 20, 35, true,
+    'http://localhost:59000/dsh-media/store-1006-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1006-logo.jpg',
+    'pharmacy', ARRAY['delivery'], true,
+    4.10, 980, false, true, null, false
+  )
+ON CONFLICT (id) DO UPDATE SET
+  slug = EXCLUDED.slug,
+  display_name = EXCLUDED.display_name,
+  status = EXCLUDED.status,
+  city_code = EXCLUDED.city_code,
+  service_area_code = EXCLUDED.service_area_code,
+  serviceability_status = EXCLUDED.serviceability_status,
+  rating_average = EXCLUDED.rating_average,
+  rating_count = EXCLUDED.rating_count,
+  delivery_eta_min = EXCLUDED.delivery_eta_min,
+  delivery_eta_max = EXCLUDED.delivery_eta_max,
+  is_visible = EXCLUDED.is_visible,
+  hero_image_url = EXCLUDED.hero_image_url,
+  logo_url = EXCLUDED.logo_url,
+  category = EXCLUDED.category,
+  delivery_modes = EXCLUDED.delivery_modes,
+  is_free_delivery = EXCLUDED.is_free_delivery,
+  distance_km = EXCLUDED.distance_km,
+  follower_count = EXCLUDED.follower_count,
+  has_pro_badge = EXCLUDED.has_pro_badge,
+  has_coupon_badge = EXCLUDED.has_coupon_badge,
+  points_multiplier = EXCLUDED.points_multiplier,
+  is_popular = EXCLUDED.is_popular,
+  updated_at = now();

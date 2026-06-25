@@ -1,0 +1,3 @@
+﻿COMMAND: go build ./...
+WORKDIR: services/dsh/backend
+RESULT: PASS

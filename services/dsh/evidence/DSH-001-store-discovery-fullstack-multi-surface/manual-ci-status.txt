@@ -1,0 +1,9 @@
+CI_NOT_CONFIGURED_FOR_THIS_BRANCH
+REMOTE_WORKFLOW_RUNS_EMPTY
+REMOTE_COMMIT_STATUSES_EMPTY
+LOCAL_GATES_USED_AS_EVIDENCE
+
+GitHub Actions workflows do not run on branch starting-implementing-slices.
+CI evidence is LOCAL only: guards, typechecks, tests, runtime smoke.
+This is documented as NOT_CONFIGURED, not as CI_PASS.
+Claiming CI_PASS would be false. Evidence is LOCAL_GATES_AND_RUNTIME_EVIDENCE_PUSHED_TO_REMOTE.

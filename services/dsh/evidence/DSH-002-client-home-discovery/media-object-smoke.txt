@@ -1,0 +1,11 @@
+media-object-smoke for DSH-002
+
+  200 http://localhost:59000/dsh-media/banner-001.jpg
+  200 http://localhost:59000/dsh-media/banner-002.jpg
+  200 http://localhost:59000/dsh-media/promo-001.jpg
+  200 http://localhost:59000/dsh-media/store-1005-hero.jpg
+  200 http://localhost:59000/dsh-media/store-1005-logo.jpg
+  200 http://localhost:59000/dsh-media/store-1001-hero.jpg
+  200 http://localhost:59000/dsh-media/store-1001-logo.jpg
+
+media-object-smoke: PASS

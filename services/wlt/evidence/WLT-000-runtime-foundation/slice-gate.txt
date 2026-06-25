@@ -1,0 +1,2 @@
+slice:gate: PASS
+Evidence: tools/registry/runs/SLICE-GATE-20260622-060501

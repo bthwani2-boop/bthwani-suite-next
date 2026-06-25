@@ -1,0 +1,81 @@
+DSH-001 Guard Results — Final 2026-06-24
+Standard: CODE_BASED_FULL_STACK_CLOSURE
+Foundation Gate Session: FOUNDATION-GATE-20260624-132705 (final re-run after all fixes)
+
+foundation:gate: PASS (FOUNDATION-GATE-20260624-132705)
+  - node-version: PASS
+  - pnpm-version: PASS
+  - git-diff-check: PASS
+  - pnpm-typecheck: PASS
+  - guard-contracts-foundation: PASS
+  - guard-no-direct-tamagui-outside-ui-kit: PASS
+  - guard-no-ui-kit-deep-imports: PASS
+  - guard-no-local-design-system: PASS
+  - guard-no-raw-hex-outside-ui-kit: PASS
+  - guard-no-expo-in-ui-kit: PASS
+  - guard-no-react-native-runtime-dependency-in-ui-kit: PASS
+  - guard-no-safe-area-in-ui-kit-runtime: PASS
+  - guard-no-vector-icons-direct-in-ui-kit: PASS
+  - guard-no-domain-component-in-ui-kit: PASS
+  - guard-no-unsafe-ui-kit-tamagui-casts: PASS
+  - guard-ui-kit-token-binding: PASS
+  - guard-no-preview-demo-mock-runtime: PASS
+  - guard-no-broken-imports: PASS
+  - guard-service-fullstack-linkage: PASS
+  - guard-dsh-service-activation: PASS
+  - guard-go-backend-runtime: PASS
+  - guard-performance-runtime-baseline: PASS
+  - guard-docker-runtime-profiles: PASS
+
+guard:matrix:v3: PASS
+guard:dsh-frontend-shared-ownership: PASS
+guard:wlt-dsh-frontend-shared-ownership: PASS (fixed CWD bug in _guard-utils.mjs)
+guard:no-financial-mutation-outside-wlt: PASS
+guard:app-shell-control-panel: PASS
+guard:control-panel-design: PASS
+guard:dsh-001-cross-surface-dependency-map: PASS
+
+pnpm run lint: PASS (all packages)
+pnpm run build: PASS (core/identity Go, services/wlt Go+TS, services/dsh TS, apps/control-panel Next.js)
+pnpm run affected:typecheck: PASS (11 projects, 1 from cache)
+pnpm run affected:build: PASS (4 projects)
+
+slice:gate: LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE
+  - guard-performance-runtime-baseline: PASS
+  - guard-docker-runtime-profiles: PASS
+  - guard-dsh-frontend-shared-ownership: PASS
+  - guard-wlt-dsh-frontend-shared-ownership: PASS
+  - guard-canonical-host-ports: PASS
+  - guard-dsh-001-cross-surface-dependency-map: PASS
+  - guard-dsh-003-catalog-ownership: PASS
+  - guard-dsh-004-cart-serviceability: PASS
+
+graphify:code: PASS (1427 files, no topology changes)
+
+CODE VIOLATIONS FIXED (2026-06-24):
+  [RAW HEX]
+  - services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx
+  - services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx
+  - services/dsh/frontend/control-panel/marketing/home-discovery/HomeDiscoveryAdminScreen.tsx
+  - services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx
+  - services/dsh/frontend/app-field/field-readiness/DshFieldReadinessChecklistScreen.tsx
+  - apps/control-panel/runtime/src/app/page.tsx
+  - apps/control-panel/runtime/src/app/dsh/marketing/page.tsx
+
+  [OPENAPI CONTRACT]
+  - services/dsh/contracts/dsh.openapi.yaml: 4× BadRequest→InvalidRequest ($ref undefined)
+
+  [GO TEST BUG]
+  - core/identity/backend/internal/identity/repository.go: removed case "client" from
+    resolveDevBypassIdentity switch — client is not a valid bypass role; it was silently
+    succeeding instead of returning ErrUnauthenticated
+
+  [GUARD CWD BUG]
+  - tools/guards/_guard-utils.mjs: repoRoot changed from process.cwd() to __dirname-based
+    path so guards work correctly whether called from repo root or package subdirectory
+  - tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs: root changed from
+    process.cwd() to imported repoRoot from _guard-utils.mjs
+
+Closure Standard: CODE_BASED_FULL_STACK_CLOSURE (effective 2026-06-24)
+Screenshots: HISTORICAL_NON_BLOCKING — not a gate condition.
+CI: CI_NOT_CONFIGURED — non-blocking by policy.

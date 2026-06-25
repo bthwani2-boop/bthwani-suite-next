@@ -20,3 +20,18 @@ graphify-out/
 
 .nx/cache/
 .nx/workspace-data/
+
+# Local images only
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.ico
+!services/dsh/evidence/**/*.png
+services/dsh/evidence/DSH-002-home-discovery-fullstack/screenshots/
+services/dsh/database/seeds/local/media/
+
+.gocache*/
+.gomodcache*/
+.cache/

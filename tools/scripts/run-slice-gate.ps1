@@ -2,19 +2,11 @@ Set-Location -LiteralPath "C:\bthwani-suite-next"
 
 $ErrorActionPreference = "Stop"
 
-$Zip = $args -contains "-Zip"
 $GuardArgIndex = [Array]::IndexOf($args, "-Guard")
 $RequestedGuard = if ($GuardArgIndex -ge 0 -and ($GuardArgIndex + 1) -lt $args.Count) { $args[$GuardArgIndex + 1] } else { $null }
 
 $SliceArgIndex = [Array]::IndexOf($args, "-Slice")
 $Slice = if ($SliceArgIndex -ge 0 -and ($SliceArgIndex + 1) -lt $args.Count) { $args[$SliceArgIndex + 1] } else { "UNSPECIFIED_SLICE" }
-
-$SessionId = "SLICE-GATE-" + (Get-Date -Format "yyyyMMdd-HHmmss")
-$EvidenceRoot = Join-Path (Get-Location) "tools\registry\runs\$SessionId"
-New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
-
-$LogPath = Join-Path $EvidenceRoot "commands.log"
-Set-Content -LiteralPath $LogPath -Value "" -Encoding UTF8
 
 . (Join-Path $PSScriptRoot "gate-run-step.ps1")
 
@@ -27,44 +19,63 @@ if ($RequestedGuard) {
 
 $results = @()
 
-$results += [pscustomobject]@{ step = "git-diff-check"; ok = (Invoke-GateStep "git-diff-check" { git --no-pager diff --check } $EvidenceRoot $LogPath) }
-$results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Invoke-GateStep "pnpm-typecheck" { pnpm typecheck } $EvidenceRoot $LogPath) }
+function Run-Step {
+  param([string]$Name, [scriptblock]$Block)
+  Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
+  try {
+    & $Block
+    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "exit $LASTEXITCODE" }
+    Write-Host "[ OK  ] $Name" -ForegroundColor Green
+    return $true
+  } catch {
+    Write-Host "[ FAIL] $Name — $_" -ForegroundColor Red
+    return $false
+  }
+}
+
+$results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
+$results += [pscustomobject]@{ step = "nx-projects"; ok = (Run-Step "nx-projects" { pnpm nx show projects }) }
+$results += [pscustomobject]@{ step = "graphify-code"; ok = (Run-Step "graphify-code" { pnpm run graphify:code }) }
+$results += [pscustomobject]@{ step = "contracts-lint"; ok = (Run-Step "contracts-lint" { pnpm run contracts:lint }) }
+$results += [pscustomobject]@{ step = "contracts-typecheck"; ok = (Run-Step "contracts-typecheck" { pnpm nx run contracts:typecheck }) }
+$results += [pscustomobject]@{ step = "dsh-typecheck"; ok = (Run-Step "dsh-typecheck" { pnpm nx run dsh:typecheck }) }
+$results += [pscustomobject]@{ step = "dsh-build"; ok = (Run-Step "dsh-build" { pnpm nx run dsh:build }) }
+$results += [pscustomobject]@{ step = "dsh-test"; ok = (Run-Step "dsh-test" { pnpm nx run dsh:test }) }
+$results += [pscustomobject]@{ step = "dsh-go-test"; ok = (Run-Step "dsh-go-test" {
+  $previousGoCache = $env:GOCACHE
+  $env:GOCACHE = Join-Path (Get-Location) ".cache\go-build"
+  Push-Location "services/dsh/backend"
+  try { go test ./... } finally {
+    Pop-Location
+    $env:GOCACHE = $previousGoCache
+  }
+}) }
+$results += [pscustomobject]@{ step = "runtime-smoke"; ok = (Run-Step "runtime-smoke" { pnpm run runtime:smoke }) }
+$results += [pscustomobject]@{ step = "no-financial-mutation-outside-wlt"; ok = (Run-Step "no-financial-mutation-outside-wlt" { pnpm run guard:no-financial-mutation-outside-wlt }) }
+$results += [pscustomobject]@{ step = "dsh-shared-ownership"; ok = (Run-Step "dsh-shared-ownership" { pnpm run guard:dsh-frontend-shared-ownership }) }
+$results += [pscustomobject]@{ step = "wlt-dsh-shared-ownership"; ok = (Run-Step "wlt-dsh-shared-ownership" { pnpm run guard:wlt-dsh-frontend-shared-ownership }) }
+$results += [pscustomobject]@{ step = "dsh-001-cross-surface"; ok = (Run-Step "dsh-001-cross-surface" { pnpm run guard:dsh-001-cross-surface-dependency-map }) }
 
 foreach ($guard in $sliceGuards) {
   $guardEntry = $manifest.guards | Where-Object { $_.id -eq $guard } | Select-Object -First 1
   if (-not $guardEntry) {
     throw "Unknown slice guard: $guard"
   }
-
   $guardPath = $guardEntry.path
   $stepName = "guard-$guard"
-  $results += [pscustomobject]@{ step = $stepName; ok = (Invoke-GateStep $stepName { node $guardPath } $EvidenceRoot $LogPath) }
+  $results += [pscustomobject]@{ step = $stepName; ok = (Run-Step $stepName { node $guardPath }) }
 }
-
-$results | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $EvidenceRoot "evidence.json") -Encoding UTF8
-git --no-pager status --short | Set-Content -LiteralPath (Join-Path $EvidenceRoot "git-status.txt") -Encoding UTF8
 
 $failed = @($results | Where-Object { -not $_.ok })
-$status = if ($failed.Count -eq 0) { "PASS" } else { "FAIL" }
+$status = if ($failed.Count -eq 0) { "LOCAL_VERIFIED_AWAITING_REMOTE_EVIDENCE" } else { "FAIL" }
 
-@"
-status: $status
-slice: $Slice
-session_id: $SessionId
-evidence_root: $EvidenceRoot
-zip_created: $Zip
-guards_run: $($sliceGuards -join ", ")
-"@ | Set-Content -LiteralPath (Join-Path $EvidenceRoot "summary.txt") -Encoding UTF8
-
-if ($Zip) {
-  Compress-Archive -Path (Join-Path $EvidenceRoot "*") -DestinationPath (Join-Path $EvidenceRoot "_HANDOFF.zip") -Force
+Write-Host ""
+Write-Host "================================" -ForegroundColor White
+Write-Host "RESULT: $status  slice=$Slice" -ForegroundColor $(if ($failed.Count -eq 0) { "Green" } else { "Red" })
+if ($failed.Count -gt 0) {
+  Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
 }
-
-Write-Host "RESULT: $status"
-Write-Host "Evidence: $EvidenceRoot"
-if ($Zip) {
-  Write-Host "Handoff:  $(Join-Path $EvidenceRoot "_HANDOFF.zip")"
-}
+Write-Host "================================" -ForegroundColor White
 
 if ($failed.Count -gt 0) {
   exit 1

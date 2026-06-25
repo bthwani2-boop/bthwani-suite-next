@@ -6,9 +6,15 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "node ../../tools/guards/no-auth-runtime-in-app-shell.mjs && node ../../tools/guards/no-app-shell-design-ownership.mjs"
   },
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
+  "dependencies": {},
   "devDependencies": {
+    "@types/react": "19.2.17",
     "typescript": "~6.0.3"
   }
 }

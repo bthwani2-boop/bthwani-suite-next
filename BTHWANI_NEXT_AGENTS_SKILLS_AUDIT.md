@@ -19,7 +19,7 @@ Do not copy the `realtest` agent tree wholesale. Add a compact canonical agent s
 2. Tool configs: `.codex/config.toml`, `.codex/hooks.json`, `.gemini/settings.json`, `.claude/settings.json`, `opencode.json`, `.github/copilot-instructions.md`.
 3. Shared agent docs: `.agents/README.md`, `.agents/INDEX.md`, `.agents/AUTHORITY_BOUNDARY.md`, `.agents/EVIDENCE_GATE_ROUTER.md`, `.agents/GRAPHIFY.md`, `.agents/SKILL_CATALOG.md`, `.agents/UPDATE_POLICY.md`, `.agents/RESTORE_DECISION.md`.
 4. Thin adapters for Claude, Codex, Gemini, Copilot, Cursor, OpenCode.
-5. Compact skill set: 14 practical skills.
+5. Compact skill set: 26 active skills (21 core and 5 Nx support skills).
 
 ## Key constraints enforced
 
