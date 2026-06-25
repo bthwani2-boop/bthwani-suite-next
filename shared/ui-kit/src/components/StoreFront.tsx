@@ -1,5 +1,6 @@
-import React, { memo } from "react";
+import React, { memo, useRef, useState, useEffect } from "react";
 import { Image, ScrollView, YStack, XStack } from "tamagui";
+import { Dimensions, Animated, Pressable } from "react-native";
 import { colorRoles, neutralScale } from "../tokens/colors";
 import { StyledText } from "./_shared";
 import { asUiComponent } from "../internal/tamagui-compat";
@@ -102,65 +103,227 @@ export type BannerCarouselItem = {
   readonly badge?: string;
   readonly image?: { uri: string } | number | null;
   readonly cta?: string;
+  readonly accentColor?: string;
   readonly onPress?: () => void;
 };
 
 export type BannerCarouselProps = {
   readonly banners: readonly BannerCarouselItem[];
+  readonly variant?: "main" | "secondary";
+  readonly itemWidth?: number;
+  readonly itemGap?: number;
 };
 
-export function BannerCarousel({ banners }: BannerCarouselProps) {
-  const itemWidth = 260; // fixed premium width for all screens
+export function BannerCarousel({ banners, variant = "main", itemWidth, itemGap }: BannerCarouselProps) {
+  const { width: windowWidth } = Dimensions.get("window");
+  const isSecondary = variant === "secondary";
+  const count = banners.length;
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  // Premium design spacing
+  const finalItemWidth = itemWidth ?? (isSecondary ? Math.round(windowWidth * 0.62) : 260);
+  const finalItemGap = itemGap ?? (isSecondary ? 12 : 12);
+  const snapInterval = finalItemWidth + finalItemGap;
+  const sidePadding = isSecondary ? (windowWidth - finalItemWidth) / 2 : 16;
+
+  // Tracks current page index on scroll
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    {
+      useNativeDriver: false,
+      listener: (event: any) => {
+        const offsetX = event.nativeEvent.contentOffset.x;
+        const index = Math.round(offsetX / snapInterval);
+        if (index >= 0 && index < count && index !== activeIndex) {
+          setActiveIndex(index);
+        }
+      },
+    }
+  );
+
+  if (count === 0) return null;
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      snapToInterval={itemWidth + 12}
-      decelerationRate="fast"
-    >
-      <XStack style={styles.carouselScroll}>
-        {banners.map((item) => (
-          <FlexYStack
-            key={item.id}
-            onPress={item.onPress}
-            pressStyle={{ opacity: 0.9 }}
-            style={[styles.carouselCard, { width: itemWidth }]}
-          >
-            {item.image ? (
-              <Image source={item.image} style={styles.carouselImage} />
-            ) : (
-              <YStack style={styles.carouselImagePlaceholder} />
-            )}
-            <YStack style={styles.carouselOverlay} />
-            <YStack style={styles.carouselContent}>
-              {item.badge ? (
-                <YStack style={styles.carouselBadge}>
-                  <StyledText role="label" weight="900" style={styles.carouselBadgeText}>
-                    {item.badge}
-                  </StyledText>
-                </YStack>
-              ) : null}
-              <StyledText role="bodyStrong" style={styles.carouselTitle} numberOfLines={1}>
-                {item.title}
-              </StyledText>
-              {item.subtitle ? (
-                <StyledText role="bodySm" style={styles.carouselSubtitle} numberOfLines={1}>
-                  {item.subtitle}
-                </StyledText>
-              ) : null}
-              {item.cta ? (
-                <YStack style={styles.carouselCta}>
-                  <StyledText role="label" weight="900" style={styles.carouselCtaText}>
-                    {item.cta}
-                  </StyledText>
-                </YStack>
-              ) : null}
-            </YStack>
-          </FlexYStack>
-        ))}
-      </XStack>
-    </ScrollView>
+    <YStack style={{ width: "100%", alignItems: "stretch", overflow: "visible" }}>
+      <Animated.ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={snapInterval}
+        decelerationRate={isSecondary ? "normal" : "fast"}
+        bounces={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        contentContainerStyle={{
+          paddingHorizontal: sidePadding,
+          paddingVertical: 8,
+          flexDirection: "row",
+        }}
+      >
+        {banners.map((item, index) => {
+          const cardBackground = item.image
+            ? "transparent"
+            : (item.accentColor ?? colorRoles.brandAction);
+
+          // Centered active item animations
+          const scale = scrollX.interpolate({
+            inputRange: [
+              (index - 1) * snapInterval,
+              index * snapInterval,
+              (index + 1) * snapInterval,
+            ],
+            outputRange: [0.94, 1, 0.94],
+            extrapolate: "clamp",
+          });
+
+          const opacity = scrollX.interpolate({
+            inputRange: [
+              (index - 1) * snapInterval,
+              index * snapInterval,
+              (index + 1) * snapInterval,
+            ],
+            outputRange: [0.78, 1, 0.78],
+            extrapolate: "clamp",
+          });
+
+          return (
+            <Animated.View
+              key={item.id}
+              style={[
+                styles.carouselCard,
+                {
+                  width: finalItemWidth,
+                  backgroundColor: cardBackground,
+                  marginRight: index === count - 1 ? 0 : finalItemGap,
+                },
+                isSecondary && {
+                  borderRadius: 28,
+                  opacity: opacity,
+                  transform: [{ scale }],
+                },
+              ]}
+            >
+              <Pressable
+                onPress={() => item.onPress?.()}
+                style={{ width: "100%", height: "100%", position: "relative" }}
+              >
+                {item.image ? (
+                  <Image source={item.image} style={styles.carouselImage} />
+                ) : null}
+
+                {/* Scrim Overlay */}
+                <YStack
+                  style={[
+                    styles.carouselOverlay,
+                    isSecondary && styles.carouselOverlaySecondary,
+                  ]}
+                />
+
+                {isSecondary ? (
+                  <YStack style={styles.carouselContentSecondary}>
+                    {item.badge ? (
+                      <YStack style={styles.carouselBadgeSecondary}>
+                        <StyledText
+                          role="label"
+                          weight="900"
+                          style={styles.carouselBadgeTextSecondary}
+                        >
+                          {item.badge}
+                        </StyledText>
+                      </YStack>
+                    ) : null}
+
+                    <YStack style={styles.carouselMiddleCopy}>
+                      <StyledText
+                        role="bodyStrong"
+                        weight="900"
+                        style={styles.carouselTitleSecondary}
+                        numberOfLines={2}
+                      >
+                        {item.title}
+                      </StyledText>
+                      {item.subtitle ? (
+                        <StyledText
+                          role="bodySm"
+                          style={styles.carouselSubtitleSecondary}
+                          numberOfLines={2}
+                        >
+                          {item.subtitle}
+                        </StyledText>
+                      ) : null}
+                    </YStack>
+
+                    {item.cta ? (
+                      <YStack
+                        style={[
+                          styles.carouselCtaSecondary,
+                          { backgroundColor: item.accentColor ?? colorRoles.brandAction },
+                        ]}
+                      >
+                        <StyledText
+                          role="label"
+                          weight="900"
+                          style={styles.carouselCtaTextSecondary}
+                        >
+                          {item.cta}
+                        </StyledText>
+                      </YStack>
+                    ) : null}
+                  </YStack>
+                ) : (
+                  <YStack style={styles.carouselContent}>
+                    {item.badge ? (
+                      <YStack style={styles.carouselBadge}>
+                        <StyledText role="label" weight="900" style={styles.carouselBadgeText}>
+                          {item.badge}
+                        </StyledText>
+                      </YStack>
+                    ) : null}
+                    <StyledText role="bodyStrong" style={styles.carouselTitle} numberOfLines={1}>
+                      {item.title}
+                    </StyledText>
+                    {item.subtitle ? (
+                      <StyledText role="bodySm" style={styles.carouselSubtitle} numberOfLines={1}>
+                        {item.subtitle}
+                      </StyledText>
+                    ) : null}
+                    {item.cta ? (
+                      <YStack style={styles.carouselCta}>
+                        <StyledText role="label" weight="900" style={styles.carouselCtaText}>
+                          {item.cta}
+                        </StyledText>
+                      </YStack>
+                    ) : null}
+                  </YStack>
+                )}
+              </Pressable>
+            </Animated.View>
+          );
+        })}
+      </Animated.ScrollView>
+
+      {/* Progress Page Indicators */}
+      {isSecondary && count > 1 ? (
+        <XStack style={styles.progressRow}>
+          {banners.map((item, idx) => {
+            const isActive = idx === activeIndex;
+            return (
+              <YStack
+                key={item.id}
+                style={[
+                  styles.progressTrack,
+                  isActive && [
+                    styles.progressTrackActive,
+                    { backgroundColor: item.accentColor ?? colorRoles.brandAction },
+                  ],
+                ]}
+              />
+            );
+          })}
+        </XStack>
+      ) : null}
+    </YStack>
   );
 }
 
@@ -247,7 +410,7 @@ const styles = {
   carouselScroll: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 12,
   },
   carouselCard: {
@@ -255,17 +418,11 @@ const styles = {
     borderRadius: 16,
     overflow: "hidden",
     position: "relative",
-    backgroundColor: neutralScale[900],
   },
   carouselImage: {
     width: "100%",
     height: "100%",
     resizeMode: "cover",
-  },
-  carouselImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: colorRoles.brandAction,
   },
   carouselOverlay: {
     position: "absolute",
@@ -274,6 +431,9 @@ const styles = {
     right: 0,
     bottom: 0,
     backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  carouselOverlaySecondary: {
+    backgroundColor: "rgba(0, 0, 0, 0.24)",
   },
   carouselContent: {
     position: "absolute",
@@ -285,6 +445,16 @@ const styles = {
     justifyContent: "flex-end",
     alignItems: "flex-end",
   },
+  carouselContentSecondary: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 16,
+    justifyContent: "space-between",
+    alignItems: "stretch",
+  },
   carouselBadge: {
     position: "absolute",
     top: 12,
@@ -294,10 +464,36 @@ const styles = {
     paddingVertical: 3,
     borderRadius: 6,
   },
+  carouselBadgeSecondary: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: colorRoles.surfaceBase,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.24)",
+  },
   carouselBadgeText: {
     color: colorRoles.brandStructure,
     fontSize: 10,
     fontFamily: "Outfit-Bold",
+  },
+  carouselBadgeTextSecondary: {
+    color: neutralScale[900],
+    fontSize: 11,
+    fontFamily: "Outfit-Bold",
+  },
+  carouselMiddleCopy: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 54,
   },
   carouselTitle: {
     color: colorRoles.textOnMediaStrong,
@@ -305,11 +501,27 @@ const styles = {
     fontFamily: "Outfit-Bold",
     textAlign: "right",
   },
+  carouselTitleSecondary: {
+    color: colorRoles.textInverse,
+    fontSize: 20,
+    fontFamily: "Outfit-Bold",
+    textAlign: "center",
+    lineHeight: 25,
+    fontWeight: "900",
+  },
   carouselSubtitle: {
     color: colorRoles.textOnMediaMuted,
     fontSize: 12,
     marginTop: 2,
     textAlign: "right",
+  },
+  carouselSubtitleSecondary: {
+    color: "rgba(255, 255, 255, 0.92)",
+    fontSize: 13,
+    fontFamily: "Outfit",
+    textAlign: "center",
+    marginTop: 4,
+    lineHeight: 16,
   },
   carouselCta: {
     marginTop: 8,
@@ -318,8 +530,38 @@ const styles = {
     paddingVertical: 4,
     borderRadius: 12,
   },
+  carouselCtaSecondary: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+  },
   carouselCtaText: {
     color: colorRoles.textInverse,
     fontSize: 11,
+  },
+  carouselCtaTextSecondary: {
+    color: colorRoles.textInverse,
+    fontSize: 11,
+    fontFamily: "Outfit-Bold",
+  },
+  progressRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    width: "100%",
+  },
+  progressTrack: {
+    width: 7,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: neutralScale[300],
+  },
+  progressTrackActive: {
+    width: 22,
   },
 } as const;

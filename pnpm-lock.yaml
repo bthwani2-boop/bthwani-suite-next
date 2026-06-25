@@ -297,6 +297,9 @@ importers:
       react-native-safe-area-context:
         specifier: ~5.7.0
         version: 5.7.0(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      react-native-svg:
+        specifier: 15.15.4
+        version: 15.15.4(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
     devDependencies:
       '@types/node':
         specifier: 22.16.0

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Image, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Svg, Circle, Path } from "react-native-svg";
 import {
   BannerCarousel,
   BannerCarouselItem,
@@ -26,6 +27,35 @@ type PublishedCatalogScreenProps = {
   readonly storeId: string;
   readonly onBack?: () => void;
 };
+
+function SearchIcon({ color }: { readonly color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} />
+      <Path d="M16.5 16.5L21 21" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function CartIcon({ color }: { readonly color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M3 6h18" stroke={color} strokeWidth={2} />
+      <Path d="M16 10a4 4 0 01-8 0" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function ShareIcon({ color }: { readonly color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M16 6l-4-4-4 4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 2v13" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScreenProps) {
   const storeCtrl = useStoreDetailController(storeId);
@@ -121,17 +151,16 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
 
   // Construct promo BannerCarousel items from catalog products or defaults
   const bannerCarouselItems: readonly BannerCarouselItem[] = products
-    .filter((p: CatalogProduct) => p.media && p.media.length > 0)
     .slice(0, 3)
     .map((p: CatalogProduct) => {
-      const firstMedia = p.media[0];
+      const firstMedia = p.media && p.media.length > 0 ? p.media[0] : null;
       return {
         id: p.id,
         title: p.name,
         subtitle: p.description,
-        badge: "عرض خاص",
+        badge: categories.find((c: CatalogCategory) => c.id === p.categoryId)?.name || "عام",
         image: (firstMedia && firstMedia.publicUrl) ? { uri: firstMedia.publicUrl } : null,
-        cta: "اطلب الآن",
+        cta: "تفاصيل",
         onPress: () => {
           Alert.alert("معاينة المنتج", p.name);
         },
@@ -148,28 +177,21 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
         <View style={[styles.floatingHeader, { top: Math.max(insets.top, 16) }]}>
           <View style={styles.floatingHeaderLeft}>
             <FloatingActionCircle
-              icon={<Text style={styles.headerIconText}>🔍</Text>}
+              icon={<SearchIcon color={colorRoles.brandStructure} />}
               accessibilityLabel="بحث"
               onPress={() => Alert.alert("بحث", "البحث متوفر قريباً داخل المتجر.")}
             />
             <FloatingActionCircle
-              icon={<Text style={styles.headerIconText}>🛒</Text>}
+              icon={<CartIcon color={colorRoles.brandStructure} />}
               accessibilityLabel="عربة التسوق"
               onPress={() => Alert.alert("العربة", "عربة التسوق ستتوفر قريباً.")}
             />
             <FloatingActionCircle
-              icon={<Text style={styles.headerIconText}>🔗</Text>}
+              icon={<ShareIcon color={colorRoles.brandStructure} />}
               accessibilityLabel="مشاركة"
               onPress={() => Alert.alert("مشاركة", `مشاركة متجر ${store.displayName}`)}
             />
           </View>
-          {onBack ? (
-            <FloatingActionCircle
-              icon={<Text style={styles.headerIconText}>↩</Text>}
-              accessibilityLabel="رجوع"
-              onPress={onBack}
-            />
-          ) : null}
         </View>
       </View>
 
@@ -246,7 +268,7 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
           {/* Promotions Banner Carousel */}
           {bannerCarouselItems.length > 0 ? (
             <View style={styles.carouselSection}>
-              <BannerCarousel banners={bannerCarouselItems} />
+              <BannerCarousel banners={bannerCarouselItems} variant="secondary" />
             </View>
           ) : null}
 
@@ -284,7 +306,7 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
                     subtitle={p.description}
                     imageSource={imageSource}
                     categoryLabel={categories.find((c: CatalogCategory) => c.id === p.categoryId)?.name || "عام"}
-                    price={{ value: parseFloat(p.priceReference || "0"), currency: "ر.ي" }}
+                    price={{ value: parseFloat(p.priceReference || "0"), currency: "د.ي" }}
                     isFavorited={isFav}
                     onFavorite={() => storeCtrl.toggleFavorite(p.id)}
                     onAdd={() => Alert.alert("السلة", `تمت إضافة ${p.name} بنجاح.`)}

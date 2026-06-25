@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@bthwani/core-identity": "workspace:*",
-    "react-native-safe-area-context": "~5.7.0"
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@types/node": "22.16.0",

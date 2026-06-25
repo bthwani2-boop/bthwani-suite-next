@@ -12,7 +12,7 @@ import {
 } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDiscoveryRoute";
-import { PublishedCatalogScreen } from "../../../../services/dsh/frontend/app-client/catalog";
+import { StoreDetailRoute } from "../../../../services/dsh/frontend/app-client/store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "../../../../services/dsh/frontend/app-client/checkout/ClientCheckoutRoute";
 
 // ─── Inline icon helpers ───────────────────────────────────────
@@ -198,7 +198,7 @@ function App() {
         ) : activeTab === "stores" ? (
           selectedStoreId === null
             ? <StoreDiscoveryRoute onStorePress={setSelectedStoreId} />
-            : <PublishedCatalogScreen
+            : <StoreDetailRoute
                 storeId={selectedStoreId}
                 onBack={() => setSelectedStoreId(null)}
               />
