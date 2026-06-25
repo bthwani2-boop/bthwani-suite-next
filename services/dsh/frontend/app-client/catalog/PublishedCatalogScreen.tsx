@@ -300,9 +300,17 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
                     id={p.id}
                     title={p.name}
                     subtitle={p.description}
+                    unitLabel={p.unitLabel}
                     imageSource={imageSource}
                     categoryLabel={categories.find((c: CatalogCategory) => c.id === p.categoryId)?.name || "عام"}
-                    price={{ value: parseFloat(p.priceReference || "0"), currency: "د.ي" }}
+                    price={{ value: parseFloat(p.priceReference || "0"), currency: "ر.ي" }}
+                    originalPrice={
+                      p.originalPriceReference
+                        ? parseFloat(p.originalPriceReference)
+                        : undefined
+                    }
+                    discountPercent={p.discountPercent}
+                    stockStatus={p.stockStatus}
                     isFavorited={isFav}
                     onFavorite={() => storeCtrl.toggleFavorite(p.id)}
                     onAdd={() => Alert.alert("السلة", `تمت إضافة ${p.name} بنجاح.`)}

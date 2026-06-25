@@ -24,7 +24,6 @@ export type CatalogMedia = {
   readonly publicUrl: string | null;
   readonly version: number;
 };
-
 export type CatalogProduct = {
   readonly id: string;
   readonly storeId: string;
@@ -33,6 +32,14 @@ export type CatalogProduct = {
   readonly description: string;
   readonly sku: string;
   readonly priceReference: string;
+  /** Original price before discount. If present and greater than priceReference, a discount is active. */
+  readonly originalPriceReference?: string;
+  /** Discount percentage label (e.g. "15%"). Derived by API or computed locally. */
+  readonly discountPercent?: number;
+  /** Unit label shown beside the product name (e.g. "500g", "1L", "كغ"). */
+  readonly unitLabel?: string;
+  /** Stock availability. Defaults to "in_stock" when absent. */
+  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
   readonly isActive: boolean;
   readonly version: number;
   readonly media: readonly CatalogMedia[];
