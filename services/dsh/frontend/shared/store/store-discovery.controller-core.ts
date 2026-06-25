@@ -45,6 +45,22 @@ export function withStoreDiscoveryFilter(
   };
 }
 
+/** DSH-015: Client surfaces MUST call this before rendering store lists. */
+export function filterClientEligibleStores(
+  stores: readonly DshStoreCardViewModel[],
+): readonly DshStoreCardViewModel[] {
+  return stores.filter((s) => s.isClientEligible);
+}
+
+export function withClientEligibilityFilter(
+  state: DshStoreListState,
+): DshStoreListState {
+  if (state.kind !== "success") return state;
+  const eligible = filterClientEligibleStores(state.stores);
+  if (eligible.length === 0) return { kind: "empty" };
+  return { ...state, stores: eligible };
+}
+
 export async function loadStoreDiscovery(
   fetcher: () => Promise<DshStoreListState>,
   publish: (state: DshStoreListState) => void,

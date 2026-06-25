@@ -3,14 +3,10 @@ import { XStack, YStack } from "tamagui";
 import { Text } from "../Text";
 import { colorRoles } from "../../tokens/colors";
 
-// Safe dynamic resolve for React Native's I18nManager
-let isRtl = false;
-try {
-  const rn = require("react" + "-native");
-  isRtl = rn.I18nManager.isRTL;
-} catch {
-  // Web/Next.js fallback
-}
+// Platform-safe RTL detection: reads document.dir on web, false on SSR / mobile fallback.
+// Intentionally avoids importing react-native so this module is safe for Turbopack / Next.js.
+const isRtl: boolean =
+  typeof document !== "undefined" && document.documentElement.dir === "rtl";
 
 export type ChipProps = {
   label: string;

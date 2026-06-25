@@ -34,7 +34,8 @@ function hasRuntimeCardContract(
     typeof value["followerCount"] === "number" &&
     typeof value["hasProBadge"] === "boolean" &&
     typeof value["hasCouponBadge"] === "boolean" &&
-    typeof value["isPopular"] === "boolean"
+    typeof value["isPopular"] === "boolean" &&
+    typeof value["publicationEligible"] === "boolean"
   );
 }
 

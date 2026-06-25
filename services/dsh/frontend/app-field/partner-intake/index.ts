@@ -1,0 +1,1 @@
+export { PartnerIntakeScreen } from "./PartnerIntakeScreen";

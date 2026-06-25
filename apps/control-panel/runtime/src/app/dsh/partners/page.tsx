@@ -1,14 +1,14 @@
 "use client";
 
-import { StoreManagementScreen } from "@dsh-cp/partners/stores/StoreManagementScreen";
+import { PartnerListScreen } from "@dsh-cp/partners";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
   ControlPanelTopBar,
-} from "../../../../shell";
+} from "../../../shell";
 import { useRouter } from "next/navigation";
 
-export default function DshStoresPage() {
+export default function DshPartnersPage() {
   const router = useRouter();
 
   const handleSectionPress = (section: string) => {
@@ -27,12 +27,7 @@ export default function DshStoresPage() {
       topBar={
         <ControlPanelTopBar
           title={<strong>لوحة التحكم — DSH</strong>}
-          serviceLabel={
-            <span>
-              <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/dsh/partners")}>الشركاء</span>
-              {" / المتاجر"}
-            </span>
-          }
+          serviceLabel={<span>الشركاء</span>}
         />
       }
       navigation={
@@ -51,7 +46,12 @@ export default function DshStoresPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<StoreManagementScreen />}
+      main={
+        <PartnerListScreen
+          onSelectPartner={(partnerId) => router.push(`/dsh/partners/${partnerId}`)}
+          onCreatePartner={() => router.push("/dsh/partners/new")}
+        />
+      }
     />
   );
 }

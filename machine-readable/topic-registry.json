@@ -1584,6 +1584,122 @@
       "verified_date": "2026-06-24"
     },
 
+    "DSH-015": {
+      "topic_id": "DSH-015",
+      "topic_name": "Partner Store Activation",
+      "purpose": "Full-profile 18-state partner lifecycle: from field intake draft through document review, ops approval, and final client_visible publication. Manages dsh_partners entity, store linkage, activation events, and client visibility gate.",
+      "business_meaning": "Partners are the supply side of the platform. Without a governed, audited activation journey, stores could appear to clients before physical verification is complete, or disappear silently when deactivated. DSH-015 closes this gap: every store's client visibility is tied to its partner's onboarding_status = 'client_visible', enforced by backend SQL and mirrored in the frontend shared brain via publicationEligible.",
+      "owning_service": "dsh",
+      "owning_shared_brain": "services/dsh/frontend/shared/partner/",
+      "wlt_shared_brain": null,
+      "in_scope": [
+        "dsh_partners table (18-state onboarding_status)",
+        "dsh_partner_documents, dsh_partner_activation_events, dsh_store_visibility_events tables",
+        "partner_id FK on dsh_stores",
+        "dsh-015_partner_activation.sql migration",
+        "Partner backend handlers: create, get, list, transition, documents, readiness, stores, audit",
+        "DSH-015 OpenAPI operations (tag: DshPartnerActivation)",
+        "shared/partner/ brain: model, types, states, view-model, admin controller, self controller",
+        "Control Panel partner screens: PartnerListScreen, PartnerDetailScreen (under control-panel/partners/)",
+        "app-partner: PartnerActivationStatusScreen (read-only status view)",
+        "app-field: PartnerIntakeScreen (draft creation only — never activates)",
+        "app-client: publicationEligible enforcement via withClientEligibilityFilter in shared/store",
+        "protectedStoreServer methods: handlePartnerActivationStatus, handlePartnerActivationReadiness"
+      ],
+      "out_of_scope": [
+        "Financial mutations — WLT owns all financial truth",
+        "Partner self-activation — Control Panel owns all activation decisions",
+        "app-captain interaction with partner lifecycle",
+        "webapp and website surfaces",
+        "DSH-014 dsh_admin_partner_activations table — preserved unchanged (lightweight 4-state)"
+      ],
+      "related_backend_modules": ["services/dsh/backend/internal/partner", "services/dsh/backend/internal/http"],
+      "related_database_tables": ["dsh_partners", "dsh_partner_documents", "dsh_partner_activation_events", "dsh_store_visibility_events", "dsh_stores (partner_id FK)"],
+      "migrations_required": ["dsh-015_partner_activation.sql"],
+      "api_contracts_required": [
+        "listDshOperatorPartners", "createDshPartner", "getDshPartner", "transitionDshPartner",
+        "getDshPartnerReadiness", "listDshPartnerDocuments", "addDshPartnerDocument", "reviewDshPartnerDocument",
+        "listDshPartnerStores", "linkDshPartnerStore", "listDshPartnerAudit",
+        "getDshPartnerActivationStatus", "getDshPartnerActivationReadiness", "submitFieldPartnerIntake"
+      ],
+      "api_clients_required": [],
+      "required_surfaces": ["control-panel"],
+      "optional_surfaces": [],
+      "read_only_surfaces": ["app-partner", "app-client"],
+      "evidence_collection_surfaces": ["app-field"],
+      "forbidden_surfaces": ["webapp", "website"],
+      "primary_control_panel_section": "partners",
+      "secondary_control_panel_sections": [],
+      "read_only_control_panel_sections": [],
+      "forbidden_control_panel_sections": ["operations", "dashboard", "finance", "catalogs", "marketing", "support", "administration", "hr"],
+      "permissions": {
+        "operator_routes": "operator or admin role",
+        "partner_self_routes": "partner role (X-Partner-ID header or actor subject)",
+        "field_intake_route": "field role"
+      },
+      "state_machine": {
+        "total_states": 18,
+        "states": ["draft", "field_submitted", "docs_pending", "docs_under_review", "docs_approved", "docs_rejected", "identity_verified", "ops_review", "ops_approved", "ops_rejected", "contract_pending", "contract_signed", "training_pending", "training_complete", "tech_setup", "pilot_phase", "partner_active", "client_visible"],
+        "terminal_states": ["ops_rejected", "client_visible"],
+        "client_visibility_state": "client_visible",
+        "deactivation_states": ["partner_deactivated", "partner_suspended"]
+      },
+      "client_visibility_rule": "app-client sees stores ONLY when partner.onboarding_status = 'client_visible'. Enforced at backend SQL JOIN level AND in frontend shared/store via withClientEligibilityFilter(state) using DshStoreCardViewModel.isClientEligible (computed from publicationEligible DTO field).",
+      "wlt_boundary": "No financial mutations. No balance reads. No fee calculations. No WLT API calls from DSH-015 code paths.",
+      "states_required": {
+        "control_panel_partner_list": ["loading", "idle", "success", "empty", "error"],
+        "control_panel_partner_detail": ["loading", "idle", "success", "not_found", "error"],
+        "control_panel_partner_mutation": ["idle", "submitting", "success", "error"],
+        "control_panel_partner_documents": ["loading", "idle", "success", "empty", "error"],
+        "control_panel_partner_readiness": ["loading", "idle", "success", "not_found", "error"],
+        "control_panel_partner_audit": ["loading", "idle", "success", "empty", "error"],
+        "control_panel_partner_stores": ["loading", "idle", "success", "empty", "error"],
+        "app_partner_status": ["loading", "idle", "success", "not_found", "error"],
+        "app_partner_readiness": ["loading", "idle", "success", "not_found", "error"],
+        "app_client_store_discovery": ["loading", "empty", "success", "error", "service_unavailable"]
+      },
+      "acceptance_criteria": [
+        "Operator can list all partners with status/category filters and pagination",
+        "Operator can create a new partner (draft state)",
+        "Operator can view partner detail with documents, stores, readiness, audit tabs",
+        "Operator can transition partner through all 18 states with reason; invalid transitions are rejected",
+        "Version conflict detected and surfaced to UI (optimistic locking)",
+        "Operator can add/review documents for a partner",
+        "Operator can link a store to a partner",
+        "Partner self-surface shows current onboarding status and readiness checklist (read-only)",
+        "Field agent can submit new partner intake (draft) — field never activates",
+        "app-client store discovery hides stores where publicationEligible=false",
+        "All activation events stored in dsh_partner_activation_events with actor_id, from_state, to_state, reason, timestamp",
+        "Go backend compiles cleanly with all DSH-015 routes registered",
+        "OpenAPI contracts lint passes with DshPartnerActivation tag",
+        "RTL layout and Arabic labels on all new screens"
+      ],
+      "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
+      "current_status": "NOT_CLOSED",
+      "blockers": [
+        "TypeScript typecheck not yet run",
+        "Go tests not yet run",
+        "Runtime not yet verified",
+        "slice:gate not yet run",
+        "Evidence files not yet created",
+        "Control Panel StoreManagementScreen and FieldReadinessQueueScreen referenced in index.ts but not yet implemented"
+      ],
+      "evidence_required": ["Go build PASS", "contracts:lint PASS", "typecheck PASS", "go test PASS", "guard:matrix:v3 PASS", "guard:dsh-frontend-shared-ownership PASS", "slice:gate PASS", "Runtime API smoke proof"],
+      "source_evidence": [
+        {"type": "SQL_MIGRATION", "path": "services/dsh/database/migrations/dsh-015_partner_activation.sql", "status": "PRESENT"},
+        {"type": "BACKEND_HANDLERS", "path": "services/dsh/backend/internal/partner/handler.go", "status": "PRESENT"},
+        {"type": "BACKEND_DOMAIN", "path": "services/dsh/backend/internal/partner/partner.go", "status": "PRESENT"},
+        {"type": "OPENAPI_CONTRACT", "path": "services/dsh/contracts/dsh.openapi.yaml", "status": "PRESENT"},
+        {"type": "SHARED_BRAIN", "path": "services/dsh/frontend/shared/partner/", "status": "PRESENT"},
+        {"type": "CONTROL_PANEL_SCREEN", "path": "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx", "status": "PRESENT"},
+        {"type": "CONTROL_PANEL_SCREEN", "path": "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx", "status": "PRESENT"},
+        {"type": "APP_PARTNER_SCREEN", "path": "services/dsh/frontend/app-partner/onboarding/PartnerActivationStatusScreen.tsx", "status": "PRESENT"},
+        {"type": "APP_FIELD_SCREEN", "path": "services/dsh/frontend/app-field/partner-intake/PartnerIntakeScreen.tsx", "status": "PRESENT"},
+        {"type": "CLIENT_ELIGIBILITY_ENFORCEMENT", "path": "services/dsh/frontend/shared/store/store-discovery.controller-core.ts", "status": "PRESENT"}
+      ],
+      "verified_date": null
+    },
+
     "WLT-001": {
       "topic_id": "WLT-001",
       "topic_name": "Payment Session Capture Lifecycle",

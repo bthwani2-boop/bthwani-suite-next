@@ -34,7 +34,7 @@ export function PartnerOnboardingStatusScreen({ storeId }: Props) {
       <Header
         title="حالة تأهيل المتجر"
         subtitle="تعرّف على مراحل التحقق الميداني ومتطلبات التفعيل"
-        actions={<Badge label={vm.statusLabel} tone={headerBadgeTone} />
+        actions={<Badge label={vm.statusLabel} tone={headerBadgeTone} />}
       />
       <Card>
         <View style={styles.hero}>

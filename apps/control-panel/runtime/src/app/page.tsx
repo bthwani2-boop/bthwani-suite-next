@@ -13,7 +13,7 @@ export default function RootPage() {
   const handleSectionPress = (section: string) => {
     if (section === "dashboard") router.push("/");
     if (section === "operations") router.push("/dsh/operations");
-    if (section === "partners") router.push("/dsh/partners/stores");
+    if (section === "partners") router.push("/dsh/partners");
     if (section === "catalogs") router.push("/dsh/catalogs");
     if (section === "marketing") router.push("/dsh/marketing");
   };

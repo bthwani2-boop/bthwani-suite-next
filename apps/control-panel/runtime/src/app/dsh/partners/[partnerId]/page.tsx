@@ -1,15 +1,17 @@
 "use client";
 
-import { StoreManagementScreen } from "@dsh-cp/partners/stores/StoreManagementScreen";
+import { PartnerDetailScreen } from "@dsh-cp/partners";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
   ControlPanelTopBar,
 } from "../../../../shell";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-export default function DshStoresPage() {
+export default function DshPartnerDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const partnerId = typeof params["partnerId"] === "string" ? params["partnerId"] : "";
 
   const handleSectionPress = (section: string) => {
     if (section === "dashboard") router.push("/");
@@ -28,9 +30,11 @@ export default function DshStoresPage() {
         <ControlPanelTopBar
           title={<strong>لوحة التحكم — DSH</strong>}
           serviceLabel={
-            <span>
-              <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/dsh/partners")}>الشركاء</span>
-              {" / المتاجر"}
+            <span
+              style={{ cursor: "pointer", textDecoration: "underline" }}
+              onClick={() => router.push("/dsh/partners")}
+            >
+              الشركاء
             </span>
           }
         />
@@ -51,7 +55,12 @@ export default function DshStoresPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<StoreManagementScreen />}
+      main={
+        <PartnerDetailScreen
+          partnerId={partnerId}
+          onBack={() => router.push("/dsh/partners")}
+        />
+      }
     />
   );
 }
