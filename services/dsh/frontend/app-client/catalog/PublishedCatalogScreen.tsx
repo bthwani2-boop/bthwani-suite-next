@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Image, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Svg, Circle, Path } from "react-native-svg";
-import { LoadingState, ScrollScreen, StateView, Text, colorRoles } from "@bthwani/ui-kit";
+import { LoadingState, ScrollScreen, StateView, Text, colorRoles, alpha } from "@bthwani/ui-kit";
 import {
   BannerCarousel,
   type BannerCarouselItem,
@@ -14,6 +13,9 @@ import {
   ProductCard,
   ServiceModeSegment,
   StatusBadge,
+  SearchIcon,
+  CartIcon,
+  ShareIcon,
 } from "../shared/ui";
 import { usePublishedCatalogController } from "../../shared/catalog";
 import { useStoreDetailController } from "../../shared/store";
@@ -23,35 +25,6 @@ type PublishedCatalogScreenProps = {
   readonly storeId: string;
   readonly onBack?: () => void;
 };
-
-function SearchIcon({ color }: { readonly color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} />
-      <Path d="M16.5 16.5L21 21" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function CartIcon({ color }: { readonly color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M3 6h18" stroke={color} strokeWidth={2} />
-      <Path d="M16 10a4 4 0 01-8 0" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function ShareIcon({ color }: { readonly color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M16 6l-4-4-4 4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M12 2v13" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScreenProps) {
   const storeCtrl = useStoreDetailController(storeId);
@@ -248,16 +221,20 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
           {/* Opening hours & store summary Single Box */}
           <View style={styles.infoBox}>
             <View style={styles.infoRow}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.infoIcon}>🕒</Text>
+              </View>
               <Text role="bodySm" tone="secondary" style={styles.infoText}>
                 أوقات العمل: 08:00 - 23:00
               </Text>
-              <Text style={styles.infoIcon}>🕒</Text>
             </View>
             <View style={[styles.infoRow, { borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle, paddingTop: 10, marginTop: 10 }]}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.infoIcon}>🛍️</Text>
+              </View>
               <Text role="bodySm" tone="secondary" style={styles.infoText}>
-                ملخص المتجر: Over 1,200 fresh groceries and daily essentials
+                ملخص المتجر: أكثر من ١,٢٠٠ من المواد الغذائية الطازجة والاحتياجات اليومية
               </Text>
-              <Text style={styles.infoIcon}>🛍️</Text>
             </View>
           </View>
 
@@ -427,12 +404,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
+    gap: 10,
   },
   infoRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 8,
+    gap: 12,
   },
   infoText: {
     flex: 1,
@@ -440,8 +418,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colorRoles.textSecondary,
   },
+  iconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: alpha(colorRoles.brandStructure, 0.06),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   infoIcon: {
-    fontSize: 16,
+    fontSize: 13,
   },
   carouselSection: {
     marginTop: 16,

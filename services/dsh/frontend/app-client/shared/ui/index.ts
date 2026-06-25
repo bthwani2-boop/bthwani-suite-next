@@ -8,3 +8,4 @@ export { MetricChip } from "./MetricChip";
 export { ProductCard } from "./ProductCard";
 export { ServiceModeSegment } from "./ServiceModeSegment";
 export { StatusBadge } from "./StatusBadge";
+export { SearchIcon, CartIcon, ShareIcon } from "./Icons";
