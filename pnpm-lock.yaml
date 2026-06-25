@@ -281,6 +281,9 @@ importers:
 
   core/identity:
     devDependencies:
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -291,9 +294,15 @@ importers:
 
   services/dsh:
     dependencies:
+      '@bthwani/control-panel':
+        specifier: workspace:*
+        version: link:../../apps/control-panel/runtime
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../core/identity
+      '@bthwani/ui-kit':
+        specifier: workspace:*
+        version: link:../../shared/ui-kit
       react-native-safe-area-context:
         specifier: ~5.7.0
         version: 5.7.0(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
@@ -338,10 +347,6 @@ importers:
         version: 6.0.3
 
   shared/app-shell:
-    dependencies:
-      '@bthwani/core-identity':
-        specifier: workspace:*
-        version: link:../../core/identity
     devDependencies:
       '@types/react':
         specifier: 19.2.17
