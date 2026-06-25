@@ -24,6 +24,7 @@ Version: 2026.06.24-v1
 - `bthwani-screen-flow-binding` — Bind routes/screens/view-models/states/visual evidence for UI flows.
 - `bthwani-dsh-wlt-finance-boundary` — Protect WLT financial truth and DSH/WLT integration boundaries.
 - `bthwani-frontend-design-excellence` — Enforce premium, modern, dynamic, mobile-first, RTL-correct, and visually stunning frontend design quality.
+- `bthwani-premium-visual-design-surgeon` — Perform deep visual dissection and premium 2026 UI execution while enforcing ui-kit, DSH shared brain, WLT/DSH boundary, RTL, performance, and visual evidence.
 - `bthwani-final-slice-closure-judge` — Judge if a slice is fully closed and ready by verifying multi-dimensional evidence.
 - `nx-workspace` — Inspect Nx workspace, projects, targets, and graph.
 - `nx-run-tasks` — Run `nx run`, `run-many`, `affected`, filters, and task debugging.

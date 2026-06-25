@@ -39,6 +39,7 @@ Use this file to select the smallest relevant skill set.
 - UI kit/design system → `bthwani-ui-kit-design-lock`
 - Screen/route/state/visual binding → `bthwani-screen-flow-binding`
 - DSH/WLT money boundary → `bthwani-dsh-wlt-finance-boundary`
+- Premium 2026 visual surgery / donor extraction / RTL / design closure → `bthwani-premium-visual-design-surgeon`
 
 ## Selection rule
 
