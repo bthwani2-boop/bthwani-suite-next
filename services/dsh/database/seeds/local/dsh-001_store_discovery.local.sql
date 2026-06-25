@@ -60,7 +60,7 @@ INSERT INTO dsh_stores (
     'sana', 'old-city', 'serviceable', 4.90, 524, 15, 30, true,
     'http://localhost:59000/dsh-media/store-1005-hero.jpg',
     'http://localhost:59000/dsh-media/store-1005-logo.jpg',
-    'restaurant', ARRAY['delivery','pickup'], true,
+    'restaurant', ARRAY['delivery','pickup','express'], true,
     0.50, 5200, true, true, 3, true
   ),
   (

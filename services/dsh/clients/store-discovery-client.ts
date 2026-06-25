@@ -92,6 +92,8 @@ export function createDshStoreClient(baseUrl: string): DshStoreClient {
         method: input?.method ?? "GET",
         headers: {
           Accept: "application/json",
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
           ...(input?.body !== undefined ? { "Content-Type": "application/json" } : {}),
           ...(input?.token !== undefined ? { Authorization: `Bearer ${input.token}` } : {}),
           ...(input?.auth !== undefined

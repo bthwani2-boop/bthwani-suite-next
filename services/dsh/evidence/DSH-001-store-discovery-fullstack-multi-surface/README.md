@@ -111,7 +111,7 @@ When unset, the fallback to first-store from API remains a dev-only fallback and
 
 ## WLT-for-DSH Boundary
 
-`services/wlt/frontend/dsh/shared` is established as the read-only financial reference
+`services/wlt/frontend/shared/dsh` is established as the read-only financial reference
 boundary for DSH surfaces. WLT runtime remains `CONTRACT_ONLY`; no backend, database,
 or financial mutation is active.
 

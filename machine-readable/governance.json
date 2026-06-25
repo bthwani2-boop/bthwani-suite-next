@@ -51,7 +51,7 @@
     "shared_brain_rule": "All business logic, controllers, view-models, and state machines live in services/<service>/frontend/shared/. Surfaces consume shared — they do not own logic.",
     "surface_ui_rule": "Surface files in services/<service>/frontend/<surface>/ are UI-only. They import controllers/hooks from shared. Any business logic in a surface file is an OWNERSHIP_VIOLATION.",
     "dsh_shared_brain_path": "services/dsh/frontend/shared/",
-    "wlt_shared_brain_for_dsh_path": "services/wlt/frontend/dsh/shared/"
+    "wlt_shared_brain_for_dsh_path": "services/wlt/frontend/shared/dsh/"
   },
 
   "real_experience_closure_standard": {

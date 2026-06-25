@@ -14,18 +14,17 @@ export function StoreDetailInfoCard({
   isRTL,
 }: Props) {
   return (
-    <View style={styles.card}>
+    <View style={styles.container}>
       {openingHours ? (
-        <View style={[styles.row, isRTL && styles.rowReverse]}>
+        <View style={[styles.chipRow, isRTL && styles.rowReverse]}>
           <Text style={styles.icon}>🕒</Text>
           <Text style={[styles.label, isRTL && styles.textRight]}>
             {isRTL ? `أوقات العمل: ${openingHours}` : `Opening Hours: ${openingHours}`}
           </Text>
         </View>
       ) : null}
-      {openingHours && catalogSummary ? <View style={styles.divider} /> : null}
       {catalogSummary ? (
-        <View style={[styles.row, isRTL && styles.rowReverse]}>
+        <View style={[styles.chipRow, isRTL && styles.rowReverse]}>
           <Text style={styles.icon}>🛍️</Text>
           <Text style={[styles.label, isRTL && styles.textRight]}>
             {isRTL ? `ملخص المتجر: ${catalogSummary}` : `Store Summary: ${catalogSummary}`}
@@ -37,39 +36,35 @@ export function StoreDetailInfoCard({
 }
 
 const styles = StyleSheet.create({
-  // Donor: borderRadius 24, borderWidth 1.5, padding 16, gap 14
-  card: {
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: colorRoles.borderSubtle,
+  container: {
     marginHorizontal: 16,
     marginTop: 12,
-    padding: 16,
-    gap: 14,
+    gap: 8,
   },
-  row: {
+  chipRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(10, 47, 92, 0.06)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 8,
   },
   rowReverse: {
     flexDirection: 'row-reverse',
   },
   icon: {
-    fontSize: 16,
+    fontSize: 14,
   },
   label: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
     color: colorRoles.textSecondary,
-    lineHeight: 18,
   },
   textRight: {
     textAlign: 'right',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colorRoles.borderSubtle,
   },
 });

@@ -10,6 +10,7 @@ import {
   type DimensionValue,
   type ImageSourcePropType,
 } from 'react-native';
+import { Svg, Circle, Path } from 'react-native-svg';
 import { colorRoles, statusScale } from '@bthwani/ui-kit';
 
 const ORANGE = colorRoles.brandAction;
@@ -23,6 +24,35 @@ function hexToRgba(hex: string, alpha = 0.9): string {
   const g = parseInt(short ? clean.slice(1, 2).repeat(2) : clean.slice(2, 4), 16);
   const b = parseInt(short ? clean.slice(2, 3).repeat(2) : clean.slice(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function SearchIcon({ color }: { readonly color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} />
+      <Path d="M16.5 16.5L21 21" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function CartIcon({ color }: { readonly color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M3 6h18" stroke={color} strokeWidth={2} />
+      <Path d="M16 10a4 4 0 01-8 0" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function ShareIcon({ color }: { readonly color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M16 6l-4-4-4 4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 2v13" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
 }
 
 export type StoreHeroFulfillmentMode = {
@@ -147,47 +177,35 @@ export function StoreHero({
           <View style={styles.heroTopActionsLeft} pointerEvents="box-none">
             {onSearchPress && (
               <TouchableOpacity
-                style={[styles.heroActionCircle, { backgroundColor: actionBg, borderColor: actionBorder }]}
+                style={styles.heroActionCircle}
                 activeOpacity={0.7}
                 onPress={onSearchPress}
                 hitSlop={{ top: 24, bottom: 24, left: 24, right: 24 }}
               >
-                <Text style={[styles.heroActionIcon, { color: primaryText }]}>🔍</Text>
+                <SearchIcon color={primaryText} />
               </TouchableOpacity>
             )}
             {onCartPress && (
               <TouchableOpacity
-                style={[styles.heroActionCircle, { backgroundColor: actionBg, borderColor: actionBorder }]}
+                style={styles.heroActionCircle}
                 activeOpacity={0.7}
                 onPress={onCartPress}
                 hitSlop={{ top: 24, bottom: 24, left: 24, right: 24 }}
               >
-                <Text style={[styles.heroActionIcon, { color: primaryText }]}>🛒</Text>
+                <CartIcon color={primaryText} />
               </TouchableOpacity>
             )}
             {onSharePress && (
               <TouchableOpacity
-                style={[styles.heroActionCircle, { backgroundColor: actionBg, borderColor: actionBorder }]}
+                style={styles.heroActionCircle}
                 activeOpacity={0.7}
                 onPress={onSharePress}
                 hitSlop={{ top: 24, bottom: 24, left: 24, right: 24 }}
               >
-                <Text style={[styles.heroActionIcon, { color: primaryText }]}>⬆</Text>
+                <ShareIcon color={primaryText} />
               </TouchableOpacity>
             )}
           </View>
-          {onBackPress && (
-            <TouchableOpacity
-              style={[styles.heroActionCircle, { backgroundColor: actionBg, borderColor: actionBorder }]}
-              activeOpacity={0.7}
-              onPress={onBackPress}
-              hitSlop={{ top: 24, bottom: 24, left: 24, right: 24 }}
-            >
-              <Text style={[styles.heroActionIcon, { color: primaryText }]}>
-                {isRTL ? '›' : '‹'}
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -450,10 +468,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-  },
-  heroActionIcon: {
-    fontSize: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.90)',
+    borderWidth: 1,
+    borderColor: 'rgba(10, 47, 92, 0.08)',
+    shadowColor: colorRoles.shadowBase || '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   // ── Content block (overlaps cover) ──

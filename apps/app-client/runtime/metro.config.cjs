@@ -8,8 +8,15 @@ const workspaceRoot = path.resolve(projectRoot, "../../..");
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the whole monorepo so files in services/dsh/ can be bundled.
-config.watchFolders = [workspaceRoot];
+// Watch specific source directories in the monorepo instead of the whole workspace root
+// to prevent the watcher from failing on Windows due to massive/nested directories (e.g., node_modules, .next).
+config.watchFolders = [
+  projectRoot,
+  path.join(workspaceRoot, "services/dsh"),
+  path.join(workspaceRoot, "shared/ui-kit"),
+  path.join(workspaceRoot, "shared/app-shell"),
+  path.join(workspaceRoot, "core/identity"),
+];
 
 // Resolve packages from the app's node_modules, then workspace root.
 config.resolver.nodeModulesPaths = [

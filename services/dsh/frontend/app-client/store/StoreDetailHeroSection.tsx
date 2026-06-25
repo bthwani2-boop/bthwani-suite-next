@@ -5,7 +5,8 @@ import type { DshStoreDetailViewModel } from '../../shared/store';
 
 const DELIVERY_MODES: readonly StoreHeroFulfillmentMode[] = [
   { id: 'bthwani_delivery', label: 'توصيل بثواني', icon: '🚲' },
-  { id: 'pickup', label: 'استلام', icon: '🏪' },
+  { id: 'partner_delivery', label: 'توصيل المتجر', icon: '🛵' },
+  { id: 'pickup', label: 'استلم بنفسك', icon: '🏪' },
 ];
 
 type Props = Readonly<{
@@ -19,10 +20,14 @@ type Props = Readonly<{
 export function StoreDetailHeroSection({ store, selectedMode, onModeChange, onBack, scrollY }: Props) {
   const visibleModes = React.useMemo(() => {
     const filtered = DELIVERY_MODES.filter((m) =>
-      store.deliveryModeLabels.some((label) =>
-        label.includes(m.id === 'pickup' ? 'استلام' : 'توصيل'),
-      ),
+      store.deliveryModeLabels.some((label) => {
+        if (m.id === 'bthwani_delivery') return label.includes('بثواني') || label.includes('المنصة') || label.includes('express');
+        if (m.id === 'partner_delivery') return label.includes('المتجر') || label.includes('الشريك') || label.includes('delivery');
+        if (m.id === 'pickup') return label.includes('استلم') || label.includes('استلام') || label.includes('pickup');
+        return false;
+      }),
     );
+    console.log("[StoreDetailHeroSection] store.deliveryModeLabels:", store.deliveryModeLabels, "filtered:", filtered.map(f => f.id));
     return filtered.length > 0 ? filtered : DELIVERY_MODES;
   }, [store.deliveryModeLabels]);
 

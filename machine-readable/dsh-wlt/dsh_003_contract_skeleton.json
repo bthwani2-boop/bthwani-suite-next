@@ -4,7 +4,7 @@
   "canonical_capability": "cart-serviceability",
   "state": "CONTRACT_ONLY",
   "dsh_brain": "services/dsh/frontend/shared/checkout",
-  "wlt_link_brain": "services/wlt/frontend/dsh/shared",
+  "wlt_link_brain": "services/wlt/frontend/shared/dsh",
   "future_dsh_004_contracts": [
     "checkout-intent-draft",
     "cancel-checkout-intent",

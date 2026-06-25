@@ -1,5 +1,6 @@
 import React, { memo, type ReactNode } from "react";
-import { Image, YStack, XStack } from "tamagui";
+import { Image } from "react-native";
+import { YStack, XStack } from "tamagui";
 import { colorRoles } from "../../tokens/colors";
 import { Surface, SurfaceProps } from "../Surface";
 import { Text } from "../Text";

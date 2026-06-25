@@ -76,7 +76,7 @@
       "purpose": "Establish WLT Go backend, DB migrations, reference-only endpoints, DSH shared API layer, Docker runtime. Prove the financial boundary exists before any DSH slice touches WLT data.",
       "business_meaning": "WLT is the single source of financial truth. Its runtime must be proven before any DSH slice can reference payment, settlement, or refund status. This prevents DSH from accidentally owning financial state.",
       "owning_service": "wlt",
-      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "owning_shared_brain": "services/wlt/frontend/shared/dsh/",
       "wlt_shared_brain": null,
       "in_scope": [
         "WLT Go backend with reference-only endpoints",
@@ -629,7 +629,7 @@
       "business_meaning": "The checkout moment is the most critical customer journey point. DSH owns the intent and order creation. WLT owns the actual payment execution. The handoff contract between them must be clean and explicit.",
       "owning_service": "dsh",
       "owning_shared_brain": "services/dsh/frontend/shared/checkout/",
-      "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "wlt_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "Checkout intent backend handler",
         "dsh_checkout_intents table",
@@ -1066,7 +1066,7 @@
       "business_meaning": "Operators need financial visibility to manage the platform, detect settlement issues, and respond to partner queries. This is display-only — DSH shows what WLT owns. The boundary is absolute.",
       "owning_service": "dsh",
       "owning_shared_brain": "services/dsh/frontend/shared/finance-visibility/",
-      "wlt_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "wlt_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "Finance visibility read handler",
         "No new DSH tables — reads from WLT reference tables only",
@@ -1590,7 +1590,7 @@
       "purpose": "Full payment session lifecycle: authorize, capture, COD collection, expiry. WLT owns all financial state transitions.",
       "business_meaning": "Payment capture is the moment financial truth is established. WLT must own authorize→capture→settle transitions exclusively. DSH only reads the opaque payment session reference ID.",
       "owning_service": "wlt",
-      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "owning_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "Payment session status expansion: authorized, captured, cod_pending, cod_collected",
         "wlt-002_payment_capture.sql migration",
@@ -1633,7 +1633,7 @@
       "purpose": "Full refund lifecycle owned by WLT: request, approve, process, complete, reject. DSH only reads refund status reference.",
       "business_meaning": "Refunds are a financial truth mutation — only WLT may initiate, process, and complete them. DSH surfaces display the refund status as a read-only reference.",
       "owning_service": "wlt",
-      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "owning_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "wlt_refunds table (wlt-003_refunds.sql)",
         "CreateRefund, GetRefund, ListRefunds, ApproveRefund, CompleteRefund, RejectRefund Go domain",
@@ -1658,7 +1658,7 @@
         {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/refund/refund.go", "status": "PRESENT"},
         {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-003_refunds.sql", "status": "PRESENT"},
         {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-refund/", "status": "PRESENT"},
-        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-refund.api.ts", "status": "PRESENT"}
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/shared/dsh/wlt-dsh-refund.api.ts", "status": "PRESENT"}
       ],
       "verified_date": "2026-06-24",
       "approval_note": "User approved 2026-06-24"
@@ -1670,7 +1670,7 @@
       "purpose": "Partner settlement lifecycle: create, post, list, summarize. WLT owns all settlement state. DSH-010 finance section reads settlement summaries as display-only.",
       "business_meaning": "Settlement determines when partners get paid. WLT must own the settlement ledger exclusively. DSH-010 may display settlement status summaries to operators — but cannot mutate them.",
       "owning_service": "wlt",
-      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "owning_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "wlt_settlements table (wlt-004_settlements.sql)",
         "CreateSettlement, GetSettlement, ListPartnerSettlements, ListSettlementSummary, PostSettlement Go domain",
@@ -1696,7 +1696,7 @@
         {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/settlement/settlement.go", "status": "PRESENT"},
         {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-004_settlements.sql", "status": "PRESENT"},
         {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-settlement/", "status": "PRESENT"},
-        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-settlement.api.ts", "status": "PRESENT"}
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/shared/dsh/wlt-dsh-settlement.api.ts", "status": "PRESENT"}
       ],
       "verified_date": "2026-06-24",
       "approval_note": "User approved 2026-06-24"
@@ -1708,7 +1708,7 @@
       "purpose": "COD collection tracking and platform commission records. WLT owns financial COD state. Captain app reads COD status as display-only reference.",
       "business_meaning": "COD (Cash On Delivery) creates a financial obligation for captains to remit collected cash. Platform commissions (delivery fee, COD fee) must be tracked. WLT owns both. DSH captain surface shows read-only COD status.",
       "owning_service": "wlt",
-      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "owning_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "wlt_cod_records + wlt_commissions tables (wlt-005_cod.sql)",
         "CreateCodRecord, GetCodRecord, ListCodRecords, MarkCodCollected, MarkCodRemitted, CreateCommission, ListCommissions Go domain",
@@ -1733,7 +1733,7 @@
         {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/cod/cod.go", "status": "PRESENT"},
         {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-005_cod.sql", "status": "PRESENT"},
         {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-cod/", "status": "PRESENT"},
-        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-cod.api.ts", "status": "PRESENT"}
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/shared/dsh/wlt-dsh-cod.api.ts", "status": "PRESENT"}
       ],
       "verified_date": "2026-06-24",
       "approval_note": "User approved 2026-06-24"
@@ -1745,7 +1745,7 @@
       "purpose": "Append-only financial ledger audit trail. WLT posts entries for every financial state transition. Read-only for admin audit.",
       "business_meaning": "Every financial event must leave an immutable audit trail. WLT posts ledger entries for payment captures, refunds, settlements, and COD collections. Operators can query the ledger for dispute resolution and compliance.",
       "owning_service": "wlt",
-      "owning_shared_brain": "services/wlt/frontend/dsh/shared/",
+      "owning_shared_brain": "services/wlt/frontend/shared/dsh/",
       "in_scope": [
         "wlt_ledger_entries append-only table (wlt-006_ledger.sql)",
         "AppendLedgerEntry, GetLedgerEntry, ListLedgerEntries (cursor pagination) Go domain",
@@ -1770,7 +1770,7 @@
         {"type": "GO_DOMAIN", "path": "services/wlt/backend/internal/ledger/ledger.go", "status": "PRESENT"},
         {"type": "MIGRATION", "path": "services/wlt/database/migrations/wlt-006_ledger.sql", "status": "PRESENT"},
         {"type": "DSH_BRIDGE", "path": "services/dsh/frontend/shared/wlt-ledger/", "status": "PRESENT"},
-        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/dsh/shared/wlt-dsh-ledger.api.ts", "status": "PRESENT"}
+        {"type": "WLT_DSH_API", "path": "services/wlt/frontend/shared/dsh/wlt-dsh-ledger.api.ts", "status": "PRESENT"}
       ],
       "verified_date": "2026-06-24",
       "approval_note": "User approved 2026-06-24"

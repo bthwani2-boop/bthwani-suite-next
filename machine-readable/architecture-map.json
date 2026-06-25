@@ -84,9 +84,9 @@
         "generated": false,
         "note": "Client generation not yet done — WLT-001+ implementation slice required"
       },
-      "frontend_shared_brain_for_dsh": "services/wlt/frontend/dsh/shared/",
+      "frontend_shared_brain_for_dsh": "services/wlt/frontend/shared/dsh/",
       "frontend_surfaces": {
-        "dsh_shared_brain": "services/wlt/frontend/dsh/shared/ (ACTIVE — reference controller)",
+        "dsh_shared_brain": "services/wlt/frontend/shared/dsh/ (ACTIVE — reference controller)",
         "app-client": "services/wlt/frontend/app-client/ (gitkeep — not started)",
         "app-partner": "services/wlt/frontend/app-partner/ (gitkeep — not started)",
         "app-captain": "services/wlt/frontend/app-captain/ (gitkeep — not started)",

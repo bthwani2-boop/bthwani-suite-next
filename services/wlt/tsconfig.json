@@ -6,8 +6,8 @@
   },
   "include": [
     "service.manifest.ts",
-    "frontend/dsh/shared/**/*.ts",
-    "frontend/dsh/shared/**/*.tsx",
+    "frontend/shared/dsh/**/*.ts",
+    "frontend/shared/dsh/**/*.tsx",
     "contracts/**/*.ts"
   ],
   "exclude": [

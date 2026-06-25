@@ -9,13 +9,13 @@ const root = repoRoot;
 // ── 1. WLT-for-DSH shared boundary must exist ─────────────────────────────────
 
 const REQUIRED_BOUNDARY_FILES = [
-  "services/wlt/frontend/dsh/shared/index.ts",
-  "services/wlt/frontend/dsh/shared/wlt-dsh-boundary.types.ts",
-  "services/wlt/frontend/dsh/shared/wlt-dsh-reference.view-model.ts",
-  "services/wlt/frontend/dsh/shared/wlt-dsh-reference.states.ts",
-  "services/wlt/frontend/dsh/shared/wlt-dsh-api-base-url.ts",
-  "services/wlt/frontend/dsh/shared/wlt-dsh-reference.api.ts",
-  "services/wlt/frontend/dsh/shared/use-wlt-dsh-reference-controller.tsx",
+  "services/wlt/frontend/shared/dsh/index.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-boundary.types.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-reference.view-model.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-reference.states.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts",
+  "services/wlt/frontend/shared/dsh/use-wlt-dsh-reference-controller.tsx",
 ];
 
 for (const rel of REQUIRED_BOUNDARY_FILES) {
@@ -51,11 +51,11 @@ if (fs.existsSync(path.join(root, wltManifest))) {
 // ── 3. WLT-for-DSH surface files must not own financial logic ─────────────────
 
 const WLT_DSH_SURFACE_SCOPES = [
-  "services/wlt/frontend/dsh/app-client/",
-  "services/wlt/frontend/dsh/control-panel/",
-  "services/wlt/frontend/dsh/app-partner/",
-  "services/wlt/frontend/dsh/app-field/",
-  "services/wlt/frontend/dsh/app-captain/",
+  "services/wlt/frontend/app-client/",
+  "services/wlt/frontend/control-panel/",
+  "services/wlt/frontend/app-partner/",
+  "services/wlt/frontend/app-field/",
+  "services/wlt/frontend/app-captain/",
 ];
 
 const FINANCIAL_MUTATION_PATTERNS = [

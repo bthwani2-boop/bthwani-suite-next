@@ -79,13 +79,13 @@
   },
 
   "dsh_reference_to_wlt": {
-    "shared_reference_controller": "services/wlt/frontend/dsh/shared/use-wlt-dsh-reference-controller.tsx",
-    "reference_api": "services/wlt/frontend/dsh/shared/wlt-dsh-reference.api.ts",
-    "reference_states": "services/wlt/frontend/dsh/shared/wlt-dsh-reference.states.ts",
-    "reference_view_model": "services/wlt/frontend/dsh/shared/wlt-dsh-reference.view-model.ts",
-    "boundary_types": "services/wlt/frontend/dsh/shared/wlt-dsh-boundary.types.ts",
-    "api_base_url": "services/wlt/frontend/dsh/shared/wlt-dsh-api-base-url.ts",
-    "allowed_usage": "DSH surfaces may import from services/wlt/frontend/dsh/shared/ to read WLT reference status for display. No mutation calls permitted.",
+    "shared_reference_controller": "services/wlt/frontend/shared/dsh/use-wlt-dsh-reference-controller.tsx",
+    "reference_api": "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts",
+    "reference_states": "services/wlt/frontend/shared/dsh/wlt-dsh-reference.states.ts",
+    "reference_view_model": "services/wlt/frontend/shared/dsh/wlt-dsh-reference.view-model.ts",
+    "boundary_types": "services/wlt/frontend/shared/dsh/wlt-dsh-boundary.types.ts",
+    "api_base_url": "services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts",
+    "allowed_usage": "DSH surfaces may import from services/wlt/frontend/shared/dsh/ to read WLT reference status for display. No mutation calls permitted.",
     "forbidden_usage": "DSH surfaces must NOT call WLT mutation endpoints directly. DSH must NOT own financial state.",
     "current_active_usage": "NOT_YET_ACTIVE_IN_SURFACES — WLT reference controller is wired but no DSH surface yet renders WLT data (WLT-000 only provides the reference layer)"
   },

@@ -79,7 +79,7 @@ What does NOT count as closure:
 
 All business logic, controllers, view-models, and state machines live in:
 - **DSH:** `services/dsh/frontend/shared/`
-- **WLT-for-DSH:** `services/wlt/frontend/dsh/shared/`
+- **WLT-for-DSH:** `services/wlt/frontend/shared/dsh/`
 
 Surfaces in `services/<service>/frontend/<surface>/` are UI-only. Any business logic in a surface = OWNERSHIP_VIOLATION = FIX_REQUIRED.
 
