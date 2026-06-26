@@ -4,3 +4,4 @@ export * from "./orders.view-model";
 export * from "./orders.controller-core";
 export * from "./orders.api";
 export * from "./use-orders-controller";
+export * from "./orders.client-state";

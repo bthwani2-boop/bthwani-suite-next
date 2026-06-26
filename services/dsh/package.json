@@ -17,6 +17,7 @@
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/control-panel": "workspace:*",
+    "@bthwani/wlt": "workspace:*",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },

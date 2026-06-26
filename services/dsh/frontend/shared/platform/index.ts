@@ -30,3 +30,18 @@ export type { MapsProviderPublicConfig } from "./platform-provider-public-config
 export { DEFAULT_MAPS_PUBLIC_CONFIG } from "./platform-provider-public-config";
 
 export { PLATFORM_PROVIDER_REGISTRY, getProviderById, getProvidersByKind } from "./platform-provider.registry";
+
+export * from './feature-flags';
+export * from './platform-vars';
+export * from './platform-vars.policy';
+export * from './platform-vars.view-model';
+export * from './platform-vars.model';
+export * from './platform-vars.api';
+export * from './local-temp-id';
+export * from './FeatureFlagProvider';
+export * from './PlatformVarsProvider';
+export * from './resolve-dsh-color-token';
+export * from './appearance.contract';
+export * from './platform-audit-state';
+export * from './platform.types';
+
