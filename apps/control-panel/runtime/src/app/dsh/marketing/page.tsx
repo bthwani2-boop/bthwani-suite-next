@@ -46,8 +46,8 @@ export default function MarketingPage() {
               display: "flex",
               gap: "0.375rem",
               padding: "0.875rem 1.5rem",
-              background: "var(--card-bg, #FFFFFF)",
-              borderBottom: "1px solid var(--card-border, #E2E8F3)",
+              background: "var(--card-bg, rgb(255, 255, 255))",
+              borderBottom: "1px solid var(--card-border, rgb(226, 232, 243))",
               direction: "rtl",
               flexShrink: 0,
             }}
@@ -62,9 +62,9 @@ export default function MarketingPage() {
                   borderRadius: "0.5rem",
                   border: "none",
                   background: kind === tab.id
-                    ? "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))"
+                    ? "var(--grad-blue, linear-gradient(135deg,rgb(59, 123, 255),rgb(94, 151, 255)))"
                     : "transparent",
-                  color: kind === tab.id ? "#FFFFFF" : "var(--text-secondary, #5A6A85)",
+                  color: kind === tab.id ? "rgb(255, 255, 255)" : "var(--text-secondary, rgb(90, 106, 133))",
                   fontWeight: 600,
                   fontSize: "0.85rem",
                   cursor: "pointer",

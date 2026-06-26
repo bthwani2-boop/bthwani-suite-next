@@ -31,8 +31,8 @@ export function ControlPanelShell({
         height: "100vh",
         overflow: "hidden",
         fontFamily: "var(--font-arabic)",
-        background: "var(--main-bg, #F0F4FA)",
-        color: "var(--text-primary, #0D1425)",
+        background: "var(--main-bg, rgb(240, 244, 250))",
+        color: "var(--text-primary, rgb(13, 20, 37))",
       }}
     >
       {serviceContext}
@@ -49,8 +49,8 @@ export function ControlPanelShell({
             flexShrink: 0,
             overflowY: "auto",
             overflowX: "hidden",
-            background: "var(--sidebar-bg, #0D1425)",
-            borderInlineEnd: "1px solid var(--sidebar-border, #1A2A4A)",
+            background: "var(--sidebar-bg, rgb(13, 20, 37))",
+            borderInlineEnd: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
             display: "flex",
             flexDirection: "column",
             scrollbarWidth: "none",
@@ -65,9 +65,9 @@ export function ControlPanelShell({
             flex: 1,
             minWidth: 0,
             overflowY: "auto",
-            background: "var(--main-bg, #F0F4FA)",
+            background: "var(--main-bg, rgb(240, 244, 250))",
             scrollbarWidth: "thin",
-            scrollbarColor: "var(--card-border, #E2E8F3) transparent",
+            scrollbarColor: "var(--card-border, rgb(226, 232, 243)) transparent",
           }}
         >
           {main}
@@ -79,8 +79,8 @@ export function ControlPanelShell({
             style={{
               flexShrink: 0,
               overflowY: "auto",
-              background: "var(--card-bg, #FFFFFF)",
-              borderInlineStart: "1px solid var(--card-border, #E2E8F3)",
+              background: "var(--card-bg, rgb(255, 255, 255))",
+              borderInlineStart: "1px solid var(--card-border, rgb(226, 232, 243))",
             }}
           >
             {sidePanel}
@@ -93,8 +93,8 @@ export function ControlPanelShell({
         <footer
           style={{
             flexShrink: 0,
-            background: "var(--topbar-bg, #FFFFFF)",
-            borderTop: "1px solid var(--topbar-border, #E2E8F3)",
+            background: "var(--topbar-bg, rgb(255, 255, 255))",
+            borderTop: "1px solid var(--topbar-border, rgb(226, 232, 243))",
           }}
         >
           {statusBar}

@@ -10,6 +10,7 @@ export const DSH_NAV_ITEMS = [
   { section: "catalogs",       label: "اعتماد الكتالوجات",    route: "/dsh/catalogs" },
   { section: "marketing",      label: "التسويق والاكتشاف",    route: "/dsh/marketing" },
   { section: "finance",        label: "المالية والتسويات",    route: "/dsh/finance" },
+  { section: "support",        label: "الدعم والمساعدة",      route: "/dsh/support" },
   { section: "platform",       label: "سياسات المنصة",        route: "/dsh/platform" },
   { section: "administration", label: "الإدارة والصلاحيات",  route: "/dsh/administration" },
 ] as const;

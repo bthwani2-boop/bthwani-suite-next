@@ -115,15 +115,15 @@ function NavItem({
           position: "relative",
           // Active: blue glow pill
           background: isActive
-            ? "linear-gradient(135deg, #1E2D55 0%, #243766 100%)"
+            ? "linear-gradient(135deg, rgb(30, 45, 85) 0%, rgb(36, 55, 102) 100%)"
             : hovered
             ? "rgba(255,255,255,0.05)"
             : "transparent",
           color: isActive
-            ? "#FFFFFF"
+            ? "rgb(255, 255, 255)"
             : hovered
-            ? "#C8D8F0"
-            : "var(--sidebar-text, #A8BFDF)",
+            ? "rgb(200, 216, 240)"
+            : "var(--sidebar-text, rgb(168, 191, 223))",
           boxShadow: isActive
             ? "inset 0 0 0 1px rgba(59,123,255,0.35), 0 0 12px rgba(59,123,255,0.12)"
             : "none",
@@ -141,8 +141,8 @@ function NavItem({
               bottom: "20%",
               width: "3px",
               borderRadius: "0 2px 2px 0",
-              background: "var(--dsh-blue, #3B7BFF)",
-              boxShadow: "0 0 8px var(--dsh-blue, #3B7BFF)",
+              background: "var(--dsh-blue, rgb(59, 123, 255))",
+              boxShadow: "0 0 8px var(--dsh-blue, rgb(59, 123, 255))",
             }}
           />
         )}
@@ -156,7 +156,7 @@ function NavItem({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: isActive ? "#3B7BFF" : "inherit",
+              color: isActive ? "rgb(59, 123, 255)" : "inherit",
               transition: "color 0.18s ease",
             }}
           >
@@ -172,8 +172,8 @@ function NavItem({
           <span
             style={{
               flexShrink: 0,
-              background: "var(--dsh-blue, #3B7BFF)",
-              color: "#fff",
+              background: "var(--dsh-blue, rgb(59, 123, 255))",
+              color: "rgb(255, 255, 255)",
               fontSize: "0.7rem",
               fontWeight: 700,
               padding: "0.1rem 0.45rem",
@@ -204,7 +204,7 @@ export function ControlPanelNavigation({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        background: "var(--sidebar-bg, #0D1425)",
+        background: "var(--sidebar-bg, rgb(13, 20, 37))",
       }}
       aria-label="قائمة لوحة التحكم"
     >
@@ -212,7 +212,7 @@ export function ControlPanelNavigation({
       <div
         style={{
           padding: "1.25rem 1rem 1rem",
-          borderBottom: "1px solid var(--sidebar-border, #1A2A4A)",
+          borderBottom: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
           flexShrink: 0,
         }}
       >
@@ -223,7 +223,7 @@ export function ControlPanelNavigation({
               width: "2rem",
               height: "2rem",
               borderRadius: "0.5rem",
-              background: "var(--grad-blue, linear-gradient(135deg, #3B7BFF, #5E97FF))",
+              background: "var(--grad-blue, linear-gradient(135deg, rgb(59, 123, 255), rgb(94, 151, 255)))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -240,22 +240,24 @@ export function ControlPanelNavigation({
               style={{
                 fontSize: "1rem",
                 fontWeight: 800,
-                color: "#FFFFFF",
+                color: "rgb(255, 255, 255)",
                 letterSpacing: "0.02em",
                 lineHeight: 1.1,
               }}
             >
               DSH
             </div>
-            <div
-              style={{
-                fontSize: "0.68rem",
-                color: "var(--sidebar-text, #A8BFDF)",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-              }}
-            >
-              لوحة التحكم
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--sidebar-text, rgb(168, 191, 223))",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                لوحة التحكم
+              </div>
             </div>
           </div>
         </div>
@@ -282,7 +284,7 @@ export function ControlPanelNavigation({
         <div
           style={{
             flexShrink: 0,
-            borderTop: "1px solid var(--sidebar-border, #1A2A4A)",
+            borderTop: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
             padding: "0.75rem",
           }}
         >
@@ -294,7 +296,7 @@ export function ControlPanelNavigation({
       <div
         style={{
           padding: "0.75rem 1rem",
-          borderTop: footer == null ? "1px solid var(--sidebar-border, #1A2A4A)" : undefined,
+          borderTop: footer == null ? "1px solid var(--sidebar-border, rgb(26, 42, 74))" : undefined,
           fontSize: "0.68rem",
           color: "rgba(168,191,223,0.45)",
           letterSpacing: "0.04em",

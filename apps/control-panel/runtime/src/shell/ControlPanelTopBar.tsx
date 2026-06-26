@@ -31,9 +31,9 @@ export function ControlPanelTopBar({
         minHeight: "var(--topbar-height, 3.75rem)",
         padding: "0 1.5rem",
         flexShrink: 0,
-        borderBottom: "1px solid var(--topbar-border, #E2E8F3)",
-        background: "var(--topbar-bg, #FFFFFF)",
-        boxShadow: "0 1px 0 var(--topbar-border, #E2E8F3)",
+        borderBottom: "1px solid var(--topbar-border, rgb(226, 232, 243))",
+        background: "var(--topbar-bg, rgb(255, 255, 255))",
+        boxShadow: "0 1px 0 var(--topbar-border, rgb(226, 232, 243))",
         zIndex: 30,
         position: "relative",
       }}
@@ -49,7 +49,7 @@ export function ControlPanelTopBar({
               width: "1.75rem",
               height: "1.75rem",
               borderRadius: "0.375rem",
-              background: "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))",
+              background: "var(--grad-blue, linear-gradient(135deg,rgb(59, 123, 255),rgb(94, 151, 255)))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -64,7 +64,7 @@ export function ControlPanelTopBar({
             style={{
               fontWeight: 800,
               fontSize: "1rem",
-              background: "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))",
+              background: "var(--grad-blue, linear-gradient(135deg,rgb(59, 123, 255),rgb(94, 151, 255)))",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -79,7 +79,7 @@ export function ControlPanelTopBar({
       {/* Breadcrumb separator + title */}
       {title != null && (
         <>
-          <span style={{ color: "var(--text-muted, #8A9BBB)", fontSize: "0.9rem", flexShrink: 0 }}>
+          <span style={{ color: "var(--text-muted, rgb(138, 155, 187))", fontSize: "0.9rem", flexShrink: 0 }}>
             —
           </span>
           <div
@@ -87,7 +87,7 @@ export function ControlPanelTopBar({
               flexShrink: 0,
               fontSize: "0.9rem",
               fontWeight: 600,
-              color: "var(--text-primary, #0D1425)",
+              color: "var(--text-primary, rgb(13, 20, 37))",
             }}
           >
             {title}
@@ -98,7 +98,7 @@ export function ControlPanelTopBar({
       {/* Service label / breadcrumb trail */}
       {serviceLabel != null && (
         <>
-          <span style={{ color: "var(--text-muted, #8A9BBB)", fontSize: "0.8rem", flexShrink: 0 }}>
+          <span style={{ color: "var(--text-muted, rgb(138, 155, 187))", fontSize: "0.8rem", flexShrink: 0 }}>
             /
           </span>
           <div
@@ -106,7 +106,7 @@ export function ControlPanelTopBar({
               flexShrink: 0,
               fontSize: "0.8rem",
               fontWeight: 500,
-              color: "var(--text-secondary, #5A6A85)",
+              color: "var(--text-secondary, rgb(90, 106, 133))",
               background: "rgba(59,123,255,0.07)",
               padding: "0.2rem 0.6rem",
               borderRadius: "999px",
@@ -125,13 +125,13 @@ export function ControlPanelTopBar({
             width: "6px",
             height: "6px",
             borderRadius: "50%",
-            background: "#00C2A8",
+            background: "rgb(0, 194, 168)",
             display: "inline-block",
             animation: "dsh-pulse-dot 2s ease-in-out infinite",
             boxShadow: "0 0 6px rgba(0,194,168,0.6)",
           }}
         />
-        <span style={{ fontSize: "0.72rem", color: "var(--text-muted, #8A9BBB)", fontWeight: 500 }}>
+        <span style={{ fontSize: "0.72rem", color: "var(--text-muted, rgb(138, 155, 187))", fontWeight: 500 }}>
           نشط
         </span>
       </div>
@@ -155,13 +155,13 @@ export function ControlPanelTopBar({
             width: "2.25rem",
             height: "2.25rem",
             borderRadius: "0.5rem",
-            border: "1px solid var(--card-border, #E2E8F3)",
+            border: "1px solid var(--card-border, rgb(226, 232, 243))",
             background: "transparent",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            color: "var(--text-secondary, #5A6A85)",
+            color: "var(--text-secondary, rgb(90, 106, 133))",
             transition: "background 0.15s ease, border-color 0.15s ease",
           }}
           onMouseEnter={(e) => {
@@ -170,7 +170,7 @@ export function ControlPanelTopBar({
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = "var(--card-border, #E2E8F3)";
+            e.currentTarget.style.borderColor = "var(--card-border, rgb(226, 232, 243))";
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -186,7 +186,7 @@ export function ControlPanelTopBar({
               width: "7px",
               height: "7px",
               borderRadius: "50%",
-              background: "#3B7BFF",
+              background: "rgb(59, 123, 255)",
               border: "1.5px solid white",
             }}
           />
@@ -203,13 +203,13 @@ export function ControlPanelTopBar({
             width: "2.25rem",
             height: "2.25rem",
             borderRadius: "50%",
-            background: "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))",
+            background: "var(--grad-blue, linear-gradient(135deg,rgb(59, 123, 255),rgb(94, 151, 255)))",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: "0.75rem",
             fontWeight: 700,
-            color: "#fff",
+            color: "rgb(255, 255, 255)",
             cursor: "pointer",
             boxShadow: "0 0 0 2px rgba(59,123,255,0.2)",
             letterSpacing: "0.02em",

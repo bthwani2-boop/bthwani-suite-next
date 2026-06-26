@@ -22,45 +22,45 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
           :root {
             /* Brand */
-            --dsh-navy:        #0D1425;
-            --dsh-navy-mid:    #152040;
-            --dsh-navy-light:  #1E2D55;
-            --dsh-blue:        #3B7BFF;
-            --dsh-blue-glow:   #3B7BFF33;
-            --dsh-blue-bright: #5E97FF;
-            --dsh-accent-teal: #00C2A8;
+            --dsh-navy:        rgb(13, 20, 37);
+            --dsh-navy-mid:    rgb(21, 32, 64);
+            --dsh-navy-light:  rgb(30, 45, 85);
+            --dsh-blue:        rgb(59, 123, 255);
+            --dsh-blue-glow:   rgba(59, 123, 255, 0.2);
+            --dsh-blue-bright: rgb(94, 151, 255);
+            --dsh-accent-teal: rgb(0, 194, 168);
 
             /* Sidebar */
             --sidebar-bg:      var(--dsh-navy);
             --sidebar-hover:   var(--dsh-navy-mid);
             --sidebar-active:  var(--dsh-navy-light);
-            --sidebar-text:    #A8BFDF;
-            --sidebar-text-active: #FFFFFF;
-            --sidebar-border:  #1A2A4A;
+            --sidebar-text:    rgb(168, 191, 223);
+            --sidebar-text-active: rgb(255, 255, 255);
+            --sidebar-border:  rgb(26, 42, 74);
             --sidebar-width:   15.5rem;
 
             /* Main content */
-            --main-bg:         #F0F4FA;
-            --card-bg:         #FFFFFF;
-            --card-border:     #E2E8F3;
+            --main-bg:         rgb(240, 244, 250);
+            --card-bg:         rgb(255, 255, 255);
+            --card-border:     rgb(226, 232, 243);
             --card-shadow:     0 1px 3px rgba(13,20,37,0.07), 0 4px 16px rgba(13,20,37,0.06);
             --card-shadow-hover: 0 8px 32px rgba(59,123,255,0.15), 0 2px 8px rgba(13,20,37,0.1);
 
             /* Topbar */
-            --topbar-bg:       #FFFFFF;
-            --topbar-border:   #E2E8F3;
+            --topbar-bg:       rgb(255, 255, 255);
+            --topbar-border:   rgb(226, 232, 243);
             --topbar-height:   3.75rem;
 
             /* Text */
-            --text-primary:    #0D1425;
-            --text-secondary:  #5A6A85;
-            --text-muted:      #8A9BBB;
+            --text-primary:    rgb(13, 20, 37);
+            --text-secondary:  rgb(90, 106, 133);
+            --text-muted:      rgb(138, 155, 187);
 
             /* Gradients */
-            --grad-blue:       linear-gradient(135deg, #3B7BFF 0%, #5E97FF 100%);
-            --grad-teal:       linear-gradient(135deg, #00C2A8 0%, #00A896 100%);
-            --grad-orange:     linear-gradient(135deg, #FF7A3D 0%, #FF5A1F 100%);
-            --grad-purple:     linear-gradient(135deg, #7C5CFF 0%, #9B7DFF 100%);
+            --grad-blue:       linear-gradient(135deg, rgb(59, 123, 255) 0%, rgb(94, 151, 255) 100%);
+            --grad-teal:       linear-gradient(135deg, rgb(0, 194, 168) 0%, rgb(0, 168, 150) 100%);
+            --grad-orange:     linear-gradient(135deg, rgb(255, 122, 61) 0%, rgb(255, 90, 31) 100%);
+            --grad-purple:     linear-gradient(135deg, rgb(124, 92, 255) 0%, rgb(155, 125, 255) 100%);
 
             /* Typography */
             --font-arabic:     'Cairo', 'system-ui', sans-serif;
