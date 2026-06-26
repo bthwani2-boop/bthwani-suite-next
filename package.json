@@ -83,7 +83,7 @@
     "@stoplight/spectral-cli": "6.16.0",
     "@types/react": "19.2.17",
     "babel-plugin-react-compiler": "1.0.0",
-    "dependency-cruiser": "17.4.3",
+    "dependency-cruiser": "18.0.0",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "jscpd": "5.0.10",
     "knip": "6.17.1",
