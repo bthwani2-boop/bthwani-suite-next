@@ -11,18 +11,18 @@
     "guard:shared-ownership": "node ../../tools/guards/dsh-frontend-shared-ownership-gate.mjs"
   },
   "peerDependencies": {
-    "react": "19.2.3"
+    "react": "19.2.7"
   },
   "dependencies": {
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/control-panel": "workspace:*",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-svg": "15.15.4"
+    "react-native-safe-area-context": "~5.8.0",
+    "react-native-svg": "15.15.5"
   },
   "devDependencies": {
     "@types/node": "22.16.0",
     "@types/react": "19.2.17",
-    "react": "19.2.3"
+    "react": "19.2.7"
   }
 }

@@ -21,8 +21,8 @@
     "typescript": "~6.0.3"
   },
   "dependencies": {
-    "@tamagui/config": "2.0.0-rc.41",
-    "tamagui": "2.0.0-rc.41"
+    "@tamagui/config": "2.3.3",
+    "tamagui": "2.3.3"
   },
   "peerDependencies": {
     "react": ">=19 <20",
