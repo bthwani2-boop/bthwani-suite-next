@@ -1,12 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { usePartnerSelfController, usePartnerDocumentsController, DOCUMENT_TYPE_LABELS } from "../../shared/partner";
+import { usePartnerSelfController, usePartnerDocumentsController, DOCUMENT_TYPE_LABELS, type DshPartnerDocumentType } from "../../shared/partner";
 
 export function PartnerDocumentsScreen() {
   const identity = useIdentitySession();
   const c = usePartnerSelfController(identity.state.kind);
   const partnerId = c.statusViewModel?.id ?? "";
-  const { state: docsState, reload: reloadDocs } = usePartnerDocumentsController(partnerId, identity.state.kind);
+  const { state: docsState, load: reloadDocs } = usePartnerDocumentsController(partnerId, identity.state.kind);
 
   if (c.statusState.kind === "idle" || c.statusState.kind === "loading") {
     return <View style={styles.center}><Text style={styles.muted}>جاري التحميل…</Text></View>;
@@ -37,7 +37,7 @@ export function PartnerDocumentsScreen() {
       )}
 
       {docsState.kind === "success" && docsState.documents.map((doc) => {
-        const typeLabel = DOCUMENT_TYPE_LABELS[doc.documentType as any] ?? doc.documentType;
+        const typeLabel = DOCUMENT_TYPE_LABELS[doc.documentType as DshPartnerDocumentType] ?? doc.documentType;
         const statusTone = doc.documentStatus === "approved"
           ? "success"
           : doc.documentStatus === "rejected"

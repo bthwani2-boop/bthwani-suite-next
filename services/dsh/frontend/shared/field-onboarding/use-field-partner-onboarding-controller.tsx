@@ -123,12 +123,15 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     try {
       // Create field visit if we have location or notes
       if (state.visitNotes || state.locationLatitude !== null) {
-        await fieldCreateVisit(state.partnerId, {
+        const visitPayload: import("../partner").DshCreatePartnerFieldVisitRequest = {
           visitNotes: state.visitNotes,
-          locationLatitude: state.locationLatitude ?? undefined,
-          locationLongitude: state.locationLongitude ?? undefined,
           evidenceMediaRefs: state.evidenceMediaRefs,
-        });
+          ...(state.locationLatitude !== null && state.locationLongitude !== null && {
+            locationLatitude: state.locationLatitude,
+            locationLongitude: state.locationLongitude,
+          }),
+        };
+        await fieldCreateVisit(state.partnerId, visitPayload);
       }
 
       await fieldSubmitPartner(state.partnerId);

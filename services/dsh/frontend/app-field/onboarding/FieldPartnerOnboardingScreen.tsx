@@ -112,8 +112,7 @@ export function FieldPartnerOnboardingScreen() {
 // ─── Step sub-components ─────────────────────────────────────────────────────
 
 function IdentityStep({ form, errors, onChange }: {
-  form: Parameters<typeof useFieldPartnerOnboardingController>[0] extends undefined
-    ? any : any;
+  form: any;
   errors: any;
   onChange: (patch: any) => void;
 }) {
