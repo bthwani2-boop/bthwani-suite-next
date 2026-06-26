@@ -17,10 +17,7 @@ export function MapsProviderInspector({ provider }: Props) {
 
         <ListItem title="المزود المختار" subtitle={provider.selectedProvider} />
         <ListItem title="البيئة" subtitle={provider.environment} />
-        <ListItem
-          title="الحالة"
-          subtitle={<Badge label={provider.status} tone={provider.status === "active" ? "success" : "neutral"} />}
-        />
+        <ListItem title="الحالة" subtitle={provider.status} />
         <ListItem title="المفتاح المُقنَّع" subtitle={provider.maskedCredential ?? "غير متاح"} />
         <ListItem title="رؤية الاعتماد" subtitle={provider.credentialVisibility} />
         <ListItem title="يتطلب مراجعة" subtitle={provider.auditRequired ? "نعم" : "لا"} />

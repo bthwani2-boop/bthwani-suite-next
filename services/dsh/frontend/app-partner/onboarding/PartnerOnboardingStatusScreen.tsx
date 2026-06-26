@@ -97,7 +97,7 @@ export function PartnerOnboardingStatusScreen() {
             gap="$1"
             tone={item.satisfied ? "success" : "default"}
           >
-            <Text role="labelMd" tone={item.satisfied ? "success" : "muted"}>
+            <Text role="label" tone={item.satisfied ? "success" : "muted"}>
               {item.satisfied ? "✓ " : "○ "}
               {item.label}
             </Text>
@@ -115,7 +115,7 @@ export function PartnerOnboardingStatusScreen() {
             <Text
               key={item.id}
               tone={item.satisfied ? "success" : "muted"}
-              role="bodyMd"
+              role="body"
             >
               {item.satisfied ? "✓" : "○"} {item.label}
             </Text>
@@ -123,7 +123,7 @@ export function PartnerOnboardingStatusScreen() {
         </Card>
       )}
 
-      <Button label="تحديث" onPress={reload} variant="ghost" />
+      <Button label="تحديث" onPress={reload} tone="ghost" />
     </ScrollScreen>
   );
 }
