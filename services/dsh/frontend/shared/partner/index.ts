@@ -12,10 +12,11 @@ export {
 } from "./partner-activation.model";
 
 export type {
-  DshPartner, DshPartnerDocument, DshPartnerReadiness,
+  DshPartner, DshPartnerSummary, DshPartnerDocument, DshPartnerFieldVisit, DshPartnerReadiness,
   DshPartnerAuditEvent, DshPartnerStore,
-  DshCreatePartnerInput, DshPartnerTransitionInput,
-  DshAddDocumentInput, DshReviewDocumentInput,
+  DshCreatePartnerInput, DshUpdatePartnerRequest, DshPartnerTransitionInput,
+  DshAddDocumentInput, DshReviewDocumentInput, DshCreatePartnerFieldVisitRequest,
+  DshPartnerListResponse,
 } from "./partner.types";
 
 export type {
@@ -39,4 +40,15 @@ export {
 
 export { usePartnerSelfController } from "./use-partner-self-controller";
 
-export { submitFieldPartnerIntake } from "./partner.api";
+export {
+  fieldCreateDraft,
+  fieldGetPartner,
+  fieldUpdatePartner,
+  fieldUploadDocument,
+  fieldCreateVisit,
+  fieldSubmitPartner,
+  fetchListFieldVisits,
+} from "./partner.api";
+export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
+export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
+

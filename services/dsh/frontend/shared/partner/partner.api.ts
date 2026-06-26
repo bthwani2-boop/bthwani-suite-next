@@ -2,14 +2,19 @@ import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type {
   DshPartner,
+  DshPartnerSummary,
   DshPartnerDocument,
+  DshPartnerFieldVisit,
   DshPartnerReadiness,
   DshPartnerAuditEvent,
   DshPartnerStore,
   DshCreatePartnerInput,
+  DshUpdatePartnerRequest,
   DshPartnerTransitionInput,
   DshAddDocumentInput,
   DshReviewDocumentInput,
+  DshCreatePartnerFieldVisitRequest,
+  DshPartnerListResponse,
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -37,10 +42,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 // ── Operator: partner CRUD ────────────────────────────────────────────────────
 
-export function fetchPartners(params: { status?: string; category?: string; limit?: number; offset?: number } = {}): Promise<{ partners: DshPartner[]; total: number }> {
+export function fetchPartners(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
   const q = new URLSearchParams();
   if (params.status) q.set("status", params.status);
-  if (params.category) q.set("category", params.category);
   if (params.limit) q.set("limit", String(params.limit));
   if (params.offset) q.set("offset", String(params.offset));
   const qs = q.toString();
@@ -55,15 +59,16 @@ export function createPartner(input: DshCreatePartnerInput): Promise<DshPartner>
   return request("/dsh/operator/partners", { method: "POST", body: input });
 }
 
-export function transitionPartner(partnerId: string, input: DshPartnerTransitionInput): Promise<DshPartner> {
-  return request(`/dsh/operator/partners/${partnerId}/transition`, { method: "POST", body: input });
+export function transitionPartner(partnerId: string, input: DshPartnerTransitionInput, version?: number): Promise<{ partner: DshPartner; event: DshPartnerAuditEvent }> {
+  const qs = version !== undefined ? `?version=${version}` : "";
+  return request(`/dsh/operator/partners/${partnerId}/transition${qs}`, { method: "POST", body: input });
 }
 
 export function fetchPartnerReadiness(partnerId: string): Promise<DshPartnerReadiness> {
   return request(`/dsh/operator/partners/${partnerId}/readiness`);
 }
 
-export function fetchPartnerDocuments(partnerId: string): Promise<{ documents: DshPartnerDocument[]; total: number }> {
+export function fetchPartnerDocuments(partnerId: string): Promise<{ documents: DshPartnerDocument[] }> {
   return request(`/dsh/operator/partners/${partnerId}/documents`);
 }
 
@@ -71,7 +76,7 @@ export function addPartnerDocument(partnerId: string, input: DshAddDocumentInput
   return request(`/dsh/operator/partners/${partnerId}/documents`, { method: "POST", body: input });
 }
 
-export function reviewPartnerDocument(partnerId: string, docId: string, input: DshReviewDocumentInput): Promise<DshPartnerDocument> {
+export function reviewPartnerDocument(partnerId: string, docId: string, input: DshReviewDocumentInput): Promise<{ document: DshPartnerDocument; review: unknown }> {
   return request(`/dsh/operator/partners/${partnerId}/documents/${docId}/review`, { method: "PATCH", body: input });
 }
 
@@ -83,7 +88,7 @@ export function linkPartnerStore(partnerId: string, storeId: string): Promise<{ 
   return request(`/dsh/operator/partners/${partnerId}/stores`, { method: "POST", body: { storeId } });
 }
 
-export function fetchPartnerAuditEvents(partnerId: string): Promise<{ events: DshPartnerAuditEvent[]; total: number }> {
+export function fetchPartnerAuditEvents(partnerId: string): Promise<{ events: DshPartnerAuditEvent[] }> {
   return request(`/dsh/operator/partners/${partnerId}/audit`);
 }
 
@@ -99,6 +104,30 @@ export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
 
 // ── Field intake ──────────────────────────────────────────────────────────────
 
-export function submitFieldPartnerIntake(input: DshCreatePartnerInput): Promise<DshPartner> {
-  return request("/dsh/field/partner-intake", { method: "POST", body: input });
+export function fieldCreateDraft(input: DshCreatePartnerInput): Promise<DshPartner> {
+  return request("/dsh/field/partners/drafts", { method: "POST", body: input });
+}
+
+export function fieldGetPartner(partnerId: string): Promise<DshPartner> {
+  return request(`/dsh/field/partners/${partnerId}`);
+}
+
+export function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
+  return request(`/dsh/field/partners/${partnerId}?version=${version}`, { method: "PATCH", body: input });
+}
+
+export function fieldUploadDocument(partnerId: string, input: DshAddDocumentInput): Promise<DshPartnerDocument> {
+  return request(`/dsh/field/partners/${partnerId}/documents`, { method: "POST", body: input });
+}
+
+export function fieldCreateVisit(partnerId: string, input: DshCreatePartnerFieldVisitRequest): Promise<DshPartnerFieldVisit> {
+  return request(`/dsh/field/partners/${partnerId}/visits`, { method: "POST", body: input });
+}
+
+export function fieldSubmitPartner(partnerId: string): Promise<{ partner: DshPartner; event: DshPartnerAuditEvent }> {
+  return request(`/dsh/field/partners/${partnerId}/submit`, { method: "POST", body: { reason: "تأكيد من الميداني" } });
+}
+
+export function fetchListFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
+  return request(`/dsh/operator/partners/${partnerId}/field-visits`);
 }

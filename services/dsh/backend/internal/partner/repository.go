@@ -1,0 +1,567 @@
+package partner
+
+import (
+	"database/sql"
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/lib/pq"
+)
+
+// ─── Partner CRUD ──────────────────────────────────────────────────────────
+
+func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
+	if err := input.Validate(); err != nil {
+		return Partner{}, err
+	}
+
+	category := input.Category
+	if category == "" {
+		category = "default"
+	}
+	surface := input.CreatedBySurface
+	if surface == "" {
+		surface = "app-field"
+	}
+
+	var p Partner
+	err := db.QueryRow(`
+		INSERT INTO dsh_partners (
+			legal_name_ar, legal_name_en, display_name,
+			legal_identity_type, legal_identity_number,
+			owner_name, primary_phone, secondary_phone, email,
+			category, notes, created_by_actor_id, created_by_surface
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		RETURNING id, legal_name_ar, legal_name_en, display_name,
+		          legal_identity_type, legal_identity_number,
+		          owner_name, primary_phone, secondary_phone, email,
+		          category, activation_status, created_by_actor_id, created_by_surface,
+		          notes, version, created_at, updated_at`,
+		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
+		input.LegalIdentityType, input.LegalIdentityNumber,
+		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
+		category, input.Notes, input.CreatedByActorID, surface,
+	).Scan(
+		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
+		&p.LegalIdentityType, &p.LegalIdentityNumber,
+		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Notes, &p.Version, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		if isPgUniqueViolation(err) {
+			return Partner{}, ErrConflict
+		}
+		return Partner{}, err
+	}
+	return p, nil
+}
+
+func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
+	var p Partner
+	err := db.QueryRow(`
+		SELECT id, legal_name_ar, legal_name_en, display_name,
+		       legal_identity_type, legal_identity_number,
+		       owner_name, primary_phone, secondary_phone, email,
+		       category, activation_status, created_by_actor_id, created_by_surface,
+		       notes, version, created_at, updated_at
+		FROM dsh_partners WHERE id = $1`, partnerID,
+	).Scan(
+		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
+		&p.LegalIdentityType, &p.LegalIdentityNumber,
+		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Notes, &p.Version, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Partner{}, ErrNotFound
+	}
+	return p, err
+}
+
+func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error) {
+	if q.Limit <= 0 {
+		q.Limit = 20
+	}
+	if q.Limit > 100 {
+		q.Limit = 100
+	}
+
+	args := []any{}
+	conds := []string{}
+	i := 1
+	if q.ActivationStatus != "" {
+		conds = append(conds, "activation_status = $"+string(rune('0'+i)))
+		args = append(args, q.ActivationStatus)
+		i++
+	}
+
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
+
+	var total int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partners`+where, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args = append(args, q.Limit, q.Offset)
+	rows, err := db.Query(`
+		SELECT id, display_name, legal_name_ar, category, activation_status, primary_phone, created_at, updated_at
+		FROM dsh_partners`+where+`
+		ORDER BY created_at DESC
+		LIMIT $`+itoa(i)+` OFFSET $`+itoa(i+1),
+		args...,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var list []PartnerSummary
+	for rows.Next() {
+		var s PartnerSummary
+		if err := rows.Scan(&s.ID, &s.DisplayName, &s.LegalNameAr, &s.Category,
+			&s.ActivationStatus, &s.PrimaryPhone, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		list = append(list, s)
+	}
+	if list == nil {
+		list = []PartnerSummary{}
+	}
+	return list, total, rows.Err()
+}
+
+func UpdatePartner(db *sql.DB, partnerID string, input UpdatePartnerInput, expectedVersion int) (Partner, error) {
+	var p Partner
+	err := db.QueryRow(`
+		UPDATE dsh_partners SET
+			display_name     = COALESCE(NULLIF($2,''), display_name),
+			owner_name       = COALESCE(NULLIF($3,''), owner_name),
+			primary_phone    = COALESCE(NULLIF($4,''), primary_phone),
+			secondary_phone  = $5,
+			email            = $6,
+			notes            = $7,
+			version          = version + 1,
+			updated_at       = NOW()
+		WHERE id = $1 AND version = $8
+		RETURNING id, legal_name_ar, legal_name_en, display_name,
+		          legal_identity_type, legal_identity_number,
+		          owner_name, primary_phone, secondary_phone, email,
+		          category, activation_status, created_by_actor_id, created_by_surface,
+		          notes, version, created_at, updated_at`,
+		partnerID, input.DisplayName, input.OwnerName,
+		input.PrimaryPhone, input.SecondaryPhone, input.Email,
+		input.Notes, expectedVersion,
+	).Scan(
+		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
+		&p.LegalIdentityType, &p.LegalIdentityNumber,
+		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
+		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Notes, &p.Version, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Partner{}, ErrNotFound
+	}
+	return p, err
+}
+
+// ─── Activation transition ─────────────────────────────────────────────────
+
+func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return Partner{}, ActivationEvent{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var current Partner
+	err = tx.QueryRow(`
+		SELECT id, activation_status, version
+		FROM dsh_partners WHERE id = $1 FOR UPDATE`, partnerID,
+	).Scan(&current.ID, &current.ActivationStatus, &current.Version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Partner{}, ActivationEvent{}, ErrNotFound
+	}
+	if err != nil {
+		return Partner{}, ActivationEvent{}, err
+	}
+
+	if expectedVersion > 0 && current.Version != expectedVersion {
+		return Partner{}, ActivationEvent{}, ErrConflict
+	}
+
+	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
+		return Partner{}, ActivationEvent{}, ErrInvalidTransition
+	}
+
+	var updated Partner
+	err = tx.QueryRow(`
+		UPDATE dsh_partners SET
+			activation_status = $2,
+			version           = version + 1,
+			updated_at        = NOW()
+		WHERE id = $1
+		RETURNING id, legal_name_ar, legal_name_en, display_name,
+		          legal_identity_type, legal_identity_number,
+		          owner_name, primary_phone, secondary_phone, email,
+		          category, activation_status, created_by_actor_id, created_by_surface,
+		          notes, version, created_at, updated_at`,
+		partnerID, input.ToStatus,
+	).Scan(
+		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
+		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
+		&updated.OwnerName, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
+		&updated.Category, &updated.ActivationStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
+		&updated.Notes, &updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
+	)
+	if err != nil {
+		return Partner{}, ActivationEvent{}, err
+	}
+
+	var evt ActivationEvent
+	err = tx.QueryRow(`
+		INSERT INTO dsh_partner_activation_events
+			(partner_id, from_status, to_status, actor_id, actor_surface, reason, correlation_id, idempotency_key)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		RETURNING id, partner_id, from_status, to_status, actor_id, actor_surface, reason, correlation_id, created_at`,
+		partnerID, string(current.ActivationStatus), string(input.ToStatus),
+		input.ActorID, input.ActorSurface, input.Reason, input.CorrelationID, input.IdempotencyKey,
+	).Scan(&evt.ID, &evt.PartnerID, &evt.FromStatus, &evt.ToStatus,
+		&evt.ActorID, &evt.ActorSurface, &evt.Reason, &evt.CorrelationID, &evt.CreatedAt)
+	if err != nil {
+		return Partner{}, ActivationEvent{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Partner{}, ActivationEvent{}, err
+	}
+	return updated, evt, nil
+}
+
+// ─── Documents ─────────────────────────────────────────────────────────────
+
+func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
+	if err := input.Validate(); err != nil {
+		return Document{}, err
+	}
+	// verify partner exists
+	var exists bool
+	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id=$1)`, partnerID).Scan(&exists); err != nil {
+		return Document{}, err
+	}
+	if !exists {
+		return Document{}, ErrNotFound
+	}
+
+	var d Document
+	err := db.QueryRow(`
+		INSERT INTO dsh_partner_documents
+			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id)
+		VALUES ($1,$2,$3,$4,$5)
+		RETURNING id, partner_id, document_type, document_status, uploaded_by_actor_id,
+		          media_ref, notes, rejection_reason, version, created_at, updated_at`,
+		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID,
+	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
+		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
+	return d, err
+}
+
+func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
+	rows, err := db.Query(`
+		SELECT id, partner_id, document_type, document_status, uploaded_by_actor_id,
+		       media_ref, notes, rejection_reason, version, created_at, updated_at
+		FROM dsh_partner_documents WHERE partner_id = $1 ORDER BY created_at ASC`, partnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []Document
+	for rows.Next() {
+		var d Document
+		if err := rows.Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus,
+			&d.UploadedByActorID, &d.MediaRef, &d.Notes, &d.RejectionReason,
+			&d.Version, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, d)
+	}
+	if list == nil {
+		list = []Document{}
+	}
+	return list, rows.Err()
+}
+
+func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
+	if err := input.Validate(); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Map decision to document_status
+	newDocStatus := "under_review"
+	switch input.Decision {
+	case "approved":
+		newDocStatus = "approved"
+	case "rejected", "needs_resubmit":
+		newDocStatus = "rejected"
+	}
+
+	var d Document
+	err = tx.QueryRow(`
+		UPDATE dsh_partner_documents SET
+			document_status  = $3,
+			rejection_reason = CASE WHEN $4='' THEN rejection_reason ELSE $4 END,
+			version          = version + 1,
+			updated_at       = NOW()
+		WHERE id = $1 AND partner_id = $2
+		RETURNING id, partner_id, document_type, document_status, uploaded_by_actor_id,
+		          media_ref, notes, rejection_reason, version, created_at, updated_at`,
+		documentID, partnerID, newDocStatus, input.Reason,
+	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
+		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Document{}, DocumentReview{}, ErrNotFound
+	}
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+
+	var rev DocumentReview
+	err = tx.QueryRow(`
+		INSERT INTO dsh_partner_document_reviews
+			(document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		RETURNING id, document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id, created_at`,
+		documentID, partnerID, input.ReviewedByActorID, input.Decision, input.Reason, input.CorrelationID,
+	).Scan(&rev.ID, &rev.DocumentID, &rev.PartnerID, &rev.ReviewedByActorID,
+		&rev.Decision, &rev.Reason, &rev.CorrelationID, &rev.CreatedAt)
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	return d, rev, nil
+}
+
+// ─── Field visits ──────────────────────────────────────────────────────────
+
+func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
+	if input.PartnerID == "" || input.FieldActorID == "" {
+		return FieldVisit{}, ErrInvalid
+	}
+
+	var storeIDSQL sql.NullString
+	if input.StoreID != "" {
+		storeIDSQL = sql.NullString{String: input.StoreID, Valid: true}
+	}
+
+	var latSQL, lonSQL sql.NullFloat64
+	if input.LocationLatitude != nil {
+		latSQL = sql.NullFloat64{Float64: *input.LocationLatitude, Valid: true}
+		lonSQL = sql.NullFloat64{Float64: *input.LocationLongitude, Valid: true}
+	}
+
+	mediaRefs := input.EvidenceMediaRefs
+	if mediaRefs == nil {
+		mediaRefs = []string{}
+	}
+
+	var v FieldVisit
+	var lat, lon sql.NullFloat64
+	var submittedAt sql.NullTime
+	var storeIDOut sql.NullString
+	err := db.QueryRow(`
+		INSERT INTO dsh_partner_field_visits
+			(partner_id, store_id, field_actor_id, visit_notes, location_latitude, location_longitude, evidence_media_refs)
+		VALUES ($1,$2,$3,$4,$5,$6,$7)
+		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
+		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		          version, created_at, submitted_at`,
+		input.PartnerID, storeIDSQL, input.FieldActorID, input.VisitNotes, latSQL, lonSQL, pq.Array(mediaRefs),
+	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
+		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
+		&v.Version, &v.CreatedAt, &submittedAt)
+	if err != nil {
+		return FieldVisit{}, err
+	}
+	if lat.Valid {
+		v.LocationLatitude = &lat.Float64
+	}
+	if lon.Valid {
+		v.LocationLongitude = &lon.Float64
+	}
+	if submittedAt.Valid {
+		v.SubmittedAt = &submittedAt.Time
+	}
+	v.StoreID = storeIDOut.String
+	if v.EvidenceMediaRefs == nil {
+		v.EvidenceMediaRefs = []string{}
+	}
+	return v, nil
+}
+
+func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
+	rows, err := db.Query(`
+		SELECT id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
+		       visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		       version, created_at, submitted_at
+		FROM dsh_partner_field_visits WHERE partner_id = $1 ORDER BY created_at DESC`, partnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []FieldVisit
+	for rows.Next() {
+		var v FieldVisit
+		var lat, lon sql.NullFloat64
+		var submittedAt sql.NullTime
+		var storeIDOut sql.NullString
+		if err := rows.Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
+			&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
+			&v.Version, &v.CreatedAt, &submittedAt); err != nil {
+			return nil, err
+		}
+		if lat.Valid {
+			v.LocationLatitude = &lat.Float64
+		}
+		if lon.Valid {
+			v.LocationLongitude = &lon.Float64
+		}
+		if submittedAt.Valid {
+			t := submittedAt.Time
+			v.SubmittedAt = &t
+		}
+		v.StoreID = storeIDOut.String
+		if v.EvidenceMediaRefs == nil {
+			v.EvidenceMediaRefs = []string{}
+		}
+		list = append(list, v)
+	}
+	if list == nil {
+		list = []FieldVisit{}
+	}
+	return list, rows.Err()
+}
+
+func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisit, error) {
+	now := time.Now()
+	var v FieldVisit
+	var lat, lon sql.NullFloat64
+	var submittedAt sql.NullTime
+	var storeIDOut sql.NullString
+	err := db.QueryRow(`
+		UPDATE dsh_partner_field_visits SET
+			visit_status = 'submitted',
+			submitted_at = $4,
+			version      = version + 1
+		WHERE id = $1 AND partner_id = $2 AND field_actor_id = $3 AND visit_status IN ('draft','in_progress')
+		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
+		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		          version, created_at, submitted_at`,
+		visitID, partnerID, actorID, now,
+	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
+		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
+		&v.Version, &v.CreatedAt, &submittedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldVisit{}, ErrNotFound
+	}
+	if err != nil {
+		return FieldVisit{}, err
+	}
+	if lat.Valid {
+		v.LocationLatitude = &lat.Float64
+	}
+	if lon.Valid {
+		v.LocationLongitude = &lon.Float64
+	}
+	if submittedAt.Valid {
+		t := submittedAt.Time
+		v.SubmittedAt = &t
+	}
+	v.StoreID = storeIDOut.String
+	if v.EvidenceMediaRefs == nil {
+		v.EvidenceMediaRefs = []string{}
+	}
+	return v, nil
+}
+
+// ─── Activation audit ──────────────────────────────────────────────────────
+
+func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, error) {
+	rows, err := db.Query(`
+		SELECT id, partner_id, from_status, to_status, actor_id, actor_surface, reason, correlation_id, created_at
+		FROM dsh_partner_activation_events WHERE partner_id = $1 ORDER BY created_at ASC`, partnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []ActivationEvent
+	for rows.Next() {
+		var e ActivationEvent
+		if err := rows.Scan(&e.ID, &e.PartnerID, &e.FromStatus, &e.ToStatus,
+			&e.ActorID, &e.ActorSurface, &e.Reason, &e.CorrelationID, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, e)
+	}
+	if list == nil {
+		list = []ActivationEvent{}
+	}
+	return list, rows.Err()
+}
+
+// ─── Store count for readiness ──────────────────────────────────────────────
+
+func CountStores(db *sql.DB, partnerID string) (int, error) {
+	var n int
+	return n, db.QueryRow(`SELECT COUNT(*) FROM dsh_stores WHERE partner_id = $1`, partnerID).Scan(&n)
+}
+
+func CountApprovedDocuments(db *sql.DB, partnerID string) (int, int, error) {
+	var total, approved int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_documents WHERE partner_id = $1`, partnerID).Scan(&total); err != nil {
+		return 0, 0, err
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_documents WHERE partner_id = $1 AND document_status = 'approved'`, partnerID).Scan(&approved); err != nil {
+		return 0, 0, err
+	}
+	return total, approved, nil
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+func isPgUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pq.Error
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
+	}
+	return false
+}
+
+func itoa(n int) string {
+	if n < 10 {
+		return string(rune('0' + n))
+	}
+	return strings.TrimSpace(strings.Repeat("0", 0) + func() string {
+		s := ""
+		for n > 0 {
+			s = string(rune('0'+n%10)) + s
+			n /= 10
+		}
+		return s
+	}())
+}
