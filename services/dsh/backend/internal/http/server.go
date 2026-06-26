@@ -144,22 +144,30 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
 
 	// DSH-015: Partner Store Activation
+	// Operator namespace
 	mux.HandleFunc("GET /dsh/operator/partners", partner.HandleListPartners(db))
 	mux.HandleFunc("POST /dsh/operator/partners", partner.HandleCreatePartner(db))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", partner.HandleGetPartner(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", partner.HandleTransitionPartner(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", partner.HandleListPartnerDocuments(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", partner.HandleAddDocument(db))
-	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", partner.HandleReviewDocument(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", partner.HandleListPartnerStores(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", partner.HandleLinkStore(db))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", partner.HandleActivationTransition(db))
 	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", partner.HandleGetReadiness(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", partner.HandleListPartnerEvents(db))
-	// Partner self-view (actor=partner)
-	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
-	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.handlePartnerActivationReadiness)
-	// Field actor partner intake
-	mux.HandleFunc("POST /dsh/field/partner-intake", partner.HandleCreatePartner(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", partner.HandleListDocuments(db))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", partner.HandleFieldUploadDocument(db))
+	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", partner.HandleReviewDocument(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", partner.HandleListFieldVisits(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", partner.HandleListFieldVisits(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", partner.HandleListAudit(db))
+
+	// Field namespace
+	mux.HandleFunc("POST /dsh/field/partners/drafts", partner.HandleFieldCreateDraft(db))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", partner.HandleFieldGetPartner(db))
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", partner.HandleFieldUpdatePartner(db))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", partner.HandleFieldUploadDocument(db))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", partner.HandleFieldCreateVisit(db))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", partner.HandleFieldSubmitPartner(db))
+
+	// Partner self namespace
+	mux.HandleFunc("GET /dsh/partner/activation/status", partner.HandlePartnerMe(db))
+	mux.HandleFunc("GET /dsh/partner/activation/readiness", partner.HandlePartnerMeReadiness(db))
 
 	// DSH-014: Administration, Roles & Activation
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)

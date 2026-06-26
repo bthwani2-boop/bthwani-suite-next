@@ -1,14 +1,13 @@
-import type { DshPartner, DshPartnerReadiness } from "./partner.types";
+import type { DshPartner, DshPartnerSummary, DshPartnerReadiness } from "./partner.types";
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import { getDshPartnerActivationStatusLabel, getDshPartnerActivationStateMetadata, getDshPartnerReadinessChecklist } from "./partner-activation.model";
-
 
 export type DshPartnerListRowViewModel = {
   readonly id: string;
   readonly displayName: string;
   readonly legalNameAr: string;
   readonly category: string;
-  readonly onboardingStatus: string;
+  readonly activationStatus: string;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
   readonly nextAction: string;
@@ -30,7 +29,7 @@ export type DshPartnerDetailViewModel = {
   readonly primaryPhone: string;
   readonly email: string;
   readonly category: string;
-  readonly onboardingStatus: string;
+  readonly activationStatus: string;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
   readonly nextAction: string;
@@ -59,27 +58,28 @@ function resolveStatusTone(status: DshPartnerActivationStatus): "success" | "war
   return "muted";
 }
 
-export function buildPartnerListRowViewModel(p: DshPartner): DshPartnerListRowViewModel {
-  const meta = getDshPartnerActivationStateMetadata(p.onboardingStatus);
+export function buildPartnerListRowViewModel(p: DshPartnerSummary | DshPartner): DshPartnerListRowViewModel {
+  const status = p.activationStatus;
+  const meta = getDshPartnerActivationStateMetadata(status);
   return {
     id: p.id,
     displayName: p.displayName,
     legalNameAr: p.legalNameAr,
     category: p.category,
-    onboardingStatus: p.onboardingStatus,
-    statusLabel: getDshPartnerActivationStatusLabel(p.onboardingStatus),
-    statusTone: resolveStatusTone(p.onboardingStatus),
+    activationStatus: status,
+    statusLabel: getDshPartnerActivationStatusLabel(status),
+    statusTone: resolveStatusTone(status),
     nextAction: meta?.nextAction ?? "",
     blockedReason: meta?.blockedReason ?? "",
     createdAt: p.createdAt,
-    isClientVisible: p.onboardingStatus === "client_visible",
-    isDeactivated: p.onboardingStatus === "partner_deactivated",
-    isRejected: p.onboardingStatus === "ops_rejected",
+    isClientVisible: status === "client_visible",
+    isDeactivated: status === "partner_deactivated",
+    isRejected: status === "ops_rejected",
   };
 }
 
 export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailViewModel {
-  const status = p.onboardingStatus;
+  const status = p.activationStatus;
   const meta = getDshPartnerActivationStateMetadata(status);
   const checklist = getDshPartnerReadinessChecklist(status);
   return {
@@ -93,12 +93,12 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     primaryPhone: p.primaryPhone,
     email: p.email,
     category: p.category,
-    onboardingStatus: p.onboardingStatus,
+    activationStatus: status,
     statusLabel: getDshPartnerActivationStatusLabel(status),
     statusTone: resolveStatusTone(status),
     nextAction: meta?.nextAction ?? "",
     blockedReason: meta?.blockedReason ?? "",
-    rejectionReason: p.rejectionReason,
+    rejectionReason: "", // backend maps rejection reason inside audit/events or notes
     auditRequired: meta?.auditRequired ?? false,
     allowedNextStatuses: meta?.allowedNextStatuses ?? [],
     canActivate: meta?.allowedNextStatuses.includes("partner_active") ?? false,
@@ -110,15 +110,14 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
 }
 
 export function buildPartnerReadinessViewModel(r: DshPartnerReadiness): DshPartnerReadinessViewModel {
-  const allPassed = r.documentsDone && r.catalogDone && r.deliveryDone && r.partnerActive;
   return {
-    allGatesPassed: allPassed,
-    blockerLabel: r.blockerSummary || (allPassed ? "" : "شرط غير مستوفٍ"),
-    items: [
-      { id: "documents", label: "الوثائق معتمدة",               satisfied: r.documentsDone, ...(!r.documentsDone && r.blockerSummary ? { blockedReason: r.blockerSummary } : {}) },
-      { id: "catalog",   label: "الكتالوج جاهز ومعتمد",         satisfied: r.catalogDone,   ...(!r.catalogDone   && r.blockerSummary ? { blockedReason: r.blockerSummary } : {}) },
-      { id: "delivery",  label: "أوضاع التوصيل مهيأة",          satisfied: r.deliveryDone,  ...(!r.deliveryDone  && r.blockerSummary ? { blockedReason: r.blockerSummary } : {}) },
-      { id: "active",    label: "الشريك نشط (اعتماد العمليات)", satisfied: r.partnerActive, ...(!r.partnerActive  && r.blockerSummary ? { blockedReason: r.blockerSummary } : {}) },
-    ],
+    allGatesPassed: r.canActivate,
+    blockerLabel: r.blockedReason ?? "",
+    items: r.checklist.map(item => ({
+      id: item.id,
+      label: item.label,
+      satisfied: item.satisfied,
+      blockedReason: item.blockedReason,
+    })),
   };
 }

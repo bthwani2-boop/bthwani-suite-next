@@ -10,7 +10,7 @@ import {
   alpha,
   spacing,
 } from "@bthwani/ui-kit";
-import { PartnerIntakeScreen } from "../../../../services/dsh/frontend/app-field/partner-intake";
+import { FieldPartnerOnboardingScreen } from "../../../../services/dsh/frontend/app-field/onboarding";
 import { FieldStoreVerificationScreen } from "../../../../services/dsh/frontend/app-field/store";
 import { DshFieldVisitScreen } from "../../../../services/dsh/frontend/app-field/field-readiness";
 import { DshFieldReadinessChecklistScreen } from "../../../../services/dsh/frontend/app-field/field-readiness";
@@ -192,7 +192,7 @@ function App() {
         topInset={insets.top}
       />
       <View style={styles.screen}>
-        {activeTab === "intake" && <PartnerIntakeScreen />}
+        {activeTab === "intake" && <FieldPartnerOnboardingScreen />}
         {activeTab === "verification" && <FieldStoreVerificationScreen />}
         {activeTab === "visit" && <DshFieldVisitScreen storeId={DEV_STORE_ID} />}
         {activeTab === "checklist" && <DshFieldReadinessChecklistScreen visit={DEV_VISIT} />}

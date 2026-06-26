@@ -145,16 +145,10 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
   const vm = detail.detailViewModel!;
   const partner = detail.detailState.partner;
 
-  const handleTransition = async (targetStatus: string) => {
+  const handleTransition = async (toStatus: string) => {
     await detail.transition({
-      targetStatus,
-      reason: transitionReason,
-      actorId:
-        identity.state.kind === "authenticated"
-          ? (identity.state as { subject?: string }).subject
-          : undefined,
-      actorSurface: "control-panel",
-      version: partner.version,
+      toStatus: toStatus as import("../../shared/partner").DshPartnerActivationStatus,
+      reason: transitionReason || undefined,
     });
     setShowTransitionInput(null);
     setTransitionReason("");
@@ -347,27 +341,25 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
                 <tr>
                   <CpTableHeaderCell>نوع الوثيقة</CpTableHeaderCell>
                   <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                  <CpTableHeaderCell>المراجع بواسطة</CpTableHeaderCell>
                   <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
                 </tr>
               </thead>
               <tbody>
                 {docs.state.documents.map((doc) => (
                   <tr key={doc.id}>
-                    <CpTableCell>{doc.docType}</CpTableCell>
-                    <CpTableCell>{doc.status}</CpTableCell>
-                    <CpTableCell>{doc.reviewedBy || "—"}</CpTableCell>
+                    <CpTableCell>{doc.documentType}</CpTableCell>
+                    <CpTableCell>{doc.documentStatus}</CpTableCell>
                     <CpTableCell>
                       <div style={{ display: "flex", gap: "0.4rem" }}>
                         <CpButton
-                          onClick={() => docs.review(doc.id, { status: "verified", reviewedBy: "operator" })}
-                          disabled={doc.status === "verified"}
+                          onClick={() => docs.review(doc.id, { decision: "approved" })}
+                          disabled={doc.documentStatus === "approved"}
                         >
                           اعتماد
                         </CpButton>
                         <CpButton
-                          onClick={() => docs.review(doc.id, { status: "rejected", reviewedBy: "operator" })}
-                          disabled={doc.status === "rejected"}
+                          onClick={() => docs.review(doc.id, { decision: "rejected" })}
+                          disabled={doc.documentStatus === "rejected"}
                         >
                           رفض
                         </CpButton>

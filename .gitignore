@@ -35,3 +35,10 @@ services/dsh/database/seeds/local/media/
 .gocache*/
 .gomodcache*/
 .cache/
+
+# BTHWANI YAGNI / smallest-diff outputs
+.yagni-out/
+
+# Agent local state
+.aider*
+!.aiderignore

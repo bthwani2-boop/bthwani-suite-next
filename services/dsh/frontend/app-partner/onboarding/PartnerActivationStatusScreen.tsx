@@ -1,5 +1,5 @@
-import React from "react";
-import { View } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
@@ -9,6 +9,7 @@ import {
   StateView,
   Surface,
   Text,
+  spacing,
 } from "@bthwani/ui-kit";
 import {
   usePartnerSelfController,
@@ -16,10 +17,13 @@ import {
   getDshPartnerReadinessChecklist,
 } from "../../shared/partner";
 import type { DshPartnerActivationStatus } from "../../shared/partner";
+import { PartnerRequirementsScreen } from "./PartnerRequirementsScreen";
+import { PartnerDocumentsScreen } from "./PartnerDocumentsScreen";
 
 export function PartnerActivationStatusScreen() {
   const identity = useIdentitySession();
   const c = usePartnerSelfController(identity.state.kind);
+  const [subTab, setSubTab] = useState<"status" | "requirements" | "documents">("status");
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -54,7 +58,7 @@ export function PartnerActivationStatusScreen() {
   }
 
   const vm = c.statusViewModel!;
-  const status = vm.onboardingStatus as DshPartnerActivationStatus;
+  const status = vm.activationStatus as DshPartnerActivationStatus;
   const checklist = getDshPartnerReadinessChecklist(status);
   const statusLabel = getDshPartnerActivationStatusLabel(status);
   const isActive = status === "client_visible" || status === "partner_active";
@@ -63,80 +67,142 @@ export function PartnerActivationStatusScreen() {
   const badgeTone = isActive ? "success" : isRejected || isDeactivated ? "danger" : "info";
 
   return (
-    <ScrollScreen>
-      {/* ── Hero card ── */}
-      <Card tone={isActive ? "success" : isRejected || isDeactivated ? "danger" : "default"} padding="$5" gap="$3">
-        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleLg">
-            {isActive
-              ? "مبروك! متجرك مفعّل ونشط"
-              : isRejected
-              ? "تم رفض طلب التأهيل"
-              : isDeactivated
-              ? "متجرك موقوف مؤقتاً"
-              : "ملف التأهيل قيد المعالجة"}
-          </Text>
-          <Badge label={statusLabel} tone={badgeTone} />
-        </View>
-        <Text tone="secondary">
-          {vm.nextAction ||
-            (isActive
-              ? "تابع متجرك وحافظ على جودة الخدمة."
-              : "فريق العمليات يراجع ملفك.")}
-        </Text>
-        {vm.blockedReason ? (
-          <Text tone="warning">{vm.blockedReason}</Text>
-        ) : null}
-        {isRejected && vm.rejectionReason ? (
-          <Surface tone="danger" padding="$3" gap="$1" borderless>
-            <Text role="titleSm" tone="danger">سبب الرفض</Text>
-            <Text tone="secondary">{vm.rejectionReason}</Text>
-          </Surface>
-        ) : null}
-      </Card>
+    <View style={{ flex: 1, backgroundColor: "#f8f9fa" }}>
+      {/* ── Sub Navigation Switcher ── */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabButton, subTab === "status" && styles.tabButtonActive]}
+          onPress={() => setSubTab("status")}
+        >
+          <Text style={[styles.tabText, subTab === "status" && styles.tabTextActive]}>الحالة</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, subTab === "requirements" && styles.tabButtonActive]}
+          onPress={() => setSubTab("requirements")}
+        >
+          <Text style={[styles.tabText, subTab === "requirements" && styles.tabTextActive]}>المتطلبات</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, subTab === "documents" && styles.tabButtonActive]}
+          onPress={() => setSubTab("documents")}
+        >
+          <Text style={[styles.tabText, subTab === "documents" && styles.tabTextActive]}>الوثائق</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* ── Readiness checklist ── */}
-      <Card padding="$5" gap="$2">
-        <Text role="titleMd" style={{ marginBottom: 8 }}>قائمة الجاهزية</Text>
-        {checklist.map((item) => (
-          <ListItem
-            key={item.id}
-            title={item.label}
-            leading={
-              <Badge
-                tone={item.satisfied ? "success" : "warning"}
-                label={item.satisfied ? "جاهز" : "مطلوب"}
-              />
-            }
-            {...(!item.satisfied && item.blockedReason ? { subtitle: item.blockedReason } : {})}
-          />
-        ))}
-      </Card>
+      {/* ── Sub-view rendering ── */}
+      <View style={{ flex: 1 }}>
+        {subTab === "status" && (
+          <ScrollScreen>
+            {/* ── Hero card ── */}
+            <Card tone={isActive ? "success" : isRejected || isDeactivated ? "danger" : "default"} padding="$5" gap="$3">
+              <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+                <Text role="titleLg">
+                  {isActive
+                    ? "مبروك! متجرك مفعّل ونشط"
+                    : isRejected
+                    ? "تم رفض طلب التأهيل"
+                    : isDeactivated
+                    ? "متجرك موقوف مؤقتاً"
+                    : "ملف التأهيل قيد المعالجة"}
+                </Text>
+                <Badge label={statusLabel} tone={badgeTone} />
+              </View>
+              <Text tone="secondary">
+                {vm.nextAction ||
+                  (isActive
+                    ? "تابع متجرك وحافظ على جودة الخدمة."
+                    : "فريق العمليات يراجع ملفك.")}
+              </Text>
+              {vm.blockedReason ? (
+                <Text tone="warning">{vm.blockedReason}</Text>
+              ) : null}
+              {isRejected && vm.rejectionReason ? (
+                <Surface tone="danger" padding="$3" gap="$1" borderless>
+                  <Text role="titleSm" tone="danger">سبب الرفض</Text>
+                  <Text tone="secondary">{vm.rejectionReason}</Text>
+                </Surface>
+              ) : null}
+            </Card>
 
-      {/* ── Detailed readiness ── */}
-      {c.readinessViewModel ? (
-        <Card padding="$5" gap="$2">
-          <Text role="titleMd" style={{ marginBottom: 8 }}>الجاهزية التفصيلية</Text>
-          {c.readinessViewModel.items.map((item) => (
-            <ListItem
-              key={item.id}
-              title={item.label}
-              leading={
-                <Badge
-                  tone={item.satisfied ? "success" : "warning"}
-                  label={item.satisfied ? "مكتمل" : "معلق"}
+            {/* ── Readiness checklist ── */}
+            <Card padding="$5" gap="$2">
+              <Text role="titleMd" style={{ marginBottom: 8 }}>قائمة الجاهزية</Text>
+              {checklist.map((item) => (
+                <ListItem
+                  key={item.id}
+                  title={item.label}
+                  leading={
+                    <Badge
+                      tone={item.satisfied ? "success" : "warning"}
+                      label={item.satisfied ? "جاهز" : "مطلوب"}
+                    />
+                  }
+                  {...(!item.satisfied && item.blockedReason ? { subtitle: item.blockedReason } : {})}
                 />
-              }
-              {...(!item.satisfied && item.blockedReason ? { subtitle: item.blockedReason } : {})}
-            />
-          ))}
-          {c.readinessViewModel.allGatesPassed ? (
-            <Surface tone="success" padding="$3" gap="$1" style={{ marginTop: 8 }}>
-              <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>جميع شروط الظهور مستوفاة ✓</Text>
-            </Surface>
-          ) : null}
-        </Card>
-      ) : null}
-    </ScrollScreen>
+              ))}
+            </Card>
+
+            {/* ── Detailed readiness ── */}
+            {c.readinessViewModel ? (
+              <Card padding="$5" gap="$2">
+                <Text role="titleMd" style={{ marginBottom: 8 }}>الجاهزية التفصيلية</Text>
+                {c.readinessViewModel.items.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    title={item.label}
+                    leading={
+                      <Badge
+                        tone={item.satisfied ? "success" : "warning"}
+                        label={item.satisfied ? "مكتمل" : "معلق"}
+                      />
+                    }
+                    {...(!item.satisfied && item.blockedReason ? { subtitle: item.blockedReason } : {})}
+                  />
+                ))}
+                {c.readinessViewModel.allGatesPassed ? (
+                  <Surface tone="success" padding="$3" gap="$1" style={{ marginTop: 8 }}>
+                    <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>جميع شروط الظهور مستوفاة ✓</Text>
+                  </Surface>
+                ) : null}
+              </Card>
+            ) : null}
+          </ScrollScreen>
+        )}
+
+        {subTab === "requirements" && <PartnerRequirementsScreen />}
+        {subTab === "documents" && <PartnerDocumentsScreen />}
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: "row-reverse",
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    height: 48,
+    alignItems: "stretch",
+  },
+  tabButton: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabButtonActive: {
+    borderBottomColor: "#FF500D", // active tab color matching App BRAND (Orange)
+  },
+  tabText: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "600",
+  },
+  tabTextActive: {
+    color: "#FF500D",
+    fontWeight: "700",
+  },
+});
