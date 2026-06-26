@@ -1,0 +1,102 @@
+import type { PlatformProviderRecord } from "./platform-provider.types";
+import { PROVIDER_SECRET_POLICIES, PROVIDER_CREDENTIAL_VISIBILITY } from "./platform-provider-secrets.policy";
+import { PROVIDER_AFFECTED_SURFACES, WLT_BOUNDARY_PROVIDER_KINDS } from "./platform-provider.policy";
+
+/**
+ * Seed registry of platform providers.
+ * No real secrets or API keys — maskedCredential values are display-only placeholders.
+ */
+export const PLATFORM_PROVIDER_REGISTRY: readonly PlatformProviderRecord[] = [
+  {
+    id: "maps-google",
+    kind: "maps",
+    label: "Google Maps",
+    selectedProvider: "google",
+    fallbackProvider: null,
+    environment: "production",
+    status: "inactive",
+    owner: "platform-team",
+    priority: 1,
+    credentialVisibility: PROVIDER_CREDENTIAL_VISIBILITY["maps"],
+    maskedCredential: "AIza••••••••••••••••••••••••XXXX",
+    lastHealthStatus: "unknown",
+    lastHealthCheckedAt: null,
+    publicRuntimeConfig: { mode: "disabled", region: "SA", language: "ar", serverSideKeysLocation: "backend_secret_only" },
+    secretPolicy: PROVIDER_SECRET_POLICIES["maps"],
+    affectedSurfaces: PROVIDER_AFFECTED_SURFACES["maps"],
+    wltBoundary: WLT_BOUNDARY_PROVIDER_KINDS.includes("maps"),
+    auditRequired: true,
+    rollbackTarget: null,
+  },
+  {
+    id: "payments-stripe",
+    kind: "payments",
+    label: "Stripe",
+    selectedProvider: "stripe",
+    fallbackProvider: null,
+    environment: "sandbox",
+    status: "inactive",
+    owner: "platform-team",
+    priority: 1,
+    credentialVisibility: PROVIDER_CREDENTIAL_VISIBILITY["payments"],
+    maskedCredential: "sk_live_••••••••••••••XXXX",
+    lastHealthStatus: "unknown",
+    lastHealthCheckedAt: null,
+    publicRuntimeConfig: {},
+    secretPolicy: PROVIDER_SECRET_POLICIES["payments"],
+    affectedSurfaces: PROVIDER_AFFECTED_SURFACES["payments"],
+    wltBoundary: WLT_BOUNDARY_PROVIDER_KINDS.includes("payments"),
+    auditRequired: true,
+    rollbackTarget: null,
+  },
+  {
+    id: "notifications-firebase",
+    kind: "notifications",
+    label: "Firebase Cloud Messaging",
+    selectedProvider: "firebase",
+    fallbackProvider: null,
+    environment: "sandbox",
+    status: "inactive",
+    owner: "platform-team",
+    priority: 1,
+    credentialVisibility: PROVIDER_CREDENTIAL_VISIBILITY["notifications"],
+    maskedCredential: "AAAA••••••••••XXXX",
+    lastHealthStatus: "unknown",
+    lastHealthCheckedAt: null,
+    publicRuntimeConfig: {},
+    secretPolicy: PROVIDER_SECRET_POLICIES["notifications"],
+    affectedSurfaces: PROVIDER_AFFECTED_SURFACES["notifications"],
+    wltBoundary: false,
+    auditRequired: false,
+    rollbackTarget: null,
+  },
+  {
+    id: "storage-s3",
+    kind: "storage",
+    label: "AWS S3",
+    selectedProvider: "aws_s3",
+    fallbackProvider: null,
+    environment: "sandbox",
+    status: "inactive",
+    owner: "platform-team",
+    priority: 1,
+    credentialVisibility: PROVIDER_CREDENTIAL_VISIBILITY["storage"],
+    maskedCredential: "AKIA••••••••••XXXX",
+    lastHealthStatus: "unknown",
+    lastHealthCheckedAt: null,
+    publicRuntimeConfig: { region: "me-south-1" },
+    secretPolicy: PROVIDER_SECRET_POLICIES["storage"],
+    affectedSurfaces: PROVIDER_AFFECTED_SURFACES["storage"],
+    wltBoundary: false,
+    auditRequired: false,
+    rollbackTarget: null,
+  },
+];
+
+export function getProviderById(id: string): PlatformProviderRecord | undefined {
+  return PLATFORM_PROVIDER_REGISTRY.find((p) => p.id === id);
+}
+
+export function getProvidersByKind(kind: PlatformProviderRecord["kind"]): readonly PlatformProviderRecord[] {
+  return PLATFORM_PROVIDER_REGISTRY.filter((p) => p.kind === kind);
+}

@@ -1,0 +1,2 @@
+pnpm --dir services/dsh typecheck → PASS (tsc --noEmit: no errors)
+pnpm --dir services/dsh build     → PASS (tsc: no errors)

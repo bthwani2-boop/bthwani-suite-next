@@ -1323,7 +1323,7 @@ paths:
   /dsh/client/orders/{orderId}/tracking:
     get:
       operationId: getDshClientOrderTracking
-      summary: Client reads live delivery tracking for their own order.
+      summary: Client reads order delivery status updates for their own order. Does not expose captain coordinates or movement.
       tags: [DshDispatch]
       security: [{ bearerAuth: [] }]
       parameters:

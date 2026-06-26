@@ -41,6 +41,7 @@
     "guard:dsh-004-cart-serviceability": "node tools/guards/dsh-004-cart-serviceability-gate.mjs",
     "guard:no-financial-mutation-outside-wlt": "node tools/guards/no-financial-mutation-outside-wlt.mjs",
     "guard:wlt-dsh-frontend-shared-ownership": "node tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
+    "guard:dsh-platform-geo-provider-governance": "node tools/guards/dsh-platform-geo-provider-governance-gate.mjs",
     "runtime:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt",
     "runtime:wlt:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles wlt",
     "runtime:wlt:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles wlt",

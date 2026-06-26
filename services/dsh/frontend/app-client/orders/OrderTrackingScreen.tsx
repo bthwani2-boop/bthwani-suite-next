@@ -27,14 +27,14 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
   const controller = useClientTrackingController(orderId);
 
   if (controller.state.kind === "loading") {
-    return <LoadingState title="جاري تحميل تتبع الطلب..." />;
+    return <LoadingState title="جاري تحميل حالة الطلب..." />;
   }
 
   if (controller.state.kind === "error") {
     return (
       <StateView
         tone="danger"
-        title="تعذر تحميل التتبع"
+        title="تعذر تحميل حالة الطلب"
         description={controller.state.message}
         actionLabel="إعادة المحاولة"
         onActionPress={controller.reload}
@@ -59,7 +59,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
 
       <Card>
         <View style={styles.card}>
-          <Text role="titleMd">خط سير التوصيل</Text>
+          <Text role="titleMd">مراحل حالة الطلب</Text>
           <View style={styles.timeline}>
             {vm.timeline.map((step) => (
               <Badge key={step.id} label={step.label} tone={step.complete ? "success" : "neutral"} />
