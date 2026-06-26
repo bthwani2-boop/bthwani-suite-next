@@ -5,7 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  Header,
   ScrollScreen,
   StateView,
   Text,
@@ -42,7 +41,12 @@ export function PartnerSupportScreen() {
 
   return (
     <ScrollScreen>
-      <Header title="دعم الشريك" subtitle="تواصل مع فريق الدعم بخصوص متجرك" actions={<Button label="تذكرة جديدة" tone="primary" onPress={() => setShowForm(!showForm)} />} />
+      <Card padding="$4" style={{ marginBottom: spacing[2] }}>
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <Text role="titleMd" style={{ textAlign: "right" }}>التذاكر المفتوحة</Text>
+          <Button label="تذكرة جديدة" tone="primary" onPress={() => setShowForm(!showForm)} />
+        </View>
+      </Card>
 
       {showForm && (
         <Card>

@@ -6,7 +6,6 @@ import {
   Badge,
   Button,
   Card,
-  Header,
   ListItem,
   ScrollScreen,
   StateView,
@@ -29,7 +28,6 @@ export function PartnerStoreScreen() {
   if (identity.state.kind !== "authenticated") {
     return (
       <ScrollScreen>
-        <Header title="دخول الشريك" subtitle="هوية موثقة لإدارة متجرك فقط" />
         <AuthLoginCard
           title="تسجيل دخول الشريك"
           subtitle="استخدم حساب الشريك المحلي المصرح به لهذا المتجر."
@@ -62,28 +60,23 @@ export function PartnerStoreScreen() {
   if (!partner) return null;
   return (
     <ScrollScreen>
-      <Header
-        title="مركز تشغيل المتجر"
-        subtitle="ملخص جاهزية متجرك وظهوره للعملاء"
-        actions={
-          <Badge
-            label={partner.store.isOpen ? "نشط الآن" : "متوقف"}
-            tone={partner.store.isOpen ? "success" : "warning"}
-          />
-        }
-      />
-
       <Card>
         <View style={styles.hero}>
-          <View style={styles.heroCopy}>
-            <Text role="titleLg">{partner.store.displayName}</Text>
-            <Text tone="secondary">
-              {partner.store.categoryLabel} · {partner.store.cityCode} / {partner.store.serviceAreaCode}
-            </Text>
-            <View style={styles.badges}>
-              <Badge label={partner.operatingLabel} tone={partner.store.isOpen ? "success" : "warning"} />
-              <Badge label={partner.visibilityLabel} tone={partner.store.isVisible ? "info" : "neutral"} />
+          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: spacing[2] }}>
+            <View style={styles.heroCopy}>
+              <Text role="titleLg" style={{ textAlign: "right" }}>{partner.store.displayName}</Text>
+              <Text tone="secondary" style={{ textAlign: "right", marginTop: 2 }}>
+                {partner.store.categoryLabel} · {partner.store.cityCode} / {partner.store.serviceAreaCode}
+              </Text>
             </View>
+            <Badge
+              label={partner.store.isOpen ? "نشط الآن" : "متوقف"}
+              tone={partner.store.isOpen ? "success" : "warning"}
+            />
+          </View>
+          <View style={styles.badges}>
+            <Badge label={partner.operatingLabel} tone={partner.store.isOpen ? "success" : "warning"} />
+            <Badge label={partner.visibilityLabel} tone={partner.store.isVisible ? "info" : "neutral"} />
           </View>
           <View style={styles.score}>
             <Text role="display">{partner.readinessPercent}%</Text>

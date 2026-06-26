@@ -10,6 +10,7 @@ import {
   StateView,
   Text,
   TextField,
+  Chip,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -38,7 +39,7 @@ export function DshFieldEscalationScreen({ storeId, visitId }: Props) {
 
   function handleSubmit() {
     void raiseEscalation(storeId, {
-      visitId,
+      ...(visitId !== undefined ? { visitId } : {}),
       severity,
       category,
       description: description.trim(),
@@ -65,56 +66,52 @@ export function DshFieldEscalationScreen({ storeId, visitId }: Props) {
       />
 
       {actionState.kind === "success" && (
-        <Card>
+        <Card tone="success" padding="$3" style={{ marginBottom: spacing[3] }}>
           <View style={styles.notice}>
             <Text tone="success">تم رفع التصعيد بنجاح وسيُراجع قريباً</Text>
-            <Button label="إغلاق" tone="ghost" onPress={resetAction} />
+            <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
           </View>
         </Card>
       )}
 
       {actionState.kind === "error" && (
-        <Card>
+        <Card tone="danger" padding="$3" style={{ marginBottom: spacing[3] }}>
           <View style={styles.notice}>
             <Text tone="danger">{actionState.message}</Text>
-            <Button label="إغلاق" tone="ghost" onPress={resetAction} />
+            <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
           </View>
         </Card>
       )}
 
-      <Card>
+      <Card padding="$5" gap="$4">
         <View style={styles.section}>
-          <Text role="titleSm">مستوى الخطورة</Text>
+          <Text role="bodyStrong" style={{ textAlign: "right", marginBottom: 6 }}>مستوى الخطورة</Text>
           <View style={styles.chips}>
             {SEVERITIES.map((s) => (
-              <Button
+              <Chip
                 key={s}
                 label={ESCALATION_SEVERITY_LABELS[s]}
-                tone={severity === s ? "primary" : "ghost"}
+                selected={severity === s}
                 onPress={() => setSeverity(s)}
               />
             ))}
           </View>
         </View>
-      </Card>
 
-      <Card>
         <View style={styles.section}>
-          <Text role="titleSm">نوع المشكلة</Text>
+          <Text role="bodyStrong" style={{ textAlign: "right", marginBottom: 6 }}>نوع المشكلة</Text>
           <View style={styles.chips}>
             {CATEGORIES.map((c) => (
-              <Button
+              <Chip
                 key={c}
                 label={ESCALATION_CATEGORY_LABELS[c]}
-                tone={category === c ? "primary" : "ghost"}
+                selected={category === c}
                 onPress={() => setCategory(c)}
               />
             ))}
           </View>
         </View>
-      </Card>
 
-      <Card>
         <View style={styles.section}>
           <TextField
             label="وصف المشكلة"
@@ -123,13 +120,14 @@ export function DshFieldEscalationScreen({ storeId, visitId }: Props) {
             placeholder="اشرح المشكلة بتفصيل كافٍ (10 أحرف كحد أدنى)"
             multiline
           />
-          <Button
-            label={actionState.kind === "submitting" ? "جاري الإرسال…" : "رفع التصعيد"}
-            tone="danger"
-            disabled={!canSubmit}
-            onPress={handleSubmit}
-          />
         </View>
+
+        <Button
+          label={actionState.kind === "submitting" ? "جاري الإرسال…" : "رفع التصعيد"}
+          tone="danger"
+          disabled={!canSubmit}
+          onPress={handleSubmit}
+        />
       </Card>
     </ScrollScreen>
   );
@@ -140,11 +138,10 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing[3],
+    padding: spacing[1],
   },
   section: {
-    padding: spacing[4],
-    gap: spacing[3],
+    gap: spacing[2],
   },
   chips: {
     flexDirection: "row-reverse",

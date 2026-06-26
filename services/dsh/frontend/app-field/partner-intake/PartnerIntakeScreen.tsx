@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TextInput, ScrollView } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { Button, Card, Header, StateView, Text, spacing, neutralScale } from "@bthwani/ui-kit";
+import { Button, Card, StateView, Text, TextField, spacing, Badge } from "@bthwani/ui-kit";
 import { submitFieldPartnerIntake, type DshCreatePartnerInput } from "../../shared/partner";
 
 type Step = "identity" | "contact" | "review" | "submitted" | "error";
@@ -91,6 +91,27 @@ export function PartnerIntakeScreen() {
     }
   };
 
+  const renderStepIndicator = () => {
+    return (
+      <View style={styles.stepIndicator}>
+        <Badge
+          label="1. الهوية"
+          tone={step === "identity" ? "action" : "neutral"}
+        />
+        <Text tone="muted">←</Text>
+        <Badge
+          label="2. التواصل"
+          tone={step === "contact" ? "action" : "neutral"}
+        />
+        <Text tone="muted">←</Text>
+        <Badge
+          label="3. المراجعة"
+          tone={step === "review" ? "action" : "neutral"}
+        />
+      </View>
+    );
+  };
+
   if (step === "submitted") {
     return (
       <StateView
@@ -118,161 +139,141 @@ export function PartnerIntakeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Header
-        title="استقبال شريك جديد"
-        subtitle={step === "identity" ? "الخطوة 1 من 3: بيانات الهوية" : step === "contact" ? "الخطوة 2 من 3: بيانات التواصل" : "الخطوة 3 من 3: مراجعة وإرسال"}
-      />
+      {renderStepIndicator()}
 
       {step === "identity" && (
-        <Card>
-          <View style={styles.form}>
-            <Text role="titleMd">بيانات الهوية القانونية</Text>
+        <Card padding="$5" gap="$4">
+          <Text role="titleMd" style={{ textAlign: "right" }}>بيانات الهوية القانونية</Text>
 
-            <View style={styles.field}>
-              <Text role="labelMd">الاسم القانوني بالعربية *</Text>
-              <TextInput
-                style={styles.input}
-                value={draft.legalNameAr}
-                onChangeText={v => update("legalNameAr", v)}
-                placeholder="الاسم الرسمي كما في السجل التجاري"
-                textAlign="right"
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text role="labelMd">الاسم المعروض للعملاء *</Text>
-              <TextInput
-                style={styles.input}
-                value={draft.displayName}
-                onChangeText={v => update("displayName", v)}
-                placeholder="الاسم الذي يظهر للعملاء"
-                textAlign="right"
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text role="labelMd">نوع الهوية *</Text>
-              <View style={styles.options}>
-                {IDENTITY_TYPES.map(t => (
-                  <Button
-                    key={t}
-                    variant={draft.legalIdentityType === t ? "primary" : "secondary"}
-                    onPress={() => update("legalIdentityType", t)}
-                    size="sm"
-                  >
-                    {t === "national_id" ? "هوية وطنية" : t === "commercial_registration" ? "سجل تجاري" : "أخرى"}
-                  </Button>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text role="labelMd">رقم الهوية / السجل *</Text>
-              <TextInput
-                style={styles.input}
-                value={draft.legalIdentityNumber}
-                onChangeText={v => update("legalIdentityNumber", v)}
-                placeholder="رقم الهوية أو السجل التجاري"
-                keyboardType="number-pad"
-                textAlign="right"
-              />
-            </View>
-
-            <Button
-              variant="primary"
-              onPress={() => setStep("contact")}
-              disabled={!isIdentityValid}
-            >
-              التالي: بيانات التواصل →
-            </Button>
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>الاسم القانوني بالعربية *</Text>
+            <TextField
+              label="الاسم القانوني"
+              value={draft.legalNameAr}
+              onChangeText={v => update("legalNameAr", v)}
+              placeholder="الاسم الرسمي كما في السجل التجاري"
+            />
           </View>
+
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>الاسم المعروض للعملاء *</Text>
+            <TextField
+              label="الاسم المعروض"
+              value={draft.displayName}
+              onChangeText={v => update("displayName", v)}
+              placeholder="الاسم الذي يظهر للعملاء"
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>نوع الهوية *</Text>
+            <View style={styles.options}>
+              {IDENTITY_TYPES.map(t => (
+                <Button
+                  key={t}
+                  label={t === "national_id" ? "هوية وطنية" : t === "commercial_registration" ? "سجل تجاري" : "أخرى"}
+                  tone={draft.legalIdentityType === t ? "primary" : "secondary"}
+                  onPress={() => update("legalIdentityType", t)}
+                  size="sm"
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>رقم الهوية / السجل *</Text>
+            <TextField
+              label="رقم الهوية"
+              value={draft.legalIdentityNumber}
+              onChangeText={v => update("legalIdentityNumber", v)}
+              placeholder="رقم الهوية أو السجل التجاري"
+            />
+          </View>
+
+          <Button
+            label="التالي: بيانات التواصل ←"
+            tone="primary"
+            onPress={() => setStep("contact")}
+            disabled={!isIdentityValid}
+          />
         </Card>
       )}
 
       {step === "contact" && (
-        <Card>
-          <View style={styles.form}>
-            <Text role="titleMd">بيانات التواصل والفئة</Text>
+        <Card padding="$5" gap="$4">
+          <Text role="titleMd" style={{ textAlign: "right" }}>بيانات التواصل والفئة</Text>
 
-            <View style={styles.field}>
-              <Text role="labelMd">اسم المالك *</Text>
-              <TextInput
-                style={styles.input}
-                value={draft.ownerName}
-                onChangeText={v => update("ownerName", v)}
-                placeholder="الاسم الكامل للمالك"
-                textAlign="right"
-              />
-            </View>
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>اسم المالك *</Text>
+            <TextField
+              label="اسم المالك"
+              value={draft.ownerName}
+              onChangeText={v => update("ownerName", v)}
+              placeholder="الاسم الكامل للمالك"
+            />
+          </View>
 
-            <View style={styles.field}>
-              <Text role="labelMd">رقم الهاتف الأساسي *</Text>
-              <TextInput
-                style={styles.input}
-                value={draft.primaryPhone}
-                onChangeText={v => update("primaryPhone", v)}
-                placeholder="05XXXXXXXX"
-                keyboardType="phone-pad"
-                textAlign="right"
-              />
-            </View>
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>رقم الهاتف الأساسي *</Text>
+            <TextField
+              label="رقم الهاتف"
+              value={draft.primaryPhone}
+              onChangeText={v => update("primaryPhone", v)}
+              placeholder="05XXXXXXXX"
+            />
+          </View>
 
-            <View style={styles.field}>
-              <Text role="labelMd">فئة المتجر *</Text>
-              <View style={styles.options}>
-                {CATEGORIES.map(cat => (
-                  <Button
-                    key={cat}
-                    variant={draft.category === cat ? "primary" : "secondary"}
-                    onPress={() => update("category", cat)}
-                    size="sm"
-                  >
-                    {cat === "restaurant" ? "مطعم" : cat === "grocery" ? "بقالة" : cat === "pharmacy" ? "صيدلية" : cat === "bakery" ? "مخبز" : "أخرى"}
-                  </Button>
-                ))}
-              </View>
+          <View style={styles.field}>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginBottom: 4 }}>فئة المتجر *</Text>
+            <View style={styles.options}>
+              {CATEGORIES.map(cat => (
+                <Button
+                  key={cat}
+                  label={cat === "restaurant" ? "مطعم" : cat === "grocery" ? "بقالة" : cat === "pharmacy" ? "صيدلية" : cat === "bakery" ? "مخبز" : "أخرى"}
+                  tone={draft.category === cat ? "primary" : "secondary"}
+                  onPress={() => update("category", cat)}
+                  size="sm"
+                />
+              ))}
             </View>
+          </View>
 
-            <View style={styles.actions}>
-              <Button variant="secondary" onPress={() => setStep("identity")}>← رجوع</Button>
-              <Button variant="primary" onPress={() => setStep("review")} disabled={!isContactValid}>
-                مراجعة وإرسال →
-              </Button>
-            </View>
+          <View style={styles.actions}>
+            <Button label="← رجوع" tone="ghost" onPress={() => setStep("identity")} />
+            <Button label="مراجعة وإرسال →" tone="primary" onPress={() => setStep("review")} disabled={!isContactValid} />
           </View>
         </Card>
       )}
 
       {step === "review" && (
-        <Card>
-          <View style={styles.form}>
-            <Text role="titleMd">مراجعة البيانات قبل الإرسال</Text>
+        <Card padding="$5" gap="$4">
+          <Text role="titleMd" style={{ textAlign: "right" }}>مراجعة البيانات قبل الإرسال</Text>
 
+          <View style={{ gap: spacing[1] }}>
             {[
               ["الاسم القانوني", draft.legalNameAr],
               ["الاسم المعروض", draft.displayName],
-              ["نوع الهوية", draft.legalIdentityType],
+              ["نوع الهوية", draft.legalIdentityType === "national_id" ? "هوية وطنية" : draft.legalIdentityType === "commercial_registration" ? "سجل تجاري" : "أخرى"],
               ["رقم الهوية", draft.legalIdentityNumber],
               ["اسم المالك", draft.ownerName],
               ["رقم الهاتف", draft.primaryPhone],
-              ["الفئة", draft.category],
-            ].map(([label, value]) => (
-              <View key={label} style={styles.reviewRow}>
-                <Text role="labelMd" tone="muted">{label}</Text>
-                <Text role="bodyMd">{value}</Text>
-              </View>
+              ["الفئة", draft.category === "restaurant" ? "مطعم" : draft.category === "grocery" ? "بقالة" : draft.category === "pharmacy" ? "صيدلية" : draft.category === "bakery" ? "مخبز" : "أخرى"],
+            ].map(([lbl, val]) => (
+              <Card key={lbl} padding="$3" tone="default" style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+                <Text tone="secondary">{lbl}</Text>
+                <Text role="bodyStrong">{val}</Text>
+              </Card>
             ))}
+          </View>
 
-            <View style={styles.actions}>
-              <Button variant="secondary" onPress={() => setStep("contact")}>← تعديل</Button>
-              <Button
-                variant="primary"
-                onPress={() => void handleSubmit()}
-                disabled={submitting}
-              >
-                {submitting ? "جاري الإرسال…" : "إرسال للمراجعة ✓"}
-              </Button>
-            </View>
+          <View style={styles.actions}>
+            <Button label="← تعديل" tone="ghost" onPress={() => setStep("contact")} />
+            <Button
+              label={submitting ? "جاري الإرسال…" : "إرسال للمراجعة ✓"}
+              tone="primary"
+              onPress={() => void handleSubmit()}
+              disabled={submitting}
+            />
           </View>
         </Card>
       )}
@@ -282,23 +283,14 @@ export function PartnerIntakeScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: spacing[4], gap: spacing[4] },
-  form: { padding: spacing[4], gap: spacing[4] },
   field: { gap: spacing[1] },
-  input: {
-    borderWidth: 1,
-    borderColor: neutralScale[200],
-    borderRadius: spacing[2],
-    padding: spacing[3],
-    fontSize: 15,
-    backgroundColor: neutralScale[50],
-  },
   options: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
-  actions: { flexDirection: "row-reverse", gap: spacing[3] },
-  reviewRow: {
+  actions: { flexDirection: "row-reverse", gap: spacing[3], marginTop: spacing[2] },
+  stepIndicator: {
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    paddingVertical: spacing[1],
-    borderBottomWidth: 1,
-    borderBottomColor: neutralScale[100],
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[2],
+    marginVertical: spacing[2],
   },
 });

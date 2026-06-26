@@ -5,7 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  Header,
   ListItem,
   LoadingState,
   ScrollScreen,
@@ -56,11 +55,17 @@ export function PartnerCatalogManagementScreen() {
 
   return (
     <ScrollScreen>
-      <Header
-        title="إدارة كتالوج المتجر"
-        subtitle={`بيانات حقيقية مرتبطة بالمتجر ${storeId ?? ""}`}
-        actions={<Badge label={`${products.length} منتج`} tone="info" />}
-      />
+      <Card padding="$4" style={{ marginBottom: spacing[2] }}>
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <View>
+            <Text role="titleMd" style={{ textAlign: "right" }}>نظرة عامة على الكتالوج</Text>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right", marginTop: 2 }}>
+              {`الرقم التعريفي للمتجر: ${storeId ?? ""}`}
+            </Text>
+          </View>
+          <Badge label={`${products.length} منتج`} tone="info" />
+        </View>
+      </Card>
       <Card>
         <View style={styles.form}>
           <Text role="titleMd">إضافة تصنيف</Text>

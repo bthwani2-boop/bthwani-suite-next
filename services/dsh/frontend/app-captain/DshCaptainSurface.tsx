@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { StyleSheet, View, Pressable, Platform } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { devBypassLogin } from "@bthwani/core-identity";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Svg, Circle, Rect, Path } from "react-native-svg";
 import {
   Badge,
   Button,
@@ -16,6 +18,10 @@ import {
   spacing,
   PermissionState,
   OfflineState,
+  alpha,
+  brandRoots,
+  colorRoles,
+  radius,
 } from "@bthwani/ui-kit";
 import { AuthLoginCard } from "../shared/auth/AuthLoginCard";
 import {
@@ -41,11 +47,88 @@ type SimulatedTaskState =
 
 type ActiveTab = "home" | "orders" | "wallet" | "support" | "profile";
 
+// Premium Header & Nav Configurations
+const BRAND = brandRoots.brandAction; // #FF500D (Orange)
+const WHITE = brandRoots.surfaceBase; // #FFFFFF
+const CORNER = 32;
+const ICON_SIZE = 22;
+const ICON_COLOR_ACTIVE = brandRoots.brandAction;
+const ICON_COLOR_INACTIVE = "#64748B";
+const ICON_COLOR_WHITE = brandRoots.surfaceBase;
+
+// SVG Icons matching app-client styles
+function OrdersIcon({ active }: { active?: boolean }) {
+  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Rect x="4" y="3" width="16" height="18" rx="2" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
+      <Path d="M8 8h8M8 12h8M8 16h5" stroke={c} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function WalletIcon({ active }: { active?: boolean }) {
+  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Rect x="2" y="6" width="20" height="14" rx="2" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
+      <Path d="M2 10h20" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
+      <Circle cx="17" cy="15" r="1.5" fill={c} />
+    </Svg>
+  );
+}
+
+function SupportIcon({ active }: { active?: boolean }) {
+  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"
+        stroke={c}
+        strokeWidth={active ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function ProfileIcon({ active }: { active?: boolean }) {
+  const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="8" r="4" stroke={c} strokeWidth={active ? 2.2 : 1.8} />
+      <Path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={c} strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function MapLauncherIcon() {
+  return (
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z"
+        stroke={ICON_COLOR_WHITE}
+        strokeWidth={2.2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M9 3v15M15 6v15"
+        stroke={ICON_COLOR_WHITE}
+        strokeWidth={2.2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
 // Local Custom BottomNavBar for app-captain (matches bthwani premium standard)
 type BottomNavItem = {
   id: string;
   label: string;
-  icon: string;
+  icon: (active: boolean) => React.ReactNode;
 };
 
 function LocalBottomNavBar({
@@ -53,24 +136,27 @@ function LocalBottomNavBar({
   activeId,
   onSelect,
   launcherLabel = "الخريطة",
-  launcherIcon = "🗺️",
+  launcherIcon,
   onLauncherPress,
   launcherActive = false,
+  bottomInset = 0,
 }: {
   items: readonly BottomNavItem[];
   activeId: string;
   onSelect: (id: string) => void;
   launcherLabel?: string;
-  launcherIcon?: string;
+  launcherIcon: React.ReactNode;
   onLauncherPress?: () => void;
   launcherActive?: boolean;
+  bottomInset?: number;
 }) {
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2, 4);
+  const totalHeight = 64 + bottomInset;
 
   return (
-    <View style={navStyles.wrapper}>
-      <View style={navStyles.bar}>
+    <View style={[navStyles.wrapper, { height: 72 + bottomInset }]}>
+      <View style={[navStyles.bar, { height: totalHeight, paddingBottom: bottomInset }]}>
         <View style={navStyles.row}>
           {leftItems.map((item) => {
             const isActive = activeId === item.id;
@@ -80,9 +166,7 @@ function LocalBottomNavBar({
                 onPress={() => onSelect(item.id)}
                 style={navStyles.navButton}
               >
-                <Text style={[navStyles.iconText, isActive && navStyles.activeColor]}>
-                  {item.icon}
-                </Text>
+                {item.icon(isActive)}
                 <Text style={[navStyles.navLabel, isActive && navStyles.activeColor]}>
                   {item.label}
                 </Text>
@@ -104,9 +188,7 @@ function LocalBottomNavBar({
                 onPress={() => onSelect(item.id)}
                 style={navStyles.navButton}
               >
-                <Text style={[navStyles.iconText, isActive && navStyles.activeColor]}>
-                  {item.icon}
-                </Text>
+                {item.icon(isActive)}
                 <Text style={[navStyles.navLabel, isActive && navStyles.activeColor]}>
                   {item.label}
                 </Text>
@@ -119,7 +201,7 @@ function LocalBottomNavBar({
         onPress={onLauncherPress}
         style={[navStyles.launcher, launcherActive && navStyles.launcherActive]}
       >
-        <Text style={navStyles.launcherIconText}>{launcherIcon}</Text>
+        {launcherIcon}
       </Pressable>
     </View>
   );
@@ -160,10 +242,136 @@ function LocalMapLayer({
   );
 }
 
+// Custom Premium Header Component for DshCaptainSurface
+type CaptainAppHeaderProps = {
+  title: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+  leadingSlot?: React.ReactNode;
+  topInset?: number;
+};
+
+function CaptainAppHeader({
+  title,
+  subtitle,
+  actions,
+  leadingSlot,
+  topInset = 0,
+}: CaptainAppHeaderProps) {
+  return (
+    <View
+      style={[
+        headerStyles.container,
+        { backgroundColor: BRAND, paddingTop: topInset + spacing[2] },
+      ]}
+    >
+      <View style={headerStyles.row}>
+        {/* Actions Slot (e.g. Badges) */}
+        <View style={headerStyles.actionsRow}>
+          {actions}
+        </View>
+
+        {/* Title and Subtitle */}
+        <View style={headerStyles.titleArea}>
+          <Text style={headerStyles.titleText}>{title}</Text>
+          {subtitle ? (
+            <Text style={[headerStyles.subtitleText, { color: alpha(WHITE, 0.88) }]} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Leading Slot (e.g. Settings / Profile) */}
+        <View style={headerStyles.leadingSlot}>
+          {leadingSlot}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// Custom Glassmorphism Badge for Header
+function CaptainHeaderBadge({ label, color = "#10B981" }: { label: string; color?: string }) {
+  return (
+    <View
+      style={{
+        backgroundColor: alpha(color, 0.18),
+        borderColor: alpha(color, 0.4),
+        borderWidth: 1,
+        paddingHorizontal: spacing[2],
+        paddingVertical: 2,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          color: WHITE,
+          fontSize: 10,
+          fontWeight: "900",
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+const headerStyles = StyleSheet.create({
+  container: {
+    borderBottomLeftRadius: CORNER,
+    borderBottomRightRadius: CORNER,
+    paddingBottom: spacing[3],
+    paddingHorizontal: spacing[4],
+    shadowColor: colorRoles.shadowBase,
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  row: {
+    flexDirection: "row-reverse", // RTL
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 48,
+  },
+  actionsRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  titleArea: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing[2],
+  },
+  titleText: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: -0.5,
+    textAlign: "center",
+  },
+  subtitleText: {
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
+    textAlign: "center",
+  },
+  leadingSlot: {
+    minWidth: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+
 // MAIN SURFACE
 export function DshCaptainSurface() {
   const identity = useIdentitySession();
   const deliveryController = useCaptainDeliveryController();
+  const insets = useSafeAreaInsets();
   
   // Unconditional hook initialization to respect React Rules of Hooks
   const storeController = useStoreRoleContextController("captain", identity.state.kind);
@@ -181,91 +389,228 @@ export function DshCaptainSurface() {
   const [declineReason, setDeclineReason] = useState("");
   const [proofCode, setProofCode] = useState("");
 
+  const captainUsername = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
+
+  // Resolve assignments
+  const assignments = useMemo(() => {
+    return deliveryController.state.kind === "success"
+      ? deliveryController.state.assignments
+      : [];
+  }, [deliveryController.state]);
+
+  const realActiveAssignment = useMemo(() => {
+    return assignments.find((a) => a.status === "offered" || a.status === "accepted");
+  }, [assignments]);
+
+  const activeAssignment = useMemo(() => {
+    if (simulatedTaskState === "real") {
+      return realActiveAssignment;
+    } else if (simulatedTaskState !== "none") {
+      return {
+        id: "asgn-sim-007",
+        orderId: "order-sim-2026",
+        captainId: captainUsername,
+        assignedBy: "operator-sim-001",
+        status: simulatedTaskState === "offered" ? "offered" : "accepted",
+        responseDeadlineAt: new Date(Date.now() + 600000).toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        delivery: {
+          id: "del-sim-007",
+          assignmentId: "asgn-sim-007",
+          orderId: "order-sim-2026",
+          captainId: captainUsername,
+          status: (simulatedTaskState === "offered" ? "driver_assigned" : simulatedTaskState) as any,
+          podMethod: "code",
+          podReference: simulatedTaskState === "delivered" ? "OTP-9988" : "",
+          note: "يرجى تسليم الطلب للعميل والتأكد من استلام كود OTP من الجوال.",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      } as DshDispatchAssignment;
+    }
+    return undefined;
+  }, [simulatedTaskState, realActiveAssignment, captainUsername]);
+
+  const hasActiveMission = Boolean(activeAssignment);
+
+  // Determine header properties dynamically
+  const headerProps = useMemo(() => {
+    switch (activeTab) {
+      case "home":
+        return {
+          title: "سطح تشغيل الكابتن",
+          subtitle: hasActiveMission ? "مهمة نشطة قيد التشغيل" : "جاهز لتلقي الطلبات الجديدة",
+          actions: (
+            <>
+              <CaptainHeaderBadge
+                label={hasActiveMission ? "في مهمة" : "نشط ومتاح"}
+                color={hasActiveMission ? "#3B82F6" : "#10B981"}
+              />
+              {simulatedTaskState !== "real" && (
+                <CaptainHeaderBadge label="محاكاة" color="#F59E0B" />
+              )}
+            </>
+          ),
+        };
+      case "orders":
+        return {
+          title: "سجل الطلبات والمهام",
+          subtitle: "عرض العمليات السابقة والمكتملة",
+          actions: null,
+        };
+      case "wallet":
+        return {
+          title: "المحفظة الرقمية",
+          subtitle: "مستحقات وتأمين كابتن التوصيل",
+          actions: null,
+        };
+      case "support":
+        return {
+          title: "مركز دعم الكابتن",
+          subtitle: "التواصل، الجاهزية والتعليمات",
+          actions: null,
+        };
+      case "profile":
+        return {
+          title: "الملف الشخصي للكابتن",
+          subtitle: "بيانات الهوية ومحاكاة المطور",
+          actions: null,
+        };
+      default:
+        return {
+          title: "سطح تشغيل الكابتن",
+          subtitle: "جاهز لتلقي الطلبات الجديدة",
+          actions: null,
+        };
+    }
+  }, [activeTab, hasActiveMission, simulatedTaskState]);
+
+  // Nav Items definition
+  const bottomNavItems = useMemo(() => [
+    {
+      id: "orders",
+      label: "الطلبات",
+      icon: (active: boolean) => <OrdersIcon active={active} />,
+    },
+    {
+      id: "wallet",
+      label: "المحفظة",
+      icon: (active: boolean) => <WalletIcon active={active} />,
+    },
+    {
+      id: "support",
+      label: "الدعم",
+      icon: (active: boolean) => <SupportIcon active={active} />,
+    },
+    {
+      id: "profile",
+      label: "حسابي",
+      icon: (active: boolean) => <ProfileIcon active={active} />,
+    },
+  ] as const, []);
+
+  const renderSettingsButton = () => {
+    return (
+      <Pressable
+        onPress={() => setActiveTab("profile")}
+        accessibilityRole="button"
+        accessibilityLabel="الإعدادات"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: radius.lg,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: alpha(WHITE, 0.15),
+        }}
+      >
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 15a3 3 0 100-6 3 3 0 000 6z"
+            stroke={WHITE}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 005 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+            stroke={WHITE}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </Pressable>
+    );
+  };
+
   // Auth Guard
   if (identity.state.kind !== "authenticated") {
     return (
-      <ScrollScreen>
-        <Header title="دخول الكابتن" subtitle="يرجى تسجيل الدخول للوصول إلى سطح تشغيل الكابتن" />
-        <AuthLoginCard
-          title="تسجيل دخول الكابتن"
-          subtitle="بعد الدخول سيظهر سطح تشغيل الكابتن والمهام المعيّنة لهويتك."
-          loading={identity.state.kind === "authenticating"}
-          {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
-          onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => devBypassLogin("captain")}
+      <View style={{ flex: 1, backgroundColor: "#FFFCF8" }}>
+        <CaptainAppHeader
+          title="دخول الكابتن"
+          subtitle="يرجى تسجيل الدخول للوصول إلى سطح تشغيل الكابتن"
+          topInset={insets.top}
         />
-      </ScrollScreen>
+        <ScrollScreen>
+          <AuthLoginCard
+            title="تسجيل دخول الكابتن"
+            subtitle="بعد الدخول سيظهر سطح تشغيل الكابتن والمهام معيّنة لهويتك."
+            loading={identity.state.kind === "authenticating"}
+            {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
+            onSubmit={(username, password) => void identity.login(username, password)}
+            onDevBypass={() => devBypassLogin("captain")}
+          />
+        </ScrollScreen>
+      </View>
     );
   }
-
-  const captainUsername = identity.state.identity.subject;
 
   // Offline Guard
   if (isSimulatedOffline) {
     return (
-      <ScrollScreen>
-        <OfflineState
-          title="أنت غير متصل بالإنترنت"
-          description="يرجى التحقق من اتصال الشبكة وإعادة المحاولة لتحديث المهام والوصول لسطح التشغيل."
-          actionLabel="إعادة المحاولة"
-          onActionPress={() => setIsSimulatedOffline(false)}
+      <View style={{ flex: 1, backgroundColor: "#FFFCF8" }}>
+        <CaptainAppHeader
+          title="سطح تشغيل الكابتن"
+          subtitle="غير متصل بالإنترنت"
+          topInset={insets.top}
         />
-      </ScrollScreen>
+        <ScrollScreen>
+          <OfflineState
+            title="أنت غير متصل بالإنترنت"
+            description="يرجى التحقق من اتصال الشبكة وإعادة المحاولة لتحديث المهام والوصول لسطح التشغيل."
+            actionLabel="إعادة المحاولة"
+            onActionPress={() => setIsSimulatedOffline(false)}
+          />
+        </ScrollScreen>
+      </View>
     );
   }
 
   // GPS Guard
   if (isSimulatedGpsDisabled) {
     return (
-      <ScrollScreen>
-        <PermissionState
-          title="خدمات الموقع الجغرافي معطلة"
-          description="يتطلب تطبيق الكابتن تفعيل خدمات الـ GPS لمتابعة الرحلة وإثبات الوصول إلى المتجر والعميل."
-          actionLabel="تمكين الوصول للموقع"
-          onActionPress={() => setIsSimulatedGpsDisabled(false)}
+      <View style={{ flex: 1, backgroundColor: "#FFFCF8" }}>
+        <CaptainAppHeader
+          title="سطح تشغيل الكابتن"
+          subtitle="خدمات الموقع مطلوبة"
+          topInset={insets.top}
         />
-      </ScrollScreen>
+        <ScrollScreen>
+          <PermissionState
+            title="خدمات الموقع الجغرافي معطلة"
+            description="يتطلب تطبيق الكابتن تفعيل خدمات الـ GPS لمتابعة الرحلة وإثبات الوصول إلى المتجر والعميل."
+            actionLabel="تمكين الوصول للموقع"
+            onActionPress={() => setIsSimulatedGpsDisabled(false)}
+          />
+        </ScrollScreen>
+      </View>
     );
   }
 
-  // Resolve assignments
-  const assignments =
-    deliveryController.state.kind === "success"
-      ? deliveryController.state.assignments
-      : [];
 
-  const realActiveAssignment = assignments.find(
-    (a) => a.status === "offered" || a.status === "accepted"
-  );
-
-  let activeAssignment: DshDispatchAssignment | undefined;
-
-  if (simulatedTaskState === "real") {
-    activeAssignment = realActiveAssignment;
-  } else if (simulatedTaskState !== "none") {
-    activeAssignment = {
-      id: "asgn-sim-007",
-      orderId: "order-sim-2026",
-      captainId: captainUsername,
-      assignedBy: "operator-sim-001",
-      status: simulatedTaskState === "offered" ? "offered" : "accepted",
-      responseDeadlineAt: new Date(Date.now() + 600000).toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      delivery: {
-        id: "del-sim-007",
-        assignmentId: "asgn-sim-007",
-        orderId: "order-sim-2026",
-        captainId: captainUsername,
-        status: (simulatedTaskState === "offered" ? "driver_assigned" : simulatedTaskState) as any,
-        podMethod: "code",
-        podReference: simulatedTaskState === "delivered" ? "OTP-9988" : "",
-        note: "يرجى تسليم الطلب للعميل والتأكد من استلام كود OTP من الجوال.",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    };
-  }
 
   // Build history lists
   const completedAssignments =
@@ -339,13 +684,7 @@ export function DshCaptainSurface() {
     setProofCode("");
   };
 
-  // Nav Items definition
-  const bottomNavItems = [
-    { id: "orders", label: "الطلبات", icon: "📋" },
-    { id: "wallet", label: "المحفظة", icon: "💳" },
-    { id: "support", label: "الدعم", icon: "💬" },
-    { id: "profile", label: "حسابي", icon: "👤" },
-  ] as const;
+
 
   // Render Order panel to float on top of map
   const renderHomeOrderPanel = () => {
@@ -504,7 +843,6 @@ export function DshCaptainSurface() {
       case "orders":
         return (
           <ScrollScreen>
-            <Header title="سجل الطلبات والمهام" subtitle="عرض العمليات السابقة والمكتملة" />
             <View style={styles.tabContainer}>
               {completedAssignments.map((assignment) => {
                 const vm = toDispatchCardViewModel(assignment as any);
@@ -533,7 +871,6 @@ export function DshCaptainSurface() {
       case "wallet":
         return (
           <ScrollScreen>
-            <Header title="المحفظة الرقمية" subtitle="مستحقات وتأمين كابتن التوصيل" />
             <View style={styles.tabContainer}>
               <Card style={styles.cardPadding}>
                 <Text role="titleMd" align="start">الرصيد المتاح للسحب</Text>
@@ -550,7 +887,6 @@ export function DshCaptainSurface() {
       case "support":
         return (
           <ScrollScreen>
-            <Header title="مركز دعم الكابتن" subtitle="التواصل، الجاهزية والتعليمات" />
             <View style={styles.tabContainer}>
               <Card style={styles.cardPadding}>
                 <Text role="titleMd" align="start">جاهزية نقطة الاستلام</Text>
@@ -586,7 +922,6 @@ export function DshCaptainSurface() {
       case "profile":
         return (
           <ScrollScreen>
-            <Header title="الملف الشخصي للكابتن" subtitle="بيانات الهوية ومحاكاة المطور" />
             <View style={styles.tabContainer}>
               <Card style={styles.cardPadding}>
                 <ListItem title="معرف الكابتن" subtitle={captainUsername} />
@@ -659,29 +994,21 @@ export function DshCaptainSurface() {
     }
   };
 
-  const hasActiveMission = Boolean(activeAssignment);
+
 
   return (
     <View style={styles.rootWrapper}>
       {/* Top Header */}
-      <Header
-        title="سطح تشغيل الكابتن"
-        subtitle={hasActiveMission ? "مهمة نشطة قيد التشغيل" : "جاهز لتلقي الطلبات الجديدة"}
-        actions={
-          <View style={styles.headerRight}>
-            <Badge
-              label={hasActiveMission ? "في مهمة" : "نشط ومتاح"}
-              tone={hasActiveMission ? "info" : "success"}
-            />
-            {simulatedTaskState !== "real" && (
-              <Badge label="محاكاة" tone="warning" />
-            )}
-          </View>
-        }
+      <CaptainAppHeader
+        title={headerProps.title}
+        subtitle={headerProps.subtitle}
+        actions={headerProps.actions}
+        topInset={insets.top}
+        leadingSlot={renderSettingsButton()}
       />
 
       {/* Body Area */}
-      <View style={styles.bodyWrapper}>
+      <View style={[styles.bodyWrapper, { paddingBottom: 64 + 16 + insets.bottom }]}>
         {activeTab === "home" ? (
           <LocalMapLayer
             isAvailable={true}
@@ -697,10 +1024,12 @@ export function DshCaptainSurface() {
         items={bottomNavItems}
         activeId={activeTab}
         onSelect={(id) => setActiveTab(id as any)}
+        launcherIcon={<MapLauncherIcon />}
         onLauncherPress={() => {
           setActiveTab("home");
         }}
         launcherActive={activeTab === "home"}
+        bottomInset={insets.bottom}
       />
     </View>
   );
@@ -714,7 +1043,6 @@ const styles = StyleSheet.create({
   bodyWrapper: {
     flex: 1,
     position: "relative",
-    paddingBottom: 64 + 16, // bottom nav bar clearance
   },
   floatingPanel: {
     padding: spacing[3],
@@ -836,7 +1164,6 @@ const navStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 72,
     alignItems: "center",
     justifyContent: "flex-end",
     zIndex: 1000,
@@ -846,7 +1173,6 @@ const navStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -868,10 +1194,6 @@ const navStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-  },
-  iconText: {
-    fontSize: 18,
-    color: "#64748B",
   },
   navLabel: {
     fontSize: 10,
@@ -914,9 +1236,6 @@ const navStyles = StyleSheet.create({
   launcherActive: {
     backgroundColor: "#0A2F5C", // active launcher dark blue
     shadowColor: "#0A2F5C",
-  },
-  launcherIconText: {
-    fontSize: 22,
   },
 });
 

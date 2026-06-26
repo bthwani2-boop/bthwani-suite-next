@@ -6,7 +6,6 @@ import {
   Badge,
   Button,
   Card,
-  Header,
   ListItem,
   ScrollScreen,
   StateView,
@@ -29,7 +28,6 @@ export function FieldStoreVerificationScreen() {
   if (identity.state.kind !== "authenticated") {
     return (
       <ScrollScreen>
-        <Header title="دخول الفريق الميداني" subtitle="الوصول محصور بالمتاجر المعيّنة" />
         <AuthLoginCard
           title="تسجيل دخول الموظف الميداني"
           subtitle="ستظهر فقط مهمة المتجر المرتبطة بهويتك."
@@ -62,20 +60,16 @@ export function FieldStoreVerificationScreen() {
   if (!field) return null;
   return (
     <ScrollScreen>
-      <Header
-        title="مساحة التحقق الميداني"
-        subtitle="مراجعة جاهزية بيانات المتجر قبل الزيارة والاعتماد"
-        actions={
-          <Badge
-            label={`${field.readinessPercent}% مكتمل`}
-            tone={field.attentionChecks.length === 0 ? "success" : "warning"}
-          />
-        }
-      />
       <Card>
         <View style={styles.hero}>
-          <Text role="titleLg">{field.store.displayName}</Text>
-          <Text tone="secondary">
+          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+            <Text role="titleLg">{field.store.displayName}</Text>
+            <Badge
+              label={`${field.readinessPercent}% مكتمل`}
+              tone={field.attentionChecks.length === 0 ? "success" : "warning"}
+            />
+          </View>
+          <Text tone="secondary" style={{ textAlign: "right" }}>
             {field.store.cityCode} / {field.store.serviceAreaCode}
           </Text>
           <View style={styles.badges}>

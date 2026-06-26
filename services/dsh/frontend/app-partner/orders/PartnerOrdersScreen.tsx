@@ -1,15 +1,16 @@
 import React, { useState } from "react";
+import { View } from "react-native";
 import {
   Badge,
   Button,
   Card,
-  Header,
   ListItem,
-  LoadingState,
   ScrollScreen,
   StateView,
+  TextField,
   Text,
-  TextInput,
+  Tabs,
+  spacing,
 } from "@bthwani/ui-kit";
 import {
   ORDER_STATUS_LABELS,
@@ -18,11 +19,16 @@ import {
 } from "../../shared/orders";
 import type { DshOrder, DshOrderStatus } from "../../shared/orders";
 
-const STATUS_TONE: Record<DshOrderStatus, "default" | "success" | "warning" | "danger" | "info"> = {
+const STATUS_TONE: Record<DshOrderStatus, "neutral" | "success" | "warning" | "danger" | "info"> = {
   pending: "warning",
   store_accepted: "info",
   preparing: "info",
   ready_for_pickup: "success",
+  driver_assigned: "info",
+  driver_arrived_store: "info",
+  picked_up: "info",
+  arrived_customer: "success",
+  delivered: "success",
   cancelled: "danger",
 };
 
@@ -92,7 +98,7 @@ function OrderActionPanel({
       <Card gap={2} padding={3}>
         {showRejectInput ? (
           <>
-            <TextInput
+            <TextField
               label="سبب الرفض"
               value={rejectionReason}
               onChangeText={setRejectionReason}
@@ -109,8 +115,8 @@ function OrderActionPanel({
           </>
         ) : (
           <>
-            <Button label="قبول الطلب" tone="brand" disabled={isSubmitting} onPress={handleAccept} />
-            <Button label="رفض الطلب" tone="danger" variant="outline" disabled={isSubmitting} onPress={() => setShowRejectInput(true)} />
+            <Button label="قبول الطلب" tone="primary" disabled={isSubmitting} onPress={handleAccept} />
+            <Button label="رفض الطلب" tone="secondary" disabled={isSubmitting} onPress={() => setShowRejectInput(true)} />
           </>
         )}
       </Card>
@@ -120,7 +126,7 @@ function OrderActionPanel({
   if (order.status === "store_accepted") {
     return (
       <Card padding={3}>
-        <Button label="بدء التجهيز" tone="brand" disabled={isSubmitting} onPress={handlePreparing} />
+        <Button label="بدء التجهيز" tone="primary" disabled={isSubmitting} onPress={handlePreparing} />
       </Card>
     );
   }
@@ -145,15 +151,15 @@ function OrderRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const label = ORDER_STATUS_LABELS[order.status] ?? order.status;
-  const tone = STATUS_TONE[order.status] ?? "default";
+  const tone = STATUS_TONE[order.status] ?? "neutral";
 
   return (
-    <Card gap={0} margin={2}>
+    <Card gap={0} style={{ marginBottom: spacing[2] }}>
       <ListItem
         onPress={() => setExpanded((v) => !v)}
         leading={<Badge tone={tone} label={label} />}
         title={`طلب #${order.id.slice(-6).toUpperCase()}`}
-        description={`${order.items.length} منتج — العميل: ${order.clientId.slice(-8)}`}
+        subtitle={`${order.items.length} منتج — العميل: ${order.clientId.slice(-8)}`}
         trailing={<Text role="bodySm" tone="muted">{expanded ? "▲" : "▼"}</Text>}
       />
       {expanded && (
@@ -162,7 +168,7 @@ function OrderRow({
             <ListItem
               key={item.id}
               title={item.productName}
-              description={`الكمية: ${item.quantity} — السعر: ${item.unitPrice} ر.س`}
+              subtitle={`الكمية: ${item.quantity} — السعر: ${item.unitPrice} ر.س`}
             />
           ))}
           <OrderActionPanel order={order} onAction={onAction} />
@@ -172,47 +178,70 @@ function OrderRow({
   );
 }
 
-export function PartnerOrdersScreen({ storeId, statusFilter, onBack }: Props) {
-  const { state, reload } = usePartnerOrdersController(storeId, statusFilter);
+export function PartnerOrdersScreen({ storeId, statusFilter: propStatusFilter, onBack }: Props) {
+  const [activeTab, setActiveTab] = useState<string>(propStatusFilter ?? "all");
+  const controllerStatusFilter = activeTab === "all" ? undefined : (activeTab as DshOrderStatus);
+  const { state, reload } = usePartnerOrdersController(storeId, controllerStatusFilter);
 
-  if (state.kind === "loading") {
-    return <LoadingState label="جارٍ تحميل الطلبات..." />;
-  }
+  const tabItems = [
+    { id: "all", label: "الكل" },
+    { id: "pending", label: "جديدة" },
+    { id: "preparing", label: "تجهيز" },
+    { id: "ready_for_pickup", label: "جاهزة" },
+  ] as const;
 
-  if (state.kind === "error") {
+  const renderContent = () => {
+    if (state.kind === "loading") {
+      return <StateView title="جارٍ تحميل الطلبات..." loading />;
+    }
+
+    if (state.kind === "error") {
+      return (
+        <StateView
+          tone="danger"
+          title="تعذر تحميل الطلبات"
+          description={state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={reload}
+        />
+      );
+    }
+
+    if (state.kind === "empty") {
+      return (
+        <StateView
+          title="لا توجد طلبات"
+          description={
+            activeTab === "pending"
+              ? "لا توجد طلبات جديدة في انتظار قبولك."
+              : "لا توجد طلبات تطابق الفلتر المحدد."
+          }
+          {...(onBack ? { actionLabel: "العودة", onActionPress: onBack } : {})}
+        />
+      );
+    }
+
+    if (state.kind !== "success") return null;
+
     return (
-      <StateView
-        kind="error"
-        title="تعذر تحميل الطلبات"
-        description={state.message}
-        action={<Button label="إعادة المحاولة" tone="secondary" onPress={reload} />}
-      />
+      <View style={{ gap: spacing[2] }}>
+        {state.orders.map((order) => (
+          <OrderRow key={order.id} order={order} onAction={reload} />
+        ))}
+      </View>
     );
-  }
-
-  if (state.kind === "empty") {
-    return (
-      <StateView
-        kind="empty"
-        title="لا توجد طلبات"
-        description={
-          statusFilter === "pending"
-            ? "لا توجد طلبات جديدة في انتظار قبولك."
-            : "لا توجد طلبات تطابق الفلتر المحدد."
-        }
-        action={onBack ? <Button label="العودة" tone="ghost" onPress={onBack} /> : undefined}
-      />
-    );
-  }
-
-  if (state.kind !== "success") return null;
+  };
 
   return (
     <ScrollScreen>
-      <Header title="طلبات المتجر" description={`${state.orders.length} طلب`} />
-      {state.orders.map((order) => (
-        <OrderRow key={order.id} order={order} onAction={reload} />
-      ))}
+      <View style={{ marginVertical: spacing[3] }}>
+        <Tabs
+          items={tabItems}
+          value={activeTab}
+          onValueChange={setActiveTab}
+        />
+      </View>
+      {renderContent()}
     </ScrollScreen>
   );
 }

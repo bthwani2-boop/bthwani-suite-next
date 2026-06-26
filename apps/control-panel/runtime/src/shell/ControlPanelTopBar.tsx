@@ -27,22 +27,199 @@ export function ControlPanelTopBar({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "1rem",
-        minHeight: "4rem",
-        padding: "0.75rem 1.5rem",
+        gap: "0.75rem",
+        minHeight: "var(--topbar-height, 3.75rem)",
+        padding: "0 1.5rem",
         flexShrink: 0,
-        borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
-        boxShadow: "0 0.25rem 1rem rgba(0, 0, 0, 0.05)",
-        background: "Canvas",
+        borderBottom: "1px solid var(--topbar-border, #E2E8F3)",
+        background: "var(--topbar-bg, #FFFFFF)",
+        boxShadow: "0 1px 0 var(--topbar-border, #E2E8F3)",
+        zIndex: 30,
+        position: "relative",
       }}
     >
+      {/* Custom logo slot (if provided) */}
       {logo != null ? <div style={{ flexShrink: 0 }}>{logo}</div> : null}
-      {title != null ? <div style={{ flexShrink: 0 }}>{title}</div> : null}
-      {serviceLabel != null ? <div style={{ flexShrink: 0 }}>{serviceLabel}</div> : null}
-      <div style={{ flex: 1 }}>{search}</div>
-      {notifications != null ? <div style={{ flexShrink: 0 }}>{notifications}</div> : null}
+
+      {/* Brand wordmark (default) */}
+      {logo == null && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+          <div
+            style={{
+              width: "1.75rem",
+              height: "1.75rem",
+              borderRadius: "0.375rem",
+              background: "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 0 8px rgba(59,123,255,0.35)",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+              <path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z" />
+            </svg>
+          </div>
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize: "1rem",
+              background: "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              letterSpacing: "0.04em",
+            }}
+          >
+            DSH
+          </span>
+        </div>
+      )}
+
+      {/* Breadcrumb separator + title */}
+      {title != null && (
+        <>
+          <span style={{ color: "var(--text-muted, #8A9BBB)", fontSize: "0.9rem", flexShrink: 0 }}>
+            —
+          </span>
+          <div
+            style={{
+              flexShrink: 0,
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "var(--text-primary, #0D1425)",
+            }}
+          >
+            {title}
+          </div>
+        </>
+      )}
+
+      {/* Service label / breadcrumb trail */}
+      {serviceLabel != null && (
+        <>
+          <span style={{ color: "var(--text-muted, #8A9BBB)", fontSize: "0.8rem", flexShrink: 0 }}>
+            /
+          </span>
+          <div
+            style={{
+              flexShrink: 0,
+              fontSize: "0.8rem",
+              fontWeight: 500,
+              color: "var(--text-secondary, #5A6A85)",
+              background: "rgba(59,123,255,0.07)",
+              padding: "0.2rem 0.6rem",
+              borderRadius: "999px",
+              border: "1px solid rgba(59,123,255,0.15)",
+            }}
+          >
+            {serviceLabel}
+          </div>
+        </>
+      )}
+
+      {/* Live status indicator */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+        <span
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: "#00C2A8",
+            display: "inline-block",
+            animation: "dsh-pulse-dot 2s ease-in-out infinite",
+            boxShadow: "0 0 6px rgba(0,194,168,0.6)",
+          }}
+        />
+        <span style={{ fontSize: "0.72rem", color: "var(--text-muted, #8A9BBB)", fontWeight: 500 }}>
+          نشط
+        </span>
+      </div>
+
+      {/* Search slot */}
+      <div style={{ flex: 1, minWidth: 0 }}>{search}</div>
+
+      {/* Custom actions slot */}
       {actions != null ? <div style={{ flexShrink: 0 }}>{actions}</div> : null}
-      {userMenu != null ? <div style={{ flexShrink: 0 }}>{userMenu}</div> : null}
+
+      {/* Notifications slot or default bell */}
+      {notifications != null ? (
+        <div style={{ flexShrink: 0 }}>{notifications}</div>
+      ) : (
+        <button
+          type="button"
+          aria-label="الإشعارات"
+          style={{
+            flexShrink: 0,
+            position: "relative",
+            width: "2.25rem",
+            height: "2.25rem",
+            borderRadius: "0.5rem",
+            border: "1px solid var(--card-border, #E2E8F3)",
+            background: "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "var(--text-secondary, #5A6A85)",
+            transition: "background 0.15s ease, border-color 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(59,123,255,0.06)";
+            e.currentTarget.style.borderColor = "rgba(59,123,255,0.25)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.borderColor = "var(--card-border, #E2E8F3)";
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          {/* Badge */}
+          <span
+            style={{
+              position: "absolute",
+              top: "0.25rem",
+              insetInlineEnd: "0.25rem",
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              background: "#3B7BFF",
+              border: "1.5px solid white",
+            }}
+          />
+        </button>
+      )}
+
+      {/* User menu slot or default avatar */}
+      {userMenu != null ? (
+        <div style={{ flexShrink: 0 }}>{userMenu}</div>
+      ) : (
+        <div
+          style={{
+            flexShrink: 0,
+            width: "2.25rem",
+            height: "2.25rem",
+            borderRadius: "50%",
+            background: "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "0.75rem",
+            fontWeight: 700,
+            color: "#fff",
+            cursor: "pointer",
+            boxShadow: "0 0 0 2px rgba(59,123,255,0.2)",
+            letterSpacing: "0.02em",
+          }}
+          title="المستخدم"
+        >
+          N
+        </div>
+      )}
     </header>
   );
 }
+

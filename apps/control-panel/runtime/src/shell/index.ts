@@ -1,6 +1,7 @@
 export * from "./ControlPanelShell";
 export * from "./ControlPanelNavigation";
 export * from "./ControlPanelTopBar";
+export * from "./useDshNavigation";
 export * from "./DataTablePageFrame";
 export * from "./DetailPageFrame";
 export * from "./EditorPageFrame";
@@ -12,3 +13,4 @@ export * from "./PaginationToolbar";
 export * from "./QueuePageFrame";
 export * from "./ReviewPageFrame";
 export * from "./SettingsPageFrame";
+

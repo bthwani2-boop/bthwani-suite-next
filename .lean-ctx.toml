@@ -1,0 +1,16 @@
+# LeanCTX policy for bthwani-suite-next
+# الهدف: متاح للوكلاء فقط، بدون تغيير سلوك التطبيق أو CI.
+
+shell_activation = "agents-only"
+rules_injection = "dedicated"
+cache_policy = "safe"
+response_verbosity = "headers_only"
+tool_profile = "standard"
+
+enable_wakeup_ctx = true
+auto_capture = true
+journal_enabled = true
+update_check_disabled = true
+
+[cloud]
+contribute_enabled = false

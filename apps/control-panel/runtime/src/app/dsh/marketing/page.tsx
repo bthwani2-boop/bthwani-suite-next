@@ -5,28 +5,20 @@ import {
   ControlPanelNavigation,
   ControlPanelShell,
   ControlPanelTopBar,
+  useDshNavigation,
 } from "../../../shell";
 import { HomeDiscoveryAdminScreen } from "@dsh-cp/marketing/home-discovery";
-import { useRouter } from "next/navigation";
 
 type HomeDiscoveryAdminKind = "banners" | "promos" | "categories";
 
 export default function MarketingPage() {
-  const router = useRouter();
+  const { items, handleSectionPress } = useDshNavigation();
   const [kind, setKind] = useState<HomeDiscoveryAdminKind>("banners");
 
-  const handleSectionPress = (section: string) => {
-    if (section === "dashboard") router.push("/");
-    if (section === "operations") router.push("/dsh/operations");
-    if (section === "partners") router.push("/dsh/partners/stores");
-    if (section === "catalogs") router.push("/dsh/catalogs");
-    if (section === "marketing") router.push("/dsh/marketing");
-  };
-
   const tabs = [
-    { id: "banners", label: "البنرات" },
-    { id: "promos", label: "العروض" },
-    { id: "categories", label: "التصنيفات" },
+    { id: "banners",     label: "البنرات الإعلانية" },
+    { id: "promos",      label: "العروض الخاصة" },
+    { id: "categories",  label: "التصنيفات الترويجية" },
   ] as const;
 
   return (
@@ -34,35 +26,30 @@ export default function MarketingPage() {
       dir="rtl"
       topBar={
         <ControlPanelTopBar
-          title={<strong>لوحة التحكم — DSH</strong>}
-          serviceLabel={<span>marketing / home-discovery</span>}
+          title={<strong>لوحة التحكم</strong>}
+          serviceLabel={<span>التسويق والاكتشاف</span>}
         />
       }
       navigation={
         <ControlPanelNavigation
           dir="rtl"
-          items={[
-            { section: "dashboard", label: "الرئيسية" },
-            { section: "operations", label: "العمليات" },
-            { section: "partners", label: "إدارة المتاجر" },
-            { section: "catalogs", label: "اعتماد الكتالوجات" },
-            { section: "marketing", label: "التسويق واكتشاف الصفحة" },
-          ]}
+          items={items}
           activeSection="marketing"
           onSectionPress={handleSectionPress}
         />
       }
       main={
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          {/* Tabs Switcher Bar */}
+          {/* Premium Tabs Bar */}
           <div
             style={{
               display: "flex",
-              gap: "0.5rem",
-              padding: "1rem 2rem",
-              background: "Canvas",
-              borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+              gap: "0.375rem",
+              padding: "0.875rem 1.5rem",
+              background: "var(--card-bg, #FFFFFF)",
+              borderBottom: "1px solid var(--card-border, #E2E8F3)",
               direction: "rtl",
+              flexShrink: 0,
             }}
           >
             {tabs.map((tab) => (
@@ -71,15 +58,19 @@ export default function MarketingPage() {
                 type="button"
                 onClick={() => setKind(tab.id)}
                 style={{
-                  padding: "0.5rem 1.5rem",
+                  padding: "0.45rem 1.1rem",
                   borderRadius: "0.5rem",
-                  border: "1px solid",
-                  borderColor: kind === tab.id ? "royalblue" : "color-mix(in srgb, currentColor 12%, transparent)",
-                  background: kind === tab.id ? "aliceblue" : "Canvas",
-                  color: kind === tab.id ? "royalblue" : "dimgray",
+                  border: "none",
+                  background: kind === tab.id
+                    ? "var(--grad-blue, linear-gradient(135deg,#3B7BFF,#5E97FF))"
+                    : "transparent",
+                  color: kind === tab.id ? "#FFFFFF" : "var(--text-secondary, #5A6A85)",
                   fontWeight: 600,
+                  fontSize: "0.85rem",
                   cursor: "pointer",
-                  transition: "all 0.2s ease",
+                  fontFamily: "var(--font-arabic, 'Cairo', sans-serif)",
+                  transition: "all 0.18s ease",
+                  boxShadow: kind === tab.id ? "0 2px 8px rgba(59,123,255,0.3)" : "none",
                 }}
               >
                 {tab.label}

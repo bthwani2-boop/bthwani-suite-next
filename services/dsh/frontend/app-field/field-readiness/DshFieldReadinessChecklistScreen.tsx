@@ -5,7 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  Header,
   ScrollScreen,
   StateView,
   Text,
@@ -57,11 +56,20 @@ export function DshFieldReadinessChecklistScreen({ visit }: Props) {
 
   return (
     <ScrollScreen>
-      <Header
-        title="قائمة التحقق الميداني"
-        subtitle={`${vm.passedCount} / ${vm.totalCount} اكتمل`}
-        actions={<Badge label={vm.allPassed ? "مكتمل" : `${vm.totalCount - vm.passedCount} متبقٍ`} tone={vm.allPassed ? "success" : "warning"} />}
-      />
+      <Card padding="$4" style={{ marginBottom: spacing[2] }}>
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <View>
+            <Text role="titleMd" style={{ textAlign: "right" }}>تقدم الجاهزية</Text>
+            <Text role="bodySm" tone="secondary" style={{ textAlign: "right" }}>
+              {`${vm.passedCount} من أصل ${vm.totalCount} متطلب تم التحقق منها`}
+            </Text>
+          </View>
+          <Badge
+            label={vm.allPassed ? "مكتمل" : `${vm.totalCount - vm.passedCount} متبقٍ`}
+            tone={vm.allPassed ? "success" : "warning"}
+          />
+        </View>
+      </Card>
 
       {checkActionState.kind === "error" && (
         <Card>

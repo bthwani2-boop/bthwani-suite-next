@@ -5,7 +5,6 @@ import {
   Badge,
   Button,
   Card,
-  Header,
   ScrollScreen,
   StateView,
   Text,
@@ -44,18 +43,17 @@ export function DshFieldVisitScreen({ storeId }: Props) {
 
   return (
     <ScrollScreen>
-      <Header
-        title="زيارات المتجر الميدانية"
-        subtitle="سجّل زيارتك وتابع حالة التأهيل"
-        actions={
+      <Card padding="$4" style={{ marginBottom: spacing[2] }}>
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <Text role="titleMd" style={{ textAlign: "right" }}>إجراءات الزيارة</Text>
           <Button
             label="بدء زيارة جديدة"
             tone="primary"
             disabled={actionState.kind === "submitting"}
             onPress={() => void startVisit({ visitType: "onboarding" })}
           />
-        }
-      />
+        </View>
+      </Card>
 
       {actionState.kind === "error" && (
         <Card>
