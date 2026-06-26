@@ -1,0 +1,15 @@
+=== runtime:status
+NAME                           IMAGE                                      COMMAND                  SERVICE        CREATED       STATUS                 PORTS
+bthwani-dsh-api-runtime        bthwani-runtime-dsh-api                    "/app/dsh-api"           dsh-api        6 hours ago   Up 5 hours (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-identity-api-runtime   bthwani-runtime-identity-api               "/identity-api"          identity-api   6 hours ago   Up 6 hours (healthy)   0.0.0.0:58082->8082/tcp, [::]:58082->8082/tcp
+bthwani-minio-runtime          minio/minio:RELEASE.2024-11-07T00-52-20Z   "/usr/bin/docker-ent…"   minio          6 hours ago   Up 6 hours             0.0.0.0:57000->9000/tcp, [::]:57000->9000/tcp, 0.0.0.0:57001->9001/tcp, [::]:57001->9001/tcp
+bthwani-postgres-runtime       postgres:16-alpine                         "docker-entrypoint.s…"   postgres       6 hours ago   Up 6 hours (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-wlt-api-runtime        bthwani-runtime-wlt-api                    "/app/wlt-api"           wlt-api        2 days ago    Up 9 hours (healthy)   0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp
+
+--- docker ps ---
+NAMES                          IMAGE                                      STATUS                 PORTS
+bthwani-dsh-api-runtime        bthwani-runtime-dsh-api                    Up 5 hours (healthy)   0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-identity-api-runtime   bthwani-runtime-identity-api               Up 6 hours (healthy)   0.0.0.0:58082->8082/tcp, [::]:58082->8082/tcp
+bthwani-postgres-runtime       postgres:16-alpine                         Up 6 hours (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-minio-runtime          minio/minio:RELEASE.2024-11-07T00-52-20Z   Up 6 hours             0.0.0.0:57000->9000/tcp, [::]:57000->9000/tcp, 0.0.0.0:57001->9001/tcp, [::]:57001->9001/tcp
+bthwani-wlt-api-runtime        bthwani-runtime-wlt-api                    Up 9 hours (healthy)   0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp

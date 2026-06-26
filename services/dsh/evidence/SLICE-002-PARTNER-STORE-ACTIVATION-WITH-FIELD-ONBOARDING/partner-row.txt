@@ -1,0 +1,10 @@
+Query: SELECT id, legal_name_ar, display_name, activation_status, version FROM dsh_partners WHERE id = $1
+Columns: [id legal_name_ar display_name activation_status version]
+
+id: prt_0559adee341346dea7299abcc0c06d64
+legal_name_ar: مؤسسة التجارة والخدمات الغذائية
+display_name: متجر البرجر المميز
+activation_status: partner_deactivated
+version: 3
+-----------------------------------
+Total Rows: 1

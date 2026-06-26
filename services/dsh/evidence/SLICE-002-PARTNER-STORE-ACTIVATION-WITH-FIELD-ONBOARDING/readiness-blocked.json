@@ -1,0 +1,23 @@
+{
+  "blockedReason": "لا يوجد فرع مربوط بالشريك",
+  "canActivate": false,
+  "checklist": [
+    {
+      "id": "documents",
+      "label": "الوثائق معتمدة",
+      "satisfied": true
+    },
+    {
+      "blockedReason": "لا يوجد فرع مربوط بالشريك",
+      "id": "store",
+      "label": "فرع مربوط بالشريك",
+      "satisfied": false
+    },
+    {
+      "id": "activation",
+      "label": "اعتماد العمليات",
+      "satisfied": false
+    }
+  ],
+  "partnerId": "prt_0559adee341346dea7299abcc0c06d64"
+}

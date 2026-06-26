@@ -1,3 +1,0 @@
-nothing to commit, working tree clean
-# captured: 2026-06-21 after commit 3677f86
-# branch: starting-implementing-slices

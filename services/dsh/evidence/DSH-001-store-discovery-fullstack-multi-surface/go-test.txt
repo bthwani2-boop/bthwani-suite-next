@@ -1,7 +1,0 @@
-﻿COMMAND: go test ./...
-WORKDIR: services/dsh/backend
-RESULT: PASS
-
-- internal/homediscovery: PASS
-- internal/store: PASS
-- remaining packages: no test files

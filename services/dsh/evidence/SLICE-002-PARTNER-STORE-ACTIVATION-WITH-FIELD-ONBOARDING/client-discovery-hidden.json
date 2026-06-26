@@ -1,0 +1,185 @@
+{
+  "pagination": {
+    "limit": 20,
+    "offset": 0,
+    "total": 5
+  },
+  "stores": [
+    {
+      "catalogApprovalStatus": "approved",
+      "category": "restaurant",
+      "cityCode": "sana",
+      "deliveryEtaMax": 30,
+      "deliveryEtaMin": 15,
+      "deliveryModes": [
+        "delivery",
+        "pickup",
+        "express"
+      ],
+      "displayName": "مطعم المدينة القديمة",
+      "distanceKm": 0.5,
+      "followerCount": 5200,
+      "hasCouponBadge": true,
+      "hasProBadge": true,
+      "heroImageUrl": "http://localhost:59000/dsh-media/store-1005-hero.jpg",
+      "id": "store-1005",
+      "isFreeDelivery": true,
+      "isPopular": true,
+      "isVisible": true,
+      "logoUrl": "http://localhost:59000/dsh-media/store-1005-logo.jpg",
+      "marketingVisibility": "visible",
+      "partnerReadiness": "ready",
+      "pointsMultiplier": 3,
+      "publicationEligible": true,
+      "ratingAverage": 4.9,
+      "ratingCount": 524,
+      "serviceAreaCode": "old-city",
+      "serviceability": {
+        "status": "serviceable"
+      },
+      "slug": "old-city-restaurant",
+      "status": "active",
+      "version": 1
+    },
+    {
+      "catalogApprovalStatus": "approved",
+      "category": "grocery",
+      "cityCode": "sana",
+      "deliveryEtaMax": 40,
+      "deliveryEtaMin": 25,
+      "deliveryModes": [
+        "delivery",
+        "pickup",
+        "express"
+      ],
+      "displayName": "أسواق حدة المركزية",
+      "distanceKm": 2.1,
+      "followerCount": 3100,
+      "hasCouponBadge": false,
+      "hasProBadge": true,
+      "heroImageUrl": "http://localhost:59000/dsh-media/store-1001-hero.jpg",
+      "id": "store-1001",
+      "isFreeDelivery": true,
+      "isPopular": true,
+      "isVisible": true,
+      "logoUrl": "http://localhost:59000/dsh-media/store-1001-logo.jpg",
+      "marketingVisibility": "visible",
+      "partnerReadiness": "ready",
+      "pointsMultiplier": 2,
+      "publicationEligible": true,
+      "ratingAverage": 4.8,
+      "ratingCount": 312,
+      "serviceAreaCode": "haddah",
+      "serviceability": {
+        "status": "serviceable"
+      },
+      "slug": "haddah-central-market",
+      "status": "active",
+      "version": 6
+    },
+    {
+      "catalogApprovalStatus": "approved",
+      "category": "pharmacy",
+      "cityCode": "sana",
+      "deliveryEtaMax": 35,
+      "deliveryEtaMin": 20,
+      "deliveryModes": [
+        "delivery"
+      ],
+      "displayName": "صيدلية معين",
+      "distanceKm": 4.1,
+      "followerCount": 980,
+      "hasCouponBadge": true,
+      "hasProBadge": false,
+      "heroImageUrl": "http://localhost:59000/dsh-media/store-1006-hero.jpg",
+      "id": "store-1006",
+      "isFreeDelivery": true,
+      "isPopular": false,
+      "isVisible": true,
+      "logoUrl": "http://localhost:59000/dsh-media/store-1006-logo.jpg",
+      "marketingVisibility": "visible",
+      "partnerReadiness": "ready",
+      "pointsMultiplier": null,
+      "publicationEligible": true,
+      "ratingAverage": 4.7,
+      "ratingCount": 88,
+      "serviceAreaCode": "maeen",
+      "serviceability": {
+        "status": "serviceable"
+      },
+      "slug": "maeen-pharmacy",
+      "status": "active",
+      "version": 1
+    },
+    {
+      "catalogApprovalStatus": "approved",
+      "category": "bakery",
+      "cityCode": "sana",
+      "deliveryEtaMax": 35,
+      "deliveryEtaMin": 20,
+      "deliveryModes": [
+        "delivery",
+        "pickup"
+      ],
+      "displayName": "مخبز السبعين",
+      "distanceKm": 1.8,
+      "followerCount": 1200,
+      "hasCouponBadge": true,
+      "hasProBadge": true,
+      "heroImageUrl": "http://localhost:59000/dsh-media/store-1002-hero.jpg",
+      "id": "store-1002",
+      "isFreeDelivery": true,
+      "isPopular": false,
+      "isVisible": true,
+      "logoUrl": "http://localhost:59000/dsh-media/store-1002-logo.jpg",
+      "marketingVisibility": "visible",
+      "partnerReadiness": "ready",
+      "pointsMultiplier": null,
+      "publicationEligible": true,
+      "ratingAverage": 4.6,
+      "ratingCount": 189,
+      "serviceAreaCode": "sabeen",
+      "serviceability": {
+        "status": "serviceable"
+      },
+      "slug": "al-sabeen-bakery",
+      "status": "active",
+      "version": 1
+    },
+    {
+      "catalogApprovalStatus": "approved",
+      "category": "grocery",
+      "cityCode": "sana",
+      "deliveryEtaMax": 55,
+      "deliveryEtaMin": 35,
+      "deliveryModes": [
+        "delivery",
+        "pickup"
+      ],
+      "displayName": "سوق شارع تعز",
+      "distanceKm": 3.5,
+      "followerCount": 850,
+      "hasCouponBadge": false,
+      "hasProBadge": false,
+      "heroImageUrl": "http://localhost:59000/dsh-media/store-1003-hero.jpg",
+      "id": "store-1003",
+      "isFreeDelivery": false,
+      "isPopular": false,
+      "isVisible": true,
+      "logoUrl": "http://localhost:59000/dsh-media/store-1003-logo.jpg",
+      "marketingVisibility": "visible",
+      "partnerReadiness": "ready",
+      "pointsMultiplier": null,
+      "publicationEligible": true,
+      "ratingAverage": 4.2,
+      "ratingCount": 97,
+      "serviceAreaCode": "taiz-st",
+      "serviceability": {
+        "status": "limited"
+      },
+      "slug": "taiz-street-market",
+      "status": "active",
+      "version": 1
+    }
+  ]
+}

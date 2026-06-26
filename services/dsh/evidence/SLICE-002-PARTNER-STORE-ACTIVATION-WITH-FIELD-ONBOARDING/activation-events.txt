@@ -1,0 +1,18 @@
+Query: SELECT id, partner_id, from_status, to_status, actor_surface, reason FROM dsh_partner_activation_events WHERE partner_id = $1
+Columns: [id partner_id from_status to_status actor_surface reason]
+
+id: pae_f596c8d7a94d4e16b302373e98340bee
+partner_id: prt_0559adee341346dea7299abcc0c06d64
+from_status: draft
+to_status: submitted
+actor_surface: app-field
+reason: مكتمل الأدلة والوثائق
+-----------------------------------
+id: pae_1bb2acdc24bc4cf88642e51173dbcc5c
+partner_id: prt_0559adee341346dea7299abcc0c06d64
+from_status: client_visible
+to_status: partner_deactivated
+actor_surface: control-panel
+reason: إيقاف مؤقت لمراجعة السجلات
+-----------------------------------
+Total Rows: 2

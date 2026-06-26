@@ -1,0 +1,33 @@
+{
+  "event": {
+    "actorId": "act_field_99",
+    "actorSurface": "app-field",
+    "correlationId": "corr_slice_002_test",
+    "createdAt": "2026-06-26T19:50:12.617604Z",
+    "fromStatus": "draft",
+    "id": "pae_f596c8d7a94d4e16b302373e98340bee",
+    "partnerId": "prt_0559adee341346dea7299abcc0c06d64",
+    "reason": "مكتمل الأدلة والوثائق",
+    "toStatus": "submitted"
+  },
+  "partner": {
+    "activationStatus": "submitted",
+    "category": "restaurant",
+    "createdAt": "2026-06-26T19:50:12.422075Z",
+    "createdByActorId": "act_field_99",
+    "createdBySurface": "app-field",
+    "displayName": "متجر البرجر المميز",
+    "email": "ahmed@burgerstore.com",
+    "id": "prt_0559adee341346dea7299abcc0c06d64",
+    "legalIdentityNumber": "CR9928374829",
+    "legalIdentityType": "commercial_register",
+    "legalNameAr": "مؤسسة التجارة والخدمات الغذائية",
+    "legalNameEn": "Food Services Trading Est",
+    "notes": "تم إنشاء ملف الشريك المبدئي بواسطة المندوب الميداني",
+    "ownerName": "أحمد عبدالله الشمري",
+    "primaryPhone": "+966501234567",
+    "secondaryPhone": "+966507654321",
+    "updatedAt": "2026-06-26T19:50:12.617604Z",
+    "version": 2
+  }
+}

@@ -1,19 +1,19 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-22",
+  "last_updated": "2026-06-26",
 
   "services": {
     "dsh": {
       "role": "ACTIVE_IMPLEMENTATION_TARGET",
-      "description": "Discovery + Store + Home + Catalog + Cart + Orders + Dispatch + Field + Support — operational commerce layer",
-      "status": "DSH-001_TECHNICAL_WIRING_VERIFIED_REAL_EXPERIENCE_FIX_REQUIRED",
-      "closure_status": "FIX_REQUIRED",
-      "next_topic_allowed": false,
+      "description": "Discovery + Store + Home + Catalog + Cart + Orders + Dispatch + Field + Support + Partner Activation — operational commerce layer",
+      "status": "DSH-015_RUNTIME_VERIFIED",
+      "closure_status": "RUNTIME_VERIFIED",
+      "next_topic_allowed": true,
       "backend": {
         "language": "Go",
         "path": "services/dsh/backend/",
         "dockerfile": "services/dsh/backend/Dockerfile",
-        "handlers_implemented": ["health", "readiness", "store-list", "store-get", "home-discovery"],
+        "handlers_implemented": ["health", "readiness", "store-list", "store-get", "home-discovery", "catalog", "cart", "checkout", "orders", "dispatch", "fieldreadiness", "support", "analytics", "partner"],
         "internal_port": 8080,
         "host_port": 58080
       },
@@ -21,18 +21,38 @@
         "path": "services/dsh/contracts/dsh.openapi.yaml",
         "version": "0.3.0",
         "state": "CONTRACT_ACTIVE",
-        "operations": ["getDshHealth", "getDshReadiness", "listDshStores", "getDshStore", "getDshHomeDiscovery"]
+        "operations": [
+          "getDshHealth", "getDshReadiness", "listDshStores", "getDshStore", "getDshHomeDiscovery",
+          "listDshPartners", "createDshPartner", "getDshPartner", "transitionDshPartner",
+          "getDshPartnerReadiness", "listDshPartnerDocuments", "addDshPartnerDocument", "reviewDshPartnerDocument",
+          "listDshPartnerStores", "linkDshPartnerStore", "listDshPartnerAuditEvents", "listDshPartnerFieldVisits",
+          "getDshPartnerActivationStatus", "getDshPartnerSelfReadiness", "createFieldPartnerDraft",
+          "getFieldPartnerDraft", "updateFieldPartnerDraft", "uploadFieldPartnerDocument", "createFieldPartnerVisit",
+          "submitFieldPartnerDraft"
+        ]
       },
       "database": {
         "path": "services/dsh/database/",
-        "migrations_applied": ["dsh-001_store_discovery.sql", "dsh-002_home_discovery.sql"],
-        "tables": ["dsh_stores", "dsh_home_banners", "dsh_home_promos", "dsh_categories"],
+        "migrations_applied": [
+          "dsh-001_store_discovery.sql", "dsh-002_home_discovery.sql", "dsh-002b_storefront_catalog.sql",
+          "dsh-004_cart.sql", "dsh-005_checkout_intent.sql", "dsh-006_orders.sql", "dsh-007_dispatch.sql",
+          "dsh-008_field_onboarding.sql", "dsh-009_support.sql", "dsh-011_notifications.sql",
+          "dsh-012_marketing.sql", "dsh-013_platform_policies.sql", "dsh-014_administration.sql",
+          "dsh-015_partner_lifecycle.sql"
+        ],
+        "tables": [
+          "dsh_stores", "dsh_home_banners", "dsh_home_promos", "dsh_categories", "dsh_catalog", "dsh_products",
+          "dsh_product_media", "dsh_carts", "dsh_cart_items", "dsh_checkout_intents", "dsh_orders", "dsh_order_events",
+          "dsh_dispatch_assignments", "dsh_field_visits", "dsh_readiness_checks", "dsh_readiness_escalations",
+          "dsh_support_tickets", "dsh_ticket_messages", "dsh_incidents", "dsh_partners", "dsh_partner_documents",
+          "dsh_partner_activation_events", "dsh_store_visibility_events"
+        ],
         "seeds_path": "services/dsh/database/seeds/local/"
       },
       "clients": {
         "path": "services/dsh/clients/",
         "generated": true,
-        "files": ["store-discovery-client.ts", "home-discovery-client.ts"]
+        "files": ["store-discovery-client.ts", "home-discovery-client.ts", "generated/dsh-api.ts"]
       },
       "frontend_shared_brain": "services/dsh/frontend/shared/",
       "frontend_surfaces": {

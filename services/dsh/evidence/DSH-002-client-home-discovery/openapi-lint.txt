@@ -1,5 +1,0 @@
-
-> bthwani-suite-next@0.0.0 contracts:lint C:\bthwani-suite-next
-> node tools/important-scripts/contracts-foundation.mjs
-
-contracts-foundation: PASS

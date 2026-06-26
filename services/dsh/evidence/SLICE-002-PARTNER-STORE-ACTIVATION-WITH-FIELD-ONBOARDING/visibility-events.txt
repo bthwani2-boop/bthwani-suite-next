@@ -1,0 +1,4 @@
+Query: SELECT id, partner_id, store_id, from_visibility, to_visibility FROM dsh_partner_store_visibility_events WHERE partner_id = $1
+Columns: [id partner_id store_id from_visibility to_visibility]
+
+Total Rows: 0

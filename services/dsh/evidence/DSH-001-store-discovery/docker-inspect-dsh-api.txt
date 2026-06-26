@@ -1,1 +1,0 @@
-Image=bthwani-runtime-dsh-api Command=["/app/dsh-api"] Entrypoint=null

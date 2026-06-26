@@ -1,0 +1,13 @@
+Database Migration Verification:
+- File: services/dsh/database/migrations/dsh-015_partner_lifecycle.sql
+
+Tables created:
+1. `dsh_partners`: Stores the partner profile (id, name, display_name, legal_identity_type, legal_identity_number, owner_name, primary_phone, secondary_phone, email, category, activation_status, created_by_actor_id, created_by_surface, version, created_at, updated_at).
+2. `dsh_partner_documents`: Documents uploaded by partner/field (id, partner_id, document_type, document_status, uploaded_by_actor_id, media_ref, notes, rejection_reason, version, created_at, updated_at).
+3. `dsh_partner_document_reviews`: Reviews log for docs (id, document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id, created_at).
+4. `dsh_partner_field_visits`: Field visit evidence log (id, partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude, evidence_media_refs, version, created_at, submitted_at).
+5. `dsh_partner_activation_events`: Activation audit trail (id, partner_id, from_status, to_status, actor_id, actor_surface, reason, correlation_id, idempotency_key, created_at).
+6. `dsh_partner_store_visibility_events`: Store visibility overrides log (id, partner_id, store_id, from_visibility, to_visibility, actor_id, reason, created_at).
+
+Modifications:
+- `dsh_stores`: Added column `partner_id` with foreign key referencing `dsh_partners(id)` and index `idx_dsh_stores_partner_id`.

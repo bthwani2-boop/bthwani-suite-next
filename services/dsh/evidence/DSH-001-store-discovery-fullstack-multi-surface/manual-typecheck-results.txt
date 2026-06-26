@@ -1,8 +1,0 @@
-TYPECHECK RESULTS — DSH-001 Manual Closure
-date=2026-06-22
-head=dd54117f744a39fd00ad0f3c95c5663ac760cf31
-
-shared/app-shell typecheck=PASS
-shared/ui-kit typecheck=PASS
-services/dsh typecheck=PASS
-apps/control-panel/runtime typecheck=PASS

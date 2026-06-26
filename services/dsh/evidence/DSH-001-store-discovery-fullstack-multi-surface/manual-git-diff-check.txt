@@ -1,2 +1,0 @@
-services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/manual-git-status.txt:1: trailing whitespace.
-+ M services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/manual-git-status.txt

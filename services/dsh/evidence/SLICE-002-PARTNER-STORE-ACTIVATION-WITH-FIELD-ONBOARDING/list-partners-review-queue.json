@@ -1,0 +1,19 @@
+{
+  "pagination": {
+    "limit": 20,
+    "offset": 0,
+    "total": 1
+  },
+  "partners": [
+    {
+      "activationStatus": "submitted",
+      "category": "restaurant",
+      "createdAt": "2026-06-26T19:50:12.422075Z",
+      "displayName": "متجر البرجر المميز",
+      "id": "prt_0559adee341346dea7299abcc0c06d64",
+      "legalNameAr": "مؤسسة التجارة والخدمات الغذائية",
+      "primaryPhone": "+966501234567",
+      "updatedAt": "2026-06-26T19:50:12.617604Z"
+    }
+  ]
+}

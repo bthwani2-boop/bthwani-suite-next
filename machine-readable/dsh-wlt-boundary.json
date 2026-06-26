@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-22",
+  "last_updated": "2026-06-26",
   "principle": "WLT is the sole owner of financial truth. DSH is the operational layer. This boundary is enforced by guard and is a DO_NOT_MERGE condition if violated.",
 
   "dsh_owns": [

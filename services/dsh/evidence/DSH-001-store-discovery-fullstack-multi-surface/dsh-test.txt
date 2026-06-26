@@ -1,9 +1,0 @@
-﻿COMMAND: pnpm --dir services/dsh test
-RESULT: PASS
-TESTS: 113
-PASSED: 113
-FAILED: 0
-
-Coverage includes URL validation, store discovery controller core, store admin
-controller core, home discovery controller core, state models, view models,
-filters, pagination, detail selection, API client errors, and backend policies.

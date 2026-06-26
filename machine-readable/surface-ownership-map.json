@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "last_updated": "2026-06-22",
+  "last_updated": "2026-06-26",
   "principle": "Surfaces are UI-only. All business logic, controllers, view-models, and state machines live in shared brains. A surface importing logic directly from another surface or defining its own business logic is an OWNERSHIP_VIOLATION that blocks closure.",
 
   "surfaces": {
@@ -124,7 +124,7 @@
         "dsh-frontend-shared-ownership",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only readiness context lacks loading/error visual proof)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only readiness context lacks loading/error visual proof)", "DSH-015 (RUNTIME_VERIFIED — partner activation status and readiness checklist)"],
       "dsh_001_scope_note": "DSH-001 in app-partner implements store-only readiness context. Catalog management, partner orders, finance are excluded.",
       "ownership_violations_found": "NONE",
       "port": 18102,
@@ -237,7 +237,7 @@
         "dsh-frontend-shared-ownership",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only verification context lacks loading/error visual proof)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — store-only verification context lacks loading/error visual proof)", "DSH-015 (RUNTIME_VERIFIED — partner draft intake)"],
       "ownership_violations_found": "NONE",
       "port": 18104
     },
@@ -313,7 +313,7 @@
         "control-panel-design-gate",
         "no-preview-demo-mock-runtime"
       ],
-      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — Store Network Governance lacks loading/empty visual proof)"],
+      "current_dsh_slices": ["DSH-001 (FIX_REQUIRED — Store Network Governance lacks loading/empty visual proof)", "DSH-015 (RUNTIME_VERIFIED — partner governance list, detail, documents, store linking)"],
       "implemented_routes": ["/dsh/partners/stores"],
       "ownership_violations_found": "NONE",
       "design_debt": "BLOCKING under REAL_EXPERIENCE_CLOSURE_v2 until removed or explicitly resolved within DSH-001 scope",
@@ -409,6 +409,12 @@
       "owns": ["useHomeDiscoveryController", "home types", "home states", "home view-models"],
       "currently_serving": ["app-client"],
       "topic": "DSH-002"
+    },
+    "dsh_partner_shared": {
+      "path": "services/dsh/frontend/shared/partner/",
+      "owns": ["usePartnerOnboardingController", "usePartnerAdminController", "usePartnerSelfController", "partner types", "partner states", "partner view-models"],
+      "currently_serving": ["control-panel", "app-partner", "app-field"],
+      "topic": "DSH-015"
     },
     "dsh_kernel": {
       "path": "services/dsh/frontend/shared/_kernel/",

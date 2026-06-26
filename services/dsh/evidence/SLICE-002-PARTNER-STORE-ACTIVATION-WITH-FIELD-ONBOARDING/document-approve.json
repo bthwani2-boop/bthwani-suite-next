@@ -1,0 +1,25 @@
+{
+  "document": {
+    "createdAt": "2026-06-26T19:50:12.488984Z",
+    "documentStatus": "approved",
+    "documentType": "commercial_register",
+    "id": "doc_4788b09b46984710a704722994d0da83",
+    "mediaRef": "media_cr_992837.jpg",
+    "notes": "سجل تجاري ساري المفعول",
+    "partnerId": "prt_0559adee341346dea7299abcc0c06d64",
+    "rejectionReason": "سليم ومطابق",
+    "updatedAt": "2026-06-26T19:50:12.857568Z",
+    "uploadedByActorId": "act_field_99",
+    "version": 2
+  },
+  "review": {
+    "correlationId": "corr_slice_002_test",
+    "createdAt": "2026-06-26T19:50:12.857568Z",
+    "decision": "approved",
+    "documentId": "doc_4788b09b46984710a704722994d0da83",
+    "id": "drev_0b0c4cbf79de4f198ce5d02fd71b55ae",
+    "partnerId": "prt_0559adee341346dea7299abcc0c06d64",
+    "reason": "سليم ومطابق",
+    "reviewedByActorId": "act_operator_11"
+  }
+}

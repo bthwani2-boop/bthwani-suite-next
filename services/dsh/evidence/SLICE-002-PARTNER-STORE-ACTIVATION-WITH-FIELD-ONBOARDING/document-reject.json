@@ -1,0 +1,25 @@
+{
+  "document": {
+    "createdAt": "2026-06-26T19:50:12.52637Z",
+    "documentStatus": "rejected",
+    "documentType": "national_id",
+    "id": "doc_740537830bf24da58374bf9fe6275036",
+    "mediaRef": "media_id_ahmed.jpg",
+    "notes": "نسخة الهوية الوطنية للمالك",
+    "partnerId": "prt_0559adee341346dea7299abcc0c06d64",
+    "rejectionReason": "صورة الهوية غير واضحة",
+    "updatedAt": "2026-06-26T19:50:12.788003Z",
+    "uploadedByActorId": "act_field_99",
+    "version": 2
+  },
+  "review": {
+    "correlationId": "corr_slice_002_test",
+    "createdAt": "2026-06-26T19:50:12.788003Z",
+    "decision": "rejected",
+    "documentId": "doc_740537830bf24da58374bf9fe6275036",
+    "id": "drev_3f3559df0523482297e3fb0914e11e01",
+    "partnerId": "prt_0559adee341346dea7299abcc0c06d64",
+    "reason": "صورة الهوية غير واضحة",
+    "reviewedByActorId": "act_operator_11"
+  }
+}

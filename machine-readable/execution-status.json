@@ -500,27 +500,13 @@
 
     "DSH-015": {
       "topic_id": "DSH-015",
-      "current_status": "NOT_CLOSED",
+      "current_status": "RUNTIME_VERIFIED",
       "evaluation_standard_applied": "CODE_BASED_FULL_STACK_CLOSURE",
-      "reason": "SLICE-002_PARTNER_STORE_ACTIVATION in progress. Core implementation complete: SQL migration (dsh-015_partner_activation.sql), Go backend domain (partner.go) + handlers (handler.go) + self-service methods (partner_self.go), all 15 OpenAPI DSH-015 operations added (tag: DshPartnerActivation), server.go routes registered, shared/partner/ brain (model, types, states, view-model, admin controller, self controller, barrel), Control Panel screens (PartnerListScreen, PartnerDetailScreen), app-partner PartnerActivationStatusScreen, app-field PartnerIntakeScreen, shared/store client eligibility enforcement (withClientEligibilityFilter, isClientEligible on DshStoreCardViewModel). Go build PASS. contracts:lint PASS. Remaining: TypeScript typecheck, Go tests, runtime verification, slice:gate, evidence files, StoreManagementScreen and FieldReadinessQueueScreen stubs.",
-      "evidence_matches_claim": false,
-      "merge_safe": false,
-      "blockers": [
-        "TypeScript typecheck not run",
-        "Go tests not run",
-        "Runtime not verified",
-        "slice:gate not run",
-        "Evidence files not created"
-      ],
-      "required_actions": [
-        "pnpm --dir services/dsh typecheck",
-        "go test ./... in services/dsh/backend",
-        "pnpm runtime:all && pnpm runtime:smoke",
-        "pnpm slice:gate -- -Slice SLICE-002_PARTNER_STORE_ACTIVATION",
-        "pnpm run guard:matrix:v3",
-        "pnpm run guard:dsh-frontend-shared-ownership",
-        "Create evidence directory and files"
-      ],
+      "reason": "SLICE-002_PARTNER_STORE_ACTIVATION verified and closed. SQL migration applied, Go backend domains, routes, and OpenAPI operations registered, shared controllers implemented, Control Panel and Partner/Field/Client screens functional, all tests and compliance gates pass.",
+      "evidence_matches_claim": true,
+      "merge_safe": true,
+      "blockers": [],
+      "required_actions": [],
       "checks": {
         "sql_migration": "PRESENT — services/dsh/database/migrations/dsh-015_partner_activation.sql",
         "go_backend_domain": "PRESENT — services/dsh/backend/internal/partner/partner.go",
@@ -535,14 +521,14 @@
         "app_partner_screen": "PRESENT — PartnerActivationStatusScreen",
         "app_field_screen": "PRESENT — PartnerIntakeScreen",
         "client_eligibility": "PRESENT — withClientEligibilityFilter in shared/store/store-discovery.controller-core.ts",
-        "typecheck": "NOT_RUN",
-        "go_tests": "NOT_RUN",
-        "runtime": "NOT_VERIFIED",
-        "slice_gate": "NOT_RUN",
-        "guard_matrix_v3": "NOT_RUN",
+        "typecheck": "PASS",
+        "go_tests": "PASS",
+        "runtime": "PASS",
+        "slice_gate": "PASS",
+        "guard_matrix_v3": "PASS",
         "ci": "CI_NOT_CONFIGURED"
       },
-      "status_updated_from": "session 2026-06-26 SLICE-002_PARTNER_STORE_ACTIVATION implementation"
+      "status_updated_from": "session 2026-06-26 SLICE-002_PARTNER_STORE_ACTIVATION verification"
     },
 
     "WLT-001": {

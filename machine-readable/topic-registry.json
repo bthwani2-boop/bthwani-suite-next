@@ -1675,15 +1675,8 @@
         "RTL layout and Arabic labels on all new screens"
       ],
       "guards_required": ["FOUNDATION_GATE", "WLT_BOUNDARY_GATE", "GUARD_MATRIX_V3", "DSH_SLICE_GATE", "TYPECHECK_GATE", "guard:dsh-frontend-shared-ownership"],
-      "current_status": "NOT_CLOSED",
-      "blockers": [
-        "TypeScript typecheck not yet run",
-        "Go tests not yet run",
-        "Runtime not yet verified",
-        "slice:gate not yet run",
-        "Evidence files not yet created",
-        "Control Panel StoreManagementScreen and FieldReadinessQueueScreen referenced in index.ts but not yet implemented"
-      ],
+      "current_status": "RUNTIME_VERIFIED",
+      "blockers": [],
       "evidence_required": ["Go build PASS", "contracts:lint PASS", "typecheck PASS", "go test PASS", "guard:matrix:v3 PASS", "guard:dsh-frontend-shared-ownership PASS", "slice:gate PASS", "Runtime API smoke proof"],
       "source_evidence": [
         {"type": "SQL_MIGRATION", "path": "services/dsh/database/migrations/dsh-015_partner_activation.sql", "status": "PRESENT"},
@@ -1695,9 +1688,10 @@
         {"type": "CONTROL_PANEL_SCREEN", "path": "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx", "status": "PRESENT"},
         {"type": "APP_PARTNER_SCREEN", "path": "services/dsh/frontend/app-partner/onboarding/PartnerActivationStatusScreen.tsx", "status": "PRESENT"},
         {"type": "APP_FIELD_SCREEN", "path": "services/dsh/frontend/app-field/partner-intake/PartnerIntakeScreen.tsx", "status": "PRESENT"},
-        {"type": "CLIENT_ELIGIBILITY_ENFORCEMENT", "path": "services/dsh/frontend/shared/store/store-discovery.controller-core.ts", "status": "PRESENT"}
+        {"type": "CLIENT_ELIGIBILITY_ENFORCEMENT", "path": "services/dsh/frontend/shared/store/store-discovery.controller-core.ts", "status": "PRESENT"},
+        {"type": "RUNTIME_EVIDENCE", "path": "services/dsh/evidence/SLICE-002-PARTNER-STORE-ACTIVATION-WITH-FIELD-ONBOARDING/", "status": "PRESENT"}
       ],
-      "verified_date": null
+      "verified_date": "2026-06-26"
     },
 
     "WLT-001": {

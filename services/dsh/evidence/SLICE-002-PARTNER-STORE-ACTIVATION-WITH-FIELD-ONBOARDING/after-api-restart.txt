@@ -1,0 +1,8 @@
+Query: SELECT id, display_name, activation_status FROM dsh_partners WHERE id = $1
+Columns: [id display_name activation_status]
+
+id: prt_0559adee341346dea7299abcc0c06d64
+display_name: متجر البرجر المميز
+activation_status: partner_deactivated
+-----------------------------------
+Total Rows: 1
