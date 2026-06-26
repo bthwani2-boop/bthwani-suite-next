@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
+  Button,
   Card,
   Header,
   ScrollScreen,
@@ -10,64 +11,123 @@ import {
   Text,
   spacing,
 } from "@bthwani/ui-kit";
-import { usePartnerOnboardingStatusController, buildOnboardingStatusViewModel } from "../../shared/field-readiness";
+import {
+  usePartnerSelfController,
+  getDshPartnerActivationStatusLabel,
+  getDshPartnerActivationStateMetadata,
+  getDshPartnerReadinessChecklist,
+  isDshPartnerClientVisible,
+} from "../../shared/partner";
 
-type Props = { readonly storeId: string };
-
-export function PartnerOnboardingStatusScreen({ storeId }: Props) {
+export function PartnerOnboardingStatusScreen() {
   const identity = useIdentitySession();
-  const { state, reload } = usePartnerOnboardingStatusController(storeId, identity.state.kind);
+  const { statusState, readinessState, reload } = usePartnerSelfController(identity.state.kind);
 
   if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="يجب تسجيل دخولك كشريك للاطلاع على حالة التأهيل." />;
+    return (
+      <StateView
+        title="تسجيل الدخول مطلوب"
+        description="يجب تسجيل دخولك كشريك للاطلاع على حالة التأهيل."
+      />
+    );
   }
-  if (state.kind === "loading" || state.kind === "idle") return <StateView title="جاري تحميل حالة التأهيل…" />;
-  if (state.kind === "error") {
-    return <StateView title="تعذر تحميل حالة التأهيل" description={state.message} actionLabel="إعادة المحاولة" onActionPress={reload} />;
+  if (statusState.kind === "loading" || statusState.kind === "idle") {
+    return <StateView title="جاري تحميل حالة التأهيل…" />;
+  }
+  if (statusState.kind === "forbidden") {
+    return <StateView title="غير مصرح" description="ليس لديك صلاحية عرض هذه البيانات." />;
+  }
+  if (statusState.kind === "not_found") {
+    return <StateView title="لم يتم إيجاد ملف الشريك" description="تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ." />;
+  }
+  if (statusState.kind === "error") {
+    return (
+      <StateView
+        title="تعذر تحميل حالة التأهيل"
+        description={statusState.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={reload}
+      />
+    );
   }
 
-  const vm = buildOnboardingStatusViewModel(state.status);
-  const headerBadgeTone = vm.isComplete ? "success" : vm.hasOpenEscalations ? "danger" : "info";
+  const partner = statusState.partner;
+  const status = partner.activationStatus;
+  const meta = getDshPartnerActivationStateMetadata(status);
+  const statusLabel = getDshPartnerActivationStatusLabel(status);
+  const checklist = getDshPartnerReadinessChecklist(status);
+  const isVisible = isDshPartnerClientVisible(status);
+  const isDeactivated = status === "partner_deactivated";
+  const isRejected = status === "ops_rejected";
+
+  const headerTone = isVisible ? "success" : isDeactivated || isRejected ? "danger" : "info";
 
   return (
     <ScrollScreen>
       <Header
-        title="حالة تأهيل المتجر"
-        subtitle="تعرّف على مراحل التحقق الميداني ومتمتطلبات التفعيل"
-        actions={<Badge label={vm.statusLabel} tone={headerBadgeTone} />}
+        title="حالة تأهيل الشريك"
+        subtitle="تعرّف على مرحلة التأهيل ومتطلبات التفعيل"
+        actions={<Badge label={statusLabel} tone={headerTone} />}
       />
-      <Card padding="$5" gap="$2" tone={vm.isComplete ? "success" : "default"}>
-        <Text role="titleLg">{vm.isComplete ? "مبروك! متجرك جاهز للتشغيل" : "التأهيل الميداني قيد التقدم"}</Text>
-        <Text tone="secondary">
-          {vm.isComplete
-            ? "تم إتمام كل الزيارات الميدانية وحل جميع التصعيدات."
-            : "يقوم فريقنا الميداني بمراجعة متجرك والتحقق من استيفائه لمعايير الجودة."}
+
+      <Card
+        padding="$5"
+        gap="$2"
+        tone={isVisible ? "success" : isDeactivated || isRejected ? "danger" : "default"}
+      >
+        <Text role="titleLg">
+          {isVisible
+            ? "متجرك مرئي للعملاء"
+            : isDeactivated
+            ? "تم إيقاف الحساب"
+            : isRejected
+            ? "تم رفض الطلب"
+            : meta.nextAction}
         </Text>
+        {meta.blockedReason !== "" && (
+          <Text tone="secondary">{meta.blockedReason}</Text>
+        )}
       </Card>
-      <View style={styles.metrics}>
-        <Card fill padding="$4" centered gap="$1">
-          <Text role="titleLg">{vm.completedVisits}</Text>
-          <Text role="caption" tone="muted">زيارات مكتملة</Text>
-        </Card>
-        <Card fill padding="$4" centered gap="$1">
-          <Text role="titleLg">{vm.totalVisits}</Text>
-          <Text role="caption" tone="muted">إجمالي الزيارات</Text>
-        </Card>
-        <Card fill padding="$4" centered gap="$1">
-          <Text role="titleLg" tone={vm.hasOpenEscalations ? "danger" : "default"}>{state.status.openEscalations}</Text>
-          <Text role="caption" tone="muted">تصعيدات مفتوحة</Text>
-        </Card>
+
+      <View style={styles.checklist}>
+        {checklist.map((item) => (
+          <Card
+            key={item.id}
+            padding="$3"
+            gap="$1"
+            tone={item.satisfied ? "success" : "default"}
+          >
+            <Text role="labelMd" tone={item.satisfied ? "success" : "muted"}>
+              {item.satisfied ? "✓ " : "○ "}
+              {item.label}
+            </Text>
+            {!item.satisfied && item.blockedReason != null && (
+              <Text role="caption" tone="muted">{item.blockedReason}</Text>
+            )}
+          </Card>
+        ))}
       </View>
-      {vm.hasOpenEscalations && (
-        <Card padding="$4" gap="$2" tone="danger">
-          <Text role="titleSm" tone="danger">هناك تصعيدات تحتاج حلاً</Text>
-          <Text tone="secondary">فريق العمليات يراجع التصعيدات المرفوعة حالياً.</Text>
+
+      {readinessState.kind === "success" && (
+        <Card padding="$4" gap="$2">
+          <Text role="titleSm">جاهزية المتطلبات</Text>
+          {readinessState.readiness.checklist.map((item) => (
+            <Text
+              key={item.id}
+              tone={item.satisfied ? "success" : "muted"}
+              role="bodyMd"
+            >
+              {item.satisfied ? "✓" : "○"} {item.label}
+            </Text>
+          ))}
         </Card>
       )}
+
+      <Button label="تحديث" onPress={reload} variant="ghost" />
     </ScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  metrics: { flexDirection: "row-reverse", gap: spacing[3], marginTop: spacing[3] },
+  checklist: { gap: spacing[2], marginTop: spacing[3] },
 });

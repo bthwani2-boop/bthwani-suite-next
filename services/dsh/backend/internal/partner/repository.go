@@ -236,6 +236,25 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		return Partner{}, ActivationEvent{}, err
 	}
 
+	// Propagate partner_readiness to linked stores inside the same transaction.
+	// client_visible → stores become discoverable; client_hidden/deactivated → stores hidden.
+	switch input.ToStatus {
+	case StatusClientVisible:
+		if _, err = tx.Exec(
+			`UPDATE dsh_stores SET partner_readiness = 'ready', version = version + 1, updated_at = NOW() WHERE partner_id = $1`,
+			partnerID,
+		); err != nil {
+			return Partner{}, ActivationEvent{}, err
+		}
+	case StatusClientHidden, StatusPartnerDeactivated:
+		if _, err = tx.Exec(
+			`UPDATE dsh_stores SET partner_readiness = 'not_ready', version = version + 1, updated_at = NOW() WHERE partner_id = $1`,
+			partnerID,
+		); err != nil {
+			return Partner{}, ActivationEvent{}, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return Partner{}, ActivationEvent{}, err
 	}
