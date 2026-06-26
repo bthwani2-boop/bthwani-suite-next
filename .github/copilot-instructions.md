@@ -11,3 +11,21 @@ Read first:
 Copilot is an implementation assistant only. It must not decide architecture, widen scope, delete/move/rename files, change dependencies, or claim final acceptance. All commands must follow the safety policy.
 
 Before editing, state the exact files you intend to touch. After editing, provide changed paths and ask for Git evidence.
+
+
+
+## BThwani Ponytail / YAGNI
+
+Also apply:
+
+1. `.agents/rules/bthwani-ponytail-yagni.md`
+2. `.agents/skills/bthwani-ponytail-yagni/SKILL.md`
+
+Default behavior:
+
+- smallest correct diff
+- reuse existing code first
+- no unrequested abstractions
+- no new dependency without proof
+- no preview/demo/mock runtime paths
+- no scans of generated/cache/output folders

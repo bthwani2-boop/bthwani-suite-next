@@ -43,3 +43,17 @@ Default: smallest action, fastest response, precise output.
 lean-ctx is active — the MCP tools replace native equivalents.
 Full rules: LEAN-CTX.md (open on demand — do not auto-load).
 <!-- /lean-ctx -->
+
+
+
+## BThwani Ponytail / YAGNI
+
+All agents must apply the portable Ponytail-style BThwani rule before changing code:
+
+    .agents/rules/bthwani-ponytail-yagni.md
+
+Shared skill:
+
+    .agents/skills/bthwani-ponytail-yagni/SKILL.md
+
+Default: reuse existing code first, avoid new abstractions, avoid new dependencies, prefer smallest correct diff, and never scan generated/cache/output folders.

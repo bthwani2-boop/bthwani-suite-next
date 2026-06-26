@@ -1,0 +1,90 @@
+rules:
+  - id: bthwani-no-old-dev-ports
+    languages:
+      - generic
+    severity: ERROR
+    message: "Old dev port detected. Use BThwani canonical new runtime ports only."
+    pattern-regex: '\b(localhost|127\.0\.0\.1|0\.0\.0\.0):(8080|8081|8082|8083|8084|3000)\b'
+    paths:
+      include:
+        - apps/**
+        - shared/**
+        - services/**
+        - core/**
+        - contracts/**
+        - tools/**
+      exclude:
+        - node_modules/**
+        - .pnpm-store/**
+        - .next/**
+        - .expo/**
+        - dist/**
+        - build/**
+        - coverage/**
+        - graphify-out/**
+        - .yagni-out/**
+        - .nx/**
+        - .cache/**
+        - .gocache*/**
+        - .gomodcache*/**
+        - tools/registry/runs/**
+
+  - id: bthwani-preview-demo-mock-review
+    languages:
+      - generic
+    severity: WARNING
+    message: "Preview/demo/mock naming detected. Verify this is not new runtime noise."
+    pattern-regex: '(?i)\b(previewData|mockData|demoData|preview-data|mock-data|demo-data|preview_fixture|mock_fixture|demo_fixture)\b'
+    paths:
+      include:
+        - apps/**
+        - shared/**
+        - services/**
+        - core/**
+        - contracts/**
+        - tools/**
+      exclude:
+        - node_modules/**
+        - .pnpm-store/**
+        - .next/**
+        - .expo/**
+        - dist/**
+        - build/**
+        - coverage/**
+        - graphify-out/**
+        - .yagni-out/**
+        - .nx/**
+        - .cache/**
+        - .gocache*/**
+        - .gomodcache*/**
+        - tools/registry/runs/**
+
+  - id: bthwani-direct-fetch-review
+    languages:
+      - generic
+    severity: WARNING
+    message: "Direct fetch call detected. Verify existing API/client binding is reused."
+    pattern-regex: '\bfetch\s*\('
+    paths:
+      include:
+        - apps/**
+        - shared/**
+        - services/**
+        - core/**
+        - contracts/**
+        - tools/**
+      exclude:
+        - node_modules/**
+        - .pnpm-store/**
+        - .next/**
+        - .expo/**
+        - dist/**
+        - build/**
+        - coverage/**
+        - graphify-out/**
+        - .yagni-out/**
+        - .nx/**
+        - .cache/**
+        - .gocache*/**
+        - .gomodcache*/**
+        - tools/registry/runs/**

@@ -76,7 +76,13 @@
     "captain": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1",
     "field": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1",
     "partner": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1",
-    "control": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/control-panel/runtime/start.ps1"
+    "control": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/control-panel/runtime/start.ps1",
+    "guard:knip": "knip --config knip.json",
+    "guard:ast-grep": "sg scan apps shared services core contracts tools --config tools/yagni/ast-grep/sgconfig.yml",
+    "guard:semgrep": "semgrep scan --config tools/yagni/semgrep/bthwani-yagni.yml",
+    "guard:go-deadcode": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-go-deadcode.ps1",
+    "guard:yagni": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-yagni-guard.ps1",
+    "yagni:diagnostics": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-yagni-diagnostics.ps1"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
