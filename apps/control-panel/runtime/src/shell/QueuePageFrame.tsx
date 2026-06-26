@@ -19,10 +19,37 @@ export function QueuePageFrame({
 }: QueuePageFrameProps) {
   return (
     <section dir={dir} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {header != null ? <div style={{ flexShrink: 0 }}>{header}</div> : null}
-      {toolbar != null ? <div style={{ flexShrink: 0 }}>{toolbar}</div> : null}
-      {filters != null ? <div style={{ flexShrink: 0 }}>{filters}</div> : null}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      {header != null ? (
+        <div style={{
+          flexShrink: 0,
+          padding: "1rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {header}
+        </div>
+      ) : null}
+      {toolbar != null ? (
+        <div style={{
+          flexShrink: 0,
+          padding: "0.625rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {toolbar}
+        </div>
+      ) : null}
+      {filters != null ? (
+        <div style={{
+          flexShrink: 0,
+          padding: "0.625rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {filters}
+        </div>
+      ) : null}
+      <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.5rem" }}>
         {stateView != null ? stateView : children}
       </div>
     </section>

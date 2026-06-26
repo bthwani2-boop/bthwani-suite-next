@@ -27,35 +27,89 @@ export function ControlPanelShell({
       dir={dir}
       style={{
         display: "flex",
-        flexDirection: "column",
         height: "100vh",
         overflow: "hidden",
-        background: "Canvas",
-        color: "CanvasText",
+        background: "var(--dsh-content-bg)",
+        color: "var(--dsh-text-primary)",
+        fontFamily: "var(--font-arabic)",
       }}
     >
-      {serviceContext}
-      <div style={{ flexShrink: 0 }}>{topBar}</div>
-      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <div
-          style={{
-            width: "15rem",
-            flexShrink: 0,
-            overflowY: "auto",
-            borderInlineEnd: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
-            background: "color-mix(in srgb, currentColor 3%, Canvas)",
-          }}
-        >
-          {navigation}
+      {/* Dark sidebar — full height, appears on the inline-end in RTL */}
+      <aside
+        style={{
+          width: "var(--dsh-sidebar-width)",
+          flexShrink: 0,
+          background: "var(--dsh-sidebar-bg)",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          boxShadow: "var(--dsh-sidebar-shadow)",
+          zIndex: 20,
+          position: "relative",
+        }}
+      >
+        {navigation}
+      </aside>
+
+      {/* Content area */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
+        }}
+      >
+        {serviceContext}
+
+        {/* TopBar */}
+        <div style={{ flexShrink: 0, zIndex: 10, position: "relative" }}>
+          {topBar}
         </div>
-        <main style={{ flex: 1, minWidth: 0, overflowY: "auto", background: "Canvas" }}>{main}</main>
-        {sidePanel != null ? (
-          <div style={{ flexShrink: 0, overflowY: "auto" }}>{sidePanel}</div>
+
+        {/* Scrollable main + optional side panel */}
+        <div style={{ flex: 1, minHeight: 0, display: "flex", overflow: "hidden" }}>
+          <main
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflowY: "auto",
+              background: "var(--dsh-content-bg)",
+            }}
+          >
+            {main}
+          </main>
+
+          {sidePanel != null ? (
+            <div
+              style={{
+                flexShrink: 0,
+                overflowY: "auto",
+                borderInlineStart: "1px solid var(--dsh-card-border)",
+                background: "var(--dsh-card-bg)",
+              }}
+            >
+              {sidePanel}
+            </div>
+          ) : null}
+        </div>
+
+        {statusBar != null ? (
+          <footer
+            style={{
+              flexShrink: 0,
+              borderTop: "1px solid var(--dsh-card-border)",
+              background: "var(--dsh-card-bg)",
+            }}
+          >
+            {statusBar}
+          </footer>
         ) : null}
       </div>
-      {statusBar != null ? (
-        <footer style={{ flexShrink: 0 }}>{statusBar}</footer>
-      ) : null}
     </div>
   );
 }

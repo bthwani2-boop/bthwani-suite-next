@@ -17,9 +17,27 @@ export function FinanceReadOnlyFrame({
 }: FinanceReadOnlyFrameProps) {
   return (
     <section dir={dir} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {header != null ? <div style={{ flexShrink: 0 }}>{header}</div> : null}
-      {summary != null ? <div style={{ flexShrink: 0 }}>{summary}</div> : null}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      {header != null ? (
+        <div style={{
+          flexShrink: 0,
+          padding: "1rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {header}
+        </div>
+      ) : null}
+      {summary != null ? (
+        <div style={{
+          flexShrink: 0,
+          padding: "1rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {summary}
+        </div>
+      ) : null}
+      <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.5rem" }}>
         {stateView != null ? stateView : children}
       </div>
     </section>

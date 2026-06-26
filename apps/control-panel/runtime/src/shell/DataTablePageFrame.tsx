@@ -10,16 +10,59 @@ export type DataTablePageFrameProps = {
   readonly dir?: "ltr" | "rtl";
 };
 
-export function DataTablePageFrame({ header, toolbar, filters, children, stateView, sidePanel, dir = "rtl" }: DataTablePageFrameProps) {
+export function DataTablePageFrame({
+  header,
+  toolbar,
+  filters,
+  children,
+  stateView,
+  sidePanel,
+  dir = "rtl",
+}: DataTablePageFrameProps) {
   return (
     <section dir={dir} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {header != null && <div style={{ flexShrink: 0 }}>{header}</div>}
-      {toolbar != null && <div style={{ flexShrink: 0 }}>{toolbar}</div>}
-      {filters != null && <div style={{ flexShrink: 0 }}>{filters}</div>}
+      {header != null && (
+        <div style={{
+          flexShrink: 0,
+          padding: "1rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {header}
+        </div>
+      )}
+      {toolbar != null && (
+        <div style={{
+          flexShrink: 0,
+          padding: "0.625rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {toolbar}
+        </div>
+      )}
+      {filters != null && (
+        <div style={{
+          flexShrink: 0,
+          padding: "0.625rem 1.5rem",
+          background: "var(--dsh-card-bg)",
+          borderBottom: "1px solid var(--dsh-card-border)",
+        }}>
+          {filters}
+        </div>
+      )}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>{stateView ?? children}</div>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "auto", padding: "1.25rem 1.5rem" }}>
+          {stateView ?? children}
+        </div>
         {sidePanel != null && (
-          <aside style={{ width: "22rem", flexShrink: 0, borderInlineStart: "1px solid rgba(0,0,0,0.1)", overflowY: "auto" }}>
+          <aside style={{
+            width: "22rem",
+            flexShrink: 0,
+            borderInlineStart: "1px solid var(--dsh-card-border)",
+            background: "var(--dsh-card-bg)",
+            overflowY: "auto",
+          }}>
             {sidePanel}
           </aside>
         )}

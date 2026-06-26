@@ -50,25 +50,30 @@ const toolbarStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "0.375rem 1rem",
-  fontSize: "0.875rem",
-  opacity: 0.75,
+  padding: "0.5rem 1.5rem",
+  fontSize: "0.8125rem",
+  color: "var(--dsh-text-muted)",
+  borderTop: "1px solid var(--dsh-card-border)",
+  background: "var(--dsh-card-bg)",
 };
 
 const labelStyle: CSSProperties = {
   flexShrink: 0,
+  fontWeight: 500,
 };
 
 const actionsStyle: CSSProperties = {
   display: "flex",
-  gap: "0.5rem",
+  gap: "0.375rem",
 };
 
 const btnStyle: CSSProperties = {
-  background: "none",
-  border: "1px solid currentColor",
-  borderRadius: "0.25rem",
+  background: "var(--dsh-card-bg)",
+  border: "1px solid var(--dsh-card-border)",
+  borderRadius: "0.375rem",
   padding: "0.25rem 0.75rem",
   cursor: "pointer",
   fontSize: "0.8rem",
+  color: "var(--dsh-text-secondary)",
+  fontFamily: "var(--font-arabic)",
 };

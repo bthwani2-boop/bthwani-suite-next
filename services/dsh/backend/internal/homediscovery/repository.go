@@ -84,7 +84,8 @@ func ListCategories(db *sql.DB) ([]HomeCategory, error) {
 }
 
 func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, error) {
-	conditions := []string{"s.is_visible = true", "s.status = 'active'"}
+	// Stores linked to a partner are only visible once that partner reaches client_visible.
+	conditions := []string{"s.is_visible = true", "s.status = 'active'", "(s.partner_id IS NULL OR p.activation_status = 'client_visible')"}
 	params := []any{}
 	idx := 1
 
@@ -109,7 +110,7 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 	}
 
 	var total int
-	if err := db.QueryRow("SELECT COUNT(*) FROM dsh_stores s LEFT JOIN dsh_categories c ON c.id = s.category_id "+whereClause, params...).Scan(&total); err != nil {
+	if err := db.QueryRow("SELECT COUNT(*) FROM dsh_stores s LEFT JOIN dsh_categories c ON c.id = s.category_id LEFT JOIN dsh_partners p ON p.id = s.partner_id "+whereClause, params...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("failed to count home stores: %w", err)
 	}
 
@@ -123,6 +124,7 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 
 	q := fmt.Sprintf(`SELECT %s FROM dsh_stores s
 		LEFT JOIN dsh_categories c ON c.id = s.category_id
+		LEFT JOIN dsh_partners p ON p.id = s.partner_id
 		%s
 		ORDER BY s.rating_average DESC NULLS LAST, s.display_name ASC
 		LIMIT $%d OFFSET 0`, cols, whereClause, idx)
