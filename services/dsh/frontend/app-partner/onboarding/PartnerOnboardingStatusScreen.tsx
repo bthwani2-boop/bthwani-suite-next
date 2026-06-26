@@ -33,34 +33,41 @@ export function PartnerOnboardingStatusScreen({ storeId }: Props) {
     <ScrollScreen>
       <Header
         title="حالة تأهيل المتجر"
-        subtitle="تعرّف على مراحل التحقق الميداني ومتطلبات التفعيل"
-        actions={<Badge label={vm.statusLabel} tone={headerBadgeTone} />
+        subtitle="تعرّف على مراحل التحقق الميداني ومتمتطلبات التفعيل"
+        actions={<Badge label={vm.statusLabel} tone={headerBadgeTone} />}
       />
-      <Card>
-        <View style={styles.hero}>
-          <Text role="titleLg">{vm.isComplete ? "مبروك! متجرك جاهز للتشغيل" : "التأهيل الميداني قيد التقدم"}</Text>
-          <Text tone="secondary">
-            {vm.isComplete
-              ? "تم إتمام كل الزيارات الميدانية وحل جميع التصعيدات."
-              : "يقوم فريقنا الميداني بمراجعة متجرك والتحقق من استيفائه لمعايير الجودة."}
-          </Text>
-        </View>
+      <Card padding="$5" gap="$2" tone={vm.isComplete ? "success" : "default"}>
+        <Text role="titleLg">{vm.isComplete ? "مبروك! متجرك جاهز للتشغيل" : "التأهيل الميداني قيد التقدم"}</Text>
+        <Text tone="secondary">
+          {vm.isComplete
+            ? "تم إتمام كل الزيارات الميدانية وحل جميع التصعيدات."
+            : "يقوم فريقنا الميداني بمراجعة متجرك والتحقق من استيفائه لمعايير الجودة."}
+        </Text>
       </Card>
       <View style={styles.metrics}>
-        <Card><View style={styles.metric}><Text role="titleLg">{vm.completedVisits}</Text><Text role="caption" tone="muted">زيارات مكتملة</Text></View></Card>
-        <Card><View style={styles.metric}><Text role="titleLg">{vm.totalVisits}</Text><Text role="caption" tone="muted">إجمالي الزيارات</Text></View></Card>
-        <Card><View style={styles.metric}><Text role="titleLg" tone={vm.hasOpenEscalations ? "danger" : undefined}>{state.status.openEscalations}</Text><Text role="caption" tone="muted">تصعيدات مفتوحة</Text></View></Card>
+        <Card fill padding="$4" centered gap="$1">
+          <Text role="titleLg">{vm.completedVisits}</Text>
+          <Text role="caption" tone="muted">زيارات مكتملة</Text>
+        </Card>
+        <Card fill padding="$4" centered gap="$1">
+          <Text role="titleLg">{vm.totalVisits}</Text>
+          <Text role="caption" tone="muted">إجمالي الزيارات</Text>
+        </Card>
+        <Card fill padding="$4" centered gap="$1">
+          <Text role="titleLg" tone={vm.hasOpenEscalations ? "danger" : "default"}>{state.status.openEscalations}</Text>
+          <Text role="caption" tone="muted">تصعيدات مفتوحة</Text>
+        </Card>
       </View>
       {vm.hasOpenEscalations && (
-        <Card><View style={styles.notice}><Text role="titleSm" tone="warning">هناك تصعيدات تحتاج حلاً</Text><Text tone="secondary">فريق العمليات يراجع التصعيدات المرفوعة.</Text></View></Card>
+        <Card padding="$4" gap="$2" tone="danger">
+          <Text role="titleSm" tone="danger">هناك تصعيدات تحتاج حلاً</Text>
+          <Text tone="secondary">فريق العمليات يراجع التصعيدات المرفوعة حالياً.</Text>
+        </Card>
       )}
     </ScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { padding: spacing[4], gap: spacing[2] },
-  metrics: { flexDirection: "row-reverse", gap: spacing[3] },
-  metric: { flex: 1, padding: spacing[4], alignItems: "center", gap: spacing[1] },
-  notice: { padding: spacing[4], gap: spacing[2] },
+  metrics: { flexDirection: "row-reverse", gap: spacing[3], marginTop: spacing[3] },
 });

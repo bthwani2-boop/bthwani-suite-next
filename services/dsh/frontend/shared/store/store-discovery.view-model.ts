@@ -33,6 +33,8 @@ export type DshStoreCardViewModel = {
   readonly hasCouponBadge: boolean;
   readonly pointsMultiplier: number | null;
   readonly isPopular: boolean;
+  /** DSH-015: true only when backend confirms partner onboarding_status = 'client_visible' */
+  readonly isClientEligible: boolean;
 };
 
 export type DshStoreDetailViewModel = DshStoreCardViewModel & {
@@ -132,6 +134,7 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     hasCouponBadge: dto.hasCouponBadge,
     pointsMultiplier: dto.pointsMultiplier ?? null,
     isPopular: dto.isPopular,
+    isClientEligible: (dto as { publicationEligible?: boolean }).publicationEligible ?? false,
   };
 }
 

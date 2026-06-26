@@ -14,9 +14,11 @@ export default function DshStoresPage() {
   const handleSectionPress = (section: string) => {
     if (section === "dashboard") router.push("/");
     if (section === "operations") router.push("/dsh/operations");
-    if (section === "partners") router.push("/dsh/partners/stores");
+    if (section === "partners") router.push("/dsh/partners");
     if (section === "catalogs") router.push("/dsh/catalogs");
     if (section === "marketing") router.push("/dsh/marketing");
+    if (section === "platform") router.push("/dsh/platform");
+    if (section === "administration") router.push("/dsh/administration");
   };
 
   return (
@@ -25,7 +27,12 @@ export default function DshStoresPage() {
       topBar={
         <ControlPanelTopBar
           title={<strong>لوحة التحكم — DSH</strong>}
-          serviceLabel={<span>partners / stores</span>}
+          serviceLabel={
+            <span>
+              <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/dsh/partners")}>الشركاء</span>
+              {" / المتاجر"}
+            </span>
+          }
         />
       }
       navigation={
@@ -34,9 +41,11 @@ export default function DshStoresPage() {
           items={[
             { section: "dashboard", label: "الرئيسية" },
             { section: "operations", label: "العمليات" },
-            { section: "partners", label: "إدارة المتاجر" },
-            { section: "catalogs", label: "اعتماد الكتالوجات" },
-            { section: "marketing", label: "التسويق واكتشاف الصفحة" },
+            { section: "partners", label: "الشركاء" },
+            { section: "catalogs", label: "الكتالوجات" },
+            { section: "marketing", label: "التسويق" },
+            { section: "platform", label: "المنصة" },
+            { section: "administration", label: "الإدارة" },
           ]}
           activeSection="partners"
           onSectionPress={handleSectionPress}

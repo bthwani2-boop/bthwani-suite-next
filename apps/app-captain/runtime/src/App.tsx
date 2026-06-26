@@ -1,8 +1,8 @@
 import React from "react";
-import { CaptainStorePickupContextScreen } from "../../../../services/dsh/frontend/app-captain/store";
+import { DshCaptainSurface } from "../../../../services/dsh/frontend/app-captain";
 
 function App() {
-  return <CaptainStorePickupContextScreen />;
+  return <DshCaptainSurface />;
 }
 
 export default App;

@@ -30,31 +30,75 @@ export function ControlPanelShell({
         flexDirection: "column",
         height: "100vh",
         overflow: "hidden",
-        background: "Canvas",
-        color: "CanvasText",
+        fontFamily: "var(--font-arabic)",
+        background: "var(--main-bg, rgb(240, 244, 250))",
+        color: "var(--text-primary, rgb(13, 20, 37))",
       }}
     >
       {serviceContext}
-      <div style={{ flexShrink: 0 }}>{topBar}</div>
+
+      {/* Top Bar */}
+      <div style={{ flexShrink: 0, zIndex: 40 }}>{topBar}</div>
+
       <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <div
+
+        {/* Sidebar */}
+        <aside
           style={{
-            width: "15rem",
+            width: "var(--sidebar-width, 15.5rem)",
             flexShrink: 0,
             overflowY: "auto",
-            borderInlineEnd: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
-            background: "color-mix(in srgb, currentColor 3%, Canvas)",
+            overflowX: "hidden",
+            background: "var(--sidebar-bg, rgb(13, 20, 37))",
+            borderInlineEnd: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+            display: "flex",
+            flexDirection: "column",
+            scrollbarWidth: "none",
           }}
         >
           {navigation}
-        </div>
-        <main style={{ flex: 1, minWidth: 0, overflowY: "auto", background: "Canvas" }}>{main}</main>
+        </aside>
+
+        {/* Main Content */}
+        <main
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflowY: "auto",
+            background: "var(--main-bg, rgb(240, 244, 250))",
+            scrollbarWidth: "thin",
+            scrollbarColor: "var(--card-border, rgb(226, 232, 243)) transparent",
+          }}
+        >
+          {main}
+        </main>
+
+        {/* Side Panel */}
         {sidePanel != null ? (
-          <div style={{ flexShrink: 0, overflowY: "auto" }}>{sidePanel}</div>
+          <div
+            style={{
+              flexShrink: 0,
+              overflowY: "auto",
+              background: "var(--card-bg, rgb(255, 255, 255))",
+              borderInlineStart: "1px solid var(--card-border, rgb(226, 232, 243))",
+            }}
+          >
+            {sidePanel}
+          </div>
         ) : null}
       </div>
+
+      {/* Status Bar */}
       {statusBar != null ? (
-        <footer style={{ flexShrink: 0 }}>{statusBar}</footer>
+        <footer
+          style={{
+            flexShrink: 0,
+            background: "var(--topbar-bg, rgb(255, 255, 255))",
+            borderTop: "1px solid var(--topbar-border, rgb(226, 232, 243))",
+          }}
+        >
+          {statusBar}
+        </footer>
       ) : null}
     </div>
   );

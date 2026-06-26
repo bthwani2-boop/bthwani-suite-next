@@ -10,51 +10,13 @@ import {
   type DimensionValue,
   type ImageSourcePropType,
 } from 'react-native';
-import { Svg, Circle, Path } from 'react-native-svg';
-import { colorRoles, statusScale, colorPalette } from '@bthwani/ui-kit';
+import { colorRoles, statusScale, colorPalette, alpha } from '@bthwani/ui-kit';
 import type { StoreHeroFulfillmentMode } from '../../shared/store';
+import { SearchIcon, CartIcon, ShareIcon } from '../shared/ui';
 
 const ORANGE = colorRoles.brandAction;
 const NAVY = colorRoles.brandStructure;
 const GOLD = colorPalette.orangeMuted;
-
-function hexToRgba(hex: string, alpha = 0.9): string {
-  const clean = (hex || colorPalette.white).replace('#', '').trim();
-  const short = clean.length === 3;
-  const r = parseInt(short ? clean.slice(0, 1).repeat(2) : clean.slice(0, 2), 16);
-  const g = parseInt(short ? clean.slice(1, 2).repeat(2) : clean.slice(2, 4), 16);
-  const b = parseInt(short ? clean.slice(2, 3).repeat(2) : clean.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function SearchIcon({ color }: { readonly color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Circle cx="11" cy="11" r="7" stroke={color} strokeWidth={2} />
-      <Path d="M16.5 16.5L21 21" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function CartIcon({ color }: { readonly color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-      <Path d="M3 6h18" stroke={color} strokeWidth={2} />
-      <Path d="M16 10a4 4 0 01-8 0" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function ShareIcon({ color }: { readonly color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M16 6l-4-4-4 4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M12 2v13" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
 
 
 export type StoreHeroProps = {
@@ -104,8 +66,8 @@ export function StoreHero({
   const activeScrollY = scrollY ?? localScrollY;
 
   // Light-mode glass action buttons — exactly matching donor lightPremium chrome
-  const actionBg = hexToRgba(colorPalette.white, 0.45);
-  const actionBorder = hexToRgba(colorPalette.black, 0.12);
+  const actionBg = alpha(colorPalette.white, 0.45);
+  const actionBorder = alpha(colorPalette.black, 0.12);
   const primaryText = NAVY;
   const secondaryText = colorRoles.textSecondary;
 
@@ -207,9 +169,18 @@ export function StoreHero({
 
       {/* Content block — overlaps cover by 140 px, donor exact */}
       <View style={styles.contentBlock}>
+        {logoImage ? (
+          <View style={[styles.heroLogoWrap, isRTL ? styles.logoRTL : styles.logoLTR]}>
+            <Animated.Image
+              source={logoImage}
+              style={styles.heroLogoImage}
+              resizeMode="contain"
+            />
+          </View>
+        ) : null}
         <View style={styles.heroLuxuryCard}>
           {/* Identity cluster */}
-          <View style={[styles.heroLuxuryIdentityRow, isRTL && styles.rowReverse]}>
+          <View style={[styles.heroLuxuryIdentityRow, isRTL && styles.rowReverse, isRTL ? styles.identityRTL : styles.identityLTR]}>
             <View style={[styles.heroLuxuryInfo, isRTL ? styles.alignEnd : styles.alignStart]}>
               <Text style={[styles.heroNameText, { color: primaryText }]} numberOfLines={1}>
                 {name}
@@ -242,11 +213,11 @@ export function StoreHero({
                     isRTL && styles.rowReverse,
                     {
                       backgroundColor: isOpen
-                        ? hexToRgba(statusScale.success, 0.12)
-                        : hexToRgba(statusScale.danger, 0.12),
+                        ? alpha(statusScale.success, 0.12)
+                        : alpha(statusScale.danger, 0.12),
                       borderColor: isOpen
-                        ? hexToRgba(statusScale.success, 0.25)
-                        : hexToRgba(statusScale.danger, 0.25),
+                        ? alpha(statusScale.success, 0.25)
+                        : alpha(statusScale.danger, 0.25),
                     },
                   ]}
                 >
@@ -272,8 +243,8 @@ export function StoreHero({
                       styles.heroStatusBadge,
                       isRTL && styles.rowReverse,
                       {
-                        backgroundColor: hexToRgba(ORANGE, 0.1),
-                        borderColor: hexToRgba(ORANGE, 0.25),
+                        backgroundColor: alpha(ORANGE, 0.1),
+                        borderColor: alpha(ORANGE, 0.25),
                       },
                     ]}
                   >
@@ -284,16 +255,6 @@ export function StoreHero({
                 ) : null}
               </View>
             </View>
-
-            {logoImage ? (
-              <View style={styles.heroLogoWrap}>
-                <Animated.Image
-                  source={logoImage}
-                  style={styles.heroLogoImage}
-                  resizeMode="contain"
-                />
-              </View>
-            ) : null}
           </View>
 
           {/* Metrics chips row */}
@@ -308,7 +269,7 @@ export function StoreHero({
                 style={[
                   styles.heroFeatureChip,
                   isRTL && styles.rowReverse,
-                  { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
+                  { backgroundColor: alpha(colorPalette.black, 0.04) },
                 ]}
               >
                 <Text style={[styles.heroFeatureIcon, { color: secondaryText }]}>↗</Text>
@@ -320,7 +281,7 @@ export function StoreHero({
                 style={[
                   styles.heroFeatureChip,
                   isRTL && styles.rowReverse,
-                  { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
+                  { backgroundColor: alpha(colorPalette.black, 0.04) },
                 ]}
               >
                 <Text style={[styles.heroFeatureIcon, { color: secondaryText }]}>⏱</Text>
@@ -332,7 +293,7 @@ export function StoreHero({
                 style={[
                   styles.heroFeatureChip,
                   isRTL && styles.rowReverse,
-                  { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
+                  { backgroundColor: alpha(colorPalette.black, 0.04) },
                 ]}
               >
                 <Text style={[styles.heroFeatureIcon, { color: GOLD }]}>⭐</Text>
@@ -349,7 +310,7 @@ export function StoreHero({
               style={[
                 styles.heroLuxuryDeliveryRow,
                 isRTL && styles.rowReverse,
-                { backgroundColor: hexToRgba(colorPalette.black, 0.04) },
+                { backgroundColor: alpha(colorPalette.black, 0.04) },
               ]}
             >
               {deliveryModes.map((mode) => {
@@ -476,6 +437,7 @@ const styles = StyleSheet.create({
 
   // ── Content block (overlaps cover) ──
   contentBlock: {
+    position: 'relative',
     marginTop: -140,
     paddingBottom: 8,
     borderTopLeftRadius: 32,
@@ -542,28 +504,43 @@ const styles = StyleSheet.create({
 
   // ── Logo ──
   heroLogoWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
+    position: 'absolute',
+    top: -60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: colorPalette.white,
-    borderWidth: 2,
-    borderColor: ORANGE,
+    borderWidth: 3,
+    borderColor: colorPalette.white,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    zIndex: 10,
     ...Platform.select({
       ios: {
         shadowColor: colorPalette.black,
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },
       },
-      android: { elevation: 6 },
+      android: { elevation: 5 },
     }),
   },
   heroLogoImage: {
     width: '100%',
     height: '100%',
+  },
+  logoRTL: {
+    right: 24,
+  },
+  logoLTR: {
+    left: 24,
+  },
+  identityRTL: {
+    paddingRight: 120,
+  },
+  identityLTR: {
+    paddingLeft: 120,
   },
 
   // ── Metrics chips ──

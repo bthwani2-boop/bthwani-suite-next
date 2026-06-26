@@ -254,7 +254,7 @@ function Invoke-WltSmoke {
 
 function Invoke-MinioSmoke {
   Write-Host "`n--- MinIO smoke ---"
-  $MinioUrl = "http://localhost:59000"
+  $MinioUrl = "http://localhost:57000"
   $max = 15
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "  /minio/health/live attempt $i/$max"

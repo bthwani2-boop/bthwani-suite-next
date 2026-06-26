@@ -1,0 +1,142 @@
+import React from "react";
+import { View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
+import {
+  Badge,
+  Card,
+  ListItem,
+  ScrollScreen,
+  StateView,
+  Surface,
+  Text,
+} from "@bthwani/ui-kit";
+import {
+  usePartnerSelfController,
+  getDshPartnerActivationStatusLabel,
+  getDshPartnerReadinessChecklist,
+} from "../../shared/partner";
+import type { DshPartnerActivationStatus } from "../../shared/partner";
+
+export function PartnerActivationStatusScreen() {
+  const identity = useIdentitySession();
+  const c = usePartnerSelfController(identity.state.kind);
+
+  if (identity.state.kind !== "authenticated") {
+    return (
+      <StateView
+        title="تسجيل الدخول مطلوب"
+        description="يجب تسجيل دخولك كشريك للاطلاع على حالة التأهيل."
+      />
+    );
+  }
+
+  if (c.statusState.kind === "loading" || c.statusState.kind === "idle") {
+    return <StateView title="جاري تحميل حالة التأهيل…" loading />;
+  }
+  if (c.statusState.kind === "not_found") {
+    return (
+      <StateView
+        title="لم يتم إيجاد ملف الشريك"
+        description="تواصل مع فريق الدعم لإنشاء ملف شريكك."
+      />
+    );
+  }
+  if (c.statusState.kind === "error") {
+    return (
+      <StateView
+        title="تعذر تحميل حالة التأهيل"
+        description={c.statusState.message}
+        tone="danger"
+        actionLabel="إعادة المحاولة"
+        onActionPress={c.reload}
+      />
+    );
+  }
+
+  const vm = c.statusViewModel!;
+  const status = vm.onboardingStatus as DshPartnerActivationStatus;
+  const checklist = getDshPartnerReadinessChecklist(status);
+  const statusLabel = getDshPartnerActivationStatusLabel(status);
+  const isActive = status === "client_visible" || status === "partner_active";
+  const isRejected = status === "ops_rejected";
+  const isDeactivated = status === "partner_deactivated";
+  const badgeTone = isActive ? "success" : isRejected || isDeactivated ? "danger" : "info";
+
+  return (
+    <ScrollScreen>
+      {/* ── Hero card ── */}
+      <Card tone={isActive ? "success" : isRejected || isDeactivated ? "danger" : "default"} padding="$5" gap="$3">
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <Text role="titleLg">
+            {isActive
+              ? "مبروك! متجرك مفعّل ونشط"
+              : isRejected
+              ? "تم رفض طلب التأهيل"
+              : isDeactivated
+              ? "متجرك موقوف مؤقتاً"
+              : "ملف التأهيل قيد المعالجة"}
+          </Text>
+          <Badge label={statusLabel} tone={badgeTone} />
+        </View>
+        <Text tone="secondary">
+          {vm.nextAction ||
+            (isActive
+              ? "تابع متجرك وحافظ على جودة الخدمة."
+              : "فريق العمليات يراجع ملفك.")}
+        </Text>
+        {vm.blockedReason ? (
+          <Text tone="warning">{vm.blockedReason}</Text>
+        ) : null}
+        {isRejected && vm.rejectionReason ? (
+          <Surface tone="danger" padding="$3" gap="$1" borderless>
+            <Text role="titleSm" tone="danger">سبب الرفض</Text>
+            <Text tone="secondary">{vm.rejectionReason}</Text>
+          </Surface>
+        ) : null}
+      </Card>
+
+      {/* ── Readiness checklist ── */}
+      <Card padding="$5" gap="$2">
+        <Text role="titleMd" style={{ marginBottom: 8 }}>قائمة الجاهزية</Text>
+        {checklist.map((item) => (
+          <ListItem
+            key={item.id}
+            title={item.label}
+            leading={
+              <Badge
+                tone={item.satisfied ? "success" : "warning"}
+                label={item.satisfied ? "جاهز" : "مطلوب"}
+              />
+            }
+            {...(!item.satisfied && item.blockedReason ? { subtitle: item.blockedReason } : {})}
+          />
+        ))}
+      </Card>
+
+      {/* ── Detailed readiness ── */}
+      {c.readinessViewModel ? (
+        <Card padding="$5" gap="$2">
+          <Text role="titleMd" style={{ marginBottom: 8 }}>الجاهزية التفصيلية</Text>
+          {c.readinessViewModel.items.map((item) => (
+            <ListItem
+              key={item.id}
+              title={item.label}
+              leading={
+                <Badge
+                  tone={item.satisfied ? "success" : "warning"}
+                  label={item.satisfied ? "مكتمل" : "معلق"}
+                />
+              }
+              {...(!item.satisfied && item.blockedReason ? { subtitle: item.blockedReason } : {})}
+            />
+          ))}
+          {c.readinessViewModel.allGatesPassed ? (
+            <Surface tone="success" padding="$3" gap="$1" style={{ marginTop: 8 }}>
+              <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>جميع شروط الظهور مستوفاة ✓</Text>
+            </Surface>
+          ) : null}
+        </Card>
+      ) : null}
+    </ScrollScreen>
+  );
+}

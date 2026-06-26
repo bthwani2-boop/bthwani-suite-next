@@ -4,6 +4,7 @@ import {
   loadStoreDiscovery,
   toggleFavoriteIds,
   withStoreDiscoveryFilter,
+  withClientEligibilityFilter,
   type DiscoveryFilter,
 } from "./store-discovery.controller-core";
 import { loadingState } from "./store-discovery.states";
@@ -36,9 +37,11 @@ export function useStoreDiscoveryController(): StoreDiscoveryController {
     setFavoriteIds((prev) => toggleFavoriteIds(prev, storeId));
   }, []);
 
+  const eligibleState = withClientEligibilityFilter(state);
+
   return {
     state,
-    visibleState: withStoreDiscoveryFilter(state, activeFilter, favoriteIds),
+    visibleState: withStoreDiscoveryFilter(eligibleState, activeFilter, favoriteIds),
     activeFilter,
     favoriteIds,
     setActiveFilter,

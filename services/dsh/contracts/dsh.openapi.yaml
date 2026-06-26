@@ -2457,6 +2457,329 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # ─── DSH-015: Partner Store Activation ──────────────────────────────────────
+
+  /dsh/operator/partners:
+    get:
+      operationId: listDshPartners
+      summary: List partners with lifecycle status and filters.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Partners list.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnersListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createDshPartner
+      summary: Create a new partner profile (operator or field actor).
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreatePartnerRequest" }
+      responses:
+        "201":
+          description: Partner created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/partners/{partnerId}:
+    get:
+      operationId: getDshPartner
+      summary: Get partner detail.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/partners/{partnerId}/transition:
+    post:
+      operationId: transitionDshPartner
+      summary: Transition a partner to a new lifecycle status.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPartnerTransitionRequest" }
+      responses:
+        "200":
+          description: Partner after transition.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422":
+          description: Invalid state transition.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshErrorResponse" }
+
+  /dsh/operator/partners/{partnerId}/readiness:
+    get:
+      operationId: getDshPartnerReadiness
+      summary: Get partner readiness checklist.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner readiness.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/partners/{partnerId}/documents:
+    get:
+      operationId: listDshPartnerDocuments
+      summary: List documents for a partner.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner documents.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDocumentsListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: addDshPartnerDocument
+      summary: Add a document reference for a partner.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAddPartnerDocumentRequest" }
+      responses:
+        "201":
+          description: Document added.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDocument" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/operator/partners/{partnerId}/documents/{docId}/review:
+    patch:
+      operationId: reviewDshPartnerDocument
+      summary: Review (approve/reject) a partner document.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: docId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshReviewPartnerDocumentRequest" }
+      responses:
+        "200":
+          description: Document after review.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDocument" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/partners/{partnerId}/stores:
+    get:
+      operationId: listDshPartnerStores
+      summary: List stores linked to a partner.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner stores.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerStoresListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: linkDshPartnerStore
+      summary: Link an existing store to a partner.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshLinkPartnerStoreRequest" }
+      responses:
+        "200":
+          description: Updated partner stores.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerStoresListResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/partners/{partnerId}/audit:
+    get:
+      operationId: listDshPartnerAuditEvents
+      summary: List activation events (audit trail) for a partner.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner audit events.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerAuditEventsListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/activation/status:
+    get:
+      operationId: getDshPartnerActivationStatus
+      summary: Partner reads their own current activation status.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Partner activation status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/activation/readiness:
+    get:
+      operationId: getDshPartnerSelfReadiness
+      summary: Partner reads their own readiness checklist.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Partner readiness checklist.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/partner-intake:
+    post:
+      operationId: createDshPartnerIntake
+      summary: Field agent creates a new partner intake draft.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreatePartnerRequest" }
+      responses:
+        "201":
+          description: Partner intake draft created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /dsh/operator/admin/partners:
     get:
       operationId: listDshPartnerActivations
@@ -4279,6 +4602,193 @@ components:
         title: { type: string }
         status: { type: string }
         expiresAt: { type: string, format: date-time }
+
+    # ─── DSH-015: Partner Store Activation schemas ────────────────────────────
+
+    DshPartner:
+      type: object
+      required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, onboardingStatus, version, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        legalNameAr: { type: string }
+        legalNameEn: { type: string }
+        displayName: { type: string }
+        legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
+        legalIdentityNumber: { type: string }
+        ownerName: { type: string }
+        primaryPhone: { type: string }
+        secondaryPhone: { type: string }
+        email: { type: string }
+        category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
+        onboardingStatus:
+          type: string
+          enum:
+            - draft
+            - submitted
+            - field_visit_scheduled
+            - field_visit_completed
+            - documents_missing
+            - documents_uploaded
+            - documents_verified
+            - catalog_not_ready
+            - catalog_ready
+            - delivery_modes_not_ready
+            - delivery_modes_ready
+            - ops_review
+            - ops_approved
+            - ops_rejected
+            - partner_active
+            - partner_deactivated
+            - client_visible
+            - client_hidden
+        rejectionReason: { type: string }
+        createdBy: { type: string }
+        assignedFieldAgent: { type: string }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshPartnersListResponse:
+      type: object
+      required: [partners, total]
+      properties:
+        partners:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartner" }
+        total: { type: integer }
+
+    DshCreatePartnerRequest:
+      type: object
+      required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category]
+      properties:
+        legalNameAr: { type: string, minLength: 1 }
+        legalNameEn: { type: string }
+        displayName: { type: string, minLength: 1 }
+        legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
+        legalIdentityNumber: { type: string, minLength: 1 }
+        ownerName: { type: string, minLength: 1 }
+        primaryPhone: { type: string, minLength: 8 }
+        secondaryPhone: { type: string }
+        email: { type: string }
+        category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
+        createdBy: { type: string }
+        assignedFieldAgent: { type: string }
+        idempotencyKey: { type: string }
+
+    DshPartnerTransitionRequest:
+      type: object
+      required: [targetStatus]
+      properties:
+        targetStatus: { type: string }
+        reason: { type: string }
+        actorId: { type: string }
+        actorSurface: { type: string, enum: [app-field, app-partner, control-panel, system] }
+        correlationId: { type: string }
+        version: { type: integer }
+
+    DshPartnerReadiness:
+      type: object
+      required: [partnerId, status, documentsDone, catalogDone, deliveryDone, partnerActive, clientVisible]
+      properties:
+        partnerId: { type: string }
+        status: { type: string }
+        documentsDone: { type: boolean }
+        catalogDone: { type: boolean }
+        deliveryDone: { type: boolean }
+        partnerActive: { type: boolean }
+        clientVisible: { type: boolean }
+        blockerSummary: { type: string }
+
+    DshPartnerDocument:
+      type: object
+      required: [id, partnerId, docType, status, mediaRef, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        partnerId: { type: string }
+        docType: { type: string, enum: [national_id, commercial_registration, lease_contract, health_certificate, other] }
+        status: { type: string, enum: [uploaded, verified, rejected, replacement_requested] }
+        mediaRef: { type: string }
+        notes: { type: string }
+        reviewedBy: { type: string }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshPartnerDocumentsListResponse:
+      type: object
+      required: [documents, total]
+      properties:
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartnerDocument" }
+        total: { type: integer }
+
+    DshAddPartnerDocumentRequest:
+      type: object
+      required: [docType, mediaRef]
+      properties:
+        docType: { type: string, enum: [national_id, commercial_registration, lease_contract, health_certificate, other] }
+        mediaRef: { type: string, minLength: 1 }
+        notes: { type: string }
+
+    DshReviewPartnerDocumentRequest:
+      type: object
+      required: [status, reviewedBy]
+      properties:
+        status: { type: string, enum: [verified, rejected, replacement_requested] }
+        notes: { type: string }
+        reviewedBy: { type: string, minLength: 1 }
+
+    DshPartnerStore:
+      type: object
+      required: [id, partnerId, slug, displayName, status, isVisible, cityCode, createdAt]
+      properties:
+        id: { type: string }
+        partnerId: { type: string }
+        slug: { type: string }
+        displayName: { type: string }
+        status: { type: string }
+        isVisible: { type: boolean }
+        cityCode: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DshPartnerStoresListResponse:
+      type: object
+      required: [stores, total]
+      properties:
+        stores:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartnerStore" }
+        total: { type: integer }
+
+    DshLinkPartnerStoreRequest:
+      type: object
+      required: [storeId]
+      properties:
+        storeId: { type: string, minLength: 1 }
+
+    DshPartnerAuditEvent:
+      type: object
+      required: [id, partnerId, fromStatus, toStatus, actorId, actorSurface, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        partnerId: { type: string }
+        fromStatus: { type: string }
+        toStatus: { type: string }
+        actorId: { type: string }
+        actorSurface: { type: string }
+        reason: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DshPartnerAuditEventsListResponse:
+      type: object
+      required: [events, total]
+      properties:
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartnerAuditEvent" }
+        total: { type: integer }
 
     DshMarketingPromo:
       type: object

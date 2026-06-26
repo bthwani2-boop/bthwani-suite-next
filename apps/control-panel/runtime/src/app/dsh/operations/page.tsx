@@ -5,34 +5,20 @@ import {
   ControlPanelNavigation,
   ControlPanelShell,
   ControlPanelTopBar,
+  useDshNavigation,
 } from "../../../shell";
-import { useRouter } from "next/navigation";
 
 export default function DshOperationsPage() {
-  const router = useRouter();
-
-  const handleSectionPress = (section: string) => {
-    if (section === "dashboard") router.push("/");
-    if (section === "operations") router.push("/dsh/operations");
-    if (section === "partners") router.push("/dsh/partners/stores");
-    if (section === "catalogs") router.push("/dsh/catalogs");
-    if (section === "marketing") router.push("/dsh/marketing");
-  };
+  const { items, handleSectionPress } = useDshNavigation();
 
   return (
     <ControlPanelShell
       dir="rtl"
-      topBar={<ControlPanelTopBar title={<strong>لوحة التحكم — DSH</strong>} serviceLabel={<span>operations / checkout</span>} />}
+      topBar={<ControlPanelTopBar title={<strong>لوحة التحكم</strong>} serviceLabel={<span>العمليات</span>} />}
       navigation={
         <ControlPanelNavigation
           dir="rtl"
-          items={[
-            { section: "dashboard", label: "الرئيسية" },
-            { section: "operations", label: "العمليات" },
-            { section: "partners", label: "إدارة المتاجر" },
-            { section: "catalogs", label: "اعتماد الكتالوجات" },
-            { section: "marketing", label: "التسويق واكتشاف الصفحة" },
-          ]}
+          items={items}
           activeSection="operations"
           onSectionPress={handleSectionPress}
         />
@@ -41,3 +27,4 @@ export default function DshOperationsPage() {
     />
   );
 }
+

@@ -88,7 +88,7 @@ if ($ProfileList -contains "media") {
     throw "MinIO smoke: FAIL — media profile requested but bthwani-minio-runtime is not running. Start with: pnpm run runtime:up"
   }
 
-  $MinioUrl = "http://localhost:59000"
+  $MinioUrl = "http://localhost:57000"
   $MinioMaxAttempts = 15
 
   for ($i = 1; $i -le $MinioMaxAttempts; $i++) {

@@ -7,6 +7,7 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/health"
 	"dsh-api/internal/homediscovery"
+	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -141,6 +142,24 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/platform/capacity", protected.handleGetCapacityConfig)
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
+
+	// DSH-015: Partner Store Activation
+	mux.HandleFunc("GET /dsh/operator/partners", partner.HandleListPartners(db))
+	mux.HandleFunc("POST /dsh/operator/partners", partner.HandleCreatePartner(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", partner.HandleGetPartner(db))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", partner.HandleTransitionPartner(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", partner.HandleListPartnerDocuments(db))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", partner.HandleAddDocument(db))
+	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", partner.HandleReviewDocument(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", partner.HandleListPartnerStores(db))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", partner.HandleLinkStore(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", partner.HandleGetReadiness(db))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", partner.HandleListPartnerEvents(db))
+	// Partner self-view (actor=partner)
+	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
+	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.handlePartnerActivationReadiness)
+	// Field actor partner intake
+	mux.HandleFunc("POST /dsh/field/partner-intake", partner.HandleCreatePartner(db))
 
 	// DSH-014: Administration, Roles & Activation
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)

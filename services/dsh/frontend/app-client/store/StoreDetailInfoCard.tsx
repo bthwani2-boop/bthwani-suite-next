@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, alpha } from '@bthwani/ui-kit';
 
 type Props = Readonly<{
   openingHours?: string;
@@ -13,21 +13,29 @@ export function StoreDetailInfoCard({
   catalogSummary = 'Over 1,200 fresh groceries and daily essentials',
   isRTL,
 }: Props) {
+  const displaySummary = catalogSummary === 'Over 1,200 fresh groceries and daily essentials' && isRTL
+    ? 'أكثر من ١,٢٠٠ من المواد الغذائية الطازجة والاحتياجات اليومية'
+    : catalogSummary;
+
   return (
     <View style={styles.container}>
       {openingHours ? (
         <View style={[styles.chipRow, isRTL && styles.rowReverse]}>
-          <Text style={styles.icon}>🕒</Text>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>🕒</Text>
+          </View>
           <Text style={[styles.label, isRTL && styles.textRight]}>
             {isRTL ? `أوقات العمل: ${openingHours}` : `Opening Hours: ${openingHours}`}
           </Text>
         </View>
       ) : null}
-      {catalogSummary ? (
+      {displaySummary ? (
         <View style={[styles.chipRow, isRTL && styles.rowReverse]}>
-          <Text style={styles.icon}>🛍️</Text>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>🛍️</Text>
+          </View>
           <Text style={[styles.label, isRTL && styles.textRight]}>
-            {isRTL ? `ملخص المتجر: ${catalogSummary}` : `Store Summary: ${catalogSummary}`}
+            {isRTL ? `ملخص المتجر: ${displaySummary}` : `Store Summary: ${displaySummary}`}
           </Text>
         </View>
       ) : null}
@@ -44,19 +52,27 @@ const styles = StyleSheet.create({
   chipRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    borderRadius: 12,
+    backgroundColor: alpha(colorRoles.brandStructure, 0.03),
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(10, 47, 92, 0.06)',
+    borderColor: alpha(colorRoles.brandStructure, 0.06),
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingVertical: 10,
+    gap: 12,
   },
   rowReverse: {
     flexDirection: 'row-reverse',
   },
+  iconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: alpha(colorRoles.brandStructure, 0.06),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   icon: {
-    fontSize: 14,
+    fontSize: 13,
   },
   label: {
     flex: 1,

@@ -186,5 +186,6 @@ export function toSharedStoreCardViewModel(
     hasCouponBadge: vm.hasCouponBadge,
     pointsMultiplier: vm.pointsMultiplier,
     isPopular: vm.isPopular,
+    isClientEligible: true,
   };
 }

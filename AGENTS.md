@@ -36,3 +36,10 @@ Match effort to task nature. Never over-engineer or under-deliver.
 | **Full** | Finance, security, secrets, agent files | authority + router + task skill + evidence gate |
 
 Default: smallest action, fastest response, precise output.
+
+<!-- lean-ctx -->
+## lean-ctx
+
+lean-ctx is active — the MCP tools replace native equivalents.
+Full rules: LEAN-CTX.md (open on demand — do not auto-load).
+<!-- /lean-ctx -->
