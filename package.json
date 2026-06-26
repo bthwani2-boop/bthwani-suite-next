@@ -88,7 +88,7 @@
     "jscpd": "5.0.10",
     "knip": "6.17.1",
     "madge": "8.0.0",
-    "nx": "22.3.3",
+    "nx": "23.0.1",
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
     "typescript": "~6.0.3"
