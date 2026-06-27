@@ -32,6 +32,7 @@ const STATUS_TONE: Record<DshOrderStatus, "neutral" | "success" | "warning" | "d
   cancelled: "danger",
 };
 
+type Props = {
   readonly storeId: string;
   readonly statusFilter?: DshOrderStatus;
   readonly onBack?: () => void;
