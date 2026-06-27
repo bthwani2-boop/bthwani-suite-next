@@ -15,17 +15,21 @@ import {
   useFieldChecklistController,
   buildChecklistViewModel,
   CHECK_TYPE_LABELS,
-  type DshFieldVisit,
   type DshCheckType,
   type DshCheckStatus,
+  type DshFieldVisit,
 } from "../../shared/field-readiness";
 
-type Props = { readonly visit: DshFieldVisit };
+type Props = {
+  readonly storeId: string;
+  readonly visitId: string;
+  readonly onBack: () => void;
+};
 
-export function DshFieldReadinessChecklistScreen({ visit }: Props) {
+export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: Props) {
   const identity = useIdentitySession();
   const { checklistState, checkActionState, reload, submitCheck, resetCheckAction } =
-    useFieldChecklistController(visit.id, identity.state.kind);
+    useFieldChecklistController(visitId, identity.state.kind);
   const [activeCheck, setActiveCheck] = React.useState<DshCheckType | null>(null);
   const [evidenceUrl, setEvidenceUrl] = React.useState("");
   const [notes, setNotes] = React.useState("");
@@ -42,6 +46,18 @@ export function DshFieldReadinessChecklistScreen({ visit }: Props) {
       />
     );
   }
+
+  const visit: DshFieldVisit = {
+    id: visitId,
+    storeId,
+    fieldAgentId: '',
+    visitType: 'onboarding',
+    status: 'in_progress',
+    notes: '',
+    startedAt: '',
+    createdAt: '',
+    updatedAt: '',
+  };
 
   const checks = checklistState.kind === "success" ? checklistState.checks : [];
   const vm = buildChecklistViewModel(visit, checks);

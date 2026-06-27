@@ -242,6 +242,24 @@ export function isDshPartnerActivationComplete(status: DshPartnerActivationStatu
   return status === 'client_visible' || status === 'partner_active';
 }
 
+export function getDshPartnerActivationProgress(status: DshPartnerActivationStatus): number {
+  switch (status) {
+    case 'submitted':             return 70;
+    case 'ops_approved':          return 100;
+    case 'ops_rejected':          return 40;
+    case 'field_visit_scheduled': return 50;
+    case 'field_visit_completed': return 60;
+    case 'documents_missing':     return 40;
+    case 'documents_uploaded':    return 65;
+    case 'documents_verified':    return 80;
+    case 'catalog_ready':         return 85;
+    case 'ops_review':            return 90;
+    case 'partner_active':        return 100;
+    case 'client_visible':        return 100;
+    default:                       return 20;
+  }
+}
+
 export function getDshPartnerActivationStatusLabel(status: DshPartnerActivationStatus): string {
   const labels: Record<DshPartnerActivationStatus, string> = {
     draft:                    'مسودة',

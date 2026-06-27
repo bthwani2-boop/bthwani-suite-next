@@ -8,3 +8,4 @@ export * from "./use-store-discovery-controller";
 export * from "./use-store-detail-controller";
 export * from "./store-role-context.view-model";
 export * from "./use-store-role-context-controller";
+export { toStoreRoleStatePresentation } from "./store-role-context.controller-core";

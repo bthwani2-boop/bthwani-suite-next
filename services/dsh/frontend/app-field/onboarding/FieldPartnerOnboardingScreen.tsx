@@ -1,383 +1,445 @@
-// app-field — main partner onboarding flow container.
-// Fully unified, pixel-perfect single screen matching the design.
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from "react-native";
-import { useFieldPartnerOnboardingController } from "../../shared/field-onboarding";
+// app-field — FieldPartnerOnboardingScreen
+// Design extracted 100% from bthwani-suite donor: DshFieldStoreOnboardingScreen.tsx
+// 4-group wizard with vertical timeline, missing-count badges, escalation footer.
+// Rules of Hooks: ALL hooks called unconditionally before any early return.
 
-export function FieldPartnerOnboardingScreen() {
-  const c = useFieldPartnerOnboardingController();
-  const { state, validationErrors, updateForm, submitDraft } = c;
-  const [loading, setLoading] = useState(false);
+import React from 'react';
+import { Platform, Pressable, View, ScrollView } from 'react-native';
+import {
+  Badge,
+  Button,
+  Card,
+  Text,
+  Header,
+  IconButton,
+  spacing,
+  radius,
+  borders,
+  colorRoles,
+  Icon,
+} from '@bthwani/ui-kit';
+import { useIdentitySession, devBypassLogin } from '@bthwani/core-identity';
+import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
+import {
+  useFieldPartnerOnboardingController,
+  getBasicsProfileMissingCount,
+  getLocationMediaMissingCount,
+  getDocumentsMissingCount,
+  getAgreementReviewMissingCount,
+  getFieldRequiredMissingItems,
+} from '../../shared/field-onboarding';
+import { StepBasicsProfile } from './StepBasicsProfile';
+import { StepLocationAndPhotos } from './StepLocationAndPhotos';
+import { StepDocuments } from './StepDocuments';
+import { StepAgreementReview } from './StepAgreementReview';
+import type { DocumentItem } from './StepDocuments';
 
-  const handleSaveDraft = async () => {
-    // Validate identity step locally or save draft
-    if (!state.form.legalNameAr?.trim()) {
-      Alert.alert("تنبيه", "الاسم التجاري بالعربية مطلوب.");
-      return;
-    }
-    setLoading(true);
-    try {
-      // Just step next to trigger draft creation
-      await c.nextStep();
-      Alert.alert("نجاح", "تم حفظ المسودة بنجاح.");
-    } catch (e) {
-      Alert.alert("خطأ", "فشل حفظ المسودة.");
-    } finally {
-      setLoading(false);
-    }
+type GroupId = 'basics_profile' | 'location_media' | 'documents' | 'agreement_review';
+
+const GROUP_ORDER: readonly GroupId[] = [
+  'basics_profile',
+  'location_media',
+  'documents',
+  'agreement_review',
+];
+
+const GROUP_LABELS: Record<GroupId, string> = {
+  basics_profile: 'البيانات الأساسية للمتجر',
+  location_media: 'الموقع والصور الميدانية',
+  documents: 'المستندات والتراخيص الرسمية',
+  agreement_review: 'الاتفاق والمراجعة النهائية',
+};
+
+const DEFAULT_DOCUMENTS: readonly DocumentItem[] = [
+  {
+    id: 'commercial_registration',
+    label: 'السجل التجاري',
+    required: true,
+    status: 'missing',
+    referenceLabel: 'لا يوجد مرجع مرفوع بعد',
+  },
+  {
+    id: 'identity_proof',
+    label: 'الهوية الوطنية للمالك',
+    required: true,
+    status: 'missing',
+    referenceLabel: 'لا يوجد مرجع مرفوع بعد',
+  },
+];
+
+export type FieldPartnerOnboardingScreenProps = {
+  readonly onBack?: () => void;
+  readonly onUploadDocument?: (kind: any, partnerId?: string) => void;
+  readonly onEscalate?: () => void;
+  readonly onGoToProducts?: () => void;
+};
+
+export function FieldPartnerOnboardingScreen({
+  onBack,
+  onUploadDocument,
+  onEscalate,
+  onGoToProducts,
+}: FieldPartnerOnboardingScreenProps = {}) {
+  const identity = useIdentitySession();
+  const controller = useFieldPartnerOnboardingController();
+  const { state, validationErrors, updateForm, updateVisitNotes, submitDraft } = controller;
+
+  const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
+  const [fieldNotes, setFieldNotes] = React.useState('');
+  const [docLoading] = React.useState<Record<string, boolean>>({});
+
+  // Derived values (safe — no hooks below this line)
+  const form = state.form;
+  const activeGroupIndex = GROUP_ORDER.indexOf(activeGroup);
+  const isLastGroup = activeGroupIndex === GROUP_ORDER.length - 1;
+  const missingItems = getFieldRequiredMissingItems(form);
+  const canSubmit = missingItems.length === 0;
+
+  const groupMissingCounts: Record<GroupId, number> = {
+    basics_profile: getBasicsProfileMissingCount(form),
+    location_media: getLocationMediaMissingCount(form),
+    documents: getDocumentsMissingCount(),
+    agreement_review: getAgreementReviewMissingCount(form),
   };
 
-  const handleSendForReview = async () => {
-    if (!state.form.legalNameAr?.trim()) {
-      Alert.alert("تنبيه", "الاسم التجاري بالعربية مطلوب.");
-      return;
-    }
-    if (!state.form.primaryPhone?.trim()) {
-      Alert.alert("تنبيه", "رقم الجوال الأساسي مطلوب.");
-      return;
-    }
-    setLoading(true);
-    try {
-      // Ensure draft is created, then submit
-      await submitDraft();
-      Alert.alert("نجاح", "تم إرسال طلب الشريك للمراجعة بنجاح.");
-    } catch (e) {
-      Alert.alert("خطأ", "فشل إرسال الطلب للمراجعة.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── Auth guard (after all hooks) ─────────────────────────────────────────
+  if (identity.state.kind !== 'authenticated') {
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}
+        contentContainerStyle={{ padding: spacing[4], justifyContent: 'center' }}
+      >
+        <AuthLoginCard
+          title="تسجيل دخول الموظف الميداني"
+          subtitle="سجّل دخولك لإضافة شريك جديد."
+          loading={identity.state.kind === 'authenticating'}
+          {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
+          onSubmit={(username, password) => void identity.login(username, password)}
+          onDevBypass={() => devBypassLogin('field')}
+        />
+      </ScrollView>
+    );
+  }
 
+  // ── Success state (after all hooks) ──────────────────────────────────────
   if (state.isSubmitted) {
     return (
-      <View style={styles.container}>
-        <View style={styles.successCard}>
-          <Text style={styles.successIcon}>✓</Text>
-          <Text style={styles.successTitle}>تم الإرسال بنجاح</Text>
-          <Text style={styles.successSubtitle}>
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+        <Header title="تم الإرسال" />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text role="titleLg" style={{ textAlign: 'center', marginBottom: 12 }}>
+            ✓ تم إرسال ملف الشريك
+          </Text>
+          <Text role="bodySm" tone="secondary" style={{ textAlign: 'center', marginBottom: 24 }}>
             ملف الشريك أُرسِل لمراجعة قسم الشركاء في لوحة التحكم.
           </Text>
-          <Text style={styles.successNote}>رقم الشريك: {state.partnerId}</Text>
-          <TouchableOpacity style={styles.resetButton} onPress={c.reset}>
-            <Text style={styles.resetButtonText}>تسجيل شريك جديد</Text>
-          </TouchableOpacity>
+          <Text role="caption" tone="muted" style={{ fontFamily: 'monospace' }}>
+            رقم الشريك: {state.partnerId}
+          </Text>
+          <View style={{ marginTop: 24 }}>
+            <Button label="تسجيل شريك جديد" tone="primary" onPress={controller.reset} />
+          </View>
         </View>
       </View>
     );
   }
 
+  // ── Navigation ───────────────────────────────────────────────────────────
+  const goToNext = () => {
+    if (isLastGroup) {
+      if (canSubmit) void submitDraft();
+      return;
+    }
+    setActiveGroup(GROUP_ORDER[activeGroupIndex + 1] as GroupId);
+  };
+
+  // ── Step content renderer ─────────────────────────────────────────────────
+  const renderGroupContent = (groupId: GroupId) => {
+    if (groupId === 'basics_profile') {
+      return (
+        <StepBasicsProfile
+          form={form}
+          errors={validationErrors}
+          readOnly={false}
+          onChange={updateForm}
+        />
+      );
+    }
+    if (groupId === 'location_media') {
+      return (
+        <StepLocationAndPhotos
+          form={form}
+          errors={validationErrors}
+          readOnly={false}
+          onChange={updateForm}
+          cameraLoading={docLoading}
+          isNativePickerAvailable={false}
+          onPickPhoto={() => undefined}
+        />
+      );
+    }
+    if (groupId === 'documents') {
+      return (
+        <StepDocuments
+          documents={DEFAULT_DOCUMENTS}
+          loadingMap={docLoading}
+          onUploadDocument={(kind) => onUploadDocument?.(kind, state.partnerId ?? undefined)}
+        />
+      );
+    }
+    if (groupId === 'agreement_review') {
+      return (
+        <StepAgreementReview
+          form={form}
+          readOnly={false}
+          onChange={updateForm}
+          missingItems={missingItems}
+          fieldNotes={fieldNotes}
+          onFieldNotesChange={(v) => {
+            setFieldNotes(v);
+            updateVisitNotes(v);
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
+  const nextGroup = GROUP_ORDER[activeGroupIndex + 1];
+  const nextLabel = nextGroup ? GROUP_LABELS[nextGroup] : '';
+
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>تسجيل شريك جديد</Text>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>الحالة: مسودة</Text>
+    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+      <Header
+        title={form.legalNameAr || 'ملف انضمام جديد'}
+        leading={
+          onBack ? (
+            <IconButton
+              icon={<Icon name="arrow-back" size={20} tone="brand" mirrored />}
+              accessibilityLabel="رجوع"
+              onPress={onBack}
+              tone="ghost"
+            />
+          ) : undefined
+        }
+        actions={
+          <IconButton
+            icon={<Icon name="save-outline" size={20} tone="brand" />}
+            accessibilityLabel="حفظ المسودة"
+            onPress={() => void controller.nextStep()}
+            tone="ghost"
+          />
+        }
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing[3], gap: spacing[1] }}>
+          <Text role="titleSm" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+            {form.legalNameAr || 'ملف انضمام جديد'}
+          </Text>
+          <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+            الملف الميداني الموحد لجمع وثائق وإحداثيات الشريك.
+          </Text>
         </View>
-      </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-        {/* Form Fields */}
-        <View style={styles.formCard}>
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>الاسم التجاري بالعربية *</Text>
-            <TextInput
-              style={[styles.input, validationErrors.legalNameAr ? styles.inputError : null]}
-              placeholder="مثال: مخبز عون"
-              placeholderTextColor="#9ca3af"
-              value={state.form.legalNameAr ?? ""}
-              onChangeText={(v) => updateForm({ legalNameAr: v, displayName: v })}
-            />
-            {validationErrors.legalNameAr ? <Text style={styles.errorText}>{validationErrors.legalNameAr}</Text> : null}
-          </View>
+        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>الاسم القانوني بالإنجليزية</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="مثال: Awn Bakery"
-              placeholderTextColor="#9ca3af"
-              value={state.form.legalNameEn ?? ""}
-              onChangeText={(v) => updateForm({ legalNameEn: v })}
-            />
-          </View>
-
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>اسم المالك بالعربية</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="مثال: عون محمد"
-              placeholderTextColor="#9ca3af"
-              value={state.form.ownerName ?? ""}
-              onChangeText={(v) => updateForm({ ownerName: v })}
+        {/* ── Products Warning Banner ── */}
+        <Card
+          style={{
+            backgroundColor: colorRoles.surfaceWarm,
+            borderWidth: 1,
+            borderColor: colorRoles.warning,
+            borderRadius: radius.md,
+            padding: spacing[3],
+          }}
+        >
+          <View style={{ gap: spacing[1], alignItems: 'flex-end' }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[2] }}>
+              <Icon name="alert-circle-outline" size={20} tone="warning" />
+              <Text role="bodyStrong" style={{ color: colorRoles.warning, textAlign: 'right', fontWeight: 'bold' }}>
+                بانتظار رفع المنتجات الابتدائية
+              </Text>
+            </View>
+            <Text role="bodySm" tone="muted" style={{ textAlign: 'right', marginTop: spacing[1] }}>
+              تم استكمال البيانات الأساسية والتراخيص، ولكن المتجر لا يعتبر جاهزاً للتفعيل حتى يتم رفع المنتجات الابتدائية للكتالوج.
+            </Text>
+            <Button
+              label="رفع المنتجات الابتدائية الآن"
+              tone="primary"
+              size="sm"
+              onPress={() => onGoToProducts?.()}
+              style={{ marginTop: spacing[2], alignSelf: 'flex-start' }}
             />
           </View>
+        </Card>
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>نوع الهوية</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="بطاقة شخصية / سجل تجاري"
-              placeholderTextColor="#9ca3af"
-              value={
-                state.form.legalIdentityType === "commercial_register" ? "سجل تجاري" :
-                state.form.legalIdentityType === "national_id" ? "بطاقة شخصية" : "شهادة عمل حر"
-              }
-              onChangeText={(v) => {
-                const type = v.includes("شخصية") ? "national_id" : "commercial_register";
-                updateForm({ legalIdentityType: type });
-              }}
-            />
-          </View>
+        {/* ── Vertical timeline accordion ── */}
+        <View style={{ gap: spacing[2] }}>
+          {GROUP_ORDER.map((groupId, index) => {
+            const isActive = activeGroup === groupId;
+            const groupMissing = groupMissingCounts[groupId];
+            const isComplete = groupMissing === 0;
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>رقم هوية المالك / السجل *</Text>
-            <TextInput
-              style={[styles.input, validationErrors.legalIdentityNumber ? styles.inputError : null]}
-              placeholder="مثال: 1029384756"
-              placeholderTextColor="#9ca3af"
-              keyboardType="numeric"
-              value={state.form.legalIdentityNumber ?? ""}
-              onChangeText={(v) => updateForm({ legalIdentityNumber: v })}
-            />
-            {validationErrors.legalIdentityNumber ? <Text style={styles.errorText}>{validationErrors.legalIdentityNumber}</Text> : null}
-          </View>
+            return (
+              <View
+                key={groupId}
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'stretch',
+                }}
+              >
+                {/* Timeline column */}
+                <View style={{ alignItems: 'center', width: 48 }}>
+                  <Pressable
+                    onPress={() => setActiveGroup(groupId)}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: radius.round,
+                      backgroundColor: isComplete
+                        ? colorRoles.success
+                        : isActive
+                        ? colorRoles.brandAction
+                        : colorRoles.surfaceMuted,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: isActive ? 0 : borders.hairline,
+                      borderColor: isComplete ? colorRoles.success : colorRoles.borderStrong,
+                      zIndex: 2,
+                    }}
+                  >
+                    {isComplete ? (
+                      <Icon name="checkmark" size={14} color="#FFF" />
+                    ) : (
+                      <Text
+                        role="caption"
+                        style={{
+                          fontWeight: 'bold',
+                          color: isActive ? '#FFF' : colorRoles.textMuted,
+                        }}
+                      >
+                        {index + 1}
+                      </Text>
+                    )}
+                  </Pressable>
+                  {index < GROUP_ORDER.length - 1 && (
+                    <View
+                      style={{
+                        width: 2,
+                        flex: 1,
+                        backgroundColor: colorRoles.borderSubtle,
+                        marginVertical: 4,
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                </View>
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>الجوال الأساسي *</Text>
-            <TextInput
-              style={[styles.input, validationErrors.primaryPhone ? styles.inputError : null]}
-              placeholder="مثال: 777777777"
-              placeholderTextColor="#9ca3af"
-              keyboardType="phone-pad"
-              value={state.form.primaryPhone ?? ""}
-              onChangeText={(v) => updateForm({ primaryPhone: v })}
-            />
-            {validationErrors.primaryPhone ? <Text style={styles.errorText}>{validationErrors.primaryPhone}</Text> : null}
-          </View>
+                {/* Content column */}
+                <View style={{ flex: 1 }}>
+                  {/* Group header row — tap to expand */}
+                  <Pressable
+                    onPress={() => setActiveGroup(groupId)}
+                    style={{
+                      paddingVertical: spacing[3],
+                      paddingHorizontal: spacing[2],
+                      flexDirection: 'row-reverse',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      role="bodyStrong"
+                      style={{
+                        fontWeight: 'bold',
+                        color: isActive ? colorRoles.brandAction : colorRoles.textPrimary,
+                      }}
+                    >
+                      {GROUP_LABELS[groupId]}
+                    </Text>
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>الجوال الاحتياطي</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="غير محدد"
-              placeholderTextColor="#9ca3af"
-              keyboardType="phone-pad"
-              value={state.form.secondaryPhone ?? ""}
-              onChangeText={(v) => updateForm({ secondaryPhone: v })}
-            />
-          </View>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[1] }}>
+                      {groupMissing > 0 ? (
+                        <Badge label={`${groupMissing} نواقص`} tone="warning" />
+                      ) : (
+                        <Badge label="مكتمل" tone="success" />
+                      )}
+                      <Icon
+                        name={isActive ? 'chevron-down' : 'chevron-back'}
+                        size={16}
+                        tone="muted"
+                        mirrored
+                      />
+                    </View>
+                  </Pressable>
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>البريد الإلكتروني</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="مثال: awn@example.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={state.form.email ?? ""}
-              onChangeText={(v) => updateForm({ email: v })}
-            />
-          </View>
-
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>الفئة</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="مثال: مخبز"
-              placeholderTextColor="#9ca3af"
-              value={
-                state.form.category === "bakery" ? "مخبز" :
-                state.form.category === "grocery" ? "بقالة" :
-                state.form.category === "restaurant" ? "مطعم" : "أخرى"
-              }
-              onChangeText={(v) => {
-                const cat = v.includes("مخبز") ? "bakery" :
-                            v.includes("بقالة") ? "grocery" :
-                            v.includes("مطعم") ? "restaurant" : "default";
-                updateForm({ category: cat });
-              }}
-            />
-          </View>
+                  {/* Group body (visible only when active) */}
+                  {isActive && (
+                    <View
+                      style={{
+                        paddingBottom: spacing[4],
+                        paddingHorizontal: spacing[2],
+                        borderBottomWidth: 1,
+                        borderBottomColor: colorRoles.borderSubtle,
+                      }}
+                    >
+                      {renderGroupContent(groupId)}
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
-      {/* Footer Buttons */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.draftButton} onPress={handleSaveDraft} disabled={loading}>
-          <Text style={styles.draftButtonText}>حفظ كمسودة</Text>
-        </TouchableOpacity>
+      {/* ── Footer actions ── */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: spacing[3],
+          borderTopWidth: 1,
+          borderTopColor: colorRoles.borderSubtle,
+          backgroundColor: colorRoles.surfaceBase,
+          padding: spacing[3],
+          paddingBottom: Platform.OS === 'ios' ? spacing[4] + 12 : 48,
+        }}
+      >
+        {/* تصعيد عائق */}
+        <Pressable
+          onPress={() => onEscalate?.()}
+          style={{
+            flex: 1,
+            backgroundColor: colorRoles.surfaceBase,
+            borderColor: colorRoles.brandAction,
+            borderWidth: 1,
+            borderRadius: radius.md,
+            height: 48,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text role="bodyStrong" style={{ color: colorRoles.brandAction, fontWeight: 'bold' }}>
+            تصعيد عائق
+          </Text>
+        </Pressable>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSendForReview} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>إرسال للمراجعة</Text>
-          )}
-        </TouchableOpacity>
+        {/* التالي / إرسال */}
+        <Button
+          label={isLastGroup ? 'إرسال للمراجعة' : `التالي: ${nextLabel}`}
+          tone={canSubmit && isLastGroup ? 'success' : 'primary'}
+          disabled={isLastGroup ? !canSubmit : false}
+          onPress={goToNext}
+          style={{ flex: 2 }}
+        />
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-    direction: "rtl",
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 15,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1E293B",
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-  },
-  statusText: {
-    fontSize: 12,
-    color: "#2563EB",
-    fontWeight: "600",
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    padding: 16,
-  },
-  formCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  fieldRow: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 8,
-    textAlign: "right",
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: "#1e293b",
-    textAlign: "right",
-    backgroundColor: "#F8FAFC",
-  },
-  inputError: {
-    borderColor: "#EF4444",
-    backgroundColor: "#FEF2F2",
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#EF4444",
-    marginTop: 4,
-    textAlign: "right",
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: "#FFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    flexDirection: "row-reverse",
-    gap: 12,
-  },
-  draftButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "#FF500D",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFF",
-  },
-  draftButtonText: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#FF500D",
-  },
-  submitButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#FF500D",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  submitButtonText: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#FFF",
-  },
-  successCard: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    backgroundColor: "#FFF",
-  },
-  successIcon: {
-    fontSize: 48,
-    color: "#10B981",
-    marginBottom: 16,
-  },
-  successTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1E293B",
-    marginBottom: 8,
-  },
-  successSubtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  successNote: {
-    fontSize: 13,
-    color: "#94A3B8",
-    fontFamily: "monospace",
-    marginBottom: 24,
-  },
-  resetButton: {
-    paddingHorizontal: 24,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#FF500D",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  resetButtonText: {
-    color: "#FFF",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-});

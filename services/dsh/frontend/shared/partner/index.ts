@@ -7,6 +7,7 @@ export {
   getDshPartnerActivationStateMetadata,
   isDshPartnerClientVisible,
   isDshPartnerActivationComplete,
+  getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
   getDshPartnerReadinessChecklist,
 } from "./partner-activation.model";
