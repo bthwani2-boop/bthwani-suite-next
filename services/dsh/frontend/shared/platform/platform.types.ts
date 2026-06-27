@@ -2,7 +2,7 @@
 // Authority: dsh/frontend/shared — moved from control-panel/platform/*/types files
 
 // ── Appearance Types ──────────────────────────────────────────────────────────
-export type AppearanceStatus = 'preview-only' | 'contract-needed' | 'ready-for-binding';
+export type AppearanceStatus = 'snapshot-only' | 'contract-needed' | 'ready-for-binding';
 export type AppearanceScope = 'Global' | 'Platform' | 'App' | 'Surface' | 'Service';
 export type AppearanceRisk = 'low' | 'medium' | 'high' | 'visual-identity';
 export type AppearanceOwner = 'Platform' | 'DesignSystem' | 'AppShell' | 'ServiceOwner';
@@ -14,8 +14,8 @@ export interface AppearanceRecord {
   status: AppearanceStatus;
   scope: AppearanceScope;
   risk: AppearanceRisk;
-  currentPreviewValue: string;
-  proposedPreviewValue: string;
+  currentSnapshotValue: string;
+  proposedSnapshotValue: string;
   effectSummary: string;
   auditRollbackHint: string;
   centralColorSystemNote: string;

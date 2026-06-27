@@ -1,6 +1,6 @@
 /**
  * DSH Fulfillment Surface Visibility
- * Not UI preview. This file is live runtime code — read by routing and surface-gating logic.
+ * Live runtime code — read by routing and surface-gating logic.
  *
  * Defines which DSH surface sees what, for each delivery mode.
  * This is the single source of truth for "does surface X see/do Y when mode is Z?"

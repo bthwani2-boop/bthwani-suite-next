@@ -96,7 +96,7 @@ export type DshOperationalClosureStatus =
   | 'missing-contract'
   | 'contract-defined'
   | 'registry-defined'
-  | 'preview-adapter-needed'
+  | 'snapshot-adapter-needed'
   | 'surface-binding-needed'
   | 'needs-visual-evidence'
   | 'runtime-unproven'
@@ -119,7 +119,7 @@ export type DshControlPanelOperationalWorkspace =
   | 'cod-discrepancy-queue'
   | 'exception-queue'
   | 'support-escalation-queue'
-  | 'settlement-inputs-preview'
+  | 'settlement-inputs-snapshot'
   | 'wlt-finance-bridge'
   | 'audit-rollback';
 
@@ -588,7 +588,7 @@ export type DshSettlementInputEvent = DshOperationalBaseRecord & {
   readonly wltReference?: string;
 };
 
-export type DshControlPanelSideEffectClassification = 'preview-only' | 'runtime-later' | 'runtime-mutation';
+export type DshControlPanelSideEffectClassification = 'snapshot-only' | 'runtime-later' | 'runtime-mutation';
 
 export type DshControlPanelOperationRecord = DshOperationalBaseRecord & {
   readonly entityKind: 'control-panel-operation-record';

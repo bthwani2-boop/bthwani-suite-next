@@ -85,16 +85,16 @@ export function buildDshControlPanelOperationsSummary(): readonly DshControlPane
   return [
     { workspace: 'orders-queue', purpose: 'Order status, owner, SLA, exception, support, and settlement input visibility.', records: byWorkspace('orders-queue') },
     { workspace: 'trips-board', purpose: 'Trip status, assignment, pickup/dropoff, proof, failure, and return visibility.', records: byWorkspace('trips-board') },
-    { workspace: 'captain-assignment-board', purpose: 'Captain candidates, WLT eligibility read-only, and assignment decision preview.', records: byWorkspace('captain-assignment-board') },
+    { workspace: 'captain-assignment-board', purpose: 'Captain candidates, WLT eligibility read-only, and assignment decision review.', records: byWorkspace('captain-assignment-board') },
     { workspace: 'store-preparation-sla', purpose: 'Store preparation, item issue, substitution, ready, and handoff visibility.', records: byWorkspace('store-preparation-sla') },
     { workspace: 'pickup-handoff-monitor', purpose: 'Pickup code, QR/barcode/photo, mismatch, and store delay evidence.', records: byWorkspace('pickup-handoff-monitor') },
     { workspace: 'pod-review-queue', purpose: 'Proof of delivery submitted, accepted, rejected, and audit-required states.', records: byWorkspace('pod-review-queue') },
     { workspace: 'cod-discrepancy-queue', purpose: 'COD expected, collected, discrepancy, and WLT handoff candidate visibility.', records: byWorkspace('cod-discrepancy-queue') },
     { workspace: 'exception-queue', purpose: 'Operational exceptions by type, severity, owner, status, action, and audit need.', records: byWorkspace('exception-queue') },
     { workspace: 'support-escalation-queue', purpose: 'Ticket, order, trip, exception, WLT reference, and rollback visibility.', records: byWorkspace('support-escalation-queue') },
-    { workspace: 'settlement-inputs-preview', purpose: 'DSH settlement input events for WLT review only.', records: byWorkspace('settlement-inputs-preview') },
+    { workspace: 'settlement-inputs-snapshot', purpose: 'DSH settlement input events for WLT review only.', records: byWorkspace('settlement-inputs-snapshot') },
     { workspace: 'wlt-finance-bridge', purpose: 'WLT-owned finance bridge visibility; no DSH ledger or accounting truth.', records: byWorkspace('wlt-finance-bridge') },
-    { workspace: 'audit-rollback', purpose: 'Operation history, preview rollback hint, permission, and evidence requirement.', records: byWorkspace('audit-rollback') },
+    { workspace: 'audit-rollback', purpose: 'Operation history, snapshot rollback hint, permission, and evidence requirement.', records: byWorkspace('audit-rollback') },
   ] as const;
 }
 

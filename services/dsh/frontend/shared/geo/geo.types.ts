@@ -1,4 +1,4 @@
-export type MapProviderMode = "disabled" | "mock" | "google" | "future_provider";
+export type MapProviderMode = "disabled" | "sandbox" | "google" | "future_provider";
 
 export type MapsUsageSurface =
   | "app-client"

@@ -4,7 +4,7 @@
  * Server-side keys (geocoding, routes, places) are backend_secret_only.
  */
 export type MapsProviderPublicConfig = {
-  readonly mode: "disabled" | "mock" | "google" | "future_provider";
+  readonly mode: "disabled" | "sandbox" | "google" | "future_provider";
   readonly region: string;
   readonly language: string;
   readonly restrictedPublicKeyRef: "runtime_injected" | "not_applicable";

@@ -42,10 +42,13 @@ export function resolvePlatformVarsDomainRecords(domain: VarsDomainId): readonly
 }
 
 export function sortPlatformVarsByScope(records: readonly DshPlatformVarRecord[]): DshPlatformVarRecord[] {
-  const scopeOrder = new Map(DSH_PLATFORM_SCOPE_PRECEDENCE.map((l) => [l.scope, l.order]));
+  const scopeOrder: Record<string, number> = {};
+  for (const l of DSH_PLATFORM_SCOPE_PRECEDENCE) {
+    scopeOrder[l.scope] = l.order;
+  }
   return [...records].sort((a, b) => {
-    const ao = scopeOrder.get(a.scope) ?? 999;
-    const bo = scopeOrder.get(b.scope) ?? 999;
+    const ao = scopeOrder[a.scope] ?? 999;
+    const bo = scopeOrder[b.scope] ?? 999;
     return ao !== bo ? ao - bo : a.label.localeCompare(b.label, 'ar');
   });
 }

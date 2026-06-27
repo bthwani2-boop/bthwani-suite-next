@@ -42,7 +42,7 @@ export function buildAdminKpiMetrics(): AdminKpiMetrics {
   return {
     rolesCount: 6,
     usersCount: 5,
-    environmentMode: "وضع تجريبي (Demo)",
+    environmentMode: "وضع تجريبي (محاكاة)",
   };
 }
 
@@ -58,8 +58,8 @@ export type AdminScopeDetails = {
 export const ADMIN_SCOPE_DETAILS: AdminScopeDetails = {
   currentDomain: "نظرة عامة",
   scope: "صلاحيات Platform فقط",
-  envMode: "محاكاة محلية (Demo)",
-  authType: "لا يوجد — Mock فقط",
+  envMode: "محاكاة محلية",
+  authType: "لا يوجد — محاكاة فقط",
 };
 
 // ─── Ownership & Policy Registry ──────────────────────────────────────────────

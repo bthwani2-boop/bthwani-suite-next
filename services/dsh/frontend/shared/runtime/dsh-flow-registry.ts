@@ -9,9 +9,9 @@
  * Rules:
  *  - Pure types + data only. No React, no side-effects, no backend, no mutation.
  *  - Import from '@bthwani/ui-kit' is FORBIDDEN here; this file has zero UI deps.
- *  - finance-preview flows: financialImpact=true, onDemandPolicy='finance-preview-only', NO mutation.
+ *  - finance-snapshot flows: financialImpact=true, onDemandPolicy='finance-snapshot-only', NO mutation.
  *  - hidden-compat flows: hiddenCompat=true, visibility='hidden-compat' — must NOT be rendered primary.
- *  - Phase 1 scope: metadata only. No payload arrays, no heavy preview data.
+ *  - Phase 1 scope: metadata only. No payload arrays, no heavy reference data.
  *
  * Cross-surface ownership contract:
  *  - app-client  : sees order/support only inside its own order context, never partner internals.
@@ -19,7 +19,7 @@
  *  - app-captain : owns handoff/delivery flows. No partner internal issues beyond handoff.
  *  - app-field   : owns onboarding, visit, readiness. No financial policies or decisions.
  *  - control-panel: escalationOwner for all policy/SLA/support flows. No duplicate mobile screens.
- *  - wlt-finance : reference-only for any financial preview. No DSH-initiated mutation.
+ *  - wlt-finance : reference-only for any financial snapshot. No DSH-initiated mutation.
  */
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ export type DshFlowDomain =
   | 'support-escalation'
   | 'chat-conversation'
   | 'cancellation-rejection'
-  | 'finance-preview'
+  | 'finance-snapshot'
   | 'control-policy';
 
 /**
@@ -71,14 +71,14 @@ export type DshFlowVisibility =
  * detail-on-open     — full detail loaded when user opens the flow.
  * evidence-on-open   — proof/attachments loaded only when evidence panel opens.
  * chat-on-open       — conversation thread loaded only when chat opens.
- * finance-preview-only — financial snapshot loaded read-only when finance panel opens.
+ * finance-snapshot-only — financial snapshot loaded read-only when finance panel opens.
  */
 export type DshOnDemandPolicy =
   | 'summary-only'
   | 'detail-on-open'
   | 'evidence-on-open'
   | 'chat-on-open'
-  | 'finance-preview-only';
+  | 'finance-snapshot-only';
 
 export type DshFlowRegistryEntry = {
   /** Stable flow identifier — matches IDs in dsh-partner.types.ts and screen-registry files. */
@@ -99,7 +99,7 @@ export type DshFlowRegistryEntry = {
   readonly screenHint?: string;
   /** Surface responsible for escalation decisions (typically control-panel). */
   readonly escalationOwner?: DshSurfaceId;
-  /** True when this flow has a financial preview/settlement/commission implication. */
+  /** True when this flow has a financial snapshot/settlement/commission implication. */
   readonly financialImpact?: boolean;
   /** On-demand loading contract for this flow's data. */
   readonly onDemandPolicy: DshOnDemandPolicy;
@@ -300,7 +300,7 @@ const PARTNER_HIDDEN_COMPAT_FLOWS: readonly DshFlowRegistryEntry[] = [
     onDemandPolicy: 'summary-only',
     allowedActions: ['الاحتفاظ بالتوافق للمستهلكين القدامى'],
     forbiddenActions: ['إظهاره كخيار أساسي', 'إنشاء route مستقل جديد'],
-    notes: 'Legacy registry consumer only. See operations-support.preview.ts for detail.',
+    notes: 'Legacy registry consumer only. See operations-support.snapshot.ts for detail.',
   },
   {
     id: 'order-rejection',
@@ -482,54 +482,54 @@ const PARTNER_ONBOARDING_FLOWS: readonly DshFlowRegistryEntry[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Registry — Finance Preview Flows (WLT bridge, hidden-compat on partner)
+// Registry — Finance Snapshot Flows (WLT bridge, hidden-compat on partner)
 // ---------------------------------------------------------------------------
 
-const FINANCE_PREVIEW_FLOWS: readonly DshFlowRegistryEntry[] = [
+const FINANCE_SNAPSHOT_FLOWS: readonly DshFlowRegistryEntry[] = [
   {
     id: 'partner-finance-bridge',
     label: 'جسر المعلومات المالية للشريك',
-    domain: 'finance-preview',
+    domain: 'finance-snapshot',
     ownerSurface: 'wlt-finance',
     visibleSurfaces: ['app-partner', 'control-panel', 'wlt-finance'],
     visibility: 'hidden-compat',
     hiddenCompat: true,
     financialImpact: true,
     escalationOwner: 'control-panel',
-    onDemandPolicy: 'finance-preview-only',
+    onDemandPolicy: 'finance-snapshot-only',
     allowedActions: ['عرض ملخص مالي للقراءة فقط'],
     forbiddenActions: ['بدء استرداد', 'تعديل تسوية', 'تغيير عمولة أو ledger', 'mutation مالي من DSH'],
-    notes: 'WLT هو المالك الوحيد لأي أثر مالي. يظهر للشريك كـ preview tag فقط.',
+    notes: 'WLT هو المالك الوحيد لأي أثر مالي. يظهر للشريك كـ snapshot tag فقط.',
   },
   {
     id: 'partner-settlement-summary',
     label: 'ملخص التسوية',
-    domain: 'finance-preview',
+    domain: 'finance-snapshot',
     ownerSurface: 'wlt-finance',
     visibleSurfaces: ['app-partner', 'control-panel', 'wlt-finance'],
     visibility: 'hidden-compat',
     hiddenCompat: true,
     financialImpact: true,
     escalationOwner: 'control-panel',
-    onDemandPolicy: 'finance-preview-only',
+    onDemandPolicy: 'finance-snapshot-only',
     allowedActions: ['عرض ملخص التسوية للقراءة فقط'],
     forbiddenActions: ['تعديل التسوية', 'إنشاء استرداد', 'mutation مالي من DSH'],
-    notes: 'يبقى preview-only. أي mutation يذهب لـ WLT فقط.',
+    notes: 'يبقى snapshot-only. أي mutation يذهب لـ WLT فقط.',
   },
   {
     id: 'partner-commission-summary',
     label: 'ملخص العمولة',
-    domain: 'finance-preview',
+    domain: 'finance-snapshot',
     ownerSurface: 'wlt-finance',
     visibleSurfaces: ['app-partner', 'control-panel', 'wlt-finance'],
     visibility: 'hidden-compat',
     hiddenCompat: true,
     financialImpact: true,
     escalationOwner: 'control-panel',
-    onDemandPolicy: 'finance-preview-only',
+    onDemandPolicy: 'finance-snapshot-only',
     allowedActions: ['عرض ملخص العمولة للقراءة فقط'],
     forbiddenActions: ['تعديل العمولة', 'تغيير ledger', 'mutation مالي من DSH'],
-    notes: 'يبقى preview-only. أي mutation يذهب لـ WLT فقط.',
+    notes: 'يبقى snapshot-only. أي mutation يذهب لـ WLT فقط.',
   },
 ];
 
@@ -793,7 +793,7 @@ export const DSH_FLOW_REGISTRY: readonly DshFlowRegistryEntry[] = [
   ...PARTNER_CHAT_FLOWS,
   ...PARTNER_INVENTORY_FLOWS,
   ...PARTNER_ONBOARDING_FLOWS,
-  ...FINANCE_PREVIEW_FLOWS,
+  ...FINANCE_SNAPSHOT_FLOWS,
   ...CLIENT_FLOWS,
   ...CAPTAIN_FLOWS,
   ...FIELD_FLOWS,
@@ -874,7 +874,7 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
     evidenceStatus: 'needs-visual-evidence',
     runtimeBindingStatus: 'NEEDS_BINDING_LATER',
     remainingBlocker: 'Payment and order-create failure states are wired through the shared lifecycle model; screenshots and runtime proof are still missing.',
-    crossSurfaceDependencies: ['wlt app-client bridge', 'control-panel finance preview', 'app-partner intake visibility'],
+    crossSurfaceDependencies: ['wlt app-client bridge', 'control-panel finance snapshot', 'app-partner intake visibility'],
     wltBoundary: 'WLT owns payment decision, wallet semantics, refunds, and settlement meaning.',
     visualEvidenceRequired: true,
   },
@@ -1018,7 +1018,7 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
     evidenceStatus: 'needs-visual-evidence',
     runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
     remainingBlocker: 'Support ownership is wired, but screenshots and runtime proof of the integrated 360 workflow are still missing.',
-    crossSurfaceDependencies: ['app-client order context', 'control-panel support queue', 'WLT preview-only visibility'],
+    crossSurfaceDependencies: ['app-client order context', 'control-panel support queue', 'WLT snapshot-only visibility'],
     wltBoundary: 'WLT remains read-only here for payment/refund/settlement visibility.',
     visualEvidenceRequired: true,
   },
@@ -1034,8 +1034,8 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
     evidenceStatus: 'needs-visual-evidence',
     runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
     remainingBlocker: 'The shared intervention layer is wired, but visual proof and runtime evidence for operator handoffs are still missing.',
-    crossSurfaceDependencies: ['support Customer360/call-intake', 'app-partner readiness', 'WLT preview-only finance references'],
-    wltBoundary: 'Any financial outcome stays preview-only in DSH and executes in WLT.',
+    crossSurfaceDependencies: ['support Customer360/call-intake', 'app-partner readiness', 'WLT snapshot-only finance references'],
+    wltBoundary: 'Any financial outcome stays snapshot-only in DSH and executes in WLT.',
     visualEvidenceRequired: true,
   },
   {
@@ -1050,7 +1050,7 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
     evidenceStatus: 'blocked-by-wlt',
     runtimeBindingStatus: 'BLOCKED_BY_WLT',
     remainingBlocker: 'Settlement, refund, payout, commission, and ledger semantics remain WLT-owned.',
-    crossSurfaceDependencies: ['wlt shared finance preview', 'partner/captain/field bridge workspaces'],
+    crossSurfaceDependencies: ['wlt shared finance snapshot', 'partner/captain/field bridge workspaces'],
     wltBoundary: 'Full WLT boundary: settlement, payout, refund, commission, ledger, and reconciliation remain outside DSH.',
     visualEvidenceRequired: true,
   },
@@ -1169,7 +1169,7 @@ export function getDshEscalationFlowsForSurface(surfaceId: DshSurfaceId): readon
 
 /**
  * All flows with financialImpact=true.
- * These must remain finance-preview-only — no mutation from DSH.
+ * These must remain finance-snapshot-only — no mutation from DSH.
  */
 export function getDshFinanceImpactFlows(): readonly DshFlowRegistryEntry[] {
   return DSH_FLOW_REGISTRY.filter((entry) => entry.financialImpact === true);
@@ -1251,7 +1251,7 @@ export type DshFlowRegistryStats = {
   readonly hiddenCompatCount: number;
   /** Entries with visibility='internal'. */
   readonly internalCount: number;
-  /** Entries with financialImpact=true (finance-preview-only). */
+  /** Entries with financialImpact=true (finance-snapshot-only). */
   readonly financePreviewCount: number;
   /** Entries with an escalationOwner set. */
   readonly escalationOwnerCount: number;
@@ -1286,8 +1286,8 @@ export type DshFlowRegistryValidationResult = {
   /** Entry IDs missing one or more required fields. */
   readonly missingRequiredFields: readonly string[];
   /**
-   * Finance-preview violations: financialImpact=true entries that don't have
-   * onDemandPolicy='finance-preview-only'.
+   * Finance-snapshot violations: financialImpact=true entries that don't have
+   * onDemandPolicy='finance-snapshot-only'.
    */
   readonly financePreviewViolations: readonly string[];
   /**
@@ -1332,9 +1332,9 @@ export function getDshFlowRegistryValidationSummary(): DshFlowRegistryValidation
 
   const financePreviewViolations: string[] = [];
   for (const entry of DSH_FLOW_REGISTRY) {
-    if (entry.financialImpact === true && entry.onDemandPolicy !== 'finance-preview-only') {
+    if (entry.financialImpact === true && entry.onDemandPolicy !== 'finance-snapshot-only') {
       financePreviewViolations.push(
-        `${entry.id}: financialImpact=true but onDemandPolicy=${entry.onDemandPolicy} (expected finance-preview-only)`
+        `${entry.id}: financialImpact=true but onDemandPolicy=${entry.onDemandPolicy} (expected finance-snapshot-only)`
       );
     }
   }
@@ -1372,7 +1372,7 @@ export function resolveDshOnDemandPolicyLabel(policy?: string): string {
   if (policy === 'detail-on-open') return 'تفاصيل عند الفتح';
   if (policy === 'evidence-on-open') return 'أدلة عند الفتح';
   if (policy === 'chat-on-open') return 'محادثة عند الفتح';
-  if (policy === 'finance-preview-only') return 'مالي للقراءة فقط';
+  if (policy === 'finance-snapshot-only') return 'مالي للقراءة فقط';
   if (policy === 'summary-only') return 'ملخص أولًا';
   return policy ?? 'سياسة من السجل';
 }

@@ -134,7 +134,7 @@ export function usePlatformVarsModel({
   const isValidDesignVal = isDesign ? (PLATFORM_VAR_QUICK_PICKS[selectedVar?.key ?? ''] ?? []).includes(editVal) : true;
 
   // disabled-by-policy: platform var mutations require a real backend API contract.
-  // No local save, no mock API. UI must display read-only state until API is implemented.
+  // No local save, no simulated API. UI must display read-only state until API is implemented.
   const confirmSaveProposed = React.useCallback(
     async (_selectedRecord: DshPlatformVarRecord, _proposedValue: string) => {
       addAuditEvent({

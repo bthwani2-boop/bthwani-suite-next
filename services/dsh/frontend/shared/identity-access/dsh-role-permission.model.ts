@@ -1,5 +1,5 @@
 // P0-09: DSH Role & Permission Model
-// UI-only RBAC preview — no runtime auth, no backend RBAC binding.
+// UI-only RBAC snapshot — no runtime auth, no backend RBAC binding.
 // Covers 10 sensitive decision points in DSH control-panel.
 // WLT boundary: finance mutations are always forbidden inside DSH.
 // Authority surface chart:
@@ -7,7 +7,7 @@
 //   control-panel/catalogs  → catalog approval/publishing
 //   control-panel/operations → dispatch, SLA, escalation
 //   control-panel/finance   → read-only view (WLT owns mutations)
-//   control-panel/platform  → vars preview/rollback request
+//   control-panel/platform  → vars snapshot/rollback request
 //   administration          → role assignment only — no operational mutation
 
 // ─── Core types ──────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ export type DshSensitiveActionId =
   | 'escalate-support'
   | 'override-sla'
   | 'view-finance-readonly'
-  | 'preview-platform-vars'
+  | 'snapshot-platform-vars'
   | 'request-platform-rollback';
 
 export type DshRolePermissionEntry = {
@@ -103,7 +103,7 @@ export type DshReasonEvidencePolicy = {
   readonly appliesToSections: ReadonlyArray<DshPermissionSection>;
   readonly reasonRequired: boolean;
   readonly evidenceRequired: boolean;
-  readonly exportPreviewLabel: string;
+  readonly exportSnapshotLabel: string;
 };
 
 // ─── Explicit section access grants ──────────────────────────────────────────
@@ -270,12 +270,12 @@ export const DSH_ROLE_PERMISSIONS: ReadonlyArray<DshRolePermissionEntry> = [
       'عرض بيانات الدفع والتسوية والعمولة — قراءة فقط. WLT هو المصدر الوحيد لأي mutation مالي. ممنوع داخل DSH أي approve/pay/settle/refund.',
     affectedSurfaces: ['control-panel'],
   },
-  // 10. Platform vars preview / rollback request
+  // 10. Platform vars snapshot / rollback request
   {
     section: 'platform-vars',
-    sensitiveAction: 'preview-platform-vars',
+    sensitiveAction: 'snapshot-platform-vars',
     roleId: 'platform-operator',
-    allowedActions: ['preview-platform-vars'],
+    allowedActions: ['snapshot-platform-vars'],
     forbiddenActions: ['request-platform-rollback'],
     auditRequired: true,
     wltMutationForbidden: false,
@@ -315,7 +315,7 @@ export function getDshSectionAuditPolicy(section: DshPermissionSection): boolean
   return DSH_ROLE_PERMISSIONS.find((e) => e.section === section)?.auditRequired ?? false;
 }
 
-/** Arabic display name for a DSH role (matches administration.mock arabicName). */
+/** Arabic display name for a DSH role (matches administration.simulated arabicName). */
 export function getDshRoleArabicName(roleId: DshRoleId): string {
   const MAP: Record<DshRoleId, string> = {
     'super-admin':        'مسؤول أعلى',
@@ -328,7 +328,7 @@ export function getDshRoleArabicName(roleId: DshRoleId): string {
   return MAP[roleId];
 }
 
-// ─── Preview audit entries (4 representative entries) ─────────────────────────
+// ─── Reference audit entries (4 representative entries) ─────────────────────────
 
 export const DSH_AUDIT_ENTRIES: ReadonlyArray<DshAuditEntry> = [
   {
@@ -462,7 +462,7 @@ export const DSH_REASON_EVIDENCE_POLICY: ReadonlyArray<DshReasonEvidencePolicy> 
     appliesToSections: ['partner-activation', 'partner-deactivation'],
     reasonRequired: true,
     evidenceRequired: true,
-    exportPreviewLabel: 'Partner readiness + contract proof export',
+    exportSnapshotLabel: 'Partner readiness + contract proof export',
   },
   {
     policyId: 'policy-ops-escalation',
@@ -470,7 +470,7 @@ export const DSH_REASON_EVIDENCE_POLICY: ReadonlyArray<DshReasonEvidencePolicy> 
     appliesToSections: ['dispatch-reassignment', 'support-escalation', 'sla-override'],
     reasonRequired: true,
     evidenceRequired: false,
-    exportPreviewLabel: 'Operations intervention export preview',
+    exportSnapshotLabel: 'Operations intervention export snapshot',
   },
   {
     policyId: 'policy-finance-readonly',
@@ -478,7 +478,7 @@ export const DSH_REASON_EVIDENCE_POLICY: ReadonlyArray<DshReasonEvidencePolicy> 
     appliesToSections: ['finance-view'],
     reasonRequired: false,
     evidenceRequired: false,
-    exportPreviewLabel: 'WLT visibility export preview',
+    exportSnapshotLabel: 'WLT visibility export snapshot',
   },
   {
     policyId: 'policy-platform-rollback',
@@ -486,7 +486,7 @@ export const DSH_REASON_EVIDENCE_POLICY: ReadonlyArray<DshReasonEvidencePolicy> 
     appliesToSections: ['platform-vars'],
     reasonRequired: true,
     evidenceRequired: true,
-    exportPreviewLabel: 'Provider rollback + blast radius export preview',
+    exportSnapshotLabel: 'Provider rollback + blast radius export snapshot',
   },
 ] as const;
 
@@ -511,7 +511,7 @@ export function resolveAuditEntry(id: string): DshAuditEntry | undefined {
   return undefined;
 }
 
-/** Returns a single preview audit entry by entryId. */
+/** Returns a single audit entry snapshot by entryId. */
 export function getDshAuditEntryById(entryId: string): DshAuditEntry | undefined {
   return getDshAuditEntries().find((e) => e.entryId === entryId);
 }

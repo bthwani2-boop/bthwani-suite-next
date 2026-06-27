@@ -17,7 +17,7 @@ export const dshOperationalSurfaceBindingMeta = {
 
 export type DshOperationalRuntimeBindingStatus =
   | 'metadata-bound'
-  | 'preview-adapter-bound'
+  | 'snapshot-adapter-bound'
   | 'ui-render-binding-needed'
   | 'runtime-api-needed'
   | 'visual-evidence-needed';
@@ -29,7 +29,7 @@ export type DshOperationalScreenBinding = {
   readonly ownerPath: string;
   readonly componentName: string;
   readonly registryEntryIds: readonly DshOperationalEntityId[];
-  readonly previewSummaryIds: readonly string[];
+  readonly snapshotSummaryIds: readonly string[];
   readonly visibleStates: readonly string[];
   readonly dataClassification: DshOperationalDataClassification;
   readonly wltImpact: DshOperationalWltImpact;
@@ -42,7 +42,7 @@ function summariesFor(surfaceId: DshSurfaceId): readonly DshOperationalSurfaceSu
   return buildDshOperationalSummaryForSurface(surfaceId);
 }
 
-function previewIdsFor(
+function snapshotIdsFor(
   surfaceId: DshSurfaceId,
   registryEntryIds: readonly DshOperationalEntityId[],
 ): readonly string[] {
@@ -71,7 +71,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
     ownerPath: 'dsh/frontend/app-client/screens/OrdersTrackingScreens.tsx',
     componentName: 'DshOrdersListScreen',
     registryEntryIds: ['order-operational-truth', 'delivery-trip', 'proof-of-delivery', 'support-escalation'],
-    previewSummaryIds: previewIdsFor('app-client', [
+    snapshotSummaryIds: snapshotIdsFor('app-client', [
       'order-operational-truth',
       'delivery-trip',
       'proof-of-delivery',
@@ -88,7 +88,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
     ownerPath: 'dsh/frontend/app-client/screens/OrdersTrackingScreens.tsx',
     componentName: 'DshTrackingScreen',
     registryEntryIds: ['order-operational-truth', 'delivery-trip', 'proof-of-delivery', 'operational-exception'],
-    previewSummaryIds: previewIdsFor('app-client', [
+    snapshotSummaryIds: snapshotIdsFor('app-client', [
       'order-operational-truth',
       'delivery-trip',
       'proof-of-delivery',
@@ -105,7 +105,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
     ownerPath: 'dsh/frontend/app-partner/screens/OrdersInboxScreen.tsx',
     componentName: 'PartnerOrdersInboxScreen',
     registryEntryIds: ['store-preparation', 'pickup-handoff', 'order-operational-truth', 'cod-collection'],
-    previewSummaryIds: previewIdsFor('app-partner', [
+    snapshotSummaryIds: snapshotIdsFor('app-partner', [
       'store-preparation',
       'pickup-handoff',
       'order-operational-truth',
@@ -122,7 +122,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
     ownerPath: 'dsh/frontend/app-partner/screens/OrdersInboxScreen.tsx',
     componentName: 'DshPartnerOrdersScreen',
     registryEntryIds: ['store-preparation', 'pickup-handoff', 'support-escalation', 'operational-exception'],
-    previewSummaryIds: previewIdsFor('app-partner', [
+    snapshotSummaryIds: snapshotIdsFor('app-partner', [
       'store-preparation',
       'pickup-handoff',
       'support-escalation',
@@ -139,7 +139,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
     ownerPath: 'dsh/frontend/app-captain/screens/DshCaptainPickupDropoffScreen.tsx',
     componentName: 'DshCaptainPickupDropoffScreen',
     registryEntryIds: ['delivery-trip', 'captain-assignment', 'pickup-handoff', 'proof-of-delivery', 'cod-collection'],
-    previewSummaryIds: previewIdsFor('app-captain', [
+    snapshotSummaryIds: snapshotIdsFor('app-captain', [
       'delivery-trip',
       'captain-assignment',
       'pickup-handoff',
@@ -157,7 +157,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
     ownerPath: 'dsh/frontend/app-field/screens/DshFieldStoreOnboardingScreen.tsx',
     componentName: 'DshFieldStoreOnboardingScreen',
     registryEntryIds: ['partner-store-onboarding', 'catalog-readiness', 'operational-exception'],
-    previewSummaryIds: previewIdsFor('app-field', [
+    snapshotSummaryIds: snapshotIdsFor('app-field', [
       'partner-store-onboarding',
       'catalog-readiness',
       'operational-exception',
@@ -185,7 +185,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
       'settlement-input-bridge',
       'control-panel-operation',
     ],
-    previewSummaryIds: previewIdsFor('control-panel', [
+    snapshotSummaryIds: snapshotIdsFor('control-panel', [
       'order-operational-truth',
       'delivery-trip',
       'captain-assignment',
@@ -198,7 +198,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
       'settlement-input-bridge',
       'control-panel-operation',
     ]),
-    visibleStates: ['queue', 'workspace', 'audit', 'rollback-preview', 'wlt-bridge-read-only'],
+    visibleStates: ['queue', 'workspace', 'audit', 'rollback-snapshot', 'wlt-bridge-read-only'],
     wltImpact: 'settlement-input-candidate',
     notes: 'Operations hub is the aggregation surface; Phase 5 defines operation-level workspace contracts.',
   }),
@@ -234,6 +234,6 @@ export function getDshOperationalSummariesForScreen(
     return [];
   }
 
-  const previewIds = new Set(bindingRecord.previewSummaryIds);
-  return summariesFor(bindingRecord.surfaceId).filter((summary) => previewIds.has(summary.summaryId));
+  const snapshotIds = new Set(bindingRecord.snapshotSummaryIds);
+  return summariesFor(bindingRecord.surfaceId).filter((summary) => snapshotIds.has(summary.summaryId));
 }
