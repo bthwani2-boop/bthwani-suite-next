@@ -46,7 +46,8 @@
       "canonical-host-ports",
       "dsh-001-cross-surface-dependency-map",
       "dsh-003-catalog-ownership",
-      "dsh-004-cart-serviceability"
+      "dsh-004-cart-serviceability",
+      "dsh-frontend-shared-boundary-imports"
     ]
   },
   "guards": [
@@ -199,6 +200,11 @@
       "id": "dsh-004-cart-serviceability",
       "path": "tools/guards/dsh-004-cart-serviceability-gate.mjs",
       "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
+    },
+    {
+      "id": "dsh-frontend-shared-boundary-imports",
+      "path": "tools/guards/dsh-frontend-shared-boundary-imports-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     }
   ]
 }

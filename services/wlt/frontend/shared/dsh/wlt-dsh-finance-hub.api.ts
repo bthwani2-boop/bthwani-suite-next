@@ -2,7 +2,14 @@ import { getWltApiBaseUrl } from "./wlt-dsh-api-base-url";
 import type { WltDshFinanceRuntimeResult } from "./wlt-dsh-finance-hub.types";
 
 export async function loadWltDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRuntimeResult> {
-  const baseUrl = getWltApiBaseUrl() ?? "http://localhost:58083";
+  const baseUrl = getWltApiBaseUrl();
+  if (!baseUrl) {
+    return {
+      state: "blocked",
+      baseUrl: "",
+      error: "wlt_runtime_base_url_missing",
+    };
+  }
 
   try {
     const [overviewResp, ledgerResp, refundsResp, closeStatusResp] = await Promise.all([

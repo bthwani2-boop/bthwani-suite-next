@@ -180,13 +180,6 @@ export type WltDshPaymentSessionReference = {
   readonly updatedAt: string;
 };
 
-export type WltCreatePaymentSessionReferenceInput = {
-  readonly checkoutIntentId: string;
-  readonly clientId: string;
-  readonly storeId: string;
-  readonly paymentMethod?: "cod" | "wallet" | "mixed" | "official_wallet";
-};
-
 export type WltDshReferenceContext = {
   readonly orderId: string;
   readonly paymentStatus: WltPaymentStatusReference | null;

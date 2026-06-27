@@ -7,6 +7,8 @@ import {
   type PartnerStoreSettingsRequest,
   type StoreActionResponse,
 } from "../../../clients/store-discovery-client";
+
+export type { OperatorStoreGovernanceRequest };
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { toAdminDetail } from "./store-admin.view-model";
 import type { StoreRoleContextState } from "./store-role-context.controller-core";

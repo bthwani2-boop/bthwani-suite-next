@@ -440,10 +440,12 @@
   },
 
   "ownership_violation_audit": {
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-27",
     "violations_found": 0,
     "guards_run": [
       "guard:dsh-frontend-shared-ownership (PASS)",
+      "guard:wlt-dsh-frontend-shared-ownership (PASS)",
+      "guard:dsh-frontend-shared-boundary-imports (PASS)",
       "guard:no-financial-mutation-outside-wlt (PASS)",
       "guard:no-direct-fetch-in-screen (PASS)",
       "guard:no-direct-tamagui-outside-ui-kit (PASS)",

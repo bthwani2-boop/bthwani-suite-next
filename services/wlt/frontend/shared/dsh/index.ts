@@ -10,7 +10,6 @@ export * from "./wlt-dsh-refund.api";
 export * from "./wlt-dsh-settlement.api";
 export * from "./wlt-dsh-cod.api";
 export * from "./wlt-dsh-ledger.api";
-export * from "./use-wlt-dsh-wallet-session";
 export * from "./wlt-dsh-finance-hub.types";
 export * from "./wlt-dsh-finance-hub.api";
 export * from "./wlt-dsh-finance-hub.view-model";

@@ -7,8 +7,8 @@ import {
 import type {
   DshStoreAdminDetail,
   StoreActionState,
+  OperatorStoreGovernanceRequest,
 } from "../../../shared/store";
-import type { OperatorStoreGovernanceRequest } from "../../../../clients/store-discovery-client";
 
 type Props = {
   readonly store: DshStoreAdminDetail;
