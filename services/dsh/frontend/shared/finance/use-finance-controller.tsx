@@ -12,9 +12,11 @@ import {
   FINANCE_CANONICAL_GROUPS,
 } from './finance-registry';
 import {
-  loadWltDshFinanceRuntimeReadModel,
   buildWltDshFinanceHubViewModel,
 } from '@bthwani/wlt';
+import {
+  loadWltDshFinanceRuntimeReadModel,
+} from '@bthwani/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.api';
 import type {
   WltDshFinanceRuntimeResult,
   WltDshFinanceHubViewModel,

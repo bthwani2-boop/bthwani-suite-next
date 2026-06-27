@@ -8,8 +8,8 @@ import {
   type StoreActionResponse,
 } from "../../../clients/store-discovery-client";
 
-export type { OperatorStoreGovernanceRequest };
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { type StoreRoleAction } from "./store-discovery.types";
 import { toAdminDetail } from "./store-admin.view-model";
 import type { StoreRoleContextState } from "./store-role-context.controller-core";
 
@@ -39,11 +39,6 @@ export async function fetchStoreRoleContext(): Promise<StoreRoleContextState> {
   }
 }
 
-export type StoreRoleAction =
-  | { readonly kind: "partner"; readonly storeId: string; readonly input: PartnerStoreSettingsRequest }
-  | { readonly kind: "field"; readonly storeId: string; readonly input: FieldStoreVerificationRequest }
-  | { readonly kind: "captain"; readonly storeId: string; readonly input: CaptainPickupReadinessRequest }
-  | { readonly kind: "operator"; readonly storeId: string; readonly input: OperatorStoreGovernanceRequest };
 
 export async function submitStoreRoleAction(action: StoreRoleAction): Promise<StoreActionResponse> {
   const accessToken = getIdentityAccessToken();

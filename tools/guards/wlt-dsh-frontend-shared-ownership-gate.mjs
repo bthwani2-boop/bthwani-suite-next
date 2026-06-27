@@ -43,6 +43,10 @@ const REQUIRED_BOUNDARY_FILES = [
   "services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts",
   "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts",
   "services/wlt/frontend/shared/dsh/use-wlt-dsh-reference-controller.tsx",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission.types.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission.states.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission.view-model.ts",
+  "services/wlt/frontend/shared/dsh/use-wlt-dsh-field-commission-reference-controller.tsx",
 ];
 
 for (const rel of REQUIRED_BOUNDARY_FILES) {
@@ -165,22 +169,58 @@ for (const file of listCodeFiles()) {
   for (const { specifier } of specs) {
     const resolved = resolveSpecifier(file, specifier);
 
-    // A. Block DSH surface from importing WLT API adapters directly
-    if (resolved.startsWith(wltSharedDshPath)) {
-      if (resolved.endsWith(".api") || resolved.includes(".api/")) {
+    if (resolved.startsWith("services/wlt/")) {
+      // 1. Block DSH surface from WLT backend/clients/generated
+      if (
+        resolved.startsWith("services/wlt/backend/") ||
+        resolved.startsWith("services/wlt/clients/") ||
+        resolved.startsWith("services/wlt/generated/")
+      ) {
         violations.push({
           file,
-          message: `FORBIDDEN: DSH surface importing WLT API adapter directly (resolved: ${resolved})`
+          message: `FORBIDDEN: DSH surface importing WLT backend/clients/generated directly (resolved: ${resolved})`
         });
       }
-    }
 
-    // B. Block app-field from any WLT dependency
-    if (posix.startsWith("services/dsh/frontend/app-field/") && resolved.startsWith("services/wlt/")) {
-      violations.push({
-        file,
-        message: `FORBIDDEN: app-field must not have any dependency on WLT (resolved: ${resolved})`
-      });
+      // 2. Block DSH surface from importing WLT API/controller-core directly
+      if (
+        resolved.endsWith(".api") ||
+        resolved.includes(".api.") ||
+        resolved.includes(".api/") ||
+        resolved.endsWith(".controller-core") ||
+        resolved.includes(".controller-core.") ||
+        resolved.includes(".controller-core/")
+      ) {
+        violations.push({
+          file,
+          message: `FORBIDDEN: DSH surface importing WLT API/controller-core directly (resolved: ${resolved})`
+        });
+      }
+
+      // 3. Block app-field from WLT dependency outside whitelisted read-only shared/dsh files
+      if (posix.startsWith("services/dsh/frontend/app-field/")) {
+        const isAllowedWltImport =
+          resolved.startsWith("services/wlt/frontend/shared/dsh/") &&
+          (
+            resolved === "services/wlt/frontend/shared/dsh/index" ||
+            resolved === "services/wlt/frontend/shared/dsh/index.ts" ||
+            resolved.endsWith(".types") ||
+            resolved.endsWith(".types.ts") ||
+            resolved.endsWith(".states") ||
+            resolved.endsWith(".states.ts") ||
+            resolved.endsWith(".view-model") ||
+            resolved.endsWith(".view-model.ts") ||
+            resolved.endsWith(".contract") ||
+            resolved.endsWith(".contract.ts") ||
+            (resolved.includes("use-") && (resolved.endsWith("-controller") || resolved.endsWith("-controller.tsx")))
+          );
+        if (!isAllowedWltImport) {
+          violations.push({
+            file,
+            message: `FORBIDDEN: app-field is only allowed to consume read-only references from whitelisted files in services/wlt/frontend/shared/dsh/ (resolved: ${resolved})`
+          });
+        }
+      }
     }
   }
 }

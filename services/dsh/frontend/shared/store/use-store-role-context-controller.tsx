@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   fetchStoreRoleContext,
   submitStoreRoleAction,
-  type StoreRoleAction,
 } from "./store-role.api";
+import {
+  type StoreRoleAction,
+} from "./store-discovery.types";
 import {
   loadStoreRoleContext,
   toStoreRoleExperience,

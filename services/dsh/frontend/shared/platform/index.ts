@@ -36,7 +36,6 @@ export * from './platform-vars';
 export * from './platform-vars.policy';
 export * from './platform-vars.view-model';
 export * from './platform-vars.model';
-export * from './platform-vars.api';
 export * from './local-temp-id';
 export * from './FeatureFlagProvider';
 export * from './PlatformVarsProvider';

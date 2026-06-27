@@ -61,8 +61,8 @@ function getNamedImports(content, importIndex) {
 }
 
 const forbiddenVerbs = [
-  "fetch", "submit", "post", "put", "patch", "delete", "create",
-  "update", "mutate", "confirm", "finalize", "settle", "mark", "govern"
+  "fetch", "submit", "create", "update", "mutate", "govern", "post",
+  "put", "patch", "delete", "confirm", "finalize", "settle", "payout", "refund"
 ];
 
 for (const file of listCodeFiles()) {
@@ -102,9 +102,14 @@ for (const file of listCodeFiles()) {
         resolved.startsWith("services/dsh/backend/") ||
         resolved.startsWith("services/dsh/clients/") ||
         resolved.startsWith("services/dsh/generated/") ||
+        resolved.startsWith("services/wlt/backend/") ||
+        resolved.startsWith("services/wlt/clients/") ||
+        resolved.startsWith("services/wlt/generated/") ||
         resolved.endsWith(".api") ||
+        resolved.includes(".api.") ||
         resolved.includes(".api/") ||
         resolved.endsWith(".controller-core") ||
+        resolved.includes(".controller-core.") ||
         resolved.includes(".controller-core/")
       ) {
         violations.push({
@@ -113,15 +118,15 @@ for (const file of listCodeFiles()) {
         });
       }
 
-      // 3. Rules when importing from DSH shared brain
-      if (resolved.startsWith("services/dsh/frontend/shared/")) {
+      // 3. Rules when importing from DSH shared brain or WLT boundary shared brain
+      if (resolved.startsWith("services/dsh/frontend/shared/") || resolved.startsWith("services/wlt/frontend/shared/dsh/")) {
         const symbols = getNamedImports(content, index);
         for (const sym of symbols) {
           // Block execution verbs
           if (forbiddenVerbs.some((verb) => sym.startsWith(verb))) {
             violations.push({
               file,
-              message: `FORBIDDEN: importing execution function '${sym}' from shared brain`
+              message: `FORBIDDEN: importing execution function '${sym}' from shared/boundary brain (resolved: ${resolved})`
             });
           }
 
@@ -143,19 +148,36 @@ for (const file of listCodeFiles()) {
             if (!isAllowedPrefix) {
               violations.push({
                 file,
-                message: `FORBIDDEN: importing non-controller/non-view-model camelCase symbol '${sym}' from shared brain`
+                message: `FORBIDDEN: importing non-controller/non-view-model camelCase symbol '${sym}' from shared/boundary brain (resolved: ${resolved})`
               });
             }
           }
         }
       }
 
-      // 4. Prevent app-field from importing services/wlt/*
+      // 4. Prevent app-field from importing services/wlt/* except whitelisted read-only references
       if (currentSurface === "app-field" && resolved.startsWith("services/wlt/")) {
-        violations.push({
-          file,
-          message: `FORBIDDEN: app-field must not have any dependency on WLT (resolved: ${resolved})`
-        });
+        const isAllowedWltImport =
+          resolved.startsWith("services/wlt/frontend/shared/dsh/") &&
+          (
+            resolved === "services/wlt/frontend/shared/dsh/index" ||
+            resolved === "services/wlt/frontend/shared/dsh/index.ts" ||
+            resolved.endsWith(".types") ||
+            resolved.endsWith(".types.ts") ||
+            resolved.endsWith(".states") ||
+            resolved.endsWith(".states.ts") ||
+            resolved.endsWith(".view-model") ||
+            resolved.endsWith(".view-model.ts") ||
+            resolved.endsWith(".contract") ||
+            resolved.endsWith(".contract.ts") ||
+            (resolved.includes("use-") && (resolved.endsWith("-controller") || resolved.endsWith("-controller.tsx")))
+          );
+        if (!isAllowedWltImport) {
+          violations.push({
+            file,
+            message: `FORBIDDEN: app-field is only allowed to consume read-only references from whitelisted files in services/wlt/frontend/shared/dsh/ (resolved: ${resolved})`
+          });
+        }
       }
     }
 
