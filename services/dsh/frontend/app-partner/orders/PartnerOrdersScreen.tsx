@@ -32,10 +32,10 @@ const STATUS_TONE: Record<DshOrderStatus, "neutral" | "success" | "warning" | "d
   cancelled: "danger",
 };
 
-type Props = {
   readonly storeId: string;
   readonly statusFilter?: DshOrderStatus;
   readonly onBack?: () => void;
+  readonly onOpenSettlement?: (orderId: string) => void;
 };
 
 function OrderActionPanel({
@@ -145,9 +145,11 @@ function OrderActionPanel({
 function OrderRow({
   order,
   onAction,
+  onOpenSettlement,
 }: {
   order: DshOrder;
   onAction: () => void;
+  onOpenSettlement?: (orderId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const label = ORDER_STATUS_LABELS[order.status] ?? order.status;
@@ -172,13 +174,23 @@ function OrderRow({
             />
           ))}
           <OrderActionPanel order={order} onAction={onAction} />
+          {onOpenSettlement && (
+            <View style={{ padding: spacing[3], paddingTop: 0 }}>
+              <Button
+                label="تفاصيل التسوية المالية (WLT)"
+                tone="ghost"
+                size="sm"
+                onPress={() => onOpenSettlement(order.id)}
+              />
+            </View>
+          )}
         </>
       )}
     </Card>
   );
 }
 
-export function PartnerOrdersScreen({ storeId, statusFilter: propStatusFilter, onBack }: Props) {
+export function PartnerOrdersScreen({ storeId, statusFilter: propStatusFilter, onBack, onOpenSettlement }: Props) {
   const [activeTab, setActiveTab] = useState<string>(propStatusFilter ?? "all");
   const controllerStatusFilter = activeTab === "all" ? undefined : (activeTab as DshOrderStatus);
   const { state, reload } = usePartnerOrdersController(storeId, controllerStatusFilter);
@@ -226,7 +238,7 @@ export function PartnerOrdersScreen({ storeId, statusFilter: propStatusFilter, o
     return (
       <View style={{ gap: spacing[2] }}>
         {state.orders.map((order) => (
-          <OrderRow key={order.id} order={order} onAction={reload} />
+          <OrderRow key={order.id} order={order} onAction={reload} onOpenSettlement={onOpenSettlement} />
         ))}
       </View>
     );

@@ -8,6 +8,7 @@ import type { DshFieldSurfaceProps } from './dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import { useIdentitySession, devBypassLogin } from '@bthwani/core-identity';
 import { AuthLoginCard } from '../shared/auth/AuthLoginCard';
+import { useAndroidBackHandler } from '../shared/runtime/useAndroidBackHandler';
 
 // ─── Bottom Navigation (exact donor replica) ────────────────────────────────
 // RTL order visible on screen (left→right): حسابي | المالية | [FAB] | السجل | المهام
@@ -129,9 +130,8 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
 
   const identity = useIdentitySession();
 
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+  useAndroidBackHandler(
+    React.useCallback(() => {
       if (fieldSurface.model.routeStackDepth > 1) {
         fieldSurface.actions.popRoute();
         return true;
@@ -141,9 +141,8 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
         return true;
       }
       return false;
-    });
-    return () => sub.remove();
-  }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit]);
+    }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit])
+  );
 
   // Root authentication guard — prompt for login immediately upon opening
   if (identity.state.kind !== 'authenticated') {

@@ -19,7 +19,11 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-export function PartnerStoreScreen() {
+export function PartnerStoreScreen({
+  onOpenPerformance,
+}: {
+  readonly onOpenPerformance?: () => void;
+} = {}) {
   const identity = useIdentitySession();
   const controller = useStoreRoleContextController("partner", identity.state.kind);
   const [reason, setReason] = React.useState("");
@@ -105,6 +109,14 @@ export function PartnerStoreScreen() {
         <ListItem title="طرق الخدمة" subtitle={partner.serviceModesLabel} />
         <ListItem title="الرؤية للعملاء" subtitle={partner.visibilityLabel} />
         <ListItem title="جاهزية الكتالوج" subtitle={partner.catalogReadinessSummary} />
+        {onOpenPerformance && (
+          <ListItem
+            title="أداء متجري التشغيلي"
+            subtitle="عرض مؤشرات القبول والرفض والأداء"
+            onPress={onOpenPerformance}
+            trailing={<Text role="bodySm" tone="brand">◀</Text>}
+          />
+        )}
       </Card>
 
       <Text role="titleMd">قائمة الجاهزية</Text>

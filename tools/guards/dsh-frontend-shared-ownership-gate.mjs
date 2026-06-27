@@ -169,7 +169,7 @@ const REQUIRED_SURFACE_BINDINGS = [
     message: "PartnerStoreScreen must consume useStoreRoleContextController",
   },
   {
-    file: join(FRONTEND, "app-field/store/FieldStoreVerificationScreen.tsx"),
+    file: join(FRONTEND, "app-field/stores/FieldStoreVerificationScreen.tsx"),
     pattern: /\buseStoreRoleContextController\b/,
     message: "FieldStoreVerificationScreen must consume useStoreRoleContextController",
   },

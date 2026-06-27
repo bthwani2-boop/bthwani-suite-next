@@ -39,15 +39,13 @@ export function DshFieldDocumentUploadScreen({ storeId, docKind, onBack }: DshFi
   const [selectedKind, setSelectedKind] = React.useState<DshPartnerDocumentType>(
     docKind ?? 'commercial_register'
   );
-  const [documentRef, setDocumentRef] = React.useState('');
+  const [documentRef, setDocumentRef] = React.useState(
+    () => `media-ref-${docKind ?? 'commercial_register'}-${Math.floor(Math.random() * 100000)}`
+  );
   const [loading, setLoading] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    // Generate dummy ref for mock upload
-    setDocumentRef(`media-ref-${selectedKind}-${Math.floor(Math.random() * 100000)}`);
-  }, [selectedKind]);
 
   const handleFormSubmit = async () => {
     if (!documentRef.trim()) {
@@ -142,7 +140,10 @@ export function DshFieldDocumentUploadScreen({ storeId, docKind, onBack }: DshFi
               return (
                 <Pressable
                   key={kind.id}
-                  onPress={() => setSelectedKind(kind.id)}
+                  onPress={() => {
+                    setSelectedKind(kind.id);
+                    setDocumentRef(`media-ref-${kind.id}-${Math.floor(Math.random() * 100000)}`);
+                  }}
                   style={{
                     padding: spacing[3],
                     borderRadius: radius.md,
