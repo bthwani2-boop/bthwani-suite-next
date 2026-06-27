@@ -1,4 +1,2 @@
-export * from "./finance-visibility.types";
-export * from "./finance-visibility.states";
-export * from "./finance-visibility.view-model";
-export * from "./use-finance-visibility-controller";
+﻿// DEPRECATED: import from '../finance-wlt-link/finance-visibility' or '../finance-wlt-link' instead
+export * from '../finance-wlt-link/finance-visibility';

@@ -1,2 +1,2 @@
-export * from "./wlt-ledger.types";
-export * from "./use-wlt-ledger-controller";
+﻿// DEPRECATED: import from '../finance-wlt-link/wlt-ledger' or '../finance-wlt-link' instead
+export * from '../finance-wlt-link/wlt-ledger';

@@ -1,3 +1,2 @@
-export * from "./finance.types";
-export * from "./finance-registry";
-export * from "./use-finance-controller";
+﻿// DEPRECATED: import from '../finance-wlt-link/finance' or '../finance-wlt-link' instead
+export * from '../finance-wlt-link/finance';

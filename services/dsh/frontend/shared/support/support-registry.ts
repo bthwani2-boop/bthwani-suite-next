@@ -275,3 +275,66 @@ export const SUPPORT_OWNERSHIP: SupportOwnershipInfo = {
   policyNote:
     "الدعم هو المالك المركزي لـ tickets والمحادثات والمتابعة بعد التصصين. العميل يرى داخل الطلب فقط، والشريك داخل command center فقط.",
 };
+
+// ─── Approval Stage ───────────────────────────────────────────────────────────
+// Shared type for partner/catalog approval workflow stages
+export type ApprovalStage =
+  | 'partner-review'
+  | 'partner-approved'
+  | 'catalog-review'
+  | 'catalog-adopted'
+  | 'marketing-review'
+  | 'marketing-approved'
+  | 'client-visible'
+  | 'rejected';
+
+// ─── Operations Support Flow Spec ────────────────────────────────────────────
+export type OperationsSupportFlowSpec = {
+  readonly flowId: string;
+  readonly label: string;
+  readonly description: string;
+};
+
+const OPERATIONS_SUPPORT_FLOWS: Record<string, OperationsSupportFlowSpec> = {
+  'order-issue-queue': {
+    flowId: 'order-issue-queue',
+    label: 'قائمة المشكلات',
+    description: 'عرض وإدارة مشكلات الطلبات',
+  },
+  'order-reject': {
+    flowId: 'order-reject',
+    label: 'رفض الطلب',
+    description: 'رفض الطلب مع إدخال السبب',
+  },
+  'order-prepare': {
+    flowId: 'order-prepare',
+    label: 'تحديث حالة التحضير',
+    description: 'تحديث حالة التحضير للطلب',
+  },
+  'inventory-adjust': {
+    flowId: 'inventory-adjust',
+    label: 'تعديل المخزون',
+    description: 'تعديل مستوى المخزون لعنصر',
+  },
+  'order-handoff': {
+    flowId: 'order-handoff',
+    label: 'تسليم الطلب',
+    description: 'إدارة تسليم الطلب للسائق',
+  },
+  'order-chat-send': {
+    flowId: 'order-chat-send',
+    label: 'إرسال رسالة',
+    description: 'إرسال رسالة للعميل عبر المحادثة',
+  },
+  'partner-finance-bridge': {
+    flowId: 'partner-finance-bridge',
+    label: 'مالية الشريك',
+    description: 'الانتقال إلى بوابة مالية الشريك',
+  },
+};
+
+export function getOperationsSupportFlowSpec(
+  flowId: string,
+): OperationsSupportFlowSpec | undefined {
+  return OPERATIONS_SUPPORT_FLOWS[flowId];
+}

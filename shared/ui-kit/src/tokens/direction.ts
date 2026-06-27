@@ -32,3 +32,8 @@ export function resolveTextAlign(value: LogicalAlignment, activeDirection: Direc
   if (value === "start") return activeDirection === "rtl" ? "right" : "left";
   return activeDirection === "rtl" ? "left" : "right";
 }
+
+export function resolveRowDirection(direction: Direction): "row" | "row-reverse" {
+  return direction === "rtl" ? "row-reverse" : "row";
+}
+

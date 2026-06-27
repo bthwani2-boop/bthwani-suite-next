@@ -1,0 +1,305 @@
+
+
+هل تم تنفيذ كل شيء هنا بنجاح واصبح كل شيء مغطي وماخوذ في الاعتبار 
+
+
+بدقة رقمية كاملة 100%**،
+مع التزام صارم بـ **صفر أخطاء، صفر تناقض، صفر تكرار، صفر فجوات، صفر ضجيج وصفر ضعف او نقص في المنطق والتشغيل ، صفر تشتت، صفر فشل، وصفر عيوب**. 
+
+ بحيث نضمن **الأدق والأقوى والأفضل والأنسب** دون أي ضعف أو نقص، وبمنهجية **حقيقية، منطقية، وتقنية** محقَّقة بالكامل **100%**
+
+
+
+نفّذ المهمة التالية تنفيذًا جنائيًا عمليًا داخل Google Antigravity على الكود المحلي المتزامن مع GitHub Remote، باستخدام أحد وكلاء/نماذج الذكاء الاصطناعي.
+
+هذا الأمر عام وقابل للاستخدام لأي نوع مهمة داخل المستودع:
+
+* feature
+* bugfix
+* refactor
+* cleanup
+* guard
+* backend
+* frontend
+* database
+* contracts
+* Docker/runtime
+* CI
+* tests
+* docs
+* evidence
+* slice/journey
+* PR review
+* migration
+* architecture enforcement
+* fullstack flow
+
+الهدف الحاكم:
+تنفيذ المهمة بمنهجية رقمية قابلة للتحقق، مع منع الادعاءات غير المثبتة، ومنع الأخطاء والتناقض والتكرار والفجوات والضجيج والتشتت قدر الإمكان عبر حراسات وفحوصات وأدلة عملية.
+
+ممنوع إعلان:
+
+* READY
+* CLOSED
+* DONE
+* 100%
+* مكتمل
+* جاهز للدمج
+
+إلا إذا أثبتت الأدلة العملية ذلك فعليًا.
+
+أي فشل، نقص دليل، تناقض، سكربت مفقود، فحص غير منفذ، نطاق غير محسوم، أو نتيجة غير مثبتة يعني:
+
+FIX_REQUIRED
+
+==================================================
+0) المطلوب تنفيذه
+=================
+
+TASK / المطلوب:
+<اكتب هنا بالضبط ما تريد تنفيذه>
+
+TOPIC / SLICE:
+<اكتب اسم الشريحة أو التوبك>
+
+SCOPE:
+<حدد النطاق بدقة>
+
+أمثلة:
+
+* services/dsh/frontend
+* services/dsh/backend
+* services/wlt/frontend
+* services/wlt/backend
+* apps/control-panel/runtime
+* apps/app-client/runtime
+* infra/docker
+* tools/guards
+* contracts/openapi
+* database/migrations
+* CI/workflows
+* docs/evidence
+* fullstack journey
+
+EXPECTED OUTCOME:
+<اكتب النتيجة النهائية المطلوبة بوضوح>
+
+OUT_OF_SCOPE:
+<اكتب ما لا يجب لمسه إن وجد>
+
+SUCCESS CRITERIA:
+<اكتب معايير النجاح الرقمية المحددة>
+
+مثال:
+
+* لا توجد مخالفات ownership.
+* لا توجد API calls داخل UI screens.
+* لا توجد بيانات mock/demo/preview داخل runtime.
+* كل guards المطلوبة PASS.
+* كل typecheck المطلوب PASS.
+* كل tests المطلوبة PASS.
+* git status نظيف أو يحتوي فقط تغييرات مقصودة committed.
+* التقرير النهائي يحتوي أدلة تنفيذ وفحص.
+
+==================================================
+
+1. المستودعات والفروع
+   ==================================================
+
+NEW_REPO_REMOTE:
+bthwani2-boop/bthwani-suite-next
+
+NEW_REPO_LOCAL:
+C:\bthwani-suite-next
+
+NEW_BRANCH:
+brach-validation
+
+NEW_BASE_BRANCH:
+master
+
+DONOR_REPO_REMOTE_READ_ONLY:
+bthwani2-boop/bthwani-suite
+
+DONOR_REPO_LOCAL_READ_ONLY:
+C:\bthwani-suite
+
+DONOR_BRANCH_READ_ONLY:
+realtest
+
+قاعدة المستودع الجديد:
+
+* التنفيذ الأساسي يتم داخل:
+  C:\bthwani-suite-next
+* الفرع العامل:
+  brach-validation
+* GitHub Remote يستخدم للتحقق والمطابقة قبل وبعد التنفيذ.
+* أي تعديل أو commit أو push يكون فقط في المستودع الجديد.
+* لا تعدّل المانح إطلاقًا.
+
+قاعدة المانح:
+
+* المانح READ-ONLY فقط.
+* الفرع المستخدم في المانح:
+  realtest
+* ممنوع تعديل المانح.
+* ممنوع commit داخل المانح.
+* ممنوع push داخل المانح.
+* ممنوع reset داخل المانح.
+* ممنوع تنظيف المانح.
+* ممنوع تصحيح المانح.
+* استخدمه فقط للفهم والمقارنة والاستخراج المنضبط.
+
+المسموح من المانح:
+
+* فهم السلوك القديم الصحيح.
+* مقارنة الرحلات.
+* مقارنة الشاشات.
+* مقارنة العقود.
+* مقارنة backend flows.
+* مقارنة database behavior.
+* استخراج أنماط صحيحة.
+* فهم أسماء الدومين والعلاقات.
+* معرفة ما يجب إعادة تركيبه في المستودع الجديد.
+
+الممنوع من المانح:
+
+* النسخ العشوائي.
+* نقل architecture قديمة تخالف معمار المستودع الجديد.
+* إدخال mock/demo/preview من المانح إلى runtime الجديد.
+* وضع منطق مأخوذ من المانح مباشرة في مكان خاطئ.
+* تعديل أي ملف في المانح.
+
+==================================================
+2) مزامنة المحلي مع Remote قبل التنفيذ
+======================================
+
+نفّذ داخل المستودع الجديد:
+
+Set-Location -LiteralPath "C:\bthwani-suite-next"
+
+git status --short
+
+إذا كان هناك تغييرات محلية قبل المزامنة:
+
+* لا تتجاهلها.
+* لا تحذفها صامتًا.
+* احفظ patch أو stash باسم واضح.
+* اذكر ذلك في التقرير.
+* بعدها فقط أكمل المزامنة.
+
+ثم نفّذ:
+
+git fetch --all --prune
+git checkout brach-validation
+git reset --hard origin/brach-validation
+git status --short
+git log --oneline --decorate -n 30
+git diff --stat master...brach-validation
+
+ثم افحص المانح للقراءة فقط:
+
+Set-Location -LiteralPath "C:\bthwani-suite"
+
+git fetch --all --prune
+git checkout realtest
+git status --short
+git log --oneline --decorate -n 20
+
+إذا ظهر أي تغيير داخل المانح:
+
+* لا تعدله.
+* لا تنظفه.
+* لا تعمل commit.
+* لا تعمل reset.
+* أبلغ عنه فقط في التقرير كـ:
+  DONOR_LOCAL_DIRTY
+  أو:
+  BLOCKED_NEEDS_EVIDENCE
+
+ثم ارجع للمستودع الجديد:
+
+Set-Location -LiteralPath "C:\bthwani-suite-next"
+
+==================================================
+3) قاعدة الاعتماد
+=================
+
+الاعتماد يكون بهذا الترتيب:
+
+1. LOCAL المتزامن:
+   C:\bthwani-suite-next
+
+2. GitHub Remote للتحقق من:
+
+   * الفرع الصحيح
+   * آخر commits
+   * diff مع base
+   * عدم وجود divergence
+   * حالة PR إن وجد
+   * حالة CI إن وجدت
+
+3. DONOR المحلي/Remote للقراءة فقط:
+   C:\bthwani-suite
+   branch: realtest
+
+ممنوع:
+
+* الاعتماد على ذاكرة الوكيل.
+* الاعتماد على local قبل fetch/reset.
+* الاعتماد على donor كمكان تنفيذ.
+* إعلان الإغلاق دون تشغيل الفحوصات المناسبة.
+* ادعاء PASS دون تشغيل الأمر أو وجود دليل.
+
+==================================================
+4) القاعدة السيادية الثابتة غير القابلة للتجاهل
+===============================================
+
+هذه القاعدة إلزامية في كل تنفيذ داخل المستودع الجديد، ويجب فحص الالتزام بها عند أي مهمة تمس DSH أو WLT أو الواجهات أو الأسطح أو shared أو runtime المرتبط بها.
+
+المسار السيادي الحاكم لعقل واجهات DSH هو فقط:
+
+C:\bthwani-suite-next\services\dsh\frontend\shared
+
+وبالمسار النسبي:
+
+services/dsh/frontend/shared
+
+هذا المسار هو الحاكم وعقل الواجهات، وهو المالك الصحيح لكل ما يلي:
+
+* controllers
+* hooks
+* state machines
+* view-models
+* adapters
+* frontend contracts
+* validation rules
+* permission rules
+* lifecycle rules
+* business UI logic
+* backend/API binding
+* DSH-facing WLT integration binding
+* domain display mapping
+* registry/config/domain constants
+* أي منطق مشترك بين الأسطح
+
+تجاهل هذا المسار أو التعامل معه كمسار عادي يعتبر خطأ معماريًا كارثيًا.
+
+==================================================
+5) أسطح DSH هي UI فقط
+=====================
+
+المسارات التالية UI فقط:
+
+C:\bthwani-suite-next\services\dsh\frontend\control-panel
+C:\bthwani-suite-next\services\dsh\frontend\app-partner
+C:\bthwani-suite-next\services\dsh\frontend\app-field
+C:\bthwani-suite-next\services\dsh\frontend\app-client
+C:\bthwani-suite-next\services\dsh\frontend\app-captain
+
+ايضاء التنفيذ قم بنقل اي شيء لايعتبر  ui فقط الى الموقع والمكان المناسب في العقل الحاكم للواجهات 
+
+وبالم
+
+يمكنك استخدام اداه جرافي و leanctx لتسريع التنفيذ وضمان دقة 100% بشكل الزامي عندما  تكون مناسبة ويمكنك استخدام اي ادوات اخرى تراها مناسبة 
+

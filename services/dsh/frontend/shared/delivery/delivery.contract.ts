@@ -207,3 +207,48 @@ export function isDshFulfillmentDeliveryMode(
 ): value is DshFulfillmentDeliveryMode {
   return value === 'bthwani_delivery' || value === 'partner_delivery' || value === 'pickup';
 }
+
+// ─── Default Service Modes (canonical source) ────────────────────────────────
+// Moved here from fulfillment.ts so Metro can resolve from a single, known file.
+export type PartnerStoreHoursDay = {
+  id: string;
+  label: string;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+};
+
+export const defaultStoreHours: readonly PartnerStoreHoursDay[] = [
+  { id: 'sun', label: 'Sunday',    isOpen: true,  openTime: '09:00', closeTime: '23:00' },
+  { id: 'mon', label: 'Monday',    isOpen: true,  openTime: '09:00', closeTime: '23:00' },
+  { id: 'tue', label: 'Tuesday',   isOpen: true,  openTime: '09:00', closeTime: '23:00' },
+  { id: 'wed', label: 'Wednesday', isOpen: true,  openTime: '09:00', closeTime: '23:30' },
+  { id: 'thu', label: 'Thursday',  isOpen: true,  openTime: '09:00', closeTime: '23:30' },
+  { id: 'fri', label: 'Friday',    isOpen: false, openTime: '14:00', closeTime: '23:30' },
+  { id: 'sat', label: 'Saturday',  isOpen: true,  openTime: '10:00', closeTime: '23:30' },
+] as const;
+
+export const defaultServiceModes = [
+  {
+    id: 'partner_delivery',
+    label: 'توصيل الشريك',
+    description: 'تفعيل توصيل الشريك يدعم مسار الطلب عبر عمليات التوصيل الشريكية.',
+    enabled: true,
+  },
+  {
+    id: 'pickup',
+    label: 'استلام ذاتي',
+    description: 'تمكين الاستلام الذاتي يتيح للمتجر استقبال العميل لاستلام الرحيل مباشرة.',
+    enabled: true,
+  },
+  {
+    id: 'bthwani_delivery',
+    label: 'توصيل بثواني',
+    description: 'فتح توصيل بثواني يتم عبر شبكة الكباتن الموافقة لاستيراد الطلبات.',
+    enabled: false,
+  },
+] as const;
+
+export const defaultZone = {
+  title: 'Yasmin',
+} as const;

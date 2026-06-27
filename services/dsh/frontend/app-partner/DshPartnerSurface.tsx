@@ -1,138 +1,180 @@
-// app-partner — DshPartnerSurface
-// Consolidated entrypoint surface for partner operations and catalog app.
-import React, { useMemo } from 'react';
-import { BackHandler, Platform, Pressable, View, StatusBar } from 'react-native';
-import { Text, spacing, colorRoles, Icon, alpha, brandRoots } from '@bthwani/ui-kit';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDshPartnerSurfaceModel } from './partner.surface-model';
-import type { DshPartnerSurfaceProps, DshPartnerRouteState } from './dsh-partner.routes';
+import React from 'react';
+import { BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
+import { Button, Card, Icon, Text, spacing } from '@bthwani/ui-kit';
+import type { DshPartnerSurfaceProps } from './dsh-partner.types';
+import { storeScopeOptions } from './dsh-partner.navigation-bridge';
+import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
+import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
+import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
-import { useIdentitySession, devBypassLogin } from '@bthwani/core-identity';
-import { AuthLoginCard } from '../shared/auth/AuthLoginCard';
-import { useAndroidBackHandler } from '../shared/runtime/useAndroidBackHandler';
 
-const BRAND = brandRoots.brandAction; // #FF500D (Orange)
-const WHITE = brandRoots.surfaceBase; // #FFFFFF
-const CORNER = 32;
-
-// Curved Premium Header
-type PartnerAppHeaderProps = {
-  title: string;
-  subtitle?: string;
-  topInset?: number;
+const COLORS = {
+  background: '#F8F5F0',
+  surface: '#FFFFFF',
+  text: '#0A2F5C',
+  textMuted: '#64748B',
+  brand: '#0A2F5C',
+  brandAction: '#FF500D',
+  line: '#E2E8F0',
+  success: '#1F8B4C',
+  white: '#FFFFFF',
 };
 
-function PartnerAppHeader({ title, subtitle, topInset = 0 }: PartnerAppHeaderProps) {
+export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
   return (
-    <View
-      style={[
-        headerStyles.container,
-        { backgroundColor: BRAND, paddingTop: topInset + spacing[2] },
-      ]}
-    >
-      <View style={headerStyles.row}>
-        <View style={headerStyles.titleArea}>
-          <Text style={headerStyles.titleText}>{title}</Text>
-          {subtitle ? (
-            <Text style={[headerStyles.subtitleText, { color: alpha(WHITE, 0.88) }]} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    </View>
+    <PlatformVarsProvider>
+      <FeatureFlagProvider>
+        <DshPartnerSurfaceInner {...props} />
+      </FeatureFlagProvider>
+    </PlatformVarsProvider>
   );
 }
 
-const headerStyles = {
-  container: {
-    borderBottomLeftRadius: CORNER,
-    borderBottomRightRadius: CORNER,
-    paddingBottom: spacing[3],
-    paddingHorizontal: spacing[4],
-    shadowColor: colorRoles.shadowBase,
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  row: {
-    flexDirection: 'row-reverse' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    minHeight: 48,
-  },
-  titleArea: {
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  titleText: {
-    color: WHITE,
-    fontSize: 18,
-    fontWeight: '900' as const,
-    letterSpacing: -0.5,
-    textAlign: 'center' as const,
-  },
-  subtitleText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    marginTop: 2,
-    textAlign: 'center' as const,
-  },
-};
+function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }: DshPartnerSurfaceProps = {}) {
+  const { dshAuthBearerToken, dshClientId } = usePlatformVars();
 
-// Custom Bottom Navigation Bar matching RTL and premium aesthetics
-function PartnerBottomNavBar({
-  activeId,
-  onSelect,
-}: {
-  activeId: string;
-  onSelect: (id: string) => void;
-}) {
-  const tabs = [
-    { id: 'onboarding', label: 'حالتي', icon: 'checkmark-circle-outline', activeIcon: 'checkmark-circle' },
-    { id: 'store', label: 'متجري', icon: 'storefront-outline', activeIcon: 'storefront' },
-    { id: 'catalog', label: 'الكتالوج', icon: 'cube-outline', activeIcon: 'cube' },
+  const {
+    state,
+    actions,
+    selectedStoreScope,
+    runtimePartnerProfile,
+    partnerOrdersState,
+    partnerOrders,
+    deliveryOpsSummary,
+  } = useDshPartnerSurfaceModel(initialRoute, initialOrderId);
+
+  const {
+    route,
+    storeScopeVisible,
+    accountHubSection,
+    ordersSearchMode,
+    selectedStoreScopeId,
+    editingProductId,
+    activeOrderId,
+    supportNav,
+  } = state;
+
+  const selectedSupportScreen = supportNav.screen;
+  const supportCommandContext = supportNav.context;
+
+  const setRoute = actions.setRoute;
+  const setActiveOrderId = actions.setActiveOrderId;
+  const setOrdersSearchMode = actions.setOrdersSearchMode;
+  const setAccountHubSection = actions.setAccountHubSection;
+  const setEditingProductId = actions.setEditingProductId;
+
+  const openStoreScope = actions.openStoreScope;
+  const setStoreScopeVisible = actions.setStoreScopeVisible;
+  const setSelectedStoreScopeId = actions.setSelectedStoreScopeId;
+  const setSelectedSupportScreen = actions.setSelectedSupportScreen;
+  const setSupportCommandContext = actions.setSupportCommandContext;
+  const openOrdersBoard = actions.openOrdersBoard;
+  const openOrdersSearch = actions.openOrdersSearch;
+  const openAccountHub = actions.openAccountHub;
+  const goBackToHub = actions.goBackToHub;
+  const openSupportDirectory = actions.openSupportDirectory;
+  const returnToSupportDirectory = actions.returnToSupportDirectory;
+  const openSupportScreen = actions.openSupportScreen;
+  const openInventoryManagement = actions.openInventoryManagement;
+  const openStoreCourier = actions.openStoreCourier;
+  const openSupportCommandFromOperationalFlow = actions.handleOperationalFlowNavigation;
+  const handleMarkReady = actions.handleMarkReady;
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      return actions.handleHardwareBackPress();
+    });
+    return () => subscription.remove();
+  }, [actions]);
+
+  const isRTL = I18nManager.isRTL;
+  const rowDirection = isRTL ? 'row-reverse' : 'row';
+
+  // Custom premium header replacement
+  const topBar = (
+    <View style={[styles.headerContainer, { flexDirection: rowDirection }]}>
+      <Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton}>
+        <Icon name="person-circle-outline" size={28} tone="brand" />
+      </Pressable>
+
+      <Pressable onPress={openStoreScope} style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start', gap: 2 }}>
+        <Text role="bodyStrong" style={{ color: COLORS.text }}>{runtimePartnerProfile.storeName}</Text>
+        <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 4 }}>
+          <Text role="caption" tone="muted">{`${selectedStoreScope.label} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
+          <Icon name="chevron-down" size={12} tone="muted" />
+        </View>
+      </Pressable>
+
+      <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: spacing[3] }}>
+        <Pressable onPress={openOrdersSearch}>
+          <Icon name="search-outline" size={24} tone="brand" />
+        </Pressable>
+        <Pressable onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>
+          <Icon name="notifications-outline" size={24} tone="brand" />
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const storeScopeSheet = (
+    <PartnerStoreScopeSheet
+      visible={storeScopeVisible}
+      onClose={() => setStoreScopeVisible(false)}
+      options={storeScopeOptions}
+      selectedId={selectedStoreScopeId}
+      onSelect={setSelectedStoreScopeId}
+    />
+  );
+
+  const showBottomNav = route !== 'entry';
+  const bottomActiveId = React.useMemo(() => {
+    if (route === 'inbox') return 'orders';
+    if (route === 'home') {
+      if (accountHubSection === 'wallet') return 'wallet';
+      if (accountHubSection === 'operations') return 'operations';
+      if (accountHubSection === 'inventory') return 'inventory';
+      return 'profile';
+    }
+    if (route === 'inventory-management') return 'inventory';
+    if (route === 'support-directory' || route === 'support-screen' || route === 'order-rejection') return 'operations';
+    return '';
+  }, [route, accountHubSection]);
+
+  const navItems = [
+    { id: 'operations', label: 'العمليات', icon: 'people-outline', activeIcon: 'people' },
+    { id: 'wallet', label: 'المحفظة', icon: 'wallet-outline', activeIcon: 'wallet' },
     { id: 'orders', label: 'الطلبات', icon: 'receipt-outline', activeIcon: 'receipt' },
-    { id: 'support', label: 'الدعم', icon: 'help-circle-outline', activeIcon: 'help-circle' },
+    { id: 'inventory', label: 'المخزون', icon: 'cube-outline', activeIcon: 'cube' },
+    { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
   ];
 
-  return (
-    <View
-      style={{
-        flexDirection: 'row-reverse',
-        height: 72,
-        backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: colorRoles.borderSubtle,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -3 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 12,
-      }}
-    >
-      {tabs.map((item) => {
-        const isActive = activeId === item.id;
+  const handleNavSelect = (id: string) => {
+    if (id === 'orders') openOrdersBoard();
+    else if (id === 'profile') openAccountHub('hub');
+    else if (id === 'wallet') openAccountHub('wallet');
+    else if (id === 'inventory') openInventoryManagement();
+    else if (id === 'operations') openSupportDirectory({ source: 'operations' });
+  };
+
+  // Custom Bottom Navigation Bar
+  const bottomNavBar = showBottomNav ? (
+    <View style={[styles.bottomNavContainer, { flexDirection: rowDirection }]}>
+      {navItems.map((item) => {
+        const isActive = bottomActiveId === item.id;
+        const iconName = isActive ? item.activeIcon : item.icon;
         return (
           <Pressable
             key={item.id}
-            onPress={() => onSelect(item.id)}
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[2] }}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
+            onPress={() => handleNavSelect(item.id)}
+            style={styles.navTab}
           >
-            <Icon
-              name={isActive ? item.activeIcon : item.icon}
-              size={22}
-              tone={isActive ? 'brand' : 'muted'}
-            />
+            <Icon name={iconName as any} size={20} tone={isActive ? 'brand' : 'muted'} />
             <Text
+              role="caption"
               style={{
                 fontSize: 10,
-                marginTop: 2,
-                color: isActive ? BRAND : colorRoles.textMuted,
+                color: isActive ? COLORS.brand : COLORS.textMuted,
                 fontWeight: isActive ? '700' : '400',
               }}
             >
@@ -142,150 +184,127 @@ function PartnerBottomNavBar({
         );
       })}
     </View>
-  );
-}
+  ) : null;
 
-export function DshPartnerSurface({ command, onExit }: DshPartnerSurfaceProps = {}) {
-  const partnerSurface = useDshPartnerSurfaceModel(command);
-  const insets = useSafeAreaInsets();
-  const identity = useIdentitySession();
-
-  useAndroidBackHandler(
-    React.useCallback(() => {
-      if (partnerSurface.model.routeStackDepth > 1) {
-        partnerSurface.actions.popRoute();
-        return true;
-      }
-      if (onExit) {
-        onExit();
-        return true;
-      }
-      return false;
-    }, [partnerSurface.actions, partnerSurface.model.routeStackDepth, onExit])
-  );
-
-  const headerInfo = useMemo(() => {
-    switch (partnerSurface.model.route.kind) {
-      case 'onboarding':
-        return {
-          title: 'حالة تأهيل متجرك',
-          subtitle: 'متابعة مرحلة التفعيل الحالية للمتجر في المنصة',
-        };
-      case 'store':
-        return {
-          title: 'مركز تشغيل المتجر',
-          subtitle: 'إدارة متجرك والاطلاع على حالة الاتصال والظهور',
-        };
-      case 'catalog':
-        return {
-          title: 'كتالوج المنتجات',
-          subtitle: 'إضافة وتعديل الأقسام والمنتجات المتاحة',
-        };
-      case 'orders':
-        return {
-          title: 'طلبات المتجر',
-          subtitle: 'تجهيز وقبول الطلبات الواردة من العملاء',
-        };
-      case 'support':
-        return {
-          title: 'دعم الشريك',
-          subtitle: 'تواصل مع الدعم الفني لحل مشكلات متجرك',
-        };
-      case 'performance':
-        return {
-          title: 'أداء متجري',
-          subtitle: 'مؤشرات أداء متجرك التشغيلية',
-        };
-      case 'settlement':
-        return {
-          title: 'حالة التسوية',
-          subtitle: 'تفاصيل التسوية المالية للطلب من WLT',
-        };
-      case 'documents':
-        return {
-          title: 'وثائقي المعتمدة',
-          subtitle: 'عرض وتتبع حالة وثائق الشراكة والنشاط',
-        };
-      case 'requirements':
-        return {
-          title: 'متطلبات التفعيل الأساسية',
-          subtitle: 'المستندات والمراحل التشغيلية المطلوبة للاعتماد',
-        };
-      default:
-        return {
-          title: 'بوابة الشركاء',
-          subtitle: 'متابعة وتأهيل عمليات متجرك المباشرة',
-        };
-    }
-  }, [partnerSurface.model.route.kind]);
-
-  // Root authentication guard — prompt for login immediately upon opening
-  if (identity.state.kind !== 'authenticated') {
-    return (
-      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <StatusBar
-          backgroundColor={BRAND}
-          barStyle="light-content"
-          translucent={false}
-        />
-        <View style={{ flex: 1, justifyContent: 'center', padding: spacing[4] }}>
-          <AuthLoginCard
-            title="تسجيل دخول الشريك"
-            subtitle="استخدم حساب الشريك المحلي المصرح به لهذا المتجر."
-            loading={identity.state.kind === 'authenticating'}
-            {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-            onSubmit={(username, password) => void identity.login(username, password)}
-            onDevBypass={() => devBypassLogin('partner')}
-          />
-        </View>
+  const renderMainShell = (content: React.ReactNode): React.ReactElement => (
+    <View style={styles.shellContainer}>
+      {topBar}
+      <View style={styles.mainContentContainer}>
+        {content}
       </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <StatusBar
-        backgroundColor={BRAND}
-        barStyle="light-content"
-        translucent={false}
-      />
-
-      <PartnerAppHeader
-        title={headerInfo.title}
-        subtitle={headerInfo.subtitle}
-        topInset={insets.top}
-      />
-
-      {/* Screen content */}
-      <View
-        style={{
-          flex: 1,
-          paddingBottom: partnerSurface.model.bottomNav.visible ? 72 : 0,
-        }}
-      >
-        <DshPartnerRouteRenderer
-          model={partnerSurface.model}
-          actions={partnerSurface.actions}
-        />
-      </View>
-
-      {/* Bottom nav — pinned to bottom */}
-      {partnerSurface.model.bottomNav.visible && (
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
-          <PartnerBottomNavBar
-            activeId={partnerSurface.model.bottomNav.activeId}
-            onSelect={(id: string) => {
-              if (id === 'onboarding') partnerSurface.actions.pushRoute({ kind: 'onboarding' });
-              if (id === 'store') partnerSurface.actions.pushRoute({ kind: 'store' });
-              if (id === 'catalog') partnerSurface.actions.pushRoute({ kind: 'catalog' });
-              if (id === 'orders') partnerSurface.actions.pushRoute({ kind: 'orders' });
-              if (id === 'support') partnerSurface.actions.pushRoute({ kind: 'support' });
-            }}
-          />
-        </View>
-      )}
+      {storeScopeSheet}
+      {bottomNavBar}
     </View>
   );
+
+  const renderSurfaceShell = (content: React.ReactNode): React.ReactElement => (
+    <View style={styles.shellContainer}>
+      <View style={styles.surfaceContentContainer}>
+        {content}
+      </View>
+      {storeScopeSheet}
+      {bottomNavBar}
+    </View>
+  );
+
+  return (
+    <DshPartnerRouteRenderer
+      route={route}
+      initialOrderId={initialOrderId}
+      activeOrderId={activeOrderId}
+      ordersSearchMode={ordersSearchMode}
+      accountHubSection={accountHubSection}
+      editingProductId={editingProductId}
+      selectedSupportScreen={selectedSupportScreen}
+      supportCommandContext={supportCommandContext}
+      partnerOrdersState={partnerOrdersState}
+      partnerOrders={partnerOrders}
+      runtimePartnerProfile={runtimePartnerProfile}
+      selectedStoreScope={selectedStoreScope}
+      selectedStoreScopeId={selectedStoreScopeId}
+      deliveryOpsSummary={deliveryOpsSummary}
+      dshAuthBearerToken={dshAuthBearerToken ?? undefined}
+      dshClientId={dshClientId ?? undefined}
+      renderMainShell={renderMainShell}
+      renderSurfaceShell={renderSurfaceShell}
+      setRoute={setRoute}
+      setActiveOrderId={setActiveOrderId}
+      setOrdersSearchMode={setOrdersSearchMode}
+      setAccountHubSection={setAccountHubSection}
+      setEditingProductId={setEditingProductId}
+      setSupportState={({ screenId, commandContext }) => {
+        setSelectedSupportScreen(screenId);
+        setSupportCommandContext(commandContext);
+      }}
+      openOrdersBoard={openOrdersBoard}
+      openOrdersSearch={openOrdersSearch}
+      openAccountHub={openAccountHub}
+      goBackToHub={goBackToHub}
+      openSupportDirectory={openSupportDirectory}
+      returnToSupportDirectory={returnToSupportDirectory}
+      openSupportScreen={openSupportScreen}
+      openInventoryManagement={openInventoryManagement}
+      openStoreCourier={openStoreCourier}
+      openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
+      handleMarkReady={handleMarkReady}
+    />
+  );
 }
+
+const styles = StyleSheet.create({
+  shellContainer: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: COLORS.background,
+  },
+  headerContainer: {
+    backgroundColor: COLORS.surface,
+    paddingTop: Platform.OS === 'ios' ? 48 : 16,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.line,
+  },
+  profileButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContentContainer: {
+    flex: 1,
+    marginTop: -2,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'visible',
+    paddingBottom: Platform.OS === 'android' ? 72 : 80,
+  },
+  surfaceContentContainer: {
+    flex: 1,
+    overflow: 'visible',
+    paddingBottom: Platform.OS === 'android' ? 72 : 80,
+  },
+  bottomNavContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 64,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.line,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    zIndex: 1000,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 0,
+  },
+  navTab: {
+    flex: 1,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+  },
+});
 
 export default DshPartnerSurface;

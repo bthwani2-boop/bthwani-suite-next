@@ -16,6 +16,7 @@ export type TextFieldProps = {
   disabled?: boolean;
   secureTextEntry?: boolean;
   multiline?: boolean;
+  numberOfLines?: number;
   onChangeText?: (value: string) => void;
 };
 

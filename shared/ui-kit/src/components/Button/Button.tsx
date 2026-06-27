@@ -3,27 +3,27 @@ import { Spinner } from "tamagui";
 import { StyledButton } from "../_shared";
 
 export type ButtonProps = {
-  children?: ReactNode;
-  label?: string;
-  size?: "sm" | "md" | "lg";
-  tone?: "primary" | "secondary" | "ghost" | "danger" | "success";
-  loading?: boolean;
-  disabled?: boolean;
-  fullWidth?: boolean;
-  leading?: ReactNode;
-  trailing?: ReactNode;
-  accessibilityLabel?: string;
+  children?: ReactNode | undefined;
+  label?: string | undefined;
+  size?: ("sm" | "md" | "lg") | undefined;
+  tone?: ("primary" | "secondary" | "ghost" | "danger" | "success") | undefined;
+  loading?: boolean | undefined;
+  disabled?: boolean | undefined;
+  fullWidth?: boolean | undefined;
+  leading?: ReactNode | undefined;
+  trailing?: ReactNode | undefined;
+  accessibilityLabel?: string | undefined;
   accessibilityState?: {
-    selected?: boolean;
-    checked?: boolean;
-    expanded?: boolean;
-    disabled?: boolean;
-    busy?: boolean;
-  };
-  onPress?: () => void;
-  circular?: boolean;
-  pill?: boolean;
-  style?: unknown;
+    selected?: boolean | undefined;
+    checked?: boolean | undefined;
+    expanded?: boolean | undefined;
+    disabled?: boolean | undefined;
+    busy?: boolean | undefined;
+  } | undefined;
+  onPress?: (() => void) | undefined;
+  circular?: boolean | undefined;
+  pill?: boolean | undefined;
+  style?: unknown | undefined;
 };
 
 export function Button({

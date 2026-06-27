@@ -311,3 +311,51 @@ export function getDshPartnerReadinessChecklist(
     { id: 'active',       label: 'الشريك نشط (اعتماد العمليات)', satisfied: activeDone, blockedReason: activeDone ? undefined : 'بانتظار اعتماد العمليات النهائي وتفعيل الشريك' },
   ] as const;
 }
+
+export type DshPartnerVisibilityBadge = 'active' | 'closed' | 'busy' | 'out-of-zone' | 'hidden-pending-approval' | 'catalog-not-ready';
+
+export function getDshPartnerVisibilityBadge(
+  status: DshPartnerActivationStatus,
+  storeOpen: boolean,
+  busy = false,
+  inZone = true,
+): DshPartnerVisibilityBadge {
+  if (status === 'client_visible' || status === 'partner_active') {
+    if (!inZone) return 'out-of-zone';
+    if (!storeOpen) return 'closed';
+    if (busy) return 'busy';
+    return 'active';
+  }
+  if (
+    status === 'catalog_not_ready' ||
+    status === 'delivery_modes_not_ready' ||
+    status === 'catalog_ready' ||
+    status === 'delivery_modes_ready'
+  ) {
+    return 'catalog-not-ready';
+  }
+  return 'hidden-pending-approval';
+}
+
+export function getDshPartnerVisibilityBadgeLabel(badge: DshPartnerVisibilityBadge): string {
+  switch (badge) {
+    case 'active':                   return 'مفتوح';
+    case 'closed':                   return 'مغلق الآن';
+    case 'busy':                     return 'مشغول';
+    case 'out-of-zone':              return 'خارج نطاق التوصيل';
+    case 'hidden-pending-approval':  return 'ليس شريكًا معتمدًا';
+    case 'catalog-not-ready':        return 'الكتالوج غير جاهز';
+  }
+}
+
+export function getDshPartnerVisibilityBadgeTone(
+  badge: DshPartnerVisibilityBadge,
+): 'success' | 'warning' | 'danger' | 'muted' {
+  switch (badge) {
+    case 'active':      return 'success';
+    case 'closed':      return 'warning';
+    case 'busy':        return 'warning';
+    case 'out-of-zone': return 'danger';
+    default:            return 'muted';
+  }
+}

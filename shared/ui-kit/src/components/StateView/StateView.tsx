@@ -9,12 +9,12 @@ export type StateTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 export type StateViewProps = {
   title: string;
-  description?: string;
-  tone?: StateTone;
-  loading?: boolean;
-  icon?: ReactNode;
-  actionLabel?: string;
-  onActionPress?: () => void;
+  description?: string | undefined;
+  tone?: StateTone | undefined;
+  loading?: boolean | undefined;
+  icon?: ReactNode | undefined;
+  actionLabel?: string | undefined;
+  onActionPress?: (() => void) | undefined;
 };
 
 export function StateView({

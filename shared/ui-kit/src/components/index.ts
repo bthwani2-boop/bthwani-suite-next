@@ -23,3 +23,11 @@ export * from "./DataTable";
 export * from "./PermissionState";
 export * from "./OfflineState";
 export * from "./Icon/Icon";
+export * from "./Box";
+export * from "./Divider";
+export * from "./SectionHeader";
+export * from "./SearchField";
+export * from "./SegmentedControl";
+export * from "./FilterRail";
+
+

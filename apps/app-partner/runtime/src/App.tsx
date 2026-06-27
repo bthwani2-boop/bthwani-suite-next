@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { colorRoles } from "@bthwani/ui-kit";
+import { BthwaniUiProvider, colorRoles } from "@bthwani/ui-kit";
 import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
 
 function AppContent() {
@@ -18,9 +18,11 @@ function AppContent() {
 
 export function App() {
   return (
-    <SafeAreaProvider>
-      <AppContent />
-    </SafeAreaProvider>
+    <BthwaniUiProvider>
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </BthwaniUiProvider>
   );
 }
 

@@ -13,7 +13,8 @@ import {
   Text,
   lightThemeColors,
 } from "@bthwani/ui-kit";
-import { useFinanceController } from "../../shared/finance";
+import { useFinanceController } from "../../shared/finance-wlt-link/finance";
+
 
 export function FinanceDashboardScreen() {
   const router = useRouter();
