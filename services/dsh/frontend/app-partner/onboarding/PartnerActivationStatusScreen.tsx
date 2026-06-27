@@ -32,6 +32,14 @@ export function PartnerActivationStatusScreen() {
   if (c.statusState.kind === "loading" || c.statusState.kind === "idle") {
     return <StateView title="جاري تحميل حالة التأهيل…" loading />;
   }
+  if (c.statusState.kind === "forbidden") {
+    return (
+      <StateView
+        title="غير مصرح"
+        description="ليس لديك صلاحية عرض هذه البيانات."
+      />
+    );
+  }
   if (c.statusState.kind === "not_found") {
     return (
       <StateView
