@@ -239,7 +239,12 @@ export function PartnerOrdersScreen({ storeId, statusFilter: propStatusFilter, o
     return (
       <View style={{ gap: spacing[2] }}>
         {state.orders.map((order) => (
-          <OrderRow key={order.id} order={order} onAction={reload} onOpenSettlement={onOpenSettlement} />
+          <OrderRow
+            key={order.id}
+            order={order}
+            onAction={reload}
+            {...(onOpenSettlement ? { onOpenSettlement } : {})}
+          />
         ))}
       </View>
     );

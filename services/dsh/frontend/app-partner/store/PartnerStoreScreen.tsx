@@ -114,7 +114,7 @@ export function PartnerStoreScreen({
             title="أداء متجري التشغيلي"
             subtitle="عرض مؤشرات القبول والرفض والأداء"
             onPress={onOpenPerformance}
-            trailing={<Text role="bodySm" tone="brand">◀</Text>}
+            trailing={<Text role="bodySm" tone="action">◀</Text>}
           />
         )}
       </Card>

@@ -18,7 +18,10 @@ function isSameRoute(left: DshPartnerRouteState, right: DshPartnerRouteState): b
 function resolveCommandRoute(command?: DshPartnerNavigationCommand): DshPartnerRouteState | null {
   if (!command) return null;
   if (command.target === 'settlement') {
-    return { kind: 'settlement', orderId: command.orderId };
+    return {
+      kind: 'settlement',
+      ...(command.orderId ? { orderId: command.orderId } : {}),
+    };
   }
   if (
     command.target === 'store' ||

@@ -63,6 +63,9 @@ export function PartnerSettlementScreen({ orderId }: Props) {
   const paymentLabel = buildFinanceStatusLabel(data.paymentStatus, "payment");
   const settlementLabel = buildFinanceStatusLabel(data.settlementStatus, "settlement");
 
+  const paymentBadge = paymentLabel.badge === "error" ? "danger" : paymentLabel.badge;
+  const settlementBadge = settlementLabel.badge === "error" ? "danger" : settlementLabel.badge;
+
   return (
     <ScrollScreen>
       <Header title="حالة التسوية" subtitle={`الطلب: ${data.orderId}`} />
@@ -76,11 +79,11 @@ export function PartnerSettlementScreen({ orderId }: Props) {
       <Card style={styles.card}>
         <View style={styles.row}>
           <Text role="label">حالة الدفع</Text>
-          <Badge label={paymentLabel.label} tone={paymentLabel.badge} />
+          <Badge label={paymentLabel.label} tone={paymentBadge} />
         </View>
         <View style={styles.row}>
           <Text role="label">حالة التسوية</Text>
-          <Badge label={settlementLabel.label} tone={settlementLabel.badge} />
+          <Badge label={settlementLabel.label} tone={settlementBadge} />
         </View>
         {data.refundStatus && (
           <View style={styles.row}>
