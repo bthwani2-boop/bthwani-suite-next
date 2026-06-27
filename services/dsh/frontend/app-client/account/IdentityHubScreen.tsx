@@ -3,19 +3,15 @@
 // No backend wiring — profile save/delete are surfaced as callback props for the host to bind.
 
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
-  Box,
   Button,
-  Icon,
-  MobileScrollView,
+  Card,
+  Header,
+  ScrollScreen,
   Text,
   TextField,
-  TopBar,
-  colorPalette,
-  safeArea,
   spacing,
-  useTheme,
 } from '@bthwani/ui-kit';
 
 export type IdentityHubScreenProps = {
@@ -25,8 +21,6 @@ export type IdentityHubScreenProps = {
 };
 
 export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: IdentityHubScreenProps) {
-  const { theme } = useTheme();
-
   const [displayName, setDisplayName] = React.useState('');
   const [phone, setPhone] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -62,171 +56,214 @@ export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: Id
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surface }}>
-      <TopBar
-        variant="surface"
-        title="الملف الشخصي"
-        actions={
-          onBack
-            ? [{ id: 'back', icon: <Icon name="chevron-back" mirrored size={18} />, accessibilityLabel: 'العودة', onPress: onBack }]
-            : []
-        }
-      />
+    <ScrollScreen>
+      <Header title="الملف الشخصي" subtitle="بيانات الحساب الشخصي" />
 
-      <MobileScrollView
-        fill
-        padding={4}
-        gap={4}
-        contentContainerStyle={{ paddingBottom: safeArea.comfortable + spacing[12] }}
-      >
-        <View style={{ gap: spacing[3] }}>
-          {/* Header row */}
-          <Box align="center" gap={2} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right', color: theme.text }}>بيانات الحساب الشخصي</Text>
-            <Box align="center" gap={1} style={{ flexDirection: 'row-reverse' }}>
-              <Icon name="checkmark-circle" size={16} color={colorPalette.success} />
-              <Text role="bodySm" weight="bold" style={{ color: colorPalette.success }}>نشط وآمن</Text>
-            </Box>
-          </Box>
+      <View style={styles.container}>
+        {/* Profile Fields */}
+        <Card style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text role="titleMd" style={styles.sectionTitle}>بيانات الحساب</Text>
+            <Text tone="success" style={styles.statusText}>● نشط وآمن</Text>
+          </View>
 
-          {/* Fields */}
-          <Box gap={3} style={{ marginTop: spacing[2] }}>
-            <Box gap={1}>
-              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>الاسم الظاهر</Text>
-              <TextField
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder="الاسم الظاهر"
-                style={{ textAlign: 'right', color: theme.text }}
-              />
-            </Box>
-
-            <Box gap={1}>
-              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>رقم الجوال</Text>
-              <TextField
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="رقم الجوال"
-                keyboardType="phone-pad"
-                style={{ textAlign: 'right', color: theme.text }}
-              />
-            </Box>
-
-            <Box gap={1}>
-              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>البريد الإلكتروني</Text>
-              <TextField
-                value={email}
-                onChangeText={setEmail}
-                placeholder="البريد الإلكتروني"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={{ textAlign: 'right', color: theme.text }}
-              />
-            </Box>
-
-            <Button
-              label="حفظ البيانات"
-              tone="brand"
-              onPress={() => onSaveProfile?.({ displayName, phone, email })}
-              style={{ width: '100%' }}
+          <View style={styles.fieldGroup}>
+            <Text role="caption" tone="muted" style={styles.fieldLabel}>الاسم الظاهر</Text>
+            <TextField
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="الاسم الظاهر"
             />
+          </View>
 
-            {/* Password section */}
-            <Box style={{ borderTopWidth: 1, borderColor: theme.line, paddingTop: spacing[3], marginTop: spacing[1] }}>
-              {!isChangingPassword ? (
-                <Button
-                  label="تغيير كلمة المرور"
-                  tone="secondary"
-                  onPress={() => setIsChangingPassword(true)}
-                  style={{ width: '100%' }}
+          <View style={styles.fieldGroup}>
+            <Text role="caption" tone="muted" style={styles.fieldLabel}>رقم الجوال</Text>
+            <TextField
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="رقم الجوال"
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text role="caption" tone="muted" style={styles.fieldLabel}>البريد الإلكتروني</Text>
+            <TextField
+              value={email}
+              onChangeText={setEmail}
+              placeholder="البريد الإلكتروني"
+            />
+          </View>
+
+          <Button
+            label="حفظ البيانات"
+            tone="primary"
+            onPress={() => onSaveProfile?.({ displayName, phone, email })}
+          />
+        </Card>
+
+        {/* Password Section */}
+        <Card style={styles.card}>
+          <Text role="titleMd" style={styles.sectionTitle}>كلمة المرور</Text>
+
+          {!isChangingPassword ? (
+            <Button
+              label="تغيير كلمة المرور"
+              tone="secondary"
+              onPress={() => setIsChangingPassword(true)}
+            />
+          ) : (
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldGroup}>
+                <Text role="caption" tone="muted" style={styles.fieldLabel}>كلمة المرور الجديدة</Text>
+                <TextField
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="أدخل كلمة المرور الجديدة"
+                  secureTextEntry
                 />
-              ) : (
-                <Box gap={3}>
-                  <Text role="bodyStrong" style={{ textAlign: 'right', color: theme.text }}>تحديث كلمة المرور</Text>
+              </View>
 
-                  <Box gap={1}>
-                    <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>كلمة المرور الجديدة</Text>
-                    <TextField
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="أدخل كلمة المرور الجديدة"
-                      secureTextEntry
-                      style={{ textAlign: 'right', color: theme.text }}
-                    />
-                  </Box>
+              <View style={styles.fieldGroup}>
+                <Text role="caption" tone="muted" style={styles.fieldLabel}>تأكيد كلمة المرور</Text>
+                <TextField
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="أعد كتابة كلمة المرور"
+                  secureTextEntry
+                />
+              </View>
 
-                  <Box gap={1}>
-                    <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>تأكيد كلمة المرور</Text>
-                    <TextField
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      placeholder="أعد كتابة كلمة المرور"
-                      secureTextEntry
-                      style={{ textAlign: 'right', color: theme.text }}
-                    />
-                  </Box>
+              {passwordMsg ? (
+                <Text
+                  role="caption"
+                  style={[styles.fieldLabel, { color: passwordTone === 'success' ? '#15803D' : '#DC2626' }]}
+                >
+                  {passwordMsg}
+                </Text>
+              ) : null}
 
-                  {passwordMsg ? (
-                    <Text
-                      role="bodySm"
-                      style={{ textAlign: 'right', color: passwordTone === 'success' ? colorPalette.success : colorPalette.danger }}
-                    >
-                      {passwordMsg}
-                    </Text>
-                  ) : null}
-
-                  <Box gap={2} style={{ flexDirection: 'row-reverse' }}>
-                    <Button label="حفظ كلمة المرور" tone="brand" onPress={handleSavePassword} style={{ flex: 1 }} />
-                    <Button label="إلغاء" tone="ghost" onPress={() => { setIsChangingPassword(false); setPassword(''); setConfirmPassword(''); setPasswordMsg(''); }} />
-                  </Box>
-                </Box>
-              )}
-            </Box>
-
-            {/* Danger zone */}
-            <Box style={{ borderTopWidth: 1, borderColor: theme.line, paddingTop: spacing[3], marginTop: spacing[2] }}>
-              {!isDeletingAccount ? (
+              <View style={styles.actionRow}>
+                <Button label="حفظ كلمة المرور" tone="primary" onPress={handleSavePassword} />
                 <Button
-                  label="حذف الحساب"
+                  label="إلغاء"
+                  tone="ghost"
+                  onPress={() => {
+                    setIsChangingPassword(false);
+                    setPassword('');
+                    setConfirmPassword('');
+                    setPasswordMsg('');
+                  }}
+                />
+              </View>
+            </View>
+          )}
+        </Card>
+
+        {/* Danger Zone */}
+        <Card style={[styles.card, styles.dangerCard]}>
+          <Text role="titleMd" style={styles.dangerTitle}>منطقة الخطر</Text>
+
+          {!isDeletingAccount ? (
+            <Button
+              label="حذف الحساب"
+              tone="danger"
+              onPress={() => setIsDeletingAccount(true)}
+            />
+          ) : (
+            <View style={styles.fieldGroup}>
+              <Text role="body" style={styles.dangerText}>
+                حذف الحساب سيؤدي إلى مسح كافة البيانات والطلبات بشكل نهائي لا يمكن استرجاعه.
+              </Text>
+              <Text role="caption" style={styles.dangerText}>اكتب "حذف" في الحقل أدناه للتأكيد:</Text>
+
+              <TextField
+                value={deleteConfirm}
+                onChangeText={setDeleteConfirm}
+                placeholder='اكتب "حذف" للتأكيد'
+              />
+
+              <View style={styles.actionRow}>
+                <Button
+                  label="حذف الحساب نهائياً"
+                  disabled={deleteConfirm !== 'حذف'}
                   tone="danger"
-                  onPress={() => setIsDeletingAccount(true)}
-                  style={{ width: '100%' }}
+                  onPress={() => {
+                    onDeleteAccount?.();
+                    setIsDeletingAccount(false);
+                    setDeleteConfirm('');
+                  }}
                 />
-              ) : (
-                <Box gap={2} padding={3} style={{ backgroundColor: colorPalette.dangerSoft, borderRadius: 15, borderWidth: 1, borderColor: colorPalette.dangerSoft }}>
-                  <Text role="bodyStrong" style={{ textAlign: 'right', color: colorPalette.dangerStrong }}>تنبيه أمان حساس!</Text>
-                  <Text role="bodySm" style={{ textAlign: 'right', color: colorPalette.dangerStrong }}>
-                    حذف الحساب سيؤدي إلى مسح كافة البيانات والطلبات بشكل نهائي لا يمكن استرجاعه.
-                  </Text>
-                  <Text role="bodySm" style={{ textAlign: 'right', color: colorPalette.dangerStrong, marginTop: spacing[1] }}>
-                    اكتب "حذف" في الحقل أدناه للتأكيد:
-                  </Text>
-
-                  <TextField
-                    value={deleteConfirm}
-                    onChangeText={setDeleteConfirm}
-                    placeholder='اكتب "حذف" للتأكيد'
-                    style={{ textAlign: 'right', color: colorPalette.dangerStrong }}
-                  />
-
-                  <Box gap={2} style={{ marginTop: spacing[2], flexDirection: 'row-reverse' }}>
-                    <Button
-                      label="حذف الحساب نهائياً"
-                      disabled={deleteConfirm !== 'حذف'}
-                      tone="danger"
-                      onPress={() => { onDeleteAccount?.(); setIsDeletingAccount(false); setDeleteConfirm(''); }}
-                      style={{ flex: 1 }}
-                    />
-                    <Button label="تراجع" tone="ghost" onPress={() => { setIsDeletingAccount(false); setDeleteConfirm(''); }} />
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        </View>
-      </MobileScrollView>
-    </View>
+                <Button
+                  label="تراجع"
+                  tone="ghost"
+                  onPress={() => {
+                    setIsDeletingAccount(false);
+                    setDeleteConfirm('');
+                  }}
+                />
+              </View>
+            </View>
+          )}
+        </Card>
+      </View>
+    </ScrollScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  card: {
+    padding: spacing[4],
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: spacing[3],
+    marginBottom: spacing[3],
+  },
+  dangerCard: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FFF5F5',
+  },
+  cardHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontWeight: 'bold',
+    color: '#1E293B',
+    textAlign: 'right',
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  fieldGroup: {
+    gap: spacing[2],
+  },
+  fieldLabel: {
+    textAlign: 'right',
+    color: '#64748B',
+  },
+  actionRow: {
+    flexDirection: 'row-reverse',
+    gap: spacing[2],
+    flexWrap: 'wrap',
+  },
+  dangerTitle: {
+    fontWeight: 'bold',
+    color: '#DC2626',
+    textAlign: 'right',
+  },
+  dangerText: {
+    textAlign: 'right',
+    color: '#B91C1C',
+    lineHeight: 20,
+  },
+});
 
 export default IdentityHubScreen;

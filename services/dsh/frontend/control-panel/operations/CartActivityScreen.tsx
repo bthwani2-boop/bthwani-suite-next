@@ -33,7 +33,7 @@ export function CartActivityScreen() {
   const controller = useOperatorCartsController(identity.state.kind);
 
   if (identity.state.kind !== "authenticated") {
-    return <Text role="body" dir="rtl">سجّل الدخول بحساب operator لمتابعة نشاط السلال.</Text>;
+    return <Text role="body">سجّل الدخول بحساب operator لمتابعة نشاط السلال.</Text>;
   }
 
   return (

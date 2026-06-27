@@ -14,7 +14,8 @@ import {
 } from "@bthwani/ui-kit";
 import {
   useSupportTicketController,
-  TICKET_STATUS_LABELS,
+  SUPPORT_CLIENT_CATEGORIES,
+  buildSupportTicketViewModel,
   TICKET_CATEGORY_LABELS,
   type DshTicketCategory,
 } from "../../shared/support";
@@ -31,8 +32,6 @@ export function SupportTicketScreen() {
   if (identity.state.kind !== "authenticated") {
     return <StateView title="تسجيل الدخول مطلوب" description="يجب تسجيل دخولك للوصول إلى الدعم." />;
   }
-
-  const CATEGORIES: DshTicketCategory[] = ["order_issue", "delivery_issue", "store_quality", "payment_reference", "account_access", "app_bug", "other"];
 
   function handleSubmit() {
     void submitTicket({ subject: subject.trim(), description: description.trim(), category }).then(() => {
@@ -55,7 +54,7 @@ export function SupportTicketScreen() {
           <View style={styles.form}>
             <Text role="titleSm">تفاصيل التذكرة</Text>
             <View style={styles.chips}>
-              {CATEGORIES.map((c) => (
+              {SUPPORT_CLIENT_CATEGORIES.map((c) => (
                 <Button key={c} label={TICKET_CATEGORY_LABELS[c]} tone={category === c ? "primary" : "ghost"} onPress={() => setCategory(c)} />
               ))}
             </View>
@@ -78,18 +77,21 @@ export function SupportTicketScreen() {
       {listState.kind === "error" && <StateView title="تعذر تحميل التذاكر" description={listState.message} actionLabel="إعادة المحاولة" onActionPress={() => void reload()} />}
       {listState.kind === "empty" && <StateView title="لا توجد تذاكر" description="لم تفتح أي تذاكر دعم بعد." />}
       {listState.kind === "success" &&
-        listState.tickets.map((t) => (
-          <Card key={t.id}>
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketInfo}>
-                <Text role="titleSm">{t.subject}</Text>
-                <Text role="caption" tone="muted">{TICKET_CATEGORY_LABELS[t.category]}</Text>
-                <Text role="caption" tone="muted">{t.createdAt}</Text>
+        listState.tickets.map((t) => {
+          const vm = buildSupportTicketViewModel(t);
+          return (
+            <Card key={vm.id}>
+              <View style={styles.ticketRow}>
+                <View style={styles.ticketInfo}>
+                  <Text role="titleSm">{vm.subject}</Text>
+                  <Text role="caption" tone="muted">{vm.categoryLabel}</Text>
+                  <Text role="caption" tone="muted">{vm.createdAt}</Text>
+                </View>
+                <Badge label={vm.statusLabel} tone={vm.statusTone} />
               </View>
-              <Badge label={TICKET_STATUS_LABELS[t.status]} tone={t.status === "resolved" || t.status === "closed" ? "success" : t.status === "in_review" ? "info" : "neutral"} />
-            </View>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
     </ScrollScreen>
   );
 }

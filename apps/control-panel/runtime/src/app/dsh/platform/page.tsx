@@ -1,6 +1,6 @@
 "use client";
 
-import { PlatformPoliciesScreen } from "@dsh-cp/platform";
+import { PlatformDashboardScreen } from "@dsh-cp/platform";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
@@ -28,7 +28,7 @@ export default function PlatformPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<PlatformPoliciesScreen />}
+      main={<PlatformDashboardScreen />}
     />
   );
 }

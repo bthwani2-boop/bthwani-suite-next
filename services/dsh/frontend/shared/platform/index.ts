@@ -44,4 +44,6 @@ export * from './resolve-dsh-color-token';
 export * from './appearance.contract';
 export * from './platform-audit-state';
 export * from './platform.types';
+export * from './platform-registry';
+
 

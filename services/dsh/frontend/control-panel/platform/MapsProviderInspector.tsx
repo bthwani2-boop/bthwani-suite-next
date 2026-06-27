@@ -22,14 +22,14 @@ export function MapsProviderInspector({ provider }: Props) {
         <ListItem title="رؤية الاعتماد" subtitle={provider.credentialVisibility} />
         <ListItem title="يتطلب مراجعة" subtitle={provider.auditRequired ? "نعم" : "لا"} />
 
-        <Text role="captionSm" style={styles.sectionTitle}>الأسطح المتأثرة</Text>
+        <Text role="caption" style={styles.sectionTitle}>الأسطح المتأثرة</Text>
         <View style={styles.badgeRow}>
           {(provider.affectedSurfaces as string[]).map((s) => (
             <Badge key={s} label={s} tone="neutral" />
           ))}
         </View>
 
-        <Text role="captionSm" style={styles.sectionTitle}>سياسة الاستخدام لكل سطح</Text>
+        <Text role="caption" style={styles.sectionTitle}>سياسة الاستخدام لكل سطح</Text>
         {Object.entries(MAPS_SURFACE_POLICY).map(([surface, policy]) => (
           <ListItem
             key={surface}

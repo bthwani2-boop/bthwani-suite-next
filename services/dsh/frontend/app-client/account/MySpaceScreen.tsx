@@ -1,28 +1,16 @@
 // Authority: services/dsh/frontend/app-client — client account surface.
 // Sovereign shared: services/dsh/frontend/shared
-// No local design system. No hardcoded colors outside theme/colorPalette.
 
 import React from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
-  Pressable,
-  View,
-  type PressableStateCallbackType,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import {
-  type BThwaniAppearanceMode,
-  Box,
-  Icon,
-  MobileScrollView,
+  Card,
+  Header,
+  ScrollScreen,
   Text,
-  TopBar,
   spacing,
-  useTheme,
-  SegmentedControl,
-  useDirection,
-  type Language,
 } from '@bthwani/ui-kit';
+import type { BThwaniAppearanceMode } from './AppearanceHubScreen';
 
 export type MySpaceScreenProps = {
   appearanceMode?: BThwaniAppearanceMode;
@@ -52,97 +40,45 @@ type TabConfig = {
   id: MySpaceTab;
   label: string;
   summary: string;
-  iconName: React.ComponentProps<typeof Icon>['name'];
+  emoji: string;
 };
 
 const TABS: TabConfig[] = [
-  { id: 'orders',       label: 'طلباتي',              summary: 'الطلب والتاريخ والتتبع',                        iconName: 'bag-outline'           },
-  { id: 'wallet',       label: 'المحفظة',              summary: 'الرصيد، الاسترداد، وطرق الدفع',                iconName: 'wallet-outline'         },
-  { id: 'loyalty',      label: 'النقاط والمكافآت',    summary: 'الرصيد، المستوى، وأقرب ثلاث مكافآت',          iconName: 'star-outline'           },
-  { id: 'subscription', label: 'الاشتراك',             summary: 'الخطة الحالية والتبديل عند الحاجة فقط',       iconName: 'card-outline'           },
-  { id: 'offers',       label: 'العروض والكوبونات',   summary: 'ثلاث فرص قابلة للاستخدام بدل قائمة طويلة',    iconName: 'pricetag-outline'       },
-  { id: 'addresses',    label: 'العناوين والموقع',    summary: 'إدارة العناوين وموقع التوصيل',                  iconName: 'location-outline'       },
-  { id: 'identity',     label: 'الملف الشخصي',        summary: 'البيانات الشخصية والأمان',                      iconName: 'person-outline'         },
-  { id: 'appearance',   label: 'المظهر',               summary: 'فاتح أبيض أو داكن زجاجي',                     iconName: 'color-palette-outline'  },
-  { id: 'language',     label: 'اللغة',                summary: 'العربية أو الإنجليزية',                        iconName: 'globe-outline'          },
-  { id: 'preferences',  label: 'تفضيلات التوصيل',     summary: 'إعدادات خاصة بالتسليم والاستبدال',             iconName: 'options-outline'        },
+  { id: 'orders',       label: 'طلباتي',            summary: 'الطلب والتاريخ والتتبع',                     emoji: '🛍' },
+  { id: 'wallet',       label: 'المحفظة',            summary: 'الرصيد، الاسترداد، وطرق الدفع',             emoji: '👛' },
+  { id: 'loyalty',      label: 'النقاط والمكافآت', summary: 'الرصيد، المستوى، وأقرب ثلاث مكافآت',        emoji: '⭐' },
+  { id: 'subscription', label: 'الاشتراك',           summary: 'الخطة الحالية والتبديل عند الحاجة فقط',    emoji: '💳' },
+  { id: 'offers',       label: 'العروض والكوبونات', summary: 'فرص قابلة للاستخدام بدل قائمة طويلة',      emoji: '🏷' },
+  { id: 'addresses',    label: 'العناوين والموقع',  summary: 'إدارة العناوين وموقع التوصيل',               emoji: '📍' },
+  { id: 'identity',     label: 'الملف الشخصي',      summary: 'البيانات الشخصية والأمان',                   emoji: '👤' },
+  { id: 'appearance',   label: 'المظهر',             summary: 'فاتح أبيض أو داكن زجاجي',                  emoji: '🎨' },
+  { id: 'preferences',  label: 'تفضيلات التوصيل',   summary: 'إعدادات خاصة بالتسليم والاستبدال',          emoji: '⚙️' },
 ];
 
-// ─── Row ──────────────────────────────────────────────────────────────────────
-
-interface MySpaceRowProps {
+function MySpaceRow({
+  title,
+  summary,
+  emoji,
+  onPress,
+}: {
   title: string;
-  subtitle: string;
-  iconName: React.ComponentProps<typeof Icon>['name'];
+  summary: string;
+  emoji: string;
   onPress?: () => void;
-  actionElement?: React.ReactNode;
-}
-
-function MySpaceRow({ title, subtitle, iconName, onPress, actionElement }: MySpaceRowProps) {
-  const { theme } = useTheme();
-
+}) {
   return (
-    <Pressable
-      accessibilityRole={actionElement ? undefined : 'button'}
-      onPress={actionElement ? undefined : onPress}
-      disabled={!!actionElement}
-      style={({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> => ({
-        width: '100%',
-        backgroundColor: pressed ? theme.surfaceInset : 'transparent',
-        borderBottomWidth: 1,
-        borderBottomColor: theme.line,
-      })}
-    >
-      <View
-        style={{
-          width: '100%',
-          paddingHorizontal: spacing[1],
-          paddingVertical: spacing[3],
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: spacing[3],
-        }}
-      >
-        {/* Icon badge */}
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 15,
-            borderWidth: 1,
-            borderColor: theme.line,
-            backgroundColor: theme.brandSurface,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name={iconName} size={21} color={theme.brand} />
-        </View>
-
-        {/* Text cluster */}
-        <View style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}>
-          <Text role="bodyStrong" style={{ textAlign: 'right', color: theme.text }}>{title}</Text>
-          <Text role="bodySm" tone="muted" style={{ textAlign: 'right', marginTop: 2 }}>
-            {subtitle}
-          </Text>
-        </View>
-
-        {/* Trailing: action or chevron */}
-        {actionElement ? (
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            {actionElement}
-          </View>
-        ) : (
-          <View style={{ width: 28, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="chevron-back" size={20} color={theme.textSoft} />
-          </View>
-        )}
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+      <View style={styles.rowEmoji}>
+        <Text style={styles.emojiText}>{emoji}</Text>
       </View>
+      <View style={styles.rowText}>
+        <Text role="body" style={styles.rowTitle}>{title}</Text>
+        <Text role="caption" tone="muted" style={styles.rowSummary}>{summary}</Text>
+      </View>
+      <Text style={styles.chevron}>‹</Text>
     </Pressable>
   );
 }
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function MySpaceScreen({
   appearanceMode = 'lightPremium',
@@ -155,9 +91,6 @@ export function MySpaceScreen({
   onOpenAppearance,
   onOpenPreferences,
 }: MySpaceScreenProps) {
-  const { theme } = useTheme();
-  const { language, setLanguage } = useDirection();
-
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
       case 'orders':       return onOpenOrders?.();
@@ -174,59 +107,77 @@ export function MySpaceScreen({
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surface }}>
-      <TopBar variant="surface" title="مساحتي" />
+    <ScrollScreen>
+      <Header title="مساحتي" subtitle="إدارة الحساب والتفضيلات" />
 
-      <MobileScrollView fill padding={4} gap={3}>
-        <Box gap={0}>
-          {TABS.map((tab) => {
-            let actionElement: React.ReactNode;
-
-            if (tab.id === 'appearance') {
-              actionElement = (
-                <SegmentedControl
-                  size="sm"
-                  fullWidth={false}
-                  style={{ width: 140 }}
-                  options={[
-                    { value: 'lightPremium', label: 'فاتح' },
-                    { value: 'darkGlass',    label: 'داكن' },
-                  ]}
-                  value={appearanceMode === 'darkGlass' ? 'darkGlass' : 'lightPremium'}
-                  onValueChange={(v) => onAppearanceModeChange?.(v as BThwaniAppearanceMode)}
-                />
-              );
-            } else if (tab.id === 'language') {
-              actionElement = (
-                <SegmentedControl
-                  size="sm"
-                  fullWidth={false}
-                  style={{ width: 140 }}
-                  options={[
-                    { value: 'ar', label: 'عربي' },
-                    { value: 'en', label: 'EN'    },
-                  ]}
-                  value={language === 'en' ? 'en' : 'ar'}
-                  onValueChange={(v) => setLanguage(v as Language)}
-                />
-              );
-            }
-
-            return (
-              <MySpaceRow
-                key={tab.id}
-                title={tab.label}
-                subtitle={tab.summary}
-                iconName={tab.iconName}
-                actionElement={actionElement}
-                onPress={() => handleRowPress(tab.id)}
-              />
-            );
-          })}
-        </Box>
-      </MobileScrollView>
-    </View>
+      <Card style={styles.listCard}>
+        {TABS.map((tab) => (
+          <MySpaceRow
+            key={tab.id}
+            title={tab.label}
+            summary={tab.summary}
+            emoji={tab.emoji}
+            onPress={() => handleRowPress(tab.id)}
+          />
+        ))}
+      </Card>
+    </ScrollScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  listCard: {
+    margin: spacing[4],
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: spacing[3],
+  },
+  rowPressed: {
+    backgroundColor: '#F8FAFC',
+  },
+  rowEmoji: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FFF7F5',
+    borderWidth: 1,
+    borderColor: '#FDDCCA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiText: {
+    fontSize: 20,
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    fontWeight: '600',
+    color: '#1E293B',
+    textAlign: 'right',
+  },
+  rowSummary: {
+    color: '#64748B',
+    textAlign: 'right',
+    fontSize: 12,
+  },
+  chevron: {
+    fontSize: 18,
+    color: '#94A3B8',
+    transform: [{ scaleX: -1 }],
+  },
+});
 
 export default MySpaceScreen;

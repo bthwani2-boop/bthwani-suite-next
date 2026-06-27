@@ -48,7 +48,7 @@ export function OrderQueueScreen() {
 
   if (identity.state.kind !== "authenticated") {
     return (
-      <Text role="body" dir="rtl">
+      <Text role="body">
         سجّل الدخول بحساب operator لمتابعة طابور الطلبات.
       </Text>
     );

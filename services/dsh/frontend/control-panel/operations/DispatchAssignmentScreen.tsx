@@ -72,7 +72,13 @@ export function DispatchAssignmentScreen() {
   return (
     <DataTablePageFrame
       dir="rtl"
-      header={<CpPageHeader title="غرفة الإرسال" subtitle="تعيين الكابتن ومتابعة دورة التوصيل" />}
+      header={
+        <CpPageHeader title="غرفة الإرسال">
+          <Text role="body" tone="muted">
+            تعيين الكابتن ومتابعة دورة التوصيل
+          </Text>
+        </CpPageHeader>
+      }
       stateView={stateView}
     >
       <Card>

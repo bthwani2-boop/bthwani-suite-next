@@ -1,6 +1,6 @@
 "use client";
 
-import { SupportHubScreen } from "@dsh-cp/support";
+import { SupportDashboardScreen } from "@dsh-cp/support";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
@@ -28,7 +28,7 @@ export default function DshSupportPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<SupportHubScreen />}
+      main={<SupportDashboardScreen />}
     />
   );
 }

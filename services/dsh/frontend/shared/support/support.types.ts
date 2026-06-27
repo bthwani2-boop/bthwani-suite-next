@@ -26,8 +26,8 @@ export type DshSupportTicket = {
   readonly status: DshTicketStatus;
   readonly assignedTo: string;
   readonly orderId: string;
-  readonly resolvedAt?: string | null;
-  readonly closedAt?: string | null;
+  readonly resolvedAt?: string | null | undefined;
+  readonly closedAt?: string | null | undefined;
   readonly createdAt: string;
   readonly updatedAt: string;
 };
@@ -50,8 +50,8 @@ export type DshIncident = {
   readonly status: DshIncidentStatus;
   readonly affectedScope: DshIncidentScope;
   readonly raisedBy: string;
-  readonly resolvedBy?: string;
-  readonly resolvedAt?: string | null;
+  readonly resolvedBy?: string | undefined;
+  readonly resolvedAt?: string | null | undefined;
   readonly postmortemUrl: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -61,31 +61,31 @@ export type DshCreateTicketInput = {
   readonly subject: string;
   readonly description: string;
   readonly category: DshTicketCategory;
-  readonly priority?: DshTicketPriority;
-  readonly storeId?: string;
-  readonly orderId?: string;
+  readonly priority?: DshTicketPriority | undefined;
+  readonly storeId?: string | undefined;
+  readonly orderId?: string | undefined;
 };
 
 export type DshAddMessageInput = {
   readonly body: string;
-  readonly isInternal?: boolean;
+  readonly isInternal?: boolean | undefined;
 };
 
 export type DshUpdateTicketInput = {
   readonly status: DshTicketStatus;
-  readonly assignedTo?: string;
+  readonly assignedTo?: string | undefined;
 };
 
 export type DshCreateIncidentInput = {
   readonly title: string;
   readonly description: string;
   readonly severity: DshIncidentSeverity;
-  readonly affectedScope?: DshIncidentScope;
+  readonly affectedScope?: DshIncidentScope | undefined;
 };
 
 export type DshUpdateIncidentInput = {
   readonly status: DshIncidentStatus;
-  readonly postmortemUrl?: string;
+  readonly postmortemUrl?: string | undefined;
 };
 
 export const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {

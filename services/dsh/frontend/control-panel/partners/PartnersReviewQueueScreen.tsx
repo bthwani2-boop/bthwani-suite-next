@@ -1,158 +1,284 @@
 "use client";
 
-import { CpPageHeader } from "@bthwani/control-panel/components";
-import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
-import { usePartnerAdminController } from "../../shared/partner";
-import { getDshPartnerActivationStatusLabel } from "../../shared/partner";
-import type { DshPartnerActivationStatus } from "../../shared/partner";
-
-const STATUS_FILTER_OPTIONS: Array<{ value: DshPartnerActivationStatus | ""; label: string }> = [
-  { value: "", label: "الكل" },
-  { value: "submitted", label: "مُرسَل للمراجعة" },
-  { value: "documents_missing", label: "وثائق ناقصة" },
-  { value: "documents_uploaded", label: "وثائق مرفوعة" },
-  { value: "ops_review", label: "مراجعة العمليات" },
-  { value: "partner_active", label: "نشط" },
-  { value: "partner_deactivated", label: "موقوف" },
-];
+import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useIdentitySession } from "@bthwani/core-identity";
+import {
+  Badge,
+  Button,
+  Card,
+  ScrollScreen,
+  StateView,
+  Text,
+  lightThemeColors,
+} from "@bthwani/ui-kit";
+import { usePartnersController } from "../../shared/partner";
 
 type Props = {
-  onOpenPartner: (partnerId: string) => void;
+  readonly onOpenPartner?: (partnerId: string) => void;
 };
 
 export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const identity = useIdentitySession();
-  const c = usePartnerAdminController(identity.state.kind);
+
+  const controller = usePartnersController({
+    initialWorkspace: 'inbox',
+    searchParams: searchParams ?? undefined,
+    router: router ?? undefined,
+    authKind: identity.state.kind,
+  });
+
+  const {
+    activeTab,
+    activeSubTab,
+    tabItems,
+    subTabItems,
+    activePartnersCount,
+    pendingCount,
+    adminController,
+    handleSelectTab,
+    handleSelectSubTab,
+  } = controller;
+
+  const activeTabMeta = useMemo(() => {
+    return tabItems.find(t => t.id === activeTab);
+  }, [tabItems, activeTab]);
+
+  const activeSubTabMeta = useMemo(() => {
+    return subTabItems.find(s => s.id === activeSubTab);
+  }, [subTabItems, activeSubTab]);
 
   if (identity.state.kind !== "authenticated") {
-    return (
-      <section dir="rtl" style={{ maxWidth: "32rem", margin: "4rem auto", padding: "2rem", border: "1px solid var(--dsh-card-border)", borderRadius: "1rem", background: "var(--dsh-card-bg)" }}>
-        <h2 style={{ color: "var(--dsh-text-primary)", marginTop: 0 }}>دخول مشغّل الشركاء</h2>
-        <button
-          onClick={() => devBypassLogin("operator")}
-          style={{ padding: "0.75rem 1.5rem", borderRadius: "0.5rem", backgroundColor: "var(--dsh-text-primary)", color: "white", border: "none", cursor: "pointer", fontFamily: "var(--font-arabic)" }}
-        >
-          تجاوز تسجيل الدخول (مطور)
-        </button>
-      </section>
-    );
+    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
   }
 
+  const renderInboxContent = () => {
+    if (activeSubTab === 'registration') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Main Onboarding File Details - مخبز عون */}
+          <Card style={{ padding: '1.5rem', border: `1px solid ${lightThemeColors.borderColor}` }}>
+            {/* Header section of application card */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <Text role="caption" tone="muted">ملف الانضمام</Text>
+                <Text role="titleLg" style={{ marginTop: '0.25rem', fontWeight: 'bold' }}>مخبز عون</Text>
+                <Text role="body" tone="muted" style={{ fontSize: '12px', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+                  store-1781677110084990779
+                </Text>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <Badge label="بيانات متجر" tone="action" />
+                  <Badge label="تطبيق الميداني" tone="info" />
+                </div>
+              </div>
+
+              <Card style={{ padding: '0.5rem 1rem', backgroundColor: 'rgba(185,106,6,0.08)', border: `1.5px solid rgba(185,106,6,0.25)`, alignItems: 'center' }}>
+                <Text style={{ fontSize: '10px', color: '#b96a06', marginBottom: '2px' }}>المرحلة الحالية</Text>
+                <Text style={{ fontSize: '14px', fontWeight: '700', color: '#b96a06' }}>تم التقديم</Text>
+              </Card>
+            </div>
+
+            {/* Basic Store Data Grid */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <Text role="caption" tone="muted" style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>بيانات المتجر الأساسية</Text>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                  <Text role="caption" tone="muted">العنوان</Text>
+                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>بيت بوس</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                  <Text role="caption" tone="muted">التصنيف</Text>
+                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>بقالة ومواد غذائية</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                  <Text role="caption" tone="muted">مرحلة النشر</Text>
+                  <Text role="body" style={{ fontWeight: 'bold', color: lightThemeColors.danger, marginTop: '0.25rem' }}>pending_review</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                  <Text role="caption" tone="muted">وقت الإرسال</Text>
+                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>2026/06/17، 9:18 ص</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                  <Text role="caption" tone="muted">استلام من المتجر</Text>
+                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>لا</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                  <Text role="caption" tone="muted">توصيل المتجر</Text>
+                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>لا</Text>
+                </Card>
+              </div>
+            </div>
+
+            {/* Contact & operations */}
+            <div>
+              <Text role="caption" tone="muted" style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>بيانات التواصل والعمل</Text>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <Card style={{ padding: '0.75rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text role="body">📞 رقم التواصل</Text>
+                  <Text role="body" tone="muted" style={{ fontStyle: 'italic' }}>لم يُرسل بعد من التطبيق الميداني</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text role="body">🕐 ساعات العمل</Text>
+                  <Text role="body" tone="muted" style={{ fontStyle: 'italic' }}>لم يُرسل بعد من التطبيق الميداني</Text>
+                </Card>
+                <Card style={{ padding: '0.75rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text role="body">📋 ملخص الكتالوج</Text>
+                  <Text role="body" tone="muted" style={{ fontStyle: 'italic' }}>لم يُرسل بعد من التطبيق الميداني</Text>
+                </Card>
+              </div>
+            </div>
+          </Card>
+
+          {/* Table of other partners */}
+          {adminController.listState.kind === 'success' && adminController.rows.length > 0 && (
+            <Card style={{ padding: '1rem' }}>
+              <Text role="titleMd" style={{ marginBottom: '1rem' }}>قائمة الشركاء والمقدمين الآخرين</Text>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
+                      <th style={{ padding: '0.75rem' }}>اسم الشريك</th>
+                      <th style={{ padding: '0.75rem' }}>رقم الجوال</th>
+                      <th style={{ padding: '0.75rem' }}>الحالة</th>
+                      <th style={{ padding: '0.75rem' }}>الإجراء</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminController.rows.map((row) => {
+                      const originalPartner = adminController.listState.kind === 'success'
+                        ? adminController.listState.partners.find(p => p.id === row.id)
+                        : null;
+                      const phone = originalPartner?.primaryPhone || '—';
+                      return (
+                        <tr key={row.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
+                          <td style={{ padding: '0.75rem' }}>
+                            <Text style={{ fontWeight: 'bold' }}>{row.displayName}</Text>
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>{phone}</td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <Badge
+                              label={row.statusLabel}
+                              tone={
+                                row.statusTone === 'muted' ? 'neutral' :
+                                row.statusTone === 'success' ? 'success' :
+                                row.statusTone === 'warning' ? 'warning' :
+                                row.statusTone === 'danger' ? 'danger' : 'info'
+                              }
+                            />
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <Button
+                              label="فتح"
+                              tone="secondary"
+                              onPress={() => onOpenPartner && onOpenPartner(row.id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
+        <Text role="body" tone="muted">
+          سيتم عرض تبويب فرعي {activeSubTabMeta?.label || activeSubTab} بالكامل قريباً.
+        </Text>
+      </Card>
+    );
+  };
+
+  const renderContent = () => {
+    if (activeTab === 'inbox') {
+      return renderInboxContent();
+    }
+
+    return (
+      <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
+        <Text role="body" tone="muted">
+          سيتم ربط تبويب {activeTabMeta?.label || activeTab} بمسار العمليات في شريحة لاحقة.
+        </Text>
+      </Card>
+    );
+  };
+
   return (
-    <DataTablePageFrame
-      dir="rtl"
-      header={<CpPageHeader title="طابور مراجعة الشركاء" />}
-      filters={
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", direction: "rtl" }}>
-          {STATUS_FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => c.setFilters({ status: opt.value, category: c.filters.category })}
-              style={{
-                padding: "0.375rem 0.875rem",
-                borderRadius: "1rem",
-                border: "1px solid",
-                borderColor: c.filters.status === opt.value ? "var(--dsh-text-primary)" : "var(--dsh-card-border)",
-                backgroundColor: c.filters.status === opt.value ? "var(--dsh-text-primary)" : "transparent",
-                color: c.filters.status === opt.value ? "white" : "var(--dsh-text-secondary)",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontFamily: "var(--font-arabic)",
-              }}
-            >
-              {opt.label}
-            </button>
+    <ScrollScreen>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
+        {/* Header Block */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Text role="titleMd">شركاء DSH</Text>
+              <Badge label="مراجعة الشريك" tone="action" />
+            </div>
+            <Text role="body" tone="muted" style={{ fontSize: '12px', marginTop: '0.25rem' }}>
+              حوكمة الشركاء، التغطية، وأهلية مسار المزايا والعروض
+            </Text>
+          </div>
+          <div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
+                <Text role="caption" tone="muted">شركاء نشطون</Text>
+                <Text role="titleMd" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>{activePartnersCount}</Text>
+              </Card>
+              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
+                <Text role="caption" tone="muted">طلبات معلقة</Text>
+                <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.warning, marginTop: '0.25rem' }}>{pendingCount}</Text>
+              </Card>
+              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
+                <Text role="caption" tone="muted">مناطق نشطة</Text>
+                <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.success, marginTop: '0.25rem' }}>0/0</Text>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap' }}>
+          {tabItems.map((tab: any) => (
+            <Button
+              key={tab.id}
+              label={tab.label}
+              tone={tab.active ? 'primary' : 'secondary'}
+              onPress={() => handleSelectTab(tab.id)}
+            />
           ))}
         </div>
-      }
-    >
-      {c.listState.kind === "loading" && (
-        <div style={{ textAlign: "center", padding: "3rem", color: "var(--dsh-text-muted)" }}>جاري التحميل…</div>
-      )}
-      {c.listState.kind === "error" && (
-        <div style={{ textAlign: "center", padding: "2rem", color: "#dc2626" }}>
-          {c.listState.message}
-          <br />
-          <button
-            onClick={c.retry}
-            style={{ marginTop: "1rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--dsh-card-border)", cursor: "pointer", fontFamily: "var(--font-arabic)" }}
-          >
-            إعادة المحاولة
-          </button>
-        </div>
-      )}
-      {c.listState.kind === "success" && c.rows.length === 0 && (
-        <div style={{ textAlign: "center", padding: "3rem", color: "var(--dsh-text-muted)" }}>لا توجد نتائج</div>
-      )}
-      {c.rows.length > 0 && (
-        <table style={{ width: "100%", borderCollapse: "collapse", direction: "rtl" }}>
-          <thead>
-            <tr style={{ borderBottom: `2px solid var(--dsh-card-border)` }}>
-              {["الاسم التجاري", "رقم الجوال", "الحالة", "الإجراء التالي", "تاريخ الإنشاء", ""].map((h) => (
-                <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "right", fontSize: "0.8125rem", color: "var(--dsh-text-muted)", fontWeight: 600 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {c.rows.map((row) => (
-              <tr key={row.id} style={{ borderBottom: `1px solid var(--dsh-content-bg)` }}>
-                <td style={{ padding: "0.875rem 1rem" }}>
-                  <div style={{ fontWeight: 600, color: "var(--dsh-text-primary)" }}>{row.displayName}</div>
-                  <div style={{ fontSize: "0.8125rem", color: "var(--dsh-text-muted)" }}>{row.legalNameAr}</div>
-                </td>
-                <td style={{ padding: "0.875rem 1rem", color: "var(--dsh-text-secondary)" }}>{row.primaryPhone}</td>
-                <td style={{ padding: "0.875rem 1rem" }}>
-                  <StatusBadge status={row.activationStatus as DshPartnerActivationStatus} />
-                </td>
-                <td style={{ padding: "0.875rem 1rem", color: "var(--dsh-text-muted)", fontSize: "0.875rem", maxWidth: "16rem" }}>{row.nextAction}</td>
-                <td style={{ padding: "0.875rem 1rem", color: "var(--dsh-text-muted)", fontSize: "0.8125rem" }}>
-                  {new Date(row.createdAt).toLocaleDateString("ar-SA")}
-                </td>
-                <td style={{ padding: "0.875rem 1rem" }}>
-                  <button
-                    onClick={() => onOpenPartner(row.id)}
-                    style={{ padding: "0.375rem 0.75rem", borderRadius: "0.375rem", border: "1px solid var(--dsh-card-border)", cursor: "pointer", fontSize: "0.875rem", fontFamily: "var(--font-arabic)" }}
-                  >
-                    فتح
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </DataTablePageFrame>
-  );
-}
 
-function StatusBadge({ status }: { status: DshPartnerActivationStatus }) {
-  const tones: Partial<Record<DshPartnerActivationStatus, { bg: string; text: string }>> = {
-    draft:                { bg: "var(--dsh-content-bg)",       text: "var(--dsh-text-muted)" },
-    submitted:            { bg: "rgba(59,123,255,0.08)",        text: "rgb(29,78,216)" },
-    documents_missing:    { bg: "rgba(234,88,12,0.08)",         text: "rgb(194,65,12)" },
-    documents_uploaded:   { bg: "rgba(21,128,61,0.08)",         text: "rgb(21,128,61)" },
-    documents_verified:   { bg: "rgba(21,128,61,0.08)",         text: "rgb(21,128,61)" },
-    ops_review:           { bg: "rgba(161,98,7,0.08)",          text: "rgb(161,98,7)" },
-    ops_approved:         { bg: "rgba(21,128,61,0.08)",         text: "rgb(21,128,61)" },
-    ops_rejected:         { bg: "rgba(220,38,38,0.08)",         text: "rgb(220,38,38)" },
-    partner_active:       { bg: "rgba(21,128,61,0.08)",         text: "rgb(21,128,61)" },
-    partner_deactivated:  { bg: "rgba(220,38,38,0.08)",         text: "rgb(220,38,38)" },
-    client_visible:       { bg: "rgba(22,101,52,0.08)",         text: "rgb(22,101,52)" },
-    client_hidden:        { bg: "var(--dsh-content-bg)",        text: "var(--dsh-text-muted)" },
-  };
-  const tone = tones[status] ?? { bg: "var(--dsh-content-bg)", text: "var(--dsh-text-muted)" };
-  return (
-    <span style={{
-      display: "inline-block",
-      padding: "0.25rem 0.625rem",
-      borderRadius: "1rem",
-      backgroundColor: tone.bg,
-      color: tone.text,
-      fontSize: "0.8125rem",
-      fontWeight: 500,
-    }}>
-      {getDshPartnerActivationStatusLabel(status)}
-    </span>
+        {/* Sub tabs (filters) */}
+        {subTabItems && subTabItems.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: 'rgba(0,0,0,0.02)', borderRadius: '4px', paddingLeft: '0.5rem' }}>
+            {subTabItems.map((subTab: any) => (
+              <Button
+                key={subTab.id}
+                label={subTab.label}
+                tone={subTab.active ? 'success' : 'secondary'}
+                style={{ padding: '0.25rem 0.75rem', fontSize: '12px' }}
+                onPress={() => handleSelectSubTab(subTab.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Current Date update banner */}
+        <Text role="caption" tone="muted" style={{ fontSize: '11px', alignSelf: 'flex-start' }}>
+          آخر تحديث حي: 4:23:23 ص
+        </Text>
+
+        {/* Content Area */}
+        <div style={{ marginTop: '0.5rem' }}>
+          {renderContent()}
+        </div>
+      </div>
+    </ScrollScreen>
   );
 }

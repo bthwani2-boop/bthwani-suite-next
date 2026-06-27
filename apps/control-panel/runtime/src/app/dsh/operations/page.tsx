@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckoutActivityScreen } from "@dsh-cp/operations/CheckoutActivityScreen";
+import { Suspense } from "react";
+import { OperationsHubScreen } from "@dsh-cp/operations/OperationsHubScreen";
 import {
   ControlPanelNavigation,
   ControlPanelShell,
@@ -23,7 +24,11 @@ export default function DshOperationsPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<CheckoutActivityScreen />}
+      main={
+        <Suspense fallback={<div>جاري التحميل...</div>}>
+          <OperationsHubScreen />
+        </Suspense>
+      }
     />
   );
 }

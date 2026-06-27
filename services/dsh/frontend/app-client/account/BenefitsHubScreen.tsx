@@ -1,26 +1,19 @@
 // Authority: services/dsh/frontend/app-client — benefits sub-screen.
 // Sovereign shared: services/dsh/frontend/shared/marketing
 // Sections: loyalty | subscription | offers (3 tabs from MySpaceScreen)
-// Marketing data: wired via usePromosController / useCampaignsController from shared/marketing.
 
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import {
-  ActionStrip,
   Badge,
-  Box,
   Button,
-  Divider,
-  Icon,
-  MobileScrollView,
+  Card,
+  Header,
+  ScrollScreen,
   StateView,
   Text,
-  TopBar,
-  radius,
-  safeArea,
   spacing,
-  useTheme,
-  type IconName,
+  radius,
 } from '@bthwani/ui-kit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,9 +24,8 @@ type BenefitRow = {
   id: string;
   title: string;
   subtitle: string;
-  iconName: IconName;
   badgeLabel?: string;
-  badgeTone?: 'default' | 'success' | 'warning' | 'danger' | 'brand' | 'info';
+  badgeTone?: 'success' | 'warning' | 'danger' | 'info' | 'action' | 'neutral';
   actionLabel?: string;
   helperText?: string;
 };
@@ -51,9 +43,8 @@ const SEED_LOYALTY_ROWS: BenefitRow[] = [
     id: 'loyalty-balance',
     title: '٣٢٠ نقطة',
     subtitle: 'مستوى فضي — مكافأتان متاحتان للاستبدال',
-    iconName: 'star-outline',
     badgeLabel: 'نقاط',
-    badgeTone: 'brand',
+    badgeTone: 'info',
     actionLabel: 'استبدل',
     helperText: 'كل ١٠٠ نقطة تساوي ١ ريال خصم على طلبك القادم.',
   },
@@ -61,7 +52,6 @@ const SEED_LOYALTY_ROWS: BenefitRow[] = [
     id: 'loyalty-next',
     title: 'المكافأة القادمة',
     subtitle: 'تحتاج ١٨٠ نقطة إضافية للوصول للمستوى الذهبي',
-    iconName: 'trophy-outline',
     badgeLabel: 'قريباً',
     badgeTone: 'warning',
     helperText: 'استمر في الطلب للوصول لمزايا المستوى الذهبي.',
@@ -73,7 +63,6 @@ const SEED_SUBSCRIPTION_ROWS: BenefitRow[] = [
     id: 'sub-current',
     title: 'خطة الأساسية',
     subtitle: '٢٩ ريال / شهرياً — التوصيل المجاني على كل طلب',
-    iconName: 'card-outline',
     badgeLabel: 'نشط',
     badgeTone: 'success',
     actionLabel: 'إدارة الخطة',
@@ -83,9 +72,8 @@ const SEED_SUBSCRIPTION_ROWS: BenefitRow[] = [
     id: 'sub-upgrade',
     title: 'خطة المميزة',
     subtitle: '٤٩ ريال / شهرياً — أولوية في التوصيل + ١٠٪ خصم',
-    iconName: 'diamond-outline',
     badgeLabel: 'ترقية',
-    badgeTone: 'brand',
+    badgeTone: 'action',
     actionLabel: 'ترقية',
     helperText: 'جرّب مجاناً لمدة ١٤ يوماً.',
   },
@@ -96,7 +84,6 @@ const SEED_OFFERS_ROWS: BenefitRow[] = [
     id: 'offer-1',
     title: 'خصم ١٥٪ على طلبك القادم',
     subtitle: 'صالح حتى ٣٠ يونيو — يطبق تلقائياً عند الدفع',
-    iconName: 'pricetag-outline',
     badgeLabel: 'جاهز',
     badgeTone: 'success',
     actionLabel: 'استخدم الآن',
@@ -106,7 +93,6 @@ const SEED_OFFERS_ROWS: BenefitRow[] = [
     id: 'offer-2',
     title: 'توصيل مجاني على ثلاث طلبات',
     subtitle: 'مكافأة ولاء — تنتهي بعد ٧ أيام',
-    iconName: 'bicycle-outline',
     badgeLabel: 'حصري',
     badgeTone: 'info',
     actionLabel: 'تفعيل',
@@ -116,7 +102,6 @@ const SEED_OFFERS_ROWS: BenefitRow[] = [
     id: 'offer-3',
     title: 'كوبون خاص بمناسبة رمضان',
     subtitle: 'كود: RAMADAN26 — خصم ٢٠٪ على الحلويات',
-    iconName: 'gift-outline',
     badgeLabel: 'كوبون',
     badgeTone: 'warning',
     actionLabel: 'نسخ الكود',
@@ -125,202 +110,178 @@ const SEED_OFFERS_ROWS: BenefitRow[] = [
 ];
 
 const SECTION_CONFIG: Record<BenefitsSection, { label: string; subtitle: string }> = {
-  loyalty:      { label: 'النقاط والمكافآت',   subtitle: 'رصيدك الحالي ومكافآتك المتاحة للاستبدال' },
-  subscription: { label: 'الاشتراك',            subtitle: 'خطتك الحالية وخيار التعديل متى احتجت' },
-  offers:       { label: 'العروض والكوبونات',  subtitle: 'العروض والكوبونات المتاحة لاستخدامها الآن' },
+  loyalty:      { label: 'النقاط والمكافآت',  subtitle: 'رصيدك الحالي ومكافآتك المتاحة للاستبدال' },
+  subscription: { label: 'الاشتراك',           subtitle: 'خطتك الحالية وخيار التعديل متى احتجت' },
+  offers:       { label: 'العروض والكوبونات', subtitle: 'العروض والكوبونات المتاحة لاستخدامها الآن' },
 };
 
-const SEED: Record<BenefitsSection, BenefitRow[]> = {
-  loyalty:      SEED_LOYALTY_ROWS,
+const SECTION_DATA: Record<BenefitsSection, BenefitRow[]> = {
+  loyalty: SEED_LOYALTY_ROWS,
   subscription: SEED_SUBSCRIPTION_ROWS,
-  offers:       SEED_OFFERS_ROWS,
+  offers: SEED_OFFERS_ROWS,
 };
 
-// ─── Row ──────────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
-function BenefitListRow({
+function BenefitRowCard({
   row,
-  isLast = false,
-  onActionPress,
+  section,
+  onAction,
 }: {
   row: BenefitRow;
-  isLast?: boolean;
-  onActionPress?: (id: string) => void;
+  section: BenefitsSection;
+  onAction?: ((rowId: string, section: BenefitsSection) => void) | undefined;
 }) {
-  const [expanded, setExpanded] = React.useState(false);
-
   return (
-    <ActionStrip
-      icon={row.iconName}
-      title={row.title}
-      subtitle={
-        <View style={{ alignItems: 'flex-end', gap: spacing[1], marginTop: 2 }}>
-          <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>{row.subtitle}</Text>
-          {row.badgeLabel && <Badge label={row.badgeLabel} tone={row.badgeTone ?? 'default'} />}
-        </View>
-      }
-      expanded={expanded}
-      onPress={() => setExpanded(!expanded)}
-      hideDivider={isLast}
-    >
-      <View style={{ gap: spacing[3], paddingTop: spacing[1] }}>
-        {row.helperText && (
-          <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-            {row.helperText}
-          </Text>
-        )}
-        {row.actionLabel && (
-          <View style={{ flexDirection: 'row-reverse', justifyContent: 'flex-start', marginTop: spacing[1] }}>
-            <Button
-              label={row.actionLabel}
-              tone="brand"
-              size="sm"
-              fullWidth={false}
-              style={{ minWidth: 120, borderRadius: radius.xs2 }}
-              onPress={() => { onActionPress?.(row.id); setExpanded(false); }}
-            />
+    <Card style={styles.rowCard}>
+      <View style={styles.rowContent}>
+        <View style={styles.rowInfo}>
+          <View style={styles.rowHeader}>
+            <Text role="titleSm" style={styles.rowTitle}>{row.title}</Text>
+            {row.badgeLabel && (
+              <Badge label={row.badgeLabel} tone={row.badgeTone ?? 'neutral'} />
+            )}
           </View>
+          <Text role="caption" tone="muted" style={styles.rowSubtitle}>{row.subtitle}</Text>
+          {row.helperText && (
+            <Text role="caption" style={styles.helperText}>{row.helperText}</Text>
+          )}
+        </View>
+        {row.actionLabel && (
+          <Button
+            label={row.actionLabel}
+            tone="primary"
+            onPress={() => onAction?.(row.id, section)}
+          />
         )}
       </View>
-    </ActionStrip>
+    </Card>
   );
 }
-
-// ─── Section tabs ─────────────────────────────────────────────────────────────
-
-function SectionTab({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const { theme } = useTheme();
-  return (
-    <Button
-      label={label}
-      tone={active ? 'brand' : 'ghost'}
-      size="sm"
-      fullWidth={false}
-      onPress={onPress}
-      style={{
-        borderRadius: radius.lg2,
-        borderWidth: 1,
-        borderColor: active ? theme.brand : theme.line,
-        minWidth: 80,
-      }}
-    />
-  );
-}
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function BenefitsHubScreen({
   initialSection = 'loyalty',
   onBack,
   onAction,
 }: BenefitsHubScreenProps) {
-  const { theme } = useTheme();
   const [section, setSection] = React.useState<BenefitsSection>(initialSection);
-  const [feedback, setFeedback] = React.useState('');
-
-  React.useEffect(() => { setSection(initialSection); }, [initialSection]);
-  React.useEffect(() => { setFeedback(''); }, [section]);
-
-  const rows = SEED[section];
-  const { label, subtitle } = SECTION_CONFIG[section];
-
-  const handleAction = (rowId: string) => {
-    onAction?.(rowId, section);
-    setFeedback(`تم تجهيز "${rows.find((r) => r.id === rowId)?.title ?? rowId}" بنجاح.`);
-    setTimeout(() => setFeedback(''), 3000);
-  };
+  const config = SECTION_CONFIG[section];
+  const rows = SECTION_DATA[section];
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surface }}>
-      <TopBar
-        variant="surface"
-        title={label}
-        subtitle={subtitle}
-        actions={
-          onBack
-            ? [{ id: 'back', icon: <Icon name="chevron-back" mirrored size={18} />, accessibilityLabel: 'العودة', onPress: onBack }]
-            : []
-        }
+    <ScrollScreen>
+      <Header
+        title={config.label}
+        subtitle={config.subtitle}
       />
 
-      <MobileScrollView
-        fill
-        padding={3}
-        gap={3}
-        contentContainerStyle={{ paddingBottom: safeArea.comfortable + spacing[12], paddingTop: spacing[2] }}
-      >
-        {/* Section tabs */}
-        <Box gap={2} style={{ flexDirection: 'row-reverse', flexWrap: 'wrap' }}>
-          {(['loyalty', 'subscription', 'offers'] as BenefitsSection[]).map((s) => (
-            <SectionTab
-              key={s}
-              label={SECTION_CONFIG[s].label}
-              active={section === s}
-              onPress={() => setSection(s)}
-            />
-          ))}
-        </Box>
-
-        <Divider />
-
-        {/* Feedback banner */}
-        {feedback ? (
-          <View
-            style={{
-              backgroundColor: theme.successSurface,
-              padding: spacing[3],
-              borderRadius: radius.sm2,
-              borderWidth: 1,
-              borderColor: theme.success,
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: spacing[2],
-            }}
+      {/* Section Tabs */}
+      <View style={styles.tabBar}>
+        {(Object.keys(SECTION_CONFIG) as BenefitsSection[]).map((s) => (
+          <TouchableOpacity
+            key={s}
+            style={[styles.tab, section === s && styles.tabActive]}
+            onPress={() => setSection(s)}
           >
-            <Icon name="checkmark-circle" tone="success" size={20} />
-            <Text role="bodyStrong" style={{ color: theme.success, textAlign: 'right', flex: 1 }}>
-              {feedback}
+            <Text style={[styles.tabText, section === s && styles.tabTextActive]}>
+              {SECTION_CONFIG[s].label}
             </Text>
-          </View>
-        ) : null}
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {/* Hint */}
-        <Text role="bodySm" tone="muted" style={{ textAlign: 'right', paddingHorizontal: spacing[3] }}>
-          {subtitle}
-        </Text>
-
-        <Divider />
-
-        {/* Rows */}
-        {rows.length > 0 ? (
-          <Box gap={0}>
-            {rows.map((row, idx) => (
-              <BenefitListRow
-                key={row.id}
-                row={row}
-                isLast={idx === rows.length - 1}
-                onActionPress={handleAction}
-              />
-            ))}
-          </Box>
-        ) : (
+      {/* Rows */}
+      <View style={styles.content}>
+        {rows.length === 0 ? (
           <StateView
             tone="neutral"
-            title="لا يوجد محتوى"
-            description="ستظهر عناصر هذا القسم هنا فور توفرها."
+            title="لا توجد بيانات"
+            description="لا توجد معلومات متاحة في هذا القسم حالياً."
           />
+        ) : (
+          rows.map((row) => (
+            <BenefitRowCard
+              key={row.id}
+              row={row}
+              section={section}
+              onAction={onAction}
+            />
+          ))
         )}
-      </MobileScrollView>
-    </View>
+      </View>
+    </ScrollScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: 'row-reverse',
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: spacing[4],
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: spacing[3],
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: '#FF500D',
+  },
+  tabText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  tabTextActive: {
+    color: '#FF500D',
+    fontWeight: '700',
+  },
+  content: {
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  rowCard: {
+    padding: spacing[4],
+    backgroundColor: '#FFF',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: spacing[3],
+  },
+  rowContent: {
+    gap: spacing[3],
+  },
+  rowInfo: {
+    gap: spacing[1],
+  },
+  rowHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  rowTitle: {
+    fontWeight: '700',
+    color: '#1E293B',
+    textAlign: 'right',
+    flex: 1,
+  },
+  rowSubtitle: {
+    color: '#475569',
+    textAlign: 'right',
+    lineHeight: 20,
+  },
+  helperText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+});
 
 export default BenefitsHubScreen;

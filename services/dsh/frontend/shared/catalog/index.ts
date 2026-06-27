@@ -4,3 +4,5 @@ export * from "./catalog.view-model";
 export * from "./catalog.controller-core";
 export * from "./catalog.api";
 export * from "./use-catalog-controller";
+export * from "./catalog-registry";
+

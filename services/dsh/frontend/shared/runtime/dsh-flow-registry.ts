@@ -1182,7 +1182,7 @@ export type DshFlowPolicySummary = {
   readonly domain: DshFlowDomain;
   readonly visibility: DshFlowVisibility;
   readonly onDemandPolicy: DshOnDemandPolicy;
-  readonly escalationOwner?: DshSurfaceId;
+  readonly escalationOwner?: DshSurfaceId | undefined;
   readonly financialImpact: boolean;
   readonly hiddenCompat: boolean;
   readonly allowedActions: readonly string[];

@@ -71,7 +71,7 @@ export function ProviderRegistryPanel() {
 
       <Card>
         <View style={styles.notice}>
-          <Text role="captionSm">
+          <Text role="caption">
             تعديل المزودين يتطلب عقد Backend موثق. لا يمكن تطبيق أي تغيير محلياً أو كمعاينة فقط.
           </Text>
         </View>

@@ -75,14 +75,14 @@ export type DshAuditEntry = {
   readonly sensitiveAction: DshSensitiveActionId;
   readonly decision: DshAuditEntryDecision;
   readonly reason: string;
-  readonly evidence?: string;
-  readonly relatedEntityId?: string;
-  readonly relatedEntityLabel?: string;
+  readonly evidence?: string | undefined;
+  readonly relatedEntityId?: string | undefined;
+  readonly relatedEntityLabel?: string | undefined;
   readonly affectedSurfaces: ReadonlyArray<string>;
   /** True when the action is finance-adjacent and WLT owns the truth. */
   readonly wltReadOnly: boolean;
   /** Present when this decision can be undone — describes rollback scope. */
-  readonly rollbackNote?: string;
+  readonly rollbackNote?: string | undefined;
 };
 
 export type DshMakerCheckerMatrixEntry = {

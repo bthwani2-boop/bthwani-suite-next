@@ -13,7 +13,8 @@ import {
 } from "@bthwani/ui-kit";
 import {
   useSupportTicketController,
-  TICKET_STATUS_LABELS,
+  SUPPORT_PARTNER_CATEGORIES,
+  buildSupportTicketViewModel,
   TICKET_CATEGORY_LABELS,
   type DshTicketCategory,
 } from "../../shared/support";
@@ -28,8 +29,6 @@ export function PartnerSupportScreen() {
   const [category, setCategory] = React.useState<DshTicketCategory>("store_quality");
 
   if (identity.state.kind !== "authenticated") return null;
-
-  const PARTNER_CATEGORIES: DshTicketCategory[] = ["store_quality", "payment_reference", "account_access", "app_bug", "other"];
 
   function handleSubmit() {
     void submitTicket({ subject: subject.trim(), description: description.trim(), category }).then(() => {
@@ -52,7 +51,7 @@ export function PartnerSupportScreen() {
         <Card>
           <View style={styles.form}>
             <View style={styles.chips}>
-              {PARTNER_CATEGORIES.map((c) => (
+              {SUPPORT_PARTNER_CATEGORIES.map((c) => (
                 <Button key={c} label={TICKET_CATEGORY_LABELS[c]} tone={category === c ? "primary" : "ghost"} onPress={() => setCategory(c)} />
               ))}
             </View>
@@ -74,17 +73,20 @@ export function PartnerSupportScreen() {
       {listState.kind === "loading" && <StateView title="جاري التحميل…" />}
       {listState.kind === "empty" && <StateView title="لا توجد تذاكر" description="لم تفتح تذاكر بعد." />}
       {listState.kind === "success" &&
-        listState.tickets.map((t) => (
-          <Card key={t.id}>
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketInfo}>
-                <Text role="titleSm">{t.subject}</Text>
-                <Text role="caption" tone="muted">{t.createdAt}</Text>
+        listState.tickets.map((t) => {
+          const vm = buildSupportTicketViewModel(t);
+          return (
+            <Card key={vm.id}>
+              <View style={styles.ticketRow}>
+                <View style={styles.ticketInfo}>
+                  <Text role="titleSm">{vm.subject}</Text>
+                  <Text role="caption" tone="muted">{vm.createdAt}</Text>
+                </View>
+                <Badge label={vm.statusLabel} tone={vm.statusTone} />
               </View>
-              <Badge label={TICKET_STATUS_LABELS[t.status]} tone={t.status === "resolved" || t.status === "closed" ? "success" : "info"} />
-            </View>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
     </ScrollScreen>
   );
 }

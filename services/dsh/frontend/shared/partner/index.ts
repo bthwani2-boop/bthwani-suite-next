@@ -39,6 +39,8 @@ export {
 } from "./use-partner-admin-controller";
 
 export { usePartnerSelfController } from "./use-partner-self-controller";
+export * from "./partner-registry";
+export * from "./use-partners-controller";
 
 export {
   fieldCreateDraft,
