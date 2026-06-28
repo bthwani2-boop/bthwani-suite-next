@@ -21,12 +21,12 @@ Work that crosses module or layer boundaries.
 - Multi-file feature, API + frontend binding, screen routing
 - Load: `bthwani-current-workspace-authority` + one task skill
 
-### Tier 4 — Full Evidence (3 skills, evidence gate)
+### Tier 4 — Escalated Evidence (3 skills, evidence gate)
 High-risk or cross-service work.
 - Finance (WLT/DSH money), security, secrets, auth, agent/skill files
 - Multi-service slice, Docker, CI, dependency changes
 - Load: authority + `bthwani-evidence-gate-router` + task skill
-- Evidence gate and closure check required before commit
+- Evidence gate is not default. Use it only for high-risk work, final closure, PR readiness, release readiness, or explicit user request.
 
 ---
 
@@ -36,13 +36,13 @@ High-risk or cross-service work.
 - Graph/ownership/context unclear → `graphify`
 - Need guard selection → `bthwani-guard-command-router`
 - Review local diff/patch → `bthwani-patch-review-evidence`
-- Need registry evidence pack → `bthwani-agent-handoff-evidence-pack`
+- Need registry evidence pack only when explicitly requested or final review requires it. → `bthwani-agent-handoff-evidence-pack`
 - Updating or auditing agent files → `bthwani-agent-skill-integrity`
 
 ### Safety and quality
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
 - Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
-- Task closure/dimension evidence check → `bthwani-final-slice-closure-judge`
+- Final closure only; do not invoke during normal implementation. → `bthwani-final-slice-closure-judge`
 
 ### Repository foundation
 - Foundation/governance/toolchain baseline → `bthwani-foundation-execution`

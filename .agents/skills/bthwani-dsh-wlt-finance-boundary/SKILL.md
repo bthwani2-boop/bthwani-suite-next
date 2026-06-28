@@ -24,21 +24,21 @@ DSH may request or display payment state but WLT owns financial mutation and tru
 - no ledger/payment/refund/settlement/payout mutation in DSH
 - no duplicated financial calculations
 - no fake payment success
-- no financial closure without WLT evidence
+- no financial closure without WLT evidence when final closure is requested
 
 ## Required evidence
 
 - DSH touched paths
 - WLT touched paths
 - contract paths
-- runtime or test evidence for financial behavior
+- runtime or test evidence for financial behavior (when final closure is requested or escalation applies)
 - guard output when available
 
 ## Failure decision
 
 - WLT mutation outside WLT -> `FIX_REQUIRED`
 - financial truth duplicated -> `FIX_REQUIRED`
-- payment success without WLT proof -> `NEEDS_EVIDENCE`
+- payment success without WLT proof when final closure or escalation is requested -> `NEEDS_EVIDENCE`
 
 ## Notes
 

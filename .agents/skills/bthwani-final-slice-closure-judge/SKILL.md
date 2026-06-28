@@ -6,11 +6,17 @@ version: 2026.06.24-v1
 
 # bthwani-final-slice-closure-judge
 
+Do not invoke during normal implementation.
+Invoke only when the user explicitly asks for CLOSED, READY, final closure, PR readiness, merge readiness, or release readiness.
+
 ## Purpose
 
 Enforce strict multi-dimensional evidence requirements before any slice is declared `CLOSED` or `READY`. No slice can be marked closed based on assumption or single-source evidence.
 
 ## Mandatory Evidence Rules
+
+Mandatory only for final closure or escalated review.
+Not required for normal implementation.
 
 1. **API / Contracts**: Requires contract proof (e.g., OpenAPI lint check or schema compliance).
 2. **Backend Logic**: Requires backend/domain proof (e.g., unit tests or local integration execution).
@@ -38,7 +44,10 @@ Enforce strict multi-dimensional evidence requirements before any slice is decla
 - `NEEDS_CI_EVIDENCE`
 
 ## Output Format
-Every closure check must output this block:
+
+Use this full output only during final closure review.
+For normal implementation, do not output this block.
+
 ```text
 skill: bthwani-final-slice-closure-judge
 slice_touched: <path/component>

@@ -43,19 +43,19 @@ summary: Enforce shared/ui-kit ownership, brand lock, and no local design system
 - Auth runtime symbols in `shared/app-shell`
 - Local Button/Card/Header systems in apps or services
 - Raw hex colors outside `shared/ui-kit`
-- UI closure without visual evidence
+- UI closure without visual evidence when final closure or escalation is requested
 
 ## Required evidence
 
 - changed UI paths
 - ui-kit public export evidence (confirm symbols exist in `src/index.ts`)
 - guard output: `pnpm --filter @bthwani/ui-kit lint`
-- visual evidence or `NEEDS_VISUAL_EVIDENCE`
+- visual evidence or `NEEDS_VISUAL_EVIDENCE` (only when final closure or escalation is requested)
 
 ## Failure decision
 
 - Cp* found in ui-kit → `FIX_REQUIRED`
 - local design system added → `FIX_REQUIRED`
-- visual evidence missing → `NEEDS_VISUAL_EVIDENCE`
+- visual evidence missing when escalation is requested → `NEEDS_VISUAL_EVIDENCE`
 - reusable pattern outside correct owner → `FIX_REQUIRED`
 - auth runtime in app-shell → `FIX_REQUIRED`

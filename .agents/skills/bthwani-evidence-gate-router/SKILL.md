@@ -8,9 +8,9 @@ summary: Choose the smallest sufficient verification gate for the task.
 
 ## Invoke when
 
-- any task asks for PASS, closure, readiness, verification, or review
-- an agent is unsure which checks to run
-- a task risks over-running heavy commands
+- user asks for closure/readiness/verification level
+- task is high-risk
+- agent is unsure whether escalation is required
 
 ## Read before
 
@@ -18,7 +18,7 @@ summary: Choose the smallest sufficient verification gate for the task.
 
 ## Execution contract
 
-Classify the task as LOW, MEDIUM, UI, API, RUNTIME, HIGH, or CRITICAL. Select only the evidence required for that classification. Escalate only when file ownership or runtime behavior requires it.
+Prefer CODE_BASED_LEAN. Select the smallest useful code-based check. Escalate only when risk requires it.
 
 ## Forbidden
 
@@ -26,12 +26,13 @@ Classify the task as LOW, MEDIUM, UI, API, RUNTIME, HIGH, or CRITICAL. Select on
 - do not claim closure from a tool summary
 - do not skip visual evidence for UI behavior
 
-## Required evidence
+## Required output
 
-- selected gate
-- commands used
-- pass/fail output
-- explicit missing evidence when incomplete
+- selected mode: CODE_BASED_LEAN or ESCALATED
+- targeted check if used
+- remaining risk
+
+Evidence files are required only when escalation applies.
 
 ## Failure decision
 

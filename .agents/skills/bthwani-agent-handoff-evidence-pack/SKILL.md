@@ -8,10 +8,9 @@ summary: Create or review evidence packs under tools/registry/runs.
 
 ## Invoke when
 
-- a task needs reviewable evidence
-- a script changes agent files
-- a larger slice needs handoff ZIP
-- the user needs a compact upload artifact
+- user explicitly asks for evidence pack / handoff artifact
+- final PR/merge/release review needs a portable proof bundle
+- high-risk change requires reviewable artifacts
 
 ## Read before
 
@@ -20,6 +19,8 @@ summary: Create or review evidence packs under tools/registry/runs.
 ## Execution contract
 
 Create a session folder under `tools/registry/runs/{SESSION_ID}` with summary, command log, Git status, diff check, and `_HANDOFF.zip` when practical.
+Do not invoke for normal implementation.
+Do not create tools/registry/runs output by default.
 
 ## Forbidden
 
@@ -29,11 +30,7 @@ Create a session folder under `tools/registry/runs/{SESSION_ID}` with summary, c
 
 ## Required evidence
 
-- `summary.txt` or `SUMMARY.md`
-- `evidence.json` when practical
-- `git-status.txt`
-- `diff-check.txt`
-- `_HANDOFF.zip` when practical
+Required only when this skill is explicitly invoked.
 
 ## Failure decision
 

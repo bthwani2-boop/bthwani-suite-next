@@ -8,9 +8,8 @@ summary: Review changes using Git evidence instead of agent claims.
 
 ## Invoke when
 
-- user uploads a patch, diff, handoff ZIP, or terminal output
-- Copilot, Codex, Claude, Gemini, script, or another tool made edits
-- a result is claimed as complete
+- when reviewing a supplied patch/diff or when final review is explicitly requested.
+- Do not invoke automatically after every agent edit.
 
 ## Read before
 
@@ -29,13 +28,8 @@ Check changed file list, scope compliance, unexpected additions/deletions, stage
 
 ## Required evidence
 
-- status
-- diff stat
-- name-status
-- diff check
-- staged diff when staged files exist
-- untracked file list
-- verification output
+For normal patch review, inspect changed code directly.
+Require evidence files only when final closure/PR/release review requires them.
 
 ## Failure decision
 

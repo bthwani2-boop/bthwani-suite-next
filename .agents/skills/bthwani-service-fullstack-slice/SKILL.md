@@ -1,7 +1,7 @@
 ---
 name: bthwani-service-fullstack-slice
 version: 2026.06.19-clean
-summary: Close service slices across contract, backend, client, UI, runtime, and evidence.
+summary: Implement service slices with code-based checks by default; use full closure evidence only when final closure is requested.
 ---
 
 # bthwani-service-fullstack-slice
@@ -29,11 +29,8 @@ Declare slice scope and exclusions. Verify contract, domain/backend, generated/a
 
 ## Required evidence
 
-- slice scope
-- touched paths by layer
-- contract/client/runtime evidence
-- UI evidence when screens change
-- final decision
+Required evidence only for final closure, PR readiness, release readiness, or high-risk runtime/contract/data changes.
+Normal implementation requires only touched paths and targeted check summary.
 
 ## Failure decision
 

@@ -16,6 +16,16 @@ The result must respect `@bthwani/ui-kit`, service shared ownership, and UI-only
 
 ## Invoke when
 
+Heavy visual surgery mode is not default.
+Do not invoke for ordinary UI fixes.
+
+Use only for:
+- explicit premium redesign
+- visual parity review
+- multi-surface visual refactor
+- final visual closure
+- user-explicit design surgery request
+
 Invoke this skill when the task includes any of the following:
 
 - designing a new interface
@@ -29,6 +39,10 @@ Invoke this skill when the task includes any of the following:
 - preparing UI work for slice closure
 
 ## Must read before execution
+
+Do not read all listed files by default.
+Read only the directly relevant files.
+Open additional governance/skill/ui-kit/donor files only when needed by the current risk.
 
 Read the relevant files before changing UI:
 
@@ -355,23 +369,13 @@ During implementation:
 
 ## Required checks
 
-Run the smallest sufficient set based on changed files, but prefer these when UI ownership or design is touched:
+For normal UI implementation:
+- run the targeted package typecheck/lint only when available and useful
 
-```powershell
-pnpm run graphify
-pnpm run foundation:gate
-pnpm run slice:gate
-pnpm run typecheck
-pnpm run lint
-pnpm run test
-pnpm run build
-pnpm run affected:typecheck
-pnpm run affected:lint
-pnpm run affected:test
-pnpm run affected:build
-pnpm run guard:dsh-frontend-shared-ownership
-pnpm run guard:control-panel-design
-```
+Do not run all of:
+graphify, foundation gate, slice gate, full typecheck, full lint, full test, full build, affected checks, and multiple guards by default.
+
+Use those only when final visual closure or high-risk ownership change requires them.
 
 When DSH/WLT finance boundaries are touched:
 
@@ -383,23 +387,8 @@ Do not invent commands. If a command is missing, report `COMMAND_NOT_AVAILABLE` 
 
 ## Required visual evidence
 
-Visible changes require at least one of:
-
-- screenshot
-- recording
-- manual navigation proof
-- visual comparison notes
-- runtime proof showing the screen or state is reachable
-
-For multi-surface work, provide evidence per affected surface.
-
-If visual evidence cannot be produced, the result must be:
-
-```text
-NEEDS_VISUAL_EVIDENCE
-```
-
-not `CLOSED`.
+Visual evidence is required only for final visual closure, redesign approval, multi-surface visual parity, or explicit user request.
+Normal UI code fixes do not require screenshots by default.
 
 ## Closure checklist
 

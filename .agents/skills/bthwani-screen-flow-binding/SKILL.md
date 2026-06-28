@@ -24,7 +24,7 @@ Prove route path, screen owner, service owner, data source, primary CTA, state c
 - no orphan screen
 - no route without owner
 - no screen-local fake data as closure
-- no UI closure without screenshots when visible behavior changes
+- no UI closure without screenshots only when final closure or escalation is requested and visible behavior changes
 
 ## Required evidence
 
@@ -32,13 +32,13 @@ Prove route path, screen owner, service owner, data source, primary CTA, state c
 - screen/component path
 - service/client path when data-backed
 - state coverage
-- screenshot or visual evidence requirement
+- screenshot or visual evidence requirement (only when final closure or escalation is requested)
 
 ## Failure decision
 
 - route missing -> `FIX_REQUIRED`
 - data-backed screen without client binding -> `FIX_REQUIRED`
-- screenshots missing -> `NEEDS_VISUAL_EVIDENCE`
+- screenshots missing when escalation is requested -> `NEEDS_VISUAL_EVIDENCE`
 
 ## Notes
 

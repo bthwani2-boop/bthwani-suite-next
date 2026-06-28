@@ -2,29 +2,43 @@
 
 Status: CANONICAL
 
-## No claim without evidence
+## Default rule
 
-Forbidden without evidence: PASS, READY, CLOSED, FINAL, 100%, DONE, LOCKED.
+Normal implementation uses CODE_BASED_LEAN.
 
-## Evidence root
+The agent should inspect relevant live code, make the smallest correct change, and run only the most targeted useful code-based check.
 
-```text
-tools/registry/runs/{SESSION_ID}
-```
+Evidence files are not required for normal implementation.
 
-## Minimum evidence
+## Evidence escalation
 
-- summary.txt or SUMMARY.md
-- evidence.json
-- commands.log
-- git-status.txt
-- diff-check.txt
-- _HANDOFF.zip when possible
+Create evidence files only for:
+- explicit final closure / CLOSED / READY request
+- PR readiness
+- merge readiness
+- release readiness
+- finance/WLT
+- security/auth/privacy/secrets
+- database mutation or migrations
+- runtime/docker/live API behavior
+- public OpenAPI/contract change
+- dependency upgrades
+- broad ownership refactor
+- explicit user request
 
-## Slice closure
+## Normal output
 
-A slice cannot close without contract evidence, runtime evidence when behavior exists, typecheck/test evidence when code exists, visual evidence when UI changes, and no preview/demo/mock runtime data.
+For regular implementation, report only:
+- changed paths
+- targeted code-based check used, if any
+- remaining risk or blocker, if any
+
+Do not create command logs, handoff ZIPs, screenshot sets, repeated git status files, diff-check artifacts, or long closure reports unless escalation applies.
+
+## Closure claims
+
+Do not claim CLOSED, READY, FINAL, DONE, or 100% unless the chosen check level matches the task risk and required escalated evidence exists.
 
 ## Acceptance condition
 
-Accepted only when all closure claims are backed by evidence under `tools/registry/runs`.
+Accepted when the implementation is correct in live code and the check level is proportional to the real task risk.

@@ -371,7 +371,6 @@ Both must exit 0 before any slice execution begins.
 ### Evidence requirements for V3 closure
 
 - `tools/registry/runs/MASTER-MATRIX-V2-V3-FINAL-CLOSURE-*/` must exist with all required files
-- `_HANDOFF.zip` must be present in the evidence root
 - `matrix-v2-audit-before.json` and `matrix-v2-audit-after.json` must be present
 - `matrix-v3-audit.json` must be present
 - `donor-wlt-dsh-inventory.json` must be present
