@@ -21,7 +21,7 @@ export type DshEntryScreenProps = {
 
 function renderOffersSection(onOpenOffersPress?: () => void, onOpenExecutionPress?: () => void) {
 	return (
-		<Surface tone="brand" gap={3}>
+		<Surface tone="action" gap={3}>
 			<SectionHeader
 				title="مراجعة العروض الواردة"
 				subtitle="ابدأ من قائمة عروض الكابتن حتى يصبح قرار الإرسال التالي واضحًا خلال ثوانٍ."

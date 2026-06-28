@@ -60,6 +60,18 @@ jobs:
       - name: Guard — no financial mutation outside WLT
         run: pnpm run guard:no-financial-mutation-outside-wlt
 
+      - name: Guard — no direct fetch in screen
+        run: pnpm run guard:no-direct-fetch-in-screen
+
+      - name: Guard — no preview demo mock runtime
+        run: pnpm run guard:no-preview-demo-mock-runtime
+
+      - name: Guard — no broken imports
+        run: pnpm run guard:no-broken-imports
+
+      - name: Guard — canonical host ports
+        run: pnpm run guard:canonical-host-ports
+
       - name: Foundation gate
         run: pnpm run foundation:gate
 

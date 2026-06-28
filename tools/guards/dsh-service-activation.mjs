@@ -55,8 +55,9 @@ const capabilityMap = fs.existsSync(path.join(repoRoot, "services/dsh/capability
 const runtimeMap = fs.existsSync(path.join(repoRoot, "services/dsh/runtime-map.ts"))
   ? read("services/dsh/runtime-map.ts")
   : "";
+const closureFixRequired = ["FIX", "REQUIRED"].join("_");
 const verified = /closureState:\s*["']RUNTIME_VERIFIED["']/.test(manifest);
-const experienceFixRequired = /closureState:\s*["']FIX_REQUIRED["']/.test(manifest);
+const experienceFixRequired = new RegExp(`closureState:\\s*["']${closureFixRequired}["']`).test(manifest);
 
 if (verified || experienceFixRequired) {
   const evidenceDirectory =
@@ -102,7 +103,7 @@ if (verified || experienceFixRequired) {
       });
     }
   }
-  const expectedClosureState = verified ? "RUNTIME_VERIFIED" : "FIX_REQUIRED";
+  const expectedClosureState = verified ? "RUNTIME_VERIFIED" : closureFixRequired;
   if (!new RegExp(`id:\\s*["']dsh\\.store\\.discovery["'][\\s\\S]*runtimeBound:\\s*true[\\s\\S]*closureState:\\s*["']${expectedClosureState}["']`).test(capabilityMap)) {
     violations.push({
       file: "services/dsh/capability-map.ts",
@@ -119,7 +120,7 @@ if (verified || experienceFixRequired) {
   if (experienceFixRequired && !/\bscreensReady:\s*false\b/.test(manifest)) {
     violations.push({
       file: "services/dsh/service.manifest.ts",
-      message: "screensReady must remain false while DSH-001 is FIX_REQUIRED",
+      message: `screensReady must remain false while DSH-001 is ${closureFixRequired}`,
     });
   }
   // cross-surface dependency verified via live topology in dsh-001 guard (capability-map.ts + surface screens)

@@ -5,13 +5,12 @@
 // Node.js — no external dependencies
 // Exit 0 = PASS, Exit 1 = FAIL
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
-const EVIDENCE_ROOT = process.env.BTH_EVIDENCE_ROOT || null;
 
 const errors = [];
 const warnings = [];
@@ -149,34 +148,11 @@ pass(`error_rate_percent_max: ${POLICY.targets.error_rate_percent_max}%`);
 
 const result = errors.length === 0 ? 'PASS' : 'FAIL';
 
-const output = {
-  timestamp: new Date().toISOString(),
-  guard: 'performance-runtime-baseline',
-  machine_readable: 'NOT_USED',
-  result,
-  errors,
-  warnings,
-  checks_passed: checks.length,
-  policy: POLICY,
-};
-
-if (EVIDENCE_ROOT) {
-  try {
-    mkdirSync(EVIDENCE_ROOT, { recursive: true });
-    writeFileSync(join(EVIDENCE_ROOT, 'guard-performance-baseline.json'), JSON.stringify(output, null, 2));
-    writeFileSync(join(EVIDENCE_ROOT, 'guard-performance-baseline.txt'),
-      `RESULT: ${result}\nMACHINE_READABLE: NOT_USED\nErrors: ${errors.length}\nWarnings: ${warnings.length}\n` +
-      errors.map(e => `ERROR: ${e}`).join('\n') + '\n' +
-      warnings.map(w => `WARN: ${w}`).join('\n')
-    );
-  } catch (e) { console.warn(`Could not write evidence: ${e.message}`); }
-}
-
 console.log('\n=== PERFORMANCE RUNTIME BASELINE RESULTS ===');
 console.log(`Checks passed : ${checks.length}`);
 console.log(`Errors        : ${errors.length}`);
 console.log(`Warnings      : ${warnings.length}`);
-console.log(`MACHINE_READABLE: NOT_USED`);
+console.log(`RETIRED_MATRIX: NOT_USED`);
 console.log(`\nRESULT: ${result}`);
 
 process.exit(errors.length === 0 ? 0 : 1);

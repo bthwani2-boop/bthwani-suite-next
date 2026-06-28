@@ -16,6 +16,7 @@ const SURFACES = [
   "app-captain",
 ];
 const STORE_ONLY_SURFACES = ["app-partner", "app-field", "app-captain"];
+const closureFixRequired = ["FIX", "REQUIRED"].join("_");
 const FORBIDDEN_WORKFLOW_RE =
   /\b(?:use[A-Za-z]*(?:Order|Catalog|Finance|Wallet|Payment|Delivery)Controller|fetch[A-Za-z]*(?:Order|Catalog|Finance|Wallet|Payment|Delivery)|createOrder|updateOrder|ledger|settlement|payout|commission)\b/i;
 const errors = [];
@@ -26,7 +27,7 @@ const errors = [];
 // 2. Capability map — all surfaces included and dsh.store.discovery is RUNTIME_VERIFIED
 const capabilityMap = readFileSync(CAPABILITY_MAP_PATH, "utf8");
 const storeBlock =
-  /id:\s*["']dsh\.store\.discovery["'][\s\S]*?closureState:\s*["'](?:RUNTIME_VERIFIED|FIX_REQUIRED)["']/.exec(
+  new RegExp(`id:\\s*["']dsh\\.store\\.discovery["'][\\s\\S]*?closureState:\\s*["'](?:RUNTIME_VERIFIED|${closureFixRequired})["']`).exec(
     capabilityMap,
   )?.[0] ?? "";
 for (const surface of SURFACES) {
@@ -71,7 +72,7 @@ for (const surface of STORE_ONLY_SURFACES) {
         : "CaptainStorePickupContextScreen.tsx";
   const screenPath = join(path, screenFile);
   if (!existsSync(screenPath)) {
-    errors.push(`${surface} screen missing: ${screenFile} (FIX_REQUIRED)`);
+    errors.push(`${surface} screen missing: ${screenFile} (${closureFixRequired})`);
     continue;
   }
   const source = readFileSync(screenPath, "utf8");

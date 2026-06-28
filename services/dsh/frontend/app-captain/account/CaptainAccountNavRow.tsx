@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Badge, Box, borders, Icon, radius, spacing, Text, useTheme } from '@bthwani/ui-kit';
+import { Badge, Box, borders, Icon, lightThemeColors, radius, spacing, Text } from '@bthwani/ui-kit';
 
 export function CaptainAccountNavRow({
   title,
@@ -15,7 +15,7 @@ export function CaptainAccountNavRow({
   badgeLabel?: string;
   onPress: () => void;
  }) {
-  const { theme } = useTheme();
+  const theme = lightThemeColors;
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,7 +29,7 @@ export function CaptainAccountNavRow({
         backgroundColor: pressed ? theme.surfaceInset : 'transparent',
         gap: spacing[3],
         borderBottomWidth: 1,
-        borderBottomColor: theme.line + '22',
+        borderBottomColor: theme.borderColor,
       })}
     >
       <View
@@ -48,9 +48,9 @@ export function CaptainAccountNavRow({
             borderRadius: radius.md,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: theme.brandSurface,
+            backgroundColor: theme.actionSoft,
             borderWidth: borders.hairline,
-            borderColor: theme.brand + '33',
+            borderColor: theme.action,
             flexShrink: 0,
           }}
         >
@@ -62,7 +62,7 @@ export function CaptainAccountNavRow({
             <Text role="bodyStrong" numberOfLines={1} style={{ textAlign: 'right' }}>
               {title}
             </Text>
-            {badgeLabel ? <Badge label={badgeLabel} tone="brand" /> : null}
+            {badgeLabel ? <Badge label={badgeLabel} tone="action" /> : null}
           </Box>
           <Text role="bodySm" tone="muted" numberOfLines={2} style={{ textAlign: 'right' }}>
             {subtitle}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Badge, Box, Button, Divider, Icon, KeyValueList, MobileScrollView, Text, TextField, useTheme,
+import { Badge, Box, Button, Divider, Icon, KeyValueList, lightThemeColors, MobileScrollView, Text, TextField,
   spacing,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
@@ -48,16 +48,16 @@ function SimpleSupportScreen({
 	heroDescription: string;
 	primaryLabel: string;
 	secondaryLabel?: string;
-	keyValues?: Array<{ label: string; value: string; tone?: 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'info' }>;
+	keyValues?: Array<{ label: string; value: string; tone?: 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'info' }> | undefined;
 	listItems?: Array<{ title: string; subtitle: string; meta: string; badgeLabel?: string }>;
 	inputLabel?: string;
-	inputHint?: string;
-	onPrimaryAction?: () => void;
-	onSecondaryAction?: () => void;
-	onBack?: () => void;
+	inputHint?: string | undefined;
+	onPrimaryAction?: (() => void) | undefined;
+	onSecondaryAction?: (() => void) | undefined;
+	onBack?: (() => void) | undefined;
 }) {
 	const [draftValue, setDraftValue] = React.useState('');
-	const theme = useTheme() as any;
+	const theme = lightThemeColors;
 
 	return (
 		<DshOperationScreen
@@ -88,13 +88,13 @@ function SimpleSupportScreen({
 											paddingHorizontal: 0,
 											paddingVertical: spacing[3],
 											borderBottomWidth: index === arr.length - 1 ? 0 : 1,
-											borderBottomColor: theme.line,
+											borderBottomColor: theme.borderColor,
 											gap: spacing[1],
 										}}
 									>
 										<Box layoutDirection="row" justify="space-between" align="center" style={{ flexDirection: 'row-reverse' }}>
 											<Text role="bodyStrong" style={{ textAlign: 'right' }}>{item.title}</Text>
-											{item.badgeLabel ? <Badge label={item.badgeLabel} tone="brand" /> : null}
+											{item.badgeLabel ? <Badge label={item.badgeLabel} tone="action" /> : null}
 										</Box>
 										<Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>{item.subtitle}</Text>
 										<Text role="caption" tone="muted" style={{ textAlign: 'right' }}>{item.meta}</Text>
@@ -107,7 +107,12 @@ function SimpleSupportScreen({
 					{inputLabel ? (
 						<>
 							<Divider />
-							<TextField label={inputLabel} value={draftValue} onChangeText={setDraftValue} hint={inputHint} />
+							<TextField
+								label={inputLabel}
+								value={draftValue}
+								onChangeText={setDraftValue}
+								{...(inputHint ? { hint: inputHint } : {})}
+							/>
 						</>
 					) : null}
 				</Box>
@@ -368,19 +373,19 @@ export function DshCaptainOperationsScreen({
 
 	if (screenId === 'chat-read-ack') {
 		return (
-			<DshCaptainChatReadAckScreen onBack={onBack} onSecondaryAction={onBack} />
+			<DshCaptainChatReadAckScreen {...(onBack ? { onBack, onSecondaryAction: onBack } : {})} />
 		);
 	}
 
 	if (screenId === 'chat-send') {
 		return (
-			<DshCaptainChatSendScreen onBack={onBack} onSecondaryAction={onBack} />
+			<DshCaptainChatSendScreen {...(onBack ? { onBack, onSecondaryAction: onBack } : {})} />
 		);
 	}
 
 	if (screenId === 'cod-liability') {
 		return (
-			<WltDshCaptainBridge section="cod-liability" onBack={onBack} />
+			<WltDshCaptainBridge section="cod-liability" {...(onBack ? { onBack } : {})} />
 		);
 	}
 
@@ -433,13 +438,13 @@ export function DshCaptainOperationsLayout({
 	const currentActionScreenId = (ACTIVE_ORDER_PREVIEW.stage as any) === 'offer-accepted' ? 'order-pickup' : 'order-deliver';
 
 	const FlatSection = ({ label, children }: { label: string; children: React.ReactNode }) => {
-		const theme = useTheme() as any;
+		const theme = lightThemeColors;
 		return (
 			<Box padding={0} gap={0}>
 				<Text
 					role="label"
 					tone="muted"
-					style={{ paddingBottom: spacing[2], textAlign: 'right', color: theme.textMuted }}
+					style={{ paddingBottom: spacing[2], textAlign: 'right', color: theme.colorMuted }}
 				>
 					{label}
 				</Text>
@@ -449,7 +454,7 @@ export function DshCaptainOperationsLayout({
 	};
 
 	const FlatRow = ({ title, subtitle, badgeLabel, badgeTone, isLast, onPress }: { title: string; subtitle: string; badgeLabel?: string; badgeTone?: 'default' | 'brand' | 'success' | 'warning' | 'danger'; isLast: boolean; onPress: () => void }) => {
-		const theme = useTheme() as any;
+		const theme = lightThemeColors;
 		return (
 			<Pressable
 				onPress={onPress}
@@ -460,13 +465,13 @@ export function DshCaptainOperationsLayout({
 					paddingVertical: 14,
 					paddingHorizontal: 0,
 					borderBottomWidth: isLast ? 0 : 1,
-					borderBottomColor: theme.line,
+					borderBottomColor: theme.borderColor,
 					backgroundColor: pressed ? theme.surfaceInset : 'transparent',
 				})}
 			>
 				<View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
 					<Box layoutDirection="row" gap={2} style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-						<Text role="bodyStrong" style={{ color: theme.text }}>{title}</Text>
+						<Text role="bodyStrong" style={{ color: theme.color }}>{title}</Text>
 						{badgeLabel ? <Badge label={badgeLabel} tone={(badgeTone === 'brand' ? 'action' : badgeTone === 'default' ? 'neutral' : badgeTone) as any} /> : null}
 					</Box>
 					<Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>{subtitle}</Text>

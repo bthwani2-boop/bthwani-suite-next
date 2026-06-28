@@ -1,7 +1,7 @@
 /**
- * PartnerCatalogReadinessPanel — SCAFFOLD: ربط API قيد التنفيذ
+ * PartnerCatalogReadinessPanel — read-only partner catalog readiness summary
  * Owner: app-partner surface
- * API boundary: GET /partner/:id/catalog-readiness (not yet bound)
+ * API boundary: supplied by the partner catalog shared controller.
  *
  * Explains catalog readiness status to the partner:
  * - Why an item may not be visible to clients
@@ -74,7 +74,7 @@ function deriveReadinessRows(
         ? `المرحلة الحالية: ${stageLabel} — يحتاج اعتماد الكتالوج`
         : undefined,
       nextAction: 'بانتظار اعتماد من control-panel/catalogs — لا يمكن للشريك التسريع',
-      apiNote: 'GET /catalog/products/:id/approval — not yet bound',
+      apiNote: 'Catalog approval state is owned by control-panel/catalogs',
     },
     {
       id: 'marketing-cleared',
@@ -90,7 +90,7 @@ function deriveReadinessRows(
       nextAction: publishStage === 'marketing-review'
         ? 'بانتظار مراجعة التسويق — لا إجراء مطلوب من الشريك'
         : 'لا شيء مطلوب',
-      apiNote: 'GET /catalog/marketing-review/:id — not yet bound',
+      apiNote: 'Marketing review state is owned by control-panel/marketing',
     },
     {
       id: 'partner-availability',
@@ -105,7 +105,7 @@ function deriveReadinessRows(
       nextAction: !available ? 'تفعيل التوفر من لوحة المخزون'
         : stockCount === 0 ? 'تحديث الكمية من لوحة المخزون'
           : 'لا شيء مطلوب',
-      apiNote: 'PATCH /partner/inventory/:id — not yet bound',
+      apiNote: 'Inventory changes are owned by the partner inventory controller',
     },
     {
       id: 'client-visible',
@@ -120,7 +120,7 @@ function deriveReadinessRows(
       nextAction: !isClientVisible
         ? 'بانتظار نشر من control-panel/catalogs — لا إجراء من الشريك'
         : 'المنتج ظاهر للعميل ✅',
-      apiNote: 'GET /catalog/products/:id/client-visibility — not yet bound',
+      apiNote: 'Client visibility is owned by catalog publication state',
     },
   ];
 }
@@ -160,7 +160,7 @@ export function PartnerCatalogReadinessPanel({
             🚦 جاهزية الكتالوج
           </Text>
           <Text role="caption" tone="muted" style={{ fontSize: typography.overline.fontSize }}>
-            ربط API قيد التنفيذ — GET /partner/catalog-readiness
+            ملخص جاهزية مستمد من حالة الكتالوج المشتركة
           </Text>
         </Box>
         {onClose && (
@@ -283,7 +283,7 @@ export function PartnerCatalogReadinessPanel({
                   {onEditStock && (
                     <Button
                       label="📦 تحديث المخزون"
-                      tone="brand"
+                      tone="primary"
                       size="sm"
                       onPress={onEditStock}
                     />

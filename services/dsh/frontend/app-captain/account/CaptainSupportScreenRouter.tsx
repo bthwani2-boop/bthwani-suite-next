@@ -41,8 +41,8 @@ export type CaptainSupportScreenRouterProps = {
   onBack: () => void;
   onNavigate: (screenId: CaptainSupportRoute) => void;
   captainCollectsCod: boolean;
-  dshAuthBearerToken?: string;
-  dshClientId?: string;
+  dshAuthBearerToken?: string | undefined;
+  dshClientId?: string | undefined;
   activeOrderId?: string;
   onAcceptTask: (orderId: string) => void;
   onDeclineTask: (orderId: string) => void;
@@ -69,8 +69,8 @@ export function CaptainSupportScreenRouter({
         <DshCaptainCodBalanceScreen
           onBack={onBack}
           onRetry={onBack}
-          dshAuthBearerToken={dshAuthBearerToken}
-          dshClientId={dshClientId}
+          {...(dshAuthBearerToken !== undefined ? { dshAuthBearerToken } : {})}
+          {...(dshClientId !== undefined ? { dshClientId } : {})}
         />
       ) : null;
     case 'order-accept':

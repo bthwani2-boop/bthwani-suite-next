@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Box, borders, Icon, radius, spacing, Text, useTheme } from '@bthwani/ui-kit';
-import type { BThwaniAppearanceMode } from '@bthwani/ui-kit';
+import { Box, borders, Icon, lightThemeColors, radius, spacing, Text } from '@bthwani/ui-kit';
+
+type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
 
 let RNSwitch: React.ComponentType<{
   value: boolean;
@@ -22,7 +23,7 @@ type AppearanceOption = {
 
 const appearanceOptions: AppearanceOption[] = [
   { mode: 'lightPremium', title: 'فاتح' },
-  { mode: 'darkGlass', title: 'داكن' },
+  { mode: 'darkPremium', title: 'داكن' },
 ];
 
 type Props = {
@@ -40,12 +41,12 @@ export function DshCaptainAccountSettingsContent({
   onSetAppearanceMode,
   onToggleStoreCourierMode,
 }: Props) {
-  const { theme } = useTheme();
+  const theme = lightThemeColors;
   const rowDirection = 'row-reverse' as const;
 
   const iconBox = (name: React.ComponentProps<typeof Icon>['name']) => (
-    <View style={{ width: 36, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceInset, borderWidth: borders.hairline, borderColor: theme.line, flexShrink: 0 }}>
-      <Icon name={name} size={17} tone="default" />
+    <View style={{ width: 36, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceInset, borderWidth: borders.hairline, borderColor: theme.borderColor, flexShrink: 0 }}>
+      <Icon name={name} size={17} tone="muted" />
     </View>
   );
 
@@ -63,17 +64,17 @@ export function DshCaptainAccountSettingsContent({
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: rowDirection, backgroundColor: theme.surfaceInset, borderRadius: radius.sm, padding: 3, borderWidth: borders.hairline, borderColor: theme.line, gap: spacing[1] }}>
+          <View style={{ flexDirection: rowDirection, backgroundColor: theme.surfaceInset, borderRadius: radius.sm, padding: 3, borderWidth: borders.hairline, borderColor: theme.borderColor, gap: spacing[1] }}>
             {appearanceOptions.map((opt) => (
-              <Pressable key={opt.mode} onPress={() => onSetAppearanceMode(opt.mode)} style={{ paddingHorizontal: spacing[3], paddingVertical: 6, borderRadius: 9, backgroundColor: appearanceMode === opt.mode ? theme.brand : 'transparent' }}>
-                <Text role="bodyStrong" style={{ color: appearanceMode === opt.mode ? theme.brandContrast : theme.text }}>{opt.title}</Text>
+              <Pressable key={opt.mode} onPress={() => onSetAppearanceMode(opt.mode)} style={{ paddingHorizontal: spacing[3], paddingVertical: 6, borderRadius: 9, backgroundColor: appearanceMode === opt.mode ? theme.action : 'transparent' }}>
+                <Text role="bodyStrong" style={{ color: appearanceMode === opt.mode ? theme.colorInverse : theme.color }}>{opt.title}</Text>
               </Pressable>
             ))}
           </View>
         </View>
 
         {/* App mode row */}
-        <View style={{ flexDirection: rowDirection, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: 14, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.line }}>
+        <View style={{ flexDirection: rowDirection, alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: 14, backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.borderColor }}>
           <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: spacing[3], flexShrink: 1, minWidth: 0 }}>
             {iconBox('storefront-outline')}
             <View style={{ flexShrink: 1, minWidth: 0, gap: 2, alignItems: 'flex-end' }}>
@@ -87,9 +88,9 @@ export function DshCaptainAccountSettingsContent({
             <RNSwitch
               value={isStoreCourierMode}
               onValueChange={onToggleStoreCourierMode}
-              thumbColor={isStoreCourierMode ? theme.brandContrast : theme.surfaceRaised}
-              trackColor={{ false: theme.lineStrong, true: theme.brand }}
-              ios_backgroundColor={theme.lineStrong}
+              thumbColor={isStoreCourierMode ? theme.colorInverse : theme.surfaceRaised}
+              trackColor={{ false: theme.borderColorStrong, true: theme.action }}
+              ios_backgroundColor={theme.borderColorStrong}
             />
           ) : null}
         </View>

@@ -10,13 +10,12 @@
 // WLT brain  : services/wlt/frontend/shared/dsh
 // Exit 0 = PASS, Exit 1 = FAIL
 
-import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
-const EVIDENCE_ROOT = process.env.BTH_EVIDENCE_ROOT || null;
 
 const errors = [];
 const warnings = [];
@@ -120,11 +119,15 @@ const FORBIDDEN_DEFINITION_PATTERNS = [
   { re: /\bcanReject\b/, label: 'canReject (permission decision in surface)' },
   { re: /\bcanCancel\b/, label: 'canCancel (permission decision in surface)' },
   { re: /\bcanSettle\b/, label: 'canSettle (permission decision in surface)' },
+  { re: /\bcanRefund\b/, label: 'canRefund (permission decision in surface)' },
+  { re: /\bcanPayout\b/, label: 'canPayout (permission decision in surface)' },
   { re: /\bisTransitionAllowed\b/, label: 'isTransitionAllowed (lifecycle decision in surface)' },
   { re: /\btoViewModel\b/, label: 'toViewModel (view-model derivation in surface)' },
   { re: /\bmapResponse\b/, label: 'mapResponse (API mapping in surface)' },
   { re: /\bderiveStatus\b/, label: 'deriveStatus (domain logic in surface)' },
   { re: /\bderivePermission\b/, label: 'derivePermission (permission logic in surface)' },
+  { re: /\brolePolicy\b/, label: 'rolePolicy (policy ownership in surface)' },
+  { re: /\bviewPolicy\b/, label: 'viewPolicy (policy ownership in surface)' },
 ];
 
 // Financial mutation patterns forbidden in DSH entirely and in WLT surfaces
@@ -160,6 +163,23 @@ else pass('DSH sovereign brain: services/dsh/frontend/shared');
 
 if (!existsSync(WLT_DSH_SHARED)) err(`CRITICAL: WLT-for-DSH brain missing: services/wlt/frontend/shared/dsh`);
 else pass('WLT-for-DSH sovereign brain: services/wlt/frontend/shared/dsh');
+
+for (const surface of [...DSH_SURFACES, ...WLT_SURFACES]) {
+  if (!existsSync(surface.abs)) err(`CRITICAL: UI surface missing: ${surface.rel}`);
+}
+
+const APP_RUNTIME_BOOTSTRAPS = [
+  'apps/control-panel/runtime',
+  'apps/app-partner/runtime',
+  'apps/app-field/runtime',
+  'apps/app-client/runtime',
+  'apps/app-captain/runtime',
+];
+
+for (const runtimePath of APP_RUNTIME_BOOTSTRAPS) {
+  if (!existsSync(join(ROOT, runtimePath))) err(`CRITICAL: app runtime bootstrap missing: ${runtimePath}`);
+  else pass(`App runtime bootstrap exists: ${runtimePath}`);
+}
 
 // ── CHECK 2: DSH Surface — No Logic Files ────────────────────────────────────
 
@@ -334,9 +354,25 @@ for (const file of walkFiles(WLT_DSH_SHARED)) {
 }
 if (localhostHits === 0) pass('No localhost fallback in WLT shared/dsh');
 
-// ── CHECK 12: Unified Source Per Domain — No Duplicated Logic in Shared ───────
+console.log('\n=== CHECK 12: No Closure Gap Markers In Closed Surfaces ===');
+const GAP_MARKERS = new RegExp(
+  `\\b(${['FIX', 'REQUIRED'].join('_')}|TODO|${['UN', 'PROVEN'].join('')}|${['NOT', 'BOUND'].join('_')}|scaffold)\\b`,
+  'i',
+);
+let markerHits = 0;
+for (const surface of DSH_SURFACES) {
+  for (const file of walkFiles(surface.abs, ['.ts', '.tsx', '.js', '.jsx'])) {
+    if (GAP_MARKERS.test(readAbs(file))) {
+      err(`Closure gap marker in DSH surface ${rel(file)}`);
+      markerHits++;
+    }
+  }
+}
+if (markerHits === 0) pass('No closure gap markers in DSH surfaces');
 
-console.log('\n=== CHECK 12: Unified Source Per Domain ===');
+// ── CHECK 13: Unified Source Per Domain — No Duplicated Logic in Shared ───────
+
+console.log('\n=== CHECK 13: Unified Source Per Domain ===');
 
 // Scan for duplicate controller names across DSH shared
 const controllerMap = new Map();
@@ -394,6 +430,11 @@ const CONTROLLER_BINDING_CHECKS = [
     label: 'FieldStoreVerificationScreen must consume useStoreRoleContextController',
   },
   {
+    file: 'services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx',
+    pattern: /\buseStoreRoleContextController\b/,
+    label: 'FieldStoreVerificationScreen compatibility path must consume useStoreRoleContextController',
+  },
+  {
     file: 'services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx',
     pattern: /\buseStoreRoleContextController\b/,
     label: 'CaptainStorePickupContextScreen must consume useStoreRoleContextController',
@@ -405,7 +446,7 @@ let unboundSurfaces = 0;
 for (const check of CONTROLLER_BINDING_CHECKS) {
   const absPath = join(ROOT, check.file);
   if (!existsSync(absPath)) {
-    warn(`NOT_BOUND_SURFACE_FIX_REQUIRED: ${check.file} — ${check.label}`);
+    err(`${['NOT', 'BOUND', 'SURFACE', 'FIX', 'REQUIRED'].join('_')}: ${check.file} — ${check.label}`);
     unboundSurfaces++;
   } else {
     const src = readAbs(absPath);
@@ -418,7 +459,7 @@ for (const check of CONTROLLER_BINDING_CHECKS) {
   }
 }
 if (unboundSurfaces === 0) pass(`All surface-to-controller bindings verified: ${boundSurfaces}`);
-else if (boundSurfaces > 0) pass(`${boundSurfaces} surface-to-controller binding(s) verified (${unboundSurfaces} unbound — see warnings)`);
+else err(`${unboundSurfaces} surface binding(s) are missing`);
 
 // ── CHECK 14: WLT Surfaces Must Not Import DSH Backend Directly ───────────────
 
@@ -440,39 +481,11 @@ if (wltDshBackendHits === 0) pass('WLT surfaces do not import DSH backend direct
 
 const result = errors.length === 0 ? 'PASS' : 'FAIL';
 
-const output = {
-  timestamp: new Date().toISOString(),
-  guard: 'unified-fullstack-brain',
-  machine_readable: 'NOT_USED',
-  result,
-  errors,
-  warnings,
-  checks_passed: checks.length,
-  sovereign_brains: {
-    dsh: 'services/dsh/frontend/shared',
-    wlt_for_dsh: 'services/wlt/frontend/shared/dsh',
-  },
-};
-
-if (EVIDENCE_ROOT) {
-  try {
-    mkdirSync(EVIDENCE_ROOT, { recursive: true });
-    writeFileSync(join(EVIDENCE_ROOT, 'guard-unified-fullstack-brain.json'), JSON.stringify(output, null, 2));
-    writeFileSync(join(EVIDENCE_ROOT, 'guard-unified-fullstack-brain.txt'),
-      `RESULT: ${result}\nMACHINE_READABLE: NOT_USED\nErrors: ${errors.length}\nWarnings: ${warnings.length}\nChecks: ${checks.length}\n` +
-      errors.map(e => `ERROR: ${e}`).join('\n') + '\n' +
-      warnings.map(w => `WARN: ${w}`).join('\n')
-    );
-  } catch (e) {
-    console.warn(`Could not write evidence: ${e.message}`);
-  }
-}
-
 console.log('\n=== UNIFIED FULLSTACK BRAIN GATE RESULTS ===');
 console.log(`Checks passed : ${checks.length}`);
 console.log(`Errors        : ${errors.length}`);
 console.log(`Warnings      : ${warnings.length}`);
-console.log(`MACHINE_READABLE: NOT_USED`);
+console.log(`RETIRED_MATRIX: NOT_USED`);
 console.log(`\nRESULT: ${result}`);
 
 process.exit(errors.length === 0 ? 0 : 1);

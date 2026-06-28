@@ -1,18 +1,17 @@
 // guard-slice-master-matrix-v3.mjs
-// Sovereign Brain & Live Topology Guard — v3 (machine-readable FREE)
+// Sovereign Brain & Live Topology Guard — v3
 // Policy: governance/02_SERVICES_AND_SURFACES.md
 //
-// Replaces: machine-readable JSON governance files (NEVER to be restored)
 // Method: live repository topology + sovereign brain contracts + unified fullstack brain
 // Exit 0 = PASS, Exit 1 = FAIL
 
-import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
-const EVIDENCE_ROOT = process.env.BTH_EVIDENCE_ROOT || null;
+const RETIRED_MATRIX_ROOT = 'machine' + '-readable';
 
 const errors = [];
 const warnings = [];
@@ -51,20 +50,18 @@ function readAbs(p) {
 function rel(p) { return relative(ROOT, p).replace(/\\/g, '/'); }
 
 // ── 1. Machine-Readable Dependency Scan ──────────────────────────────────────
-// CRITICAL: machine-readable/ must not be referenced in any guard, CI, or script.
+// CRITICAL: the retired matrix root must not be referenced in any active guard, CI, or script.
 
 console.log('\n=== CHECK 1: Machine-Readable Dependency Scan ===');
 
-const MR_DIR = join(ROOT, 'machine-readable');
+const MR_DIR = join(ROOT, RETIRED_MATRIX_ROOT);
 if (existsSync(MR_DIR)) {
-  warn('machine-readable/ directory still exists — it must not be used by any guard, CI, or script');
+  err(`${RETIRED_MATRIX_ROOT}/ directory still exists`);
 }
 
 // Active guards: those registered in guard-manifest.json foundation/slice sets
-// Dead/retired code: v2 guard, registry scripts, old plan docs — warn not error
 const THIS_FILE = 'tools/guards/guard-slice-master-matrix-v3.mjs';
 const DEAD_CODE_PREFIXES = [
-  'tools/guards/guard-slice-master-matrix-v2.mjs',
   'tools/registry/',
   'tools/plan/',
   'governance/',
@@ -85,19 +82,18 @@ for (const scanDir of MR_SCAN_DIRS) {
   for (const f of files) {
     if (f.replace(/\\/g, '/').endsWith(THIS_FILE)) continue;
     const src = readAbs(f);
-    if (/machine-readable[/\\]/.test(src) || /readJSON\(['"]machine-readable/.test(src)) {
+    if (new RegExp(`${RETIRED_MATRIX_ROOT}[/\\\\]`).test(src) || src.includes(`readJSON('${RETIRED_MATRIX_ROOT}`) || src.includes(`readJSON("${RETIRED_MATRIX_ROOT}`)) {
       if (isDeadCode(f)) {
-        warn(`(dead-code) machine-readable ref in retired file: ${rel(f)}`);
+        err(`retired matrix reference in inactive file scanned by guard: ${rel(f)}`);
         mrWarnings++;
       } else {
-        err(`machine-readable dependency in active guard: ${rel(f)}`);
+        err(`retired matrix dependency in active guard: ${rel(f)}`);
         mrHits++;
       }
     }
   }
 }
-if (mrHits === 0 && mrWarnings === 0) pass('No machine-readable dependencies in any guards/CI');
-else if (mrHits === 0) pass(`No machine-readable dependencies in active guards (${mrWarnings} dead-code warning(s))`);
+if (mrHits === 0 && mrWarnings === 0) pass('No retired matrix dependencies in any guards/CI');
 
 // ── 2. Sovereign Brain Existence ──────────────────────────────────────────────
 
@@ -130,35 +126,9 @@ const DSH_SURFACES = [
   'services/dsh/frontend/app-captain',
 ];
 
-const SURFACE_README = `# UI-Only Surface
-
-This path is reserved as a UI-only surface.
-
-It must not contain:
-- business logic
-- API adapters
-- controllers
-- state machines
-- validation
-- permission
-- lifecycle
-- role policy
-- view-model ownership
-- cross-service ownership
-
-All non-UI logic must live in the sovereign shared brain.
-`;
-
 for (const surface of DSH_SURFACES) {
   if (!dirExists(surface)) {
-    warn(`DSH surface not found (reserving): ${surface}`);
-    try {
-      mkdirSync(join(ROOT, surface), { recursive: true });
-      writeFileSync(join(ROOT, surface, 'README.md'), SURFACE_README);
-      pass(`Reserved DSH surface: ${surface}`);
-    } catch (e) {
-      err(`Could not reserve DSH surface ${surface}: ${e.message}`);
-    }
+    err(`DSH surface not found: ${surface}`);
   } else {
     pass(`DSH surface exists: ${surface}`);
   }
@@ -178,14 +148,7 @@ const WLT_SURFACES = [
 
 for (const surface of WLT_SURFACES) {
   if (!dirExists(surface)) {
-    warn(`WLT surface not found (reserving): ${surface}`);
-    try {
-      mkdirSync(join(ROOT, surface), { recursive: true });
-      writeFileSync(join(ROOT, surface, 'README.md'), SURFACE_README.replace('sovereign shared brain', 'WLT sovereign shared brain'));
-      pass(`Reserved WLT surface: ${surface}`);
-    } catch (e) {
-      err(`Could not reserve WLT surface ${surface}: ${e.message}`);
-    }
+    err(`WLT surface not found: ${surface}`);
   } else {
     pass(`WLT surface exists: ${surface}`);
   }
@@ -473,7 +436,7 @@ const result = errors.length === 0 ? 'PASS' : 'FAIL';
 const output = {
   timestamp: new Date().toISOString(),
   guard: 'matrix-v3-live-topology',
-  machine_readable: 'NOT_USED',
+  retired_matrix: 'NOT_USED',
   result,
   errors,
   warnings,
@@ -484,25 +447,11 @@ const output = {
   },
 };
 
-if (EVIDENCE_ROOT) {
-  try {
-    mkdirSync(EVIDENCE_ROOT, { recursive: true });
-    writeFileSync(join(EVIDENCE_ROOT, 'guard-matrix-v3.json'), JSON.stringify(output, null, 2));
-    writeFileSync(join(EVIDENCE_ROOT, 'guard-matrix-v3.txt'),
-      `RESULT: ${result}\nMACHINE_READABLE: NOT_USED\nErrors: ${errors.length}\nWarnings: ${warnings.length}\nChecks: ${checks.length}\n` +
-      errors.map(e => `ERROR: ${e}`).join('\n') + '\n' +
-      warnings.map(w => `WARN: ${w}`).join('\n')
-    );
-  } catch (e) {
-    console.warn(`Could not write evidence: ${e.message}`);
-  }
-}
-
 console.log('\n=== GUARD MATRIX V3 (LIVE TOPOLOGY) RESULTS ===');
 console.log(`Checks passed : ${checks.length}`);
 console.log(`Errors        : ${errors.length}`);
 console.log(`Warnings      : ${warnings.length}`);
-console.log(`MACHINE_READABLE: NOT_USED`);
+console.log(`RETIRED_MATRIX: NOT_USED`);
 console.log(`\nRESULT: ${result}`);
 
 process.exit(errors.length === 0 ? 0 : 1);

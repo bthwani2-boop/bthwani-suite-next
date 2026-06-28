@@ -11,7 +11,7 @@ import {
   zIndex
 } from "./tokens";
 
-export const tamaguiConfig = createTamagui({
+export const tamaguiConfig: ReturnType<typeof createTamagui> = createTamagui({
   ...defaultConfig,
   tokens: {
     ...defaultConfig.tokens,
