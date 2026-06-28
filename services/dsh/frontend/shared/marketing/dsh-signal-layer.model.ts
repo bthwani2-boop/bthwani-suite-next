@@ -29,7 +29,9 @@ export type DshSignalEventKind =
   | 'refund_completed_wlt'
   // Support & exceptions
   | 'partner_capacity_degraded'
-  | 'ticket_escalated';
+  | 'ticket_escalated'
+  | 'order_rescue_requested'
+  | 'manual_call_intake_requested';
 
 export type DshSignalPriority = 'urgent' | 'important' | 'normal';
 

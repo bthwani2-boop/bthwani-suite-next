@@ -20,7 +20,7 @@ export function KeyValueList({ items, dense }: KeyValueListProps) {
       {items.map((item, index) => (
         <View key={index} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: dense ? 2 : 6 }}>
           <Text role="bodySm" tone="muted">{item.label}</Text>
-          <Text role="bodySm" tone={item.tone === 'brand' ? 'action' : item.tone}>{item.value}</Text>
+          <Text role="bodySm" tone={item.tone === 'brand' ? 'action' : (item.tone || 'default')}>{item.value}</Text>
         </View>
       ))}
     </View>

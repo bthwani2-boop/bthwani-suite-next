@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
     "allowImportingTsExtensions": true,
@@ -8,7 +9,7 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "../../",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,7 +22,10 @@
   "include": [
     "domain/**/*.ts",
     "clients/**/*.ts",
-    "frontend/shared/**/*.ts"
+    "frontend/shared/**/*.ts",
+    "frontend/shared/**/*.tsx",
+    "frontend/app-captain/**/*.ts",
+    "frontend/app-captain/**/*.tsx"
   ],
   "exclude": [
     "node_modules",

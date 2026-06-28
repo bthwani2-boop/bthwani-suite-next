@@ -1,5 +1,5 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import type {
   WltPaymentStatusRef,
   WltSettlementStatusRef,

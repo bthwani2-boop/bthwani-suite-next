@@ -11,9 +11,9 @@
  * - DSH displays WLT-provided values in read-only format only.
  */
 
-import type { DshClientState } from '../orders/orders.client-state';
-import type { DshFulfillmentDeliveryMode } from '../delivery';
-import type { DshSignalEventKind } from '../marketing/dsh-signal-layer.model';
+import type { DshClientState } from '../../orders/orders.client-state';
+import type { DshFulfillmentDeliveryMode } from '../../delivery';
+import type { DshSignalEventKind } from '../../marketing/dsh-signal-layer.model';
 
 export type DshWltIntentKind =
   | 'payment_initiation'

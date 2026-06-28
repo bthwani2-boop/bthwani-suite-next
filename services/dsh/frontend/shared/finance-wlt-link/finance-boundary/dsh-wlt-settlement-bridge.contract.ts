@@ -3,7 +3,7 @@ import type {
   DshSettlementInputEvent,
   DshSettlementInputEventType,
   DshSettlementInputStatus,
-} from '../operations/dsh-operational.contract';
+} from '../../operations/dsh-operational.contract';
 
 export const dshWltSettlementBridgeContractMeta = {
   dataKind: 'DSH_WLT_SETTLEMENT_BRIDGE_CONTRACT',

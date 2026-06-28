@@ -16,7 +16,7 @@ export * from './finance-boundary/dsh-wlt-settlement-bridge.contract';
 export * from './finance-visibility/finance-visibility.types';
 export * from './finance-visibility/finance-visibility.states';
 export * from './finance-visibility/finance-visibility.view-model';
-export { useFinanceVisibilityController } from './finance-visibility/use-finance-visibility-controller';
+export { usePartnerFinanceVisibilityController as useFinanceVisibilityController } from './finance-visibility/use-finance-visibility-controller';
 
 export * from './wlt-cod/wlt-cod.types';
 export { useWltCodController } from './wlt-cod/use-wlt-cod-controller';
