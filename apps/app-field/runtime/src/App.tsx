@@ -5,10 +5,8 @@ import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
 
 function AppContent() {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={[styles.root, { paddingBottom: insets.bottom }]}>
+    <View style={styles.root}>
       <View style={styles.screen}>
         <DshFieldSurface />
       </View>

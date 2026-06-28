@@ -95,20 +95,10 @@ export function DshFieldDocumentUploadScreen({ storeId, docKind, onBack }: DshFi
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="إثبات الوثائق والصور"
-          subtitle={`معرف المتجر: ${storeId}`}
-          leading={
-            <IconButton
-              icon={<Icon name="arrow-back" size={20} tone="brand" mirrored />}
-              accessibilityLabel="رجوع"
-              onPress={onBack}
-              tone="ghost"
-            />
-          }
-        />
-      </View>
+      <Header
+        title="إثبات الوثائق والصور"
+        subtitle={`معرف المتجر: ${storeId}`}
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 100 }}

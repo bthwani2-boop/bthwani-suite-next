@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Platform, Pressable, View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Badge,
   Button,
@@ -82,6 +83,7 @@ export function FieldPartnerOnboardingScreen({
 }: FieldPartnerOnboardingScreenProps = {}) {
   const identity = useIdentitySession();
   const controller = useFieldPartnerOnboardingController();
+  const insets = useSafeAreaInsets();
   const { state, validationErrors, updateForm, updateVisitNotes, submitDraft } = controller;
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
@@ -212,16 +214,6 @@ export function FieldPartnerOnboardingScreen({
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <Header
         title={form.legalNameAr || 'ملف انضمام جديد'}
-        leading={
-          onBack ? (
-            <IconButton
-              icon={<Icon name="arrow-back" size={20} tone="brand" mirrored />}
-              accessibilityLabel="رجوع"
-              onPress={onBack}
-              tone="ghost"
-            />
-          ) : undefined
-        }
         actions={
           <IconButton
             icon={<Icon name="save-outline" size={20} tone="brand" />}
@@ -409,7 +401,7 @@ export function FieldPartnerOnboardingScreen({
           borderTopColor: colorRoles.borderSubtle,
           backgroundColor: colorRoles.surfaceBase,
           padding: spacing[3],
-          paddingBottom: Platform.OS === 'ios' ? spacing[4] + 12 : 48,
+          paddingBottom: spacing[3] + insets.bottom,
         }}
       >
         {/* تصعيد عائق */}

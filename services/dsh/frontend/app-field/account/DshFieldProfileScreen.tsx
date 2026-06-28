@@ -28,20 +28,10 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="بيانات الميداني"
-          subtitle="بيانات عملية يحتاجها الحساب فقط"
-          leading={
-            <IconButton
-              icon={<Icon name="arrow-back" size={20} tone="brand" mirrored />}
-              accessibilityLabel="رجوع"
-              onPress={onBack}
-              tone="ghost"
-            />
-          }
-        />
-      </View>
+      <Header
+        title="بيانات الميداني"
+        subtitle="بيانات عملية يحتاجها الحساب فقط"
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 96 }}

@@ -67,21 +67,9 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist }: Props)
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="زيارات التأهيل الميداني"
-          leading={
-            onBack ? (
-              <IconButton
-                icon={<Icon name="arrow-back" size={20} tone="brand" mirrored />}
-                accessibilityLabel="رجوع"
-                onPress={onBack}
-                tone="ghost"
-              />
-            ) : undefined
-          }
-        />
-      </View>
+      <Header
+        title="زيارات التأهيل الميداني"
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing[4], gap: spacing[4] }}

@@ -2,6 +2,7 @@
 // Consolidated entrypoint surface for field partner onboarding app.
 import React from 'react';
 import { BackHandler, Platform, Pressable, View, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
 import { useDshFieldSurfaceModel } from './field.surface-model';
 import type { DshFieldSurfaceProps } from './dsh-field.routes';
@@ -23,6 +24,7 @@ function FieldBottomNavBar({
   onSelect: (id: string) => void;
   onLauncherPress: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   // Right-side items (visually rightmost in RTL): المهام, السجل
   const rightItems = [
     { id: 'tasks',   label: 'المهام',  icon: 'list-outline',  activeIcon: 'list'  },
@@ -65,7 +67,8 @@ function FieldBottomNavBar({
     <View
       style={{
         flexDirection: 'row',
-        height: 72,
+        height: 72 + insets.bottom,
+        paddingBottom: insets.bottom,
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: colorRoles.borderSubtle,
@@ -167,6 +170,8 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     );
   }
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       {/* Global orange status bar for all screens */}
@@ -180,7 +185,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
       <View
         style={{
           flex: 1,
-          paddingBottom: fieldSurface.model.bottomNav.visible ? 72 : 0,
+          paddingBottom: fieldSurface.model.bottomNav.visible ? (72 + insets.bottom) : 0,
         }}
       >
         <DshFieldRouteRenderer

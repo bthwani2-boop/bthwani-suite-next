@@ -18,12 +18,10 @@ export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScr
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="سجل المتاجر"
-          subtitle="آخر حالة لكل متجر مرتبط بالميدان"
-        />
-      </View>
+      <Header
+        title="سجل المتاجر"
+        subtitle="آخر حالة لكل متجر مرتبط بالميدان"
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 96 }}

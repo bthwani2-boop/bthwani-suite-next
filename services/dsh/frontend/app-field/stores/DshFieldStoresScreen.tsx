@@ -121,8 +121,9 @@ function NextStoreCard({
   onPress: () => void;
 }) {
   return (
-    <View
-      style={{
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
         backgroundColor: '#FFF',
         borderRadius: radius.lg,
         borderWidth: 1,
@@ -137,7 +138,8 @@ function NextStoreCard({
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 8,
         elevation: 2,
-      }}
+        opacity: pressed ? 0.92 : 1,
+      })}
     >
       {/* Right: text */}
       <View style={{ flex: 1, gap: spacing[1], alignItems: 'flex-end' }}>
@@ -153,9 +155,7 @@ function NextStoreCard({
           {subtitle}
         </Text>
       </View>
-      {/* Left: CTA button */}
-      <Button label="البدء الآن" tone="primary" size="sm" onPress={onPress} />
-    </View>
+    </Pressable>
   );
 }
 

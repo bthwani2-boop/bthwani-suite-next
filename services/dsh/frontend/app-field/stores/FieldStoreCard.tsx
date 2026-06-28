@@ -86,7 +86,7 @@ export function FieldStoreCard({ partner, onPress }: FieldStoreCardProps) {
           elevation: 1,
         }}
       >
-        {/* Row 1: Arrow button (left) + badges + title (right) */}
+        {/* Row 1: Badges + title */}
         <View
           style={{
             flexDirection: 'row-reverse',
@@ -121,23 +121,6 @@ export function FieldStoreCard({ partner, onPress }: FieldStoreCardProps) {
             <Text style={{ fontSize: 13, color: colorRoles.textMuted, textAlign: 'right' }}>
               {partner.category}
             </Text>
-          </View>
-
-          {/* Left: Orange arrow circle */}
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: colorRoles.brandAction,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              marginTop: spacing[2],
-              transform: [{ scaleX: -1 }],
-            }}
-          >
-            <Text style={{ color: '#FFF', fontSize: 18, lineHeight: 22 }}>→</Text>
           </View>
         </View>
 

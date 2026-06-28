@@ -55,12 +55,10 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="المالية والعمولات الميدانية"
-          subtitle="مستحقات وعمولات تأهيل الشركاء (عرض فقط من محرك المحفظة)"
-        />
-      </View>
+      <Header
+        title="المالية والعمولات الميدانية"
+        subtitle="مستحقات وعمولات تأهيل الشركاء (عرض فقط من محرك المحفظة)"
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 96 }}

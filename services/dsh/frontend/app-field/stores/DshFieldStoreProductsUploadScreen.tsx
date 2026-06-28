@@ -2,6 +2,7 @@
 // Dedicated products list and classification picker screen.
 import React from 'react';
 import { Pressable, View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Button,
   Text,
@@ -62,6 +63,7 @@ export function DshFieldStoreProductsUploadScreen({
   storeId,
   onBack,
 }: DshFieldStoreProductsUploadScreenProps) {
+  const insets = useSafeAreaInsets();
   const [storeType, setStoreType] = React.useState('retail');
   const [mainCategory, setMainCategory] = React.useState('grocery');
   const [subCategory, setSubCategory] = React.useState('supermarket');
@@ -108,20 +110,10 @@ export function DshFieldStoreProductsUploadScreen({
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <View style={{ paddingHorizontal: spacing[4] }}>
-        <Header
-          title="المنتجات والتصنيف"
-          subtitle={`معرف المتجر: ${storeId}`}
-          leading={
-            <IconButton
-              icon={<Icon name="arrow-back" size={20} tone="brand" mirrored />}
-              accessibilityLabel="رجوع"
-              onPress={onBack}
-              tone="ghost"
-            />
-          }
-        />
-      </View>
+      <Header
+        title="المنتجات والتصنيف"
+        subtitle={`معرف المتجر: ${storeId}`}
+      />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -292,6 +284,7 @@ export function DshFieldStoreProductsUploadScreen({
       <View
         style={{
           padding: spacing[3],
+          paddingBottom: spacing[3] + insets.bottom,
           borderTopWidth: 1,
           borderTopColor: colorRoles.borderSubtle,
           backgroundColor: colorRoles.surfaceBase,
