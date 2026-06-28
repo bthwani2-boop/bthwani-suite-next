@@ -34,7 +34,11 @@ const EXCLUDED_DIRS = new Set([
 ]);
 
 const EXCLUDED_EXTENSIONS = new Set([
-  "png", "jpg", "jpeg", "gif", "webp", "svg", "mp4", "mov", "zip", "7z", "rar", "tar", "gz", "map"
+  "png", "jpg", "jpeg", "gif", "webp", "svg", "ico",
+  "mp4", "mov", "avi", "pdf",
+  "zip", "7z", "rar", "tar", "gz",
+  "map", "log", "har", "sqlite", "db", "db-shm", "db-wal",
+  "tsbuildinfo", "apk", "aab", "ipa"
 ]);
 
 export function isExcluded(relPath, isDir, name) {

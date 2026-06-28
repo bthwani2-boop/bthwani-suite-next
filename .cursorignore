@@ -22,3 +22,26 @@ evidence/
 **/visual-evidence/
 **/generated/
 **/__generated__/
+
+# Media/Binary/Archive/Log exclusions
+*.log
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.ico
+*.mp4
+*.mov
+*.pdf
+
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

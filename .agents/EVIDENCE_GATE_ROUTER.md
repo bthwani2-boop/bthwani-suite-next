@@ -4,7 +4,7 @@ Goal: choose the smallest sufficient code-based check.
 
 ## Default mode — CODE_BASED_LEAN
 
-The canonical policy for default execution is detailed in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+The canonical policy for default execution is detailed in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md).
 
 Use this for normal implementation.
 
@@ -26,7 +26,7 @@ Not required by default:
 - full guard suite
 - repeated status/diff artifacts
 
-All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
+All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
 
 ## Gate levels
 

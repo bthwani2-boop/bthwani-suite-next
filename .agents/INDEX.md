@@ -2,7 +2,7 @@
 
 ## ⚡ Execution Model — Proportional to Task Nature
 
-The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity**. No more, no less.
+The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity**. No more, no less.
 
 ### Tier 1 — Instant (0 skills, 0 checks)
 Trivial tasks. Execute immediately and respond.

@@ -33,7 +33,7 @@ Prefer CODE_BASED_LEAN. Select the smallest useful code-based check. Escalate on
 - targeted check if used
 - remaining risk
 
-Evidence files are required only when escalation applies, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+Evidence files are required only when escalation applies, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
 
 ## Failure decision
 
@@ -43,4 +43,4 @@ Evidence files are required only when escalation applies, following the canonica
 
 ## Notes
 
-All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).

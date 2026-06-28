@@ -14,7 +14,7 @@ Also refer to [BThwani Harness Patterns](.agents/BTHWANI_HARNESS_PATTERNS.md) fo
 
 ## Default: CODE_BASED_LEAN
 
-Normal implementation is live-code first and token-efficient, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+Normal implementation is live-code first and token-efficient, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](governance/LEAN_CODE_BASED_CHECK.md).
 
 Agents must:
 - inspect only directly relevant code paths
@@ -27,7 +27,7 @@ Agents must not create evidence packs, handoff ZIPs, command logs, screenshot se
 
 Agents must not run Graphify, Nx graph, full typecheck, full test, full build, full guard suite, or local CI-style gates by default.
 
-All scans and file operations must adhere to the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+All scans and file operations must adhere to the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](governance/LEAN_CODE_BASED_CHECK.md).
 
 Escalate only for explicit closure/PR/release requests or high-risk work: WLT/finance, security, auth, privacy, secrets, data mutation, migrations, runtime, public contracts, dependency upgrades, CI, broad move/delete/refactor, or unclear ownership/dependency/routing/duplication.
 

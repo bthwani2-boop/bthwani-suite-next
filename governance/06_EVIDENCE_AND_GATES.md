@@ -4,7 +4,7 @@ Status: CANONICAL
 
 ## Default rule
 
-Normal implementation uses CODE_BASED_LEAN, in accordance with the canonical policy in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+Normal implementation uses CODE_BASED_LEAN, in accordance with the canonical policy in [LEAN_CODE_BASED_CHECK.md](LEAN_CODE_BASED_CHECK.md).
 
 The agent should inspect relevant live code, make the smallest correct change, and run only the most targeted useful code-based check.
 

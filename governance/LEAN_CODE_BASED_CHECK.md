@@ -59,3 +59,14 @@ To maximize token efficiency and avoid scanning massive generated, temporary, or
 - Map files: `*.map`
 - Minified scripts: `*.min.js`
 - Lockfiles (except dependency-specific tasks): `pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`
+
+---
+
+## Document Link & Ignore File Policy
+
+### Repo-Relative Links
+- All links inside committed repository documents (governance, agents, skills, and codebases) must be **repo-relative** (e.g., `../governance/LEAN_CODE_BASED_CHECK.md`).
+- **NEVER** commit Windows or machine-local file scheme links (e.g., `file:///C:/...` or `file:///c:/...`).
+
+### Ignore File Alignment
+- All project ignore configurations (`.graphifyignore`, `.aiderignore`, `.cursorignore`, `.aiexclude`) and automated guard exclusions must fully align with the **Token-Drain Exclusions** defined in this document.

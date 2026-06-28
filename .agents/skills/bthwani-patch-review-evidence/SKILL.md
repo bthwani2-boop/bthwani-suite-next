@@ -30,7 +30,7 @@ Check changed file list, scope compliance, unexpected additions/deletions, stage
 ## Required evidence
 
 For normal patch review, inspect changed code directly.
-Require evidence files and screenshots only when final closure/PR/release review or explicit escalation requires them, following [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+Require evidence files and screenshots only when final closure/PR/release review or explicit escalation requires them, following [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
 
 ## Failure decision
 
@@ -41,4 +41,4 @@ Require evidence files and screenshots only when final closure/PR/release review
 
 ## Notes
 
-All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).

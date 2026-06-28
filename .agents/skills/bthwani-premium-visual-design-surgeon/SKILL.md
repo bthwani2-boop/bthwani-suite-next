@@ -411,7 +411,7 @@ A design slice may close only when all applicable items pass:
 - checks pass or blockers are explicitly proven
 - evidence does not contradict code or guard output
 
-All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
 
 ## Failure decisions
 
@@ -429,7 +429,7 @@ BLOCKED_BY_RUNTIME
 
 ## Output contract
 
-Always end with this output:
+Use this full output template only for explicit design surgery, final visual closure, visual parity approval, or release/store visual review:
 
 ```text
 skill: bthwani-premium-visual-design-surgeon
@@ -474,6 +474,8 @@ remaining_blockers:
   required_action:
   verification_command:
 ```
+
+For normal UI work, output only changed paths, code-based checks used (if any), and remaining risk.
 
 ## Quality bar
 
