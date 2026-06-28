@@ -1,0 +1,7 @@
+RESULT: PASS
+MACHINE_READABLE: NOT_USED
+Errors: 0
+Warnings: 1
+Checks: 16
+
+WARN: NOT_BOUND_SURFACE_FIX_REQUIRED: services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx — PartnerStoreScreen must consume useStoreRoleContextController

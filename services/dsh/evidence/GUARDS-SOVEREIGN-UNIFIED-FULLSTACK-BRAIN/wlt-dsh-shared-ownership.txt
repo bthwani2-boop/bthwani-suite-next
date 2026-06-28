@@ -1,0 +1,8 @@
+GUARD: wlt-dsh-frontend-shared-ownership
+FILE: tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs
+RESULT: PASS
+MACHINE_READABLE: NOT_USED
+
+WLT-for-DSH BRAIN VERIFIED:
+  services/wlt/frontend/shared/dsh — owns all WLT-for-DSH read-only bindings
+  WLT surfaces — UI rendering only, no financial mutations

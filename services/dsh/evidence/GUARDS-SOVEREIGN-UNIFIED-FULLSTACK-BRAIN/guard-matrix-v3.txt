@@ -1,0 +1,7 @@
+RESULT: PASS
+MACHINE_READABLE: NOT_USED
+Errors: 0
+Warnings: 1
+Checks: 31
+
+WARN: (dead-code) machine-readable ref in retired file: tools/guards/guard-slice-master-matrix-v2.mjs

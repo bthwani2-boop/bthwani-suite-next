@@ -98,4 +98,4 @@ for (const file of listCodeFiles()) {
   }
 }
 
-fail("dsh-004-cart-serviceability", violations);
+fail("dsh-cart-serviceability", violations);

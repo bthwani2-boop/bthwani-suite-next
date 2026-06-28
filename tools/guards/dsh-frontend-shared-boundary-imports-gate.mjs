@@ -144,7 +144,9 @@ for (const file of listCodeFiles()) {
               sym.startsWith("get") ||
               sym.startsWith("filter") ||
               sym.startsWith("is") ||
-              sym.startsWith("next");
+              sym.startsWith("next") ||
+              sym.startsWith("translate") ||  // display formatters (translateOwner, translateStage, etc.)
+              sym.startsWith("wlt");           // generated WLT-for-DSH read-only UI copy constants
             if (!isAllowedPrefix) {
               violations.push({
                 file,

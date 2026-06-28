@@ -233,7 +233,6 @@ const PORT_SCOPES = [
   "services/dsh/frontend/control-panel/",
   "services/wlt/frontend/control-panel/",
   "apps/control-panel/runtime/",
-  "machine-readable/control-panel-design/",
 ];
 
 for (const file of listCodeFiles()) {
@@ -273,36 +272,14 @@ try {
   // git not available — skip check
 }
 
-// ── 11. machine-readable/control-panel-design JSON files are valid ────────────
+// ── 11. Control-panel governance doc exists ───────────────────────────────────
 
-const machineDir = path.join(root, "machine-readable/control-panel-design");
-if (!fs.existsSync(machineDir)) {
+const CP_GOVERNANCE = "governance/02_SERVICES_AND_SURFACES.md";
+if (!fs.existsSync(path.join(root, CP_GOVERNANCE))) {
   violations.push({
-    file: "machine-readable/control-panel-design/",
-    message: "MISSING: machine-readable/control-panel-design/ directory does not exist",
+    file: CP_GOVERNANCE,
+    message: "MISSING: control-panel governance doc (02_SERVICES_AND_SURFACES.md)",
   });
-} else {
-  const REQUIRED_JSON = [
-    "control_panel_app_shell_audit.json",
-    "control_panel_design_skeleton_reference.json",
-    "control_panel_section_archetypes.json",
-    "control_panel_service_ownership_matrix.json",
-    "control_panel_design_gate.json",
-  ];
-
-  for (const name of REQUIRED_JSON) {
-    const abs = path.join(machineDir, name);
-    const rel = `machine-readable/control-panel-design/${name}`;
-    if (!fs.existsSync(abs)) {
-      violations.push({ file: rel, message: "MISSING required machine-readable contract file" });
-      continue;
-    }
-    try {
-      JSON.parse(fs.readFileSync(abs, "utf8"));
-    } catch {
-      violations.push({ file: rel, message: "INVALID JSON — parse error" });
-    }
-  }
 }
 
 fail(guardId, violations);

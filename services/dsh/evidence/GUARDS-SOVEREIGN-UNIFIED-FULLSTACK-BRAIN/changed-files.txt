@@ -1,0 +1,42 @@
+BRANCH: brach-validation
+BASE: master
+HEAD: f511f814e1638be643cdaf09f83e02ea5bef0097
+
+MODIFIED (M):
+  .github/workflows/ci.yml                                          — added sovereignty guard steps + brach-validation push branch
+  package.json                                                       — added guard:unified-fullstack-brain + renamed guard scripts
+  tools/guards/guard-manifest.json                                   — moved 001/003/004 to foundation with rule-based IDs
+  tools/guards/guard-slice-master-matrix-v3.mjs                      — fully rewritten: live topology, no machine-readable
+  tools/guards/performance-runtime-baseline.mjs                      — rewritten: live topology, inline policy constants
+  tools/guards/dsh-service-activation.mjs                            — removed machine-readable comment string
+  tools/guards/app-shell-control-panel-contract-gate.mjs             — removed machine-readable/control-panel-design/ check
+  tools/guards/control-panel-design-gate.mjs                         — removed machine-readable required files + JSON check
+  tools/guards/dsh-frontend-shared-ownership-gate.mjs               — removed blanket useEffect check
+  tools/guards/dsh-frontend-shared-boundary-imports-gate.mjs        — added translate/wlt to allowed prefixes
+  services/dsh/frontend/shared/store/index.ts                        — added store-delivery.types export
+  services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts — moved 3 types to shared/store, import from shared
+  services/dsh/frontend/app-partner/Catalog/InventoryCatalogScreen.tsx — removed canRenderInClientSurface, inlined check
+  tools/plan/command_old_new                                          — updated to sovereignty v4 protocol
+
+DELETED (D):
+  .vscode/settings.json                                              — personal IDE settings (CodeGeeX)
+  tools/guards/dsh-001-cross-surface-dependency-map.mjs              — renamed to dsh-store-role-boundary-gate.mjs
+  tools/guards/dsh-003-catalog-ownership-gate.mjs                    — renamed to dsh-catalog-ownership-gate.mjs
+  tools/guards/dsh-004-cart-serviceability-gate.mjs                  — renamed to dsh-cart-serviceability-gate.mjs
+  services/dsh/frontend/shared/finance-visibility/{4 files}          — duplicate of finance-wlt-link canonical
+  services/dsh/frontend/shared/finance/{3 files}                     — duplicate of finance-wlt-link canonical
+  services/dsh/frontend/shared/wlt-cod/{3 files}                     — duplicate of finance-wlt-link canonical
+  services/dsh/frontend/shared/wlt-ledger/{3 files}                  — duplicate of finance-wlt-link canonical
+  services/dsh/frontend/shared/wlt-refund/{3 files}                  — duplicate of finance-wlt-link canonical
+  services/dsh/frontend/shared/wlt-settlement/{3 files}              — duplicate of finance-wlt-link canonical
+
+NEW (?):
+  tools/guards/unified-fullstack-brain-gate.mjs                      — NEW: 14-check sovereignty gate
+  tools/guards/dsh-store-role-boundary-gate.mjs                      — renamed from dsh-001
+  tools/guards/dsh-catalog-ownership-gate.mjs                        — renamed from dsh-003
+  tools/guards/dsh-cart-serviceability-gate.mjs                      — renamed from dsh-004
+  services/dsh/frontend/shared/store/store-delivery.types.ts         — NEW: store domain types moved from surface
+  services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx     — NEW: scaffold surface screen
+  services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx — NEW: scaffold surface screen
+  services/dsh/frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx — NEW: scaffold surface screen
+  services/dsh/evidence/GUARDS-SOVEREIGN-UNIFIED-FULLSTACK-BRAIN/    — NEW: evidence directory

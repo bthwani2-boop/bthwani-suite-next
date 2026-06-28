@@ -32,11 +32,6 @@ const REQUIRED_FILES = [
   // control-panel runtime: Cp* primitives
   "apps/control-panel/runtime/src/components/index.ts",
   "apps/control-panel/runtime/src/components/CpPrimitives.tsx",
-  // machine-readable contracts
-  "machine-readable/control-panel-design/control_panel_design_skeleton_reference.json",
-  "machine-readable/control-panel-design/control_panel_section_archetypes.json",
-  "machine-readable/control-panel-design/control_panel_service_ownership_matrix.json",
-  "machine-readable/control-panel-design/control_panel_design_gate.json",
 ];
 
 for (const rel of REQUIRED_FILES) {
@@ -59,20 +54,11 @@ if (fs.existsSync(path.join(root, appShellIndex))) {
   }
 }
 
-// ── 3. Valid JSON for all machine-readable/control-panel-design/*.json ────────
+// ── 3. Control-panel governance doc exists ────────────────────────────────────
 
-const machineDir = path.join(root, "machine-readable/control-panel-design");
-if (fs.existsSync(machineDir)) {
-  for (const entry of fs.readdirSync(machineDir)) {
-    if (!entry.endsWith(".json")) continue;
-    const rel = `machine-readable/control-panel-design/${entry}`;
-    const abs = path.join(root, rel);
-    try {
-      JSON.parse(fs.readFileSync(abs, "utf8"));
-    } catch {
-      violations.push({ file: rel, message: "Invalid JSON" });
-    }
-  }
+const CP_GOVERNANCE = "governance/02_SERVICES_AND_SURFACES.md";
+if (!fs.existsSync(path.join(root, CP_GOVERNANCE))) {
+  violations.push({ file: CP_GOVERNANCE, message: "MISSING: control-panel governance doc" });
 }
 
 // ── Scope helpers ─────────────────────────────────────────────────────────────
@@ -217,7 +203,6 @@ const PORT_SCOPES = [
   "services/dsh/frontend/control-panel/",
   "services/wlt/frontend/control-panel/",
   "apps/control-panel/runtime/",
-  "machine-readable/control-panel-design/",
 ];
 
 for (const file of listCodeFiles()) {

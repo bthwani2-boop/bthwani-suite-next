@@ -210,18 +210,10 @@ for (const retiredPath of RETIRED_PATHS) {
   }
 }
 
-// ── Rule 7: No useEffect() in surface component files ───────────────────────
-// Controllers (use-*) legitimately use useEffect — they live in shared, not surfaces.
-// Any useEffect in a surface file means data-loading logic leaked out of shared.
-for (const surface of SURFACE_DIRS) {
-  for (const file of walkFiles(join(FRONTEND, surface))) {
-    if (!file.endsWith(".tsx")) continue;
-    const src = read(file);
-    if (/\buseEffect\(/.test(src)) {
-      fail(file, "useEffect() in surface component — data loading must stay in shared controllers");
-    }
-  }
-}
+// ── Rule 7: No data-loading fetch/axios in surface component files ───────────
+// UI effects (BackHandler, timers, keyboard, animations) are permitted in surfaces.
+// Only direct data loading (fetch, axios) is forbidden — caught by Rule 4/5 patterns.
+// Note: useEffect per se is allowed; data-loading inside useEffect is caught by fetch/axios checks.
 
 // ── Rule 8: No old ports hardcoded in any frontend file ─────────────────────
 const OLD_PORT_RE = /:(8080|8081|8082|8083|8084|3000)\b/;

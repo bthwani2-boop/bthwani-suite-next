@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-06-28T14:50:39.612Z",
+  "guard": "unified-fullstack-brain",
+  "machine_readable": "NOT_USED",
+  "result": "PASS",
+  "errors": [],
+  "warnings": [
+    "NOT_BOUND_SURFACE_FIX_REQUIRED: services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx — PartnerStoreScreen must consume useStoreRoleContextController"
+  ],
+  "checks_passed": 16,
+  "sovereign_brains": {
+    "dsh": "services/dsh/frontend/shared",
+    "wlt_for_dsh": "services/wlt/frontend/shared/dsh"
+  }
+}

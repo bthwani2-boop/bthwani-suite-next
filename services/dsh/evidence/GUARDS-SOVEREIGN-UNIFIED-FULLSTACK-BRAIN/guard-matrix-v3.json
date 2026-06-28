@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-06-28T14:50:37.485Z",
+  "guard": "matrix-v3-live-topology",
+  "machine_readable": "NOT_USED",
+  "result": "PASS",
+  "errors": [],
+  "warnings": [
+    "(dead-code) machine-readable ref in retired file: tools/guards/guard-slice-master-matrix-v2.mjs"
+  ],
+  "checks_passed": 31,
+  "sovereign_brains": {
+    "dsh": "services/dsh/frontend/shared",
+    "wlt_for_dsh": "services/wlt/frontend/shared/dsh"
+  }
+}

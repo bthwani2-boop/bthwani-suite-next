@@ -1,3 +1,4 @@
+export * from "./store-delivery.types";
 export * from "./store-discovery.types";
 export * from "./store-discovery.view-model";
 export * from "./store-discovery.states";

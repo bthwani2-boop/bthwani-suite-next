@@ -1,305 +1,409 @@
+# أمر التنفيذ السيادي العام — بروتوكول العقل الفول ستاك الموحد
+# Sovereign Execution Command — Unified Fullstack Brain Protocol
+# لا machine-readable / NO machine-readable dependency
+# النسخة: v4 (2026-06-28)
 
+## 0) قاعدة القرار الحاكم: لا machine-readable
 
-هل تم تنفيذ كل شيء هنا بنجاح واصبح كل شيء مغطي وماخوذ في الاعتبار 
+ممنوع نهائيًا الاعتماد على أو استرجاع أو إعادة بناء أي ملف من:
 
+```
+machine-readable/
+```
 
-بدقة رقمية كاملة 100%**،
-مع التزام صارم بـ **صفر أخطاء، صفر تناقض، صفر تكرار، صفر فجوات، صفر ضجيج وصفر ضعف او نقص في المنطق والتشغيل ، صفر تشتت، صفر فشل، وصفر عيوب**. 
+بما يشمل:
+- governance.json
+- topic-registry.json
+- verification-gates.json
+- architecture-map.json
+- execution-status.json
+- surface-ownership-map.json
+- dsh-wlt-boundary.json
+- repositories.json
+- evidence-index.json
 
- بحيث نضمن **الأدق والأقوى والأفضل والأنسب** دون أي ضعف أو نقص، وبمنهجية **حقيقية، منطقية، وتقنية** محقَّقة بالكامل **100%**
+أي guard أو script أو CI أو evidence لا يزال يعتمد عليها:
 
+```
+STATUS: FIX_REQUIRED
+```
 
+الحوكمة تعتمد على:
+```
+live repository topology
+sovereign frontend brains
+unified fullstack brain contracts
+shared controllers/state/view-models
+API/backend linkage
+guards قابلة للتشغيل
+tests وأدلة من نفس commit
+```
 
-نفّذ المهمة التالية تنفيذًا جنائيًا عمليًا داخل Google Antigravity على الكود المحلي المتزامن مع GitHub Remote، باستخدام أحد وكلاء/نماذج الذكاء الاصطناعي.
+---
 
-هذا الأمر عام وقابل للاستخدام لأي نوع مهمة داخل المستودع:
+## 1) المستودعات والفروع
 
-* feature
-* bugfix
-* refactor
-* cleanup
-* guard
-* backend
-* frontend
-* database
-* contracts
-* Docker/runtime
-* CI
-* tests
-* docs
-* evidence
-* slice/journey
-* PR review
-* migration
-* architecture enforcement
-* fullstack flow
+```
+NEW_REPO_REMOTE:    bthwani2-boop/bthwani-suite-next
+NEW_REPO_LOCAL:     C:\bthwani-suite-next
+NEW_BRANCH:         brach-validation
+NEW_BASE_BRANCH:    master
 
-الهدف الحاكم:
-تنفيذ المهمة بمنهجية رقمية قابلة للتحقق، مع منع الادعاءات غير المثبتة، ومنع الأخطاء والتناقض والتكرار والفجوات والضجيج والتشتت قدر الإمكان عبر حراسات وفحوصات وأدلة عملية.
+DONOR_REMOTE_READ_ONLY:  bthwani2-boop/bthwani-suite
+DONOR_LOCAL_READ_ONLY:   C:\bthwani-suite
+DONOR_BRANCH_READ_ONLY:  realtest
+```
 
-ممنوع إعلان:
+قاعدة المستودع:
+- التنفيذ داخل: C:\bthwani-suite-next فقط
+- المانح READ-ONLY — ممنوع تعديله أو commit أو push أو reset
 
-* READY
-* CLOSED
-* DONE
-* 100%
-* مكتمل
-* جاهز للدمج
+---
 
-إلا إذا أثبتت الأدلة العملية ذلك فعليًا.
+## 2) بروتوكول القرار المهني
 
-أي فشل، نقص دليل، تناقض، سكربت مفقود، فحص غير منفذ، نطاق غير محسوم، أو نتيجة غير مثبتة يعني:
+تعامل مع كل مهمة كقرار هندسي بالأدلة، لا كتحسين اختياري.
 
+```
+1. افهم الهدف والنطاق والسياق.
+2. افحص GitHub Remote أولًا.
+3. افحص الملفات الفعلية والمسارات والطبقات والأسطح والتبعيات.
+4. لا تعتمد على الذاكرة.
+5. لا تتحيز للوضع الحالي.
+6. لا تفترض أن الموجود صحيح.
+7. لا تترك غموضًا كملاحظة عامة.
+8. أي غموض = نقص محدد: ما الناقص؟ أين؟ لماذا؟ ما الدليل؟ ما الخطوة؟
+```
+
+المخرجات المقبولة فقط:
+```
+PASS
 FIX_REQUIRED
+BLOCKED_NEEDS_EVIDENCE
+```
 
-==================================================
-0) المطلوب تنفيذه
-=================
+ممنوع:
+```
+READY / CLOSED / DONE / 100% / مكتمل / جاهز للدمج
+```
+إلا إذا كل الأدلة العملية من نفس branch/head PASS فعليًا.
 
-TASK / المطلوب:
-<اكتب هنا بالضبط ما تريد تنفيذه>
+---
 
-TOPIC / SLICE:
-<اكتب اسم الشريحة أو التوبك>
+## 3) مزامنة الفرع
 
-SCOPE:
-<حدد النطاق بدقة>
-
-أمثلة:
-
-* services/dsh/frontend
-* services/dsh/backend
-* services/wlt/frontend
-* services/wlt/backend
-* apps/control-panel/runtime
-* apps/app-client/runtime
-* infra/docker
-* tools/guards
-* contracts/openapi
-* database/migrations
-* CI/workflows
-* docs/evidence
-* fullstack journey
-
-EXPECTED OUTCOME:
-<اكتب النتيجة النهائية المطلوبة بوضوح>
-
-OUT_OF_SCOPE:
-<اكتب ما لا يجب لمسه إن وجد>
-
-SUCCESS CRITERIA:
-<اكتب معايير النجاح الرقمية المحددة>
-
-مثال:
-
-* لا توجد مخالفات ownership.
-* لا توجد API calls داخل UI screens.
-* لا توجد بيانات mock/demo/preview داخل runtime.
-* كل guards المطلوبة PASS.
-* كل typecheck المطلوب PASS.
-* كل tests المطلوبة PASS.
-* git status نظيف أو يحتوي فقط تغييرات مقصودة committed.
-* التقرير النهائي يحتوي أدلة تنفيذ وفحص.
-
-==================================================
-
-1. المستودعات والفروع
-   ==================================================
-
-NEW_REPO_REMOTE:
-bthwani2-boop/bthwani-suite-next
-
-NEW_REPO_LOCAL:
-C:\bthwani-suite-next
-
-NEW_BRANCH:
-brach-validation
-
-NEW_BASE_BRANCH:
-master
-
-DONOR_REPO_REMOTE_READ_ONLY:
-bthwani2-boop/bthwani-suite
-
-DONOR_REPO_LOCAL_READ_ONLY:
-C:\bthwani-suite
-
-DONOR_BRANCH_READ_ONLY:
-realtest
-
-قاعدة المستودع الجديد:
-
-* التنفيذ الأساسي يتم داخل:
-  C:\bthwani-suite-next
-* الفرع العامل:
-  brach-validation
-* GitHub Remote يستخدم للتحقق والمطابقة قبل وبعد التنفيذ.
-* أي تعديل أو commit أو push يكون فقط في المستودع الجديد.
-* لا تعدّل المانح إطلاقًا.
-
-قاعدة المانح:
-
-* المانح READ-ONLY فقط.
-* الفرع المستخدم في المانح:
-  realtest
-* ممنوع تعديل المانح.
-* ممنوع commit داخل المانح.
-* ممنوع push داخل المانح.
-* ممنوع reset داخل المانح.
-* ممنوع تنظيف المانح.
-* ممنوع تصحيح المانح.
-* استخدمه فقط للفهم والمقارنة والاستخراج المنضبط.
-
-المسموح من المانح:
-
-* فهم السلوك القديم الصحيح.
-* مقارنة الرحلات.
-* مقارنة الشاشات.
-* مقارنة العقود.
-* مقارنة backend flows.
-* مقارنة database behavior.
-* استخراج أنماط صحيحة.
-* فهم أسماء الدومين والعلاقات.
-* معرفة ما يجب إعادة تركيبه في المستودع الجديد.
-
-الممنوع من المانح:
-
-* النسخ العشوائي.
-* نقل architecture قديمة تخالف معمار المستودع الجديد.
-* إدخال mock/demo/preview من المانح إلى runtime الجديد.
-* وضع منطق مأخوذ من المانح مباشرة في مكان خاطئ.
-* تعديل أي ملف في المانح.
-
-==================================================
-2) مزامنة المحلي مع Remote قبل التنفيذ
-======================================
-
-نفّذ داخل المستودع الجديد:
-
+```powershell
 Set-Location -LiteralPath "C:\bthwani-suite-next"
-
-git status --short
-
-إذا كان هناك تغييرات محلية قبل المزامنة:
-
-* لا تتجاهلها.
-* لا تحذفها صامتًا.
-* احفظ patch أو stash باسم واضح.
-* اذكر ذلك في التقرير.
-* بعدها فقط أكمل المزامنة.
-
-ثم نفّذ:
-
 git fetch --all --prune
 git checkout brach-validation
 git reset --hard origin/brach-validation
 git status --short
 git log --oneline --decorate -n 30
 git diff --stat master...brach-validation
+```
 
-ثم افحص المانح للقراءة فقط:
+إذا ظهر local dirty بعد reset:
+```
+STATUS: BLOCKED_NEEDS_EVIDENCE
+```
 
-Set-Location -LiteralPath "C:\bthwani-suite"
+---
 
-git fetch --all --prune
-git checkout realtest
-git status --short
-git log --oneline --decorate -n 20
+## 4) المسارات السيادية الحاكمة
 
-إذا ظهر أي تغيير داخل المانح:
+### 4.1 DSH Frontend Brain (العقل الحاكم الوحيد لـ DSH)
 
-* لا تعدله.
-* لا تنظفه.
-* لا تعمل commit.
-* لا تعمل reset.
-* أبلغ عنه فقط في التقرير كـ:
-  DONOR_LOCAL_DIRTY
-  أو:
-  BLOCKED_NEEDS_EVIDENCE
+```
+services/dsh/frontend/shared
+```
 
-ثم ارجع للمستودع الجديد:
+يملك فقط:
+- controllers / hooks
+- state machines / states
+- view-models
+- adapters / API bindings
+- frontend contracts
+- validation rules / permission rules
+- role policies / view policies
+- lifecycle rules
+- business UI logic / domain display mapping
+- registry/config/domain constants
+- DSH-facing WLT integration binding
+- shared providers
+- shared error/loading/empty-state contracts
+- أي منطق مشترك بين الأسطح
 
+### 4.2 DSH UI-Only Surfaces (واجهات فقط)
+
+```
+services/dsh/frontend/control-panel
+services/dsh/frontend/app-partner
+services/dsh/frontend/app-field
+services/dsh/frontend/app-client
+services/dsh/frontend/app-captain
+```
+
+مسموح فقط:
+- rendering / layout / labels / icons
+- navigation composition
+- role-specific visibility rendering
+- empty/loading/error rendering
+- calling shared controller hooks
+- passing UI props
+- surface-specific composition فقط
+
+ممنوع داخلها:
+- fetch / axios
+- API adapters / repositories
+- state machines / controllers / controller-core
+- domain validation / permission logic / role policy / view policy
+- business lifecycle logic
+- process.env / URL construction
+- storage access (localStorage/sessionStorage/AsyncStorage)
+- cross-service integration / backend/database/internal imports
+- duplicated domain types / view-model / status / validation / permission / lifecycle logic
+
+### 4.3 WLT-for-DSH Brain
+
+```
+services/wlt/frontend/shared/dsh
+```
+
+يملك:
+- WLT-for-DSH types / states / contracts / view-models
+- WLT-for-DSH read-only API adapters / controllers
+- WLT-for-DSH field commission references
+- WLT-for-DSH financial reference mappings
+- read-only binding consumed by DSH shared
+
+### 4.4 WLT UI-Only Surfaces
+
+```
+services/wlt/frontend/control-panel
+services/wlt/frontend/app-partner
+services/wlt/frontend/app-field
+services/wlt/frontend/app-client
+services/wlt/frontend/app-captain
+```
+
+ممنوع داخلها:
+- financial mutation (wallet/ledger/payment/refund/settlement/commission/payout)
+- API adapter مباشر / state machine / controller-core
+- business lifecycle logic / financial permission logic
+
+### 4.5 Apps Runtime (Bootstrap فقط)
+
+```
+apps/app-client/runtime
+apps/app-partner/runtime
+apps/app-field/runtime
+apps/app-captain/runtime
+apps/control-panel/runtime
+```
+
+يحتوي فقط: bootstrap + provider wrapping موحد + navigation entry point
+لا يحتوي: business logic / API binding / state machine / controllers
+
+---
+
+## 5) قاعدة العقل الفول ستاك الموحد
+
+**Unified Fullstack Brain Rule:**
+
+كل Slice / Journey / Topic داخل DSH أو WLT-for-DSH يجب أن يمتلك مصدر منطق واحد فقط:
+
+```
+DSH:       services/dsh/frontend/shared/<domain>/
+WLT-DSH:   services/wlt/frontend/shared/dsh/<domain>/
+```
+
+كل surface يستهلك نفس: controller / state contract / view-model / validation / permissions / lifecycle / role/view policy
+
+أي اختلاف بين التطبيقات = role/view policy مصرّح داخل shared، وليس منطقًا منفصلًا داخل surface.
+
+أمثلة ممنوعة:
+```
+app-client يرى store ACTIVE بينما app-partner يراه PENDING لنفس source state
+app-partner يستخدم validation خاصًا غير موجود في shared
+surface يختار API endpoint مباشرة
+surface يقرر permission أو lifecycle أو transition
+surface يبني view-model من raw API response
+surface يملك role policy محلية
+```
+
+أمثلة مسموحة:
+```
+نفس state المركزي لكن label مختلف حسب role
+نفس view-model لكن layout مختلف
+نفس permission لكن زر مخفي في surface معين
+نفس controller لكن surface يعرض subset
+```
+
+---
+
+## 6) Guards السيادية المطلوبة
+
+```
+tools/guards/guard-slice-master-matrix-v3.mjs          ← live topology (NO machine-readable)
+tools/guards/unified-fullstack-brain-gate.mjs           ← unified brain enforcement
+tools/guards/dsh-frontend-shared-ownership-gate.mjs     ← DSH shared ownership
+tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs ← WLT-DSH ownership
+tools/guards/dsh-frontend-shared-boundary-imports-gate.mjs
+tools/guards/no-financial-mutation-outside-wlt.mjs
+tools/guards/no-direct-fetch-in-screen.mjs
+tools/guards/no-preview-demo-mock-runtime.mjs
+tools/guards/no-broken-imports.mjs
+tools/guards/canonical-host-ports.mjs
+```
+
+---
+
+## 7) Scripts التحقق الإلزامية
+
+```powershell
 Set-Location -LiteralPath "C:\bthwani-suite-next"
 
-==================================================
-3) قاعدة الاعتماد
-=================
+git status --short
+pnpm install --frozen-lockfile
 
-الاعتماد يكون بهذا الترتيب:
+git grep -n "machine-readable" -- tools package.json .github governance services apps contracts
 
-1. LOCAL المتزامن:
-   C:\bthwani-suite-next
+pnpm run guard:matrix:v3
+pnpm run guard:unified-fullstack-brain
+pnpm run guard:dsh-frontend-shared-ownership
+pnpm run guard:wlt-dsh-frontend-shared-ownership
+pnpm run guard:dsh-frontend-shared-boundary-imports
+pnpm run guard:no-financial-mutation-outside-wlt
+pnpm run guard:no-direct-fetch-in-screen
+pnpm run guard:no-preview-demo-mock-runtime
+pnpm run guard:no-broken-imports
+pnpm run guard:canonical-host-ports
 
-2. GitHub Remote للتحقق من:
+pnpm run foundation:gate
+pnpm run slice:gate
 
-   * الفرع الصحيح
-   * آخر commits
-   * diff مع base
-   * عدم وجود divergence
-   * حالة PR إن وجد
-   * حالة CI إن وجدت
+pnpm run typecheck
+pnpm run test
+pnpm run build
 
-3. DONOR المحلي/Remote للقراءة فقط:
-   C:\bthwani-suite
-   branch: realtest
+Push-Location "services\dsh\backend"
+go test ./...
+go build ./...
+Pop-Location
 
-ممنوع:
+Push-Location "core\identity\backend"
+go test ./...
+go build ./...
+Pop-Location
 
-* الاعتماد على ذاكرة الوكيل.
-* الاعتماد على local قبل fetch/reset.
-* الاعتماد على donor كمكان تنفيذ.
-* إعلان الإغلاق دون تشغيل الفحوصات المناسبة.
-* ادعاء PASS دون تشغيل الأمر أو وجود دليل.
+git diff --check
+git status --short
+```
 
-==================================================
-4) القاعدة السيادية الثابتة غير القابلة للتجاهل
-===============================================
+إذا فشل أي أمر: `STATUS: FIX_REQUIRED`
 
-هذه القاعدة إلزامية في كل تنفيذ داخل المستودع الجديد، ويجب فحص الالتزام بها عند أي مهمة تمس DSH أو WLT أو الواجهات أو الأسطح أو shared أو runtime المرتبط بها.
+---
 
-المسار السيادي الحاكم لعقل واجهات DSH هو فقط:
+## 8) تعريف المهمة (قالب)
 
-C:\bthwani-suite-next\services\dsh\frontend\shared
+```
+TASK / المطلوب:
+<اكتب هنا بالضبط ما تريد تنفيذه>
 
-وبالمسار النسبي:
+TOPIC / SLICE:
+<اسم الشريحة أو التوبك>
 
-services/dsh/frontend/shared
+SCOPE:
+<النطاق بدقة>
 
-هذا المسار هو الحاكم وعقل الواجهات، وهو المالك الصحيح لكل ما يلي:
+EXPECTED OUTCOME:
+<النتيجة النهائية المطلوبة>
 
-* controllers
-* hooks
-* state machines
-* view-models
-* adapters
-* frontend contracts
-* validation rules
-* permission rules
-* lifecycle rules
-* business UI logic
-* backend/API binding
-* DSH-facing WLT integration binding
-* domain display mapping
-* registry/config/domain constants
-* أي منطق مشترك بين الأسطح
+OUT_OF_SCOPE:
+<ما لا يجب لمسه>
 
-تجاهل هذا المسار أو التعامل معه كمسار عادي يعتبر خطأ معماريًا كارثيًا.
+SUCCESS CRITERIA:
+<معايير النجاح الرقمية المحددة>
+```
 
-==================================================
-5) أسطح DSH هي UI فقط
-=====================
+---
 
-المسارات التالية UI فقط:
+## 9) قاعدة الإغلاق النهائية
 
-C:\bthwani-suite-next\services\dsh\frontend\control-panel
-C:\bthwani-suite-next\services\dsh\frontend\app-partner
-C:\bthwani-suite-next\services\dsh\frontend\app-field
-C:\bthwani-suite-next\services\dsh\frontend\app-client
-C:\bthwani-suite-next\services\dsh\frontend\app-captain
+لا يُعلن الإغلاق إلا إذا تحقق كل الآتي:
 
-ايضاء التنفيذ قم بنقل اي شيء لايعتبر  ui فقط الى الموقع والمكان المناسب في العقل الحاكم للواجهات 
+```
+☑ لا machine-readable dependency
+☑ guard:matrix:v3 يعمل بمنهجية live topology
+☑ guard:unified-fullstack-brain موجود ويعمل
+☑ unified-fullstack-brain في package.json + guard-manifest foundation/slice + CI
+☑ DSH shared = عقل DSH الوحيد
+☑ DSH surfaces UI فقط
+☑ WLT shared/dsh = عقل WLT-for-DSH الوحيد
+☑ WLT surfaces UI فقط
+☑ لا API/state machine/controller/validation/permission/lifecycle داخل surfaces
+☑ لا status mappings متعارضة بين التطبيقات
+☑ لا direct cross-service imports من UI
+☑ لا cross-surface imports / لا ports قديمة
+☑ لا raw hex خارج ui-kit / لا personal IDE settings
+☑ evidence لا تعتمد على DB direct writes كإثبات رحلة
+☑ كل guards PASS
+☑ typecheck / test / build PASS
+☑ Go tests/builds PASS
+☑ CI PASS أو سبب موثق
+☑ git diff --check PASS
+☑ evidence من نفس branch/head
+```
 
-وبالم
+إذا فشل بند واحد: `STATUS: FIX_REQUIRED`
 
-يمكنك استخدام اداه جرافي و leanctx لتسريع التنفيذ وضمان دقة 100% بشكل الزامي عندما  تكون مناسبة ويمكنك استخدام اي ادوات اخرى تراها مناسبة 
+---
 
+## 10) شكل التقرير النهائي
+
+```
+RESULT: PASS | FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
+
+BRANCH: brach-validation
+BASE: master
+
+MACHINE_READABLE: NOT_USED / NOT_RESTORED / NOT_REBUILT
+
+SOVEREIGN_BRAINS:
+  DSH:         services/dsh/frontend/shared
+  WLT_FOR_DSH: services/wlt/frontend/shared/dsh
+
+UNIFIED_FULLSTACK_BRAIN: PASS | FAIL
+NO_CONFLICTS_BETWEEN_SURFACES: PASS | FAIL
+NO_SURFACE_LOGIC: PASS | FAIL
+NO_DIRECT_CROSS_SERVICE_UI_IMPORTS: PASS | FAIL
+NO_OLD_PORTS: PASS | FAIL
+
+CI: PASS | FAIL | NOT_AVAILABLE_WITH_REASON
+
+GUARDS:
+  guard:matrix:v3                          → PASS | FAIL
+  guard:unified-fullstack-brain            → PASS | FAIL
+  guard:dsh-frontend-shared-ownership      → PASS | FAIL
+  guard:wlt-dsh-frontend-shared-ownership  → PASS | FAIL
+  guard:dsh-frontend-shared-boundary-imports → PASS | FAIL
+  guard:no-financial-mutation-outside-wlt  → PASS | FAIL
+  foundation:gate                          → PASS | FAIL
+  slice:gate                               → PASS | FAIL
+
+TESTS:
+  typecheck    → PASS | FAIL
+  test         → PASS | FAIL
+  build        → PASS | FAIL
+  go-test-dsh  → PASS | FAIL
+  go-build-dsh → PASS | FAIL
+
+EVIDENCE: services/dsh/evidence/GUARDS-SOVEREIGN-UNIFIED-FULLSTACK-BRAIN/
+
+REMAINING_GAPS: NONE | <قائمة محددة>
+
+NEXT REQUIRED ACTION: none | <إجراء دقيق>
+```
+
+ممنوع: تم تحسينه / أصبح أفضل / يبدو صحيحًا / غالبًا مكتمل
+كل قرار يستند إلى أمر، ملف، مخرج، أو دليل قابل للمراجعة.

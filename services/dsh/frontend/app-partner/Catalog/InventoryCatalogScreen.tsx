@@ -84,7 +84,6 @@ import {
   translateOwner,
   translateStage,
   translateEntityType,
-  canRenderInClientSurface,
 } from '../../shared/partner/partner.workflow';
 
 
@@ -175,7 +174,7 @@ function resolveInventoryCardStatus(item: InventoryCatalogListItem): {
     return { label: 'موقوف', tone: 'danger' };
   }
 
-  if (canRenderInClientSurface(item.publishStage, 'product')) {
+  if (item.publishStage === 'client-visible') {
     return { label: 'ظاهر للعميل', tone: 'success' };
   }
 
@@ -211,7 +210,7 @@ function applyHierarchyFilter(
           if (f === 'low-stock' && !item.lowStock) return false;
           if (f === 'unavailable' && item.available) return false;
           if (f === 'not-linked' && item.catalogLinked) return false;
-          if (f === 'client-visible' && !canRenderInClientSurface(item.publishStage, 'product')) return false;
+          if (f === 'client-visible' && !item.publishStage === 'client-visible') return false;
           if (f === 'needs-review' && !item.reviewNeeded) return false;
           if (f === 'private-store' && !item.isPrivateStoreProduct) return false;
           if (f === 'canonical' && item.isPrivateStoreProduct) return false;
@@ -1236,7 +1235,7 @@ function InventoryCatalogContent({
   const lowStockCount = items.filter((item) => item.lowStock).length;
   const reviewCount = items.filter((item) => item.reviewNeeded).length;
   const notLinkedCount = items.filter((item) => !item.catalogLinked).length;
-  const clientVisibleCount = items.filter((item) => canRenderInClientSurface(item.publishStage, 'product')).length;
+  const clientVisibleCount = items.filter((item) => item.publishStage === 'client-visible').length;
   const kpiItems = [
     { label: 'المنتجات', value: String(totalProducts), tone: 'brand' as const },
     { label: 'منخفض', value: String(lowStockCount), tone: lowStockCount > 0 ? 'warning' as const : 'success' as const },

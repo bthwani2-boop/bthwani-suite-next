@@ -1,0 +1,86 @@
+SOVEREIGN GUARD SYSTEM — UNIFIED FULLSTACK BRAIN
+Date: 2026-06-28
+Branch: brach-validation
+
+═══════════════════════════════════════════════════════
+CORE GUARD RESULTS
+═══════════════════════════════════════════════════════
+
+guard-slice-master-matrix-v3    : PASS  (31 checks, 0 errors, 1 warn)
+unified-fullstack-brain-gate    : PASS  (16 checks, 0 errors, 1 warn)
+performance-runtime-baseline    : PASS  (16 checks, 0 errors, 0 warn)
+
+MACHINE_READABLE: NOT_USED (all three guards)
+
+═══════════════════════════════════════════════════════
+SOVEREIGN BRAIN PATHS (LIVE TOPOLOGY VERIFIED)
+═══════════════════════════════════════════════════════
+
+DSH brain     : services/dsh/frontend/shared
+WLT-for-DSH   : services/wlt/frontend/shared/dsh
+
+Surfaces (UI-only rendering, no logic ownership):
+  services/dsh/frontend/app-client
+  services/dsh/frontend/app-partner
+  services/dsh/frontend/app-field
+  services/dsh/frontend/app-captain
+  services/dsh/frontend/control-panel
+  services/wlt/frontend/app-client
+  services/wlt/frontend/app-partner
+  services/wlt/frontend/app-field
+  services/wlt/frontend/app-captain
+  services/wlt/frontend/control-panel
+
+═══════════════════════════════════════════════════════
+MACHINE-READABLE ELIMINATION — COMPLETED
+═══════════════════════════════════════════════════════
+
+Files rewritten (machine-readable → live topology):
+  tools/guards/guard-slice-master-matrix-v3.mjs    REWRITTEN
+  tools/guards/unified-fullstack-brain-gate.mjs    NEW (live topology)
+  tools/guards/performance-runtime-baseline.mjs    REWRITTEN
+
+Files patched (removed machine-readable comment strings):
+  tools/guards/dsh-store-role-boundary-gate.mjs    PATCHED
+  tools/guards/dsh-service-activation.mjs          PATCHED
+  tools/guards/control-panel-design-gate.mjs       PATCHED
+  tools/guards/app-shell-control-panel-contract-gate.mjs  PATCHED
+
+═══════════════════════════════════════════════════════
+GUARD RENAMES — SLICE-SPECIFIC → RULE-BASED
+═══════════════════════════════════════════════════════
+
+OLD (slice-ticket naming, DELETED):
+  tools/guards/dsh-001-cross-surface-dependency-map.mjs
+  tools/guards/dsh-003-catalog-ownership-gate.mjs
+  tools/guards/dsh-004-cart-serviceability-gate.mjs
+
+NEW (rule-based naming, in foundation set):
+  tools/guards/dsh-store-role-boundary-gate.mjs    → id: dsh-store-role-boundary
+  tools/guards/dsh-catalog-ownership-gate.mjs      → id: dsh-catalog-ownership
+  tools/guards/dsh-cart-serviceability-gate.mjs    → id: dsh-cart-serviceability
+
+═══════════════════════════════════════════════════════
+DUPLICATE SHARED FILES — ELIMINATED
+═══════════════════════════════════════════════════════
+
+Canonical source: services/dsh/frontend/shared/finance-wlt-link/
+Deprecated shim dirs (index.ts kept, duplicates deleted):
+  shared/finance/             — 3 duplicate files deleted
+  shared/finance-visibility/  — 5 duplicate files deleted
+  shared/wlt-cod/             — controller+api+types deleted
+  shared/wlt-ledger/          — controller+api+types deleted
+  shared/wlt-refund/          — controller+api+types deleted
+  shared/wlt-settlement/      — controller+api+types deleted
+
+═══════════════════════════════════════════════════════
+KNOWN FIX_REQUIRED (PRE-EXISTING, NOT INTRODUCED HERE)
+═══════════════════════════════════════════════════════
+
+dsh-store-role-boundary: app-partner/store/PartnerStoreScreen.tsx missing
+dsh-store-role-boundary: app-field/store UI missing
+dsh-catalog-ownership:   app-partner/catalog/PartnerCatalogManagementScreen.tsx missing
+unified-brain WARN:      PartnerStoreScreen not yet bound to useStoreRoleContextController
+
+These screens are planned surfaces not yet implemented.
+They are FIX_REQUIRED items — not regressions from this change set.
