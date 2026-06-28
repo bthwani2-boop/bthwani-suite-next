@@ -24,7 +24,8 @@ Prove route path, screen owner, service owner, data source, primary CTA, state c
 - no orphan screen
 - no route without owner
 - no screen-local fake data as closure
-- no UI closure without screenshots only when final closure or escalation is requested and visible behavior changes
+- do not block UI closure or normal implementation for lack of screenshots or visual evidence unless final closure, release/store requirements, or explicit escalation rules apply
+- do not require long output blocks for normal execution
 
 ## Required evidence
 
@@ -32,14 +33,14 @@ Prove route path, screen owner, service owner, data source, primary CTA, state c
 - screen/component path
 - service/client path when data-backed
 - state coverage
-- screenshot or visual evidence requirement (only when final closure or escalation is requested)
+- screenshot or visual evidence requirement (only when final closure, release, or explicit escalation is requested)
 
 ## Failure decision
 
 - route missing -> `FIX_REQUIRED`
 - data-backed screen without client binding -> `FIX_REQUIRED`
-- screenshots missing when escalation is requested -> `NEEDS_VISUAL_EVIDENCE`
+- screenshots missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
 
 ## Notes
 
-No extra notes.
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).

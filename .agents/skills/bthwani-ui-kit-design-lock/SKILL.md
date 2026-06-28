@@ -43,19 +43,24 @@ summary: Enforce shared/ui-kit ownership, brand lock, and no local design system
 - Auth runtime symbols in `shared/app-shell`
 - Local Button/Card/Header systems in apps or services
 - Raw hex colors outside `shared/ui-kit`
-- UI closure without visual evidence when final closure or escalation is requested
+- do not block UI closure or normal implementation for lack of screenshots or visual evidence unless final closure, release/store requirements, or explicit escalation rules apply
+- do not require long output blocks for normal execution
 
 ## Required evidence
 
 - changed UI paths
 - ui-kit public export evidence (confirm symbols exist in `src/index.ts`)
-- guard output: `pnpm --filter @bthwani/ui-kit lint`
-- visual evidence or `NEEDS_VISUAL_EVIDENCE` (only when final closure or escalation is requested)
+- guard output: `pnpm --filter @bthwani/ui-kit lint` (or relevant code-based lint/guard command)
+- visual evidence or `NEEDS_VISUAL_EVIDENCE` (only when final closure, release, or explicit escalation is requested)
 
 ## Failure decision
 
 - Cp* found in ui-kit → `FIX_REQUIRED`
 - local design system added → `FIX_REQUIRED`
-- visual evidence missing when escalation is requested → `NEEDS_VISUAL_EVIDENCE`
+- visual evidence missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
 - reusable pattern outside correct owner → `FIX_REQUIRED`
 - auth runtime in app-shell → `FIX_REQUIRED`
+
+## Notes
+
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).

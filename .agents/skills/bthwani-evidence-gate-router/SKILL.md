@@ -24,7 +24,8 @@ Prefer CODE_BASED_LEAN. Select the smallest useful code-based check. Escalate on
 
 - do not run broad verification for text-only changes
 - do not claim closure from a tool summary
-- do not skip visual evidence for UI behavior
+- do not require visual evidence or screenshots for UI changes unless escalation rules, final visual closure, release/store requirements, or explicit user requests apply
+- do not require long output blocks for normal execution
 
 ## Required output
 
@@ -32,14 +33,14 @@ Prefer CODE_BASED_LEAN. Select the smallest useful code-based check. Escalate on
 - targeted check if used
 - remaining risk
 
-Evidence files are required only when escalation applies.
+Evidence files are required only when escalation applies, following the canonical policy in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
 
 ## Failure decision
 
 - insufficient evidence -> `NEEDS_EVIDENCE`
-- visual evidence missing -> `NEEDS_VISUAL_EVIDENCE`
+- visual evidence missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
 - failed gate -> `FIX_REQUIRED`
 
 ## Notes
 
-No extra notes.
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).

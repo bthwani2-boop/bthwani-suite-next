@@ -4,6 +4,8 @@ Goal: choose the smallest sufficient code-based check.
 
 ## Default mode — CODE_BASED_LEAN
 
+The canonical policy for default execution is detailed in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
+
 Use this for normal implementation.
 
 Required:
@@ -24,6 +26,8 @@ Not required by default:
 - full guard suite
 - repeated status/diff artifacts
 
+All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
+
 ## Gate levels
 
 ### LOW
@@ -41,7 +45,8 @@ Use affected/touched-area checks only.
 
 ### UI
 Code-based check first.
-Screenshot/recording required only for final visual closure, redesign approval, or explicit user request.
+Normal UI work uses code-based validation. Do not block implementation or closure due to lack of screenshots.
+Screenshot/recording required only for final visual closure, visual parity approval, release/store visual requirements, or explicit user request.
 
 ### API
 Contract/client checks only when OpenAPI, generated client, adapter, or backend binding changed.
@@ -64,4 +69,4 @@ Every review must end with one of:
 
 `PASS`, `PASS_WITH_WARNINGS`, `FIX_REQUIRED`, `BLOCKED`, `READY_FOR_PR`, `REVERT_REQUIRED`, `NEEDS_EVIDENCE`, `NEEDS_VISUAL_EVIDENCE`, `NO_ACTION_REQUIRED`.
 
-Use `NEEDS_EVIDENCE` or `NEEDS_VISUAL_EVIDENCE` only when escalation rules make evidence required.
+Use `NEEDS_VISUAL_EVIDENCE` only when visual evidence is required for explicit visual request, final visual closure, visual parity approval, or release/store visual requirements. Use `NEEDS_EVIDENCE` only when escalation rules make evidence files mandatory.

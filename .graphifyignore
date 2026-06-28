@@ -65,23 +65,3 @@ tools/registry/runs/
 # Agent/skill documentation noise
 .agents/
 **/.agents/
-
-# Reduce non-code graph noise
-docs/
-**/docs/
-**/*.md
-**/*.mdx
-**/*.csv
-**/*.jsonl
-**/*.txt
-
-# Evidence / reports / generated operational records
-evidence/
-**/evidence/
-reports/
-**/reports/
-tools/registry/runs/
-
-# Agent/skill documentation noise
-.agents/
-**/.agents/

@@ -4,11 +4,11 @@ Status: CANONICAL
 
 ## Default rule
 
-Normal implementation uses CODE_BASED_LEAN.
+Normal implementation uses CODE_BASED_LEAN, in accordance with the canonical policy in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
 
 The agent should inspect relevant live code, make the smallest correct change, and run only the most targeted useful code-based check.
 
-Evidence files are not required for normal implementation.
+Evidence files and screenshots are not required for normal implementation. All file operations and scans must obey the token-drain exclusions specified in the canonical policy.
 
 ## Evidence escalation
 

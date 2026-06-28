@@ -387,8 +387,9 @@ Do not invent commands. If a command is missing, report `COMMAND_NOT_AVAILABLE` 
 
 ## Required visual evidence
 
-Visual evidence is required only for final visual closure, redesign approval, multi-surface visual parity, or explicit user request.
-Normal UI code fixes do not require screenshots by default.
+Visual evidence/screenshots are required only for explicit visual request, final visual closure, visual parity approval, or release/store visual requirements.
+Normal UI work uses code-based validation. Do not block normal implementation because screenshots are absent.
+Do not require long output blocks for normal execution.
 
 ## Closure checklist
 
@@ -406,9 +407,11 @@ A design slice may close only when all applicable items pass:
 - RTL is correct
 - accessibility is acceptable
 - performance is not degraded
-- screenshots or visual evidence exist
+- screenshots or visual evidence exist (only when escalation, final visual closure, or explicit user request applies)
 - checks pass or blockers are explicitly proven
 - evidence does not contradict code or guard output
+
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md).
 
 ## Failure decisions
 
@@ -417,7 +420,7 @@ Use these exact decisions:
 ```text
 DESIGN_CLOSED
 DESIGN_FIX_REQUIRED
-NEEDS_VISUAL_EVIDENCE
+NEEDS_VISUAL_EVIDENCE (only when escalation/release/explicit request applies)
 BLOCKED_BY_OWNERSHIP
 BLOCKED_BY_UI_KIT_VIOLATION
 BLOCKED_BY_DSH_WLT_BOUNDARY

@@ -2,7 +2,7 @@
 
 ## ⚡ Execution Model — Proportional to Task Nature
 
-The agent must **match effort to task complexity**. No more, no less.
+The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](file:///c:/bthwani-suite-next/governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity**. No more, no less.
 
 ### Tier 1 — Instant (0 skills, 0 checks)
 Trivial tasks. Execute immediately and respond.
@@ -35,14 +35,14 @@ High-risk or cross-service work.
 ### Tooling and evidence
 - Graph/ownership/context unclear → `graphify`
 - Need guard selection → `bthwani-guard-command-router`
-- Review local diff/patch → `bthwani-patch-review-evidence`
-- Need registry evidence pack only when explicitly requested or final review requires it. → `bthwani-agent-handoff-evidence-pack`
+- Review local diff/patch (Escalation-only / PR review) → `bthwani-patch-review-evidence`
+- Create evidence packs only when explicitly requested. (Explicit-request-only) → `bthwani-agent-handoff-evidence-pack`
 - Updating or auditing agent files → `bthwani-agent-skill-integrity`
 
 ### Safety and quality
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
 - Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
-- Final closure only; do not invoke during normal implementation. → `bthwani-final-slice-closure-judge`
+- Final closure judge. (Final-only / Closure phase) → `bthwani-final-slice-closure-judge`
 
 ### Repository foundation
 - Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
@@ -56,10 +56,10 @@ High-risk or cross-service work.
 - Runtime env/provider/service slots → `bthwani-platform-runtime-config`
 
 ### UI and finance
-- UI kit/design system → `bthwani-ui-kit-design-lock`
-- Screen/route/state/visual binding → `bthwani-screen-flow-binding`
+- UI kit/design system (Visual evidence is escalation-only) → `bthwani-ui-kit-design-lock`
+- Route/state/screen binding (Visual evidence is escalation-only) → `bthwani-screen-flow-binding`
 - DSH/WLT money boundary → `bthwani-dsh-wlt-finance-boundary`
-- Premium 2026 visual surgery / donor extraction / RTL / design closure → `bthwani-premium-visual-design-surgeon`
+- Premium UI execution/design system alignment (Visual evidence is escalation-only) → `bthwani-premium-visual-design-surgeon`
 
 
 
