@@ -47,6 +47,7 @@ High-risk or cross-service work.
 ### Repository foundation
 - Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
 - Donor or realtest extraction → `bthwani-legacy-extraction`
+- External agent donor reference, agent inspiration, or agency-agents review (Use only when user asks to design/improve agents/skills or internal agent design is blocked. Do not load by default) → `external-agent-donor-reference`
 - Matrix-driven closure or coverage → `bthwani-machine-readable-matrix-governor`
 
 ### Full-stack and runtime

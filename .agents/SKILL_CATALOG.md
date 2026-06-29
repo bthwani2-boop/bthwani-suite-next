@@ -15,6 +15,7 @@ Version: 2026.06.24-v1
 - `bthwani-agent-skill-integrity` — Validate agent files, catalog sync, skill structure, and adapter thinness.
 - `bthwani-foundation-execution` — Execute foundation slice work against governance, package metadata, and guard baseline.
 - `bthwani-legacy-extraction` — Extract from donor/realtest only after conflict review and rewrite for next.
+- `external-agent-donor-reference` — Use approved external agent repositories as read-only inspiration only; never clone, install, execute, auto-sync, or copy wholesale.
 - `bthwani-machine-readable-matrix-governor` — Use CSV matrices as planning input only; closure evidence only in final gate.
 - `bthwani-service-fullstack-slice` — Close service slices across contract, backend, client, UI, and runtime. (Code-based implementation by default, full evidence only in final/high-risk).
 - `bthwani-api-runtime-binding` — Protect OpenAPI -> generated client -> adapter -> screen/runtime binding.

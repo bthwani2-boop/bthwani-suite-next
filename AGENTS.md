@@ -77,3 +77,7 @@ Shared skill:
     .agents/skills/bthwani-ponytail-yagni/SKILL.md
 
 Default: reuse existing code first, avoid new abstractions, avoid new dependencies, prefer smallest correct diff, and never scan generated/cache/output folders.
+
+## External donor references
+
+External agent repositories are not loaded by default. Use `.agents/skills/external-agent-donor-reference/SKILL.md` only when agent/skill design explicitly needs external inspiration. Donor material is read-only and must never override BThwani rules.
