@@ -18,3 +18,5 @@ export const opsTheme = {
   info: '#2563EB',
   surface: '#FFF',
 };
+
+export const OpsTheme = opsTheme;

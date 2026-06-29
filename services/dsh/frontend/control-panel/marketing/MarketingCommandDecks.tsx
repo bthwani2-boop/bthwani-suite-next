@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { opsTheme } from "../../shared/operations";
+import { OpsTheme } from "../../shared/operations";
+const opsTheme = OpsTheme;
 import {
   CpButton,
   CpTextInput,
