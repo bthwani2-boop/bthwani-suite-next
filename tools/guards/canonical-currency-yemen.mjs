@@ -9,7 +9,10 @@ const TARGET_DIRS = [
   "infra",
   "tools/scripts",
   "contracts",
-  "docs/runtime"
+  "docs/runtime",
+  ".github",
+  "tools",
+  "docs"
 ];
 
 const EXCLUDED_DIRS = new Set([

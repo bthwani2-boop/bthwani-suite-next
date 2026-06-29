@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: BThwani WLT Service API
   version: 0.2.0
-  description: Wallet and financial ledger service. Read-only reference endpoints for DSH surface consumption. No mutation endpoints exposed.
+  description: WLT owns wallet and financial mutation endpoints. DSH and frontend surfaces must not call external financial providers directly.
 
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -1026,6 +1026,10 @@ components:
           enum:
             - reference_created
             - pending_provider
+            - authorized
+            - captured
+            - cod_pending
+            - cod_collected
             - failed
             - expired
         providerReference:

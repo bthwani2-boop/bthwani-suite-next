@@ -248,4 +248,101 @@ for (const contractFile of contractFiles) {
   }
 }
 
+// 6. Validate that WltPaymentSession statuses in wlt.openapi.yaml match DB migrations
+const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/wlt.openapi.yaml");
+const wltMigrationPath = path.join(repoRoot, "services/wlt/database/migrations/wlt-002_payment_capture.sql");
+
+if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
+  try {
+    const migrationContent = fs.readFileSync(wltMigrationPath, "utf8");
+    const statusChkMatch = migrationContent.match(/CHECK\s*\(\s*status\s+IN\s*\(([^)]+)\)\)/i);
+    if (statusChkMatch) {
+      const dbStatuses = statusChkMatch[1]
+        .split(",")
+        .map(s => s.trim().replace(/['"]/g, ""));
+      
+      const openApiContent = fs.readFileSync(wltOpenApiPath, "utf8");
+      const openApiLines = openApiContent.split(/\r?\n/);
+      let insideWltPaymentSession = false;
+      let insideStatus = false;
+      let insideEnum = false;
+      const schemaStatusEnum = [];
+      
+      for (const line of openApiLines) {
+        const indentMatch = line.match(/^(\s*)/);
+        const indent = indentMatch ? indentMatch[1].length : 0;
+        const trimmed = line.trim();
+        
+        if (trimmed.startsWith("WltPaymentSession:")) {
+          insideWltPaymentSession = true;
+          insideStatus = false;
+          insideEnum = false;
+          continue;
+        }
+        
+        if (insideWltPaymentSession) {
+          if (indent <= 4 && trimmed !== "" && !trimmed.startsWith("WltPaymentSession:") && !trimmed.startsWith("properties:") && !trimmed.startsWith("required:")) {
+            insideWltPaymentSession = false;
+            insideStatus = false;
+            insideEnum = false;
+          }
+        }
+        
+        if (insideWltPaymentSession) {
+          if (trimmed.startsWith("status:")) {
+            insideStatus = true;
+            insideEnum = false;
+            continue;
+          }
+          if (insideStatus) {
+            if (indent <= 8 && trimmed !== "" && !trimmed.startsWith("status:") && !trimmed.startsWith("type:") && !trimmed.startsWith("enum:")) {
+              insideStatus = false;
+              insideEnum = false;
+            }
+          }
+          if (insideStatus) {
+            if (trimmed.startsWith("enum:")) {
+              insideEnum = true;
+              continue;
+            }
+            if (insideEnum) {
+              if (trimmed.startsWith("- ")) {
+                schemaStatusEnum.push(trimmed.slice(2).trim());
+              } else if (trimmed !== "") {
+                insideEnum = false;
+              }
+            }
+          }
+        }
+      }
+      
+      if (schemaStatusEnum.length > 0) {
+        for (const dbStatus of dbStatuses) {
+          if (!schemaStatusEnum.includes(dbStatus)) {
+            violations.push({
+              file: "services/wlt/contracts/wlt.openapi.yaml",
+              message: `OpenAPI WltPaymentSession.status enum is missing state '${dbStatus}' defined in DB migration wlt-002_payment_capture.sql`
+            });
+          }
+        }
+      } else {
+        violations.push({
+          file: "services/wlt/contracts/wlt.openapi.yaml",
+          message: "Failed to find WltPaymentSession.status enum in OpenAPI schema"
+        });
+      }
+    } else {
+      violations.push({
+        file: "services/wlt/database/migrations/wlt-002_payment_capture.sql",
+        message: "Failed to parse CHECK constraint on status from migration file"
+      });
+    }
+  } catch (err) {
+    violations.push({
+      file: "services/wlt/contracts/wlt.openapi.yaml",
+      message: `Error validating OpenAPI statuses against DB migrations: ${err.message}`
+    });
+  }
+}
+
 fail(guardId, violations);
