@@ -177,6 +177,9 @@ export function FieldPartnerOnboardingScreen({
           cameraLoading={docLoading}
           isNativePickerAvailable={false}
           onPickPhoto={() => undefined}
+          locationLatitude={state.locationLatitude}
+          locationLongitude={state.locationLongitude}
+          onLocationChange={controller.updateLocation}
         />
       );
     }

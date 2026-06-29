@@ -1,16 +1,18 @@
-// Authority: services/dsh/frontend/app-client — client account surface.
-// Sovereign shared: services/dsh/frontend/shared
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
-  Card,
-  Header,
-  ScrollScreen,
+  Icon,
+  MobileScrollView,
+  Surface,
   Text,
+  TopBar,
   spacing,
+  SegmentedControl,
+  colorRoles,
+  brandScale,
 } from '@bthwani/ui-kit';
-import type { BThwaniAppearanceMode } from './AppearanceHubScreen';
+
+export type BThwaniAppearanceMode = 'lightPremium' | 'darkGlass';
 
 export type MySpaceScreenProps = {
   appearanceMode?: BThwaniAppearanceMode;
@@ -22,6 +24,7 @@ export type MySpaceScreenProps = {
   onOpenIdentity?: () => void;
   onOpenAppearance?: () => void;
   onOpenPreferences?: () => void;
+  onBack?: () => void;
 };
 
 type MySpaceTab =
@@ -40,42 +43,53 @@ type TabConfig = {
   id: MySpaceTab;
   label: string;
   summary: string;
-  emoji: string;
+  iconName: string;
 };
 
 const TABS: TabConfig[] = [
-  { id: 'orders',       label: 'طلباتي',            summary: 'الطلب والتاريخ والتتبع',                     emoji: '🛍' },
-  { id: 'wallet',       label: 'المحفظة',            summary: 'الرصيد، الاسترداد، وطرق الدفع',             emoji: '👛' },
-  { id: 'loyalty',      label: 'النقاط والمكافآت', summary: 'الرصيد، المستوى، وأقرب ثلاث مكافآت',        emoji: '⭐' },
-  { id: 'subscription', label: 'الاشتراك',           summary: 'الخطة الحالية والتبديل عند الحاجة فقط',    emoji: '💳' },
-  { id: 'offers',       label: 'العروض والكوبونات', summary: 'فرص قابلة للاستخدام بدل قائمة طويلة',      emoji: '🏷' },
-  { id: 'addresses',    label: 'العناوين والموقع',  summary: 'إدارة العناوين وموقع التوصيل',               emoji: '📍' },
-  { id: 'identity',     label: 'الملف الشخصي',      summary: 'البيانات الشخصية والأمان',                   emoji: '👤' },
-  { id: 'appearance',   label: 'المظهر',             summary: 'فاتح أبيض أو داكن زجاجي',                  emoji: '🎨' },
-  { id: 'preferences',  label: 'تفضيلات التوصيل',   summary: 'إعدادات خاصة بالتسليم والاستبدال',          emoji: '⚙️' },
+  { id: 'orders', label: 'طلباتي', summary: 'الطلب والتاريخ والتتبع', iconName: 'bag-outline' },
+  { id: 'wallet', label: 'المحفظة', summary: 'الرصيد، الاسترداد، وطرق الدفع', iconName: 'wallet-outline' },
+  { id: 'loyalty', label: 'النقاط والمكافآت', summary: 'الرصيد، المستوى، وأقرب ثلاث مكافآت', iconName: 'star-outline' },
+  { id: 'subscription', label: 'الاشتراك', summary: 'الخطة الحالية والتبديل عند الحاجة فقط', iconName: 'card-outline' },
+  { id: 'offers', label: 'العروض والكوبونات', summary: 'ثلاث فرص قابلة للاستخدام بدل قائمة طويلة', iconName: 'pricetag-outline' },
+  { id: 'addresses', label: 'العناوين والموقع', summary: 'إدارة العناوين وموقع التوصيل', iconName: 'location-outline' },
+  { id: 'identity', label: 'الملف الشخصي', summary: 'البيانات الشخصية والأمان', iconName: 'person-outline' },
+  { id: 'appearance', label: 'المظهر', summary: 'فاتح أبيض أو داكن زجاجي', iconName: 'color-palette-outline' },
+  { id: 'language', label: 'اللغة', summary: 'العربية أو الإنجليزية', iconName: 'globe-outline' },
+  { id: 'preferences', label: 'تفضيلات التوصيل', summary: 'إعدادات خاصة بالتسليم والاستبدال', iconName: 'options-outline' },
 ];
 
 function MySpaceRow({
   title,
-  summary,
-  emoji,
+  subtitle,
+  iconName,
   onPress,
+  actionElement,
 }: {
   title: string;
-  summary: string;
-  emoji: string;
+  subtitle: string;
+  iconName: string;
   onPress?: () => void;
+  actionElement?: React.ReactNode;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-      <View style={styles.rowEmoji}>
-        <Text style={styles.emojiText}>{emoji}</Text>
+    <Pressable
+      disabled={!!actionElement}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && !actionElement && styles.rowPressed]}
+    >
+      <View style={styles.rowIconContainer}>
+        <Icon name={iconName} size={21} color={colorRoles.brandAction} />
       </View>
       <View style={styles.rowText}>
-        <Text role="body" style={styles.rowTitle}>{title}</Text>
-        <Text role="caption" tone="muted" style={styles.rowSummary}>{summary}</Text>
+        <Text role="bodyStrong" style={styles.rowTitle}>{title}</Text>
+        <Text role="bodySm" tone="muted" style={styles.rowSummary}>{subtitle}</Text>
       </View>
-      <Text style={styles.chevron}>‹</Text>
+      {actionElement ? (
+        <View style={styles.actionWrapper}>{actionElement}</View>
+      ) : (
+        <Text style={styles.chevron}>‹</Text>
+      )}
     </Pressable>
   );
 }
@@ -90,7 +104,10 @@ export function MySpaceScreen({
   onOpenIdentity,
   onOpenAppearance,
   onOpenPreferences,
+  onBack,
 }: MySpaceScreenProps) {
+  const [lang, setLang] = useState<string>("ar");
+
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
       case 'orders':       return onOpenOrders?.();
@@ -107,31 +124,68 @@ export function MySpaceScreen({
   };
 
   return (
-    <ScrollScreen>
-      <Header title="مساحتي" subtitle="إدارة الحساب والتفضيلات" />
+    <View style={styles.container}>
+      <TopBar title="مساحتي" />
 
-      <Card style={styles.listCard}>
-        {TABS.map((tab) => (
-          <MySpaceRow
-            key={tab.id}
-            title={tab.label}
-            summary={tab.summary}
-            emoji={tab.emoji}
-            onPress={() => handleRowPress(tab.id)}
-          />
-        ))}
-      </Card>
-    </ScrollScreen>
+      <MobileScrollView fill padding={4} gap={3} contentContainerStyle={styles.scrollContent}>
+        {TABS.map((tab) => {
+          let actionElement: React.ReactNode = undefined;
+
+          if (tab.id === 'appearance') {
+            actionElement = (
+              <SegmentedControl
+                items={[
+                  { value: 'lightPremium', label: 'فاتح' },
+                  { value: 'darkGlass', label: 'داكن' },
+                ]}
+                value={appearanceMode === 'darkGlass' ? 'darkGlass' : 'lightPremium'}
+                onValueChange={(nextValue) => {
+                  onAppearanceModeChange?.(nextValue as BThwaniAppearanceMode);
+                }}
+              />
+            );
+          } else if (tab.id === 'language') {
+            actionElement = (
+              <SegmentedControl
+                items={[
+                  { value: 'ar', label: 'عربي' },
+                  { value: 'en', label: 'EN' },
+                ]}
+                value={lang}
+                onValueChange={setLang}
+              />
+            );
+          }
+
+          return (
+            <MySpaceRow
+              key={tab.id}
+              title={tab.label}
+              subtitle={tab.summary}
+              iconName={tab.iconName}
+              actionElement={actionElement}
+              onPress={() => handleRowPress(tab.id)}
+            />
+          );
+        })}
+      </MobileScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colorRoles.surfaceWarm,
+  },
+  scrollContent: {
+    paddingBottom: spacing[12],
+  },
   listCard: {
-    margin: spacing[4],
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colorRoles.borderSubtle,
     overflow: 'hidden',
   },
   row: {
@@ -140,41 +194,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: colorRoles.borderSubtle,
     gap: spacing[3],
   },
   rowPressed: {
     backgroundColor: '#F8FAFC',
   },
-  rowEmoji: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FFF7F5',
+  rowIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#FDDCCA',
+    borderColor: colorRoles.borderSubtle,
+    backgroundColor: brandScale.action[50],
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emojiText: {
-    fontSize: 20,
   },
   rowText: {
     flex: 1,
     gap: 2,
   },
   rowTitle: {
-    fontWeight: '600',
-    color: '#1E293B',
+    color: colorRoles.textPrimary,
     textAlign: 'right',
   },
   rowSummary: {
-    color: '#64748B',
     textAlign: 'right',
-    fontSize: 12,
+  },
+  actionWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chevron: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#94A3B8',
     transform: [{ scaleX: -1 }],
   },

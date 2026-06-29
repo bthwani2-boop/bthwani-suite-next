@@ -1,4 +1,4 @@
-import { configureIdentitySession, getIdentityAccessToken } from "@bthwani/core-identity";
+import { getIdentityAccessToken } from "@bthwani/core-identity";
 import {
   createDshStoreClient,
   type CaptainPickupReadinessRequest,
@@ -15,7 +15,6 @@ import type { StoreRoleContextState } from "./store-role-context.controller-core
 
 const baseUrl = resolveDshApiBaseUrl();
 const client = validateDshApiBaseUrl(baseUrl) ? createDshStoreClient(baseUrl) : null;
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 export async function fetchStoreRoleContext(): Promise<StoreRoleContextState> {
   const token = getIdentityAccessToken();
@@ -83,17 +82,4 @@ export function classifyRoleError(error: unknown): StoreRoleContextState {
 function createRequestId(prefix: string): string {
   const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
   return `${prefix}-${random}`;
-}
-
-function resolveIdentityApiBaseUrl(): string {
-  if (typeof process !== "undefined") {
-    const env = process.env as Record<string, string | undefined>;
-    const configured =
-      env["NEXT_PUBLIC_IDENTITY_API_BASE_URL"] ??
-      env["EXPO_PUBLIC_IDENTITY_API_BASE_URL"];
-    if (configured && configured.trim().length > 0) {
-      return configured.trim();
-    }
-  }
-  return "http://localhost:58082";
 }

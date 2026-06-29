@@ -7,9 +7,12 @@ import { Text, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
 import { useDshFieldSurfaceModel } from './field.surface-model';
 import type { DshFieldSurfaceProps } from './dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
-import { useIdentitySession, devBypassLogin } from '@bthwani/core-identity';
+import { useIdentitySession, devBypassLogin, configureIdentitySession } from '@bthwani/core-identity';
 import { AuthLoginCard } from '../shared/auth/AuthLoginCard';
 import { useAndroidBackHandler } from '../shared/runtime/useAndroidBackHandler';
+import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
+
+configureIdentitySession(resolveIdentityApiBaseUrl());
 
 // ─── Bottom Navigation (exact donor replica) ────────────────────────────────
 // RTL order visible on screen (left→right): حسابي | المالية | [FAB] | السجل | المهام

@@ -1,6 +1,7 @@
 import React from "react";
-import { useIdentitySession } from "@bthwani/core-identity";
-import { Header, ScrollScreen } from "@bthwani/ui-kit";
+import { View } from "react-native";
+import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
+import { TopBar, ScrollScreen } from "@bthwani/ui-kit";
 import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { CartScreen } from "../cart";
 import { CheckoutScreen } from "./CheckoutScreen";
@@ -10,35 +11,41 @@ type Props = {
   readonly storeId: string;
   readonly serviceAreaCode?: string;
   readonly onBrowseCatalog?: () => void;
+  readonly onBack?: () => void;
+  readonly onSuccess?: (intentId: string) => void;
 };
 
-export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrowseCatalog }: Props) {
+export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrowseCatalog, onBack, onSuccess }: Props) {
   const identity = useIdentitySession();
-  const [checkoutCart, setCheckoutCart] = React.useState<DshCart | null>(null);
+  const [checkoutData, setCheckoutData] = React.useState<{ cart: DshCart; deliveryAddress: string; note: string; paymentMethod: string } | null>(null);
 
   if (identity.state.kind !== "authenticated") {
     return (
-      <ScrollScreen>
-        <Header title="إتمام الطلب" subtitle="تسجيل دخول العميل مطلوب قبل إنشاء مرجع WLT" />
-        <AuthLoginCard
-          title="دخول العميل"
-          subtitle="استخدم حساب العميل المحلي لمتابعة السلة وبدء checkout."
-          loading={identity.state.kind === "authenticating"}
-          {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
-          onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => void identity.login("client", "123456")}
-        />
-      </ScrollScreen>
+      <View style={{ flex: 1 }}>
+        <TopBar title="إتمام الطلب" subtitle="سجل الدخول للمتابعة" />
+        <ScrollScreen>
+          <AuthLoginCard
+            title="دخول العميل"
+            subtitle="استخدم حساب العميل المحلي لمتابعة السلة وبدء checkout."
+            loading={identity.state.kind === "authenticating"}
+            {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
+            onSubmit={(username, password) => void identity.login(username, password)}
+            onDevBypass={() => devBypassLogin("client")}
+          />
+        </ScrollScreen>
+      </View>
     );
   }
 
-  if (checkoutCart) {
+  if (checkoutData) {
     return (
       <CheckoutScreen
-        cart={checkoutCart}
-        deliveryAddress="صنعاء، حي الأصبحي"
-        onCancel={() => setCheckoutCart(null)}
-        onSuccess={() => undefined}
+        cart={checkoutData.cart}
+        deliveryAddress={checkoutData.deliveryAddress}
+        note={checkoutData.note}
+        paymentMethod={checkoutData.paymentMethod}
+        onCancel={() => setCheckoutData(null)}
+        onSuccess={onSuccess}
       />
     );
   }
@@ -48,8 +55,10 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
       storeId={storeId}
       serviceAreaCode={serviceAreaCode}
       authKind="authenticated"
+      onProceedToCheckout={(cart, deliveryAddress, note, paymentMethod) => setCheckoutData({ cart, deliveryAddress, note, paymentMethod })}
       {...(onBrowseCatalog ? { onBrowseCatalog } : {})}
-      onProceedToCheckout={setCheckoutCart}
+      {...(onBack ? { onBack } : {})}
     />
   );
 }
+

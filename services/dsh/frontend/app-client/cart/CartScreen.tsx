@@ -1,25 +1,193 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { StyleSheet, View, Pressable, ScrollView, Platform, Dimensions, Modal, TouchableOpacity } from "react-native";
 import {
   Badge,
   Button,
   Card,
-  Header,
   ListItem,
   LoadingState,
   ScrollScreen,
   StateView,
   Text,
+  TopBar,
+  Divider,
+  Icon,
+  Surface,
+  TextField,
+  colorRoles,
+  radius,
+  spacing,
+  useDirection,
 } from "@bthwani/ui-kit";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
-import type { DshCart } from "../../shared/cart";
+import type { DshCart, DshCartItem } from "../../shared/cart";
 
 type Props = {
   readonly storeId: string;
   readonly serviceAreaCode?: string;
   readonly authKind?: "authenticated" | "unauthenticated";
-  readonly onProceedToCheckout?: (cart: DshCart) => void;
+  readonly onProceedToCheckout?: (cart: DshCart, deliveryAddress: string, note: string, paymentMethod: string) => void;
   readonly onBrowseCatalog?: () => void;
+  readonly onBack?: () => void;
 };
+
+type QuickActionKey = "coupon" | "address" | "note" | "extra";
+
+type QuickActionMeta = {
+  title: string;
+  placeholder: string;
+  helper?: string;
+  saveLabel: string;
+  multiline?: boolean;
+  icon?: string;
+};
+
+const QUICK_ACTION_META: Record<QuickActionKey, QuickActionMeta> = {
+  coupon: {
+    title: "إضافة قسيمة تخفيض",
+    placeholder: "أدخل رمز التخفيض هنا",
+    helper: "سيتم تطبيق خصم فوري بقيمة 500 د.ي عند إدخال قسيمة صالحة.",
+    saveLabel: "حفظ وتطبيق القسيمة",
+    icon: "pricetag-outline",
+  },
+  address: {
+    title: "موقع التوصيل",
+    placeholder: "اكتب العنوان بالتفصيل (المدينة، الحي، الشارع)",
+    helper: "يمكنك تحديد الموقع تفاعلياً من الخريطة ووصف العنوان بدقة.",
+    saveLabel: "حفظ العنوان الجديد",
+    multiline: true,
+    icon: "location-outline",
+  },
+  note: {
+    title: "ملاحظات الطلب",
+    placeholder: "اكتب ملاحظتك للمتجر أو الكابتن هنا",
+    helper: "يمكنك تحديد تعليمات خاصة بالتحضير أو التوصيل.",
+    saveLabel: "حفظ الملاحظة",
+    multiline: true,
+    icon: "document-text-outline",
+  },
+  extra: {
+    title: "على طريقي",
+    placeholder: "مثال: مناديل، ماء، بسبس...",
+    helper: "اطلب إضافات بسيطة من طريق كابتن التوصيل.",
+    saveLabel: "تأكيد الطلب الإضافي",
+    multiline: true,
+    icon: "add-circle-outline",
+  },
+};
+
+type ExecutionScheduleOption = {
+  value: string;
+  label: string;
+  fullLabel: string;
+};
+
+type ExecutionScheduleOptions = {
+  dateOptions: ExecutionScheduleOption[];
+  timeOptions: ExecutionScheduleOption[];
+};
+
+function padSchedulePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function createExecutionScheduleOptions(referenceDate = new Date()): ExecutionScheduleOptions {
+  const dateOptions = Array.from({ length: 4 }, (_, index) => {
+    const date = new Date(referenceDate);
+    date.setDate(referenceDate.getDate() + index + 1);
+    const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    const label = index === 0 ? "غدًا" : index === 1 ? "بعد غد" : `${dayNames[date.getDay()]}، ${date.getDate()}`;
+    const fullLabel = `${dayNames[date.getDay()]}، ${date.getDate()} ${monthNames[date.getMonth()]}`;
+    return {
+      value: `${date.getFullYear()}-${padSchedulePart(date.getMonth() + 1)}-${padSchedulePart(date.getDate())}`,
+      label,
+      fullLabel,
+    };
+  });
+
+  const timeOptions = [9, 11, 13, 15, 17, 19].map((hour) => {
+    const period = hour >= 12 ? "م" : "ص";
+    const displayHour = hour > 12 ? hour - 12 : hour;
+    const label = `${displayHour}:00 ${period}`;
+    return {
+      value: `${padSchedulePart(hour)}:00`,
+      label,
+      fullLabel: label,
+    };
+  });
+
+  return { dateOptions, timeOptions };
+}
+
+function PromoBanner({ onPress }: { onPress: () => void }) {
+  return (
+    <Surface
+      tone="default"
+      style={{
+        backgroundColor: "#FFFBEB",
+        borderWidth: 1,
+        borderColor: "#FEF3C7",
+        borderRadius: radius.md,
+        padding: 12,
+        marginBottom: 12,
+      }}
+    >
+      <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flex: 1, alignItems: "flex-end", paddingLeft: 8 }}>
+          <Text role="bodySm" weight="bold" style={{ color: colorRoles.textPrimary, marginBottom: 2 }}>
+            اشترك بخدمة بثواني برو
+          </Text>
+          <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>
+            استمتع بتوصيل مجاني غير محدود وعروض حصرية على طلباتك!
+          </Text>
+        </View>
+        <Button
+          label="اشترك الآن"
+          tone="primary"
+          size="sm"
+          fullWidth={false}
+          onPress={onPress}
+          style={{ backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction }}
+        />
+      </View>
+    </Surface>
+  );
+}
+
+type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official-wallets";
+
+type PaymentDecisionOption = {
+  id: PaymentMethodKey;
+  title: string;
+  description: string;
+  selected?: boolean | undefined;
+  disabled?: boolean | undefined;
+  statusLabel?: string | undefined;
+  statusTone?: "success" | "action" | "info" | "warning" | "danger" | undefined;
+  helperText?: string | undefined;
+  amountRows?: { label: string; value: string; tone?: "brand" | "muted" | undefined }[] | undefined;
+  action?: { label: string; onPress: () => void } | undefined;
+};
+
+const RECOMMENDED_ITEMS = [
+  { id: "rec-1", name: "كعك بلدي فاخر", price: 1200, icon: "🍪" },
+  { id: "rec-2", name: "عصير مانجو طازج", price: 800, icon: "🥤" },
+  { id: "rec-3", name: "جبن بلدي طازج", price: 2500, icon: "🧀" },
+];
+
+const STORES_LOCATIONS = [
+  { id: "store-1001", name: "أسواق حدة", lat: 15.3400, lng: 44.1900, x: 220, y: 190 },
+  { id: "store-1005", name: "مطعم المدينة", lat: 15.3560, lng: 44.1800, x: 160, y: 120 },
+];
+
+const LANDMARKS = [
+  { lat: 15.3560, lng: 44.1800, name: "صنعاء، المدينة القديمة، باب اليمن", x: 160, y: 120 },
+  { lat: 15.3400, lng: 44.1900, name: "صنعاء، حي حدة، شارع بيروت", x: 220, y: 190 },
+  { lat: 15.3300, lng: 44.2000, name: "صنعاء، حي السبعين، ميدان السبعين", x: 240, y: 210 },
+  { lat: 15.3200, lng: 44.1800, name: "صنعاء، شارع تعز، جولة تعز", x: 160, y: 230 },
+  { lat: 15.3700, lng: 44.1900, name: "صنعاء، حي معين، شارع الستين", x: 120, y: 60 },
+];
 
 export function CartScreen({
   storeId,
@@ -27,149 +195,1410 @@ export function CartScreen({
   authKind = "unauthenticated",
   onProceedToCheckout,
   onBrowseCatalog,
+  onBack,
 }: Props) {
   const controller = useCartController(storeId, authKind);
   const serviceabilityController = useServiceabilityController();
+  const { direction, isRTL } = useDirection();
+
+  // Local state replicas from donor
+  const [selectedFulfillmentMode, setSelectedFulfillmentMode] = useState<string>("bthwani_delivery");
+  const [deliveryModePickerOpen, setDeliveryModePickerOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [clientAddress, setClientAddress] = useState("صنعاء، حي الأصبحي، شارع المقالح");
+  const [note, setNote] = useState("لا يوجد ملاحظة");
+  const [extraRequest, setExtraRequest] = useState("");
+  const [quickActionKey, setQuickActionKey] = useState<QuickActionKey | null>(null);
+  const [quickActionDraft, setQuickActionDraft] = useState("");
+
+  // Scheduling states
+  const [scheduling, setScheduling] = useState<"now" | "later">("now");
+  const executionScheduleOptions = useMemo(() => createExecutionScheduleOptions(), []);
+  const [scheduledDate, setScheduledDate] = useState(() => executionScheduleOptions.dateOptions[0]?.value ?? "");
+  const [scheduledTime, setScheduledTime] = useState(() => executionScheduleOptions.timeOptions[0]?.value ?? "");
+
+  // Wallet mockup states
+  const [walletLinked, setWalletLinked] = useState(true);
+  const [walletBalance, setWalletBalance] = useState(15000); // 15,000 YER
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
+  const [checkoutReviewVisible, setCheckoutReviewVisible] = useState(false);
+
+  // Client GPS coordinates for serviceability checks (interactive map state)
+  const [clientCoordinates, setClientCoordinates] = useState({
+    latitude: 15.3520,
+    longitude: 44.1780,
+  });
+  const [userPinPos, setUserPinPos] = useState({ x: 160, y: 140 });
+
+  const handleCheckServiceability = () => {
+    void serviceabilityController.check(
+      storeId,
+      serviceAreaCode,
+      clientCoordinates.latitude,
+      clientCoordinates.longitude
+    );
+  };
+
+  // Sync state with cart when cart is loaded
+  useEffect(() => {
+    if (controller.state.kind === "success") {
+      setSelectedFulfillmentMode(controller.state.cart.fulfillmentMode);
+    }
+  }, [controller.state]);
+
+  // Autocheck serviceability
+  useEffect(() => {
+    if (storeId && serviceAreaCode) {
+      console.log("[CartScreen] autocheck serviceability useEffect triggered for store:", storeId, "area:", serviceAreaCode);
+      void serviceabilityController.check(
+        storeId,
+        serviceAreaCode,
+        clientCoordinates.latitude,
+        clientCoordinates.longitude
+      );
+    }
+  }, [storeId, serviceAreaCode, clientCoordinates.latitude, clientCoordinates.longitude]);
 
   if (controller.state.kind === "loading") {
-    return <LoadingState title="جاري تحميل السلة…" />;
+    return (
+      <View style={styles.container}>
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
+        <LoadingState title="جاري جلب تفاصيل السلة..." />
+      </View>
+    );
   }
 
   if (controller.state.kind === "offline") {
     return (
-      <StateView
-        title="لا يوجد اتصال"
-        description="تحقق من اتصالك بالإنترنت وأعد المحاولة."
-        actionLabel="إعادة المحاولة"
-        onActionPress={controller.retry}
-      />
+      <View style={styles.container}>
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
+        <StateView
+          title="لا يوجد اتصال بالشبكة"
+          description="يرجى التحقق من اتصالك بالإنترنت وأعد المحاولة."
+          actionLabel="إعادة المحاولة"
+          onActionPress={controller.retry}
+        />
+      </View>
     );
   }
 
   if (controller.state.kind === "permission_denied") {
     return (
-      <StateView
-        title="يلزم تسجيل الدخول"
-        description="سجّل دخولك للوصول إلى سلتك."
-      />
+      <View style={styles.container}>
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
+        <StateView
+          title="يلزم تسجيل الدخول"
+          description="سجّل دخولك لحفظ منتجاتك والوصول إلى سلتك."
+        />
+      </View>
     );
   }
 
   if (controller.state.kind === "error") {
     return (
-      <StateView
-        title="تعذر تحميل السلة"
-        description={controller.state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={controller.retry}
-      />
+      <View style={styles.container}>
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
+        <StateView
+          title="تعذر تحميل السلة"
+          description={controller.state.message}
+          actionLabel="إعادة المحاولة"
+          onActionPress={controller.retry}
+        />
+      </View>
     );
   }
 
   if (controller.state.kind === "empty") {
     return (
-      <StateView
-        title="سلتك فارغة"
-        description="أضف منتجات من الكتالوج للمتابعة."
-        {...(onBrowseCatalog ? { actionLabel: "تصفح الكتالوج", onActionPress: onBrowseCatalog } : {})}
-      />
+      <View style={styles.container}>
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
+        <StateView
+          title="سلة التسوق فارغة"
+          description="تصفح منتجات المتجر المتميزة وأضفها إلى السلة للبدء."
+          {...(onBrowseCatalog ? { actionLabel: "تصفح المنتجات الآن", onActionPress: onBrowseCatalog } : {})}
+        />
+      </View>
     );
   }
 
   const { cart } = controller.state;
 
-  const handleCheckServiceability = () => {
-    void serviceabilityController.check(storeId, serviceAreaCode);
-  };
+  // Pricing Logic
+  const subtotal = cart.items.reduce((acc, item) => {
+    const priceStr = item.priceReference ? item.priceReference.replace(/[^\d.]/g, "") : "0";
+    const priceVal = parseFloat(priceStr) || 0;
+    return acc + priceVal * item.quantity;
+  }, 0);
+
+  const deliveryFee = selectedFulfillmentMode === "pickup" ? 0 : 950;
+  const discount = couponCode ? 500 : 0;
+  const grandTotal = Math.max(subtotal + deliveryFee - discount, 0);
 
   const isBlocked = serviceabilityController.serviceability.kind === "blocked";
   const isChecking = serviceabilityController.serviceability.kind === "checking";
   const isServiceable = serviceabilityController.serviceability.kind === "serviceable";
 
-  const fulfillmentLabel =
-    cart.fulfillmentMode === "bthwani_delivery"
-      ? "توصيل بثواني"
-      : cart.fulfillmentMode === "partner_delivery"
-      ? "توصيل المتجر"
-      : "استلم بنفسك";
+  const toggleDeliveryModePicker = () => setDeliveryModePickerOpen(!deliveryModePickerOpen);
+
+  const openQuickAction = (key: QuickActionKey) => {
+    setQuickActionKey(key);
+    if (key === "coupon") setQuickActionDraft(couponCode);
+    else if (key === "address") setQuickActionDraft(clientAddress);
+    else if (key === "note") setQuickActionDraft(note);
+    else if (key === "extra") setQuickActionDraft(extraRequest);
+  };
+
+  const applyQuickAction = () => {
+    if (!quickActionKey) return;
+    if (quickActionKey === "coupon") setCouponCode(quickActionDraft);
+    else if (quickActionKey === "note") setNote(quickActionDraft);
+    else if (quickActionKey === "extra") setExtraRequest(quickActionDraft);
+    setQuickActionKey(null);
+    setQuickActionDraft("");
+  };
+
+  const handleMapPress = (event: any) => {
+    const { locationX, locationY } = event.nativeEvent;
+    const x = Math.max(10, Math.min(310, locationX));
+    const y = Math.max(10, Math.min(210, locationY));
+    
+    setUserPinPos({ x, y });
+
+    // Map SVG coordinates to latitude/longitude
+    const lat = 15.3800 - (y / 220.0) * 0.0800;
+    const lng = 44.1500 + (x / 320.0) * 0.0600;
+
+    // Find closest landmark
+    let closestLandmark = LANDMARKS[0]!;
+    let minDistance = 999999.0;
+    for (const lm of LANDMARKS) {
+      const dx = lm.x - x;
+      const dy = lm.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestLandmark = lm;
+      }
+    }
+
+    setQuickActionDraft(closestLandmark.name);
+  };
+
+  const handleLocateMe = () => {
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const x = Math.max(10, Math.min(310, Math.round((longitude - 44.1500) * 320.0 / 0.0600)));
+          const y = Math.max(10, Math.min(210, Math.round((15.3800 - latitude) * 220.0 / 0.0800)));
+          setUserPinPos({ x, y });
+          
+          let closestLandmark = LANDMARKS[0];
+          let minDistance = 999999.0;
+          for (const lm of LANDMARKS) {
+            const dx = lm.x - x;
+            const dy = lm.y - y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestLandmark = lm;
+            }
+          }
+          setQuickActionDraft(closestLandmark!.name);
+        },
+        () => {
+          setUserPinPos({ x: 160, y: 140 });
+          setQuickActionDraft(LANDMARKS[0]!.name);
+        }
+      );
+    } else {
+      setUserPinPos({ x: 160, y: 140 });
+      setQuickActionDraft(LANDMARKS[0]!.name);
+    }
+  };
+
+  const applyAddressMapAction = () => {
+    const lat = 15.3800 - (userPinPos.y / 220.0) * 0.0800;
+    const lng = 44.1500 + (userPinPos.x / 320.0) * 0.0600;
+    setClientCoordinates({ latitude: lat, longitude: lng });
+    setClientAddress(quickActionDraft);
+    setQuickActionKey(null);
+
+    // Call serviceability controller check with new coordinates!
+    void serviceabilityController.check(storeId, serviceAreaCode, lat, lng);
+  };
+
+  const handleProceed = () => {
+    if (onProceedToCheckout) {
+      onProceedToCheckout(
+        cart,
+        selectedFulfillmentMode === "pickup" ? "" : clientAddress,
+        `ملاحظة: ${note} | على طريقي: ${extraRequest || "لا يوجد"} | الجدولة: ${scheduling === "later" ? `${scheduledDate} ${scheduledTime}` : "الآن"}`,
+        paymentMethod
+      );
+    }
+  };
+
+  // Payment decision options logic
+  const paymentDecisionOptions: PaymentDecisionOption[] = [
+    {
+      id: "cod",
+      title: "عند الاستلام (نقدًا)",
+      description: "ادفع كامل المبلغ نقدًا عند استلام طلبك.",
+      statusLabel: paymentMethod === "cod" ? "محدد" : "جاهز",
+      statusTone: paymentMethod === "cod" ? "action" : "info",
+      amountRows: [
+        { label: "من المحفظة", value: "0 د.ي", tone: "muted" },
+        { label: "عند الاستلام", value: `${grandTotal} د.ي`, tone: "brand" },
+      ],
+    },
+    {
+      id: "wallet",
+      title: "من رصيد المحفظة",
+      description: "ادفع كامل الطلب من رصيد محفظتك الداخلي.",
+      disabled: !walletLinked || walletBalance < grandTotal,
+      statusLabel: paymentMethod === "wallet" ? "محدد" : walletBalance >= grandTotal ? "جاهز" : "رصيد غير كافٍ",
+      statusTone: paymentMethod === "wallet" ? "action" : walletBalance >= grandTotal ? "success" : "danger",
+      amountRows: [
+        { label: "رصيد المحفظة", value: `${walletBalance} د.ي`, tone: "brand" },
+        { label: "المطلوب خصمه", value: `${grandTotal} د.ي`, tone: "brand" },
+      ],
+      helperText: walletBalance < grandTotal ? `تحتاج لشحن ${grandTotal - walletBalance} د.ي إضافية.` : undefined,
+      action: !walletLinked
+        ? { label: "ربط المحفظة", onPress: () => setWalletLinked(true) }
+        : walletBalance < grandTotal
+        ? { label: "شحن الرصيد", onPress: () => setWalletBalance(walletBalance + 20000) }
+        : undefined,
+    },
+    {
+      id: "mixed",
+      title: "محفظة + عند الاستلام",
+      description: "استخدم رصيد المحفظة المتاح وادفع المتبقي نقدًا.",
+      disabled: !walletLinked || walletBalance <= 0 || walletBalance >= grandTotal,
+      statusLabel: paymentMethod === "mixed" ? "محدد" : walletBalance > 0 && walletBalance < grandTotal ? "جاهز" : "غير متوفر",
+      statusTone: paymentMethod === "mixed" ? "action" : "info",
+      amountRows: [
+        { label: "من المحفظة", value: `${Math.min(walletBalance, grandTotal)} د.ي`, tone: "brand" },
+        { label: "عند الاستلام", value: `${Math.max(0, grandTotal - walletBalance)} د.ي`, tone: "brand" },
+      ],
+    },
+    {
+      id: "official-wallets",
+      title: "المحافظ الإلكترونية الرسمية",
+      description: "الدفع عبر كاش، الكريمي، جوالي أو المحافظ الأخرى.",
+      statusLabel: "متاح",
+      statusTone: "info",
+      action: { label: "اختيار محفظة", onPress: () => alert("سيتم فتح بوابة الدفع الخارجية قريبًا.") },
+    },
+  ];
 
   return (
-    <ScrollScreen>
-      <Header title="سلة التسوق" subtitle={`${cart.items.length} منتج`} />
+    <View style={styles.container}>
+      <TopBar title="تأكيد الطلب" subtitle={`${cart.items.length} منتج`} {...(onBack ? { onBack } : {})} />
 
-      <Card>
-        {cart.items.map((item) => (
-          <ListItem
-            key={item.id}
-            title={item.productName}
-            {...(item.priceReference ? { subtitle: item.priceReference } : {})}
-            meta={`× ${item.quantity}`}
-            trailing={
-              <Button
-                tone="ghost"
-                size="sm"
-                label="حذف"
-                onPress={() => void controller.removeItem(cart.id, item.id)}
-                disabled={controller.action === "submitting"}
-              />
-            }
-          />
-        ))}
-      </Card>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* بنر العروض والاشتراكات */}
+        <PromoBanner onPress={() => alert("تم الاشتراك في بثواني برو!")} />
 
-      <Card>
-        <Text role="label">طريقة التوصيل</Text>
-        <Text role="body">{fulfillmentLabel}</Text>
-      </Card>
+        {/* سياسة تأكيد الطلب */}
+        <Surface tone="inset" style={styles.policyBanner}>
+          <View style={styles.policyHeader}>
+            <View style={styles.policyHeaderText}>
+              <Text role="bodySm" weight="bold" style={styles.policyTitle}>سياسة تأكيد الطلب</Text>
+              <Text role="caption" style={styles.policyDesc}>
+                هذه الشاشة تعرض الملخص أولاً، وتفتح المراجعة التفصيلية عند الطلب فقط. الأثر المالي والتسويات يتبع WLT وFinance.
+              </Text>
+            </View>
+            <Text role="caption" weight="black" style={styles.policyBadge}>سيادي</Text>
+          </View>
+        </Surface>
 
-      {serviceabilityController.serviceability.kind === "blocked" && (
-        <StateView
-          title="خارج نطاق التوصيل"
-          description={
-            serviceabilityController.serviceability.reason ??
-            "المتجر غير متاح في منطقتك حاليًا."
-          }
-          actionLabel="تغيير المنطقة"
-          onActionPress={serviceabilityController.reset}
-        />
-      )}
+        {/* خيار التوصيل */}
+        <Surface tone="default" style={styles.cardFrame}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardHeaderMeta}>
+              <Icon name="car-outline" size={18} color={colorRoles.textPrimary} style={styles.cardIcon} />
+              <View style={styles.cardHeaderTitles}>
+                <Text role="bodySm" weight="bold" style={styles.cardLabel}>خيار التوصيل</Text>
+                <Text role="caption" style={styles.cardValue}>
+                  {selectedFulfillmentMode === "pickup"
+                    ? "تم اختيار الاستلام من المتجر"
+                    : selectedFulfillmentMode === "partner_delivery"
+                    ? "تم اختيار توصيل المتجر"
+                    : "تم اختيار توصيل بثواني"}
+                </Text>
+              </View>
+            </View>
+            <Button
+              label={deliveryModePickerOpen ? "إغلاق" : "تغيير"}
+              tone="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={toggleDeliveryModePicker}
+            />
+          </View>
 
-      {serviceabilityController.serviceability.kind === "error" && (
-        <StateView
-          title="تعذر التحقق من التوصيل"
-          description={serviceabilityController.serviceability.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={handleCheckServiceability}
-        />
-      )}
+          {deliveryModePickerOpen && (
+            <View style={styles.pickerOptionsList}>
+              {[
+                { value: "bthwani_delivery", label: "توصيل بثواني", desc: "التوصيل يتم عبر كابتن بثواني إلى موقع العميل.", icon: "bicycle-outline" },
+                { value: "partner_delivery", label: "توصيل المتجر", desc: "التوصيل يتم عبر موصل المتجر إلى موقع العميل.", icon: "storefront-outline" },
+                { value: "pickup", label: "استلم بنفسك", desc: "تستلم الطلب من المتجر بنفسك بدون رسوم توصيل.", icon: "walk-outline" },
+              ].map((option) => {
+                const isSelected = option.value === selectedFulfillmentMode;
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => {
+                      setSelectedFulfillmentMode(option.value);
+                      setDeliveryModePickerOpen(false);
+                    }}
+                    style={[styles.pickerItem, isSelected && styles.pickerItemActive]}
+                  >
+                    <View style={styles.pickerItemContent}>
+                      <Icon name={option.icon} size={18} color={isSelected ? colorRoles.brandAction : colorRoles.textPrimary} />
+                      <View style={styles.pickerItemMeta}>
+                        <Text role="bodySm" weight="bold" style={styles.pickerItemLabel}>{option.label}</Text>
+                        <Text role="caption" style={styles.pickerItemDesc}>{option.desc}</Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </Surface>
 
-      <Button
-        tone="secondary"
-        label="حذف السلة"
-        onPress={() => void controller.clear(cart)}
-        disabled={controller.action === "submitting"}
-      />
+        {/* الإجراءات السريعة (قسيمة، عنوان، ملاحظات، إضافات) */}
+        <Surface tone="default" style={styles.cardFrame}>
+          {/* حقل القسيمة */}
+          <View style={styles.optionRowContainer}>
+            <View style={styles.optionTextContainer}>
+              <Text role="bodySm" weight="bold" style={styles.optionTitle}>هل لديك قسيمة تخفيض؟</Text>
+              <Text role="caption" style={styles.optionSubtitle}>
+                {couponCode ? `القسيمة النشطة: ${couponCode}` : "أدخل رمز التخفيض إن وجد"}
+              </Text>
+            </View>
+            <Button
+              label={couponCode ? "تعديل" : "إضافة"}
+              tone="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={() => openQuickAction("coupon")}
+            />
+          </View>
+          {quickActionKey === "coupon" && (
+            <View style={styles.actionEditorBox}>
+              <Text role="bodySm" weight="bold" style={styles.editorTitle}>رمز قسيمة التخفيض</Text>
+              <TextField value={quickActionDraft} onChangeText={setQuickActionDraft} placeholder="أدخل كود الخصم (مثال: FREE50)" />
+              <View style={styles.editorActions}>
+                <Button label="تطبيق القسيمة" onPress={applyQuickAction} style={styles.editorSaveBtn} />
+                <Button label="إلغاء" tone="secondary" onPress={() => setQuickActionKey(null)} />
+              </View>
+            </View>
+          )}
 
-      {!isServiceable && !isBlocked && (
-        <Button
-          tone="primary"
-          label={isChecking ? "جاري التحقق…" : "التحقق من التوصيل"}
-          onPress={handleCheckServiceability}
-          disabled={isChecking}
-        />
-      )}
+          <Divider style={styles.divider} />
 
-      {isServiceable && (
-        <>
-          <Badge label="منطقتك مخدومة" tone="success" />
+          {/* حقل العنوان والخريطة */}
+          {selectedFulfillmentMode !== "pickup" && (
+            <>
+              <View style={styles.optionRowContainer}>
+                <View style={styles.optionTextContainer}>
+                  <Text role="bodySm" weight="bold" style={styles.optionTitle}>موقع التوصيل</Text>
+                  <Text role="caption" style={styles.optionSubtitle}>{clientAddress}</Text>
+                  <Text role="caption" style={{ color: colorRoles.brandAction }}>
+                    الإحداثيات: {clientCoordinates.latitude.toFixed(4)}، {clientCoordinates.longitude.toFixed(4)}
+                  </Text>
+                </View>
+                <Button
+                  label="تحديد من الخريطة"
+                  tone="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => openQuickAction("address")}
+                />
+              </View>
+              {quickActionKey === "address" && (
+                <View style={styles.actionEditorBox}>
+                  <Text role="bodySm" weight="bold" style={styles.editorTitle}>تحديد موقعك على الخريطة</Text>
+                  
+                  <Button
+                    label="تحديد موقعي الحالي بالـ GPS 🎯"
+                    tone="secondary"
+                    size="sm"
+                    onPress={handleLocateMe}
+                    style={{ alignSelf: "center", marginVertical: 4, width: 320 }}
+                  />
+
+                  {/* الخريطة التفاعلية */}
+                  <View style={styles.mapContainer}>
+                    <Pressable onPress={handleMapPress} style={styles.mapPressable}>
+                      {/* Grid / concentric circles background */}
+                      <View style={[styles.mapCircle, { width: 100, height: 100, borderRadius: 50, top: 70, left: 110 }]} />
+                      <View style={[styles.mapCircle, { width: 200, height: 200, borderRadius: 100, top: 20, left: 60 }]} />
+                      
+                      {/* Major roads representation */}
+                      <View style={[styles.mapRoad, { height: 2, width: "100%", top: 120, left: 0 }]} />
+                      <View style={[styles.mapRoad, { width: 2, height: "100%", left: 160, top: 0 }]} />
+
+                      {/* Store Pins */}
+                      {STORES_LOCATIONS.map(st => (
+                        <View key={st.id} style={[styles.storePin, { top: st.y - 12, left: st.x - 12 }]}>
+                          <Icon name="storefront" size={14} color="#1D4ED8" />
+                          <Text style={styles.storePinLabel}>{st.name}</Text>
+                        </View>
+                      ))}
+
+                      {/* User Pin */}
+                      <View style={[styles.userPin, { top: userPinPos.y - 20, left: userPinPos.x - 10 }]}>
+                        <View style={styles.userPinPulse} />
+                        <Icon name="pin" size={20} color="#FF500D" />
+                      </View>
+                    </Pressable>
+                  </View>
+
+                  <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>
+                    انقر على الخريطة لتحديد موقعك. سيتم احتساب المسافة الحقيقية للمتجر فورياً.
+                  </Text>
+
+                  <TextField
+                    value={quickActionDraft}
+                    onChangeText={setQuickActionDraft}
+                    placeholder="وصف العنوان (مثال: حي الأصبحي، شارع المقالح)"
+                    multiline
+                  />
+
+                  <View style={styles.editorActions}>
+                    <Button label="تأكيد الموقع والعنوان" onPress={applyAddressMapAction} style={styles.editorSaveBtn} />
+                    <Button label="إلغاء" tone="secondary" onPress={() => setQuickActionKey(null)} />
+                  </View>
+                </View>
+              )}
+              <Divider style={styles.divider} />
+            </>
+          )}
+
+          {/* حقل الملاحظات */}
+          <View style={styles.optionRowContainer}>
+            <View style={styles.optionTextContainer}>
+              <Text role="bodySm" weight="bold" style={styles.optionTitle}>ملاحظات الطلب</Text>
+              <Text role="caption" style={styles.optionSubtitle}>{note}</Text>
+            </View>
+            <Button
+              label={note === "لا يوجد ملاحظة" ? "إضافة" : "تعديل"}
+              tone="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={() => openQuickAction("note")}
+            />
+          </View>
+          {quickActionKey === "note" && (
+            <View style={styles.actionEditorBox}>
+              <Text role="bodySm" weight="bold" style={styles.editorTitle}>أضف ملاحظات الطلب</Text>
+              <TextField value={quickActionDraft} onChangeText={setQuickActionDraft} placeholder="مثال: يرجى الاتصال عند الوصول..." multiline />
+              <View style={styles.editorActions}>
+                <Button label="حفظ الملاحظة" onPress={applyQuickAction} style={styles.editorSaveBtn} />
+                <Button label="إلغاء" tone="secondary" onPress={() => setQuickActionKey(null)} />
+              </View>
+            </View>
+          )}
+
+          {/* على طريقي */}
+          {selectedFulfillmentMode === "bthwani_delivery" && (
+            <>
+              <Divider style={styles.divider} />
+              <View style={styles.optionRowContainer}>
+                <View style={styles.optionTextContainer}>
+                  <Text role="bodySm" weight="bold" style={styles.optionTitle}>على طريقي</Text>
+                  <Text role="caption" style={styles.optionSubtitle}>{extraRequest || "أطلب شيئاً بسيطاً من الكابتن"}</Text>
+                </View>
+                <Button
+                  label={extraRequest ? "تعديل" : "إضافة"}
+                  tone="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => openQuickAction("extra")}
+                />
+              </View>
+              {quickActionKey === "extra" && (
+                <View style={styles.actionEditorBox}>
+                  <Text role="bodySm" weight="bold" style={styles.editorTitle}>طلب على طريقي</Text>
+                  <TextField value={quickActionDraft} onChangeText={setQuickActionDraft} placeholder="مثال: علبة ماء، مناديل..." />
+                  <View style={styles.editorActions}>
+                    <Button label="تأكيد" onPress={applyQuickAction} style={styles.editorSaveBtn} />
+                    <Button label="إلغاء" tone="secondary" onPress={() => setQuickActionKey(null)} />
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+        </Surface>
+
+        {/* وقت التنفيذ */}
+        <Surface tone="default" style={styles.cardFrame}>
+          <Text role="bodySm" weight="bold" style={styles.cardLabel}>وقت التنفيذ</Text>
+          <View style={{ gap: spacing[4], marginTop: 4 }}>
+            <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+              <Pressable
+                onPress={() => setScheduling("now")}
+                style={[
+                  styles.selectorTab,
+                  scheduling === "now" && styles.selectorTabActive,
+                ]}
+              >
+                <Text style={[styles.selectorTabText, scheduling === "now" && styles.selectorTabTextActive]}>الآن</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setScheduling("later")}
+                style={[
+                  styles.selectorTab,
+                  scheduling === "later" && styles.selectorTabActive,
+                ]}
+              >
+                <Text style={[styles.selectorTabText, scheduling === "later" && styles.selectorTabTextActive]}>في وقت لاحق</Text>
+              </Pressable>
+            </View>
+
+            {scheduling === "now" ? (
+              <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>
+                سيتم تنفيذ الطلب مباشرة بعد تأكيد السلة.
+              </Text>
+            ) : (
+              <View style={{ gap: 8, marginTop: 4 }}>
+                <Text role="caption" weight="bold" style={{ color: colorRoles.textPrimary, textAlign: "right" }}>اختر التاريخ:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row-reverse", gap: 8 }}>
+                  {executionScheduleOptions.dateOptions.map((opt) => {
+                    const isSelected = opt.value === scheduledDate;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setScheduledDate(opt.value)}
+                        style={[styles.chip, isSelected && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{opt.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <Text role="caption" weight="bold" style={{ color: colorRoles.textPrimary, textAlign: "right", marginTop: 4 }}>اختر الوقت:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row-reverse", gap: 8 }}>
+                  {executionScheduleOptions.timeOptions.map((opt) => {
+                    const isSelected = opt.value === scheduledTime;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setScheduledTime(opt.value)}
+                        style={[styles.chip, isSelected && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{opt.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </Surface>
+
+        {/* قرار الدفع */}
+        <Surface tone="default" style={styles.cardFrame}>
+          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+            <Text role="bodySm" weight="bold" style={styles.cardLabel}>قرار الدفع</Text>
+            <Badge label="معاينة دفع" tone="info" />
+          </View>
+          <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right", marginBottom: 6 }}>
+            معاينة الدفع غير منفذة ماليًا · WLT يملك منطق الدفع الفعلي
+          </Text>
+
+          <View style={{ gap: 8 }}>
+            {paymentDecisionOptions.map((opt) => {
+              const isSelected = opt.id === paymentMethod;
+              return (
+                <Pressable
+                  key={opt.id}
+                  disabled={opt.disabled}
+                  onPress={() => setPaymentMethod(opt.id)}
+                  style={[
+                    styles.paymentCard,
+                    isSelected && styles.paymentCardActive,
+                    opt.disabled && { opacity: 0.4 },
+                  ]}
+                >
+                  <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+                    <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, flex: 1 }}>
+                      <View style={[styles.radioDot, isSelected && styles.radioDotActive]} />
+                      <View style={{ alignItems: "flex-end", flex: 1 }}>
+                        <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: "right" }}>{opt.title}</Text>
+                        <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>{opt.description}</Text>
+                      </View>
+                    </View>
+                    {opt.statusLabel && (
+                      <Badge label={opt.statusLabel} tone={opt.statusTone ?? "info"} />
+                    )}
+                  </View>
+
+                  {opt.amountRows && isSelected && (
+                    <View style={styles.paymentBreakdown}>
+                      {opt.amountRows.map((row) => (
+                        <View key={row.label} style={{ flexDirection: "row-reverse", justifyContent: "space-between", marginVertical: 2 }}>
+                          <Text role="caption" style={{ color: colorRoles.textSecondary }}>{row.label}</Text>
+                          <Text role="caption" weight="bold" style={{ color: row.tone === "brand" ? colorRoles.brandAction : colorRoles.textPrimary }}>{row.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {opt.helperText && isSelected && (
+                    <Text role="caption" style={{ color: colorRoles.danger, textAlign: "right", marginTop: 4 }}>{opt.helperText}</Text>
+                  )}
+
+                  {opt.action && isSelected && (
+                    <Button
+                      label={opt.action.label}
+                      tone="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      onPress={opt.action.onPress}
+                      style={{ alignSelf: "flex-start", marginTop: 6 }}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Surface>
+
+        {/* قد تعجبك هذه المنتجات أيضاً */}
+        <View style={{ gap: spacing[3], marginVertical: 4 }}>
+          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4 }}>
+            <Text role="bodySm" weight="bold" style={{ color: colorRoles.textPrimary }}>قد تعجبك هذه المنتجات أيضاً</Text>
+            <Text role="caption" style={{ color: colorRoles.textSecondary }}>إضافة سريعة للسلة</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row-reverse", gap: 8, paddingVertical: 4 }}>
+            {RECOMMENDED_ITEMS.map((item) => {
+              const cartItem = cart.items.find((it) => it.productName === item.name);
+              const qty = cartItem?.quantity ?? 0;
+              return (
+                <Surface key={item.id} tone="default" style={styles.recCard}>
+                  {qty > 0 && (
+                    <View style={styles.recBadge}>
+                      <Badge label={`مضاف (${qty})`} tone="action" />
+                    </View>
+                  )}
+                  <Text style={{ fontSize: 24, textAlign: "center", marginVertical: 4 }}>{item.icon}</Text>
+                  <Text role="bodySm" weight="bold" style={{ color: colorRoles.textPrimary, textAlign: "center" }} numberOfLines={1}>{item.name}</Text>
+                  <Text role="caption" style={{ color: colorRoles.brandAction, textAlign: "center", marginBottom: 6 }}>{item.price} د.ي</Text>
+                  <Button
+                    label={qty > 0 ? "إضافة المزيد" : "أضف للسلة"}
+                    tone="secondary"
+                    size="sm"
+                    onPress={() => void controller.updateItemQuantity(item.id, item.name, qty + 1, `${item.price} د.ي`)}
+                  />
+                </Surface>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* مراجعة السلة (العناصر والكميات) */}
+        <Surface tone="default" style={styles.cardFrame}>
+          <View style={styles.cartReviewHeader}>
+            <View style={styles.cartReviewHeaderText}>
+              <Icon name="cart-outline" size={18} color={colorRoles.textPrimary} />
+              <Text role="bodySm" weight="bold" style={styles.cardLabel}>مراجعة السلة</Text>
+              <Badge label={`${cart.items.length} عناصر`} tone="success" />
+            </View>
+            <Pressable onPress={() => void controller.clear(cart)}>
+              <Text role="bodySm" style={styles.clearBtnText}>حذف الكل</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.itemsListContainer}>
+            {cart.items.map((item, index) => {
+              const priceVal = parseFloat(item.priceReference ? item.priceReference.replace(/[^\d.]/g, "") : "0") || 0;
+              return (
+                <View key={item.id} style={styles.cartItemRow}>
+                  <View style={styles.itemMainDetails}>
+                    <Text role="bodyStrong" style={styles.itemTitleText}>{`${index + 1}- ${item.productName}`}</Text>
+                    <Text role="caption" style={styles.itemUnitPrice}>سعر الوحدة: {priceVal} د.ي</Text>
+                  </View>
+
+                  <View style={styles.qtyControlsContainer}>
+                    <Button
+                      label="-"
+                      tone="ghost"
+                      size="sm"
+                      fullWidth={false}
+                      onPress={() => void controller.updateItemQuantity(item.productId, item.productName, item.quantity - 1, item.priceReference)}
+                      style={styles.qtyBtn}
+                    />
+                    <Text role="bodyStrong" style={styles.qtyNumberText}>{item.quantity}</Text>
+                    <Button
+                      label="+"
+                      tone="primary"
+                      size="sm"
+                      fullWidth={false}
+                      onPress={() => void controller.updateItemQuantity(item.productId, item.productName, item.quantity + 1, item.priceReference)}
+                      style={styles.qtyBtn}
+                    />
+                  </View>
+
+                  <Text role="bodyStrong" style={styles.itemSubtotalText}>{priceVal * item.quantity} د.ي</Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <Divider style={styles.divider} />
+
+          {/* خلاصة الحساب المالي للفاتورة */}
+          <View style={styles.invoiceBreakdown}>
+            <View style={styles.invoiceRow}>
+              <Text role="bodySm" style={styles.invoiceLabel}>إجمالي المنتجات</Text>
+              <Text role="bodyStrong" style={styles.invoiceValue}>{subtotal} د.ي</Text>
+            </View>
+            <View style={styles.invoiceRow}>
+              <Text role="bodySm" style={styles.invoiceLabel}>سعر التوصيل</Text>
+              <Text role="bodyStrong" style={styles.invoiceValue}>{deliveryFee} د.ي</Text>
+            </View>
+            {discount > 0 && (
+              <View style={styles.invoiceRow}>
+                <Text role="bodySm" style={styles.invoiceLabelSuccess}>الخصم (قسيمة: {couponCode})</Text>
+                <Text role="bodyStrong" style={styles.invoiceValueSuccess}>-{discount} د.ي</Text>
+              </View>
+            )}
+            <Divider style={styles.divider} />
+            <View style={styles.invoiceRowTotal}>
+              <Text role="bodyStrong" weight="black" style={styles.totalLabel}>الإجمالي النهائي</Text>
+              <Text role="titleMd" weight="black" style={styles.totalValue}>{grandTotal} د.ي</Text>
+            </View>
+          </View>
+        </Surface>
+
+        {/* نطاق الخدمة والتوصيل الفعلي */}
+        {isBlocked && (
+          <View style={styles.blockedNoticeCard}>
+            <Icon name="alert-circle-outline" size={20} color={colorRoles.danger} />
+            <View style={styles.blockedNoticeText}>
+              <Text role="bodySm" weight="bold" style={{ color: colorRoles.danger }}>خارج نطاق التوصيل</Text>
+              <Text role="caption" style={{ color: colorRoles.textMuted }}>
+                {serviceabilityController.serviceability.kind === "blocked" ? serviceabilityController.serviceability.reason : ""}
+              </Text>
+            </View>
+            <Button label="تغيير المنطقة" tone="secondary" size="sm" onPress={serviceabilityController.reset} />
+          </View>
+        )}
+
+        {/* أزرار الإجراءات */}
+        {!isServiceable && !isBlocked && (
           <Button
             tone="primary"
-            label="المتابعة للدفع"
-            {...(onProceedToCheckout ? { onPress: () => onProceedToCheckout(cart) } : {})}
-            disabled={controller.action === "submitting"}
+            label={isChecking ? "جاري التحقق من التوصيل…" : "تأكيد التغطية والمتابعة 📍"}
+            onPress={handleCheckServiceability}
+            disabled={isChecking}
+            style={styles.mainActionBtn}
           />
-        </>
-      )}
-    </ScrollScreen>
+        )}
+
+        {isServiceable && (
+          <Button
+            tone="primary"
+            label="المتابعة لتأكيد الطلب 🚀"
+            onPress={() => setCheckoutReviewVisible(true)}
+            style={styles.mainActionBtn}
+          />
+        )}
+
+        {/* شاشة ملخص الطلب المنسدلة (Bottom Sheet) */}
+        <Modal
+          visible={checkoutReviewVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setCheckoutReviewVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable style={{ flex: 1 }} onPress={() => setCheckoutReviewVisible(false)} />
+            <View style={styles.modalContent}>
+              {/* Drag Handle Indicator */}
+              <View style={styles.dragHandle} />
+
+              <View style={styles.modalHeader}>
+                <Text role="titleMd" weight="bold" style={styles.modalTitle}>خلاصة ومراجعة الطلب</Text>
+                <Pressable onPress={() => setCheckoutReviewVisible(false)} style={styles.closeButton}>
+                  <Icon name="close" size={20} tone="muted" />
+                </Pressable>
+              </View>
+
+              <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+                
+                {/* Fulfillment details */}
+                <View style={styles.modalCard}>
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+                    <View style={styles.modalIconBg}>
+                      <Icon name="bicycle" size={20} color={colorRoles.brandAction} />
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text role="caption" style={{ color: colorRoles.textSecondary }}>طريقة الاستلام والتوصيل</Text>
+                      <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, marginTop: 2 }}>
+                        {selectedFulfillmentMode === "pickup" ? "استلام من المتجر بنفسك" : "توصيل سريع عبر كابتن بثواني"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Delivery Address */}
+                {selectedFulfillmentMode !== "pickup" && (
+                  <View style={styles.modalCard}>
+                    <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+                      <View style={[styles.modalIconBg, { backgroundColor: "rgba(5, 150, 105, 0.1)" }]}>
+                        <Icon name="location" size={20} color="#059669" />
+                      </View>
+                      <View style={{ flex: 1, alignItems: "flex-end" }}>
+                        <Text role="caption" style={{ color: colorRoles.textSecondary }}>عنوان التسليم المحدد</Text>
+                        <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, marginTop: 2 }}>{clientAddress}</Text>
+                        <Text role="caption" style={{ color: colorRoles.brandAction, marginTop: 4 }}>
+                          الإحداثيات: {clientCoordinates.latitude.toFixed(5)}، {clientCoordinates.longitude.toFixed(5)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Note & Schedule */}
+                <View style={styles.modalCard}>
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+                    <View style={[styles.modalIconBg, { backgroundColor: "rgba(217, 119, 6, 0.1)" }]}>
+                      <Icon name="time-outline" size={20} color="#D97706" />
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text role="caption" style={{ color: colorRoles.textSecondary }}>توجيهات ووقت التنفيذ</Text>
+                      <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, marginTop: 2 }}>
+                        وقت التوصيل: {scheduling === "later" ? `${scheduledDate} ${scheduledTime}` : "توصيل فوري (الآن)"}
+                      </Text>
+                      {note && (
+                        <Text role="caption" style={{ color: colorRoles.textSecondary, marginTop: 4 }}>
+                          ملاحظات إضافية: {note}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Billing invoice summary */}
+                <View style={[styles.modalCard, { backgroundColor: "#F8FAFC", borderColor: "#E2E8F0" }]}>
+                  <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: 'right', marginBottom: 8, fontWeight: "bold" }}>تفاصيل الفاتورة المالية</Text>
+                  
+                  <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", marginVertical: 4 }}>
+                    <Text role="bodySm" style={{ color: colorRoles.textSecondary }}>رسوم التوصيل والخدمة:</Text>
+                    <Text role="bodyStrong" style={{ color: colorRoles.textPrimary }}>{deliveryFee} د.ي</Text>
+                  </View>
+                  <Divider style={{ marginVertical: 8 }} />
+                  <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginVertical: 4 }}>
+                    <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, fontWeight: "bold" }}>الإجمالي النهائي المستحق:</Text>
+                    <Text role="titleMd" weight="black" style={{ color: colorRoles.brandAction, fontSize: 20 }}>{grandTotal} د.ي</Text>
+                  </View>
+                </View>
+
+                {/* Confirm Action Button */}
+                <Button
+                  tone="primary"
+                  label="تأكيد الطلب والذهاب للدفع 💳"
+                  onPress={() => {
+                    setCheckoutReviewVisible(false);
+                    handleProceed();
+                  }}
+                  style={{ marginTop: 12, height: 50, borderRadius: 25 }}
+                />
+
+                <Button
+                  tone="secondary"
+                  label="إلغاء وتعديل السلة"
+                  onPress={() => setCheckoutReviewVisible(false)}
+                  style={{ height: 50, borderRadius: 25 }}
+                />
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+        
+        <View style={styles.footerSpacing} />
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colorRoles.surfaceWarm,
+  },
+  scrollContent: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    gap: 12,
+  },
+  policyBanner: {
+    backgroundColor: "#EFF5FC",
+    borderWidth: 1,
+    borderColor: "#B4CFEA",
+    borderRadius: radius.md,
+    padding: 12,
+  },
+  policyHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  policyHeaderText: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingLeft: 8,
+  },
+  policyTitle: {
+    color: colorRoles.textPrimary,
+    marginBottom: 4,
+  },
+  policyDesc: {
+    color: colorRoles.textSecondary,
+    textAlign: "right",
+    lineHeight: 16,
+  },
+  policyBadge: {
+    color: colorRoles.brandAction,
+    fontWeight: "800",
+  },
+  cardFrame: {
+    backgroundColor: colorRoles.surfaceBase,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    padding: 14,
+    gap: 12,
+  },
+  cardHeaderRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardHeaderMeta: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  cardIcon: {
+    marginTop: 2,
+  },
+  cardHeaderTitles: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  cardLabel: {
+    color: colorRoles.textPrimary,
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "right",
+  },
+  cardValue: {
+    color: colorRoles.textSecondary,
+    fontWeight: "bold",
+  },
+  pickerOptionsList: {
+    gap: 8,
+    marginTop: 8,
+  },
+  pickerItem: {
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    padding: 10,
+  },
+  pickerItemActive: {
+    borderColor: colorRoles.brandAction,
+    backgroundColor: "#FFF3ED",
+  },
+  pickerItemContent: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  pickerItemMeta: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  pickerItemLabel: {
+    color: colorRoles.textPrimary,
+  },
+  pickerItemDesc: {
+    color: colorRoles.textSecondary,
+    textAlign: "right",
+  },
+  optionRowContainer: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  optionTextContainer: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingLeft: 8,
+  },
+  optionTitle: {
+    color: colorRoles.textPrimary,
+  },
+  optionSubtitle: {
+    color: colorRoles.textSecondary,
+    marginTop: 2,
+  },
+  actionEditorBox: {
+    backgroundColor: "#F8F5F0",
+    borderRadius: radius.sm,
+    padding: 12,
+    gap: 8,
+    marginTop: 6,
+  },
+  editorTitle: {
+    color: colorRoles.textPrimary,
+    textAlign: "right",
+  },
+  editorActions: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    marginTop: 4,
+  },
+  editorSaveBtn: {
+    flex: 1,
+  },
+  divider: {
+    backgroundColor: colorRoles.borderSubtle,
+    marginVertical: 4,
+  },
+  cartReviewHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cartReviewHeaderText: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+  },
+  clearBtnText: {
+    color: colorRoles.danger,
+  },
+  itemsListContainer: {
+    gap: 10,
+    marginTop: 6,
+  },
+  cartItemRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.sm,
+    padding: 10,
+    gap: 8,
+  },
+  itemMainDetails: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  itemTitleText: {
+    color: colorRoles.textPrimary,
+    textAlign: "right",
+  },
+  itemUnitPrice: {
+    color: colorRoles.textSecondary,
+    marginTop: 2,
+  },
+  qtyControlsContainer: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    backgroundColor: "#F8F5F0",
+    borderRadius: radius.sm,
+    padding: 2,
+    gap: 4,
+  },
+  qtyBtn: {
+    minWidth: 28,
+    height: 28,
+    paddingHorizontal: 0,
+    borderRadius: radius.xs,
+  },
+  qtyNumberText: {
+    minWidth: 20,
+    textAlign: "center",
+    color: colorRoles.textPrimary,
+  },
+  itemSubtotalText: {
+    color: colorRoles.textPrimary,
+    minWidth: 60,
+    textAlign: "left",
+  },
+  invoiceBreakdown: {
+    gap: 8,
+  },
+  invoiceRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  invoiceLabel: {
+    color: colorRoles.textSecondary,
+  },
+  invoiceValue: {
+    color: colorRoles.textPrimary,
+  },
+  invoiceLabelSuccess: {
+    color: colorRoles.success,
+  },
+  invoiceValueSuccess: {
+    color: colorRoles.success,
+  },
+  invoiceRowTotal: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  totalLabel: {
+    color: colorRoles.textPrimary,
+  },
+  totalValue: {
+    color: colorRoles.brandAction,
+  },
+  blockedNoticeCard: {
+    backgroundColor: "#FFF1F0",
+    borderColor: "#FFA39E",
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: 12,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  blockedNoticeText: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  mainActionBtn: {
+    borderRadius: radius.md,
+    height: 48,
+  },
+  footerSpacing: {
+    height: 30,
+  },
+  // Restored components styling
+  selectorTab: {
+    flex: 1,
+    height: 38,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  selectorTabActive: {
+    backgroundColor: colorRoles.brandAction,
+    borderColor: colorRoles.brandAction,
+  },
+  selectorTabText: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: colorRoles.textSecondary,
+  },
+  selectorTabTextActive: {
+    color: "#FFFFFF",
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  chipActive: {
+    backgroundColor: colorRoles.brandAction,
+    borderColor: colorRoles.brandAction,
+  },
+  chipText: {
+    fontSize: 12,
+    color: colorRoles.textSecondary,
+  },
+  chipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  paymentCard: {
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    padding: 12,
+    backgroundColor: colorRoles.surfaceBase,
+    gap: 4,
+  },
+  paymentCardActive: {
+    borderColor: colorRoles.brandAction,
+    backgroundColor: "#FFF3ED",
+  },
+  radioDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: colorRoles.borderSubtle,
+    backgroundColor: "transparent",
+  },
+  radioDotActive: {
+    borderColor: colorRoles.brandAction,
+    backgroundColor: colorRoles.brandAction,
+  },
+  paymentBreakdown: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: colorRoles.borderSubtle,
+  },
+  recCard: {
+    width: 120,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    padding: 10,
+    backgroundColor: colorRoles.surfaceBase,
+    position: "relative",
+  },
+  recBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    zIndex: 1,
+  },
+  // Interactive Map Styles
+  mapContainer: {
+    width: 320,
+    height: 220,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    alignSelf: "center",
+    position: "relative",
+    marginVertical: 8,
+  },
+  mapPressable: {
+    width: "100%",
+    height: "100%",
+  },
+  mapCircle: {
+    position: "absolute",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+  },
+  mapRoad: {
+    position: "absolute",
+    backgroundColor: "#E2E8F0",
+  },
+  storePin: {
+    position: "absolute",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    zIndex: 2,
+  },
+  storePinLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#1E3A8A",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: radius.xs,
+  },
+  userPin: {
+    position: "absolute",
+    zIndex: 10,
+  },
+  userPinPulse: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 80, 13, 0.3)",
+    top: -5,
+    left: -5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.65)", // Dark semi-transparent backdrop
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    maxHeight: "85%",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 25,
+  },
+  dragHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#E2E8F0",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 16,
+    marginBottom: 8,
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#F1F5F9",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#0F172A",
+    textAlign: "right",
+  },
+  closeButton: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
+  },
+  modalCard: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    marginVertical: 4,
+  },
+  modalIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(29, 78, 216, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
+
+export default CartScreen;

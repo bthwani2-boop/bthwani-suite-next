@@ -21,7 +21,9 @@ INSERT INTO dsh_stores (
   has_pro_badge,
   has_coupon_badge,
   points_multiplier,
-  is_popular
+  is_popular,
+  latitude,
+  longitude
 ) VALUES
   (
     'store-1001', 'haddah-central-market', 'أسواق حدة المركزية', 'active',
@@ -29,7 +31,8 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1001-hero.jpg',
     'http://localhost:59000/dsh-media/store-1001-logo.jpg',
     'grocery', ARRAY['delivery','pickup','express'], true,
-    2.10, 3100, true, false, 2, true
+    2.10, 3100, true, false, 2, true,
+    15.3400, 44.1900
   ),
   (
     'store-1002', 'al-sabeen-bakery', 'مخبز السبعين', 'active',
@@ -37,7 +40,8 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1002-hero.jpg',
     'http://localhost:59000/dsh-media/store-1002-logo.jpg',
     'bakery', ARRAY['delivery','pickup'], true,
-    1.80, 1200, true, true, null, false
+    1.80, 1200, true, true, null, false,
+    15.3300, 44.2000
   ),
   (
     'store-1003', 'taiz-street-market', 'سوق شارع تعز', 'active',
@@ -45,7 +49,8 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1003-hero.jpg',
     'http://localhost:59000/dsh-media/store-1003-logo.jpg',
     'grocery', ARRAY['delivery','pickup'], false,
-    3.50, 850, false, false, null, false
+    3.50, 850, false, false, null, false,
+    15.3200, 44.1800
   ),
   (
     'store-1004', 'al-zubairi-grocery', 'بقالة الزبيري', 'temporarily_closed',
@@ -53,7 +58,8 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1004-hero.jpg',
     'http://localhost:59000/dsh-media/store-1004-logo.jpg',
     'grocery', ARRAY['delivery'], false,
-    1.20, 2400, true, false, null, false
+    1.20, 2400, true, false, null, false,
+    15.3600, 44.1700
   ),
   (
     'store-1005', 'old-city-restaurant', 'مطعم المدينة القديمة', 'active',
@@ -61,7 +67,8 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1005-hero.jpg',
     'http://localhost:59000/dsh-media/store-1005-logo.jpg',
     'restaurant', ARRAY['delivery','pickup','express'], true,
-    0.50, 5200, true, true, 3, true
+    0.50, 5200, true, true, 3, true,
+    15.3560, 44.1800
   ),
   (
     'store-1006', 'maeen-pharmacy', 'صيدلية معين', 'active',
@@ -69,7 +76,8 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1006-hero.jpg',
     'http://localhost:59000/dsh-media/store-1006-logo.jpg',
     'pharmacy', ARRAY['delivery'], true,
-    4.10, 980, false, true, null, false
+    4.10, 980, false, true, null, false,
+    15.3700, 44.1900
   )
 ON CONFLICT (id) DO UPDATE SET
   slug = EXCLUDED.slug,
@@ -94,4 +102,6 @@ ON CONFLICT (id) DO UPDATE SET
   has_coupon_badge = EXCLUDED.has_coupon_badge,
   points_multiplier = EXCLUDED.points_multiplier,
   is_popular = EXCLUDED.is_popular,
+  latitude = EXCLUDED.latitude,
+  longitude = EXCLUDED.longitude,
   updated_at = now();

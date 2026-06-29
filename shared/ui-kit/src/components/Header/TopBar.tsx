@@ -32,10 +32,10 @@ export function TopBar({ title, subtitle, variant = 'primary', onBack, style }: 
         style,
       ]}
     >
-      <View style={{ flex: 1, alignItems: 'flex-start' }}>
-        <Text role="titleMd">{title}</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text role="titleMd" style={{ textAlign: 'center' }}>{title}</Text>
         {subtitle ? (
-          <Text role="bodySm" tone="muted" style={{ marginTop: 2 }}>
+          <Text role="bodySm" tone="muted" style={{ marginTop: 2, textAlign: 'center' }}>
             {subtitle}
           </Text>
         ) : null}

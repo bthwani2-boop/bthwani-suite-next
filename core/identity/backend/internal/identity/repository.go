@@ -131,6 +131,9 @@ func resolveDevBypassIdentity(token string, now time.Time) (ActorIdentity, error
 	surface := "control-panel"
 	scope := "all"
 	switch role {
+	case "client":
+		surface = "app-client"
+		scope = "own"
 	case "partner":
 		surface = "app-partner"
 		scope = "own"

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Badge, Box, Button, KeyValueList, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
+import { StyleSheet, View } from 'react-native';
+import { Badge, Box, Button, KeyValueList, SectionHeader, Surface, Text, Icon } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 
 const SurfaceAny = Surface as any;
@@ -20,6 +21,19 @@ const STAGE_COORDINATES: Record<CaptainFieldStage, { lat: number; lng: number }>
   'at-door': { lat: 15.3250, lng: 44.1250 },
   'bell-rang': { lat: 15.3251, lng: 44.1251 },
   'proof': { lat: 15.3252, lng: 44.1252 },
+};
+
+// Map store and customer coordinate positions on our visual schematic map
+const STORE_POS = { x: 128, y: 154, name: 'المتجر' };
+const CUSTOMER_POS = { x: 234, y: 44, name: 'العميل' };
+
+const CAPTAIN_POSITIONS: Record<CaptainFieldStage, { x: number; y: number }> = {
+  'to-store': { x: 106, y: 176 },
+  'to-customer': { x: 149, y: 132 },
+  'near-customer': { x: 192, y: 88 },
+  'at-door': { x: 213, y: 66 },
+  'bell-rang': { x: 215, y: 64 },
+  'proof': { x: 217, y: 62 },
 };
 
 function useCaptainHeartbeat(stage: CaptainFieldStage): CaptainHeartbeatState {
@@ -49,63 +63,49 @@ const STAGE_CONFIG: Record<CaptainFieldStage, { title: string; description: stri
     nextStage: 'to-customer',
     action: 'تأكيد الاستلام من المتجر',
     proximityLabel: null,
-    lifecycleStatus: 'enroute_to_pickup',
+    lifecycleStatus: 'PICKING_UP',
   },
   'to-customer': {
-    title: 'التوصيل للعميل',
-    description: 'الطلب معك وأنت في الطريق للعميل.',
+    title: 'التوجه للعميل',
+    description: 'تم استلام الشحنة وجاري التوجه لموقع العميل.',
     nextStage: 'near-customer',
     action: 'تأكيد الاقتراب من العميل',
-    proximityLabel: null,
-    lifecycleStatus: 'enroute_to_dropoff',
+    proximityLabel: 'near_customer',
+    lifecycleStatus: 'EN_ROUTE',
   },
   'near-customer': {
-    title: 'قريب من العميل',
-    description: 'أنت على مقربة من موقع التسليم.',
+    title: 'الاقتراب من العميل',
+    description: 'على بعد أقل من 500 متر من موقع العميل.',
     nextStage: 'at-door',
-    action: 'تأكيد الوصول للموقع',
-    proximityLabel: 'near_customer',
-    lifecycleStatus: 'near_customer',
+    action: 'تأكيد الوصول عند الباب',
+    proximityLabel: 'at_door',
+    lifecycleStatus: 'EN_ROUTE',
   },
   'at-door': {
-    title: 'عند باب العميل',
-    description: 'وصلت لموقع التسليم. أخطر العميل بوصولك.',
+    title: 'الوصول عند الباب',
+    description: 'متواجد حالياً عند باب منزل العميل لتسليم الطلب.',
     nextStage: 'bell-rang',
     action: 'قرع الجرس',
-    proximityLabel: 'at_door',
-    lifecycleStatus: 'at_door',
+    proximityLabel: 'bell_rang',
+    lifecycleStatus: 'ARRIVED',
   },
   'bell-rang': {
     title: 'تم قرع الجرس',
-    description: 'أُرسل إشعار الوصول. انتظر العميل أو انتقل لإثبات التسليم.',
+    description: 'ينتظر استلام العميل للطلب وإثبات التسليم.',
     nextStage: 'proof',
-    action: 'انتقل لإثبات التسليم',
+    action: 'تسجيل إثبات التسليم',
     proximityLabel: 'bell_rang',
-    lifecycleStatus: 'bell_rang',
+    lifecycleStatus: 'ARRIVED',
   },
   'proof': {
-    title: 'إثبات التسليم',
-    description: 'ثبّت استلام العميل للطلب وأغلق المهمة.',
+    title: 'إثبات التسليم المكتمل',
+    description: 'تم التقاط صورة إثبات التسليم وإغلاق الطلب ماليًا.',
     nextStage: null,
-    action: 'رفع الإثبات الآن',
+    action: 'العودة للرئيسية',
     proximityLabel: null,
-    lifecycleStatus: 'arrived_at_dropoff',
+    lifecycleStatus: 'DELIVERED',
   },
 };
-
-export interface DshCaptainMapScreenProps {
-  readonly orderId: string;
-  readonly captainId?: string;
-  readonly onBack: () => void;
-  readonly onPushLocation: (push: {
-    readonly orderId: string;
-    readonly captainId: string;
-    readonly latitude: number;
-    readonly longitude: number;
-    readonly lifecycleStatus: string;
-    readonly orderStatus?: DshCaptainLifecycleStatus;
-  }) => Promise<unknown>;
-}
 
 export function DshCaptainMapScreen({
   orderId,
@@ -195,6 +195,8 @@ export function DshCaptainMapScreen({
         ? 'warning' as const
         : 'info' as const;
 
+  const captainPos = CAPTAIN_POSITIONS[taskStage];
+
   return (
     <DshOperationScreen
       state={screenState}
@@ -234,12 +236,40 @@ export function DshCaptainMapScreen({
           </SurfaceAny>
 
           <SurfaceAny tone="raised" gap={3}>
-            <SectionHeader title="حالة التحديث" subtitle="تحديث الموقع داخلي كل 3 دقائق — لا GPS live للعميل." />
+            <SectionHeader title="خريطة التتبع الميداني" subtitle="عرض مباشر لمسار الكابتن بين المتجر والعميل" />
+            
+            {/* خريطة التنفيذ التفاعلية */}
+            <View style={styles.mapContainer}>
+              {/* Concentric grid lines */}
+              <View style={[styles.mapCircle, { width: 120, height: 120, borderRadius: 60, top: 50, left: 100 }]} />
+              <View style={[styles.mapCircle, { width: 220, height: 220, borderRadius: 110, top: 0, left: 50 }]} />
+              <View style={[styles.mapRoad, { height: 1.5, width: "100%", top: 110, left: 0 }]} />
+              <View style={[styles.mapRoad, { width: 1.5, height: "100%", left: 160, top: 0 }]} />
+
+              {/* Store Pin */}
+              <View style={[styles.storePin, { top: STORE_POS.y - 12, left: STORE_POS.x - 12 }]}>
+                <Icon name="storefront" size={14} color="#1D4ED8" />
+                <Text style={styles.pinLabel}>{STORE_POS.name}</Text>
+              </View>
+
+              {/* Customer Pin */}
+              <View style={[styles.customerPin, { top: CUSTOMER_POS.y - 12, left: CUSTOMER_POS.x - 12 }]}>
+                <Icon name="location" size={14} color="#059669" />
+                <Text style={styles.pinLabel}>{CUSTOMER_POS.name}</Text>
+              </View>
+
+              {/* Captain Current Pin */}
+              <View style={[styles.captainPin, { top: captainPos.y - 14, left: captainPos.x - 10 }]}>
+                <View style={styles.userPinPulse} />
+                <Icon name="bicycle" size={18} color="#FF500D" />
+              </View>
+            </View>
+
             <KeyValueList
               items={[
                 { label: 'آخر تحديث', value: heartbeat.lastUpdateMinutesAgo === 0 ? 'الآن' : `منذ ${heartbeat.lastUpdateMinutesAgo} دقيقة` },
                 { label: 'الوقت التقريبي', value: heartbeat.etaMinutes !== null ? `${heartbeat.etaMinutes} دقيقة` : 'وصلت' },
-                { label: 'إحداثيات الكابتن', value: `(${STAGE_COORDINATES[taskStage].lat.toFixed(4)}, ${STAGE_COORDINATES[taskStage].lng.toFixed(4)})` },
+                { label: 'إحداثيات الكابتن الحالي', value: `(${STAGE_COORDINATES[taskStage].lat.toFixed(4)}, ${STAGE_COORDINATES[taskStage].lng.toFixed(4)})` },
                 { label: 'حالة المرحلة', value: config.lifecycleStatus, tone: 'action' as any },
               ]}
             />
@@ -283,6 +313,81 @@ export function DshCaptainMapScreen({
       onTertiaryAction={onBack}
     />
   );
+}
+
+const styles = StyleSheet.create({
+  mapContainer: {
+    width: 320,
+    height: 220,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    overflow: "hidden",
+    alignSelf: "center",
+    position: "relative",
+    marginVertical: 4,
+  },
+  mapCircle: {
+    position: "absolute",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+  },
+  mapRoad: {
+    position: "absolute",
+    backgroundColor: "#E2E8F0",
+  },
+  storePin: {
+    position: "absolute",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    zIndex: 2,
+  },
+  customerPin: {
+    position: "absolute",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    zIndex: 2,
+  },
+  captainPin: {
+    position: "absolute",
+    zIndex: 10,
+  },
+  pinLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#334155",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  userPinPulse: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 80, 13, 0.3)",
+    top: -6,
+    left: -6,
+  },
+});
+
+export interface DshCaptainMapScreenProps {
+  readonly orderId: string;
+  readonly captainId?: string;
+  readonly onBack: () => void;
+  readonly onPushLocation: (push: {
+    readonly orderId: string;
+    readonly captainId: string;
+    readonly latitude: number;
+    readonly longitude: number;
+    readonly lifecycleStatus: string;
+    readonly orderStatus?: DshCaptainLifecycleStatus;
+  }) => Promise<unknown>;
 }
 
 export default DshCaptainMapScreen;

@@ -7,6 +7,10 @@ import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
+import { configureIdentitySession } from '@bthwani/core-identity';
+import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
+
+configureIdentitySession(resolveIdentityApiBaseUrl());
 
 const COLORS = {
   background: '#F8F5F0',
