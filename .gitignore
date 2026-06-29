@@ -39,3 +39,10 @@ services/dsh/database/seeds/local/media/
 # Agent local state
 .aider*
 !.aiderignore
+
+# Logs and evidence
+tools/registry/runs/
+.diagnostics/
+*.log
+node-gates*.log
+*_HANDOFF.zip

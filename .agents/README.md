@@ -24,9 +24,10 @@ No tool may assume, switch, or prefer a remote metadata branch during execution.
 
 1. `AGENTS.md`
 2. `.agents/COMMAND_SAFETY_POLICY.md`
-3. `.agents/INDEX.md`
-4. `.agents/AUTHORITY_BOUNDARY.md`
-5. `.agents/EVIDENCE_GATE_ROUTER.md` when choosing verification
-6. One or two task-specific skills only
+3. `.agents/AUTOMATED_EXECUTION_POLICY.md` (Mandatory automated execution policy)
+4. `.agents/INDEX.md`
+5. `.agents/AUTHORITY_BOUNDARY.md`
+6. `.agents/EVIDENCE_GATE_ROUTER.md` when choosing verification
+7. One or two task-specific skills only
 
 Do not read every skill by default.

@@ -16,7 +16,7 @@
 - delete, move, or rename files without explicit task need and rollback path
 - mutate GitHub unless explicitly requested
 - change dependencies, lockfiles, CI, generated files, or runtime infrastructure unless the task requires it
-- claim closure without evidence
+- claim closure without automation-backed evidence appropriate to the task's complexity (e.g., executing target validator scripts returning exit code 0)
 - treat Graphify output as final acceptance
 - treat screenshots, reports, or donor snapshots as implementation truth
 

@@ -408,8 +408,8 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 	var storeIDOut sql.NullString
 	err := db.QueryRow(`
 		INSERT INTO dsh_partner_field_visits
-			(partner_id, store_id, field_actor_id, visit_notes, location_latitude, location_longitude, evidence_media_refs)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)
+			(partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude, evidence_media_refs, submitted_at)
+		VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,NOW())
 		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
 		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
 		          version, created_at, submitted_at`,

@@ -4,6 +4,18 @@
 
 All agents must strictly adhere to the [Command Safety Policy](.agents/COMMAND_SAFETY_POLICY.md).
 
+## Automated Execution Policy
+
+All agents must read and strictly adhere to the [Automated Execution Policy](.agents/AUTOMATED_EXECUTION_POLICY.md).
+* **Mandatory Automation & Selection**: Automation is mandatory, but new script creation is conditional. Agents must choose the smallest sufficient automated method for the task: existing guard, package script, targeted check, small script, single structured script, or multiple specialized scripts.
+* **Proportionality**: Tiny edits do not require new scripts, but still require an appropriate lightweight validation after modification. Repeated, multi-file, cross-layer, or high-risk work must use scripted or tool-backed diagnosis, remediation, verification, and targeted re-diagnosis. Manual file-by-file chasing is prohibited as a primary method.
+* **Standard Paths**:
+  * Diagnostics: [tools/diagnostics](./tools/diagnostics)
+  * Operations & Verification: [tools/scripts](./tools/scripts)
+  * Summarized Runs & Artifacts: [tools/registry/runs](./tools/registry/runs)
+* **Fail-Closed**: Any ambiguity or risk >= 1% halts execution (halt without applying further changes, report the failed state, and require explicit approval before any revert/reset/cleanup).
+* **Close Loops**: All future executions must operate under a Closed Loop (Diagnosis -> Plan -> Exec -> Verify -> Rediagnose -> Close/Block).
+
 ## Shared skills root
 
 All agents must use shared project skills from:
@@ -50,7 +62,7 @@ Match effort to task nature. Never over-engineer or under-deliver.
 
 | Tier | When | Action |
 |---|---|---|
-| **Instant** | Single file, typo, rename, comment, explain | Execute directly, 0 skills, no checks unless risk appears |
+| **Instant** | Single file, typo, rename, comment, explain | Execute directly, 0 skills, small targeted check post-modification |
 | **Focused** | Feature within one module/service | 1 task skill max, targeted code-based check only when useful |
 | **Standard** | Multi-file or cross-layer | authority + one task skill, affected/touched-area checks only |
 | **Full** | Finance, security, secrets, agent files | authority + router + task skill + evidence gate (finance/security/auth/data/runtime/agent/PR/release only) |
@@ -81,3 +93,14 @@ Default: reuse existing code first, avoid new abstractions, avoid new dependenci
 ## External donor references
 
 External agent repositories are not loaded by default. Use `.agents/skills/external-agent-donor-reference/SKILL.md` only when agent/skill design explicitly needs external inspiration. Donor material is read-only and must never override BThwani rules.
+
+## Handling Incorrect Governance, Guards, or Skills
+
+When an agent encounters a guard, governance file, or skill whose content is incorrect, outdated, or buggy, they must:
+1. **Verify context and scope** using [bthwani-current-workspace-authority](.agents/skills/bthwani-current-workspace-authority/SKILL.md) (check active branch and repository status).
+2. **Apply Update Policy** [UPDATE_POLICY.md](.agents/UPDATE_POLICY.md) to ensure the correction reduces duplication, improves precision, or fixes incorrect paths/boundaries.
+3. **Keep edits minimal (YAGNI)** using [bthwani-ponytail-yagni](.agents/skills/bthwani-ponytail-yagni/SKILL.md).
+4. **Perform targeted verification**:
+   - Run `git --no-pager diff --check` for textual governance updates.
+   - Run the specific modified guard script (e.g. [guard-automated-execution-policy.mjs](tools/guards/guard-automated-execution-policy.mjs)) and verify it returns exit code 0.
+   - Run [bthwani-agent-skill-integrity](.agents/skills/bthwani-agent-skill-integrity/SKILL.md) if skills or catalog records were modified.
