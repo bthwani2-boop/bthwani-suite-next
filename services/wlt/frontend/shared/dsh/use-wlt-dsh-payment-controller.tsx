@@ -25,6 +25,7 @@ export type WltDshPaymentController = {
   readonly paymentDecisionOptions: readonly PaymentDecisionOption[];
 };
 
+// Presentation-only selector state for DSH checkout UI; financial mutation remains owned by WLT runtime APIs.
 export function useWltDshPaymentController(grandTotal: number): WltDshPaymentController {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
   const [walletLinked, setWalletLinked] = useState(true);

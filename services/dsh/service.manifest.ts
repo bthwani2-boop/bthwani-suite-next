@@ -168,7 +168,7 @@ export const dshServiceManifest = {
     requiredStoreRoleSurfaces: ["app-partner", "app-field", "app-captain"],
     incompleteExperienceSurfaces: [],
     crossSurfaceDependencyMap:
-      "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json",
+      "services/dsh/frontend/shared/runtime/dsh-cross-surface-closure-map.ts",
   },
   nextSlice: {
     id: "DSH-011",

@@ -20,8 +20,10 @@ import {
 } from './account/OperationScreens';
 import { OrdersInboxScreen } from './orders/OrdersInboxScreen';
 import { DshPartnerStoreCourierScreen } from './store/DshPartnerStoreCourierScreen';
+import { PartnerStoreScreen } from './store/PartnerStoreScreen';
 import { PartnerEntryScreen } from './account/PartnerEntryScreen';
 import { PartnerSupportScreen } from './account/PartnerSupportScreen';
+import { PartnerCatalogManagementScreen } from './Catalog/PartnerCatalogManagementScreen';
 import { ProductEditScreen } from './Catalog/ProductEditScreen';
 import { CategoryManagementScreen } from './Catalog/CategoryManagementScreen';
 import { ProductMediaScreen } from './Catalog/ProductMediaScreen';
@@ -140,15 +142,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
 
   if (route === 'inventory-management') {
     return renderSurfaceShell(
-      <InventoryCatalogScreen
-        onBack={() => openAccountHub('hub')}
-        onNavigateToProductEdit={(id) => { setEditingProductId(id); setRoute('product-edit'); }}
-        onNavigateToCategoryManagement={() => setRoute('category-management')}
-        onNavigateToProductMedia={(id) => { setEditingProductId(id); setRoute('product-media'); }}
-        onNavigateToProductOverrides={(id) => { setEditingProductId(id); setRoute('product-overrides'); }}
-        storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.label}
-        activeZoneLabel={runtimePartnerProfile.activeZoneLabel} todayHoursLabel={runtimePartnerProfile.todayHoursLabel}
-      />,
+      <PartnerCatalogManagementScreen />,
     ) as React.ReactElement;
   }
 
@@ -165,6 +159,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'product-overrides') return renderSurfaceShell(<ProductOverridesScreen productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen onBack={() => openAccountHub('operations')} />) as React.ReactElement;
+  if (route === 'team-management') return renderSurfaceShell(<PartnerStoreScreen />) as React.ReactElement;
 
   if (route === 'support-directory') {
     return renderSurfaceShell(

@@ -134,6 +134,7 @@ export type DshCaptainRoute =
   | 'bell'
   | 'support-directory'
   | 'support-screen'
+  | 'store-pickup-context'
   | 'pickup-dropoff'
   | 'pod-submission'
   | 'map';

@@ -186,6 +186,35 @@ for (const binding of REQUIRED_SURFACE_BINDINGS) {
   }
 }
 
+const REQUIRED_ROUTE_BINDINGS = [
+  {
+    file: join(FRONTEND, "app-partner/DshPartnerRouteRenderer.tsx"),
+    pattern: /\bPartnerStoreScreen\b/,
+    message: "DshPartnerRouteRenderer must route-bind PartnerStoreScreen",
+  },
+  {
+    file: join(FRONTEND, "app-partner/DshPartnerRouteRenderer.tsx"),
+    pattern: /\bPartnerCatalogManagementScreen\b/,
+    message: "DshPartnerRouteRenderer must route-bind PartnerCatalogManagementScreen",
+  },
+  {
+    file: join(FRONTEND, "app-field/DshFieldRouteRenderer.tsx"),
+    pattern: /\bFieldStoreVerificationScreen\b/,
+    message: "DshFieldRouteRenderer must route-bind FieldStoreVerificationScreen",
+  },
+  {
+    file: join(FRONTEND, "app-captain/DshCaptainRouteRenderer.tsx"),
+    pattern: /\bCaptainStorePickupContextScreen\b/,
+    message: "DshCaptainRouteRenderer must route-bind CaptainStorePickupContextScreen",
+  },
+];
+
+for (const binding of REQUIRED_ROUTE_BINDINGS) {
+  if (!binding.pattern.test(read(binding.file))) {
+    fail(binding.file, binding.message);
+  }
+}
+
 // Ensure role context controller documents fallback
 const controllerPath = join(SHARED_DIR, "store/use-store-role-context-controller.tsx");
 const controllerSrc = read(controllerPath);

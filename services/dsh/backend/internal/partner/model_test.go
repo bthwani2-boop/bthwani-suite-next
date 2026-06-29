@@ -298,3 +298,48 @@ func TestDeactivationRemovesClientVisibility(t *testing.T) {
 		t.Fatal("deactivated partner must not be client_visible")
 	}
 }
+
+func TestPartnerReadinessForActivationStatus(t *testing.T) {
+	cases := []struct {
+		status ActivationStatus
+		want   string
+		ok     bool
+	}{
+		{StatusClientVisible, "ready", true},
+		{StatusClientHidden, "blocked", true},
+		{StatusPartnerDeactivated, "blocked", true},
+		{StatusPartnerActive, "", false},
+	}
+
+	for _, c := range cases {
+		got, ok := partnerReadinessForActivationStatus(c.status)
+		if ok != c.ok || got != c.want {
+			t.Fatalf("partnerReadinessForActivationStatus(%s) = (%q, %v), want (%q, %v)", c.status, got, ok, c.want, c.ok)
+		}
+		if got == "not_ready" {
+			t.Fatalf("partner_readiness must use DB-valid values only, got %q", got)
+		}
+	}
+}
+
+func TestCreateFieldVisitRejectsPartialCoordinates(t *testing.T) {
+	lat := 15.3694
+	_, err := CreateFieldVisit(nil, CreateFieldVisitInput{
+		PartnerID:        "prt_001",
+		FieldActorID:     "field_001",
+		LocationLatitude: &lat,
+	})
+	if err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for latitude without longitude, got %v", err)
+	}
+
+	lon := 44.191
+	_, err = CreateFieldVisit(nil, CreateFieldVisitInput{
+		PartnerID:         "prt_001",
+		FieldActorID:      "field_001",
+		LocationLongitude: &lon,
+	})
+	if err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for longitude without latitude, got %v", err)
+	}
+}

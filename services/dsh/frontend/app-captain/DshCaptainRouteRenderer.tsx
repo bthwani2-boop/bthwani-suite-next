@@ -20,6 +20,7 @@ import { DshCaptainFinanceScreen } from './account/DshCaptainFinanceScreen';
 import { DshCaptainSupportDirectoryScreen } from './account/DshCaptainOperationsScreen';
 import { DshCaptainAccountSettingsContent } from './account/DshCaptainAccountSettingsContent';
 import { CaptainAccountNavRow } from './account/CaptainAccountNavRow';
+import { CaptainStorePickupContextScreen } from './store/CaptainStorePickupContextScreen';
 import { OfferDeclineSheet } from './orders/OfferDeclineSheet';
 import { CaptainSupportScreenRouter } from './account/CaptainSupportScreenRouter';
 import type { DshCaptainBellEvent } from '../shared/orders/orders.state-machine';
@@ -231,6 +232,8 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
         }}
       />
     );
+
+    if (route === 'store-pickup-context') return <CaptainStorePickupContextScreen />;
 
     if (route === 'pod-submission' && captainPodRequired) return (
       <DshCaptainPoDSubmissionScreen

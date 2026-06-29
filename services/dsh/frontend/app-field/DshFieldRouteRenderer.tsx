@@ -6,6 +6,7 @@ import { DshFieldVisitScreen } from './escalation/DshFieldVisitScreen';
 import { DshFieldReadinessChecklistScreen } from './escalation/DshFieldReadinessChecklistScreen';
 import { DshFieldEscalationScreen } from './escalation/DshFieldEscalationScreen';
 import { DshFieldStoresScreen } from './stores/DshFieldStoresScreen';
+import { FieldStoreVerificationScreen } from './stores/FieldStoreVerificationScreen';
 import { DshFieldProfileHomeScreen } from './account/DshFieldProfileHomeScreen';
 import { DshFieldProfileScreen } from './account/DshFieldProfileScreen';
 import { DshFieldStoresHistoryScreen } from './stores/DshFieldStoresHistoryScreen';
@@ -66,6 +67,9 @@ export function DshFieldRouteRenderer({ model, actions }: Props): React.ReactEle
         }
       />
     );
+  }
+  if (route.kind === 'verification') {
+    return <FieldStoreVerificationScreen />;
   }
 
   if (route.kind === 'checklist') {
@@ -132,7 +136,7 @@ export function DshFieldRouteRenderer({ model, actions }: Props): React.ReactEle
 
   return (
     <DshFieldStoresScreen
-      onOpenStore={(storeId) => actions.pushRoute({ kind: 'onboarding', partnerId: storeId })}
+      onOpenStore={(storeId) => actions.pushRoute({ kind: 'verification', storeId })}
       onOpenAccount={() => actions.pushRoute({ kind: 'account' })}
       onCreateStore={() => actions.pushRoute({ kind: 'onboarding' })}
     />

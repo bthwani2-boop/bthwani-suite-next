@@ -8,6 +8,7 @@ export type DshFieldRoute =
   | 'stores'
   | 'onboarding'
   | 'visit'
+  | 'verification'
   | 'checklist'
   | 'account'
   | 'profile'
@@ -21,6 +22,7 @@ export type DshFieldRouteState =
   | { kind: 'stores' }
   | { kind: 'onboarding'; partnerId?: string }
   | { kind: 'visit'; storeId: string }
+  | { kind: 'verification'; storeId: string }
   | { kind: 'checklist'; visitId: string; storeId: string }
   | { kind: 'account' }
   | { kind: 'profile' }
