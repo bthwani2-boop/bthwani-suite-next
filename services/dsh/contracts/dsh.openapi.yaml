@@ -2551,7 +2551,7 @@ paths:
           description: Partner after transition.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartner" }
+              schema: { $ref: "#/components/schemas/DshPartnerTransitionResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -2654,7 +2654,7 @@ paths:
           description: Document after review.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerDocument" }
+              schema: { $ref: "#/components/schemas/DshPartnerDocumentReviewResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -2765,7 +2765,7 @@ paths:
           description: Partner activation status.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartner" }
+              schema: { $ref: "#/components/schemas/DshPartnerActivationStatus" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -4771,17 +4771,17 @@ components:
       type: object
       required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
       properties:
-        id: { type: string, format: uuid }
+        id: { type: string }
         legalNameAr: { type: string }
         legalNameEn: { type: string }
         displayName: { type: string }
-        legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
+        legalIdentityType: { type: string, enum: [commercial_register, national_id, freelancer_certificate] }
         legalIdentityNumber: { type: string }
         ownerName: { type: string }
         primaryPhone: { type: string }
         secondaryPhone: { type: string }
         email: { type: string }
-        category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
+        category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, default] }
         activationStatus:
           type: string
           enum:
@@ -4859,9 +4859,30 @@ components:
         toStatus: { type: string }
         reason: { type: string }
         actorId: { type: string }
-        actorSurface: { type: string, enum: [app-field, app-partner, control-panel, system] }
+        actorSurface: { type: string, enum: [app-field, app-partner, app-captain, control-panel, system] }
         correlationId: { type: string }
         version: { type: integer }
+
+    DshPartnerTransitionResponse:
+      type: object
+      required: [partner, event]
+      properties:
+        partner: { $ref: "#/components/schemas/DshPartner" }
+        event: { $ref: "#/components/schemas/DshPartnerAuditEvent" }
+
+    DshPartnerActivationStatus:
+      type: object
+      required: [id, displayName, legalNameAr, category, activationStatus, primaryPhone, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        legalNameAr: { type: string }
+        category: { type: string }
+        activationStatus: { type: string }
+        primaryPhone: { type: string }
+        email: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     DshPartnerReadiness:
       type: object
@@ -4887,14 +4908,14 @@ components:
       type: object
       required: [id, partnerId, documentType, documentStatus, uploadedByActorId, mediaRef, version, createdAt, updatedAt]
       properties:
-        id: { type: string, format: uuid }
+        id: { type: string }
         partnerId: { type: string }
         documentType:
           type: string
           enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
         documentStatus:
           type: string
-          enum: [pending, under_review, approved, rejected, needs_resubmit]
+          enum: [pending, under_review, approved, rejected]
         uploadedByActorId: { type: string }
         mediaRef: { type: string }
         notes: { type: string }
@@ -4927,6 +4948,26 @@ components:
       properties:
         decision: { type: string, enum: [approved, rejected, needs_resubmit] }
         reason: { type: string }
+
+    DshPartnerDocumentReview:
+      type: object
+      required: [id, documentId, partnerId, reviewedByActorId, decision, reason, correlationId, createdAt]
+      properties:
+        id: { type: string }
+        documentId: { type: string }
+        partnerId: { type: string }
+        reviewedByActorId: { type: string }
+        decision: { type: string, enum: [approved, rejected, needs_resubmit] }
+        reason: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DshPartnerDocumentReviewResponse:
+      type: object
+      required: [document, review]
+      properties:
+        document: { $ref: "#/components/schemas/DshPartnerDocument" }
+        review: { $ref: "#/components/schemas/DshPartnerDocumentReview" }
 
     DshPartnerStore:
       type: object

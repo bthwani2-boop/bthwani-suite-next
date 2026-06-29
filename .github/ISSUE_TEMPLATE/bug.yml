@@ -1,0 +1,26 @@
+name: Bug
+description: Report a reproducible runtime or product defect.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What breaks, for whom, and on which surface.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Exact steps, request, route, or command.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, failing check, screenshot, or API response.
+    validations:
+      required: true

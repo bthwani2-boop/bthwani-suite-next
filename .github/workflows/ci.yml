@@ -202,6 +202,79 @@ jobs:
         working-directory: services/dsh/backend
         run: go build ./...
 
+  dsh-go-db:
+    name: DSH Go DB integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run DSH migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: dsh_runtime_password
+        run: |
+          for f in services/dsh/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run DSH local seeds
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: dsh_runtime_password
+        run: |
+          for f in services/dsh/database/seeds/local/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run DSH tests with DB required
+        working-directory: services/dsh/backend
+        env:
+          DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+          DSH_REQUIRE_DB_TESTS: "true"
+        run: go test -v ./...
+
   identity-go:
     name: Identity Go backend
     runs-on: ubuntu-latest
@@ -246,59 +319,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Docker compose up
-        run: |
-          docker compose \
-            --env-file infra/docker/env/runtime.env.example \
-            -f infra/docker/compose.runtime.yml \
-            -f infra/docker/compose.financial-simulators.yml \
-            --profile wlt \
-            --profile financial-simulators \
-            --profile mail \
-            up -d --build
-
-      - name: Runtime health checks
+      - name: Full runtime reset and smoke
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          function Wait-ForUrl($Url) {
-            for ($i = 1; $i -le 30; $i++) {
-              try {
-                Invoke-RestMethod $Url -TimeoutSec 5 | Out-Null
-                return
-              } catch {
-                Start-Sleep -Seconds 3
-              }
-            }
-            throw "Timed out waiting for $Url"
-          }
-          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime
-          Wait-ForUrl "http://localhost:58083/wlt/health"
-          Wait-ForUrl "http://localhost:58090/__admin/mappings"
-          Wait-ForUrl "http://localhost:8025/api/v1/info"
-
-      - name: WLT migrations and seeds
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles wlt
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles wlt
-
-      - name: Wait for WLT readiness
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          function Wait-ForUrl($Url) {
-            for ($i = 1; $i -le 30; $i++) {
-              try {
-                Invoke-RestMethod $Url -TimeoutSec 5 | Out-Null
-                return
-              } catch {
-                Start-Sleep -Seconds 3
-              }
-            }
-            throw "Timed out waiting for $Url"
-          }
-          Wait-ForUrl "http://localhost:58083/wlt/readiness"
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke

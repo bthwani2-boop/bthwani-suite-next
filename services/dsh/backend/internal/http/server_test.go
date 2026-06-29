@@ -23,3 +23,19 @@ func TestCorsAllowsPutForRuntimeEndpoints(t *testing.T) {
 		t.Fatalf("expected CORS methods to include PUT, got %q", allowed)
 	}
 }
+
+func TestDshActorSurfaceUsesDatabaseAllowedValues(t *testing.T) {
+	cases := map[string]string{
+		"operator": "control-panel",
+		"partner":  "app-partner",
+		"field":    "app-field",
+		"captain":  "app-captain",
+		"system":   "system",
+	}
+
+	for role, want := range cases {
+		if got := dshActorSurface(role); got != want {
+			t.Fatalf("dshActorSurface(%q) = %q, want %q", role, got, want)
+		}
+	}
+}

@@ -1,0 +1,26 @@
+name: Security
+description: Track non-sensitive security hardening work. Do not disclose active vulnerabilities here.
+title: "[security]: "
+labels: ["security"]
+body:
+  - type: textarea
+    id: area
+    attributes:
+      label: Area
+      description: Identity, auth, WLT finance, DSH runtime, CI, Docker, or dependency surface.
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk
+      description: Public, non-sensitive risk statement.
+    validations:
+      required: true
+  - type: textarea
+    id: required_proof
+    attributes:
+      label: Required Proof
+      description: Required checks or review before merge.
+    validations:
+      required: true

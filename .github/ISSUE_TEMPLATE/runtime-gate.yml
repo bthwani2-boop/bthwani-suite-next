@@ -1,0 +1,26 @@
+name: Runtime Gate
+description: Track a failing runtime, Docker, migration, seed, or smoke gate.
+title: "[runtime-gate]: "
+labels: ["runtime", "gate"]
+body:
+  - type: textarea
+    id: failing_gate
+    attributes:
+      label: Failing Gate
+      description: Exact job, step, command, and SHA.
+    validations:
+      required: true
+  - type: textarea
+    id: expected_runtime
+    attributes:
+      label: Expected Runtime Proof
+      description: Health/readiness endpoints, migration/seed proof, and smoke path.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant failure excerpt only.
+    validations:
+      required: true

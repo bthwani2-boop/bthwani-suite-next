@@ -95,8 +95,25 @@ func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.C
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := context.WithValue(r.Context(), "actor_id", actor.ID)
-	ctx = context.WithValue(ctx, "actor_surface", "app-"+actor.Role)
+	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
 	return r.WithContext(ctx)
+}
+
+func dshActorSurface(role string) string {
+	switch role {
+	case "operator":
+		return "control-panel"
+	case "partner":
+		return "app-partner"
+	case "field":
+		return "app-field"
+	case "captain":
+		return "app-captain"
+	case "system":
+		return "system"
+	default:
+		return "system"
+	}
 }
 
 func partnerRequestWithStore(r *http.Request, actor store.StoreActor, storeID string) *http.Request {

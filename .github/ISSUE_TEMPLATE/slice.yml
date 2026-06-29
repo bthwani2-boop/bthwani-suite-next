@@ -1,0 +1,26 @@
+name: Slice Closure
+description: Track a DSH/WLT slice from implementation to evidence.
+title: "[slice]: "
+labels: ["slice", "needs-evidence"]
+body:
+  - type: input
+    id: slice_id
+    attributes:
+      label: Slice ID
+      placeholder: DSH-015
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Backend, frontend shared brain, UI surfaces, contracts, runtime.
+    validations:
+      required: true
+  - type: textarea
+    id: required_checks
+    attributes:
+      label: Required Checks
+      description: Exact commands or GitHub Actions checks required before READY_CANDIDATE.
+    validations:
+      required: true
