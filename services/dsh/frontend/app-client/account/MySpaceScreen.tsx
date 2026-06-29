@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[12],
   },
   listCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   rowPressed: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colorRoles.surfaceBase,
   },
   rowIconContainer: {
     width: 44,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   chevron: {
     fontSize: 20,
-    color: '#94A3B8',
+    color: colorRoles.surfaceBase,
     transform: [{ scaleX: -1 }],
   },
 });

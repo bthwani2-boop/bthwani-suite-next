@@ -1,5 +1,5 @@
 "use client";
-
+import { colorRoles } from '@bthwani/ui-kit';
 import { useState, useMemo } from "react";
 import {
   CpButton,
@@ -67,8 +67,8 @@ function MainTabButton({
         padding: "0.625rem 1.125rem",
         background: "none",
         border: "none",
-        borderBottom: active ? "2px solid #FF500D" : "2px solid transparent",
-        color: active ? "#FF500D" : "currentColor",
+        borderBottom: active ? "2px solid colorRoles.brandAction" : "2px solid transparent",
+        color: active ? colorRoles.brandAction : "currentColor",
         fontWeight: active ? 700 : 500,
         fontSize: "0.875rem",
         cursor: "pointer",
@@ -98,8 +98,8 @@ function TabButton({
       onClick={onClick}
       style={{
         padding: "0.5rem 1rem",
-        background: active ? "#FF500D" : "transparent",
-        color: active ? "#FFF" : "currentColor",
+        background: active ? colorRoles.brandAction : "transparent",
+        color: active ? colorRoles.surfaceBase : "currentColor",
         border: active ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
         borderRadius: "0.5rem",
         fontWeight: active ? 700 : 500,
@@ -131,8 +131,8 @@ function SectionTabButton({
       onClick={onClick}
       style={{
         padding: "0.35rem 0.85rem",
-        background: active ? "#FEE2E2" : "transparent",
-        color: active ? "#991B1B" : "currentColor",
+        background: active ? colorRoles.surfaceBase : "transparent",
+        color: active ? colorRoles.brandAction : "currentColor",
         border: "none",
         borderRadius: "0.375rem",
         fontWeight: active ? 700 : 500,
@@ -267,7 +267,7 @@ export function MarketingDashboardScreen() {
               style={{
                 display: "flex",
                 gap: "0.5rem",
-                background: "#F1F5F9",
+                background: colorRoles.surfaceBase,
                 padding: "0.25rem",
                 borderRadius: "0.5rem",
                 alignSelf: "flex-start",
@@ -303,10 +303,10 @@ export function MarketingDashboardScreen() {
                     color: opsTheme.brand,
                     textDecoration: "none",
                     fontWeight: 600,
-                    background: "#FFF7F5",
+                    background: colorRoles.surfaceBase,
                     padding: "0.25rem 0.625rem",
                     borderRadius: "0.375rem",
-                    border: "1px solid #FFD8CC",
+                    border: "1px solid colorRoles.surfaceBase",
                   }}
                 >
                   {bridge.label}
@@ -317,8 +317,8 @@ export function MarketingDashboardScreen() {
             {/* Visibility Gates Intro Header */}
             <div
               style={{
-                background: "#FFF",
-                border: "1px solid #E2E8F0",
+                background: colorRoles.surfaceBase,
+                border: "1px solid colorRoles.surfaceBase",
                 borderRadius: "1rem",
                 padding: "1.5rem",
               }}
@@ -349,8 +349,8 @@ export function MarketingDashboardScreen() {
             {/* Eligibility Card Block */}
             <div
               style={{
-                background: "#FFF",
-                border: "1px solid #E2E8F0",
+                background: colorRoles.surfaceBase,
+                border: "1px solid colorRoles.surfaceBase",
                 borderRadius: "1rem",
                 padding: "1.5rem",
               }}
@@ -361,10 +361,10 @@ export function MarketingDashboardScreen() {
                 </h4>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <span style={{ fontSize: "0.75rem", opacity: 0.65 }}>Ù…Ù„Ø®Øµ Ø§Ù„Ø­ÙˆÙƒÙ…Ø©</span>
-                  <span style={{ background: opsTheme.dangerSurface, color: 'var(--status-danger-strong, #991B1B)', padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontWeight: 700, fontSize: "0.85rem" }}>
+                  <span style={{ background: opsTheme.dangerSurface, color: 'var(--status-danger-strong, colorRoles.brandAction)', padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontWeight: 700, fontSize: "0.85rem" }}>
                     0
                   </span>
-                  <span style={{ fontSize: "0.75rem", color: 'var(--status-danger-strong, #991B1B)', fontWeight: 600 }}>eligibility</span>
+                  <span style={{ fontSize: "0.75rem", color: 'var(--status-danger-strong, colorRoles.brandAction)', fontWeight: 600 }}>eligibility</span>
                 </div>
               </div>
               <p style={{ margin: 0, fontSize: "0.813rem", opacity: 0.7, lineHeight: 1.5 }}>
@@ -384,8 +384,8 @@ export function MarketingDashboardScreen() {
                     <div
                       key={card.id}
                       style={{
-                        background: "#FFF",
-                        border: "1px solid #E2E8F0",
+                        background: colorRoles.surfaceBase,
+                        border: "1px solid colorRoles.surfaceBase",
                         borderRadius: "0.75rem",
                         padding: "1.25rem",
                         display: "flex",
@@ -398,8 +398,8 @@ export function MarketingDashboardScreen() {
                         <strong style={{ fontSize: "0.875rem", color: opsTheme.text }}>{card.title}</strong>
                         <span
                           style={{
-                            background: isBypassed ? "#D1FAE5" : card.statusColor + "15",
-                            color: isBypassed ? "#065F46" : card.statusColor,
+                            background: isBypassed ? colorRoles.surfaceBase : card.statusColor + "15",
+                            color: isBypassed ? colorRoles.brandStructure : card.statusColor,
                             padding: "0.15rem 0.5rem",
                             borderRadius: "0.25rem",
                             fontWeight: 600,
@@ -430,9 +430,9 @@ export function MarketingDashboardScreen() {
                             style={{
                               fontSize: "0.75rem",
                               padding: "0.35rem 0.85rem",
-                              background: "#D1FAE5",
-                              color: 'var(--status-success-strong, #065F46)',
-                              border: "1px solid #6EE7B7",
+                              background: colorRoles.surfaceBase,
+                              color: 'var(--status-success-strong, colorRoles.brandStructure)',
+                              border: "1px solid colorRoles.surfaceBase",
                               borderRadius: "0.5rem",
                             }}
                           >
@@ -458,8 +458,8 @@ export function MarketingDashboardScreen() {
                     <div
                       key={card.id}
                       style={{
-                        background: "#FFF",
-                        border: "1px solid #E2E8F0",
+                        background: colorRoles.surfaceBase,
+                        border: "1px solid colorRoles.surfaceBase",
                         borderRadius: "0.75rem",
                         padding: "1.25rem",
                         display: "flex",
@@ -472,8 +472,8 @@ export function MarketingDashboardScreen() {
                         <strong style={{ fontSize: "0.875rem", color: opsTheme.text }}>{card.title}</strong>
                         <span
                           style={{
-                            background: isBypassed ? "#D1FAE5" : "#FFF1F2",
-                            color: isBypassed ? "#065F46" : "#E11D48",
+                            background: isBypassed ? colorRoles.surfaceBase : colorRoles.surfaceBase,
+                            color: isBypassed ? colorRoles.brandStructure : colorRoles.brandAction,
                             padding: "0.15rem 0.5rem",
                             borderRadius: "0.25rem",
                             fontWeight: 600,
@@ -500,9 +500,9 @@ export function MarketingDashboardScreen() {
                             style={{
                               fontSize: "0.75rem",
                               padding: "0.35rem 0.85rem",
-                              background: "#D1FAE5",
-                              color: 'var(--status-success-strong, #065F46)',
-                              border: "1px solid #6EE7B7",
+                              background: colorRoles.surfaceBase,
+                              color: 'var(--status-success-strong, colorRoles.brandStructure)',
+                              border: "1px solid colorRoles.surfaceBase",
                               borderRadius: "0.5rem",
                             }}
                           >
@@ -522,8 +522,8 @@ export function MarketingDashboardScreen() {
             {/* Quick Decision Board */}
             <div
               style={{
-                background: "#FFF",
-                border: "1px solid #E2E8F0",
+                background: colorRoles.surfaceBase,
+                border: "1px solid colorRoles.surfaceBase",
                 borderRadius: "0.75rem",
                 padding: "1.25rem",
               }}
@@ -542,7 +542,7 @@ export function MarketingDashboardScreen() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
                   <span style={{ opacity: 0.7 }}>Ø¸Ù‡ÙˆØ± ØªØ¬Ø§Ø±ÙŠ:</span>
-                  <strong style={{ color: 'var(--status-success-strong, #065F46)' }}>{metrics.commercialVisibilityBlocked} Ù…Ø­Ø¬ÙˆØ¨ Ø­Ø§Ù„ÙŠØ§Ù‹</strong>
+                  <strong style={{ color: 'var(--status-success-strong, colorRoles.brandStructure)' }}>{metrics.commercialVisibilityBlocked} Ù…Ø­Ø¬ÙˆØ¨ Ø­Ø§Ù„ÙŠØ§Ù‹</strong>
                 </div>
               </div>
             </div>
@@ -550,8 +550,8 @@ export function MarketingDashboardScreen() {
             {/* Delivery Signals to Marketing */}
             <div
               style={{
-                background: "#FFF",
-                border: "1px solid #E2E8F0",
+                background: colorRoles.surfaceBase,
+                border: "1px solid colorRoles.surfaceBase",
                 borderRadius: "0.75rem",
                 padding: "1.25rem",
               }}
@@ -564,8 +564,8 @@ export function MarketingDashboardScreen() {
                   <div
                     key={signal.id}
                     style={{
-                      background: "#F8FAFC",
-                      border: "1px solid #E2E8F0",
+                      background: colorRoles.surfaceBase,
+                      border: "1px solid colorRoles.surfaceBase",
                       borderRadius: "0.5rem",
                       padding: "0.875rem",
                       display: "flex",
@@ -579,8 +579,8 @@ export function MarketingDashboardScreen() {
                     <span
                       style={{
                         alignSelf: "flex-start",
-                        background: signal.isApproved ? "#D1FAE5" : "#FFF3CD",
-                        color: signal.isApproved ? "#065F46" : "#92400E",
+                        background: signal.isApproved ? colorRoles.surfaceBase : colorRoles.surfaceBase,
+                        color: signal.isApproved ? colorRoles.brandStructure : colorRoles.brandAction,
                         fontSize: "0.688rem",
                         fontWeight: 600,
                         padding: "0.1rem 0.35rem",
@@ -674,7 +674,7 @@ function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind
         </div>
 
         {controller.actionState.kind === "success" && (
-          <p role="status" style={{ color: 'var(--status-success-strong, #065F46)', fontSize: "0.85rem", margin: "0 0 1rem" }}>
+          <p role="status" style={{ color: 'var(--status-success-strong, colorRoles.brandStructure)', fontSize: "0.85rem", margin: "0 0 1rem" }}>
             {controller.actionState.message}
           </p>
         )}
@@ -720,7 +720,7 @@ function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind
       </div>
 
       {controller.selected !== null && (
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <HomeDiscoveryEditor
             kind={kind}
             draft={controller.draft}

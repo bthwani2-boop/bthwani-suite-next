@@ -1,3 +1,4 @@
+import { colorRoles } from '@bthwani/ui-kit';
 import React from 'react';
 import { View, Pressable, I18nManager } from 'react-native';
 import { Text } from '../Text';
@@ -25,9 +26,9 @@ export function TopBar({ title, subtitle, variant = 'primary', onBack, style }: 
           minHeight: 56,
           paddingHorizontal: spacing[4],
           paddingVertical: spacing[3],
-          backgroundColor: variant === 'secondary' ? '#F8FAFC' : '#FFFFFF',
+          backgroundColor: variant === 'secondary' ? colorRoles.surfaceBase : colorRoles.surfaceBase,
           borderBottomWidth: 1,
-          borderBottomColor: '#E2E8F0',
+          borderBottomColor: colorRoles.surfaceBase,
         },
         style,
       ]}

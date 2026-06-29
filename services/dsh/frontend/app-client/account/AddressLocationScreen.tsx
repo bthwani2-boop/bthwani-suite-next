@@ -38,7 +38,7 @@ function BackIcon({ color = colorRoles.textPrimary }: { color?: string }) {
   );
 }
 
-function MapIcon({ color = '#FF500D' }: { color?: string }) {
+function MapIcon({ color = colorRoles.brandAction }: { color?: string }) {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
       <Path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -47,7 +47,7 @@ function MapIcon({ color = '#FF500D' }: { color?: string }) {
   );
 }
 
-function PinIcon({ color = '#FF500D' }: { color?: string }) {
+function PinIcon({ color = colorRoles.brandAction }: { color?: string }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Path d="M12 2a8 8 0 00-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 00-8-8z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -110,19 +110,19 @@ function StyledTextField({ label, placeholder, value, onChangeText }: { label: s
       </Text>
       <TextInput
         placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={colorRoles.surfaceBase}
         value={value}
         onChangeText={onChangeText}
         style={{
           width: '100%',
           height: 48,
           borderWidth: 1,
-          borderColor: '#D1D5DB',
+          borderColor: colorRoles.surfaceBase,
           borderRadius: 16,
           paddingHorizontal: 16,
           textAlign: 'right',
           color: colorRoles.textPrimary,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colorRoles.surfaceBase,
         }}
       />
     </View>
@@ -134,14 +134,14 @@ function DefaultBadge() {
     <View
       style={{
         borderWidth: 1,
-        borderColor: '#FFE2D4',
-        backgroundColor: '#FFF3ED',
+        borderColor: colorRoles.surfaceBase,
+        backgroundColor: colorRoles.surfaceBase,
         borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 4,
       }}
     >
-      <Text role="caption" style={{ color: '#FF500D', fontSize: 12, fontWeight: 'bold' }}>
+      <Text role="caption" style={{ color: colorRoles.brandAction, fontSize: 12, fontWeight: 'bold' }}>
         افتراضي
       </Text>
     </View>
@@ -173,7 +173,7 @@ function AddressRow({ address, isLast = false, onSetDefault, onEdit }: AddressRo
       >
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, flex: 1 }}>
           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255, 80, 13, 0.08)', justifyContent: 'center', alignItems: 'center' }}>
-            <PinIcon color="#FF500D" />
+            <PinIcon color={colorRoles.brandAction} />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
             <Text role="bodyStrong" style={{ color: colorRoles.textPrimary }}>{address.label}</Text>
@@ -192,7 +192,7 @@ function AddressRow({ address, isLast = false, onSetDefault, onEdit }: AddressRo
               label="تعيين كافتراضي"
               tone="primary"
               size="sm"
-              style={{ borderRadius: radius.xs, backgroundColor: '#FF500D' }}
+              style={{ borderRadius: radius.xs, backgroundColor: colorRoles.brandAction }}
               onPress={() => { onSetDefault(address.id); setExpanded(false); }}
             />
           )}
@@ -254,24 +254,24 @@ export function AddressLocationScreen({ onBack }: AddressLocationScreenProps) {
 
           <Button
             tone="secondary"
-            leading={<MapIcon color="#FF500D" />}
+            leading={<MapIcon color={colorRoles.brandAction} />}
             label="تحديد من Google Map"
             onPress={() => {}}
-            style={{ borderRadius: 100, borderColor: '#D1D5DB' }}
+            style={{ borderRadius: 100, borderColor: colorRoles.surfaceBase }}
           />
 
           <View
             style={{
-              backgroundColor: '#FFF3ED',
+              backgroundColor: colorRoles.surfaceBase,
               borderWidth: 1,
-              borderColor: '#FFE2D4',
+              borderColor: colorRoles.surfaceBase,
               borderRadius: 16,
               paddingHorizontal: 16,
               paddingVertical: 12,
               alignItems: 'flex-end',
             }}
           >
-            <Text role="caption" style={{ color: '#FF500D', textAlign: 'right' }}>
+            <Text role="caption" style={{ color: colorRoles.brandAction, textAlign: 'right' }}>
               سيتم ربط اختيار الموقع بمزود الخرائط من لوحة التحكم لاحقًا.
             </Text>
           </View>
@@ -290,7 +290,7 @@ export function AddressLocationScreen({ onBack }: AddressLocationScreenProps) {
           <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: 'right', paddingHorizontal: spacing[4] }}>
             العناوين المحفوظة
           </Text>
-          <View style={{ borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+          <View style={{ borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 16, overflow: 'hidden', backgroundColor: colorRoles.surfaceBase }}>
             {addresses.map((addr, idx) => (
               <AddressRow
                 key={addr.id}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Badge, Box, Button, KeyValueList, SectionHeader, Surface, Text, Icon } from '@bthwani/ui-kit';
+import { Badge, Box, Button, KeyValueList, SectionHeader, Surface, Text, Icon, colorRoles } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 
 const SurfaceAny = Surface as any;
@@ -248,20 +248,20 @@ export function DshCaptainMapScreen({
 
               {/* Store Pin */}
               <View style={[styles.storePin, { top: STORE_POS.y - 12, left: STORE_POS.x - 12 }]}>
-                <Icon name="storefront" size={14} color="#1D4ED8" />
+                <Icon name="storefront" size={14} color={colorRoles.brandStructure} />
                 <Text style={styles.pinLabel}>{STORE_POS.name}</Text>
               </View>
 
               {/* Customer Pin */}
               <View style={[styles.customerPin, { top: CUSTOMER_POS.y - 12, left: CUSTOMER_POS.x - 12 }]}>
-                <Icon name="location" size={14} color="#059669" />
+                <Icon name="location" size={14} color={colorRoles.brandStructure} />
                 <Text style={styles.pinLabel}>{CUSTOMER_POS.name}</Text>
               </View>
 
               {/* Captain Current Pin */}
               <View style={[styles.captainPin, { top: captainPos.y - 14, left: captainPos.x - 10 }]}>
                 <View style={styles.userPinPulse} />
-                <Icon name="bicycle" size={18} color="#FF500D" />
+                <Icon name="bicycle" size={18} color={colorRoles.brandAction} />
               </View>
             </View>
 
@@ -319,9 +319,9 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: 320,
     height: 220,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: colorRoles.surfaceBase,
     borderRadius: 8,
     overflow: "hidden",
     alignSelf: "center",
@@ -331,12 +331,12 @@ const styles = StyleSheet.create({
   mapCircle: {
     position: "absolute",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
     borderStyle: "dashed",
   },
   mapRoad: {
     position: "absolute",
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colorRoles.surfaceBase,
   },
   storePin: {
     position: "absolute",
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   pinLabel: {
     fontSize: 9,
     fontWeight: "bold",
-    color: "#334155",
+    color: colorRoles.brandStructure,
     backgroundColor: "rgba(255, 255, 255, 0.8)",
     paddingHorizontal: 4,
     paddingVertical: 1,

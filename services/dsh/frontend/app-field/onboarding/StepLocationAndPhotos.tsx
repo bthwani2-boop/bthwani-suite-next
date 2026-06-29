@@ -281,7 +281,7 @@ export function StepLocationAndPhotos({
             {/* Store Location Pin */}
             <View style={[styles.userPin, { top: pinPos.y - 20, left: pinPos.x - 10 }]}>
               <View style={styles.userPinPulse} />
-              <Icon name="pin" size={20} color="#1D4ED8" />
+              <Icon name="pin" size={20} color={colorRoles.brandStructure} />
             </View>
           </Pressable>
         </View>
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: 320,
     height: 220,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     borderRadius: radius.md,
@@ -356,12 +356,12 @@ const styles = StyleSheet.create({
   mapCircle: {
     position: "absolute",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
     borderStyle: "dashed",
   },
   mapRoad: {
     position: "absolute",
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colorRoles.surfaceBase,
   },
   landmarkPin: {
     position: "absolute",
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#64748B",
+    backgroundColor: colorRoles.brandStructure,
   },
   userPin: {
     position: "absolute",

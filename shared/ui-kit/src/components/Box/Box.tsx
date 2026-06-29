@@ -1,3 +1,4 @@
+import { colorRoles } from '@bthwani/ui-kit';
 import React from 'react';
 import { View, I18nManager } from 'react-native';
 import { spacing } from '../../tokens/spacing';
@@ -42,10 +43,10 @@ export function Box({
     padding: padding ? (spacing as any)[padding] || padding * 4 : undefined,
     paddingVertical: paddingY ? (spacing as any)[paddingY] || paddingY * 4 : undefined,
     paddingHorizontal: paddingX ? (spacing as any)[paddingX] || paddingX * 4 : undefined,
-    backgroundColor: background === 'surfaceInset' ? '#F1EFEA' : background === 'surface' ? '#FFFFFF' : undefined,
+    backgroundColor: background === 'surfaceInset' ? colorRoles.surfaceBase : background === 'surface' ? colorRoles.surfaceBase : undefined,
     borderRadius: radiusToken === 'md' ? 8 : radiusToken === 'lg' ? 12 : undefined,
     borderWidth: border ? 1 : undefined,
-    borderColor: borderTone === 'line' ? '#E2E8F0' : undefined,
+    borderColor: borderTone === 'line' ? colorRoles.surfaceBase : undefined,
     justifyContent: justify === 'space-between' ? 'space-between' : justify,
     alignItems: align === 'center' ? 'center' : align,
   };

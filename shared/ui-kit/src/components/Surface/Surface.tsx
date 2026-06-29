@@ -27,10 +27,10 @@ const toneBg: Record<string, string> = {
   raised: colorRoles.surfaceMuted,
   inset: colorRoles.surfaceInset,
   action: colorRoles.brandActionSoft,
-  success: "#ECFDF5",
-  warning: "#FFFBEB",
-  danger: "#FEF2F2",
-  info: "#EFF6FF",
+  success: colorRoles.surfaceBase,
+  warning: colorRoles.surfaceBase,
+  danger: colorRoles.surfaceBase,
+  info: colorRoles.surfaceBase,
 };
 
 const toneBorder: Record<string, string> = {

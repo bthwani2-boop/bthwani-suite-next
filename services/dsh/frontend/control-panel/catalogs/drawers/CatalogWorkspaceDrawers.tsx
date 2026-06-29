@@ -1,5 +1,5 @@
 "use client";
-
+import { colorRoles } from '@bthwani/ui-kit';
 import React, { useState } from "react";
 import { opsTheme } from "../../../shared/operations";
 import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
@@ -162,7 +162,7 @@ export function CatalogWorkspaceRouter({
           width: "100%",
           maxWidth: "34rem",
           height: "100%",
-          backgroundColor: "var(--surface-raised, #FFF)",
+          backgroundColor: "var(--surface-raised, colorRoles.surfaceBase)",
           borderLeft: `1px solid ${opsTheme.line}`,
           boxShadow: "-4px 0 24px rgba(0,0,0,0.15)",
           display: "flex",

@@ -21,7 +21,7 @@ const TOKEN_MAP: Record<string, string | undefined> = {
   'brand.400': brandScale.action[400],
   'brand.500': brandScale.action[500],
   'brand.600': brandScale.action[600],
-  'danger.400': '#F2877A', // mapped to brandScale/statusScale equivalent
+  'danger.400': colorRoles.brandAction, // mapped to brandScale/statusScale equivalent
   'danger.600': statusScale.danger,
   'info.600': statusScale.info,
   'info.700': statusScale.infoStrong,

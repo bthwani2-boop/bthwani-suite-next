@@ -285,7 +285,7 @@ export function DshCaptainOperationsScreen({
 				heroTitle="الطلب النشط الحالي"
 				heroDescription="مهمة توصيل واحدة قيد التنفيذ."
 				keyValues={[
-					{ label: 'رقم الطلب', value: '#28401', tone: 'brand' },
+					{ label: 'رقم الطلب', value: '# 28401', tone: 'brand' },
 					{ label: 'المتجر', value: 'مطعم حضرموت السعيد' },
 					{ label: 'العميل', value: 'أحمد علي حدة' },
 					{ label: 'حالة الاستلام', value: 'في الطريق للاستلام', tone: 'warning' },
@@ -302,7 +302,7 @@ export function DshCaptainOperationsScreen({
 			<SimpleSupportScreen
 				title="لقطة تفاصيل الطلب"
 				subtitle="معلومات تفصيلية للمهمة النشطة"
-				heroTitle="طلب #28401"
+				heroTitle="طلب # 28401"
 				heroDescription="تم التعيين والقبول · في انتظار الاستلام من المتجر."
 				keyValues={[
 					{ label: 'المتجر', value: 'مطعم حضرموت السعيد - الستين' },
@@ -327,7 +327,7 @@ export function DshCaptainOperationsScreen({
 				heroTitle="تأكيد الاستلام"
 				heroDescription="يرجى مطابقة محتويات الطلب ورقم الفاتورة قبل الاستلام."
 				keyValues={[
-					{ label: 'رقم الفاتورة المطلوبة', value: '#28401', tone: 'brand' },
+					{ label: 'رقم الفاتورة المطلوبة', value: '# 28401', tone: 'brand' },
 					{ label: 'محتويات الطلب', value: 'وجبة غداء عائلية + مشروبات' },
 					{ label: 'تعليمات الشريك للتحضير', value: 'يرجى وضع الكيس في الصندوق الحراري مباشرة.' },
 				]}

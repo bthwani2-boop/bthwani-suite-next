@@ -13,6 +13,7 @@ import {
   TextField,
   useTheme,
   colorPalette,
+  colorRoles,
   spacing,
   radius,
 } from '@bthwani/ui-kit';
@@ -203,10 +204,10 @@ export function DshCaptainPickupDropoffScreen({
                 <Box gap={2}>
                   {config.checklist.map((item, index) => (
                     <View key={index} style={styles.checkItem}>
-                      <View style={[styles.checkCircle, { backgroundColor: theme.brand || '#E53935' }]}>
+                      <View style={[styles.checkCircle, { backgroundColor: theme.brand || colorRoles.brandAction }]}>
                         <Icon name="checkmark" size={12} color={colorPalette.white} />
                       </View>
-                      <Text role="bodySm" style={[styles.checkText, { color: theme.brand || '#000' }]}>{item}</Text>
+                      <Text role="bodySm" style={[styles.checkText, { color: theme.brand || colorRoles.brandStructure }]}>{item}</Text>
                     </View>
                   ))}
                 </Box>
@@ -281,9 +282,9 @@ export function DshCaptainPickupDropoffScreen({
           )}
 
           <Box paddingY={2}>
-            <Pressable onPress={onReportIssue} style={[styles.issueButton, { borderColor: theme.brand || '#E53935' }]}>
-              <Icon name="warning-outline" size={16} color={(theme.brand || '#E53935') as any} />
-              <Text role="bodySm" style={[styles.issueText, { color: theme.brand || '#E53935' }]}>أواجه مشكلة في {mode === 'pickup' ? 'الاستلام' : 'التسليم'}</Text>
+            <Pressable onPress={onReportIssue} style={[styles.issueButton, { borderColor: theme.brand || colorRoles.brandAction }]}>
+              <Icon name="warning-outline" size={16} color={(theme.brand || colorRoles.brandAction) as any} />
+              <Text role="bodySm" style={[styles.issueText, { color: theme.brand || colorRoles.brandAction }]}>أواجه مشكلة في {mode === 'pickup' ? 'الاستلام' : 'التسليم'}</Text>
             </Pressable>
           </Box>
         </Box>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { Box, Text, useTheme } from '@bthwani/ui-kit';
+import { Box, Text, useTheme, colorRoles } from '@bthwani/ui-kit';
 
 export type ModernPremiumHeaderProps = {
   title?: string;
@@ -31,7 +31,7 @@ export function ModernPremiumHeader({
   const isRTL = direction === 'rtl';
 
   return (
-    <View style={[styles.container, { backgroundColor: '#E53935' }]}>
+    <View style={[styles.container, { backgroundColor: colorRoles.brandAction }]}>
       {/* Top row: Title/Location and actions */}
       <View style={[styles.mainRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <View style={[styles.infoSection, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 12,
     paddingBottom: 8,
-    shadowColor: '#000',
+    shadowColor: colorRoles.brandStructure,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: -2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 8,
     minWidth: 16,
     height: 16,
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: {
-    color: '#E53935',
+    color: colorRoles.brandAction,
     fontSize: 9,
     fontWeight: 'bold',
   },
@@ -151,13 +151,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tickerStatusBadge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   tickerStatusText: {
-    color: '#E53935',
+    color: colorRoles.brandAction,
     fontSize: 10,
     fontWeight: 'bold',
   },

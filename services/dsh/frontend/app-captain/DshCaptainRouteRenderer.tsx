@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Badge, Box, Button, Divider, Icon, KeyValueList, MobileScrollView, Text, TopBar, spacing } from '@bthwani/ui-kit';
+import { Badge, Box, Button, Divider, Icon, KeyValueList, MobileScrollView, Text, TopBar, spacing, colorRoles } from '@bthwani/ui-kit';
 type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
 import type { DshCaptainRoute } from './dsh-captain.types';
 import type { CaptainSupportRoute, CaptainAvailabilityMeta, CompactOrderChatMessage, DshCaptainLocationPush } from '../shared/delivery';
@@ -325,7 +325,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
           </View>
           <View style={{ flex: 1, minWidth: 80, alignItems: 'center', gap: 1 }}>
             <Text role="caption" tone="muted">المستوى</Text>
-            <Text role="bodyStrong" tone="action" style={{ color: '#E53935' } as any}>Elite 3</Text>
+            <Text role="bodyStrong" tone="action" style={{ color: colorRoles.brandAction } as any}>Elite 3</Text>
           </View>
           <View style={{ flex: 1, minWidth: 80, alignItems: 'center', gap: 1 }}>
             <Text role="caption" tone="muted">{wltSummaryLabel}</Text>

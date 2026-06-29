@@ -10,6 +10,7 @@ import {
   ScrollScreen,
   Text,
   spacing,
+  colorRoles,
 } from '@bthwani/ui-kit';
 
 export type BThwaniAppearanceMode = 'lightPremium' | 'darkGlass';
@@ -106,13 +107,13 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
     marginBottom: spacing[3],
   },
   optionCardSelected: {
-    borderColor: '#FF500D',
-    backgroundColor: '#FFF7F5',
+    borderColor: colorRoles.brandAction,
+    backgroundColor: colorRoles.surfaceBase,
   },
   optionRow: {
     flexDirection: 'row-reverse',
@@ -126,11 +127,11 @@ const styles = StyleSheet.create({
   },
   optionTitle: {
     fontWeight: '700',
-    color: '#1E293B',
+    color: colorRoles.brandStructure,
     textAlign: 'right',
   },
   optionDesc: {
-    color: '#64748B',
+    color: colorRoles.brandStructure,
     textAlign: 'right',
     lineHeight: 20,
   },
