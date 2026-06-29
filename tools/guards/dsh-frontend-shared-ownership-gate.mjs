@@ -98,7 +98,7 @@ for (const file of walkFiles(SHARED_DIR)) {
   const src = read(file);
   for (const [, specifier] of src.matchAll(IMPORT_RE)) {
     for (const surface of SURFACE_DIRS) {
-      if (specifier.includes(`/${surface}/`) || specifier.includes(`/${surface}`)) {
+      if (specifier.includes(`/${surface}/`) || specifier === surface || specifier.startsWith(`${surface}/`)) {
         fail(file, `shared imports from surface '${surface}' (specifier: ${specifier}) — forbidden`);
       }
     }
