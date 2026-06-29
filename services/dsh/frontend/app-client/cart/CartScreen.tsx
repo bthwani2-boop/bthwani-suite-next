@@ -21,6 +21,8 @@ import {
 } from "@bthwani/ui-kit";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshCartItem } from "../../shared/cart";
+import { useWltDshPaymentController } from "../../../../wlt/frontend/shared/dsh";
+import { PaymentDecisionSection } from "../../../../wlt/frontend/app-client/payment/PaymentDecisionSection";
 
 type Props = {
   readonly storeId: string;
@@ -155,20 +157,7 @@ function PromoBanner({ onPress }: { onPress: () => void }) {
   );
 }
 
-type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official-wallets";
 
-type PaymentDecisionOption = {
-  id: PaymentMethodKey;
-  title: string;
-  description: string;
-  selected?: boolean | undefined;
-  disabled?: boolean | undefined;
-  statusLabel?: string | undefined;
-  statusTone?: "success" | "action" | "info" | "warning" | "danger" | undefined;
-  helperText?: string | undefined;
-  amountRows?: { label: string; value: string; tone?: "brand" | "muted" | undefined }[] | undefined;
-  action?: { label: string; onPress: () => void } | undefined;
-};
 
 const RECOMMENDED_ITEMS = [
   { id: "rec-1", name: "كعك بلدي فاخر", price: 1200, icon: "🍪" },
@@ -217,10 +206,6 @@ export function CartScreen({
   const [scheduledDate, setScheduledDate] = useState(() => executionScheduleOptions.dateOptions[0]?.value ?? "");
   const [scheduledTime, setScheduledTime] = useState(() => executionScheduleOptions.timeOptions[0]?.value ?? "");
 
-  // Wallet display states
-  const [walletLinked, setWalletLinked] = useState(true);
-  const [walletDisplayBalance, setWalletDisplayBalance] = useState(15000); // 15,000 YER
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
   const [checkoutReviewVisible, setCheckoutReviewVisible] = useState(false);
 
   // Client GPS coordinates for serviceability checks (interactive map state)
@@ -334,6 +319,8 @@ export function CartScreen({
   const discount = couponCode ? 500 : 0;
   const grandTotal = Math.max(subtotal + deliveryFee - discount, 0);
 
+  const wltPayment = useWltDshPaymentController(grandTotal);
+
   const isBlocked = serviceabilityController.serviceability.kind === "blocked";
   const isChecking = serviceabilityController.serviceability.kind === "checking";
   const isServiceable = serviceabilityController.serviceability.kind === "serviceable";
@@ -434,63 +421,12 @@ export function CartScreen({
         cart,
         selectedFulfillmentMode === "pickup" ? "" : clientAddress,
         `ملاحظة: ${note} | على طريقي: ${extraRequest || "لا يوجد"} | الجدولة: ${scheduling === "later" ? `${scheduledDate} ${scheduledTime}` : "الآن"}`,
-        paymentMethod
+        wltPayment.paymentMethod
       );
     }
   };
 
-  // Payment decision options logic
-  const paymentDecisionOptions: PaymentDecisionOption[] = [
-    {
-      id: "cod",
-      title: "عند الاستلام (نقدًا)",
-      description: "ادفع كامل المبلغ نقدًا عند استلام طلبك.",
-      statusLabel: paymentMethod === "cod" ? "محدد" : "جاهز",
-      statusTone: paymentMethod === "cod" ? "action" : "info",
-      amountRows: [
-        { label: "من المحفظة", value: "0 د.ي", tone: "muted" },
-        { label: "عند الاستلام", value: `${grandTotal} د.ي`, tone: "brand" },
-      ],
-    },
-    {
-      id: "wallet",
-      title: "من رصيد المحفظة",
-      description: "ادفع كامل الطلب من رصيد محفظتك الداخلي.",
-      disabled: !walletLinked || walletDisplayBalance < grandTotal,
-      statusLabel: paymentMethod === "wallet" ? "محدد" : walletDisplayBalance >= grandTotal ? "جاهز" : "رصيد غير كافٍ",
-      statusTone: paymentMethod === "wallet" ? "action" : walletDisplayBalance >= grandTotal ? "success" : "danger",
-      amountRows: [
-        { label: "رصيد المحفظة", value: `${walletDisplayBalance} د.ي`, tone: "brand" },
-        { label: "المطلوب خصمه", value: `${grandTotal} د.ي`, tone: "brand" },
-      ],
-      helperText: walletDisplayBalance < grandTotal ? `تحتاج لشحن ${grandTotal - walletDisplayBalance} د.ي إضافية.` : undefined,
-      action: !walletLinked
-        ? { label: "ربط المحفظة", onPress: () => setWalletLinked(true) }
-        : walletDisplayBalance < grandTotal
-        ? { label: "شحن الرصيد", onPress: () => setWalletDisplayBalance(walletDisplayBalance + 20000) }
-        : undefined,
-    },
-    {
-      id: "mixed",
-      title: "محفظة + عند الاستلام",
-      description: "استخدم رصيد المحفظة المتاح وادفع المتبقي نقدًا.",
-      disabled: !walletLinked || walletDisplayBalance <= 0 || walletDisplayBalance >= grandTotal,
-      statusLabel: paymentMethod === "mixed" ? "محدد" : walletDisplayBalance > 0 && walletDisplayBalance < grandTotal ? "جاهز" : "غير متوفر",
-      statusTone: paymentMethod === "mixed" ? "action" : "info",
-      amountRows: [
-        { label: "من المحفظة", value: `${Math.min(walletDisplayBalance, grandTotal)} د.ي`, tone: "brand" },
-        { label: "عند الاستلام", value: `${Math.max(0, grandTotal - walletDisplayBalance)} د.ي`, tone: "brand" },
-      ],
-    },
-    {
-      id: "official-wallets",
-      title: "المحافظ الإلكترونية الرسمية",
-      description: "الدفع عبر كاش، الكريمي، جوالي أو المحافظ الأخرى.",
-      statusLabel: "متاح",
-      statusTone: "info",
-      action: { label: "اختيار محفظة", onPress: () => alert("سيتم فتح بوابة الدفع الخارجية قريبًا.") },
-    },
-  ];
+
 
   return (
     <View style={styles.container}>
@@ -804,72 +740,11 @@ export function CartScreen({
         </Surface>
 
         {/* قرار الدفع */}
-        <Surface tone="default" style={styles.cardFrame}>
-          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-            <Text role="bodySm" weight="bold" style={styles.cardLabel}>قرار الدفع</Text>
-            <Badge label="معاينة دفع" tone="info" />
-          </View>
-          <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right", marginBottom: 6 }}>
-            معاينة الدفع غير منفذة ماليًا · WLT يملك منطق الدفع الفعلي
-          </Text>
-
-          <View style={{ gap: 8 }}>
-            {paymentDecisionOptions.map((opt) => {
-              const isSelected = opt.id === paymentMethod;
-              return (
-                <Pressable
-                  key={opt.id}
-                  disabled={opt.disabled}
-                  onPress={() => setPaymentMethod(opt.id)}
-                  style={[
-                    styles.paymentCard,
-                    isSelected && styles.paymentCardActive,
-                    opt.disabled && { opacity: 0.4 },
-                  ]}
-                >
-                  <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-                    <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, flex: 1 }}>
-                      <View style={[styles.radioDot, isSelected && styles.radioDotActive]} />
-                      <View style={{ alignItems: "flex-end", flex: 1 }}>
-                        <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: "right" }}>{opt.title}</Text>
-                        <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>{opt.description}</Text>
-                      </View>
-                    </View>
-                    {opt.statusLabel && (
-                      <Badge label={opt.statusLabel} tone={opt.statusTone ?? "info"} />
-                    )}
-                  </View>
-
-                  {opt.amountRows && isSelected && (
-                    <View style={styles.paymentBreakdown}>
-                      {opt.amountRows.map((row) => (
-                        <View key={row.label} style={{ flexDirection: "row-reverse", justifyContent: "space-between", marginVertical: 2 }}>
-                          <Text role="caption" style={{ color: colorRoles.textSecondary }}>{row.label}</Text>
-                          <Text role="caption" weight="bold" style={{ color: row.tone === "brand" ? colorRoles.brandAction : colorRoles.textPrimary }}>{row.value}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {opt.helperText && isSelected && (
-                    <Text role="caption" style={{ color: colorRoles.danger, textAlign: "right", marginTop: 4 }}>{opt.helperText}</Text>
-                  )}
-
-                  {opt.action && isSelected && (
-                    <Button
-                      label={opt.action.label}
-                      tone="secondary"
-                      size="sm"
-                      fullWidth={false}
-                      onPress={opt.action.onPress}
-                      style={{ alignSelf: "flex-start", marginTop: 6 }}
-                    />
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </Surface>
+        <PaymentDecisionSection
+          paymentMethod={wltPayment.paymentMethod}
+          options={wltPayment.paymentDecisionOptions}
+          onSelectMethod={wltPayment.setPaymentMethod}
+        />
 
         {/* قد تعجبك هذه المنتجات أيضاً */}
         <View style={{ gap: spacing[3], marginVertical: 4 }}>

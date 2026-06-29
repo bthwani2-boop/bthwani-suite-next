@@ -42,16 +42,17 @@ import {
   ComplianceRiskWorkspace,
   MessagesWorkspace,
 } from "./SupportWorkspaces";
+import { lightThemeColors } from "@bthwani/ui-kit";
 
 // ─── Inline badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ label, tone }: { label: string; tone: SupportTicketTone }) {
   const toneColors: Record<SupportTicketTone, { bg: string; color: string }> = {
-    warning: { bg: opsTheme.warningSurface, color: 'var(--status-warning-text, #92400E)' },
-    success: { bg: opsTheme.successSurface, color: 'var(--status-success-strong, #065F46)' },
-    danger:  { bg: opsTheme.dangerSurface, color: 'var(--status-danger-strong, #991B1B)' },
-    neutral: { bg: 'var(--surface-muted, #F1F5F9)', color: opsTheme.textMuted },
-    info:    { bg: opsTheme.infoSurface, color: opsTheme.info },
+    warning: { bg: lightThemeColors.warningSoft, color: lightThemeColors.warning },
+    success: { bg: lightThemeColors.successSoft, color: lightThemeColors.success },
+    danger:  { bg: lightThemeColors.dangerSoft, color: lightThemeColors.danger },
+    neutral: { bg: lightThemeColors.surfaceInset, color: lightThemeColors.colorMuted },
+    info:    { bg: lightThemeColors.infoSoft, color: lightThemeColors.info },
   };
   const { bg, color } = toneColors[tone];
   return (
@@ -195,7 +196,7 @@ export function SupportDashboardScreen() {
           </CpButton>
         </div>
         {identity.state.kind === "error" && (
-          <p role="alert" style={{ color: opsTheme.danger, textAlign: "right" }}>{identity.state.message}</p>
+          <p role="alert" style={{ color: lightThemeColors.danger, textAlign: "right" }}>{identity.state.message}</p>
         )}
       </section>
     );
@@ -440,7 +441,7 @@ export function SupportDashboardScreen() {
                       </CpButton>
                     </div>
                     {ticketCtrl.actionState.kind === "error" && (
-                      <p role="alert" style={{ color: opsTheme.danger, fontSize: "0.8rem" }}>
+                      <p role="alert" style={{ color: lightThemeColors.danger, fontSize: "0.8rem" }}>
                         {ticketCtrl.actionState.message}
                       </p>
                     )}
