@@ -2,185 +2,234 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button, Text, Badge } from '@bthwani/ui-kit';
-import { buildOperationsHref } from '../../shared/operations/operations-registry';
+import { Box, Text } from '@bthwani/ui-kit';
+import {
+  WebControlPanelRecommendation,
+  WebControlPanelDecisionRow,
+} from '@bthwani/ui-kit/web';
+import { getDshControlPanelGovernanceEntry } from '../../shared/runtime';
+import type { AnyOperationsWorkspaceId } from './operations.registry';
+import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from './operations.registry';
+import styles from '../shared/control-panel-surface.module.css';
+import { getDshSignalSummaries, getDshSignalEventLabel, getDshSignalEventTone } from '../../shared/marketing/dsh-signal-layer.model';
+import { MOCK_TOP_SUGGESTIONS as TOP_SUGGESTIONS, MOCK_QUICK_ACTIONS as QUICK_ACTIONS } from '../../shared/operations';
 
-export type CommandCenterScreenProps = {
-  hubHref: string;
-  subGroup?: string;
-};
+export type CommandCenterScreenProps = { hubHref: string; subGroup?: string; };
 
-const TOP_SUGGESTIONS = [
-  {
-    id: 'sug-1',
-    label: 'تكدس شمال الرياض — فعّل الحافز فورًا',
-    reason: '45 طلب بدون كابتن في منطقة الشمال',
-    confidence: 'high' as const,
-    action: 'فتح المناطق',
-    workspace: 'area-capacity' as const,
-    risk: 'critical' as const,
-  },
-  {
-    id: 'sug-2',
-    label: '32 طلب بدون إسناد — تدخّل الآن',
-    reason: 'قائمة الإسناد تتراكم وكباتن متاحون غير مستغلين',
-    confidence: 'high' as const,
-    action: 'فتح الإسناد',
-    workspace: 'dispatch-assignment' as const,
-    risk: 'high' as const,
-  },
-  {
-    id: 'sug-3',
-    label: '12 استثناء مفتوح — راجع قائمة الإسناد',
-    reason: 'استثناءات بدون مالك تزيد من خطر خرق SLA',
-    confidence: 'medium' as const,
-    action: 'فتح الاستثناءات',
-    workspace: 'exceptions-escalations' as const,
-    risk: 'medium' as const,
-  },
-] as const;
+const OPS_SIGNAL_SUMMARIES = getDshSignalSummaries('control-panel', 'ops');
+const OPS_URGENT_SIGNALS = OPS_SIGNAL_SUMMARIES
+  .filter((s) => s.priority === 'urgent' && s.readState === 'unread')
+  .slice(0, 3);
 
-const QUICK_ACTIONS = [
-  { id: 'QA-1', label: 'إعادة إسناد 12 طلب متأخر', time: 'منذ 5 دقائق', workspace: 'dispatch-assignment' as const },
-  { id: 'QA-2', label: 'تواصل مع المتجر رقم 402', time: 'منذ 12 دقيقة', workspace: 'partner-stores' as const },
-  { id: 'QA-3', label: 'تصعيد شكوى عميل (تأخير)', time: 'منذ 18 دقيقة', workspace: 'audit-support-sla' as const },
-] as const;
-
-export function CommandCenterScreen({ hubHref, subGroup }: CommandCenterScreenProps) {
+export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCenterScreenProps) {
   const router = useRouter();
-
-  const containerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1rem',
-    padding: '1rem',
-    direction: 'rtl',
-  };
-
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-    gap: '1rem',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    padding: '1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-  };
-
-  const flexRowStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '0.5rem',
-  };
+  const operationsGovernance = getDshControlPanelGovernanceEntry('operations');
+  const supportGovernance = getDshControlPanelGovernanceEntry('support');
+  const financeGovernance = getDshControlPanelGovernanceEntry('finance');
 
   return (
-    <div style={containerStyle}>
-      <div style={gridStyle}>
+    <Box gap={3}>
+      {/* ── Header ── */}
+      <div className={styles.surfaceSectionHeader} style={{ marginBottom: '4px' }}>
+        <h2 className={styles.surfaceSectionTitle} style={{ fontSize: '15px' }}>لوحة التحكم والمراقبة النشطة</h2>
+        <p className={styles.surfaceSectionSubtitle} style={{ fontSize: '11px' }}>التدخلات السريعة وتوجيه قرارات الإسناد وحوكمة أسطح DSH</p>
+      </div>
+
+      <div className={styles.surfaceGridTwoCol} style={{ gap: '10px' }}>
+
         {/* 1. Decision routing map */}
-        <Card style={cardStyle}>
-          <Text role="titleSm">خريطة القرار التشغيلي</Text>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={flexRowStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                <Text role="body"><strong>التنفيذ التشغيلي الحي:</strong> العمليات</Text>
-                <Text role="caption" tone="muted">إدارة ومراقبة الطلبات الحية، وتعديل إسناد الكباتن والتحكم التشغيلي الفوري.</Text>
-              </div>
-              <Button
-                label="الطلبات الحية"
-                tone="primary"
-                onPress={() => router.push('/dsh/operations?workspace=live-orders')}
-              />
-            </div>
-
-            <div style={flexRowStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                <Text role="body"><strong>التذاكر والتصعيد:</strong> الدعم الفني</Text>
-                <Text role="caption" tone="muted">استعراض تذاكر الدعم الفني، والمحادثات المباشرة مع العملاء والشركاء.</Text>
-              </div>
-              <Button
-                label="فتح الدعم"
-                tone="secondary"
-                onPress={() => router.push('/dsh/support')}
-              />
-            </div>
-
-            <div style={flexRowStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                <Text role="body"><strong>الأثر المالي:</strong> المحفظة WLT</Text>
-                <Text role="caption" tone="muted">قراءة السجلات والعمليات المالية ومطابقة التحصيلات (غير قابل للتعديل من DSH).</Text>
-              </div>
-              <Button
-                label="فتح المالية"
-                tone="secondary"
-                onPress={() => router.push('/dsh/finance')}
-              />
-            </div>
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>خريطة القرار السريع</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <WebControlPanelDecisionRow
+              entityId="OPS"
+              entityLabel="التنفيذ التشغيلي الحي"
+              status="العمليات"
+              statusTone="neutral"
+              recommendation="داخل العمليات"
+              reason={operationsGovernance.notes}
+              sla="إسناد، ضغط، الطلبات الحية"
+              primaryAction={{
+                id: 'go-live-orders',
+                label: 'الطلبات الحية',
+                onAction: () => router.push(buildOperationsHref('live-orders')),
+              }}
+            />
+            <WebControlPanelDecisionRow
+              entityId="SUP"
+              entityLabel="التذاكر والتصعيد"
+              status="دعم خارجي"
+              statusTone="warning"
+              recommendation="حوّل إلى الدعم"
+              reason={supportGovernance.notes}
+              sla="التذاكر، المحادثات، المتابعة"
+              primaryAction={{ id: 'go-support', label: 'فتح الدعم', onAction: () => router.push('/support') }}
+            />
+            <WebControlPanelDecisionRow
+              entityId="FIN"
+              entityLabel="الأثر المالي"
+              status="المحفظة المالية"
+              statusTone="warning"
+              recommendation="حوّل إلى المحفظة المالية WLT — عرض فقط"
+              reason={financeGovernance.notes}
+              sla="معاينة فقط — لا تعديل مالي"
+              primaryAction={{ id: 'go-finance', label: 'فتح المالية', onAction: () => router.push('/finance') }}
+            />
           </div>
-        </Card>
+        </div>
 
         {/* 2. Top system recommendations */}
-        <Card style={cardStyle}>
-          <Text role="titleSm">أعلى توصيات النظام الآن</Text>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>أعلى توصيات النظام الآن</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
             {TOP_SUGGESTIONS.map((s) => (
-              <div key={s.id} style={{ ...flexRowStyle, borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                  <Text role="body"><strong>{s.label}</strong></Text>
-                  <Text role="caption" tone="muted">{s.reason}</Text>
-                </div>
-                <Badge label={s.risk === 'critical' ? 'حرج' : 'متوسط'} tone={s.risk === 'critical' ? 'danger' : 'warning'} />
-              </div>
+              <WebControlPanelRecommendation
+                key={s.id}
+                title={s.label}
+                reason={s.reason}
+                confidence={s.confidence}
+                auditTag={s.risk === 'critical' ? 'خطر حرج' : undefined}
+                primaryAction={{
+                  id: `action-${s.id}`,
+                  label: s.action,
+                  onAction: () => router.push(buildOperationsHref(s.workspace)),
+                }}
+              />
             ))}
           </div>
-        </Card>
+        </div>
 
         {/* 3. Urgent quick actions */}
-        <Card style={cardStyle}>
-          <Text role="titleSm">تدخل سريع مطلوب</Text>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>تدخل سريع مطلوب</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
             {QUICK_ACTIONS.map((action) => (
-              <div key={action.id} style={flexRowStyle}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                  <Text role="body">{action.label}</Text>
-                  <Text role="caption" tone="muted">{action.time}</Text>
-                </div>
-                <Button
-                  label="انتقل"
-                  tone="secondary"
-                  onPress={() => {
-                    const href = buildOperationsHref(action.workspace);
-                    router.push(href);
-                  }}
-                />
-              </div>
+              <WebControlPanelDecisionRow
+                key={action.id}
+                entityId={action.id}
+                entityLabel={action.label}
+                sla={action.time}
+                status="مطلوب"
+                statusTone="warning"
+                primaryAction={{
+                  id: `go-${action.id}`,
+                  label: 'انتقل',
+                  onAction: () => router.push(buildOperationsHref(action.workspace)),
+                }}
+              />
             ))}
           </div>
-        </Card>
+        </div>
 
-        {/* 4. WLT Financial Reference (Read-Only) */}
-        <Card style={cardStyle}>
-          <Text role="titleSm">مرجعية المحفظة WLT (قراءة فقط)</Text>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
-            <div style={flexRowStyle}>
-              <Text role="body">حالة ربط المحفظة:</Text>
-              <Badge label="متصلة" tone="success" />
-            </div>
-            <div style={flexRowStyle}>
-              <Text role="body">التحصيلات اليومية (COD):</Text>
-              <Text role="bodyStrong">0.00 ر.س</Text>
-            </div>
-            <div style={flexRowStyle}>
-              <Text role="body">طلبات الاسترداد المعلقة:</Text>
-              <Badge label="لا يوجد" tone="neutral" />
+        {/* 3.5. Playbooks */}
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>خطط التدخل</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <WebControlPanelRecommendation
+              title="لا توجد خطط تدخل نشطة"
+              reason="سيتم ربط خطط التدخل بـ API العمليات."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
+          </div>
+        </div>
+
+        {/* 4. Signal layer */}
+        {OPS_URGENT_SIGNALS.length > 0 ? (
+          <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+            <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>إشارات النظام العاجلة</h3>
+            <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+              {OPS_URGENT_SIGNALS.map((signal) => {
+                const tone = getDshSignalEventTone(signal.kind);
+                const statusTone = tone === 'danger' ? 'danger' as const
+                  : tone === 'warning' ? 'warning' as const
+                  : 'neutral' as const;
+                return (
+                  <WebControlPanelDecisionRow
+                    key={signal.eventId}
+                    entityId={signal.entityId}
+                    entityLabel={getDshSignalEventLabel(signal.kind)}
+                    status={signal.title}
+                    statusTone={statusTone}
+                    risk="danger"
+                    recommendation={`الكيان: ${signal.entityId} · ${signal.emittedAt}`}
+                    sla={signal.emittedAt}
+                    primaryAction={{
+                      id: `sig-${signal.eventId}`,
+                      label: 'فتح التفاصيل',
+                      onAction: () => {
+                        const OPS_PREFIX = 'cp/operations/';
+                        if (signal.routeId.startsWith(OPS_PREFIX)) {
+                          router.push(buildOperationsHref(signal.routeId.slice(OPS_PREFIX.length) as AnyOperationsWorkspaceId));
+                        } else {
+                          router.push(`/${signal.routeId}`);
+                        }
+                      },
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
-        </Card>
+        ) : null}
+
+        {/* 5. Service health */}
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>حالة الخدمة والمؤشرات</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <WebControlPanelRecommendation
+              title="لا توجد مؤشرات خدمة نشطة"
+              reason="سيتم ربط مؤشرات الخدمة بـ API العمليات."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
+          </div>
+        </div>
+
+        {/* 6. WLT finance alerts */}
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>تنبيهات WLT المالية (قراءة فقط)</h3>
+          <Box gap={1} paddingX={1} paddingY={1}>
+            <Text role="caption" tone="muted">
+              لا تعديل مالي أو تسوية داخل DSH؛ المرجعية الكاملة لـ WLT.
+            </Text>
+          </Box>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <Text role="caption" tone="muted">لا توجد تنبيهات مالية — سيتم ربطها بـ WLT API.</Text>
+          </div>
+        </div>
+
       </div>
-    </div>
+
+      {/* ── Governance Footnote Section ── */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid var(--bthwani-control-panel-border)', paddingTop: '10px' }}>
+        <div className={styles.surfaceInfoCard} style={{ flex: '1 1 300px', padding: '6px 10px' }}>
+          <div>
+            <div className={styles.surfaceInfoCardTitle} style={{ fontSize: '11px', fontWeight: 800 }}>حدود ملكية العمليات</div>
+            <div className={styles.surfaceInfoCardDescription} style={{ fontSize: '10px' }}>{operationsGovernance.notes}</div>
+          </div>
+          <div className={styles.surfaceMetaWrap} style={{ gap: '4px' }}>
+            {operationsGovernance.onDemandPolicySummary.map((policy) => (
+              <span key={policy} className={styles.surfaceMetaChip} style={{ fontSize: '9px', padding: '2px 6px' }}>{policy}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.surfaceInfoCard} style={{ flex: '1 1 300px', padding: '6px 10px' }}>
+          <div>
+            <div className={styles.surfaceInfoCardTitle} style={{ fontSize: '11px', fontWeight: 800 }}>تحويلات الملكية والحوكمة</div>
+            <div className={styles.surfaceInfoCardDescription} style={{ fontSize: '10px' }}>
+              الدعم والماليات والكتالوجات والشركاء والمنصة والإدارة أقسام مستقلة؛ العمليات تفتحها ولا تكرر منطقها.
+            </div>
+          </div>
+          <div className={styles.surfaceMetaWrap} style={{ gap: '4px' }}>
+            {NON_OPERATIONS_SECTION_SHORTCUTS.map((shortcut) => (
+              <span key={shortcut.id} className={styles.surfaceMetaChip} style={{ fontSize: '9px', padding: '2px 6px' }}>{shortcut.label}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Box>
   );
 }
 

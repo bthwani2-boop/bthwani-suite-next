@@ -22,6 +22,13 @@ import {
 } from "../../shared/platform";
 import { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 import { PlatformPoliciesScreen } from "./PlatformPoliciesScreen";
+import { DshPlatformVarsWorkspace } from "./DshPlatformVarsWorkspace";
+import {
+  DshPlatformCanaryWorkspace,
+  DshPlatformHealthWorkspace,
+  DshPlatformRollbackWorkspace,
+  DshPlatformOverviewWorkspace,
+} from "./DshPlatformWorkspaces";
 
 // ─── Main Tab button (underline style) ──────────────────────────────────────────
 
@@ -188,72 +195,8 @@ export function PlatformDashboardScreen() {
 
       {/* ── Content View conditionally rendered by mainTab ───────────────── */}
       {mainTab === "variables" && (
-        <div
-          style={{
-            background: "#FFF",
-            border: "1px solid #E2E8F0",
-            borderRadius: "1rem",
-            padding: "1.5rem",
-            margin: "1rem",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <h3 style={{ margin: "0 0 0.35rem", fontSize: "1.1rem", fontWeight: 700 }}>
-                إدارة المتغيرات والسياسات
-              </h3>
-              <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.7, lineHeight: 1.6 }}>
-                مراجعة وتعديل سياسات المنصة ومتغيراتها التشغيلية. كل تغيير يخضع للتدقيق ولا يُطبَّق على الخوادم الحية.
-              </p>
-            </div>
-
-            {/* Inner Stats Card Row */}
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              <div style={{ background: "#F1F5F9", padding: "0.5rem 1rem", borderRadius: "0.5rem", textAlign: "center", minWidth: "4.5rem" }}>
-                <strong style={{ fontSize: "1.1rem" }}>{innerStats.total}</strong>
-                <div style={{ fontSize: "0.7rem", opacity: 0.65 }}>إجمالي</div>
-              </div>
-              <div style={{ background: "#F1F5F9", padding: "0.5rem 1rem", borderRadius: "0.5rem", textAlign: "center", minWidth: "4.5rem" }}>
-                <strong style={{ fontSize: "1.1rem" }}>{innerStats.linked}</strong>
-                <div style={{ fontSize: "0.7rem", opacity: 0.65 }}>مرتبط</div>
-              </div>
-              <div style={{ background: "#F1F5F9", padding: "0.5rem 1rem", borderRadius: "0.5rem", textAlign: "center", minWidth: "4.5rem" }}>
-                <strong style={{ fontSize: "1.1rem" }}>{innerStats.contractRequired}</strong>
-                <div style={{ fontSize: "0.7rem", opacity: 0.65 }}>يتطلب عقد</div>
-              </div>
-              <div style={{ background: "#F1F5F9", padding: "0.5rem 1rem", borderRadius: "0.5rem", textAlign: "center", minWidth: "4.5rem" }}>
-                <strong style={{ fontSize: "1.1rem" }}>{innerStats.wltCount}</strong>
-                <div style={{ fontSize: "0.7rem", opacity: 0.65 }}>WLT</div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 24rem",
-              gap: "2rem",
-              marginTop: "2rem",
-              alignItems: "start",
-            }}
-          >
-            {/* Left box details tool */}
-            <div style={{ border: "2px dashed #E2E8F0", borderRadius: "0.75rem", padding: "3rem", textAlign: "center", opacity: 0.6, fontSize: "0.875rem" }}>
-              اختر عنصراً من القائمة لعرض التفاصيل وأدوات التعديل.
-            </div>
-
-            {/* Right box empty list */}
-            <div>
-              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-                <span style={{ background: "#FF500D", color: "#FFF", padding: "0.2rem 0.625rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 600 }}>
-                  الكل
-                </span>
-              </div>
-              <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "2rem", textAlign: "center", opacity: 0.7, fontSize: "0.85rem" }}>
-                لا توجد عناصر لهذه الطبقة. غيّر المجال أو طبقة الأسقفية.
-              </div>
-            </div>
-          </div>
+        <div style={{ padding: "1rem" }}>
+          <DshPlatformVarsWorkspace />
         </div>
       )}
 
@@ -269,16 +212,13 @@ export function PlatformDashboardScreen() {
         </div>
       )}
 
-      {/* ── Placeholders for other technical tabs ── */}
-      {mainTab !== "variables" && mainTab !== "providers" && mainTab !== "services" && (
-        <div style={{ padding: "3rem", textAlign: "center" }}>
-          <CpStatePanel
-            role="status"
-            title={PLATFORM_MAIN_TABS.find((t) => t.id === mainTab)?.label ?? ""}
-            description="هذا القسم قيد التطوير والمراقبة الفنية حالياً."
-          />
-        </div>
-      )}
+      {mainTab === "canary" && <DshPlatformCanaryWorkspace />}
+
+      {mainTab === "health" && <DshPlatformHealthWorkspace />}
+
+      {mainTab === "rollback" && <DshPlatformRollbackWorkspace />}
+
+      {mainTab === "overview" && <DshPlatformOverviewWorkspace />}
 
       {/* ── Status Footer (ownership bar) ────────────────────────────────────── */}
       <div
@@ -297,8 +237,9 @@ export function PlatformDashboardScreen() {
         <span>المالك: <strong>{PLATFORM_OWNERSHIP.owner}</strong></span>
         <span>والتدقيق: <strong>{PLATFORM_OWNERSHIP.ownerPath}</strong></span>
         <span>الخدمات النشطة: {PLATFORM_OWNERSHIP.activeServices}</span>
-        <span style={{ marginInlineStart: "auto", color: "#065F46", fontWeight: 600 }}>{PLATFORM_OWNERSHIP.status}</span>
+        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, #065F46)', fontWeight: 600 }}>{PLATFORM_OWNERSHIP.status}</span>
       </div>
     </DataTablePageFrame>
   );
 }
+

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Providers } from "./providers";
+import { WebThemeStyle } from "@bthwani/ui-kit/web";
 
 export const metadata: Metadata = {
   title: "لوحة التحكم — DSH",
@@ -9,8 +10,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" data-bth-root="true" data-ui-root="true" data-bth-theme="light" data-ui-theme="light">
       <head>
+        <WebThemeStyle />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

@@ -22,30 +22,17 @@ import type {
   StoreCourierCompensation,
   StoreDeliveryPolicy,
   StoreDeliveryPricingSource,
-} from '../domain/dsh-partner-binding.contracts';
+} from '../dsh-partner-binding.contracts';
+import {
+  STORE_COURIER_COMPENSATION_OPTIONS,
+  STORE_DELIVERY_POLICY_OPTIONS,
+  STORE_DELIVERY_PRICING_SOURCE_OPTIONS,
+  isStoreDeliveryPolicyCompensationRequired,
+  resolveStoreCourierCompensationLabel,
+  resolveStoreDeliveryPolicyLabel,
+  resolveStoreDeliveryPricingSourceLabel,
+} from '../../shared/store';
 import { getSurfaceModeCapability, getSurfaceRoleSummaryForMode } from '../../shared/orders';
-
-type PolicyOption = { id: StoreDeliveryPolicy; label: string; description: string };
-type PricingOption = { id: StoreDeliveryPricingSource; label: string; description: string };
-type CompensationOption = { id: StoreCourierCompensation; label: string; description: string };
-
-const POLICY_OPTIONS: readonly PolicyOption[] = [
-  { id: 'free_delivery', label: 'توصيل مجاني', description: 'المتجر يتحمل تكلفة التوصيل — لا رسوم على العميل.' },
-  { id: 'courier_per_delivery_payout', label: 'مستحق لكل توصيلة', description: 'الموصل يحصل على مبلغ محدد عن كل طلب يوصله.' },
-  { id: 'store_retained_fee_salary_courier', label: 'رسوم للمتجر + راتب للموصل', description: 'رسوم التوصيل تذهب للمتجر، والموصل على راتب ثابت.' },
-];
-
-const PRICING_OPTIONS: readonly PricingOption[] = [
-  { id: 'bthwani_pricing', label: 'تسعير بثواني', description: 'يعتمد جدول الأسعار الموحد من بثواني.' },
-  { id: 'store_fixed_price', label: 'سعر ثابت من المتجر', description: 'المتجر يحدد سعرًا موحدًا للتوصيل لكل الطلبات.' },
-  { id: 'control_panel_zone_pricing', label: 'تسعير المناطق — لوحة التحكم', description: 'يعتمد التسعير المناطقي المُدار من لوحة التحكم.' },
-];
-
-const COMPENSATION_OPTIONS: readonly CompensationOption[] = [
-  { id: 'none', label: 'لا مستحق إضافي', description: 'الموصل على راتب ثابت أو بدون عمولة منفصلة.' },
-  { id: 'fixed_per_delivery', label: 'مبلغ ثابت لكل توصيلة', description: 'مبلغ محدد يُضاف لكل طلب يتم توصيله.' },
-  { id: 'percentage_of_delivery_fee', label: 'نسبة من رسوم التوصيل', description: 'نسبة مئوية من رسوم التوصيل لكل طلب.' },
-];
 
 const BRANCH_OPTIONS = [
   { id: 'all', label: 'كل الفروع' },
@@ -109,12 +96,12 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
   const [compensation, setCompensation] = React.useState<StoreCourierCompensation>('none');
   const [savedLabel, setSavedLabel] = React.useState<string | null>(null);
 
-  const requiresCompensation = policy !== 'free_delivery';
+  const requiresCompensation = isStoreDeliveryPolicyCompensationRequired(policy);
   const canSave = courierName.trim().length > 0 && courierPhone.trim().length > 0;
 
-  const selectedPolicyLabel = POLICY_OPTIONS.find((o) => o.id === policy)?.label ?? '';
-  const selectedPricingLabel = PRICING_OPTIONS.find((o) => o.id === pricingSource)?.label ?? '';
-  const selectedCompensationLabel = COMPENSATION_OPTIONS.find((o) => o.id === compensation)?.label ?? '';
+  const selectedPolicyLabel = resolveStoreDeliveryPolicyLabel(policy);
+  const selectedPricingLabel = resolveStoreDeliveryPricingSourceLabel(pricingSource);
+  const selectedCompensationLabel = resolveStoreCourierCompensationLabel(compensation);
 
   const branchLabel = selectedBranchIds.includes('all')
     ? 'كل الفروع'
@@ -208,7 +195,7 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">سياسة التوصيل</Text>
         <SelectionBlock
-          options={POLICY_OPTIONS}
+          options={STORE_DELIVERY_POLICY_OPTIONS}
           selectedId={policy}
           onSelect={setPolicy}
           direction={direction}
@@ -221,7 +208,7 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
       <Box gap={3} paddingY={2}>
         <Text role="bodyStrong" align="start">مصدر التسعير</Text>
         <SelectionBlock
-          options={PRICING_OPTIONS}
+          options={STORE_DELIVERY_PRICING_SOURCE_OPTIONS}
           selectedId={pricingSource}
           onSelect={setPricingSource}
           direction={direction}
@@ -235,7 +222,7 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
           <Box gap={3} paddingY={2}>
             <Text role="bodyStrong" align="start">مستحق الموصل</Text>
             <SelectionBlock
-              options={COMPENSATION_OPTIONS}
+              options={STORE_COURIER_COMPENSATION_OPTIONS}
               selectedId={compensation}
               onSelect={setCompensation}
               direction={direction}

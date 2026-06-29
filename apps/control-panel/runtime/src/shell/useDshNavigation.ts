@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 /** Full ordered list of all DSH control panel sections */
 export const DSH_NAV_ITEMS = [
-  { section: "dashboard",      label: "الرئيسية",              route: "/" },
+  { section: "dashboard",      label: "الرئيسية",              route: "/dsh/dashboard" },
   { section: "operations",     label: "العمليات",              route: "/dsh/operations" },
   { section: "partners",       label: "الشركاء والمتاجر",     route: "/dsh/partners" },
   { section: "catalogs",       label: "اعتماد الكتالوجات",    route: "/dsh/catalogs" },
@@ -13,6 +13,7 @@ export const DSH_NAV_ITEMS = [
   { section: "support",        label: "الدعم والمساعدة",      route: "/dsh/support" },
   { section: "platform",       label: "سياسات المنصة",        route: "/dsh/platform" },
   { section: "administration", label: "الإدارة والصلاحيات",  route: "/dsh/administration" },
+  { section: "hr",             label: "الموارد البشرية",      route: "/dsh/hr" },
 ] as const;
 
 export type DshSection = (typeof DSH_NAV_ITEMS)[number]["section"];

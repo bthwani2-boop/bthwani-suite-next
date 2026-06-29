@@ -132,3 +132,62 @@ export const ADMIN_STATUS_FOOTER: AdminStatusFooterInfo = {
   activeServices: "1/1",
   status: "جاهز",
 };
+
+// ── Admin Role UI Types & Mock Data ──────────────────────────────────────────
+// These are display-only role definitions for the administration panel UI.
+// No real auth mutation happens here — محاكاة UI فقط.
+
+import type { DshRoleId } from '../identity-access/dsh-role-permission.model';
+
+export type AdminRole = {
+  readonly id: DshRoleId;
+  readonly name: string;
+  readonly arabicName: string;
+  readonly description: string;
+  readonly tone: "danger" | "warning" | "success" | "brand" | "neutral" | "default";
+  readonly permissions: readonly string[];
+};
+
+export const ADMIN_ROLES: readonly AdminRole[] = [
+  { id: 'super-admin', name: 'Super Admin', arabicName: 'مسؤول أعلى', description: 'كامل الصلاحيات الفنية والتشغيلية والإدارية.', tone: 'danger', permissions: ['manage-roles', 'manage-users', 'approve-chain', 'override-sla', 'platform-vars-rollback'] },
+  { id: 'platform-governor', name: 'Platform Governor', arabicName: 'حاكم المنصة', description: 'ضبط السياسات وإقرار التراجع وطلب التعليق.', tone: 'warning', permissions: ['approve-chain', 'override-sla', 'platform-vars-rollback'] },
+  { id: 'platform-approver', name: 'Platform Approver', arabicName: 'معتمد المنصة', description: 'اعتماد الشركاء ونشر الكتالوج وتصعيد الحوادث.', tone: 'success', permissions: ['activate-partner', 'publish-catalog', 'reassign-dispatch', 'escalate-support'] },
+  { id: 'platform-operator', name: 'Platform Operator', arabicName: 'مشغّل المنصة', description: 'استعراض البيانات، تقديم طلبات التفعيل، وإسناد التذاكر.', tone: 'brand', permissions: ['view-dashboard', 'submit-partner-activation', 'submit-catalog-approval', 'reassign-dispatch'] },
+  { id: 'finance-approver', name: 'Finance Approver', arabicName: 'معتمد مالي', description: 'عرض التقارير والعمولات والمستحقات (قراءة فقط من WLT).', tone: 'neutral', permissions: ['view-finance-readonly'] },
+  { id: 'viewer', name: 'Viewer', arabicName: 'مراقب', description: 'رصد تشغيلي وقراءة فقط لكامل أسطح لوحة التحكم.', tone: 'default', permissions: ['view-dashboard'] }
+] as const;
+
+export const ADMIN_PLATFORM_PERMISSIONS = [
+  { id: 'activate-partner', name: 'تفعيل الشركاء', scope: 'partners', description: 'الموافقة النهائية على تنشيط المتاجر.' },
+  { id: 'publish-catalog', name: 'نشر الكتالوج', scope: 'catalogs', description: 'إتاحة المنتجات للعملاء في التطبيق.' },
+  { id: 'reassign-dispatch', name: 'إعادة إسناد الطلب', scope: 'operations', description: 'تحويل الطلب لكابتن آخر عند الطوارئ.' },
+  { id: 'override-sla', name: 'تجاوز SLA', scope: 'operations', description: 'تعطيل أو استثناء شروط وقت التوصيل.' },
+  { id: 'platform-vars-rollback', name: 'التراجع عن المتغيرات', scope: 'platform', description: 'التراجع الفوري لإصلاح الأعطال.' },
+  { id: 'view-finance-readonly', name: 'عرض المالية', scope: 'finance', description: 'قراءة تقارير WLT بدون إمكانية التعديل.' }
+] as const;
+
+export type DshAdminUser = {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  readonly roleId: DshRoleId;
+  readonly status: "active" | "pending" | "suspended";
+  readonly lastAccess: string;
+};
+
+export const MOCK_ADMIN_USERS: readonly DshAdminUser[] = [
+  { id: 'usr-1', name: 'أحمد الشريف', email: 'ahmed@bthwani.sa', roleId: 'super-admin', status: 'active', lastAccess: 'منذ ساعتين' },
+  { id: 'usr-2', name: 'فاطمة القحطاني', email: 'fatima@bthwani.sa', roleId: 'platform-approver', status: 'active', lastAccess: 'منذ يوم' },
+  { id: 'usr-3', name: 'خالد النعماني', email: 'khaled@bthwani.sa', roleId: 'platform-operator', status: 'active', lastAccess: 'منذ 3 أيام' },
+  { id: 'usr-4', name: 'سارة العتيبي', email: 'sara@bthwani.sa', roleId: 'viewer', status: 'pending', lastAccess: 'لم يسجل دخول بعد' }
+] as const;
+
+export const ALL_DSH_ROLE_IDS: readonly DshRoleId[] = [
+  'super-admin',
+  'platform-governor',
+  'platform-approver',
+  'platform-operator',
+  'finance-approver',
+  'viewer',
+] as const;
+

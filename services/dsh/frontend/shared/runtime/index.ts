@@ -6,10 +6,12 @@ export * from './dsh-flow-registry';
 export * from './dsh-price-format';
 export * from './dsh-auth-client';
 export * from './dsh-control-panel-governance.map';
+export * from './dsh-cross-surface-closure-map';
+export * from './dsh-control-panel-display';
+export * from './control-panel.dashboard';
 export type { SeedEvidenceEntry } from './dev-seeds-isolation-guard';
 export {
   DSH_SEED_EVIDENCE,
   guardDevSeed,
   getSeedEvidenceSummary,
 } from './dev-seeds-isolation-guard';
-

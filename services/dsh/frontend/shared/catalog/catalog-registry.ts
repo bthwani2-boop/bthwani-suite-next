@@ -176,6 +176,105 @@ export function buildCatalogKpiMetrics(
 
 // ─── Submission View Model ────────────────────────────────────────────────────
 
+export type CatalogPublicationRequirementId =
+  | "active-product"
+  | "sku-present"
+  | "price-present"
+  | "active-category"
+  | "media-complete"
+  | "stock-available";
+
+export type CatalogPublicationRequirementSummary = {
+  readonly id: CatalogPublicationRequirementId;
+  readonly label: string;
+  readonly satisfiedCount: number;
+  readonly blockedCount: number;
+  readonly percent: number;
+};
+
+export type CatalogPublicationReadinessSummary = {
+  readonly totalProducts: number;
+  readonly readyProducts: number;
+  readonly blockedProducts: number;
+  readonly readyPercent: number;
+  readonly requirements: readonly CatalogPublicationRequirementSummary[];
+};
+
+type CatalogPublicationRequirement = {
+  readonly id: CatalogPublicationRequirementId;
+  readonly label: string;
+  readonly check: (product: CatalogProduct, activeCategoryIds: ReadonlySet<string>) => boolean;
+};
+
+const CATALOG_PUBLICATION_REQUIREMENTS: readonly CatalogPublicationRequirement[] = [
+  {
+    id: "active-product",
+    label: "المنتج نشط",
+    check: (product) => product.isActive,
+  },
+  {
+    id: "sku-present",
+    label: "هوية SKU موجودة",
+    check: (product) => product.sku.trim().length > 0,
+  },
+  {
+    id: "price-present",
+    label: "السعر موجود",
+    check: (product) => product.priceReference.trim().length > 0,
+  },
+  {
+    id: "active-category",
+    label: "الفئة مربوطة ونشطة",
+    check: (product, activeCategoryIds) =>
+      product.categoryId !== null && activeCategoryIds.has(product.categoryId),
+  },
+  {
+    id: "media-complete",
+    label: "وسائط المنتج مكتملة",
+    check: (product) =>
+      product.media.some((media) => media.state === "complete" && media.publicUrl !== null),
+  },
+  {
+    id: "stock-available",
+    label: "المخزون قابل للعرض",
+    check: (product) => (product.stockStatus ?? "in_stock") !== "out_of_stock",
+  },
+] as const;
+
+export function buildCatalogPublicationReadiness(
+  products: readonly CatalogProduct[],
+  categories: readonly CatalogCategory[],
+): CatalogPublicationReadinessSummary {
+  const activeCategoryIds = new Set(
+    categories.filter((category) => category.isActive).map((category) => category.id),
+  );
+  const totalProducts = products.length;
+  const readyProducts = products.filter((product) =>
+    CATALOG_PUBLICATION_REQUIREMENTS.every((requirement) =>
+      requirement.check(product, activeCategoryIds),
+    ),
+  ).length;
+
+  return {
+    totalProducts,
+    readyProducts,
+    blockedProducts: totalProducts - readyProducts,
+    readyPercent: totalProducts > 0 ? Math.round((readyProducts / totalProducts) * 100) : 0,
+    requirements: CATALOG_PUBLICATION_REQUIREMENTS.map((requirement) => {
+      const satisfiedCount = products.filter((product) =>
+        requirement.check(product, activeCategoryIds),
+      ).length;
+      return {
+        id: requirement.id,
+        label: requirement.label,
+        satisfiedCount,
+        blockedCount: totalProducts - satisfiedCount,
+        percent: totalProducts > 0 ? Math.round((satisfiedCount / totalProducts) * 100) : 0,
+      };
+    }),
+  };
+}
+
 export type CatalogSubmissionTone = "warning" | "success" | "danger" | "neutral";
 
 export type CatalogSubmissionViewModel = {

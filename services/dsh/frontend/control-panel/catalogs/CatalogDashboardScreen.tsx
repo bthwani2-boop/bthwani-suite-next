@@ -19,6 +19,7 @@ import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   useCatalogApprovalController,
+  usePartnerCatalogController,
   CATALOG_MAIN_TABS,
   CATALOG_SCOPES,
   CATALOG_SMART_FILTERS,
@@ -27,23 +28,27 @@ import {
   filterSubmissionsByScope,
   buildCatalogSubmissionViewModel,
   buildCatalogKpiMetrics,
+  buildCatalogPublicationReadiness,
   buildCatalogBreadcrumb,
   type CatalogMainTabId,
   type CatalogSubTabId,
   type CatalogScopeId,
   type CatalogSmartFilterId,
 } from "../../shared/catalog";
+import { opsTheme } from "../../shared/operations";
+import { CatalogWorkspaceRouter } from "./drawers/CatalogWorkspaceDrawers";
+import type { CatalogWorkspaceState } from "./drawers/CatalogWorkspaceDrawers";
 
-// ─── Inline badge — no external dependency needed ────────────────────────────
+// â”€â”€â”€ Inline badge â€” no external dependency needed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type StatusTone = "warning" | "success" | "danger" | "neutral";
 
 function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
   const toneColors: Record<StatusTone, { bg: string; color: string }> = {
-    warning: { bg: "#FFF3CD", color: "#92400E" },
-    success: { bg: "#D1FAE5", color: "#065F46" },
-    danger:  { bg: "#FEE2E2", color: "#991B1B" },
-    neutral: { bg: "#F1F5F9", color: "#475569" },
+    warning: { bg: opsTheme.warningSurface, color: 'var(--status-warning-text, #92400E)' },
+    success: { bg: opsTheme.successSurface, color: 'var(--status-success-strong, #065F46)' },
+    danger:  { bg: opsTheme.dangerSurface, color: 'var(--status-danger-strong, #991B1B)' },
+    neutral: { bg: 'var(--surface-muted, #F1F5F9)', color: opsTheme.textMuted },
   };
   const { bg, color } = toneColors[tone];
   return (
@@ -64,7 +69,7 @@ function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
   );
 }
 
-// ─── Tab button (toggle style) ────────────────────────────────────────────────
+// â”€â”€â”€ Tab button (toggle style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TabButton({
   active,
@@ -97,7 +102,7 @@ function TabButton({
   );
 }
 
-// ─── Main Tab bar (underline style) ──────────────────────────────────────────
+// â”€â”€â”€ Main Tab bar (underline style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MainTabButton({
   active,
@@ -130,11 +135,12 @@ function MainTabButton({
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function CatalogDashboardScreen() {
   const identity = useIdentitySession();
   const controller = useCatalogApprovalController(identity.state.kind);
+  const catalogController = usePartnerCatalogController(identity.state.kind);
 
   const [mainTab, setMainTab] = useState<CatalogMainTabId>("catalog");
   const [subTab, setSubTab] = useState<CatalogSubTabId>("master-registry");
@@ -143,16 +149,26 @@ export function CatalogDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [reasonByStore, setReasonByStore] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [workspaceState, setWorkspaceState] = useState<CatalogWorkspaceState | null>(null);
+  const [proposals, setProposals] = useState<any[]>([]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const subTabs = getCatalogSubTabsForMain(mainTab);
 
+  const publicationReadiness = useMemo(() => {
+    if (catalogController.state.kind !== "success") return null;
+    return buildCatalogPublicationReadiness(
+      catalogController.state.catalog.products,
+      catalogController.state.catalog.categories,
+    );
+  }, [catalogController.state]);
+
   const metrics = useMemo(() => {
     const submissions =
       controller.state.kind === "success" ? controller.state.submissions : [];
-    return buildCatalogKpiMetrics(submissions, 14582);
-  }, [controller.state]);
+    return buildCatalogKpiMetrics(submissions, publicationReadiness?.totalProducts);
+  }, [controller.state, publicationReadiness]);
 
   const filteredSubmissions = useMemo(() => {
     if (controller.state.kind !== "success") return [];
@@ -167,7 +183,7 @@ export function CatalogDashboardScreen() {
 
   const breadcrumb = buildCatalogBreadcrumb(mainTab, subTab, filteredSubmissions.length);
 
-  // ── Auth gate ───────────────────────────────────────────────────────────────
+  // â”€â”€ Auth gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (identity.state.kind !== "authenticated") {
     return (
       <section
@@ -184,23 +200,23 @@ export function CatalogDashboardScreen() {
         }}
       >
         <div>
-          <h2 style={{ margin: 0, textAlign: "right" }}>كتالوج DSH</h2>
+          <h2 style={{ margin: 0, textAlign: "right" }}>ÙƒØªØ§Ù„ÙˆØ¬ DSH</h2>
           <p style={{ opacity: 0.7, textAlign: "right" }}>
-            يتطلب حساب operator مصرح به لإدارة الكتالوجات.
+            ÙŠØªØ·Ù„Ø¨ Ø­Ø³Ø§Ø¨ operator Ù…ØµØ±Ø­ Ø¨Ù‡ Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬Ø§Øª.
           </p>
         </div>
         <CpTextInput
           value={username}
           onChange={setUsername}
-          placeholder="اسم المستخدم"
-          aria-label="اسم المستخدم"
+          placeholder="Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…"
+          aria-label="Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…"
         />
         <CpTextInput
           value={password}
           onChange={setPassword}
-          placeholder="كلمة المرور"
+          placeholder="ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±"
           type="password"
-          aria-label="كلمة المرور"
+          aria-label="ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±"
         />
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <CpButton
@@ -212,14 +228,14 @@ export function CatalogDashboardScreen() {
             onClick={() => void identity.login(username.trim(), password)}
             style={{ flex: 1 }}
           >
-            {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}
+            {identity.state.kind === "authenticating" ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù‚Ù‚â€¦" : "ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„"}
           </CpButton>
           <CpButton onClick={() => devBypassLogin("operator")} style={{ flex: 1 }}>
-            تجاوز (مطور)
+            ØªØ¬Ø§ÙˆØ² (Ù…Ø·ÙˆØ±)
           </CpButton>
         </div>
         {identity.state.kind === "error" && (
-          <p role="alert" style={{ color: "#DC2626", textAlign: "right" }}>
+          <p role="alert" style={{ color: opsTheme.danger, textAlign: "right" }}>
             {identity.state.message}
           </p>
         )}
@@ -235,35 +251,38 @@ export function CatalogDashboardScreen() {
     <DataTablePageFrame
       dir="rtl"
       header={
-        <CpPageHeader title="كتالوج DSH">
+        <CpPageHeader title="ÙƒØªØ§Ù„ÙˆØ¬ DSH">
           <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            إدارة المنتجات والفئات ومخاطر التبني عبر الأسطح
+            Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª ÙˆØ§Ù„ÙØ¦Ø§Øª ÙˆÙ…Ø®Ø§Ø·Ø± Ø§Ù„ØªØ¨Ù†ÙŠ Ø¹Ø¨Ø± Ø§Ù„Ø£Ø³Ø·Ø­
           </p>
 
-          {/* ── KPI Strip ─────────────────────────────────────────────── */}
+          {/* â”€â”€ KPI Strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <CpKpiStrip>
-            <CpKpiCard label="تعرضات النشاط"    value={metrics.activityExposures} />
-            <CpKpiCard label="بانتظار اعتماد"    value={metrics.pendingApproval} />
-            <CpKpiCard label="إجمالي المنتجات"   value={metrics.totalProducts.toLocaleString("ar-YE")} />
+            <CpKpiCard label="ØªØ¹Ø±Ø¶Ø§Øª Ø§Ù„Ù†Ø´Ø§Ø·"    value={metrics.activityExposures} />
+            <CpKpiCard label="Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ø¹ØªÙ…Ø§Ø¯"    value={metrics.pendingApproval} />
+            <CpKpiCard label="Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª"   value={metrics.totalProducts.toLocaleString("ar-YE")} />
+            {publicationReadiness !== null && (
+              <CpKpiCard label="Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ù†Ø´Ø±" value={`${publicationReadiness.readyPercent}%`} />
+            )}
           </CpKpiStrip>
         </CpPageHeader>
       }
       stateView={
         isLoading ? (
-          <CpStatePanel role="status" title="جاري تحميل الكتالوج…" />
+          <CpStatePanel role="status" title="Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬â€¦" />
         ) : hasError ? (
           <CpStatePanel
             role="alert"
-            title="تعذر تحميل بيانات الكتالوج"
+            title="ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬"
             description={(controller.state as { message: string }).message}
           />
         ) : undefined
       }
     >
-      {/* ── Main Tabs ──────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Main Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <nav
         dir="rtl"
-        aria-label="تبويبات الكتالوج الرئيسية"
+        aria-label="ØªØ¨ÙˆÙŠØ¨Ø§Øª Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©"
         style={{
           display: "flex",
           borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
@@ -287,9 +306,9 @@ export function CatalogDashboardScreen() {
         ))}
       </nav>
 
-      {/* ── Sub-Tabs ────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Sub-Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {subTabs.length > 0 && (
-        <CpFilterBar label="التبويبات الفرعية">
+        <CpFilterBar label="Ø§Ù„ØªØ¨ÙˆÙŠØ¨Ø§Øª Ø§Ù„ÙØ±Ø¹ÙŠØ©">
           {subTabs.map((tab) => (
             <TabButton
               key={tab.id}
@@ -302,8 +321,8 @@ export function CatalogDashboardScreen() {
         </CpFilterBar>
       )}
 
-      {/* ── Scope Filters ────────────────────────────────────────────────────── */}
-      <CpFilterBar label="نطاق الكتالوج">
+      {/* â”€â”€ Scope Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <CpFilterBar label="Ù†Ø·Ø§Ù‚ Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬">
         {CATALOG_SCOPES.map((f) => (
           <TabButton
             key={f.id}
@@ -315,10 +334,10 @@ export function CatalogDashboardScreen() {
         ))}
       </CpFilterBar>
 
-      {/* ── Smart Filters ────────────────────────────────────────────────────── */}
-      <CpFilterBar label="تصفية ذكية">
+      {/* â”€â”€ Smart Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <CpFilterBar label="ØªØµÙÙŠØ© Ø°ÙƒÙŠØ©">
         <span style={{ fontSize: "0.75rem", opacity: 0.65, paddingInlineEnd: "0.5rem" }}>
-          تصفية ذكية:
+          ØªØµÙÙŠØ© Ø°ÙƒÙŠØ©:
         </span>
         {CATALOG_SMART_FILTERS.map((f) => (
           <TabButton
@@ -333,6 +352,13 @@ export function CatalogDashboardScreen() {
           {CATALOG_TOOLBAR_ACTIONS.map((action) => (
             <CpButton
               key={action.id}
+              onClick={() => {
+                if (action.id === "quick-suspend" || action.id === "set-image-policy") {
+                  setWorkspaceState({ workspace: "bulk-operations" });
+                } else {
+                  setWorkspaceState({ workspace: "taxonomy-governance" });
+                }
+              }}
               style={{
                 fontSize: "0.75rem",
                 padding: "0.25rem 0.625rem",
@@ -348,24 +374,24 @@ export function CatalogDashboardScreen() {
         </span>
       </CpFilterBar>
 
-      {/* ── Search + Bulk Actions ────────────────────────────────────────────── */}
-      <CpFilterBar label="بحث وإجراءات">
+      {/* â”€â”€ Search + Bulk Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <CpFilterBar label="Ø¨Ø­Ø« ÙˆØ¥Ø¬Ø±Ø§Ø¡Ø§Øª">
         {selectedIds.size > 0 && (
           <CpButton onClick={() => setSelectedIds(new Set())}>
-            إجراءات جماعية ({selectedIds.size})
+            Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø¬Ù…Ø§Ø¹ÙŠØ© ({selectedIds.size})
           </CpButton>
         )}
         <CpSearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="بحث شامل بالمنتج أو الباركود…"
+          placeholder="Ø¨Ø­Ø« Ø´Ø§Ù…Ù„ Ø¨Ø§Ù„Ù…Ù†ØªØ¬ Ø£Ùˆ Ø§Ù„Ø¨Ø§Ø±ÙƒÙˆØ¯â€¦"
           wide
-          aria-label="بحث في الكتالوج"
+          aria-label="Ø¨Ø­Ø« ÙÙŠ Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬"
         />
-        <span style={{ fontSize: "0.813rem", opacity: 0.65 }}>الفئة: الكل</span>
+        <span style={{ fontSize: "0.813rem", opacity: 0.65 }}>Ø§Ù„ÙØ¦Ø©: Ø§Ù„ÙƒÙ„</span>
       </CpFilterBar>
 
-      {/* ── Breadcrumb ────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Breadcrumb â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         dir="rtl"
         style={{
@@ -373,14 +399,59 @@ export function CatalogDashboardScreen() {
           fontSize: "0.75rem",
           opacity: 0.65,
         }}
-        aria-label="مسار التنقل"
+        aria-label="Ù…Ø³Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„"
       >
         {breadcrumb}
       </div>
 
-      {/* ── State Views ────────────────────────────────────────────────────────── */}
+      {mainTab === "publishing" && publicationReadiness !== null && (
+        <section
+          dir="rtl"
+          aria-label="Ø¬Ø§Ù‡Ø²ÙŠØ© Ù†Ø´Ø± Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬"
+          style={{
+            display: "grid",
+            gap: "0.75rem",
+            padding: "0.75rem 1rem",
+            borderBlock: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
+            background: "color-mix(in srgb, currentColor 3%, transparent)",
+          }}
+        >
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+            <strong>Ø¨ÙˆØ§Ø¨Ø© Ø§Ù„Ù†Ø´Ø±</strong>
+            <span style={{ fontSize: "0.813rem", opacity: 0.7 }}>
+              {publicationReadiness.readyProducts} Ø¬Ø§Ù‡Ø² Ù…Ù† {publicationReadiness.totalProducts} Ù…Ù†ØªØ¬
+            </span>
+            <span style={{ fontSize: "0.813rem", opacity: 0.7 }}>
+              {publicationReadiness.blockedProducts} ÙŠØ­ØªØ§Ø¬ Ø¥ØºÙ„Ø§Ù‚ Ù…ØªØ·Ù„Ø¨Ø§Øª
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))", gap: "0.5rem" }}>
+            {publicationReadiness.requirements.map((requirement) => (
+              <div
+                key={requirement.id}
+                style={{
+                  display: "grid",
+                  gap: "0.25rem",
+                  padding: "0.625rem",
+                  border: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+                  borderRadius: "0.5rem",
+                  background: "Canvas",
+                }}
+              >
+                <strong style={{ fontSize: "0.813rem" }}>{requirement.label}</strong>
+                <span style={{ fontSize: "0.75rem", opacity: 0.68 }}>
+                  {requirement.satisfiedCount}/{publicationReadiness.totalProducts} Â· {requirement.percent}%
+                  {requirement.blockedCount > 0 ? ` Â· ${requirement.blockedCount} Ù…Ø­Ø¬ÙˆØ¨` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* â”€â”€ State Views â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isEmpty && !isLoading && (
-        <CpStatePanel role="status" title="لا توجد إدخالات كتالوج بعد." />
+        <CpStatePanel role="status" title="Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø¯Ø®Ø§Ù„Ø§Øª ÙƒØªØ§Ù„ÙˆØ¬ Ø¨Ø¹Ø¯." />
       )}
 
       {controller.state.kind === "success" &&
@@ -388,19 +459,19 @@ export function CatalogDashboardScreen() {
         searchQuery.trim() && (
           <CpStatePanel
             role="status"
-            title={`لا توجد نتائج لـ "${searchQuery}"`}
+            title={`Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù„Ù€ "${searchQuery}"`}
           />
         )}
 
-      {/* ── Data Table ────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Data Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {controller.state.kind === "success" && (
-        <CpTable aria-label="جدول كتالوجات المتاجر">
+        <CpTable aria-label="Ø¬Ø¯ÙˆÙ„ ÙƒØªØ§Ù„ÙˆØ¬Ø§Øª Ø§Ù„Ù…ØªØ§Ø¬Ø±">
           <thead>
             <tr dir="rtl">
               <CpTableHeaderCell style={{ width: "2rem" }}>
                 <input
                   type="checkbox"
-                  aria-label="تحديد الكل"
+                  aria-label="ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„"
                   checked={selectedIds.size === filteredSubmissions.length && filteredSubmissions.length > 0}
                   onChange={(e) =>
                     setSelectedIds(
@@ -411,14 +482,14 @@ export function CatalogDashboardScreen() {
                   }
                 />
               </CpTableHeaderCell>
-              <CpTableHeaderCell>صورة</CpTableHeaderCell>
-              <CpTableHeaderCell>المنتج</CpTableHeaderCell>
-              <CpTableHeaderCell>الفئة</CpTableHeaderCell>
-              <CpTableHeaderCell>التصنيف</CpTableHeaderCell>
-              <CpTableHeaderCell>المعرف / الباركود</CpTableHeaderCell>
-              <CpTableHeaderCell>السعر</CpTableHeaderCell>
-              <CpTableHeaderCell>السياسة</CpTableHeaderCell>
-              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>ØµÙˆØ±Ø©</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„Ù…Ù†ØªØ¬</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„ÙØ¦Ø©</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„ØªØµÙ†ÙŠÙ</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„Ù…Ø¹Ø±Ù / Ø§Ù„Ø¨Ø§Ø±ÙƒÙˆØ¯</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„Ø³Ø¹Ø±</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„Ø³ÙŠØ§Ø³Ø©</CpTableHeaderCell>
+              <CpTableHeaderCell>Ø§Ù„Ø­Ø§Ù„Ø©</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody dir="rtl">
@@ -433,7 +504,7 @@ export function CatalogDashboardScreen() {
                     fontSize: "0.875rem",
                   }}
                 >
-                  لا توجد طلبات اعتماد.
+                  Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª Ø§Ø¹ØªÙ…Ø§Ø¯.
                 </td>
               </tr>
             ) : (
@@ -449,13 +520,14 @@ export function CatalogDashboardScreen() {
                       return next;
                     })
                   }
+                  onDoubleClick={() => setWorkspaceState({ workspace: "item-detail", productId: vm.id })}
                 >
                   <CpTableCell>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(vm.id)}
                       onChange={() => {}}
-                      aria-label={`تحديد ${vm.storeId}`}
+                      aria-label={`ØªØ­Ø¯ÙŠØ¯ ${vm.storeId}`}
                     />
                   </CpTableCell>
                   {/* Image */}
@@ -474,7 +546,7 @@ export function CatalogDashboardScreen() {
                       }}
                       aria-hidden="true"
                     >
-                      📦
+                      ðŸ“¦
                     </div>
                   </CpTableCell>
                   {/* Product / storeId */}
@@ -482,18 +554,18 @@ export function CatalogDashboardScreen() {
                     <strong style={{ fontSize: "0.875rem" }}>{vm.storeId}</strong>
                   </CpTableCell>
                   {/* Category */}
-                  <CpTableCell style={{ opacity: 0.55, fontSize: "0.813rem" }}>—</CpTableCell>
+                  <CpTableCell style={{ opacity: 0.55, fontSize: "0.813rem" }}>â€”</CpTableCell>
                   {/* Classification */}
-                  <CpTableCell style={{ opacity: 0.55, fontSize: "0.813rem" }}>رئيسي</CpTableCell>
+                  <CpTableCell style={{ opacity: 0.55, fontSize: "0.813rem" }}>Ø±Ø¦ÙŠØ³ÙŠ</CpTableCell>
                   {/* ID / Barcode */}
                   <CpTableCell>
                     <code style={{ fontSize: "0.75rem", fontFamily: "monospace" }}>
-                      {vm.id.slice(0, 12)}…
+                      {vm.id.slice(0, 12)}â€¦
                     </code>
                   </CpTableCell>
                   {/* Price (revision) */}
                   <CpTableCell>
-                    <strong>نسخة {vm.revision}</strong>
+                    <strong>Ù†Ø³Ø®Ø© {vm.revision}</strong>
                   </CpTableCell>
                   {/* Policy (reason input) */}
                   <CpTableCell>
@@ -506,11 +578,11 @@ export function CatalogDashboardScreen() {
                             [vm.storeId]: value,
                           }))
                         }
-                        placeholder="سبب القرار…"
-                        aria-label={`سبب قرار ${vm.storeId}`}
+                        placeholder="Ø³Ø¨Ø¨ Ø§Ù„Ù‚Ø±Ø§Ø±â€¦"
+                        aria-label={`Ø³Ø¨Ø¨ Ù‚Ø±Ø§Ø± ${vm.storeId}`}
                       />
                     ) : (
-                      <span style={{ opacity: 0.5, fontSize: "0.813rem" }}>—</span>
+                      <span style={{ opacity: 0.5, fontSize: "0.813rem" }}>â€”</span>
                     )}
                   </CpTableCell>
                   {/* Status + Actions */}
@@ -535,13 +607,13 @@ export function CatalogDashboardScreen() {
                               fontSize: "0.75rem",
                               padding: "0.2rem 0.5rem",
                               background: "#D1FAE5",
-                              color: "#065F46",
+                              color: "var(--status-success-strong, #065F46)",
                               border: "1px solid #6EE7B7",
                               borderRadius: "0.375rem",
                               cursor: "pointer",
                             }}
                           >
-                            اعتماد
+                            Ø§Ø¹ØªÙ…Ø§Ø¯
                           </CpButton>
                           <CpButton
                             disabled={
@@ -559,13 +631,13 @@ export function CatalogDashboardScreen() {
                               fontSize: "0.75rem",
                               padding: "0.2rem 0.5rem",
                               background: "#FEE2E2",
-                              color: "#991B1B",
+                              color: "var(--status-danger-strong, #991B1B)",
                               border: "1px solid #FCA5A5",
                               borderRadius: "0.375rem",
                               cursor: "pointer",
                             }}
                           >
-                            رفض
+                            Ø±ÙØ¶
                           </CpButton>
                         </div>
                       )}
@@ -587,12 +659,24 @@ export function CatalogDashboardScreen() {
                   direction: "rtl",
                 }}
               >
-                السابق | صفحة 1 من 1 | التالي &nbsp;·&nbsp; {filteredSubmissions.length} سجل
+                Ø§Ù„Ø³Ø§Ø¨Ù‚ | ØµÙØ­Ø© 1 Ù…Ù† 1 | Ø§Ù„ØªØ§Ù„ÙŠ &nbsp;Â·&nbsp; {filteredSubmissions.length} Ø³Ø¬Ù„
               </td>
             </tr>
           </tfoot>
         </CpTable>
       )}
+      <CatalogWorkspaceRouter
+        workspaceState={workspaceState}
+        products={
+          catalogController.state.kind === "success"
+            ? catalogController.state.catalog.products
+            : []
+        }
+        selectedProductIds={Array.from(selectedIds)}
+        onClose={() => setWorkspaceState(null)}
+        onProposal={(p) => setProposals((prev) => [...prev, p])}
+      />
     </DataTablePageFrame>
   );
 }
+

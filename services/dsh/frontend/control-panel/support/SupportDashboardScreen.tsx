@@ -36,16 +36,22 @@ import {
   type SupportQueueFilterId,
   type SupportTicketTone,
 } from "../../shared/support";
+import {
+  ClientProfileWorkspace,
+  CallReceptionWorkspace,
+  ComplianceRiskWorkspace,
+  MessagesWorkspace,
+} from "./SupportWorkspaces";
 
 // ─── Inline badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ label, tone }: { label: string; tone: SupportTicketTone }) {
   const toneColors: Record<SupportTicketTone, { bg: string; color: string }> = {
-    warning: { bg: "#FFF3CD", color: "#92400E" },
-    success: { bg: "#D1FAE5", color: "#065F46" },
-    danger:  { bg: "#FEE2E2", color: "#991B1B" },
-    neutral: { bg: "#F1F5F9", color: "#475569" },
-    info:    { bg: "#DBEAFE", color: "#1E40AF" },
+    warning: { bg: opsTheme.warningSurface, color: 'var(--status-warning-text, #92400E)' },
+    success: { bg: opsTheme.successSurface, color: 'var(--status-success-strong, #065F46)' },
+    danger:  { bg: opsTheme.dangerSurface, color: 'var(--status-danger-strong, #991B1B)' },
+    neutral: { bg: 'var(--surface-muted, #F1F5F9)', color: opsTheme.textMuted },
+    info:    { bg: opsTheme.infoSurface, color: opsTheme.info },
   };
   const { bg, color } = toneColors[tone];
   return (
@@ -189,7 +195,7 @@ export function SupportDashboardScreen() {
           </CpButton>
         </div>
         {identity.state.kind === "error" && (
-          <p role="alert" style={{ color: "#DC2626", textAlign: "right" }}>{identity.state.message}</p>
+          <p role="alert" style={{ color: opsTheme.danger, textAlign: "right" }}>{identity.state.message}</p>
         )}
       </section>
     );
@@ -425,7 +431,7 @@ export function SupportDashboardScreen() {
                         style={{
                           flex: 1,
                           background: "#D1FAE5",
-                          color: "#065F46",
+                          color: 'var(--status-success-strong, #065F46)',
                           border: "1px solid #6EE7B7",
                           borderRadius: "0.5rem",
                         }}
@@ -434,7 +440,7 @@ export function SupportDashboardScreen() {
                       </CpButton>
                     </div>
                     {ticketCtrl.actionState.kind === "error" && (
-                      <p role="alert" style={{ color: "#DC2626", fontSize: "0.8rem" }}>
+                      <p role="alert" style={{ color: opsTheme.danger, fontSize: "0.8rem" }}>
                         {ticketCtrl.actionState.message}
                       </p>
                     )}
@@ -489,14 +495,13 @@ export function SupportDashboardScreen() {
         </>
       )}
 
-      {/* ── Other Tabs placeholder ─────────────────────────────────────────── */}
-      {mainTab !== "queues" && mainTab !== "escalation" && (
-        <CpStatePanel
-          role="status"
-          title={SUPPORT_MAIN_TABS.find((t) => t.id === mainTab)?.label ?? ""}
-          description="هذا القسم قيد التطوير ضمن المنظومة."
-        />
-      )}
+      {mainTab === "client-profile" && <ClientProfileWorkspace />}
+
+      {mainTab === "call-reception" && <CallReceptionWorkspace />}
+
+      {mainTab === "compliance-risk" && <ComplianceRiskWorkspace />}
+
+      {mainTab === "messages" && <MessagesWorkspace />}
 
       {/* ── Status Footer (ownership bar) ────────────────────────────────────── */}
       <div
@@ -515,8 +520,9 @@ export function SupportDashboardScreen() {
         <span>المالك: <strong>{SUPPORT_OWNERSHIP.owner}</strong></span>
         <span>رقلتق: 1/2</span>
         <span>الخدمات المشتركة: —</span>
-        <span style={{ marginInlineStart: "auto", color: "#065F46", fontWeight: 600 }}>جاهز</span>
+        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, #065F46)', fontWeight: 600 }}>جاهز</span>
       </div>
     </DataTablePageFrame>
   );
 }
+

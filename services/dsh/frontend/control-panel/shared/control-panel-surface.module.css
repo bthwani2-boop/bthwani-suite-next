@@ -1,0 +1,1914 @@
+/* ===== DSH Control Panel Shared Surface Layout ===== */
+.surfaceCockpit {
+  width: 100%;
+  min-height: 0;
+  background-color: var(--bthwani-control-panel-background);
+  direction: rtl;
+  text-align: right;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.surfaceTopBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px;
+  background-color: var(--bthwani-control-panel-surface);
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+  flex-shrink: 0;
+}
+
+.surfaceTitleBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.surfaceStatePadding {
+  padding: 24px;
+}
+
+.surfaceTitleBlock h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+  letter-spacing: -0.01em;
+}
+
+.surfaceTitleBlock p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bthwani-control-panel-text-muted);
+}
+
+.surfaceHeaderIconBox {
+  width: 40px;
+  height: 40px;
+  background-color: var(--bthwani-control-panel-brand);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.surfaceHeaderGlyph {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--bthwani-text-inverse);
+  border-radius: 4px;
+  position: relative;
+}
+
+.surfaceHeaderGlyphMinus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  background-color: var(--bthwani-text-inverse);
+  transform: translate(-50%, -50%);
+}
+
+.surfaceHeaderGlyphDot {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--bthwani-text-inverse);
+  border-radius: 1px;
+}
+
+.surfaceHeaderGlyphLabel {
+  color: var(--bthwani-text-inverse);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.surfaceHeaderTextRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surfaceHeaderTitle {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--bthwani-control-panel-text);
+  font-weight: 800;
+}
+
+.surfaceHeaderSubtitle {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--bthwani-control-panel-text-muted);
+}
+
+.surfaceHeaderBadgeText {
+  color: var(--bthwani-brand);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.surfaceHeaderBadgeTextInverse {
+  color: var(--bthwani-text-inverse);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.surfaceHeaderActions {
+  display: flex;
+  align-items: center;
+}
+
+.surfaceMainPanel {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background-color: var(--bthwani-control-panel-stage);
+}
+
+.surfaceInnerScroll {
+  padding: 10px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.surfaceCockpitContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.navigationDock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: var(--bthwani-control-panel-surface);
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.filterDock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bthwani-control-panel-surface);
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.filterDockTint {
+  background-color: var(--bthwani-control-panel-surface-inset);
+}
+
+.surfaceTab {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surfaceTab:hover {
+  background-color: var(--bthwani-control-panel-surface-inset);
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceTabActive {
+  background-color: var(--bthwani-control-panel-brand);
+  color: var(--bthwani-text-inverse);
+  box-shadow: 0 10px 24px var(--bthwani-overlay);
+}
+
+.commandKpi {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  background: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 8px;
+  min-width: 100px;
+}
+
+.commandKpiLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text-muted);
+  margin-bottom: 2px;
+}
+
+.commandKpiValue {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--bthwani-control-panel-text);
+  line-height: 1;
+}
+
+.commandKpiValueAlert {
+  color: var(--bthwani-brand);
+}
+
+.commandKpiValueSuccess {
+  color: var(--bthwani-success);
+}
+
+.commandKpiValueDanger {
+  color: var(--bthwani-danger);
+}
+
+.commandKpiTrend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.commandKpiTrendValue {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.commandKpiTrendSuccess {
+  color: var(--bthwani-success);
+}
+
+.commandKpiTrendWarning {
+  color: var(--bthwani-warning);
+}
+
+.surfacePulseCompact {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Common Layout Primitives */
+.surfaceSectionHeader {
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.surfaceSectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceSectionSubtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--bthwani-control-panel-text-muted);
+}
+
+.surfaceGridTwoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 1024px) {
+  .surfaceGridTwoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+.surfaceCompactPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 10px;
+  min-height: 0;
+  max-height: 100%;
+}
+
+.surfacePanelTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+  flex-shrink: 0;
+}
+
+.surfaceStackSmall {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+/* Split grid: full width when no inspector, with-inspector when item is selected */
+.surfaceSplitGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 12px;
+  align-items: start;
+}
+
+/* Full-width: no inspector panel active */
+.surfaceSplitGridFull {
+  display: block;
+  width: 100%;
+}
+
+.surfaceDetailSplit {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  align-items: flex-start;
+}
+
+.surfaceListColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Inspector panel: only rendered when user selects a row */
+.surfaceInspectorPanel {
+  width: 360px;
+  flex-shrink: 0;
+  background-color: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+/* Inspector header row */
+.surfaceInspectorHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+  flex-shrink: 0;
+}
+
+.surfaceInspectorHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.surfaceInspectorTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.surfaceInspectorSubtitle {
+  font-size: 11px;
+  color: var(--bthwani-control-panel-text-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.surfaceInspectorCloseBtn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--bthwani-control-panel-border);
+  background: var(--bthwani-control-panel-surface-inset);
+  color: var(--bthwani-control-panel-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.surfaceInspectorCloseBtn:hover {
+  background: var(--bthwani-control-panel-border);
+  color: var(--bthwani-control-panel-text);
+}
+
+/* Inspector summary block at top */
+.surfaceInspectorSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bthwani-control-panel-surface-inset);
+  border-radius: 8px;
+}
+
+.surfaceInspectorSummaryRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.surfaceInspectorSummaryLabel {
+  color: var(--bthwani-control-panel-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.surfaceInspectorSummaryValue {
+  color: var(--bthwani-control-panel-text);
+  font-weight: 700;
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inspector section (collapsible group) */
+.surfaceInspectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.surfaceInspectorSectionTitle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+  margin: 0;
+}
+
+.surfaceInspectorSectionToken {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--bthwani-control-panel-text-muted);
+  background: var(--bthwani-control-panel-surface-inset);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  opacity: 0.7;
+}
+
+/* Fix UI distortion/overlap inside inspector panel by stacking grids and cards vertically */
+.surfaceInspectorPanel .surfaceGridTwoCol {
+  grid-template-columns: 1fr;
+}
+
+.surfaceInspectorPanel .surfaceInfoCard {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.surfaceInspectorPanel .surfaceInfoCardTextBlock {
+  align-items: stretch;
+}
+
+.surfaceInspectorPanel .surfaceActionWrap {
+  justify-content: flex-start;
+}
+
+.surfaceDetailRail {
+  width: 360px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--bthwani-control-panel-border);
+}
+
+.surfaceInspectorMeta {
+  padding: 8px;
+  background-color: var(--bthwani-control-panel-surface-inset);
+  border-radius: 6px;
+}
+
+.surfaceInspectorRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+  font-size: 12px;
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceInspectorRow:last-child {
+  border-bottom: 0;
+}
+
+.surfaceMetaChip {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text);
+  padding: 6px 10px;
+  background-color: var(--bthwani-control-panel-surface-inset);
+  border-radius: 999px;
+  border: 1px solid var(--bthwani-control-panel-border);
+}
+
+.surfaceMetaChipClickable {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.surfaceMetaChipClickable:hover {
+  background-color: var(--bthwani-control-panel-border);
+  border-color: var(--bthwani-control-panel-text-muted);
+}
+
+.surfaceMetaChipActive {
+  background-color: var(--bthwani-control-panel-brand);
+  color: var(--bthwani-text-inverse);
+  border-color: var(--bthwani-control-panel-brand);
+}
+
+.inspectorInput,
+.inspectorTextarea,
+.inspectorSelect {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 6px;
+  color: var(--bthwani-control-panel-text);
+  font-family: inherit;
+  font-size: 12px;
+  box-sizing: border-box;
+  margin-top: 4px;
+  outline: none;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.inspectorInput:focus,
+.inspectorTextarea:focus,
+.inspectorSelect:focus {
+  border-color: var(--bthwani-control-panel-brand);
+}
+
+.inspectorTextarea {
+  resize: vertical;
+}
+
+.quantityBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--bthwani-control-panel-border);
+  background-color: var(--bthwani-control-panel-surface-inset);
+  color: var(--bthwani-control-panel-text);
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.quantityBtn:hover {
+  background-color: var(--bthwani-control-panel-border);
+}
+
+.overrideNotification {
+  font-size: 11px;
+  color: var(--bthwani-success);
+  margin-top: 4px;
+  font-weight: bold;
+}
+
+.surfaceInfoCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background-color: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.surfaceInfoCardButton {
+  width: 100%;
+  direction: rtl;
+  text-align: right;
+  cursor: pointer;
+}
+
+.surfaceInfoCardActive {
+  border-color: var(--bthwani-control-panel-brand);
+  box-shadow: 0 10px 24px var(--bthwani-overlay);
+}
+
+.surfaceInfoCardTextBlock {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.surfaceInfoCardTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+}
+
+.surfaceInfoCardDescription {
+  font-size: 11px;
+  color: var(--bthwani-control-panel-text-muted);
+  line-height: 1.35;
+}
+
+.surfaceFootnote {
+  font-size: 11px;
+  color: var(--bthwani-control-panel-text-soft);
+}
+
+.surfaceMetaWrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.surfaceActionWrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.selectableReasonItem {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: var(--bthwani-control-panel-surface-inset);
+}
+
+.selectableReasonItemActive {
+  background-color: var(--bthwani-brand-surface);
+}
+
+@media (max-width: 1024px) {
+  .surfaceSplitGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .surfaceInspectorPanel {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+
+  .surfaceDetailSplit {
+    flex-direction: column;
+  }
+
+  .surfaceDetailRail {
+    width: 100%;
+    border-right: 0;
+    border-top: 1px solid var(--bthwani-control-panel-border);
+  }
+}
+
+/* Phase 2: escalation flow catalog reference (read-only registry display) */
+.escalationCatalogSection {
+  margin-top: 24px;
+}
+
+.escalationCatalogRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+  font-size: 12px;
+  direction: rtl;
+}
+
+.escalationCatalogId {
+  font-weight: 600;
+  min-width: 200px;
+  color: var(--bthwani-control-panel-text);
+  text-align: right;
+}
+
+.escalationCatalogMeta {
+  color: var(--bthwani-control-panel-text-muted);
+  min-width: 100px;
+  text-align: right;
+}
+
+.escalationCatalogDomain {
+  color: var(--bthwani-control-panel-text-muted);
+  min-width: 140px;
+  text-align: right;
+}
+
+.escalationCatalogVisibility {
+  min-width: 100px;
+  color: var(--bthwani-control-panel-text);
+  text-align: right;
+}
+
+.escalationCatalogPolicy {
+  min-width: 130px;
+  color: var(--bthwani-control-panel-text);
+  text-align: right;
+}
+
+.escalationCatalogBadgeFinance {
+  color: var(--bthwani-warning);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ── Topology Lane ─────────────────────────────────────────────────────────── */
+
+.topologyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topologyCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.topologyFlowBox {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  font-family: monospace;
+  direction: ltr;
+  text-align: left;
+  font-size: 12px;
+}
+
+.topologyCardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.topologyActionBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INLINE ACCORDION — ينسدل من الطلب نفسه
+   Used by OrderRescueScreen and AssistedOrderDeskScreen
+   ═══════════════════════════════════════════════════════════════ */
+
+.rescueRowWrap {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--bthwani-control-panel-border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background: var(--bthwani-control-panel-surface);
+}
+
+.rescueRowWrapActive {
+  border-color: var(--bthwani-control-panel-brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bthwani-control-panel-brand) 20%, transparent);
+}
+
+.rescueRowSummary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.rescueRowSummary:hover {
+  background: var(--bthwani-control-panel-surface-inset);
+}
+
+.rescueSeverityBar {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.rescueSeverityBarDanger { background: var(--bthwani-danger); }
+.rescueSeverityBarWarning { background: var(--bthwani-warning); }
+
+.rescueRowInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  text-align: right;
+}
+
+.rescueRowId {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text-muted);
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.rescueRowCustomer {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rescueRowBlocker {
+  font-size: 11px;
+  color: var(--bthwani-control-panel-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}
+
+.rescueRowMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.rescueSeverityBadge {
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.rescueSeverityBadgeDanger {
+  background: var(--bthwani-danger-surface);
+  color: var(--bthwani-danger-text);
+}
+
+.rescueSeverityBadgeWarning {
+  background: var(--bthwani-warning-surface);
+  color: var(--bthwani-warning-text);
+}
+
+.rescueRowSla {
+  font-size: 10px;
+  color: var(--bthwani-control-panel-text-muted);
+  font-weight: 600;
+  direction: rtl;
+}
+
+.rescueToggleBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid var(--bthwani-control-panel-border);
+  background: transparent;
+  color: var(--bthwani-control-panel-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.rescueToggleBtn:hover {
+  background: var(--bthwani-control-panel-border);
+  color: var(--bthwani-control-panel-text);
+}
+
+.rescueToggleBtnActive {
+  background: var(--bthwani-control-panel-brand);
+  border-color: var(--bthwani-control-panel-brand);
+  color: white;
+  transform: rotate(180deg);
+}
+
+/* ── Accordion body ── */
+.rescueAccordion {
+  border-top: 2px solid var(--bthwani-control-panel-brand);
+  display: flex;
+  flex-direction: column;
+  background: var(--bthwani-control-panel-surface);
+}
+
+/* Step block */
+.rescueStep {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+}
+
+.rescueStepHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.rescueStepNum {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bthwani-control-panel-brand);
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rescueStepNumMuted {
+  background: var(--bthwani-control-panel-surface-inset);
+  color: var(--bthwani-control-panel-text-muted);
+}
+
+.rescueStepTitle {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+  flex: 1;
+  text-align: right;
+}
+
+.rescueStepSelected {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-brand);
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--bthwani-control-panel-brand) 12%, transparent);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Option chips */
+.rescueChipGrid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rescueChip {
+  padding: 6px 13px;
+  border-radius: 8px;
+  border: 1.5px solid var(--bthwani-control-panel-border);
+  background: var(--bthwani-control-panel-surface-inset);
+  color: var(--bthwani-control-panel-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.13s ease;
+  white-space: nowrap;
+}
+
+.rescueChip:hover {
+  border-color: var(--bthwani-control-panel-brand);
+  color: var(--bthwani-control-panel-brand);
+  background: color-mix(in srgb, var(--bthwani-control-panel-brand) 8%, transparent);
+}
+
+.rescueChipActive {
+  background: var(--bthwani-control-panel-brand);
+  border-color: var(--bthwani-control-panel-brand);
+  color: white;
+  font-weight: 800;
+}
+
+/* Evidence grid — 2 cols */
+.rescueEvidenceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  direction: rtl;
+}
+
+.rescueEvidenceFieldFull {
+  grid-column: 1 / -1;
+}
+
+.rescueFieldLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text-muted);
+  margin-bottom: 4px;
+  text-align: right;
+  display: block;
+}
+
+/* Forbidden actions block */
+.rescueForbiddenBlock {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--bthwani-danger) 8%, transparent);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--bthwani-danger) 25%, transparent);
+}
+
+.rescueForbiddenContent {
+  flex: 1;
+  text-align: right;
+}
+
+.rescueForbiddenTitle {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--bthwani-danger-text);
+  margin-bottom: 4px;
+}
+
+.rescueForbiddenItem {
+  font-size: 11px;
+  color: var(--bthwani-danger-text);
+  opacity: 0.8;
+  padding: 2px 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Support bar */
+.rescueSupportBar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  background: var(--bthwani-control-panel-surface-inset);
+  border-radius: 8px;
+  border: 1px solid var(--bthwani-control-panel-border);
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+
+.rescueSupportBarCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  flex: 1;
+  text-align: right;
+  border-right: 1px solid var(--bthwani-control-panel-border);
+}
+
+.rescueSupportBarCell:first-child {
+  border-right: none;
+}
+
+.rescueSupportBarCellLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.rescueSupportBarCellValue {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--bthwani-control-panel-text);
+}
+
+.rescueSupportNavBtn {
+  padding: 0 14px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  background: var(--bthwani-control-panel-brand);
+  color: white;
+  border: none;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.rescueSupportNavBtn:hover {
+  opacity: 0.85;
+}
+
+/* WLT row */
+.rescueWltRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  direction: rtl;
+}
+
+.rescueWltCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Cross-surface links */
+.rescueLinkItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bthwani-control-panel-surface-inset);
+  border-radius: 8px;
+  border: 1px solid var(--bthwani-control-panel-border);
+}
+
+.rescueLinkItemLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bthwani-control-panel-text);
+  text-align: right;
+}
+
+.rescueLinkItemBtn {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1.5px solid var(--bthwani-control-panel-brand);
+  background: transparent;
+  color: var(--bthwani-control-panel-brand);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.13s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rescueLinkItemBtn:hover {
+  background: var(--bthwani-control-panel-brand);
+  color: white;
+}
+
+/* Accordion footer */
+.rescueAccordionFooter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bthwani-control-panel-surface-inset);
+  border-top: 1px solid var(--bthwani-control-panel-border);
+  flex-wrap: wrap;
+}
+
+.rescueSubmitBtn {
+  padding: 10px 28px;
+  border-radius: 8px;
+  background: var(--bthwani-control-panel-brand);
+  color: white;
+  border: none;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.rescueSubmitBtn:hover { opacity: 0.85; }
+
+.rescueSecondaryBtn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bthwani-control-panel-text);
+  border: 1.5px solid var(--bthwani-control-panel-border);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+
+.rescueSecondaryBtn:hover {
+  border-color: var(--bthwani-control-panel-brand);
+  color: var(--bthwani-control-panel-brand);
+}
+
+.rescueToast {
+  padding: 8px 14px;
+  background: var(--bthwani-success-surface);
+  color: var(--bthwani-success-text);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Custom premium skeleton loader styling */
+@keyframes skeletonPulse {
+  0% {
+    background-color: var(--bthwani-control-panel-border, #E2E8F0);
+    opacity: 0.6;
+  }
+  50% {
+    background-color: var(--bthwani-control-panel-surface-inset, #F1F5F9);
+    opacity: 0.9;
+  }
+  100% {
+    background-color: var(--bthwani-control-panel-border, #E2E8F0);
+    opacity: 0.6;
+  }
+}
+
+.skeletonBlock {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+  border-radius: 6px;
+  background-color: var(--bthwani-control-panel-border, #E2E8F0);
+}
+
+.skeletonKpi {
+  height: 48px;
+  width: 120px;
+}
+
+.skeletonTextLine {
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeletonTextLineShort {
+  width: 60%;
+}
+
+.skeletonTableRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--bthwani-control-panel-border);
+}
+
+.skeletonCell {
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* Styling for top warning strip */
+.topWarningStrip {
+  background: var(--bth-warning-surface, #FFFBEB);
+  border-bottom: 1px solid var(--bth-warning-border, #FEF3C7);
+  padding: 6px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  direction: rtl;
+}
+
+.topWarningTextAmber {
+  color: var(--bth-warning-text, #D97706);
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.topWarningDivider {
+  color: var(--bth-text-muted, #64748B);
+  font-size: 11px;
+}
+
+.topWarningTextDanger {
+  color: var(--bth-danger-text, #DC2626);
+  font-weight: bold;
+  font-size: 11px;
+}
+
+/* Skeleton Loading Visual Styles */
+.skeletonWarningStrip {
+  background: var(--bth-warning-surface, #FFFBEB);
+  border-bottom: 1px solid var(--bth-warning-border, #FEF3C7);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  direction: rtl;
+}
+
+.skeletonWarningDot {
+  color: #CBD5E1;
+}
+
+.skeletonHeader {
+  padding: 16px 20px;
+}
+
+.skeletonHeaderTitleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.skeletonHeaderTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-direction: row-reverse;
+}
+
+.skeletonPulseCompactGap {
+  gap: 8px;
+}
+
+.skeletonKpiBox {
+  padding: 6px 12px;
+  min-width: 110px;
+}
+
+.skeletonNavDock {
+  padding: 8px 20px;
+  gap: 8px;
+}
+
+.skeletonWorkbench {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  padding: 16px;
+  direction: rtl;
+  flex: 1;
+}
+
+.skeletonRightList {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonTableWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--bthwani-control-panel-border, #E2E8F0);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.skeletonRowItem {
+  background: var(--bthwani-control-panel-surface, #FFFFFF);
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.skeletonRowDetails {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-direction: row-reverse;
+}
+
+.skeletonRowTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.skeletonRowActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-direction: row-reverse;
+}
+
+.skeletonLeftInspector {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Empty State Styling */
+.emptyStateContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  direction: rtl;
+}
+
+.emptyStateIconCircle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--bth-brand-surface, #FFE6D9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--bth-brand, #FF500D);
+  font-size: 32px;
+}
+
+.emptyStateTitle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: var(--bthwani-control-panel-text);
+}
+
+.emptyStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text-muted);
+  max-width: 480px;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.emptyStateButton {
+  padding: 8px 20px;
+  background: var(--bthwani-control-panel-brand, #FF500D);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 80, 13, 0.2);
+}
+
+/* Error State Styling */
+.errorStateContainer {
+  padding: 24px;
+  background: var(--bth-danger-surface, #FEF2F2);
+  border: 1.5px solid var(--bth-danger-border, #FEE2E2);
+  border-radius: 12px;
+  margin: 16px;
+  direction: rtl;
+  text-align: right;
+}
+
+.errorStateTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-direction: row-reverse;
+}
+
+.errorStateTitle {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bth-danger-text, #DC2626);
+}
+
+.errorStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.errorStateLogs {
+  background: #FFFFFF;
+  border: 1px solid var(--bthwani-control-panel-border, #E2E8F0);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-family: monospace;
+  font-size: 11px;
+  direction: ltr;
+  text-align: left;
+}
+
+.errorStateLogHeader {
+  font-weight: bold;
+  color: var(--bth-danger-text, #DC2626);
+  margin-bottom: 6px;
+}
+
+.errorStateRetryButton {
+  padding: 8px 16px;
+  background: var(--bth-danger-text, #DC2626);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Offline State Styling */
+.offlineStateContainer {
+  padding: 24px;
+  background: var(--bth-warning-surface);
+  border: 1.5px solid var(--bth-warning-border);
+  border-radius: 12px;
+  margin: 16px;
+  direction: rtl;
+  text-align: right;
+}
+
+.offlineStateTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-direction: row-reverse;
+}
+
+.offlineStateTitle {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bth-warning-text);
+}
+
+.offlineStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.offlineStateInfo {
+  background: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.offlineStateButton {
+  padding: 8px 16px;
+  background: var(--bth-warning-text);
+  color: var(--bthwani-text-inverse);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Disabled State Styling */
+.disabledStateContainer {
+  padding: 24px;
+  background: var(--bth-danger-surface);
+  border: 1.5px solid var(--bth-danger-border);
+  border-radius: 12px;
+  margin: 16px;
+  direction: rtl;
+  text-align: right;
+}
+
+.disabledStateTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-direction: row-reverse;
+}
+
+.disabledStateTitle {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bth-danger-text);
+}
+
+.disabledStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.disabledStateInfo {
+  background: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.disabledStateButton {
+  padding: 8px 16px;
+  background: var(--bthwani-control-panel-text-muted);
+  color: var(--bthwani-text-inverse);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Blocked State Styling */
+.blockedStateContainer {
+  padding: 24px;
+  background: var(--bth-warning-surface);
+  border: 1.5px solid var(--bth-warning-border);
+  border-radius: 12px;
+  margin: 16px;
+  direction: rtl;
+  text-align: right;
+}
+
+.blockedStateTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-direction: row-reverse;
+}
+
+.blockedStateTitle {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bth-warning-text);
+}
+
+.blockedStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.blockedStateInfo {
+  background: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.blockedStateButton {
+  padding: 8px 16px;
+  background: var(--bthwani-control-panel-brand);
+  color: var(--bthwani-text-inverse);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Warning Strip ───────────────────────────────────────────────────────── */
+
+.warningStrip {
+  background: var(--bth-warning-surface);
+  border-bottom: 1px solid var(--bth-warning-border);
+  padding: 6px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  direction: rtl;
+  flex-shrink: 0;
+}
+
+.warningStripSkeleton {
+  background: var(--bth-warning-surface);
+  border-bottom: 1px solid var(--bth-warning-border);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  direction: rtl;
+  flex-shrink: 0;
+}
+
+.warningStripAlert {
+  color: var(--bth-warning-text);
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.warningStripDanger {
+  color: var(--bth-danger-text);
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.warningStripSep {
+  color: var(--bthwani-control-panel-text-muted);
+  font-size: 11px;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────── */
+
+.emptyStateContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  direction: rtl;
+}
+
+.emptyStateIconBox {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--bth-brand-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--bthwani-brand);
+  font-size: 32px;
+}
+
+.emptyStateTitle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: var(--bthwani-control-panel-text);
+}
+
+.emptyStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text-muted);
+  max-width: 480px;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.emptyStateButton {
+  padding: 8px 20px;
+  background: var(--bthwani-control-panel-brand);
+  color: var(--bthwani-text-inverse);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--bthwani-overlay);
+}
+
+/* ── Error State ─────────────────────────────────────────────────────────── */
+
+.errorStateContainer {
+  padding: 24px;
+  background: var(--bth-danger-surface);
+  border: 1.5px solid var(--bth-danger-border);
+  border-radius: 12px;
+  margin: 16px;
+  direction: rtl;
+  text-align: right;
+}
+
+.errorStateTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-direction: row-reverse;
+}
+
+.errorStateTitle {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--bth-danger-text);
+}
+
+.errorStateDesc {
+  font-size: 13px;
+  color: var(--bthwani-control-panel-text);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.errorStateDiagnostics {
+  background: var(--bthwani-control-panel-surface);
+  border: 1px solid var(--bthwani-control-panel-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 20px;
+  font-family: monospace;
+  font-size: 11px;
+  direction: ltr;
+  text-align: left;
+}
+
+.errorStateDiagnosticsHeader {
+  font-weight: bold;
+  color: var(--bth-danger-text);
+  margin-bottom: 6px;
+}
+
+.errorStateButton {
+  padding: 8px 16px;
+  background: var(--bth-danger-text);
+  color: var(--bthwani-text-inverse);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Shared State Actions Row ────────────────────────────────────────────── */
+
+.stateActionsRow {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── Disabled State Policy Info ──────────────────────────────────────────── */
+
+.disabledStatePolicyHeader {
+  font-weight: bold;
+  color: var(--bthwani-control-panel-text);
+  margin-bottom: 6px;
+}
+
+.disabledStatePolicyRow {
+  margin-bottom: 4px;
+}

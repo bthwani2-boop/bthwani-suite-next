@@ -36,8 +36,19 @@ import {
   type DshHomeAdminContentInput,
   type DshHomeAdminKind,
 } from "../../shared/home-discovery";
+import { opsTheme } from "../../shared/operations";
+import {
+  VideoStudioCommandDeck,
+  CampaignsCommandDeck,
+  PartnerOffersCommandDeck,
+  ImageProductReviewCommandDeck,
+  BenefitsSubscriptionsCommandDeck,
+  GrowthCommandDeck,
+  SignalsMeasurementCommandDeck,
+  TickerCommandDeck,
+} from "./MarketingCommandDecks";
 
-// ─── Main Tab button (underline style) ──────────────────────────────────────────
+// â”€â”€â”€ Main Tab button (underline style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MainTabButton({
   active,
@@ -70,7 +81,7 @@ function MainTabButton({
   );
 }
 
-// ─── Tab button (pill style) ──────────────────────────────────────────────────
+// â”€â”€â”€ Tab button (pill style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TabButton({
   active,
@@ -103,7 +114,7 @@ function TabButton({
   );
 }
 
-// ─── Section Tab button ───────────────────────────────────────────────────────
+// â”€â”€â”€ Section Tab button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SectionTabButton({
   active,
@@ -146,7 +157,7 @@ export function MarketingDashboardScreen() {
   const subTabs = getMarketingSubTabsForMain(mainTab);
   const metrics = useMemo(() => buildMarketingKpiMetrics(), []);
 
-  // ── Auth gate ──────────────────────────────────────────────────────────────
+  // â”€â”€ Auth gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (identity.state.kind !== "authenticated") {
     return (
       <section
@@ -163,14 +174,14 @@ export function MarketingDashboardScreen() {
         }}
       >
         <div>
-          <h2 style={{ margin: 0, textAlign: "right" }}>تسويق DSH</h2>
+          <h2 style={{ margin: 0, textAlign: "right" }}>ØªØ³ÙˆÙŠÙ‚ DSH</h2>
           <p style={{ opacity: 0.7, textAlign: "right" }}>
-            يتطلب حساب operator مصرح به للوصول للحوكمة التسويقية.
+            ÙŠØªØ·Ù„Ø¨ Ø­Ø³Ø§Ø¨ operator Ù…ØµØ±Ø­ Ø¨Ù‡ Ù„Ù„ÙˆØµÙˆÙ„ Ù„Ù„Ø­ÙˆÙƒÙ…Ø© Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠØ©.
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <CpButton onClick={() => devBypassLogin("operator")} style={{ flex: 1 }}>
-            تجاوز تسجيل الدخول (مطور)
+            ØªØ¬Ø§ÙˆØ² ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ (Ù…Ø·ÙˆØ±)
           </CpButton>
         </div>
       </section>
@@ -181,22 +192,22 @@ export function MarketingDashboardScreen() {
     <DataTablePageFrame
       dir="rtl"
       header={
-        <CpPageHeader title="تسويق DSH">
+        <CpPageHeader title="ØªØ³ÙˆÙŠÙ‚ DSH">
           <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            حوكمة المحتوى التسويقي والنمو الاستراتيجي
+            Ø­ÙˆÙƒÙ…Ø© Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ ÙˆØ§Ù„Ù†Ù…Ùˆ Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ
           </p>
 
-          {/* ── KPI Strip ─────────────────────────────────────────────── */}
+          {/* â”€â”€ KPI Strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <CpKpiStrip>
-            <CpKpiCard label="بوابات الشركاء"    value={metrics.partnerGatesActive} />
-            <CpKpiCard label="منتجات محجوبة"    value={metrics.blockedProductsActive} />
-            <CpKpiCard label="ظهور تجاري"       value={`${metrics.commercialVisibilityBlocked} محجوب حالياً`} />
-            <CpKpiCard label="إشارات غير مقروءة" value={`${metrics.unreadSignalsCount} (${metrics.promoCandidatesCount} مرشحين ترويج)`} />
+            <CpKpiCard label="Ø¨ÙˆØ§Ø¨Ø§Øª Ø§Ù„Ø´Ø±ÙƒØ§Ø¡"    value={metrics.partnerGatesActive} />
+            <CpKpiCard label="Ù…Ù†ØªØ¬Ø§Øª Ù…Ø­Ø¬ÙˆØ¨Ø©"    value={metrics.blockedProductsActive} />
+            <CpKpiCard label="Ø¸Ù‡ÙˆØ± ØªØ¬Ø§Ø±ÙŠ"       value={`${metrics.commercialVisibilityBlocked} Ù…Ø­Ø¬ÙˆØ¨ Ø­Ø§Ù„ÙŠØ§Ù‹`} />
+            <CpKpiCard label="Ø¥Ø´Ø§Ø±Ø§Øª ØºÙŠØ± Ù…Ù‚Ø±ÙˆØ¡Ø©" value={`${metrics.unreadSignalsCount} (${metrics.promoCandidatesCount} Ù…Ø±Ø´Ø­ÙŠÙ† ØªØ±ÙˆÙŠØ¬)`} />
           </CpKpiStrip>
         </CpPageHeader>
       }
     >
-      {/* ── Main Tab Navigation (matching underline style) ────────────────── */}
+      {/* â”€â”€ Main Tab Navigation (matching underline style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <nav
         dir="rtl"
         style={{
@@ -223,7 +234,7 @@ export function MarketingDashboardScreen() {
         ))}
       </nav>
 
-      {/* ── Sub-Tabs (Pills) ──────────────────────────────────────────────── */}
+      {/* â”€â”€ Sub-Tabs (Pills) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {subTabs.length > 0 && (
         <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 1rem", flexWrap: "wrap" }}>
           {subTabs.map((tab) => (
@@ -238,7 +249,7 @@ export function MarketingDashboardScreen() {
         </div>
       )}
 
-      {/* ── Main Dashboard Layout ─────────────────────────────────────────── */}
+      {/* â”€â”€ Main Dashboard Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {mainTab === "visibility-gates" && (
         <div
           style={{
@@ -249,9 +260,9 @@ export function MarketingDashboardScreen() {
             alignItems: "start",
           }}
         >
-          {/* ── Right Column: Interactive Gates & Content ─────────────────── */}
+          {/* â”€â”€ Right Column: Interactive Gates & Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            {/* Section Tabs: الأهلية / الكبت / التدقيق / الشرائح */}
+            {/* Section Tabs: Ø§Ù„Ø£Ù‡Ù„ÙŠØ© / Ø§Ù„ÙƒØ¨Øª / Ø§Ù„ØªØ¯Ù‚ÙŠÙ‚ / Ø§Ù„Ø´Ø±Ø§Ø¦Ø­ */}
             <div
               style={{
                 display: "flex",
@@ -283,13 +294,13 @@ export function MarketingDashboardScreen() {
                 flexWrap: "wrap",
               }}
             >
-              <span style={{ fontWeight: 600, opacity: 0.8 }}>جسور الحوكمة التفاعلية:</span>
+              <span style={{ fontWeight: 600, opacity: 0.8 }}>Ø¬Ø³ÙˆØ± Ø§Ù„Ø­ÙˆÙƒÙ…Ø© Ø§Ù„ØªÙØ§Ø¹Ù„ÙŠØ©:</span>
               {GOVERNANCE_BRIDGES.map((bridge) => (
                 <a
                   key={bridge.id}
                   href={bridge.targetRoute}
                   style={{
-                    color: "#FF500D",
+                    color: opsTheme.brand,
                     textDecoration: "none",
                     fontWeight: 600,
                     background: "#FFF7F5",
@@ -312,25 +323,25 @@ export function MarketingDashboardScreen() {
                 padding: "1.5rem",
               }}
             >
-              <h3 style={{ margin: "0 0 0.5rem", color: "#E11D48", fontSize: "1.05rem" }}>
-                بوابات الظهور عبر الأسطح
+              <h3 style={{ margin: "0 0 0.5rem", color: opsTheme.danger, fontSize: "1.05rem" }}>
+                Ø¨ÙˆØ§Ø¨Ø§Øª Ø§Ù„Ø¸Ù‡ÙˆØ± Ø¹Ø¨Ø± Ø§Ù„Ø£Ø³Ø·Ø­
               </h3>
               <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.7, lineHeight: 1.6 }}>
-                بوابة تفعيل الشركاء تتحقق من جاهزية المتجر قبل إطلاق أي عروض تسويقية. بوابة نشر المنتجات تضمن سلامة مواصفات وصور المنتج قبل النشر. توقعات الظهور التجاري تقتصر على محاكاة العناصر المرئية للعملاء. قنوات إشارات التنسيق تعمل على تزامن القرارات لحظياً وبدون تداخل.
+                Ø¨ÙˆØ§Ø¨Ø© ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø´Ø±ÙƒØ§Ø¡ ØªØªØ­Ù‚Ù‚ Ù…Ù† Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ù…ØªØ¬Ø± Ù‚Ø¨Ù„ Ø¥Ø·Ù„Ø§Ù‚ Ø£ÙŠ Ø¹Ø±ÙˆØ¶ ØªØ³ÙˆÙŠÙ‚ÙŠØ©. Ø¨ÙˆØ§Ø¨Ø© Ù†Ø´Ø± Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª ØªØ¶Ù…Ù† Ø³Ù„Ø§Ù…Ø© Ù…ÙˆØ§ØµÙØ§Øª ÙˆØµÙˆØ± Ø§Ù„Ù…Ù†ØªØ¬ Ù‚Ø¨Ù„ Ø§Ù„Ù†Ø´Ø±. ØªÙˆÙ‚Ø¹Ø§Øª Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ¬Ø§Ø±ÙŠ ØªÙ‚ØªØµØ± Ø¹Ù„Ù‰ Ù…Ø­Ø§ÙƒØ§Ø© Ø§Ù„Ø¹Ù†Ø§ØµØ± Ø§Ù„Ù…Ø±Ø¦ÙŠØ© Ù„Ù„Ø¹Ù…Ù„Ø§Ø¡. Ù‚Ù†ÙˆØ§Øª Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„ØªÙ†Ø³ÙŠÙ‚ ØªØ¹Ù…Ù„ Ø¹Ù„Ù‰ ØªØ²Ø§Ù…Ù† Ø§Ù„Ù‚Ø±Ø§Ø±Ø§Øª Ù„Ø­Ø¸ÙŠØ§Ù‹ ÙˆØ¨Ø¯ÙˆÙ† ØªØ¯Ø§Ø®Ù„.
               </p>
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <CpButton style={{ background: "#FF500D", color: "#FFF", border: "none", borderRadius: "0.5rem", padding: "0.45rem 1rem", cursor: "pointer" }}>
-                  عروض الشركاء
+                <CpButton style={{ background: opsTheme.brand, color: opsTheme.textInverse, border: "none", borderRadius: "0.5rem", padding: "0.45rem 1rem", cursor: "pointer" }}>
+                  Ø¹Ø±ÙˆØ¶ Ø§Ù„Ø´Ø±ÙƒØ§Ø¡
                 </CpButton>
                 <CpButton style={{ borderRadius: "0.5rem", padding: "0.45rem 1rem" }}>
-                  الحملات
+                  Ø§Ù„Ø­Ù…Ù„Ø§Øª
                 </CpButton>
                 <CpButton style={{ borderRadius: "0.5rem", padding: "0.45rem 1rem" }}>
-                  مراجعة الميديا
+                  Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ù…ÙŠØ¯ÙŠØ§
                 </CpButton>
                 <CpButton style={{ borderRadius: "0.5rem", padding: "0.45rem 1rem" }}>
-                  الإشارات
+                  Ø§Ù„Ø¥Ø´Ø§Ø±Ø§Øª
                 </CpButton>
               </div>
             </div>
@@ -346,25 +357,25 @@ export function MarketingDashboardScreen() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                 <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-                  أهلية الظهور / موانع النشر / سجلات التدقيق والشرائح
+                  Ø£Ù‡Ù„ÙŠØ© Ø§Ù„Ø¸Ù‡ÙˆØ± / Ù…ÙˆØ§Ù†Ø¹ Ø§Ù„Ù†Ø´Ø± / Ø³Ø¬Ù„Ø§Øª Ø§Ù„ØªØ¯Ù‚ÙŠÙ‚ ÙˆØ§Ù„Ø´Ø±Ø§Ø¦Ø­
                 </h4>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ fontSize: "0.75rem", opacity: 0.65 }}>ملخص الحوكمة</span>
-                  <span style={{ background: "#FEE2E2", color: "#991B1B", padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontWeight: 700, fontSize: "0.85rem" }}>
+                  <span style={{ fontSize: "0.75rem", opacity: 0.65 }}>Ù…Ù„Ø®Øµ Ø§Ù„Ø­ÙˆÙƒÙ…Ø©</span>
+                  <span style={{ background: opsTheme.dangerSurface, color: 'var(--status-danger-strong, #991B1B)', padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontWeight: 700, fontSize: "0.85rem" }}>
                     0
                   </span>
-                  <span style={{ fontSize: "0.75rem", color: "#991B1B", fontWeight: 600 }}>eligibility</span>
+                  <span style={{ fontSize: "0.75rem", color: 'var(--status-danger-strong, #991B1B)', fontWeight: 600 }}>eligibility</span>
                 </div>
               </div>
               <p style={{ margin: 0, fontSize: "0.813rem", opacity: 0.7, lineHeight: 1.5 }}>
-                التحقق من توافق معايير الحملات والشركاء مع سياسات النشر دون تجاوز ضوابط التفعيل.
+                Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØªÙˆØ§ÙÙ‚ Ù…Ø¹Ø§ÙŠÙŠØ± Ø§Ù„Ø­Ù…Ù„Ø§Øª ÙˆØ§Ù„Ø´Ø±ÙƒØ§Ø¡ Ù…Ø¹ Ø³ÙŠØ§Ø³Ø§Øª Ø§Ù„Ù†Ø´Ø± Ø¯ÙˆÙ† ØªØ¬Ø§ÙˆØ² Ø¶ÙˆØ§Ø¨Ø· Ø§Ù„ØªÙØ¹ÙŠÙ„.
               </p>
             </div>
 
-            {/* ── Section: بوابة تفعيل الشريك إلى الظهور ── */}
+            {/* â”€â”€ Section: Ø¨ÙˆØ§Ø¨Ø© ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø´Ø±ÙŠÙƒ Ø¥Ù„Ù‰ Ø§Ù„Ø¸Ù‡ÙˆØ± â”€â”€ */}
             <div>
               <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem", fontWeight: 700 }}>
-                بوابة تفعيل الشريك إلى الظهور
+                Ø¨ÙˆØ§Ø¨Ø© ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø´Ø±ÙŠÙƒ Ø¥Ù„Ù‰ Ø§Ù„Ø¸Ù‡ÙˆØ±
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {PARTNER_GATE_CARDS.map((card) => {
@@ -384,7 +395,7 @@ export function MarketingDashboardScreen() {
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <strong style={{ fontSize: "0.875rem", color: "#1E293B" }}>{card.title}</strong>
+                        <strong style={{ fontSize: "0.875rem", color: opsTheme.text }}>{card.title}</strong>
                         <span
                           style={{
                             background: isBypassed ? "#D1FAE5" : card.statusColor + "15",
@@ -395,13 +406,13 @@ export function MarketingDashboardScreen() {
                             fontSize: "0.72rem",
                           }}
                         >
-                          {isBypassed ? "تم التجاوز بنجاح" : card.statusTag}
+                          {isBypassed ? "ØªÙ… Ø§Ù„ØªØ¬Ø§ÙˆØ² Ø¨Ù†Ø¬Ø§Ø­" : card.statusTag}
                         </span>
                       </div>
 
                       <div style={{ fontSize: "0.75rem", opacity: 0.55, display: "flex", gap: "1rem" }}>
-                        <span>المالك: {card.owner}</span>
-                        <span>السطح المتأثر: {card.surface}</span>
+                        <span>Ø§Ù„Ù…Ø§Ù„Ùƒ: {card.owner}</span>
+                        <span>Ø§Ù„Ø³Ø·Ø­ Ø§Ù„Ù…ØªØ£Ø«Ø±: {card.surface}</span>
                         <span>{card.auditNote}</span>
                       </div>
 
@@ -420,12 +431,12 @@ export function MarketingDashboardScreen() {
                               fontSize: "0.75rem",
                               padding: "0.35rem 0.85rem",
                               background: "#D1FAE5",
-                              color: "#065F46",
+                              color: 'var(--status-success-strong, #065F46)',
                               border: "1px solid #6EE7B7",
                               borderRadius: "0.5rem",
                             }}
                           >
-                            تجاوز البوابة
+                            ØªØ¬Ø§ÙˆØ² Ø§Ù„Ø¨ÙˆØ§Ø¨Ø©
                           </CpButton>
                         )}
                       </div>
@@ -435,10 +446,10 @@ export function MarketingDashboardScreen() {
               </div>
             </div>
 
-            {/* ── Section: بوابة نشر المنتج ── */}
+            {/* â”€â”€ Section: Ø¨ÙˆØ§Ø¨Ø© Ù†Ø´Ø± Ø§Ù„Ù…Ù†ØªØ¬ â”€â”€ */}
             <div>
               <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem", fontWeight: 700 }}>
-                بوابة نشر المنتج
+                Ø¨ÙˆØ§Ø¨Ø© Ù†Ø´Ø± Ø§Ù„Ù…Ù†ØªØ¬
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {PRODUCT_GATE_CARDS.map((card) => {
@@ -458,7 +469,7 @@ export function MarketingDashboardScreen() {
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <strong style={{ fontSize: "0.875rem", color: "#1E293B" }}>{card.title}</strong>
+                        <strong style={{ fontSize: "0.875rem", color: opsTheme.text }}>{card.title}</strong>
                         <span
                           style={{
                             background: isBypassed ? "#D1FAE5" : "#FFF1F2",
@@ -469,14 +480,14 @@ export function MarketingDashboardScreen() {
                             fontSize: "0.72rem",
                           }}
                         >
-                          {isBypassed ? "تم التجاوز بنجاح" : card.statusTag}
+                          {isBypassed ? "ØªÙ… Ø§Ù„ØªØ¬Ø§ÙˆØ² Ø¨Ù†Ø¬Ø§Ø­" : card.statusTag}
                         </span>
                       </div>
 
                       <div style={{ fontSize: "0.75rem", opacity: 0.55, display: "flex", gap: "1rem" }}>
-                        <span>الموانع: {card.restrictionsCount}</span>
-                        <span>النشر محجوب</span>
-                        <span>بوابة الشريك: {card.partnerGateStatus}</span>
+                        <span>Ø§Ù„Ù…ÙˆØ§Ù†Ø¹: {card.restrictionsCount}</span>
+                        <span>Ø§Ù„Ù†Ø´Ø± Ù…Ø­Ø¬ÙˆØ¨</span>
+                        <span>Ø¨ÙˆØ§Ø¨Ø© Ø§Ù„Ø´Ø±ÙŠÙƒ: {card.partnerGateStatus}</span>
                       </div>
 
                       <div style={{ display: "flex", gap: "0.5rem", alignSelf: "flex-end", marginTop: "0.25rem" }}>
@@ -490,12 +501,12 @@ export function MarketingDashboardScreen() {
                               fontSize: "0.75rem",
                               padding: "0.35rem 0.85rem",
                               background: "#D1FAE5",
-                              color: "#065F46",
+                              color: 'var(--status-success-strong, #065F46)',
                               border: "1px solid #6EE7B7",
                               borderRadius: "0.5rem",
                             }}
                           >
-                            تجاوز الموانع
+                            ØªØ¬Ø§ÙˆØ² Ø§Ù„Ù…ÙˆØ§Ù†Ø¹
                           </CpButton>
                         )}
                       </div>
@@ -506,7 +517,7 @@ export function MarketingDashboardScreen() {
             </div>
           </div>
 
-          {/* ── Left Column: Quick Decision & Signals ───────────────────────── */}
+          {/* â”€â”€ Left Column: Quick Decision & Signals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {/* Quick Decision Board */}
             <div
@@ -518,20 +529,20 @@ export function MarketingDashboardScreen() {
               }}
             >
               <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.9rem", fontWeight: 700 }}>
-                لوحة القرار السريع
+                Ù„ÙˆØ­Ø© Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø³Ø±ÙŠØ¹
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-                  <span style={{ opacity: 0.7 }}>بوابات الشركاء:</span>
-                  <strong style={{ color: "#FF500D" }}>{metrics.partnerGatesActive} مسارات نشطة</strong>
+                  <span style={{ opacity: 0.7 }}>Ø¨ÙˆØ§Ø¨Ø§Øª Ø§Ù„Ø´Ø±ÙƒØ§Ø¡:</span>
+                  <strong style={{ color: opsTheme.brand }}>{metrics.partnerGatesActive} Ù…Ø³Ø§Ø±Ø§Øª Ù†Ø´Ø·Ø©</strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-                  <span style={{ opacity: 0.7 }}>منتجات محجوبة:</span>
-                  <strong>{metrics.blockedProductsActive} موانع نشطة</strong>
+                  <span style={{ opacity: 0.7 }}>Ù…Ù†ØªØ¬Ø§Øª Ù…Ø­Ø¬ÙˆØ¨Ø©:</span>
+                  <strong>{metrics.blockedProductsActive} Ù…ÙˆØ§Ù†Ø¹ Ù†Ø´Ø·Ø©</strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-                  <span style={{ opacity: 0.7 }}>ظهور تجاري:</span>
-                  <strong style={{ color: "#065F46" }}>{metrics.commercialVisibilityBlocked} محجوب حالياً</strong>
+                  <span style={{ opacity: 0.7 }}>Ø¸Ù‡ÙˆØ± ØªØ¬Ø§Ø±ÙŠ:</span>
+                  <strong style={{ color: 'var(--status-success-strong, #065F46)' }}>{metrics.commercialVisibilityBlocked} Ù…Ø­Ø¬ÙˆØ¨ Ø­Ø§Ù„ÙŠØ§Ù‹</strong>
                 </div>
               </div>
             </div>
@@ -546,7 +557,7 @@ export function MarketingDashboardScreen() {
               }}
             >
               <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.9rem", fontWeight: 700 }}>
-                إشارات التسليم إلى التسويق
+                Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„ØªØ³Ù„ÙŠÙ… Ø¥Ù„Ù‰ Ø§Ù„ØªØ³ÙˆÙŠÙ‚
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {DELIVERY_SIGNAL_CARDS.map((signal) => (
@@ -562,7 +573,7 @@ export function MarketingDashboardScreen() {
                       gap: "0.35rem",
                     }}
                   >
-                    <p style={{ margin: 0, fontSize: "0.775rem", fontWeight: 600, color: "#1E293B", lineHeight: 1.4 }}>
+                    <p style={{ margin: 0, fontSize: "0.775rem", fontWeight: 600, color: opsTheme.text, lineHeight: 1.4 }}>
                       {signal.title}
                     </p>
                     <span
@@ -590,7 +601,7 @@ export function MarketingDashboardScreen() {
                         marginTop: "0.25rem",
                       }}
                     >
-                      فتح الإشارات
+                      ÙØªØ­ Ø§Ù„Ø¥Ø´Ø§Ø±Ø§Øª
                     </CpButton>
                   </div>
                 ))}
@@ -600,42 +611,37 @@ export function MarketingDashboardScreen() {
         </div>
       )}
 
-      {/* ── Banners Tab ── */}
+      {/* â”€â”€ Banners Tab â”€â”€ */}
       {mainTab === "banners-carousel" && (
         <MarketingHomeDiscoveryPanel kind="banners" />
       )}
 
-      {/* ── Promos Tab ── */}
+      {/* â”€â”€ Promos Tab â”€â”€ */}
       {mainTab === "homepage-promos" && (
         <MarketingHomeDiscoveryPanel kind="promos" />
       )}
 
-      {/* ── Smart Bar / Categories Tab ── */}
+      {/* ─── Smart Bar / Tickers Tab ─── */}
       {mainTab === "smart-bar" && (
-        <MarketingHomeDiscoveryPanel kind="categories" />
+        <TickerCommandDeck />
       )}
 
-      {/* ── Placeholder for other tabs ── */}
-      {mainTab !== "visibility-gates" &&
-        mainTab !== "banners-carousel" &&
-        mainTab !== "homepage-promos" &&
-        mainTab !== "smart-bar" && (
-          <div style={{ padding: "3rem", textAlign: "center" }}>
-            <CpStatePanel
-              role="status"
-              title={MARKETING_MAIN_TABS.find((t) => t.id === mainTab)?.label ?? ""}
-              description="هذا القسم قيد التطوير والمراقبة التشغيلية حالياً."
-            />
-          </div>
-        )}
+      {/* â”€â”€ Placeholder for other tabs â”€â”€ */}
+      {mainTab === "video-studio" && <VideoStudioCommandDeck />}
+      {mainTab === "campaigns" && <CampaignsCommandDeck />}
+      {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
+      {mainTab === "image-product-review" && <ImageProductReviewCommandDeck />}
+      {mainTab === "benefits-subscriptions" && <BenefitsSubscriptionsCommandDeck />}
+      {mainTab === "growth" && <GrowthCommandDeck />}
+      {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
     </DataTablePageFrame>
   );
 }
 
 const KIND_META = {
-  banners: { title: "إدارة بنرات الصفحة الرئيسية", singular: "بنر", imageLabel: "رابط صورة البنر" },
-  promos: { title: "إدارة عروض الصفحة الرئيسية", singular: "عرض", imageLabel: "رابط صورة العرض" },
-  categories: { title: "إدارة تصنيفات الصفحة الرئيسية", singular: "تصنيف", imageLabel: "رابط الأيقونة (اختياري)" },
+  banners: { title: "Ø¥Ø¯Ø§Ø±Ø© Ø¨Ù†Ø±Ø§Øª Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©", singular: "Ø¨Ù†Ø±", imageLabel: "Ø±Ø§Ø¨Ø· ØµÙˆØ±Ø© Ø§Ù„Ø¨Ù†Ø±" },
+  promos: { title: "Ø¥Ø¯Ø§Ø±Ø© Ø¹Ø±ÙˆØ¶ Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©", singular: "Ø¹Ø±Ø¶", imageLabel: "Ø±Ø§Ø¨Ø· ØµÙˆØ±Ø© Ø§Ù„Ø¹Ø±Ø¶" },
+  categories: { title: "Ø¥Ø¯Ø§Ø±Ø© ØªØµÙ†ÙŠÙØ§Øª Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©", singular: "ØªØµÙ†ÙŠÙ", imageLabel: "Ø±Ø§Ø¨Ø· Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)" },
 } as const;
 
 function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind }) {
@@ -644,12 +650,12 @@ function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind
   const meta = KIND_META[kind];
 
   if (controller.state.kind === "loading") {
-    return <CpStatePanel role="status" title="جاري تحميل المحتوى..." />;
+    return <CpStatePanel role="status" title="Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ø­ØªÙˆÙ‰..." />;
   }
   if (controller.state.kind === "error") {
     return (
-      <CpStatePanel role="alert" title="تعذر تحميل البيانات" description={controller.state.message}>
-        <CpButton onClick={controller.retry}>إعادة المحاولة</CpButton>
+      <CpStatePanel role="alert" title="ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª" description={controller.state.message}>
+        <CpButton onClick={controller.retry}>Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©</CpButton>
       </CpStatePanel>
     );
   }
@@ -662,48 +668,48 @@ function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>{meta.title}</h3>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <CpButton onClick={() => controller.select(null)}>إضافة {meta.singular}</CpButton>
-            <CpButton onClick={controller.retry}>تحديث</CpButton>
+            <CpButton onClick={() => controller.select(null)}>Ø¥Ø¶Ø§ÙØ© {meta.singular}</CpButton>
+            <CpButton onClick={controller.retry}>ØªØ­Ø¯ÙŠØ«</CpButton>
           </div>
         </div>
 
         {controller.actionState.kind === "success" && (
-          <p role="status" style={{ color: "#065F46", fontSize: "0.85rem", margin: "0 0 1rem" }}>
+          <p role="status" style={{ color: 'var(--status-success-strong, #065F46)', fontSize: "0.85rem", margin: "0 0 1rem" }}>
             {controller.actionState.message}
           </p>
         )}
         {controller.actionState.kind === "error" && (
-          <p role="alert" style={{ color: "#DC2626", fontSize: "0.85rem", margin: "0 0 1rem" }}>
+          <p role="alert" style={{ color: opsTheme.danger, fontSize: "0.85rem", margin: "0 0 1rem" }}>
             {controller.actionState.message}
           </p>
         )}
 
         {controller.state.kind === "empty" ? (
-          <CpEmptyTableMessage>لا يوجد محتوى من هذا النوع. أضف أول عنصر.</CpEmptyTableMessage>
+          <CpEmptyTableMessage>Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø­ØªÙˆÙ‰ Ù…Ù† Ù‡Ø°Ø§ Ø§Ù„Ù†ÙˆØ¹. Ø£Ø¶Ù Ø£ÙˆÙ„ Ø¹Ù†ØµØ±.</CpEmptyTableMessage>
         ) : (
           <CpTable aria-label={meta.title}>
             <thead>
               <tr>
-                <CpTableHeaderCell>العنوان</CpTableHeaderCell>
-                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                <CpTableHeaderCell>الترتيب</CpTableHeaderCell>
-                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
-                <CpTableHeaderCell>التحكم</CpTableHeaderCell>
+                <CpTableHeaderCell>Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</CpTableHeaderCell>
+                <CpTableHeaderCell>Ø§Ù„Ø­Ø§Ù„Ø©</CpTableHeaderCell>
+                <CpTableHeaderCell>Ø§Ù„ØªØ±ØªÙŠØ¨</CpTableHeaderCell>
+                <CpTableHeaderCell>Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡</CpTableHeaderCell>
+                <CpTableHeaderCell>Ø§Ù„ØªØ­ÙƒÙ…</CpTableHeaderCell>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id}>
                   <CpTableCell>{item.title}</CpTableCell>
-                  <CpTableCell>{item.isActive ? "نشط" : "موقوف"}</CpTableCell>
+                  <CpTableCell>{item.isActive ? "Ù†Ø´Ø·" : "Ù…ÙˆÙ‚ÙˆÙ"}</CpTableCell>
                   <CpTableCell>{item.sortOrder}</CpTableCell>
                   <CpTableCell>
-                    {item.actionType === "none" ? "بدون انتقال" : `${item.actionType}: ${item.actionTarget}`}
+                    {item.actionType === "none" ? "Ø¨Ø¯ÙˆÙ† Ø§Ù†ØªÙ‚Ø§Ù„" : `${item.actionType}: ${item.actionTarget}`}
                   </CpTableCell>
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
-                      <CpButton onClick={() => void controller.remove(item.id)}>حذف</CpButton>
+                      <CpButton onClick={() => controller.select(item)}>ØªØ¹Ø¯ÙŠÙ„</CpButton>
+                      <CpButton onClick={() => void controller.remove(item.id)}>Ø­Ø°Ù</CpButton>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -754,14 +760,14 @@ function HomeDiscoveryEditor({
   return (
     <div style={{ display: "grid", gap: "0.75rem" }}>
       <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-        {editing ? `تعديل ${meta.singular}` : `إضافة ${meta.singular}`}
+        {editing ? `ØªØ¹Ø¯ÙŠÙ„ ${meta.singular}` : `Ø¥Ø¶Ø§ÙØ© ${meta.singular}`}
       </h4>
-      <CpTextInput value={draft.title} onChange={(v) => update("title", v)} placeholder="العنوان" aria-label="العنوان" />
+      <CpTextInput value={draft.title} onChange={(v) => update("title", v)} placeholder="Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" aria-label="Ø§Ù„Ø¹Ù†ÙˆØ§Ù†" />
       {kind !== "categories" && (
-        <CpTextInput value={draft.subtitle} onChange={(v) => update("subtitle", v)} placeholder="الوصف المختصر" aria-label="الوصف المختصر" />
+        <CpTextInput value={draft.subtitle} onChange={(v) => update("subtitle", v)} placeholder="Ø§Ù„ÙˆØµÙ Ø§Ù„Ù…Ø®ØªØµØ±" aria-label="Ø§Ù„ÙˆØµÙ Ø§Ù„Ù…Ø®ØªØµØ±" />
       )}
       {kind === "promos" && (
-        <CpTextInput value={draft.badgeLabel} onChange={(v) => update("badgeLabel", v)} placeholder="شارة العرض" aria-label="شارة العرض" />
+        <CpTextInput value={draft.badgeLabel} onChange={(v) => update("badgeLabel", v)} placeholder="Ø´Ø§Ø±Ø© Ø§Ù„Ø¹Ø±Ø¶" aria-label="Ø´Ø§Ø±Ø© Ø§Ù„Ø¹Ø±Ø¶" />
       )}
       <CpTextInput value={draft.imageUrl} onChange={(v) => update("imageUrl", v)} placeholder={meta.imageLabel} aria-label={meta.imageLabel} />
       {kind !== "categories" && (
@@ -770,40 +776,42 @@ function HomeDiscoveryEditor({
             value={draft.actionType}
             onChange={(v) => update("actionType", v as DshHomeAdminContentInput["actionType"])}
             options={[
-              { value: "none", label: "بدون انتقال" },
-              { value: "store", label: "متجر" },
-              { value: "category", label: "تصنيف" },
-              { value: "external", label: "رابط خارجي" },
+              { value: "none", label: "Ø¨Ø¯ÙˆÙ† Ø§Ù†ØªÙ‚Ø§Ù„" },
+              { value: "store", label: "Ù…ØªØ¬Ø±" },
+              { value: "category", label: "ØªØµÙ†ÙŠÙ" },
+              { value: "external", label: "Ø±Ø§Ø¨Ø· Ø®Ø§Ø±Ø¬ÙŠ" },
             ]}
-            aria-label="نوع الإجراء"
+            aria-label="Ù†ÙˆØ¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡"
           />
-          <CpTextInput value={draft.actionTarget} onChange={(v) => update("actionTarget", v)} placeholder="هدف الإجراء" aria-label="هدف الإجراء" />
+          <CpTextInput value={draft.actionTarget} onChange={(v) => update("actionTarget", v)} placeholder="Ù‡Ø¯Ù Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡" aria-label="Ù‡Ø¯Ù Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡" />
         </>
       )}
-      <CpTextInput value={String(draft.sortOrder)} onChange={(v) => update("sortOrder", Number.parseInt(v, 10) || 0)} placeholder="الترتيب" aria-label="الترتيب" />
+      <CpTextInput value={String(draft.sortOrder)} onChange={(v) => update("sortOrder", Number.parseInt(v, 10) || 0)} placeholder="Ø§Ù„ØªØ±ØªÙŠØ¨" aria-label="Ø§Ù„ØªØ±ØªÙŠØ¨" />
       <CpSelect
         value={draft.isActive ? "active" : "inactive"}
         onChange={(v) => update("isActive", v === "active")}
         options={[
-          { value: "active", label: "نشط" },
-          { value: "inactive", label: "موقوف" },
+          { value: "active", label: "Ù†Ø´Ø·" },
+          { value: "inactive", label: "Ù…ÙˆÙ‚ÙˆÙ" },
         ]}
-        aria-label="حالة النشر"
+        aria-label="Ø­Ø§Ù„Ø© Ø§Ù„Ù†Ø´Ø±"
       />
       <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
         <CpButton
           disabled={submitting || draft.title.trim().length < 2 || (kind !== "categories" && draft.imageUrl.trim().length === 0)}
           onClick={onSave}
-          style={{ background: "#FF500D", color: "#FFF", border: "none", borderRadius: "0.375rem", padding: "0.35rem 0.75rem", fontSize: "0.813rem" }}
+          style={{ background: opsTheme.brand, color: opsTheme.textInverse, border: "none", borderRadius: "0.375rem", padding: "0.35rem 0.75rem", fontSize: "0.813rem" }}
         >
-          {submitting ? "جاري الحفظ…" : "حفظ ونشر"}
+          {submitting ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸â€¦" : "Ø­ÙØ¸ ÙˆÙ†Ø´Ø±"}
         </CpButton>
         <CpButton onClick={onCancel} style={{ borderRadius: "0.375rem", padding: "0.35rem 0.75rem", fontSize: "0.813rem" }}>
-          إلغاء
+          Ø¥Ù„ØºØ§Ø¡
         </CpButton>
       </div>
     </div>
   );
 }
+
+
 
 
