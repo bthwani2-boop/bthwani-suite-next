@@ -94,3 +94,14 @@ Default: reuse existing code first, avoid new abstractions, avoid new dependenci
 ## External donor references
 
 External agent repositories are not loaded by default. Use `.agents/skills/external-agent-donor-reference/SKILL.md` only when agent/skill design explicitly needs external inspiration. Donor material is read-only and must never override BThwani rules.
+
+## Handling Incorrect Governance, Guards, or Skills
+
+When an agent encounters a guard, governance file, or skill whose content is incorrect, outdated, or buggy, they must:
+1. **Verify context and scope** using [bthwani-current-workspace-authority](file:///c:/bthwani-suite-next/.agents/skills/bthwani-current-workspace-authority/SKILL.md) (check active branch and repository status).
+2. **Apply Update Policy** [UPDATE_POLICY.md](file:///c:/bthwani-suite-next/.agents/UPDATE_POLICY.md) to ensure the correction reduces duplication, improves precision, or fixes incorrect paths/boundaries.
+3. **Keep edits minimal (YAGNI)** using [bthwani-ponytail-yagni](file:///c:/bthwani-suite-next/.agents/skills/bthwani-ponytail-yagni/SKILL.md).
+4. **Perform targeted verification**:
+   - Run `git --no-pager diff --check` for textual governance updates.
+   - Run the specific modified guard script (e.g. [guard-automated-execution-policy.mjs](file:///c:/bthwani-suite-next/tools/guards/guard-automated-execution-policy.mjs)) and verify it returns exit code 0.
+   - Run [bthwani-agent-skill-integrity](file:///c:/bthwani-suite-next/.agents/skills/bthwani-agent-skill-integrity/SKILL.md) if skills or catalog records were modified.
