@@ -28,6 +28,7 @@ export type PartnerOfferRecord = {
   readonly activeFromDate?: string;
   readonly activeToDate?: string;
   readonly rejectionReason?: string;
+  readonly marginRiskNote?: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;

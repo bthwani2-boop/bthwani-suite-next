@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/electricity/payments/duplicate"
+  },
+  "response": {
+    "status": 409,
+    "jsonBody": {
+      "code": "DUPLICATE_PAYMENT",
+      "message": "Payment was already accepted"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

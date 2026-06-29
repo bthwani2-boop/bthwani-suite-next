@@ -217,9 +217,9 @@ export function CartScreen({
   const [scheduledDate, setScheduledDate] = useState(() => executionScheduleOptions.dateOptions[0]?.value ?? "");
   const [scheduledTime, setScheduledTime] = useState(() => executionScheduleOptions.timeOptions[0]?.value ?? "");
 
-  // Wallet mockup states
+  // Wallet display states
   const [walletLinked, setWalletLinked] = useState(true);
-  const [walletBalance, setWalletBalance] = useState(15000); // 15,000 YER
+  const [walletDisplayBalance, setWalletDisplayBalance] = useState(15000); // 15,000 YER
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
   const [checkoutReviewVisible, setCheckoutReviewVisible] = useState(false);
 
@@ -456,30 +456,30 @@ export function CartScreen({
       id: "wallet",
       title: "من رصيد المحفظة",
       description: "ادفع كامل الطلب من رصيد محفظتك الداخلي.",
-      disabled: !walletLinked || walletBalance < grandTotal,
-      statusLabel: paymentMethod === "wallet" ? "محدد" : walletBalance >= grandTotal ? "جاهز" : "رصيد غير كافٍ",
-      statusTone: paymentMethod === "wallet" ? "action" : walletBalance >= grandTotal ? "success" : "danger",
+      disabled: !walletLinked || walletDisplayBalance < grandTotal,
+      statusLabel: paymentMethod === "wallet" ? "محدد" : walletDisplayBalance >= grandTotal ? "جاهز" : "رصيد غير كافٍ",
+      statusTone: paymentMethod === "wallet" ? "action" : walletDisplayBalance >= grandTotal ? "success" : "danger",
       amountRows: [
-        { label: "رصيد المحفظة", value: `${walletBalance} د.ي`, tone: "brand" },
+        { label: "رصيد المحفظة", value: `${walletDisplayBalance} د.ي`, tone: "brand" },
         { label: "المطلوب خصمه", value: `${grandTotal} د.ي`, tone: "brand" },
       ],
-      helperText: walletBalance < grandTotal ? `تحتاج لشحن ${grandTotal - walletBalance} د.ي إضافية.` : undefined,
+      helperText: walletDisplayBalance < grandTotal ? `تحتاج لشحن ${grandTotal - walletDisplayBalance} د.ي إضافية.` : undefined,
       action: !walletLinked
         ? { label: "ربط المحفظة", onPress: () => setWalletLinked(true) }
-        : walletBalance < grandTotal
-        ? { label: "شحن الرصيد", onPress: () => setWalletBalance(walletBalance + 20000) }
+        : walletDisplayBalance < grandTotal
+        ? { label: "شحن الرصيد", onPress: () => setWalletDisplayBalance(walletDisplayBalance + 20000) }
         : undefined,
     },
     {
       id: "mixed",
       title: "محفظة + عند الاستلام",
       description: "استخدم رصيد المحفظة المتاح وادفع المتبقي نقدًا.",
-      disabled: !walletLinked || walletBalance <= 0 || walletBalance >= grandTotal,
-      statusLabel: paymentMethod === "mixed" ? "محدد" : walletBalance > 0 && walletBalance < grandTotal ? "جاهز" : "غير متوفر",
+      disabled: !walletLinked || walletDisplayBalance <= 0 || walletDisplayBalance >= grandTotal,
+      statusLabel: paymentMethod === "mixed" ? "محدد" : walletDisplayBalance > 0 && walletDisplayBalance < grandTotal ? "جاهز" : "غير متوفر",
       statusTone: paymentMethod === "mixed" ? "action" : "info",
       amountRows: [
-        { label: "من المحفظة", value: `${Math.min(walletBalance, grandTotal)} د.ي`, tone: "brand" },
-        { label: "عند الاستلام", value: `${Math.max(0, grandTotal - walletBalance)} د.ي`, tone: "brand" },
+        { label: "من المحفظة", value: `${Math.min(walletDisplayBalance, grandTotal)} د.ي`, tone: "brand" },
+        { label: "عند الاستلام", value: `${Math.max(0, grandTotal - walletDisplayBalance)} د.ي`, tone: "brand" },
       ],
     },
     {

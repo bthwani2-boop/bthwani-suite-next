@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/refund-failed"
+  },
+  "response": {
+    "status": 409,
+    "jsonBody": {
+      "code": "REFUND_FAILED",
+      "message": "Refund failed"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

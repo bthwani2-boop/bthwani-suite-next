@@ -60,6 +60,9 @@ jobs:
       - name: Guard — no financial mutation outside WLT
         run: pnpm run guard:no-financial-mutation-outside-wlt
 
+      - name: Guard — no direct financial provider access outside WLT
+        run: pnpm run guard:no-direct-financial-provider-access-outside-wlt
+
       - name: Guard — no direct fetch in screen
         run: pnpm run guard:no-direct-fetch-in-screen
 
@@ -130,3 +133,75 @@ jobs:
       - name: Go build
         working-directory: core/identity/backend
         run: go build ./...
+
+  docker-runtime-smoke:
+    name: Docker runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Docker compose up
+        run: |
+          docker compose \
+            --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            -f infra/docker/compose.financial-simulators.yml \
+            --profile identity \
+            --profile dsh \
+            --profile wlt \
+            --profile financial-simulators \
+            --profile mail \
+            up -d --build
+
+      - name: Runtime health checks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          function Wait-ForUrl($Url) {
+            for ($i = 1; $i -le 30; $i++) {
+              try {
+                Invoke-RestMethod $Url -TimeoutSec 5 | Out-Null
+                return
+              } catch {
+                Start-Sleep -Seconds 3
+              }
+            }
+            throw "Timed out waiting for $Url"
+          }
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime
+          Wait-ForUrl "http://localhost:58082/identity/health"
+          Wait-ForUrl "http://localhost:58080/dsh/health"
+          Wait-ForUrl "http://localhost:58083/wlt/health"
+          Wait-ForUrl "http://localhost:58090/__admin/mappings"
+          Wait-ForUrl "http://localhost:8025/api/v1/info"
+
+      - name: WLT provider smoke
+        run: pnpm run runtime:wlt:provider:smoke
+
+      - name: Docker compose ps
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
+
+      - name: Docker compose logs on failure
+        if: failure()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
+
+      - name: Docker compose down
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans

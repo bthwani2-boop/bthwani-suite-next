@@ -7,8 +7,8 @@
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
-  Supported: identity, dsh, media, wlt
-  Example: -Profiles identity,dsh,media or -Profiles wlt
+  Supported: identity, dsh, media, wlt, financial-simulators, mail, cache
+  Example: -Profiles identity,dsh,media or -Profiles wlt,financial-simulators
 
 .PARAMETER Service
   (Optional) Target a specific service for logs/status.
@@ -28,6 +28,7 @@ $ErrorActionPreference = "Stop"
 Set-Location -LiteralPath "C:\bthwani-suite-next"
 
 $ComposeFile = ".\infra\docker\compose.runtime.yml"
+$FinancialComposeFile = ".\infra\docker\compose.financial-simulators.yml"
 $EnvFile     = ".\infra\docker\env\runtime.env.example"
 
 if (-not (Test-Path -LiteralPath $EnvFile)) {
@@ -39,7 +40,7 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("identity", "dsh", "media", "wlt")
+$AllowedProfiles = @("identity", "dsh", "media", "wlt", "financial-simulators", "mail", "cache")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
@@ -56,7 +57,15 @@ function Get-ComposeProfileArgs {
 }
 
 function Get-ComposeBase {
-  return @("--env-file", $script:EnvFile, "-f", $script:ComposeFile)
+  $files = @("--env-file", $script:EnvFile, "-f", $script:ComposeFile)
+  $needsFinancialCompose = $script:ProfileList | Where-Object { @("financial-simulators", "mail", "cache") -contains $_ }
+  if ($needsFinancialCompose) {
+    if (-not (Test-Path -LiteralPath $script:FinancialComposeFile)) {
+      throw "Financial simulator compose file not found: $script:FinancialComposeFile"
+    }
+    $files += @("-f", $script:FinancialComposeFile)
+  }
+  return $files
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -183,6 +192,71 @@ function Wait-ForWltApi {
     Start-Sleep -Seconds 4
   }
   throw "WLT API did not become healthy after $max attempts"
+}
+
+function Wait-ForWireMockFinancialProvider {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for WireMock financial provider ($i/$max)..."
+    try {
+      Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 5 -ErrorAction Stop | Out-Null
+      Write-Host "WireMock financial provider: healthy"
+      return
+    } catch { }
+    Start-Sleep -Seconds 3
+  }
+  throw "WireMock financial provider did not become healthy after $max attempts"
+}
+
+function Invoke-WireMockFinancialSmoke {
+  Write-Host "`n--- WireMock financial provider smoke ---"
+  $health = Invoke-RestMethod "http://localhost:58090/financial/health" -TimeoutSec 10 -ErrorAction Stop
+  if ($health.status -ne "healthy") { throw "WireMock financial health is not healthy" }
+  Write-Host "WireMock financial provider smoke: PASS"
+}
+
+function Wait-ForMailpit {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for Mailpit ($i/$max)..."
+    try {
+      Invoke-RestMethod "http://localhost:8025/api/v1/info" -TimeoutSec 5 -ErrorAction Stop | Out-Null
+      Write-Host "Mailpit: healthy"
+      return
+    } catch { }
+    Start-Sleep -Seconds 3
+  }
+  throw "Mailpit did not become healthy after $max attempts"
+}
+
+function Invoke-MailpitSmoke {
+  Write-Host "`n--- Mailpit smoke ---"
+  Invoke-RestMethod "http://localhost:8025/api/v1/info" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  Write-Host "Mailpit smoke: PASS"
+}
+
+function Wait-ForValkey {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for Valkey ($i/$max)..."
+    docker compose @(Get-ComposeBase) exec -T valkey valkey-cli ping 2>$null
+    if ($LASTEXITCODE -eq 0) { Write-Host "Valkey: healthy"; return }
+    Start-Sleep -Seconds 3
+  }
+  throw "Valkey did not become healthy after $max attempts"
+}
+
+function Invoke-ValkeySmoke {
+  Write-Host "`n--- Valkey smoke ---"
+  docker compose @(Get-ComposeBase) exec -T valkey valkey-cli ping
+  if ($LASTEXITCODE -ne 0) { throw "Valkey smoke failed" }
+  Write-Host "Valkey smoke: PASS"
+}
+
+function Invoke-WltFinancialProviderSmoke {
+  Write-Host "`n--- WLT financial provider smoke ---"
+  pwsh -NoProfile -ExecutionPolicy Bypass -File ".\tools\scripts\smoke-wlt-financial-provider.ps1" -BaseUrl "http://localhost:58090"
+  if ($LASTEXITCODE -ne 0) { throw "WLT financial provider smoke failed" }
 }
 
 function Invoke-WltMigrate {
@@ -518,6 +592,19 @@ elseif ($Action -eq "reset") {
     Wait-ForWltApi
     Invoke-WltSmoke
   }
+  if ($ProfileList -contains "financial-simulators") {
+    Wait-ForWireMockFinancialProvider
+    Invoke-WireMockFinancialSmoke
+    Invoke-WltFinancialProviderSmoke
+  }
+  if ($ProfileList -contains "mail") {
+    Wait-ForMailpit
+    Invoke-MailpitSmoke
+  }
+  if ($ProfileList -contains "cache") {
+    Wait-ForValkey
+    Invoke-ValkeySmoke
+  }
   Write-Host "reset: PASS"
 }
 
@@ -583,6 +670,19 @@ elseif ($Action -eq "smoke") {
   if ($ProfileList -contains "media") {
     Invoke-MinioSmoke
   }
+  if ($ProfileList -contains "financial-simulators") {
+    Wait-ForWireMockFinancialProvider
+    Invoke-WireMockFinancialSmoke
+    Invoke-WltFinancialProviderSmoke
+  }
+  if ($ProfileList -contains "mail") {
+    Wait-ForMailpit
+    Invoke-MailpitSmoke
+  }
+  if ($ProfileList -contains "cache") {
+    Wait-ForValkey
+    Invoke-ValkeySmoke
+  }
   Write-Host "smoke: PASS"
 }
 
@@ -625,6 +725,22 @@ elseif ($Action -eq "all") {
   if ($ProfileList -contains "media") {
     Invoke-DshMediaSeed
     Invoke-MinioSmoke
+  }
+
+  if ($ProfileList -contains "financial-simulators") {
+    Wait-ForWireMockFinancialProvider
+    Invoke-WireMockFinancialSmoke
+    Invoke-WltFinancialProviderSmoke
+  }
+
+  if ($ProfileList -contains "mail") {
+    Wait-ForMailpit
+    Invoke-MailpitSmoke
+  }
+
+  if ($ProfileList -contains "cache") {
+    Wait-ForValkey
+    Invoke-ValkeySmoke
   }
 
   # final status

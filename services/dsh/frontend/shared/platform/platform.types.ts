@@ -134,6 +134,7 @@ export type DshPlatformPolicyScenario = {
   title: string;
   owner: DshPlatformVarOwner;
   scope: DshPlatformVarScope;
+  priority: string;
   relatedKeys: readonly string[];
   expectedImpact: string;
   guardrail: string;

@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/health"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "status": "healthy",
+      "provider": "wiremock-financial-provider"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

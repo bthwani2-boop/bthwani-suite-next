@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/common/duplicate"
+  },
+  "response": {
+    "status": 409,
+    "jsonBody": {
+      "code": "DUPLICATE_TRANSACTION",
+      "message": "Duplicate idempotency key"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

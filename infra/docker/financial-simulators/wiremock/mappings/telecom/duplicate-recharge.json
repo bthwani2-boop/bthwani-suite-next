@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/telecom/recharges/duplicate"
+  },
+  "response": {
+    "status": 409,
+    "jsonBody": {
+      "code": "DUPLICATE_RECHARGE",
+      "message": "Recharge already processed"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

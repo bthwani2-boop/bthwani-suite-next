@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "CONFIGURED_NEEDS_DOCKER_EVIDENCE",
+  "owner": "services/wlt",
+  "profiles": ["financial-simulators", "mail", "cache"],
+  "checks": [
+    {
+      "id": "wiremock-financial-provider",
+      "status": "CONFIGURED",
+      "host_port": 58090,
+      "verification_command": "pnpm run runtime:wlt:provider:smoke"
+    },
+    {
+      "id": "mailpit",
+      "status": "CONFIGURED",
+      "host_ports": [8025, 1025],
+      "verification_command": "pnpm run runtime:mail"
+    },
+    {
+      "id": "valkey",
+      "status": "CONFIGURED_OPTIONAL",
+      "verification_command": "pnpm run runtime:cache"
+    },
+    {
+      "id": "docker-runtime-smoke-ci",
+      "status": "BLOCKED_NEEDS_EVIDENCE",
+      "command": "GitHub Actions job docker-runtime-smoke",
+      "reason": "requires remote CI execution on pushed branch"
+    }
+  ],
+  "forbidden": [
+    "production_secrets",
+    "production_provider_urls",
+    "direct_financial_provider_access_outside_wlt",
+    "database_public_exposure",
+    "minio_console_public_exposure"
+  ]
+}

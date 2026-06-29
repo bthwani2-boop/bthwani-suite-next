@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/electricity/bills/100200"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "billId": "elec-100200",
+      "status": "unpaid",
+      "amountMinorUnits": 34500,
+      "currency": "SAR"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
