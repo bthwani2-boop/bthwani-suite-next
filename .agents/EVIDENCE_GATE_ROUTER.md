@@ -1,81 +1,72 @@
 # Evidence Gate Router
 
-Goal: choose the smallest sufficient verification gate.
+Goal: choose the smallest sufficient code-based check.
+
+## Default mode — CODE_BASED_LEAN
+
+The canonical policy for default execution is detailed in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md).
+
+Use this for normal implementation.
+
+Required:
+- inspect directly relevant code paths
+- implement the smallest safe diff
+- run one targeted package/type/build/test/guard check only when useful and available
+- summarize changed paths, check result, and remaining risk
+
+Not required by default:
+- evidence packs
+- handoff ZIPs
+- command logs
+- screenshots or recordings
+- visual evidence packs
+- Graphify
+- Nx graph
+- full repository typecheck/test/build
+- full guard suite
+- repeated status/diff artifacts
+
+All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
 
 ## Gate levels
 
-### LOW — documentation or agent text only
+### LOW
+Text/doc/agent wording only.
+No evidence files.
+Use direct text review.
 
-Required:
+### FOCUSED
+Source code within one clear module.
+Use targeted code-based check only when useful.
 
-```powershell
-git --no-pager status --short
-git --no-pager diff --check
-```
+### STANDARD
+Multi-file or cross-layer but ownership is clear.
+Use affected/touched-area checks only.
 
-### MEDIUM — source code, package code, or config
+### UI
+Code-based check first.
+Normal UI work uses code-based validation. Do not block implementation or closure due to lack of screenshots.
+Screenshot/recording required only for final visual closure, visual parity approval, release/store visual requirements, or explicit user request.
 
-Required:
+### API
+Contract/client checks only when OpenAPI, generated client, adapter, or backend binding changed.
 
-```powershell
-git --no-pager status --short
-git --no-pager diff --stat
-git --no-pager diff --name-status
-git --no-pager diff --check
-```
+### RUNTIME
+Runtime smoke only when runtime behavior changed or is claimed.
 
-Add targeted package check when the touched package has a script.
+### HIGH
+Move/delete/refactor/boundary/public API.
+Use targeted verification and rollback awareness.
+Evidence pack only when requested or review-critical.
 
-### UI — screen, route, component, visual behavior
-
-Required:
-
-- MEDIUM gate
-- UI kit boundary guard when relevant
-- screenshot or `NEEDS_VISUAL_EVIDENCE`
-- loading/empty/error/success/offline/disabled state notes when affected
-
-### API — OpenAPI, client, adapter, backend binding
-
-Required:
-
-- MEDIUM gate
-- contract lint when affected
-- generated client evidence when generated output changes
-- no raw screen fetch
-- runtime proof when behavior is claimed
-
-### RUNTIME — Docker, data-plane, services, live-like smoke
-
-Required:
-
-- MEDIUM gate
-- relevant Docker/runtime scripts from `package.json`
-- logs or smoke output
-- no memory repository/live-like shortcut
-
-### HIGH — move/delete/refactor/boundary/public API
-
-Required:
-
-- pre-change snapshot
-- explicit touched-path list
-- rollback note
-- patch review
-- targeted verification
-- evidence pack when useful
-- boundary guard output when ownership lines are crossed:
-  - `pnpm --filter @bthwani/app-shell lint` (no auth runtime, no design ownership)
-  - `pnpm --filter @bthwani/ui-kit lint` (no Cp*, no domain components, no deep imports)
-  - `pnpm --filter @bthwani/control-panel lint` (required files present, no Tamagui)
-  - `pnpm --filter @bthwani/dsh guard:shared-ownership` (DSH shared ownership)
-
-### CRITICAL — remote writes, branch mutation, force operations
-
-Default: `BLOCKED` unless the user explicitly requests the operation.
+### CRITICAL
+Remote writes, branch mutation, destructive operations.
+Blocked unless explicitly requested.
 
 ## Decision output
 
 Every review must end with one of:
 
 `PASS`, `PASS_WITH_WARNINGS`, `FIX_REQUIRED`, `BLOCKED`, `READY_FOR_PR`, `REVERT_REQUIRED`, `NEEDS_EVIDENCE`, `NEEDS_VISUAL_EVIDENCE`, `NO_ACTION_REQUIRED`.
+
+Use `NEEDS_VISUAL_EVIDENCE` only when visual evidence is required for explicit visual request, final visual closure, visual parity approval, or release/store visual requirements. Use `NEEDS_EVIDENCE` only when escalation rules make evidence files mandatory.

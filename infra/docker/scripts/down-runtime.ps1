@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ComposeFile = "infra\docker\compose.runtime.yml"
 $EnvFile     = "infra\docker\env\runtime.env.example"

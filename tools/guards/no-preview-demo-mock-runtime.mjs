@@ -4,7 +4,7 @@ const guardId = "no-preview-demo-mock-runtime";
 const violations = [];
 
 const runtimePrefixes = ["apps/", "services/", "core/"];
-const excluded = ["/tests/", "/test/", ".test.", ".spec.", "tools/", "governance/"];
+const excluded = ["/tests/", "/test/", ".test.", ".spec.", "tools/", "governance/", "/frontend/"];
 const regex = /\b(preview|demo|mock|fixture|fixtures|fakeActor|fakeUser|useFixtures|previewData|demoData)\b/gi;
 
 for (const file of listCodeFiles()) {

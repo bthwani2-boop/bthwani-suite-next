@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"time"
 )
 
@@ -169,14 +170,35 @@ func UpdateFulfillmentMode(ctx context.Context, db *sql.DB, cartID string, mode 
 	return nil
 }
 
+func calculateDistanceKM(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadius = 6371.0 // Earth radius in kilometers
+
+	radLat1 := lat1 * math.Pi / 180
+	radLon1 := lon1 * math.Pi / 180
+	radLat2 := lat2 * math.Pi / 180
+	radLon2 := lon2 * math.Pi / 180
+
+	diffLat := radLat2 - radLat1
+	diffLon := radLon2 - radLon1
+
+	a := math.Sin(diffLat/2)*math.Sin(diffLat/2) +
+		math.Cos(radLat1)*math.Cos(radLat2)*
+			math.Sin(diffLon/2)*math.Sin(diffLon/2)
+
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return earthRadius * c
+}
+
 // CheckServiceability verifies that the store is active and in the serviceable state.
 // DSH only checks store-level availability — delivery fee and zone pricing are WLT concerns.
-func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string) ServiceabilityResult {
-	var storeStatus, serviceabilityStatus, storeServiceArea string
+func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) ServiceabilityResult {
+	var storeStatus, serviceabilityStatus, storeServiceArea, storeCity string
+	var distanceKM, storeLat, storeLng *float64
 	err := db.QueryRowContext(ctx,
-		`SELECT status, serviceability_status, service_area_code FROM dsh_stores WHERE id = $1`,
+		`SELECT status, serviceability_status, service_area_code, city_code, distance_km, latitude, longitude FROM dsh_stores WHERE id = $1`,
 		storeID,
-	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea)
+	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea, &storeCity, &distanceKM, &storeLat, &storeLng)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store not found"}
 	}
@@ -189,7 +211,21 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 	if serviceabilityStatus == "out_of_area" || serviceabilityStatus == "unavailable" {
 		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store is not serviceable"}
 	}
-	if serviceAreaCode != "" && storeServiceArea != "" && storeServiceArea != serviceAreaCode {
+
+	// Calculate physical distance between client and store coordinates if both are provided
+	var calculatedDistance *float64
+	if clientLat != nil && clientLng != nil && storeLat != nil && storeLng != nil {
+		dist := calculateDistanceKM(*clientLat, *clientLng, *storeLat, *storeLng)
+		calculatedDistance = &dist
+	} else {
+		calculatedDistance = distanceKM
+	}
+
+	// Check if store is within delivery range (<= 5.0 km) or matches the zone/city name fallback
+	isWithinDistance := calculatedDistance != nil && *calculatedDistance > 0 && *calculatedDistance <= 5.0
+	matchesZone := serviceAreaCode != "" && (storeServiceArea == serviceAreaCode || storeCity == serviceAreaCode)
+
+	if !isWithinDistance && !matchesZone {
 		return ServiceabilityResult{Serviceable: false, Code: "out_of_area", Reason: "store outside requested service area"}
 	}
 	return ServiceabilityResult{Serviceable: true, Code: "serviceable"}

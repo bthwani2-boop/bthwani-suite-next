@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/expired-token"
+  },
+  "response": {
+    "status": 401,
+    "jsonBody": {
+      "code": "EXPIRED_TOKEN",
+      "message": "Provider token expired"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

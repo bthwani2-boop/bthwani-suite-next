@@ -17,7 +17,7 @@ summary: Protect OpenAPI to client to screen/runtime binding.
 
 ## Execution contract
 
-Enforce the chain: service OpenAPI -> generated or typed client -> service adapter -> view-model -> screen state -> runtime evidence. Use existing guard scripts when present.
+Enforce the chain: service OpenAPI -> generated or typed client -> service adapter -> view-model -> screen state -> runtime evidence (when escalation applies). Use existing guard scripts when present.
 
 ## Forbidden
 
@@ -33,13 +33,13 @@ Enforce the chain: service OpenAPI -> generated or typed client -> service adapt
 - client/adapter path
 - screen/view-model path when UI affected
 - contract lint or targeted check when changed
-- runtime proof when behavior is claimed
+- runtime proof only when escalation applies or runtime behavior changes are claimed
 
 ## Failure decision
 
 - endpoint without service contract -> `FIX_REQUIRED`
 - no client binding -> `FIX_REQUIRED`
-- runtime claim without proof -> `NEEDS_EVIDENCE`
+- runtime claim without proof when escalation applies -> `NEEDS_EVIDENCE`
 
 ## Notes
 

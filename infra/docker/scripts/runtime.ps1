@@ -7,8 +7,8 @@
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
-  Supported: identity, dsh, media, wlt
-  Example: -Profiles identity,dsh,media or -Profiles wlt
+  Supported: identity, dsh, media, wlt, financial-simulators, mail, cache
+  Example: -Profiles identity,dsh,media or -Profiles wlt,financial-simulators
 
 .PARAMETER Service
   (Optional) Target a specific service for logs/status.
@@ -25,10 +25,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath "C:\bthwani-suite-next"
 
-$ComposeFile = ".\infra\docker\compose.runtime.yml"
-$EnvFile     = ".\infra\docker\env\runtime.env.example"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../")).Path
+Set-Location -LiteralPath $RepoRoot
+
+$ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
+$FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simulators.yml"
+$EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 
 if (-not (Test-Path -LiteralPath $EnvFile)) {
   throw "Env file not found: $EnvFile"
@@ -39,7 +43,7 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("identity", "dsh", "media", "wlt")
+$AllowedProfiles = @("identity", "dsh", "media", "wlt", "financial-simulators", "mail", "cache")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
@@ -56,7 +60,15 @@ function Get-ComposeProfileArgs {
 }
 
 function Get-ComposeBase {
-  return @("--env-file", $script:EnvFile, "-f", $script:ComposeFile)
+  $files = @("--env-file", $script:EnvFile, "-f", $script:ComposeFile)
+  $needsFinancialCompose = $script:ProfileList | Where-Object { @("financial-simulators", "mail", "cache") -contains $_ }
+  if ($needsFinancialCompose) {
+    if (-not (Test-Path -LiteralPath $script:FinancialComposeFile)) {
+      throw "Financial simulator compose file not found: $script:FinancialComposeFile"
+    }
+    $files += @("-f", $script:FinancialComposeFile)
+  }
+  return $files
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -85,6 +97,13 @@ function Wait-ForDshApi {
   throw "DSH API did not become healthy after $max attempts"
 }
 
+function Start-DshApi {
+  if ($script:ProfileList -notcontains "dsh") { return }
+  Write-Host "`n--- Starting DSH API after identity readiness ---"
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d dsh-api
+  if ($LASTEXITCODE -ne 0) { throw "DSH API start failed (exit $LASTEXITCODE)" }
+}
+
 function Wait-ForIdentityApi {
   $max = 20
   for ($i = 1; $i -le $max; $i++) {
@@ -99,7 +118,7 @@ function Wait-ForIdentityApi {
 }
 
 function Invoke-IdentityMigrate {
-  $MigrationDir = ".\core\identity\database\migrations"
+  $MigrationDir = "core/identity/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No identity migration files found in $MigrationDir" }
   Write-Host "`n--- Applying identity migrations ---"
@@ -141,7 +160,7 @@ function Invoke-IdentitySmoke {
 }
 
 function Invoke-Migrate {
-  $MigrationDir = ".\services\dsh\database\migrations"
+  $MigrationDir = "services/dsh/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
   Write-Host "`n--- Applying DSH migrations ---"
@@ -157,7 +176,7 @@ function Invoke-Migrate {
 }
 
 function Invoke-Seed {
-  $SeedDir = ".\services\dsh\database\seeds\local"
+  $SeedDir = "services/dsh/database/seeds/local"
   $SeedFiles = Get-ChildItem -LiteralPath $SeedDir -Filter "*.sql" | Sort-Object Name
   if ($SeedFiles.Count -eq 0) { throw "No seed files found in $SeedDir" }
   Write-Host "`n--- Applying DSH local seeds ---"
@@ -185,8 +204,73 @@ function Wait-ForWltApi {
   throw "WLT API did not become healthy after $max attempts"
 }
 
+function Wait-ForWireMockFinancialProvider {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for WireMock financial provider ($i/$max)..."
+    try {
+      Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 5 -ErrorAction Stop | Out-Null
+      Write-Host "WireMock financial provider: healthy"
+      return
+    } catch { }
+    Start-Sleep -Seconds 3
+  }
+  throw "WireMock financial provider did not become healthy after $max attempts"
+}
+
+function Invoke-WireMockFinancialSmoke {
+  Write-Host "`n--- WireMock financial provider smoke ---"
+  $health = Invoke-RestMethod "http://localhost:58090/financial/health" -TimeoutSec 10 -ErrorAction Stop
+  if ($health.status -ne "healthy") { throw "WireMock financial health is not healthy" }
+  Write-Host "WireMock financial provider smoke: PASS"
+}
+
+function Wait-ForMailpit {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for Mailpit ($i/$max)..."
+    try {
+      Invoke-RestMethod "http://localhost:8025/api/v1/info" -TimeoutSec 5 -ErrorAction Stop | Out-Null
+      Write-Host "Mailpit: healthy"
+      return
+    } catch { }
+    Start-Sleep -Seconds 3
+  }
+  throw "Mailpit did not become healthy after $max attempts"
+}
+
+function Invoke-MailpitSmoke {
+  Write-Host "`n--- Mailpit smoke ---"
+  Invoke-RestMethod "http://localhost:8025/api/v1/info" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  Write-Host "Mailpit smoke: PASS"
+}
+
+function Wait-ForValkey {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for Valkey ($i/$max)..."
+    docker compose @(Get-ComposeBase) exec -T valkey valkey-cli ping 2>$null
+    if ($LASTEXITCODE -eq 0) { Write-Host "Valkey: healthy"; return }
+    Start-Sleep -Seconds 3
+  }
+  throw "Valkey did not become healthy after $max attempts"
+}
+
+function Invoke-ValkeySmoke {
+  Write-Host "`n--- Valkey smoke ---"
+  docker compose @(Get-ComposeBase) exec -T valkey valkey-cli ping
+  if ($LASTEXITCODE -ne 0) { throw "Valkey smoke failed" }
+  Write-Host "Valkey smoke: PASS"
+}
+
+function Invoke-WltFinancialProviderSmoke {
+  Write-Host "`n--- WLT financial provider smoke ---"
+  pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:RepoRoot "tools/scripts/smoke-wlt-provider-through-wlt.ps1") -BaseUrl "http://localhost:58083"
+  if ($LASTEXITCODE -ne 0) { throw "WLT financial provider smoke failed" }
+}
+
 function Invoke-WltMigrate {
-  $MigrationDir = ".\services\wlt\database\migrations"
+  $MigrationDir = "services/wlt/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
   Write-Host "`n--- Applying WLT migrations ---"
@@ -202,7 +286,7 @@ function Invoke-WltMigrate {
 }
 
 function Invoke-WltSeed {
-  $SeedDir = ".\services\wlt\database\seeds\local"
+  $SeedDir = "services/wlt/database/seeds/local"
   $SeedFiles = Get-ChildItem -LiteralPath $SeedDir -Filter "*.sql" | Sort-Object Name
   if ($SeedFiles.Count -eq 0) { throw "No seed files found in $SeedDir" }
   Write-Host "`n--- Applying WLT local seeds ---"
@@ -254,7 +338,8 @@ function Invoke-WltSmoke {
 
 function Invoke-MinioSmoke {
   Write-Host "`n--- MinIO smoke ---"
-  $MinioUrl = "http://localhost:57000"
+  $MinioPort = if ($env:BTHWANI_MINIO_API_PORT) { $env:BTHWANI_MINIO_API_PORT } else { "59000" }
+  $MinioUrl = "http://localhost:$MinioPort"
   $max = 15
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "  /minio/health/live attempt $i/$max"
@@ -274,7 +359,7 @@ function Invoke-MinioSmoke {
 
 function Invoke-DshMediaSeed {
   Write-Host "`n--- Applying DSH-001 MinIO media seed ---"
-  $MediaDirectory = (Resolve-Path ".\services\dsh\database\seeds\local\media").Path
+  $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
   $Mount = "${MediaDirectory}:/seed:ro"
   docker run --rm --network bthwani-runtime --volume $Mount `
     --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
@@ -416,6 +501,93 @@ function Invoke-DshSmoke {
   $catalogAudit = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/audit" -Headers $operatorHeaders -TimeoutSec 10
   if ($catalogAudit.events.Count -lt 1) { throw "catalog audit evidence is missing" }
 
+  # DSH-015: partner lifecycle from field draft to client-visible store readiness.
+  $fieldToken = Get-LocalActorToken "field"
+  $fieldHeaders = @{
+    Authorization = "Bearer $fieldToken"
+    "X-Correlation-ID" = "smoke-partner-field-$([guid]::NewGuid())"
+  }
+  $partnerSuffix = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+  $partnerDraftBody = @{
+    legalNameAr = "مؤسسة فحص الشركاء $partnerSuffix"
+    legalNameEn = "Partner Activation Smoke $partnerSuffix"
+    displayName = "شريك فحص $partnerSuffix"
+    legalIdentityType = "commercial_register"
+    legalIdentityNumber = "YE-SMOKE-$partnerSuffix"
+    ownerName = "مالك فحص الشركاء"
+    primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
+    category = "grocery"
+    notes = "DSH-015 runtime smoke"
+  } | ConvertTo-Json
+  $partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "DSH-015 draft create did not return partner id" }
+
+  $submitBody = @{ reason = "field submitted DSH-015 smoke partner" } | ConvertTo-Json
+  $submitted = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
+  if ($submitted.partner.activationStatus -ne "submitted") { throw "DSH-015 submit did not reach submitted" }
+
+  $visitBody = @{
+    storeId = "store-1002"
+    visitNotes = "field visit for DSH-015 smoke"
+    locationLatitude = 15.3229
+    locationLongitude = 44.2075
+    evidenceMediaRefs = @("media_visit_smoke_front.jpg")
+  } | ConvertTo-Json
+  $visit = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
+  if ($visit.visitStatus -ne "submitted") { throw "DSH-015 field visit was not submitted" }
+
+  $docBody = @{
+    documentType = "commercial_register"
+    mediaRef = "media_smoke_commercial_register.jpg"
+    notes = "commercial register smoke document"
+  } | ConvertTo-Json
+  $doc = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($doc.id)) { throw "DSH-015 document upload did not return document id" }
+
+  $transitionHeaders = @{
+    Authorization = "Bearer $operatorToken"
+    "X-Correlation-ID" = "smoke-partner-transition-$([guid]::NewGuid())"
+  }
+  function Invoke-PartnerTransition([string] $PartnerId, [string] $ToStatus) {
+    $body = @{
+      toStatus = $ToStatus
+      reason = "DSH-015 runtime smoke transition to $ToStatus"
+    } | ConvertTo-Json
+    $result = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$PartnerId/transition" -Method Post -Headers $transitionHeaders -ContentType "application/json" -Body $body -TimeoutSec 10
+    if ($result.partner.activationStatus -ne $ToStatus) { throw "DSH-015 transition to $ToStatus failed" }
+    if ($result.event.actorSurface -ne "control-panel") { throw "DSH-015 transition actor_surface was $($result.event.actorSurface)" }
+    return $result
+  }
+
+  Invoke-PartnerTransition $partnerDraft.id "documents_uploaded" | Out-Null
+  $reviewBody = @{
+    decision = "approved"
+    reason = "DSH-015 smoke review approved"
+  } | ConvertTo-Json
+  $review = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $operatorHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
+  if ($review.document.documentStatus -ne "approved") { throw "DSH-015 document review did not approve document" }
+
+  $linkBody = @{ storeId = "store-1002" } | ConvertTo-Json
+  $linkedStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $linkBody -TimeoutSec 10
+  if ($linkedStores.total -lt 1) { throw "DSH-015 partner store link returned no stores" }
+
+  foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "partner_active", "client_visible")) {
+    Invoke-PartnerTransition $partnerDraft.id $toStatus | Out-Null
+  }
+  $readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
+  if ($readiness.partnerId -ne $partnerDraft.id) { throw "DSH-015 readiness response did not match partner" }
+  $audit = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/audit" -Headers $operatorHeaders -TimeoutSec 10
+  if ($audit.events.Count -lt 7) { throw "DSH-015 audit did not include the full transition chain" }
+  if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "DSH-015 audit final status is not client_visible" }
+  $linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1002" -Headers $operatorHeaders -TimeoutSec 10
+  if ($linkedStore.store.partnerReadiness -ne "ready") { throw "DSH-015 linked store partner_readiness is not ready" }
+
+  $partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status" -Headers $partnerHeaders -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($partnerSelfStatus.activationStatus)) { throw "DSH-015 partner self status missing activationStatus" }
+  $partnerSelfReadiness = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/readiness" -Headers $partnerHeaders -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($partnerSelfReadiness.partnerId)) { throw "DSH-015 partner self readiness missing partnerId" }
+  Write-Host "  DSH-015 partner lifecycle smoke: PASS"
+
   if ($script:ProfileList -contains "wlt") {
     $clientToken = Get-LocalActorToken "client"
     $clientHeaders = @{
@@ -505,6 +677,7 @@ elseif ($Action -eq "reset") {
     Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+    Start-DshApi
   }
   if ($ProfileList -contains "dsh") {
     Invoke-Migrate
@@ -517,6 +690,19 @@ elseif ($Action -eq "reset") {
     Invoke-WltSeed
     Wait-ForWltApi
     Invoke-WltSmoke
+  }
+  if ($ProfileList -contains "financial-simulators") {
+    Wait-ForWireMockFinancialProvider
+    Invoke-WireMockFinancialSmoke
+    Invoke-WltFinancialProviderSmoke
+  }
+  if ($ProfileList -contains "mail") {
+    Wait-ForMailpit
+    Invoke-MailpitSmoke
+  }
+  if ($ProfileList -contains "cache") {
+    Wait-ForValkey
+    Invoke-ValkeySmoke
   }
   Write-Host "reset: PASS"
 }
@@ -569,6 +755,7 @@ elseif ($Action -eq "smoke") {
     Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+    Start-DshApi
   }
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
@@ -582,6 +769,19 @@ elseif ($Action -eq "smoke") {
   }
   if ($ProfileList -contains "media") {
     Invoke-MinioSmoke
+  }
+  if ($ProfileList -contains "financial-simulators") {
+    Wait-ForWireMockFinancialProvider
+    Invoke-WireMockFinancialSmoke
+    Invoke-WltFinancialProviderSmoke
+  }
+  if ($ProfileList -contains "mail") {
+    Wait-ForMailpit
+    Invoke-MailpitSmoke
+  }
+  if ($ProfileList -contains "cache") {
+    Wait-ForValkey
+    Invoke-ValkeySmoke
   }
   Write-Host "smoke: PASS"
 }
@@ -606,6 +806,7 @@ elseif ($Action -eq "all") {
     Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+    Start-DshApi
   }
 
   if ($ProfileList -contains "wlt") {
@@ -625,6 +826,22 @@ elseif ($Action -eq "all") {
   if ($ProfileList -contains "media") {
     Invoke-DshMediaSeed
     Invoke-MinioSmoke
+  }
+
+  if ($ProfileList -contains "financial-simulators") {
+    Wait-ForWireMockFinancialProvider
+    Invoke-WireMockFinancialSmoke
+    Invoke-WltFinancialProviderSmoke
+  }
+
+  if ($ProfileList -contains "mail") {
+    Wait-ForMailpit
+    Invoke-MailpitSmoke
+  }
+
+  if ($ProfileList -contains "cache") {
+    Wait-ForValkey
+    Invoke-ValkeySmoke
   }
 
   # final status

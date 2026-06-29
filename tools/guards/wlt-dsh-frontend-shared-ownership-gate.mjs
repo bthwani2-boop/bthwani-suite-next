@@ -1,13 +1,40 @@
+#!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { fail, listCodeFiles, read, toPosix, repoRoot } from "./_guard-utils.mjs";
+import { fail, listCodeFiles, read, toPosix, repoRoot, findImportSpecifiers, existsResolved } from "./_guard-utils.mjs";
 
 const guardId = "wlt-dsh-frontend-shared-ownership";
 const violations = [];
 const root = repoRoot;
 
-// ── 1. WLT-for-DSH shared boundary must exist ─────────────────────────────────
+// Load tsconfig aliases
+const tsconfigPath = path.join(repoRoot, "tsconfig.base.json");
+const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, "utf8"));
+const aliases = tsconfig?.compilerOptions?.paths ?? {};
 
+function resolveSpecifier(file, specifier) {
+  for (const [alias, targets] of Object.entries(aliases)) {
+    const target = targets[0];
+    if (!target) continue;
+    if (specifier === alias) {
+      return target;
+    }
+    if (alias.endsWith("/*") && specifier.startsWith(alias.slice(0, -2))) {
+      const sub = specifier.slice(alias.length - 2);
+      return target.replace(/\/\*$/, sub);
+    }
+  }
+
+  if (specifier.startsWith(".") || specifier.startsWith("..")) {
+    const baseDir = path.dirname(file);
+    const resolved = path.resolve(repoRoot, baseDir, specifier);
+    return toPosix(path.relative(repoRoot, resolved));
+  }
+
+  return specifier;
+}
+
+// ── 1. Required Boundary Files ──
 const REQUIRED_BOUNDARY_FILES = [
   "services/wlt/frontend/shared/dsh/index.ts",
   "services/wlt/frontend/shared/dsh/wlt-dsh-boundary.types.ts",
@@ -16,6 +43,10 @@ const REQUIRED_BOUNDARY_FILES = [
   "services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts",
   "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts",
   "services/wlt/frontend/shared/dsh/use-wlt-dsh-reference-controller.tsx",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission.types.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission.states.ts",
+  "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission.view-model.ts",
+  "services/wlt/frontend/shared/dsh/use-wlt-dsh-field-commission-reference-controller.tsx",
 ];
 
 for (const rel of REQUIRED_BOUNDARY_FILES) {
@@ -25,8 +56,7 @@ for (const rel of REQUIRED_BOUNDARY_FILES) {
   }
 }
 
-// ── 2. WLT manifest sliceRuntimeVerified allowed only when WLT-000 evidence is present ──
-
+// ── 2. WLT manifest sliceRuntimeVerified validation ──
 const wltManifest = "services/wlt/service.manifest.ts";
 const WLT_000_EVIDENCE_DIR = "services/wlt/evidence/WLT-000-runtime-foundation";
 const WLT_000_SLICE_GATE = path.join(root, WLT_000_EVIDENCE_DIR, "slice-gate.txt");
@@ -48,8 +78,154 @@ if (fs.existsSync(path.join(root, wltManifest))) {
   }
 }
 
-// ── 3. WLT-for-DSH surface files must not own financial logic ─────────────────
+// ── 3. Check Exports in index.ts point to existing files ──
+const wltIndexPath = "services/wlt/frontend/shared/dsh/index.ts";
+if (fs.existsSync(path.join(root, wltIndexPath))) {
+  const content = read(wltIndexPath);
+  const specs = findImportSpecifiers(content);
+  for (const { specifier } of specs) {
+    if (!existsResolved(wltIndexPath, specifier)) {
+      violations.push({
+        file: wltIndexPath,
+        message: `BROKEN EXPORT: file does not exist for specifier '${specifier}'`
+      });
+    }
+  }
+}
 
+// ── 4. Reinforce Read-Only Rules inside WLT shared boundary ──
+const wltSharedDshPath = "services/wlt/frontend/shared/dsh/";
+const approvalPath = path.join(root, wltSharedDshPath, ".wlt-mutation-approved");
+const mutationApproved = fs.existsSync(approvalPath);
+
+for (const file of listCodeFiles()) {
+  if (!file.startsWith(wltSharedDshPath)) continue;
+
+  const content = read(file);
+
+  // A. Block POST/PUT/PATCH/DELETE methods
+  if (!mutationApproved) {
+    const httpMutationRegex = /\bmethod\s*:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i;
+    if (httpMutationRegex.test(content)) {
+      violations.push({
+        file,
+        message: `FORBIDDEN: mutation HTTP method in read-only boundary file`
+      });
+    }
+  }
+
+  // B. Block mutation function name patterns
+  const mutationFuncRegexes = [
+    /\b(?:export\s+)?(?:async\s+)?function\s+((?:create|update|mutate|confirm|finalize|settle|post|refund|payout)\w*)\b/g,
+    /\b(?:export\s+)?const\s+((?:create|update|mutate|confirm|finalize|settle|post|refund|payout)\w*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z_]\w*)\s*=>/g,
+    /\b(?:export\s+)?const\s+((?:create|update|mutate|confirm|finalize|settle|post|refund|payout)\w*)\s*=\s*(?:async\s*)?function\b/g
+  ];
+
+  for (const regex of mutationFuncRegexes) {
+    let match;
+    while ((match = regex.exec(content))) {
+      violations.push({
+        file,
+        message: `FORBIDDEN: mutation function declaration '${match[1]}' in read-only boundary`
+      });
+    }
+  }
+
+  const ledgerMutationRegex = /\b(?:ledger_mutation|ledgermutation|ledgerMutation)\b/gi;
+  if (ledgerMutationRegex.test(content)) {
+    violations.push({
+      file,
+      message: `FORBIDDEN: ledger mutation reference in read-only boundary`
+    });
+  }
+
+  // C. Block fallback localhost
+  const localhostRegex = /\bhttp:\/\/(?:localhost|127\.0\.0\.1)\b/i;
+  if (localhostRegex.test(content)) {
+    violations.push({
+      file,
+      message: `FORBIDDEN: hardcoded localhost fallback is not allowed inside shared WLT boundary`
+    });
+  }
+}
+
+// ── 5. Check DSH Surfaces imports from WLT shared boundary ──
+const DSH_SURFACE_SCOPES = [
+  "services/dsh/frontend/control-panel/",
+  "services/dsh/frontend/app-client/",
+  "services/dsh/frontend/app-partner/",
+  "services/dsh/frontend/app-field/",
+  "services/dsh/frontend/app-captain/",
+];
+
+for (const file of listCodeFiles()) {
+  const posix = toPosix(file);
+  const matchedSurface = DSH_SURFACE_SCOPES.find((s) => posix.startsWith(s));
+  if (!matchedSurface) continue;
+
+  const content = read(file);
+  const specs = findImportSpecifiers(content);
+
+  for (const { specifier } of specs) {
+    const resolved = resolveSpecifier(file, specifier);
+
+    if (resolved.startsWith("services/wlt/")) {
+      // 1. Block DSH surface from WLT backend/clients/generated
+      if (
+        resolved.startsWith("services/wlt/backend/") ||
+        resolved.startsWith("services/wlt/clients/") ||
+        resolved.startsWith("services/wlt/generated/")
+      ) {
+        violations.push({
+          file,
+          message: `FORBIDDEN: DSH surface importing WLT backend/clients/generated directly (resolved: ${resolved})`
+        });
+      }
+
+      // 2. Block DSH surface from importing WLT API/controller-core directly
+      if (
+        resolved.endsWith(".api") ||
+        resolved.includes(".api.") ||
+        resolved.includes(".api/") ||
+        resolved.endsWith(".controller-core") ||
+        resolved.includes(".controller-core.") ||
+        resolved.includes(".controller-core/")
+      ) {
+        violations.push({
+          file,
+          message: `FORBIDDEN: DSH surface importing WLT API/controller-core directly (resolved: ${resolved})`
+        });
+      }
+
+      // 3. Block app-field from WLT dependency outside whitelisted read-only shared/dsh files
+      if (posix.startsWith("services/dsh/frontend/app-field/")) {
+        const isAllowedWltImport =
+          resolved.startsWith("services/wlt/frontend/shared/dsh/") &&
+          (
+            resolved === "services/wlt/frontend/shared/dsh/index" ||
+            resolved === "services/wlt/frontend/shared/dsh/index.ts" ||
+            resolved.endsWith(".types") ||
+            resolved.endsWith(".types.ts") ||
+            resolved.endsWith(".states") ||
+            resolved.endsWith(".states.ts") ||
+            resolved.endsWith(".view-model") ||
+            resolved.endsWith(".view-model.ts") ||
+            resolved.endsWith(".contract") ||
+            resolved.endsWith(".contract.ts") ||
+            (resolved.includes("use-") && (resolved.endsWith("-controller") || resolved.endsWith("-controller.tsx")))
+          );
+        if (!isAllowedWltImport) {
+          violations.push({
+            file,
+            message: `FORBIDDEN: app-field is only allowed to consume read-only references from whitelisted files in services/wlt/frontend/shared/dsh/ (resolved: ${resolved})`
+          });
+        }
+      }
+    }
+  }
+}
+
+// ── 6. Keep Legacy Financial Mutation Checks ──
 const WLT_DSH_SURFACE_SCOPES = [
   "services/wlt/frontend/app-client/",
   "services/wlt/frontend/control-panel/",
@@ -86,8 +262,6 @@ for (const file of listCodeFiles()) {
     }
   }
 }
-
-// ── 4. DSH must not mutate WLT financial fields ───────────────────────────────
 
 const DSH_SCOPES = [
   "services/dsh/frontend/",

@@ -1,4 +1,0 @@
-
-> @bthwani/dsh@0.0.0 typecheck C:\bthwani-suite-next\services\dsh
-> tsc -p tsconfig.json --noEmit
-

@@ -7,6 +7,7 @@ export {
   getDshPartnerActivationStateMetadata,
   isDshPartnerClientVisible,
   isDshPartnerActivationComplete,
+  getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
   getDshPartnerReadinessChecklist,
 } from "./partner-activation.model";
@@ -39,6 +40,8 @@ export {
 } from "./use-partner-admin-controller";
 
 export { usePartnerSelfController } from "./use-partner-self-controller";
+export * from "./partner-registry";
+export * from "./use-partners-controller";
 
 export {
   fieldCreateDraft,
@@ -51,4 +54,3 @@ export {
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
-

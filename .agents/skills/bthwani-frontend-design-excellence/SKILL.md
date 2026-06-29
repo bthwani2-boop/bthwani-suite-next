@@ -17,7 +17,7 @@ This skill acts as the ultimate authority on *how* things should look and feel, 
 - **Centralized Design System**: Any reusable/repeatable frontend pattern must be centralized in the approved design system / `@bthwani/ui-kit`.
 - **No Local Design Systems**: Do not use this skill to hardcode random colors, local design systems, or one-off visual hacks.
 - **RTL Enforcement**: Arabic/RTL UI must be directionally correct.
-- **Visual Evidence Required**: Visible UI changes require visual evidence (screenshots/recordings). Without it, the decision must be `NEEDS_VISUAL_EVIDENCE`.
+- **Visual Evidence (Escalated Only)**: Visible UI changes require visual evidence (screenshots/recordings) only when final closure or escalation is requested. Without it, the decision must be `NEEDS_VISUAL_EVIDENCE`. Otherwise, code-based verification is sufficient.
 
 ## Design-Quality Pillars
 
@@ -64,7 +64,7 @@ This skill acts as the ultimate authority on *how* things should look and feel, 
 2. Read `bthwani-ui-kit-design-lock` for ownership/design-system boundaries.
 3. Identify existing `@bthwani/ui-kit` exports before proposing any local UI.
 4. Apply the design pillars (Aesthetics, Micro-animations, RTL, Spacing).
-5. Verify with code gates and visual evidence.
+5. Verify with code-based checks, and use visual evidence only when final closure or escalation is requested.
 
 ## Output Contract
 
@@ -78,7 +78,7 @@ design_intent:
 rich_aesthetics_applied:
 animations_and_states:
 rtl_findings:
-visual_evidence:
+visual_evidence: (only when final closure or escalation is requested)
 decision: PASS / PASS_WITH_WARNINGS / FIX_REQUIRED / NEEDS_VISUAL_EVIDENCE
 next_action:
 ```

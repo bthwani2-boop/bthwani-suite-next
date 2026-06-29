@@ -1,3 +1,2 @@
-export * from "./wlt-settlement.types";
-export * from "./wlt-settlement.api";
-export * from "./use-wlt-settlement-controller";
+﻿// DEPRECATED: import from '../finance-wlt-link/wlt-settlement' or '../finance-wlt-link' instead
+export * from '../finance-wlt-link/wlt-settlement';

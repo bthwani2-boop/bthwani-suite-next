@@ -25,5 +25,6 @@
     "@bthwani/ui-kit": "workspace:*"
     ,"@bthwani/app-shell": "workspace:*"
     ,"@bthwani/core-identity": "workspace:*"
+    ,"@expo/vector-icons": "^14.0.2"
   }
 }

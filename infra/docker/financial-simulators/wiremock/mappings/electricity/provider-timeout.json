@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/electricity/payments/timeout"
+  },
+  "response": {
+    "status": 504,
+    "fixedDelayMilliseconds": 200,
+    "jsonBody": {
+      "code": "PROVIDER_TIMEOUT",
+      "message": "Electricity provider timeout"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

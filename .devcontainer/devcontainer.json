@@ -1,0 +1,41 @@
+{
+  "name": "bthwani-suite-next",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/powershell:1": {}
+  },
+  "postCreateCommand": "corepack enable && node --version && pnpm --version && go version && docker --version && docker compose version",
+  "forwardPorts": [
+    13000,
+    18101,
+    18102,
+    18103,
+    18104,
+    58080,
+    58082,
+    58083,
+    8025,
+    58090
+  ],
+  "portsAttributes": {
+    "13000": { "label": "control-panel" },
+    "18101": { "label": "app-client" },
+    "18102": { "label": "app-partner" },
+    "18103": { "label": "app-captain" },
+    "18104": { "label": "app-field" },
+    "58080": { "label": "dsh-api" },
+    "58082": { "label": "identity-api" },
+    "58083": { "label": "wlt-api" },
+    "8025": { "label": "mailpit-ui" },
+    "58090": { "label": "wiremock-financial-provider" }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "pwsh"
+      }
+    }
+  }
+}

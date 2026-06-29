@@ -2,6 +2,8 @@
   "name": "@bthwani/wlt",
   "version": "0.0.0",
   "private": true,
+  "main": "frontend/shared/dsh/index.ts",
+  "types": "frontend/shared/dsh/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "pnpm run typecheck && cd backend && go build ./...",

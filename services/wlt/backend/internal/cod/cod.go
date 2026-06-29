@@ -117,7 +117,7 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	}
 	currency := input.Currency
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	const q = `
 		INSERT INTO wlt_cod_records (order_id, captain_id, partner_id, amount_minor_units, currency)
@@ -212,7 +212,7 @@ func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, err
 	}
 	currency := input.Currency
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	const q = `
 		INSERT INTO wlt_commissions

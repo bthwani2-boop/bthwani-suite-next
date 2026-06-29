@@ -2,6 +2,7 @@
 // No JSX. No ui-kit.
 
 export type FieldPartnerDraftForm = {
+  // ── Identity (Step 1) ──────────────────────────────────────────
   legalNameAr: string;
   legalNameEn: string;
   displayName: string;
@@ -13,6 +14,22 @@ export type FieldPartnerDraftForm = {
   email: string;
   category: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
   notes: string;
+
+  // ── Location (Step 2) ──────────────────────────────────────────
+  city: string;
+  addressLine: string;
+  coverageSummary: string;
+
+  // ── Photos (Step 2) ───────────────────────────────────────────
+  storefrontPhotoRef: string;
+  interiorPhotoRef: string;
+  signagePhotoRef: string;
+
+  // ── Offer / Agreement (Step 4) ────────────────────────────────
+  preliminaryOffer: string;
+  operatingHours: string;
+  deliveryReadiness: string;
+  financeNote: string;
 };
 
 export type FieldPartnerDraftStep =
@@ -91,6 +108,57 @@ export function validateIdentityStep(form: Partial<FieldPartnerDraftForm>): Fiel
 
 export function validateOwnerStep(form: Partial<FieldPartnerDraftForm>): FieldOnboardingValidationErrors {
   const errors: FieldOnboardingValidationErrors = {};
-  if (!form.primaryPhone?.trim()) errors.primaryPhone = "رقم الجوال الأساسي مطلوب";
+  if (!form.ownerName?.trim()) errors.ownerName = "اسم المالك مطلوب للمطابقة القانونية";
+  if (!form.primaryPhone?.trim()) errors.primaryPhone = "رقم جوال المالك مطلوب للتواصل المباشر";
   return errors;
+}
+
+// ── Group-level missing count helpers (mirrors donor groupSummaries logic) ──
+
+export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm>): number {
+  let count = 0;
+  if (!form.ownerName?.trim()) count++;
+  if (!form.primaryPhone?.trim()) count++;
+  return count;
+}
+
+export function getLocationMediaMissingCount(form: Partial<FieldPartnerDraftForm>): number {
+  let count = 0;
+  if (!form.addressLine?.trim()) count++;
+  if (!form.storefrontPhotoRef?.trim()) count++;
+  if (!form.interiorPhotoRef?.trim()) count++;
+  return count;
+}
+
+export function getDocumentsMissingCount(): number {
+  // Documents are always 2 until uploaded via field upload flow
+  return 2;
+}
+
+export function getAgreementReviewMissingCount(form: Partial<FieldPartnerDraftForm>): number {
+  let count = 0;
+  if (!form.preliminaryOffer?.trim()) count++;
+  if (!form.operatingHours?.trim()) count++;
+  if (!form.deliveryReadiness?.trim()) count++;
+  if (!form.financeNote?.trim()) count++;
+  // + basics missing forwarded
+  count += getBasicsProfileMissingCount(form);
+  count += getLocationMediaMissingCount(form);
+  count += getDocumentsMissingCount();
+  return count;
+}
+
+// ── Global required missing items list (mirrors donor getPartnerRequiredMissingItems) ──
+
+export function getFieldRequiredMissingItems(form: Partial<FieldPartnerDraftForm>): string[] {
+  const missing: string[] = [];
+  if (!form.ownerName?.trim()) missing.push("اسم المالك");
+  if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
+  if (!form.storefrontPhotoRef?.trim()) missing.push("صورة الواجهة");
+  if (!form.preliminaryOffer?.trim()) missing.push("العرض أو الاتفاق المبدئي");
+  if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
+  // Always: documents are uploaded via field flow, default to missing
+  missing.push("السجل التجاري");
+  missing.push("هوية المالك");
+  return missing;
 }

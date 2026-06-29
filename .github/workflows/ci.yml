@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - master
+      - brach-validation
 
 permissions:
   contents: read
@@ -41,6 +42,51 @@ jobs:
       - name: Contracts lint
         run: pnpm run contracts:lint
 
+      - name: Guard — matrix v3 (live topology)
+        run: pnpm run guard:matrix:v3
+
+      - name: Guard — unified fullstack brain
+        run: pnpm run guard:unified-fullstack-brain
+
+      - name: Guard — DSH frontend shared ownership
+        run: pnpm run guard:dsh-frontend-shared-ownership
+
+      - name: Guard — WLT-DSH frontend shared ownership
+        run: pnpm run guard:wlt-dsh-frontend-shared-ownership
+
+      - name: Guard — DSH frontend shared boundary imports
+        run: pnpm run guard:dsh-frontend-shared-boundary-imports
+
+      - name: Guard — no financial mutation outside WLT
+        run: pnpm run guard:no-financial-mutation-outside-wlt
+
+      - name: Guard — no direct financial provider access outside WLT
+        run: pnpm run guard:no-direct-financial-provider-access-outside-wlt
+
+      - name: Guard — no direct fetch in screen
+        run: pnpm run guard:no-direct-fetch-in-screen
+
+      - name: Guard — no preview demo mock runtime
+        run: pnpm run guard:no-preview-demo-mock-runtime
+
+      - name: Guard — no broken imports
+        run: pnpm run guard:no-broken-imports
+
+      - name: Guard — canonical host ports
+        run: pnpm run guard:canonical-host-ports
+
+      - name: Guard — no hardcoded local repo root
+        run: pnpm run guard:no-hardcoded-local-repo-root
+
+      - name: Guard — canonical currency Yemen
+        run: pnpm run guard:canonical-currency-yemen
+
+      - name: Foundation gate
+        run: pnpm run foundation:gate
+
+      - name: Slice gate
+        run: pnpm run slice:gate
+
       - name: Typecheck
         run: pnpm run typecheck
 
@@ -49,6 +95,90 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+  wlt-go:
+    name: WLT Go backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+
+      - name: Go test
+        working-directory: services/wlt/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: services/wlt/backend
+        run: go build ./...
+
+  wlt-go-db:
+    name: WLT Go DB integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run WLT migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: wlt_runtime_password
+        run: |
+          for f in services/wlt/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run WLT tests with DB required
+        working-directory: services/wlt/backend
+        env:
+          DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:5432/wlt_runtime?sslmode=disable
+          WLT_REQUIRE_DB_TESTS: "true"
+        run: go test -v ./...
 
   dsh-go:
     name: DSH Go backend
@@ -72,6 +202,79 @@ jobs:
         working-directory: services/dsh/backend
         run: go build ./...
 
+  dsh-go-db:
+    name: DSH Go DB integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run DSH migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: dsh_runtime_password
+        run: |
+          for f in services/dsh/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run DSH local seeds
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: dsh_runtime_password
+        run: |
+          for f in services/dsh/database/seeds/local/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run DSH tests with DB required
+        working-directory: services/dsh/backend
+        env:
+          DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+          DSH_REQUIRE_DB_TESTS: "true"
+        run: go test -v ./...
+
   identity-go:
     name: Identity Go backend
     runs-on: ubuntu-latest
@@ -93,3 +296,48 @@ jobs:
       - name: Go build
         working-directory: core/identity/backend
         run: go build ./...
+
+  docker-runtime-smoke:
+    name: Docker runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full runtime reset and smoke
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+
+      - name: WireMock financial provider smoke
+        run: pnpm run runtime:wiremock:financial:smoke
+
+      - name: WLT provider-through-WLT smoke
+        run: pnpm run runtime:wlt:provider:smoke
+
+      - name: Docker compose ps
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
+
+      - name: Docker compose logs on failure
+        if: failure()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
+
+      - name: Docker compose down
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans

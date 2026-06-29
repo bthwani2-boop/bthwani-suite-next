@@ -1,11 +1,13 @@
 package refund
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
 
@@ -30,6 +32,10 @@ type CreateRefundInput struct {
 	AmountMinorUnits int64  `json:"amountMinorUnits"`
 	Currency         string `json:"currency"`
 	Reason           string `json:"reason"`
+}
+
+type financialProvider interface {
+	Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error)
 }
 
 func scanRefund(row *sql.Row) (*Refund, error) {
@@ -83,7 +89,7 @@ func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
 	}
 	currency := input.Currency
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	const q = `
 		INSERT INTO wlt_refunds
@@ -166,6 +172,29 @@ func CompleteRefund(db *sql.DB, refundID string) (*Refund, error) {
 	return transitionRefund(db, refundID, "completed", true)
 }
 
+func CompleteRefundWithProvider(ctx context.Context, db *sql.DB, client financialProvider, refundID string, meta provider.RequestMeta) (*Refund, error) {
+	ref, err := GetRefund(db, refundID)
+	if err != nil || ref == nil {
+		return ref, err
+	}
+	result, err := client.Post(ctx, "/financial/card/refund", map[string]any{
+		"refundId":         ref.ID,
+		"paymentSessionId": ref.PaymentSessionID,
+		"orderId":          ref.OrderID,
+		"clientId":         ref.ClientID,
+		"amountMinorUnits": ref.AmountMinorUnits,
+		"currency":         ref.Currency,
+		"reason":           ref.Reason,
+	}, meta)
+	if err != nil {
+		return nil, err
+	}
+	if result.Status != "refunded" || result.ProviderReference == "" {
+		return nil, fmt.Errorf("provider refund returned invalid status or reference")
+	}
+	return CompleteRefund(db, refundID)
+}
+
 func RejectRefund(db *sql.DB, refundID string) (*Refund, error) {
 	return transitionRefund(db, refundID, "rejected", true)
 }
@@ -237,9 +266,14 @@ func HandleApproveRefund(db *sql.DB) http.HandlerFunc {
 
 func HandleCompleteRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ref, err := CompleteRefund(db, r.PathValue("refundId"))
+		client, err := newProviderClient()
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+			return
+		}
+		ref, err := CompleteRefundWithProvider(r.Context(), db, client, r.PathValue("refundId"), requestMeta(r, "wlt-refund"))
+		if err != nil {
+			sendProviderError(w, err)
 			return
 		}
 		if ref == nil {
@@ -248,6 +282,37 @@ func HandleCompleteRefund(db *sql.DB) http.HandlerFunc {
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"refund": ref})
 	}
+}
+
+func newProviderClient() (*provider.Client, error) {
+	config, err := provider.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return provider.NewClient(config), nil
+}
+
+func requestMeta(r *http.Request, prefix string) provider.RequestMeta {
+	meta := provider.NewRequestMeta(prefix)
+	if correlationID := r.Header.Get("X-Correlation-ID"); correlationID != "" {
+		meta.CorrelationID = correlationID
+	}
+	if idempotencyKey := r.Header.Get("Idempotency-Key"); idempotencyKey != "" {
+		meta.IdempotencyKey = idempotencyKey
+	}
+	return meta
+}
+
+func sendProviderError(w http.ResponseWriter, err error) {
+	if providerErr, ok := err.(provider.Error); ok {
+		message := providerErr.Message
+		if message == "" {
+			message = providerErr.Error()
+		}
+		shared.SendError(w, http.StatusBadGateway, "PROVIDER_ERROR", message)
+		return
+	}
+	shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 }
 
 func HandleRejectRefund(db *sql.DB) http.HandlerFunc {

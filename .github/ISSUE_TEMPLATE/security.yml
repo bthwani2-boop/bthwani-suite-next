@@ -1,0 +1,23 @@
+name: Security Incident or Advisory
+description: Report a security-sensitive issue or maintainer review request.
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        WARNING: Do NOT disclose zero-day or high-risk vulnerabilities publicly.
+        Use this issue template only for internal tasks, hardening, or general maintainer policy.
+  - type: textarea
+    id: details
+    attributes:
+      label: Hardening Details
+      placeholder: Describe the security area (e.g. CORS, Identity token, Auth checks).
+    validations:
+      required: true
+  - type: textarea
+    id: resolution
+    attributes:
+      label: Proposed Mitigation
+      placeholder: Describe steps taken or required to harden.
+    validations:
+      required: true

@@ -28,7 +28,16 @@
       "dsh-service-activation",
       "go-backend-runtime",
       "performance-runtime-baseline",
-      "docker-runtime-profiles"
+      "docker-runtime-profiles",
+      "dsh-frontend-shared-ownership",
+      "wlt-dsh-frontend-shared-ownership",
+      "dsh-frontend-shared-boundary-imports",
+      "unified-fullstack-brain",
+      "canonical-host-ports",
+      "no-hardcoded-local-repo-root",
+      "dsh-store-role-boundary",
+      "dsh-catalog-ownership",
+      "dsh-cart-serviceability"
     ],
     "slice": [
       "no-direct-fetch-in-screen",
@@ -44,9 +53,9 @@
       "dsh-frontend-shared-ownership",
       "wlt-dsh-frontend-shared-ownership",
       "canonical-host-ports",
-      "dsh-001-cross-surface-dependency-map",
-      "dsh-003-catalog-ownership",
-      "dsh-004-cart-serviceability"
+      "no-hardcoded-local-repo-root",
+      "dsh-frontend-shared-boundary-imports",
+      "unified-fullstack-brain"
     ]
   },
   "guards": [
@@ -73,6 +82,7 @@
     {
       "id": "no-raw-hex-outside-ui-kit",
       "path": "tools/guards/no-raw-hex-outside-ui-kit.mjs",
+      "severity": "warning",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {
@@ -83,6 +93,7 @@
     {
       "id": "no-react-native-runtime-dependency-in-ui-kit",
       "path": "tools/guards/no-react-native-runtime-dependency-in-ui-kit.mjs",
+      "severity": "warning",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {
@@ -113,6 +124,7 @@
     {
       "id": "no-unsafe-ui-kit-tamagui-casts",
       "path": "tools/guards/no-unsafe-ui-kit-tamagui-casts.mjs",
+      "severity": "warning",
       "policySource": "governance/03_UI_KIT_AND_BRAND_LOCK.md"
     },
     {
@@ -153,6 +165,7 @@
     {
       "id": "dsh-service-activation",
       "path": "tools/guards/dsh-service-activation.mjs",
+      "severity": "warning",
       "policySource": "governance/13_DSH_SERVICE_ACTIVATION.md"
     },
     {
@@ -168,6 +181,7 @@
     {
       "id": "docker-runtime-profiles",
       "path": "tools/guards/docker-runtime-profiles.mjs",
+      "severity": "warning",
       "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
     },
     {
@@ -186,19 +200,35 @@
       "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
     },
     {
-      "id": "dsh-001-cross-surface-dependency-map",
-      "path": "tools/guards/dsh-001-cross-surface-dependency-map.mjs",
+      "id": "no-hardcoded-local-repo-root",
+      "path": "tools/guards/no-hardcoded-local-repo-root.mjs",
+      "policySource": "governance/08_CLEANUP_AND_DEPRECATION.md"
+    },
+    {
+      "id": "dsh-store-role-boundary",
+      "path": "tools/guards/dsh-store-role-boundary-gate.mjs",
+      "severity": "warning",
       "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     },
     {
-      "id": "dsh-003-catalog-ownership",
-      "path": "tools/guards/dsh-003-catalog-ownership-gate.mjs",
-      "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
+      "id": "dsh-catalog-ownership",
+      "path": "tools/guards/dsh-catalog-ownership-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     },
     {
-      "id": "dsh-004-cart-serviceability",
-      "path": "tools/guards/dsh-004-cart-serviceability-gate.mjs",
-      "policySource": "governance/09_SLICE_OPERATING_MODEL.md"
+      "id": "dsh-cart-serviceability",
+      "path": "tools/guards/dsh-cart-serviceability-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "dsh-frontend-shared-boundary-imports",
+      "path": "tools/guards/dsh-frontend-shared-boundary-imports-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
+    },
+    {
+      "id": "unified-fullstack-brain",
+      "path": "tools/guards/unified-fullstack-brain-gate.mjs",
+      "policySource": "governance/02_SERVICES_AND_SURFACES.md"
     }
   ]
 }

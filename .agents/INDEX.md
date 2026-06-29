@@ -2,7 +2,7 @@
 
 ## ⚡ Execution Model — Proportional to Task Nature
 
-The agent must **match effort to task complexity**. No more, no less.
+The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity**. No more, no less.
 
 ### Tier 1 — Instant (0 skills, 0 checks)
 Trivial tasks. Execute immediately and respond.
@@ -21,12 +21,12 @@ Work that crosses module or layer boundaries.
 - Multi-file feature, API + frontend binding, screen routing
 - Load: `bthwani-current-workspace-authority` + one task skill
 
-### Tier 4 — Full Evidence (3 skills, evidence gate)
+### Tier 4 — Escalated Evidence (3 skills, evidence gate)
 High-risk or cross-service work.
 - Finance (WLT/DSH money), security, secrets, auth, agent/skill files
 - Multi-service slice, Docker, CI, dependency changes
 - Load: authority + `bthwani-evidence-gate-router` + task skill
-- Evidence gate and closure check required before commit
+- Evidence gate is not default. Use it only for high-risk work, final closure, PR readiness, release readiness, or explicit user request.
 
 ---
 
@@ -35,18 +35,19 @@ High-risk or cross-service work.
 ### Tooling and evidence
 - Graph/ownership/context unclear → `graphify`
 - Need guard selection → `bthwani-guard-command-router`
-- Review local diff/patch → `bthwani-patch-review-evidence`
-- Need registry evidence pack → `bthwani-agent-handoff-evidence-pack`
+- Review local diff/patch (Escalation-only / PR review) → `bthwani-patch-review-evidence`
+- Create evidence packs only when explicitly requested. (Explicit-request-only) → `bthwani-agent-handoff-evidence-pack`
 - Updating or auditing agent files → `bthwani-agent-skill-integrity`
 
 ### Safety and quality
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
 - Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
-- Task closure/dimension evidence check → `bthwani-final-slice-closure-judge`
+- Final closure judge. (Final-only / Closure phase) → `bthwani-final-slice-closure-judge`
 
 ### Repository foundation
 - Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
 - Donor or realtest extraction → `bthwani-legacy-extraction`
+- External agent donor reference, agent inspiration, or agency-agents review (Use only when user asks to design/improve agents/skills or internal agent design is blocked. Do not load by default) → `external-agent-donor-reference`
 - Matrix-driven closure or coverage → `bthwani-machine-readable-matrix-governor`
 
 ### Full-stack and runtime
@@ -56,10 +57,10 @@ High-risk or cross-service work.
 - Runtime env/provider/service slots → `bthwani-platform-runtime-config`
 
 ### UI and finance
-- UI kit/design system → `bthwani-ui-kit-design-lock`
-- Screen/route/state/visual binding → `bthwani-screen-flow-binding`
+- UI kit/design system (Visual evidence is escalation-only) → `bthwani-ui-kit-design-lock`
+- Route/state/screen binding (Visual evidence is escalation-only) → `bthwani-screen-flow-binding`
 - DSH/WLT money boundary → `bthwani-dsh-wlt-finance-boundary`
-- Premium 2026 visual surgery / donor extraction / RTL / design closure → `bthwani-premium-visual-design-surgeon`
+- Premium UI execution/design system alignment (Visual evidence is escalation-only) → `bthwani-premium-visual-design-surgeon`
 
 
 

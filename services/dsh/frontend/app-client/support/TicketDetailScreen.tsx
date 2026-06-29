@@ -12,7 +12,7 @@ import {
   TextField,
   spacing,
 } from "@bthwani/ui-kit";
-import { useTicketDetailController, TICKET_STATUS_LABELS } from "../../shared/support";
+import { useTicketDetailController, buildSupportTicketViewModel } from "../../shared/support";
 
 type Props = { readonly ticketId: string };
 
@@ -28,6 +28,7 @@ export function TicketDetailScreen({ ticketId }: Props) {
   if (detailState.kind !== "success") return null;
 
   const ticket = detailState.ticket;
+  const vm = buildSupportTicketViewModel(ticket);
 
   function handleSend() {
     void sendMessage({ body: reply.trim() }).then(() => setReply(""));
@@ -36,9 +37,9 @@ export function TicketDetailScreen({ ticketId }: Props) {
   return (
     <ScrollScreen>
       <Header
-        title={ticket.subject}
-        subtitle={`#${ticket.id.slice(0, 8)}`}
-        actions={<Badge label={TICKET_STATUS_LABELS[ticket.status]} tone={ticket.status === "resolved" || ticket.status === "closed" ? "success" : "info"} />}
+        title={vm.subject}
+        subtitle={`#${vm.id.slice(0, 8)}`}
+        actions={<Badge label={vm.statusLabel} tone={vm.statusTone} />}
       />
 
       {messageListState.kind === "success" &&

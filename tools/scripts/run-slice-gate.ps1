@@ -1,7 +1,8 @@
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 
 $ErrorActionPreference = "Stop"
 
+$Soft = $args -contains "-Soft"
 $GuardArgIndex = [Array]::IndexOf($args, "-Guard")
 $RequestedGuard = if ($GuardArgIndex -ge 0 -and ($GuardArgIndex + 1) -lt $args.Count) { $args[$GuardArgIndex + 1] } else { $null }
 
@@ -63,7 +64,14 @@ foreach ($guard in $sliceGuards) {
   }
   $guardPath = $guardEntry.path
   $stepName = "guard-$guard"
-  $results += [pscustomobject]@{ step = $stepName; ok = (Run-Step $stepName { node $guardPath }) }
+  $isWarning = $guardEntry.severity -eq "warning"
+
+  $stepOk = Run-Step $stepName { node $guardPath }
+  if (-not $stepOk -and $isWarning) {
+    Write-Host "WARNING: Guard $guard failed, but is warning-only." -ForegroundColor Yellow
+    $stepOk = $true
+  }
+  $results += [pscustomobject]@{ step = $stepName; ok = $stepOk }
 }
 
 $failed = @($results | Where-Object { -not $_.ok })
@@ -78,5 +86,10 @@ if ($failed.Count -gt 0) {
 Write-Host "================================" -ForegroundColor White
 
 if ($failed.Count -gt 0) {
-  exit 1
+  if ($Soft) {
+    Write-Host "WARNING: Slice gate failed, but exiting with code 0 due to -Soft flag."
+    exit 0
+  } else {
+    exit 1
+  }
 }

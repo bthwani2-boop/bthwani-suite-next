@@ -1,0 +1,29 @@
+name: Feature Slice
+description: Propose or track a new feature slice.
+labels: ["slice", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Track implementation of feature slices with required evidence.
+  - type: input
+    id: slice-id
+    attributes:
+      label: Slice ID
+      placeholder: e.g., DSH-016
+    validations:
+      required: true
+  - type: textarea
+    id: overview
+    attributes:
+      label: Overview & Scope
+      placeholder: Describe the goal and affected boundaries/surfaces.
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Implementation Checklist
+      placeholder: List of files and systems affected.
+    validations:
+      required: true

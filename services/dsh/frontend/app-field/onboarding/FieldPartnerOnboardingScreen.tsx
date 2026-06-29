@@ -1,356 +1,440 @@
-// app-field — main partner onboarding flow container.
-// No fetch. No env. Consumes useFieldPartnerOnboardingController from shared.
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native";
-import { useFieldPartnerOnboardingController } from "../../shared/field-onboarding";
-import { FIELD_ONBOARDING_STEP_LABELS } from "../../shared/field-onboarding";
+// app-field — FieldPartnerOnboardingScreen
+// Design extracted 100% from bthwani-suite donor: DshFieldStoreOnboardingScreen.tsx
+// 4-group wizard with vertical timeline, missing-count badges, escalation footer.
+// Rules of Hooks: ALL hooks called unconditionally before any early return.
 
-export function FieldPartnerOnboardingScreen() {
-  const c = useFieldPartnerOnboardingController();
-  const { state, validationErrors, updateForm, updateVisitNotes, updateLocation, nextStep, prevStep, submitDraft, reset } = c;
+import React from 'react';
+import { Platform, Pressable, View, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  Badge,
+  Button,
+  Card,
+  Text,
+  Header,
+  IconButton,
+  spacing,
+  radius,
+  borders,
+  colorRoles,
+  Icon,
+} from '@bthwani/ui-kit';
+import { useIdentitySession, devBypassLogin } from '@bthwani/core-identity';
+import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
+import {
+  useFieldPartnerOnboardingController,
+  getBasicsProfileMissingCount,
+  getLocationMediaMissingCount,
+  getDocumentsMissingCount,
+  getAgreementReviewMissingCount,
+  getFieldRequiredMissingItems,
+} from '../../shared/field-onboarding';
+import { StepBasicsProfile } from './StepBasicsProfile';
+import { StepLocationAndPhotos } from './StepLocationAndPhotos';
+import { StepDocuments } from './StepDocuments';
+import { StepAgreementReview } from './StepAgreementReview';
+import type { DocumentItem } from './StepDocuments';
 
+type GroupId = 'basics_profile' | 'location_media' | 'documents' | 'agreement_review';
+
+const GROUP_ORDER: readonly GroupId[] = [
+  'basics_profile',
+  'location_media',
+  'documents',
+  'agreement_review',
+];
+
+const GROUP_LABELS: Record<GroupId, string> = {
+  basics_profile: 'البيانات الأساسية للمتجر',
+  location_media: 'الموقع والصور الميدانية',
+  documents: 'المستندات والتراخيص الرسمية',
+  agreement_review: 'الاتفاق والمراجعة النهائية',
+};
+
+const DEFAULT_DOCUMENTS: readonly DocumentItem[] = [
+  {
+    id: 'commercial_registration',
+    label: 'السجل التجاري',
+    required: true,
+    status: 'missing',
+    referenceLabel: 'لا يوجد مرجع مرفوع بعد',
+  },
+  {
+    id: 'identity_proof',
+    label: 'الهوية الوطنية للمالك',
+    required: true,
+    status: 'missing',
+    referenceLabel: 'لا يوجد مرجع مرفوع بعد',
+  },
+];
+
+export type FieldPartnerOnboardingScreenProps = {
+  readonly onBack?: () => void;
+  readonly onUploadDocument?: (kind: any, partnerId?: string) => void;
+  readonly onEscalate?: () => void;
+  readonly onGoToProducts?: () => void;
+};
+
+export function FieldPartnerOnboardingScreen({
+  onBack,
+  onUploadDocument,
+  onEscalate,
+  onGoToProducts,
+}: FieldPartnerOnboardingScreenProps = {}) {
+  const identity = useIdentitySession();
+  const controller = useFieldPartnerOnboardingController();
+  const insets = useSafeAreaInsets();
+  const { state, validationErrors, updateForm, updateVisitNotes, submitDraft } = controller;
+
+  const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
+  const [fieldNotes, setFieldNotes] = React.useState('');
+  const [docLoading] = React.useState<Record<string, boolean>>({});
+
+  // Derived values (safe — no hooks below this line)
+  const form = state.form;
+  const activeGroupIndex = GROUP_ORDER.indexOf(activeGroup);
+  const isLastGroup = activeGroupIndex === GROUP_ORDER.length - 1;
+  const missingItems = getFieldRequiredMissingItems(form);
+  const canSubmit = missingItems.length === 0;
+
+  const groupMissingCounts: Record<GroupId, number> = {
+    basics_profile: getBasicsProfileMissingCount(form),
+    location_media: getLocationMediaMissingCount(form),
+    documents: getDocumentsMissingCount(),
+    agreement_review: getAgreementReviewMissingCount(form),
+  };
+
+  // ── Auth guard (after all hooks) ─────────────────────────────────────────
+  if (identity.state.kind !== 'authenticated') {
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}
+        contentContainerStyle={{ padding: spacing[4], justifyContent: 'center' }}
+      >
+        <AuthLoginCard
+          title="تسجيل دخول الموظف الميداني"
+          subtitle="سجّل دخولك لإضافة شريك جديد."
+          loading={identity.state.kind === 'authenticating'}
+          {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
+          onSubmit={(username, password) => void identity.login(username, password)}
+          onDevBypass={() => devBypassLogin('field')}
+        />
+      </ScrollView>
+    );
+  }
+
+  // ── Success state (after all hooks) ──────────────────────────────────────
   if (state.isSubmitted) {
     return (
-      <View style={styles.container}>
-        <View style={styles.successCard}>
-          <Text style={styles.successTitle}>تم الإرسال بنجاح</Text>
-          <Text style={styles.successSubtitle}>
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+        <Header title="تم الإرسال" />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text role="titleLg" style={{ textAlign: 'center', marginBottom: 12 }}>
+            ✓ تم إرسال ملف الشريك
+          </Text>
+          <Text role="bodySm" tone="secondary" style={{ textAlign: 'center', marginBottom: 24 }}>
             ملف الشريك أُرسِل لمراجعة قسم الشركاء في لوحة التحكم.
           </Text>
-          <Text style={styles.successNote}>رقم الشريك: {state.partnerId}</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={reset}>
-            <Text style={styles.primaryButtonText}>إضافة شريك جديد</Text>
-          </TouchableOpacity>
+          <Text role="caption" tone="muted" style={{ fontFamily: 'monospace' }}>
+            رقم الشريك: {state.partnerId}
+          </Text>
+          <View style={{ marginTop: 24 }}>
+            <Button label="تسجيل شريك جديد" tone="primary" onPress={controller.reset} />
+          </View>
         </View>
       </View>
     );
   }
 
-  const stepLabel = FIELD_ONBOARDING_STEP_LABELS[state.step];
+  // ── Navigation ───────────────────────────────────────────────────────────
+  const goToNext = () => {
+    if (isLastGroup) {
+      if (canSubmit) void submitDraft();
+      return;
+    }
+    setActiveGroup(GROUP_ORDER[activeGroupIndex + 1] as GroupId);
+  };
+
+  // ── Step content renderer ─────────────────────────────────────────────────
+  const renderGroupContent = (groupId: GroupId) => {
+    if (groupId === 'basics_profile') {
+      return (
+        <StepBasicsProfile
+          form={form}
+          errors={validationErrors}
+          readOnly={false}
+          onChange={updateForm}
+        />
+      );
+    }
+    if (groupId === 'location_media') {
+      return (
+        <StepLocationAndPhotos
+          form={form}
+          errors={validationErrors}
+          readOnly={false}
+          onChange={updateForm}
+          cameraLoading={docLoading}
+          isNativePickerAvailable={false}
+          onPickPhoto={() => undefined}
+          locationLatitude={state.locationLatitude}
+          locationLongitude={state.locationLongitude}
+          onLocationChange={controller.updateLocation}
+        />
+      );
+    }
+    if (groupId === 'documents') {
+      return (
+        <StepDocuments
+          documents={DEFAULT_DOCUMENTS}
+          loadingMap={docLoading}
+          onUploadDocument={(kind) => onUploadDocument?.(kind, state.partnerId ?? undefined)}
+        />
+      );
+    }
+    if (groupId === 'agreement_review') {
+      return (
+        <StepAgreementReview
+          form={form}
+          readOnly={false}
+          onChange={updateForm}
+          missingItems={missingItems}
+          fieldNotes={fieldNotes}
+          onFieldNotesChange={(v) => {
+            setFieldNotes(v);
+            updateVisitNotes(v);
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
+  const nextGroup = GROUP_ORDER[activeGroupIndex + 1];
+  const nextLabel = nextGroup ? GROUP_LABELS[nextGroup] : '';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>تأهيل شريك جديد</Text>
-        <Text style={styles.headerStep}>{stepLabel}</Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+      <Header
+        title={form.legalNameAr || 'ملف انضمام جديد'}
+        actions={
+          <IconButton
+            icon={<Icon name="save-outline" size={20} tone="brand" />}
+            accessibilityLabel="حفظ المسودة"
+            onPress={() => void controller.nextStep()}
+            tone="ghost"
+          />
+        }
+      />
 
-      {state.submitError ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{state.submitError}</Text>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing[3], gap: spacing[1] }}>
+          <Text role="titleSm" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+            {form.legalNameAr || 'ملف انضمام جديد'}
+          </Text>
+          <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+            الملف الميداني الموحد لجمع وثائق وإحداثيات الشريك.
+          </Text>
         </View>
-      ) : null}
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-        {state.step === "identity" && (
-          <IdentityStep
-            form={state.form}
-            errors={validationErrors}
-            onChange={updateForm}
-          />
-        )}
-        {state.step === "owner" && (
-          <OwnerStep
-            form={state.form}
-            errors={validationErrors}
-            onChange={updateForm}
-          />
-        )}
-        {state.step === "store" && (
-          <StoreStep
-            form={state.form}
-            errors={validationErrors}
-            onChange={updateForm}
-          />
-        )}
-        {state.step === "location" && (
-          <LocationStep
-            lat={state.locationLatitude}
-            lon={state.locationLongitude}
-            onSet={updateLocation}
-          />
-        )}
-        {state.step === "documents" && (
-          <DocumentsStep partnerId={state.partnerId} />
-        )}
-        {state.step === "visit-notes" && (
-          <VisitNotesStep
-            notes={state.visitNotes}
-            onChange={updateVisitNotes}
-          />
-        )}
-        {state.step === "review" && (
-          <ReviewStep state={state} />
-        )}
+        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+
+        {/* ── Products Warning Banner ── */}
+        <Card
+          style={{
+            backgroundColor: colorRoles.surfaceWarm,
+            borderWidth: 1,
+            borderColor: colorRoles.warning,
+            borderRadius: radius.md,
+            padding: spacing[3],
+          }}
+        >
+          <View style={{ gap: spacing[1], alignItems: 'flex-end' }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[2] }}>
+              <Icon name="alert-circle-outline" size={20} tone="warning" />
+              <Text role="bodyStrong" style={{ color: colorRoles.warning, textAlign: 'right', fontWeight: 'bold' }}>
+                بانتظار رفع المنتجات الابتدائية
+              </Text>
+            </View>
+            <Text role="bodySm" tone="muted" style={{ textAlign: 'right', marginTop: spacing[1] }}>
+              تم استكمال البيانات الأساسية والتراخيص، ولكن المتجر لا يعتبر جاهزاً للتفعيل حتى يتم رفع المنتجات الابتدائية للكتالوج.
+            </Text>
+            <Button
+              label="رفع المنتجات الابتدائية الآن"
+              tone="primary"
+              size="sm"
+              onPress={() => onGoToProducts?.()}
+              style={{ marginTop: spacing[2], alignSelf: 'flex-start' }}
+            />
+          </View>
+        </Card>
+
+        {/* ── Vertical timeline accordion ── */}
+        <View style={{ gap: spacing[2] }}>
+          {GROUP_ORDER.map((groupId, index) => {
+            const isActive = activeGroup === groupId;
+            const groupMissing = groupMissingCounts[groupId];
+            const isComplete = groupMissing === 0;
+
+            return (
+              <View
+                key={groupId}
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'stretch',
+                }}
+              >
+                {/* Timeline column */}
+                <View style={{ alignItems: 'center', width: 48 }}>
+                  <Pressable
+                    onPress={() => setActiveGroup(groupId)}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: radius.round,
+                      backgroundColor: isComplete
+                        ? colorRoles.success
+                        : isActive
+                        ? colorRoles.brandAction
+                        : colorRoles.surfaceMuted,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: isActive ? 0 : borders.hairline,
+                      borderColor: isComplete ? colorRoles.success : colorRoles.borderStrong,
+                      zIndex: 2,
+                    }}
+                  >
+                    {isComplete ? (
+                      <Icon name="checkmark" size={14} color="#FFF" />
+                    ) : (
+                      <Text
+                        role="caption"
+                        style={{
+                          fontWeight: 'bold',
+                          color: isActive ? '#FFF' : colorRoles.textMuted,
+                        }}
+                      >
+                        {index + 1}
+                      </Text>
+                    )}
+                  </Pressable>
+                  {index < GROUP_ORDER.length - 1 && (
+                    <View
+                      style={{
+                        width: 2,
+                        flex: 1,
+                        backgroundColor: colorRoles.borderSubtle,
+                        marginVertical: 4,
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                </View>
+
+                {/* Content column */}
+                <View style={{ flex: 1 }}>
+                  {/* Group header row — tap to expand */}
+                  <Pressable
+                    onPress={() => setActiveGroup(groupId)}
+                    style={{
+                      paddingVertical: spacing[3],
+                      paddingHorizontal: spacing[2],
+                      flexDirection: 'row-reverse',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      role="bodyStrong"
+                      style={{
+                        fontWeight: 'bold',
+                        color: isActive ? colorRoles.brandAction : colorRoles.textPrimary,
+                      }}
+                    >
+                      {GROUP_LABELS[groupId]}
+                    </Text>
+
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[1] }}>
+                      {groupMissing > 0 ? (
+                        <Badge label={`${groupMissing} نواقص`} tone="warning" />
+                      ) : (
+                        <Badge label="مكتمل" tone="success" />
+                      )}
+                      <Icon
+                        name={isActive ? 'chevron-down' : 'chevron-back'}
+                        size={16}
+                        tone="muted"
+                        mirrored
+                      />
+                    </View>
+                  </Pressable>
+
+                  {/* Group body (visible only when active) */}
+                  {isActive && (
+                    <View
+                      style={{
+                        paddingBottom: spacing[4],
+                        paddingHorizontal: spacing[2],
+                        borderBottomWidth: 1,
+                        borderBottomColor: colorRoles.borderSubtle,
+                      }}
+                    >
+                      {renderGroupContent(groupId)}
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        {state.step !== "identity" && (
-          <TouchableOpacity style={styles.secondaryButton} onPress={prevStep}>
-            <Text style={styles.secondaryButtonText}>السابق</Text>
-          </TouchableOpacity>
-        )}
-        {state.step === "review" ? (
-          <TouchableOpacity
-            style={[styles.primaryButton, state.isSubmitting && styles.disabled]}
-            onPress={() => void submitDraft()}
-            disabled={state.isSubmitting}
-          >
-            <Text style={styles.primaryButtonText}>
-              {state.isSubmitting ? "جاري الإرسال…" : "إرسال للمراجعة"}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.primaryButton} onPress={() => void nextStep()}>
-            <Text style={styles.primaryButtonText}>التالي</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-}
-
-// ─── Step sub-components ─────────────────────────────────────────────────────
-
-function IdentityStep({ form, errors, onChange }: {
-  form: any;
-  errors: any;
-  onChange: (patch: any) => void;
-}) {
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>بيانات الهوية التجارية</Text>
-      <FieldInput
-        label="الاسم التجاري بالعربية *"
-        value={form.legalNameAr ?? ""}
-        onChangeText={(v: string) => onChange({ legalNameAr: v })}
-        error={errors.legalNameAr}
-      />
-      <FieldInput
-        label="الاسم التجاري بالإنجليزية"
-        value={form.legalNameEn ?? ""}
-        onChangeText={(v: string) => onChange({ legalNameEn: v })}
-      />
-      <FieldInput
-        label="اسم العرض للعملاء *"
-        value={form.displayName ?? ""}
-        onChangeText={(v: string) => onChange({ displayName: v })}
-        error={errors.displayName}
-      />
-      <FieldInput
-        label="رقم السجل التجاري / الهوية *"
-        value={form.legalIdentityNumber ?? ""}
-        onChangeText={(v: string) => onChange({ legalIdentityNumber: v })}
-        error={errors.legalIdentityNumber}
-      />
-    </View>
-  );
-}
-
-function OwnerStep({ form, errors, onChange }: { form: any; errors: any; onChange: (p: any) => void }) {
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>بيانات المالك</Text>
-      <FieldInput
-        label="اسم المالك"
-        value={form.ownerName ?? ""}
-        onChangeText={(v: string) => onChange({ ownerName: v })}
-      />
-      <FieldInput
-        label="رقم الجوال الأساسي *"
-        value={form.primaryPhone ?? ""}
-        onChangeText={(v: string) => onChange({ primaryPhone: v })}
-        error={errors.primaryPhone}
-        keyboardType="phone-pad"
-      />
-      <FieldInput
-        label="رقم الجوال الاحتياطي"
-        value={form.secondaryPhone ?? ""}
-        onChangeText={(v: string) => onChange({ secondaryPhone: v })}
-        keyboardType="phone-pad"
-      />
-      <FieldInput
-        label="البريد الإلكتروني"
-        value={form.email ?? ""}
-        onChangeText={(v: string) => onChange({ email: v })}
-        keyboardType="email-address"
-      />
-    </View>
-  );
-}
-
-function StoreStep({ form, errors, onChange }: { form: any; errors: any; onChange: (p: any) => void }) {
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>بيانات الفرع</Text>
-      <Text style={styles.fieldLabel}>نوع المتجر</Text>
-      {(["restaurant", "grocery", "pharmacy", "bakery", "default"] as const).map((cat) => (
-        <TouchableOpacity
-          key={cat}
-          style={[styles.radioRow, form.category === cat && styles.radioSelected]}
-          onPress={() => onChange({ category: cat })}
+      {/* ── Footer actions ── */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: spacing[3],
+          borderTopWidth: 1,
+          borderTopColor: colorRoles.borderSubtle,
+          backgroundColor: colorRoles.surfaceBase,
+          padding: spacing[3],
+          paddingBottom: spacing[3] + insets.bottom,
+        }}
+      >
+        {/* تصعيد عائق */}
+        <Pressable
+          onPress={() => onEscalate?.()}
+          style={{
+            flex: 1,
+            backgroundColor: colorRoles.surfaceBase,
+            borderColor: colorRoles.brandAction,
+            borderWidth: 1,
+            borderRadius: radius.md,
+            height: 48,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <Text style={styles.radioText}>{
-            { restaurant: "مطعم", grocery: "بقالة", pharmacy: "صيدلية", bakery: "مخبز", default: "أخرى" }[cat]
-          }</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-function LocationStep({ lat, lon, onSet }: { lat: number | null; lon: number | null; onSet: (la: number, lo: number) => void }) {
-  const handleCapture = () => {
-    // In a real implementation this uses the device GPS
-    // For now we capture a placeholder
-    onSet(24.7136, 46.6753);
-    Alert.alert("تم تسجيل الموقع", "الموقع الجغرافي تم تسجيله بنجاح.");
-  };
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>الموقع الجغرافي</Text>
-      {lat !== null ? (
-        <View style={styles.locationCard}>
-          <Text style={styles.locationText}>خط العرض: {lat}</Text>
-          <Text style={styles.locationText}>خط الطول: {lon}</Text>
-        </View>
-      ) : (
-        <Text style={styles.mutedText}>لم يتم تسجيل الموقع بعد</Text>
-      )}
-      <TouchableOpacity style={styles.primaryButton} onPress={handleCapture}>
-        <Text style={styles.primaryButtonText}>تسجيل الموقع الحالي</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function DocumentsStep({ partnerId }: { partnerId: string | null }) {
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>الوثائق المطلوبة</Text>
-      <Text style={styles.mutedText}>
-        {partnerId
-          ? "أضف الوثائق عبر رفع الملفات المطلوبة. الوثائق الأساسية: الهوية الوطنية، السجل التجاري."
-          : "أكمل بيانات الهوية أولاً لتفعيل رفع الوثائق."}
-      </Text>
-      {["national_id", "commercial_register", "lease_agreement"].map((type) => (
-        <View key={type} style={styles.documentRow}>
-          <Text style={styles.documentLabel}>
-            {{ national_id: "الهوية الوطنية", commercial_register: "السجل التجاري", lease_agreement: "عقد الإيجار" }[type]}
+          <Text role="bodyStrong" style={{ color: colorRoles.brandAction, fontWeight: 'bold' }}>
+            تصعيد عائق
           </Text>
-          <TouchableOpacity style={styles.uploadButton} disabled={!partnerId}>
-            <Text style={styles.uploadButtonText}>رفع</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
-    </View>
-  );
-}
+        </Pressable>
 
-function VisitNotesStep({ notes, onChange }: { notes: string; onChange: (v: string) => void }) {
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>ملاحظات الزيارة الميدانية</Text>
-      <TextInput
-        style={styles.textArea}
-        value={notes}
-        onChangeText={onChange}
-        multiline
-        numberOfLines={6}
-        placeholder="أدخل ملاحظات الزيارة وأي تفاصيل إضافية..."
-        textAlignVertical="top"
-      />
-    </View>
-  );
-}
-
-function ReviewStep({ state }: { state: any }) {
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>مراجعة وإرسال الملف</Text>
-      <View style={styles.reviewCard}>
-        <ReviewRow label="الاسم التجاري" value={state.form.legalNameAr} />
-        <ReviewRow label="اسم العرض" value={state.form.displayName} />
-        <ReviewRow label="رقم الجوال" value={state.form.primaryPhone} />
-        <ReviewRow label="رقم الهوية" value={state.form.legalIdentityNumber} />
-        <ReviewRow label="الموقع" value={state.locationLatitude ? `${state.locationLatitude}, ${state.locationLongitude}` : "لم يُسجَّل"} />
+        {/* التالي / إرسال */}
+        <Button
+          label={isLastGroup ? 'إرسال للمراجعة' : `التالي: ${nextLabel}`}
+          tone={canSubmit && isLastGroup ? 'success' : 'primary'}
+          disabled={isLastGroup ? !canSubmit : false}
+          onPress={goToNext}
+          style={{ flex: 2 }}
+        />
       </View>
-      <Text style={styles.reviewNote}>
-        بعد الإرسال، سيراجع قسم الشركاء في لوحة التحكم الملف ويتخذ قرار الاعتماد أو الرفض.
-        لا يمكن للميداني تفعيل الشريك مباشرة.
-      </Text>
     </View>
   );
 }
-
-function ReviewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.reviewRow}>
-      <Text style={styles.reviewLabel}>{label}:</Text>
-      <Text style={styles.reviewValue}>{value || "—"}</Text>
-    </View>
-  );
-}
-
-function FieldInput({ label, value, onChangeText, error, keyboardType }: {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  error?: string;
-  keyboardType?: any;
-}) {
-  return (
-    <View style={styles.fieldGroup}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={[styles.textInput, error ? styles.inputError : null]}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        textAlign="right"
-      />
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  header: { padding: 16, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  headerTitle: { fontSize: 18, fontWeight: "700", textAlign: "right", color: "#111" },
-  headerStep: { fontSize: 14, color: "#6b7280", textAlign: "right", marginTop: 4 },
-  body: { flex: 1 },
-  bodyContent: { padding: 16 },
-  footer: { flexDirection: "row", gap: 12, padding: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#e5e7eb" },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 16, textAlign: "right", color: "#111" },
-  fieldGroup: { marginBottom: 16 },
-  fieldLabel: { fontSize: 14, color: "#374151", marginBottom: 6, textAlign: "right" },
-  textInput: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 12, fontSize: 14, backgroundColor: "#fff" },
-  textArea: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 12, fontSize: 14, backgroundColor: "#fff", minHeight: 120 },
-  inputError: { borderColor: "#ef4444" },
-  errorText: { color: "#ef4444", fontSize: 12, marginTop: 4, textAlign: "right" },
-  errorBanner: { backgroundColor: "#fef2f2", padding: 12, marginHorizontal: 16, marginTop: 8, borderRadius: 8, borderWidth: 1, borderColor: "#fecaca" },
-  primaryButton: { flex: 1, backgroundColor: "#111827", padding: 14, borderRadius: 8, alignItems: "center" },
-  primaryButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
-  secondaryButton: { flex: 1, backgroundColor: "#f3f4f6", padding: 14, borderRadius: 8, alignItems: "center" },
-  secondaryButtonText: { color: "#374151", fontWeight: "600", fontSize: 15 },
-  disabled: { opacity: 0.5 },
-  radioRow: { padding: 12, borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, marginBottom: 8 },
-  radioSelected: { borderColor: "#111827", backgroundColor: "#f9fafb" },
-  radioText: { textAlign: "right", fontSize: 14 },
-  locationCard: { padding: 12, backgroundColor: "#ecfdf5", borderRadius: 8, marginBottom: 12 },
-  locationText: { fontSize: 14, color: "#065f46" },
-  mutedText: { color: "#9ca3af", fontSize: 14, textAlign: "right", marginBottom: 16 },
-  documentRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 12, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, marginBottom: 8 },
-  documentLabel: { fontSize: 14, color: "#374151" },
-  uploadButton: { backgroundColor: "#1d4ed8", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
-  uploadButtonText: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  reviewCard: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8, padding: 16, marginBottom: 16 },
-  reviewRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f3f4f6" },
-  reviewLabel: { fontSize: 14, color: "#6b7280" },
-  reviewValue: { fontSize: 14, fontWeight: "500", color: "#111" },
-  reviewNote: { fontSize: 13, color: "#6b7280", textAlign: "right", lineHeight: 20 },
-  successCard: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
-  successTitle: { fontSize: 22, fontWeight: "700", color: "#065f46", marginBottom: 12 },
-  successSubtitle: { fontSize: 15, color: "#374151", textAlign: "center", marginBottom: 8 },
-  successNote: { fontSize: 13, color: "#6b7280", marginBottom: 24 },
-});

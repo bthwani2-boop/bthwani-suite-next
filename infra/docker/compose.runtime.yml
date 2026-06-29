@@ -92,6 +92,9 @@ services:
       PORT: "8083"
       DATABASE_URL: "postgres://${BTHWANI_WLT_DB_USER:-wlt_runtime}:${BTHWANI_WLT_DB_PASSWORD:-wlt_runtime_password}@postgres:5432/${BTHWANI_WLT_DB_NAME:-wlt_runtime}?sslmode=disable"
       WLT_AUTH_MODE: "public-read-references"
+      WLT_FINANCIAL_PROVIDER_MODE: "${WLT_FINANCIAL_PROVIDER_MODE:-mock}"
+      WLT_FINANCIAL_PROVIDER_BASE_URL: "${WLT_FINANCIAL_PROVIDER_BASE_URL:-http://wiremock-financial-provider:8080}"
+      WLT_ALLOW_PRODUCTION_PROVIDER: "${WLT_ALLOW_PRODUCTION_PROVIDER:-false}"
     ports:
       - "${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
     depends_on:

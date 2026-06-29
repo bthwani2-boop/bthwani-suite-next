@@ -1,3 +1,2 @@
-export * from "./wlt-cod.types";
-export * from "./wlt-cod.api";
-export * from "./use-wlt-cod-controller";
+﻿// DEPRECATED: import from '../finance-wlt-link/wlt-cod' or '../finance-wlt-link' instead
+export * from '../finance-wlt-link/wlt-cod';

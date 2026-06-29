@@ -8,9 +8,8 @@ summary: Review changes using Git evidence instead of agent claims.
 
 ## Invoke when
 
-- user uploads a patch, diff, handoff ZIP, or terminal output
-- Copilot, Codex, Claude, Gemini, script, or another tool made edits
-- a result is claimed as complete
+- when reviewing a supplied patch/diff or when final review is explicitly requested.
+- Do not invoke automatically after every agent edit.
 
 ## Read before
 
@@ -25,25 +24,21 @@ Check changed file list, scope compliance, unexpected additions/deletions, stage
 - do not trust the tool summary alone
 - do not ignore untracked files
 - do not ignore staged changes
-- do not approve UI changes without visual evidence
+- do not block UI changes for lack of screenshots or visual evidence unless final closure, release/store requirements, or explicit escalation rules apply
+- do not require long output blocks for normal execution
 
 ## Required evidence
 
-- status
-- diff stat
-- name-status
-- diff check
-- staged diff when staged files exist
-- untracked file list
-- verification output
+For normal patch review, inspect changed code directly.
+Require evidence files and screenshots only when final closure/PR/release review or explicit escalation requires them, following [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).
 
 ## Failure decision
 
 - no patch/evidence -> `NEEDS_EVIDENCE`
 - forbidden scope changed -> `REVERT_REQUIRED`
 - verification failed -> `FIX_REQUIRED`
-- UI evidence missing -> `NEEDS_VISUAL_EVIDENCE`
+- UI evidence missing (only when escalation/release/explicit request applies) -> `NEEDS_VISUAL_EVIDENCE`
 
 ## Notes
 
-No extra notes.
+All operations and scans must obey the token-drain exclusions specified in [LEAN_CODE_BASED_CHECK.md](../../../governance/LEAN_CODE_BASED_CHECK.md).

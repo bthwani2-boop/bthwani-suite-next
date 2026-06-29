@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
       "react-native": "react-native-web",
+      // @expo/vector-icons/Ionicons pulls in expo-font → expo-modules-core →
+      // TurboModuleRegistry (native-only) and loads .ttf font files — none of
+      // which Turbopack can handle on web. Stub it out so the dependency chain
+      // is never entered. Icons render as nothing on the web control panel.
+      // Note: Turbopack on Windows does not support absolute paths in resolveAlias,
+      // so we use a relative path from the project root (next.config.ts location).
+      "@expo/vector-icons/Ionicons": "./stubs/ionicons-stub.js",
     },
     // @ts-expect-error -- resolveConditions not yet in installed @types/next TurbopackOptions
     resolveConditions: ["browser"],
@@ -20,6 +27,7 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       "react-native$": "react-native-web",
+      "@expo/vector-icons/Ionicons": require.resolve("./stubs/ionicons-stub.js"),
     };
     return config;
   },

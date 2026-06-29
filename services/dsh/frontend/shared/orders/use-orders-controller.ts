@@ -3,6 +3,7 @@ import {
   acceptOrder,
   classifyOrderError,
   createOrder,
+  fetchClientOrder,
   fetchClientOrders,
   fetchOperatorOrders,
   fetchPartnerOrders,
@@ -14,6 +15,7 @@ import type {
   DshCreateOrderInput,
   DshOrder,
   DshOrderActionState,
+  DshOrderDetailState,
   DshOrdersListState,
 } from "./orders.types";
 import {
@@ -157,3 +159,24 @@ export function useOperatorOrdersController(statusFilter?: string) {
 }
 
 export type { DshOrder, DshOrdersListState, DshOrderActionState };
+
+export function useClientOrderDetailController(orderId: string) {
+  const [state, setState] = useState<DshOrderDetailState>({ kind: "loading" });
+
+  const load = useCallback(async () => {
+    try {
+      const order = await fetchClientOrder(orderId);
+      setState({ kind: "success", order });
+    } catch (error) {
+      setState({ kind: "error", message: "تعذر تحميل تفاصيل الطلب." });
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    void load();
+    const interval = setInterval(load, 3000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  return { state, reload: load };
+}

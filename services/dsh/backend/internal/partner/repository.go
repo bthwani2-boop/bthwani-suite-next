@@ -236,10 +236,32 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		return Partner{}, ActivationEvent{}, err
 	}
 
+	// Propagate partner_readiness to linked stores inside the same transaction.
+	// client_visible → stores become discoverable; client_hidden/deactivated → stores hidden.
+	if readiness, ok := partnerReadinessForActivationStatus(input.ToStatus); ok {
+		if _, err = tx.Exec(
+			`UPDATE dsh_stores SET partner_readiness = $2, version = version + 1, updated_at = NOW() WHERE partner_id = $1`,
+			partnerID, readiness,
+		); err != nil {
+			return Partner{}, ActivationEvent{}, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return Partner{}, ActivationEvent{}, err
 	}
 	return updated, evt, nil
+}
+
+func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool) {
+	switch status {
+	case StatusClientVisible:
+		return "ready", true
+	case StatusClientHidden, StatusPartnerDeactivated:
+		return "blocked", true
+	default:
+		return "", false
+	}
 }
 
 // ─── Documents ─────────────────────────────────────────────────────────────
@@ -360,6 +382,9 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 	if input.PartnerID == "" || input.FieldActorID == "" {
 		return FieldVisit{}, ErrInvalid
 	}
+	if (input.LocationLatitude == nil) != (input.LocationLongitude == nil) {
+		return FieldVisit{}, ErrInvalid
+	}
 
 	var storeIDSQL sql.NullString
 	if input.StoreID != "" {
@@ -409,6 +434,54 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		v.EvidenceMediaRefs = []string{}
 	}
 	return v, nil
+}
+
+func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerStore, error) {
+	rows, err := db.Query(`
+		SELECT id, partner_id, slug, display_name, status, is_visible, city_code, created_at
+		FROM dsh_stores
+		WHERE partner_id = $1
+		ORDER BY display_name ASC`, partnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stores := []PartnerStore{}
+	for rows.Next() {
+		var s PartnerStore
+		var createdAt time.Time
+		if err := rows.Scan(&s.ID, &s.PartnerID, &s.Slug, &s.DisplayName, &s.Status, &s.IsVisible, &s.CityCode, &createdAt); err != nil {
+			return nil, err
+		}
+		s.CreatedAt = createdAt.UTC().Format(time.RFC3339Nano)
+		stores = append(stores, s)
+	}
+	return stores, rows.Err()
+}
+
+func LinkPartnerStore(db *sql.DB, partnerID, storeID string) ([]PartnerStore, error) {
+	if partnerID == "" || storeID == "" {
+		return nil, ErrInvalid
+	}
+	res, err := db.Exec(`
+		UPDATE dsh_stores
+		SET partner_id = $1,
+		    partner_readiness = 'pending',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $2`, partnerID, storeID)
+	if err != nil {
+		return nil, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if affected == 0 {
+		return nil, ErrNotFound
+	}
+	return ListPartnerStores(db, partnerID)
 }
 
 func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {

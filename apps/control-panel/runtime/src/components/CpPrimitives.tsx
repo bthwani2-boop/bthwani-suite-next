@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
 export type CpButtonProps = {
   readonly type?: "button" | "submit" | "reset";
@@ -160,8 +160,18 @@ export function CpEmptyTableMessage({ children }: { readonly children: ReactNode
   return <div style={{ padding: "1.5rem 1rem", fontSize: "0.875rem", opacity: 0.65 }}>{children}</div>;
 }
 
-export function CpSelectableTableRow({ selected, onClick, children }: { readonly selected: boolean; readonly onClick: () => void; readonly children: ReactNode }) {
-  return <tr onClick={onClick} aria-selected={selected || undefined} style={{ cursor: "pointer", outline: selected ? "2px solid currentColor" : undefined }}>{children}</tr>;
+export function CpSelectableTableRow({
+  selected,
+  onClick,
+  onDoubleClick,
+  children,
+}: {
+  readonly selected: boolean;
+  readonly onClick: () => void;
+  readonly onDoubleClick?: MouseEventHandler<HTMLTableRowElement>;
+  readonly children: ReactNode;
+}) {
+  return <tr onClick={onClick} onDoubleClick={onDoubleClick} aria-selected={selected || undefined} style={{ cursor: "pointer", outline: selected ? "2px solid currentColor" : undefined }}>{children}</tr>;
 }
 
 export function CpInlineCode({ children }: { readonly children: ReactNode }) {

@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/common/rate-limited"
+  },
+  "response": {
+    "status": 429,
+    "jsonBody": {
+      "code": "RATE_LIMITED",
+      "message": "Provider rate limit exceeded"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

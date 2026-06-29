@@ -3,16 +3,26 @@ import { YStack, XStack, Image } from "tamagui";
 import { colorRoles, colorPalette } from "../../tokens/colors";
 import { Surface, SurfaceProps } from "../Surface";
 import { Text } from "../Text";
-import { Inline } from "../_shared";
+import { Inline, Block } from "../_shared";
 import { asUiComponent } from "../../internal/tamagui-compat";
 
 const FlexYStack = asUiComponent(YStack);
 
 export type CardProps = SurfaceProps & {
-  interactive?: boolean;
+  interactive?: boolean | undefined;
+  title?: string | undefined;
+  subtitle?: string | undefined;
+  footer?: ReactNode | undefined;
 };
 
-export function Card({ interactive = false, ...props }: CardProps) {
+export function Card({
+  interactive = false,
+  title,
+  subtitle,
+  footer,
+  children,
+  ...props
+}: CardProps) {
   return (
     <Surface
       tone="raised"
@@ -23,7 +33,22 @@ export function Card({ interactive = false, ...props }: CardProps) {
           }
         : {})}
       {...props}
-    />
+    >
+      <Block gap="$3" width="100%">
+        {title || subtitle ? (
+          <Block gap="$1">
+            {title ? <Text role="bodyStrong">{title}</Text> : null}
+            {subtitle ? <Text role="bodySm" tone="secondary">{subtitle}</Text> : null}
+          </Block>
+        ) : null}
+        {children}
+        {footer ? (
+          <Block width="100%">
+            {footer}
+          </Block>
+        ) : null}
+      </Block>
+    </Surface>
   );
 }
 

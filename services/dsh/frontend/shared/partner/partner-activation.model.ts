@@ -242,6 +242,24 @@ export function isDshPartnerActivationComplete(status: DshPartnerActivationStatu
   return status === 'client_visible' || status === 'partner_active';
 }
 
+export function getDshPartnerActivationProgress(status: DshPartnerActivationStatus): number {
+  switch (status) {
+    case 'submitted':             return 70;
+    case 'ops_approved':          return 100;
+    case 'ops_rejected':          return 40;
+    case 'field_visit_scheduled': return 50;
+    case 'field_visit_completed': return 60;
+    case 'documents_missing':     return 40;
+    case 'documents_uploaded':    return 65;
+    case 'documents_verified':    return 80;
+    case 'catalog_ready':         return 85;
+    case 'ops_review':            return 90;
+    case 'partner_active':        return 100;
+    case 'client_visible':        return 100;
+    default:                       return 20;
+  }
+}
+
 export function getDshPartnerActivationStatusLabel(status: DshPartnerActivationStatus): string {
   const labels: Record<DshPartnerActivationStatus, string> = {
     draft:                    'مسودة',
@@ -292,4 +310,52 @@ export function getDshPartnerReadinessChecklist(
     { id: 'delivery',     label: 'أوضاع التوصيل مهيأة',          satisfied: delDone,    blockedReason: delDone   ? undefined : 'يجب تحديد طريقة توصيل واحدة على الأقل' },
     { id: 'active',       label: 'الشريك نشط (اعتماد العمليات)', satisfied: activeDone, blockedReason: activeDone ? undefined : 'بانتظار اعتماد العمليات النهائي وتفعيل الشريك' },
   ] as const;
+}
+
+export type DshPartnerVisibilityBadge = 'active' | 'closed' | 'busy' | 'out-of-zone' | 'hidden-pending-approval' | 'catalog-not-ready';
+
+export function getDshPartnerVisibilityBadge(
+  status: DshPartnerActivationStatus,
+  storeOpen: boolean,
+  busy = false,
+  inZone = true,
+): DshPartnerVisibilityBadge {
+  if (status === 'client_visible' || status === 'partner_active') {
+    if (!inZone) return 'out-of-zone';
+    if (!storeOpen) return 'closed';
+    if (busy) return 'busy';
+    return 'active';
+  }
+  if (
+    status === 'catalog_not_ready' ||
+    status === 'delivery_modes_not_ready' ||
+    status === 'catalog_ready' ||
+    status === 'delivery_modes_ready'
+  ) {
+    return 'catalog-not-ready';
+  }
+  return 'hidden-pending-approval';
+}
+
+export function getDshPartnerVisibilityBadgeLabel(badge: DshPartnerVisibilityBadge): string {
+  switch (badge) {
+    case 'active':                   return 'مفتوح';
+    case 'closed':                   return 'مغلق الآن';
+    case 'busy':                     return 'مشغول';
+    case 'out-of-zone':              return 'خارج نطاق التوصيل';
+    case 'hidden-pending-approval':  return 'ليس شريكًا معتمدًا';
+    case 'catalog-not-ready':        return 'الكتالوج غير جاهز';
+  }
+}
+
+export function getDshPartnerVisibilityBadgeTone(
+  badge: DshPartnerVisibilityBadge,
+): 'success' | 'warning' | 'danger' | 'muted' {
+  switch (badge) {
+    case 'active':      return 'success';
+    case 'closed':      return 'warning';
+    case 'busy':        return 'warning';
+    case 'out-of-zone': return 'danger';
+    default:            return 'muted';
+  }
 }

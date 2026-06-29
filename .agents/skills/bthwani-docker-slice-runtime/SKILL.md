@@ -28,14 +28,14 @@ Run only runtime-relevant scripts from `package.json`. Keep service business sch
 
 ## Required evidence
 
-- runtime command output
-- smoke logs
+- runtime command output (when escalation applies)
+- smoke logs (when escalation applies)
 - changed infra/service database paths
 - Git diff checks
 
 ## Failure decision
 
-- runtime required but not run -> `NEEDS_EVIDENCE`
+- runtime required by escalation but not run -> `NEEDS_EVIDENCE`
 - runtime script fails -> `FIX_REQUIRED`
 - live-like shortcut found -> `FIX_REQUIRED`
 

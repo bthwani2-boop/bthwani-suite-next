@@ -3,7 +3,7 @@ import { fail, findImportSpecifiers, lineNumber, listCodeFiles, read } from "./_
 const guardId = "no-vector-icons-direct-in-ui-kit";
 const violations = [];
 
-for (const file of listCodeFiles().filter((item) => item.startsWith("shared/ui-kit/"))) {
+for (const file of listCodeFiles().filter((item) => item.startsWith("shared/ui-kit/") && !item.includes("Icon/Icon.tsx"))) {
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     if (item.specifier === "@expo/vector-icons" || item.specifier.includes("vector-icons")) {

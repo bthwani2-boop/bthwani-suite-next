@@ -32,12 +32,14 @@ func idempotencyKey(r *http.Request) string {
 }
 
 func actorFromContext(r *http.Request) (actorID, surface string) {
-	actorID = r.Header.Get("X-Actor-ID")
-	surface = r.Header.Get("X-Actor-Surface")
-	if surface == "" {
-		surface = "control-panel"
-	}
+	actorID, _ = r.Context().Value("actor_id").(string)
+	surface, _ = r.Context().Value("actor_surface").(string)
 	return actorID, surface
+}
+
+func storeIDFromContext(r *http.Request) string {
+	storeID, _ := r.Context().Value("store_id").(string)
+	return storeID
 }
 
 func partnerIDFromPath(r *http.Request) string {
@@ -273,6 +275,45 @@ func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GET /dsh/partners/{partnerId}/stores
+func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stores, err := ListPartnerStores(db, partnerIDFromPath(r))
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner stores")
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]any{"stores": stores, "total": len(stores)})
+	}
+}
+
+// POST /dsh/partners/{partnerId}/stores
+func HandleLinkPartnerStore(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			StoreID string `json:"storeId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+			return
+		}
+		stores, err := LinkPartnerStore(db, partnerIDFromPath(r), input.StoreID)
+		if errors.Is(err, ErrInvalid) {
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "storeId is required")
+			return
+		}
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
+			return
+		}
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to link partner store")
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]any{"stores": stores, "total": len(stores)})
+	}
+}
+
 // GET /dsh/partners/{partnerId}/audit
 func HandleListAudit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -405,11 +446,11 @@ func HandleFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
 		_ = json.NewDecoder(r.Body).Decode(&body)
 
 		input := TransitionInput{
-			ToStatus:      StatusSubmitted,
-			Reason:        body.Reason,
-			ActorID:       actorID,
-			ActorSurface:  "app-field",
-			CorrelationID: correlationID(r),
+			ToStatus:       StatusSubmitted,
+			Reason:         body.Reason,
+			ActorID:        actorID,
+			ActorSurface:   "app-field",
+			CorrelationID:  correlationID(r),
 			IdempotencyKey: idempotencyKey(r),
 		}
 
@@ -439,8 +480,7 @@ func HandleFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partner/me  — partner reads their own profile
 func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// partner's store_id is bound via auth context
-		storeID := r.Header.Get("X-Store-ID")
+		storeID := storeIDFromContext(r)
 		if storeID == "" {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "no store context")
 			return
@@ -481,7 +521,7 @@ func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partner/me/readiness
 func HandlePartnerMeReadiness(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		storeID := r.Header.Get("X-Store-ID")
+		storeID := storeIDFromContext(r)
 		if storeID == "" {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "no store context")
 			return

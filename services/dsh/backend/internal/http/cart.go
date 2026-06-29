@@ -18,8 +18,10 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		return
 	}
 	var body struct {
-		StoreID         string `json:"storeId"`
-		ServiceAreaCode string `json:"serviceAreaCode"`
+		StoreID         string   `json:"storeId"`
+		ServiceAreaCode string   `json:"serviceAreaCode"`
+		Latitude        *float64 `json:"latitude"`
+		Longitude       *float64 `json:"longitude"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -28,7 +30,7 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId is required")
 		return
 	}
-	result := cart.CheckServiceability(r.Context(), s.db, body.StoreID, body.ServiceAreaCode)
+	result := cart.CheckServiceability(r.Context(), s.db, body.StoreID, body.ServiceAreaCode, body.Latitude, body.Longitude)
 	store.SendJSON(w, http.StatusOK, result)
 }
 

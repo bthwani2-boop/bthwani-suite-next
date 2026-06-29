@@ -33,13 +33,13 @@ export type CatalogProduct = {
   readonly sku: string;
   readonly priceReference: string;
   /** Original price before discount. If present and greater than priceReference, a discount is active. */
-  readonly originalPriceReference?: string;
+  readonly originalPriceReference?: string | undefined;
   /** Discount percentage label (e.g. "15%"). Derived by API or computed locally. */
-  readonly discountPercent?: number;
+  readonly discountPercent?: number | undefined;
   /** Unit label shown beside the product name (e.g. "500g", "1L", "كغ"). */
-  readonly unitLabel?: string;
+  readonly unitLabel?: string | undefined;
   /** Stock availability. Defaults to "in_stock" when absent. */
-  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock" | undefined;
   readonly isActive: boolean;
   readonly version: number;
   readonly media: readonly CatalogMedia[];
@@ -64,7 +64,7 @@ export type CatalogSubmission = {
 export type CatalogState =
   | { readonly kind: "loading" }
   | { readonly kind: "permission_denied" }
-  | { readonly kind: "empty"; readonly storeId?: string }
+  | { readonly kind: "empty"; readonly storeId?: string | undefined }
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "success"; readonly catalog: PartnerCatalog };
 

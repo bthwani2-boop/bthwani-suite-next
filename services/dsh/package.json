@@ -17,12 +17,14 @@
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/control-panel": "workspace:*",
+    "@bthwani/wlt": "workspace:*",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@types/node": "22.16.0",
     "@types/react": "19.2.17",
+    "next": "16.2.2",
     "react": "19.2.3"
   }
 }

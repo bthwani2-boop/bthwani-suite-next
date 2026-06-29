@@ -111,10 +111,10 @@ export async function createCatalogProduct(input: {
 export async function updateCatalogCategory(
   categoryId: string,
   input: {
-    readonly name?: string;
-    readonly description?: string;
-    readonly sortOrder?: number;
-    readonly isActive?: boolean;
+    readonly name?: string | undefined;
+    readonly description?: string | undefined;
+    readonly sortOrder?: number | undefined;
+    readonly isActive?: boolean | undefined;
     readonly expectedVersion: number;
   },
 ): Promise<CatalogCategory> {
@@ -138,12 +138,12 @@ export async function deleteCatalogCategory(
 export async function updateCatalogProduct(
   productId: string,
   input: {
-    readonly name?: string;
-    readonly description?: string;
-    readonly sku?: string;
-    readonly priceReference?: string;
-    readonly categoryId?: string | null;
-    readonly isActive?: boolean;
+    readonly name?: string | undefined;
+    readonly description?: string | undefined;
+    readonly sku?: string | undefined;
+    readonly priceReference?: string | undefined;
+    readonly categoryId?: string | null | undefined;
+    readonly isActive?: boolean | undefined;
     readonly expectedVersion: number;
   },
 ): Promise<CatalogProduct> {

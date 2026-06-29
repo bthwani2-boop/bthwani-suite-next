@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/electricity/payments/invalid-signature"
+  },
+  "response": {
+    "status": 401,
+    "jsonBody": {
+      "code": "INVALID_SIGNATURE",
+      "message": "Provider signature is invalid"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

@@ -1,18 +1,20 @@
 .git/
 node_modules/
+.pnpm-store/
 .next/
 .expo/
+.turbo/
+.nx/
+.cache/
 dist/
 build/
 out/
-.nx/
-.turbo/
 coverage/
-.cache/
 tmp/
 temp/
-.diagnostics/
+logs/
 graphify-out/
+.diagnostics/
 
 # Go caches
 .gocache*/
@@ -46,25 +48,10 @@ tools/registry/runs/
 *.db-wal
 *.tsbuildinfo
 
-# Reduce non-code graph noise
-docs/
-**/docs/
-**/*.md
-**/*.mdx
-**/*.csv
-**/*.jsonl
-**/*.txt
-
-# Evidence / reports / generated operational records
-evidence/
-**/evidence/
-reports/
-**/reports/
-tools/registry/runs/
-
-# Agent/skill documentation noise
-.agents/
-**/.agents/
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
 
 # Reduce non-code graph noise
 docs/
@@ -80,6 +67,11 @@ evidence/
 **/evidence/
 reports/
 **/reports/
+**/screenshots/
+**/recordings/
+**/visual-evidence/
+**/generated/
+**/__generated__/
 tools/registry/runs/
 
 # Agent/skill documentation noise

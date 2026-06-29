@@ -7,7 +7,6 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/health"
 	"dsh-api/internal/homediscovery"
-	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -145,29 +144,30 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 
 	// DSH-015: Partner Store Activation
 	// Operator namespace
-	mux.HandleFunc("GET /dsh/operator/partners", partner.HandleListPartners(db))
-	mux.HandleFunc("POST /dsh/operator/partners", partner.HandleCreatePartner(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", partner.HandleGetPartner(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", partner.HandleActivationTransition(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", partner.HandleGetReadiness(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", partner.HandleListDocuments(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", partner.HandleFieldUploadDocument(db))
-	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", partner.HandleReviewDocument(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", partner.HandleListFieldVisits(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", partner.HandleListFieldVisits(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", partner.HandleListAudit(db))
+	mux.HandleFunc("GET /dsh/operator/partners", protected.handleListPartners)
+	mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", protected.handleGetPartner)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", protected.handleActivationTransition)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", protected.handleGetPartnerReadiness)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", protected.handleListPartnerDocuments)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", protected.handleAddPartnerDocument)
+	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", protected.handleReviewPartnerDocument)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", protected.handleListPartnerStores)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", protected.handleLinkPartnerStore)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", protected.handleListPartnerFieldVisits)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", protected.handleListPartnerAudit)
 
 	// Field namespace
-	mux.HandleFunc("POST /dsh/field/partners/drafts", partner.HandleFieldCreateDraft(db))
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", partner.HandleFieldGetPartner(db))
-	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", partner.HandleFieldUpdatePartner(db))
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", partner.HandleFieldUploadDocument(db))
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", partner.HandleFieldCreateVisit(db))
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", partner.HandleFieldSubmitPartner(db))
+	mux.HandleFunc("POST /dsh/field/partners/drafts", protected.handleFieldCreatePartnerDraft)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", protected.handleFieldGetPartnerDraft)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.handleFieldUpdatePartnerDraft)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", protected.handleFieldUploadPartnerDocument)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleFieldCreatePartnerVisit)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleFieldSubmitPartnerDraft)
 
 	// Partner self namespace
-	mux.HandleFunc("GET /dsh/partner/activation/status", partner.HandlePartnerMe(db))
-	mux.HandleFunc("GET /dsh/partner/activation/readiness", partner.HandlePartnerMeReadiness(db))
+	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
+	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.handlePartnerActivationReadiness)
 
 	// DSH-014: Administration, Roles & Activation
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)
@@ -204,7 +204,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if localCorsOrigins[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-Correlation-ID")
 			w.Header().Set("Vary", "Origin")
 		}

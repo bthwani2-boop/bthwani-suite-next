@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS dsh_partner_activation_events (
     actor_id                TEXT        NOT NULL,
     actor_surface           TEXT        NOT NULL
                                 CHECK (actor_surface IN (
-                                    'app-field','app-partner','control-panel','system'
+                                    'app-field','app-partner','app-captain','control-panel','system'
                                 )),
     reason                  TEXT        NOT NULL DEFAULT '',
     correlation_id          TEXT        NOT NULL DEFAULT '',

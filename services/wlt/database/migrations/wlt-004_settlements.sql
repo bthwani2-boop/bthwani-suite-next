@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS wlt_settlements (
   gross_amount        bigint NOT NULL DEFAULT 0,
   platform_fee        bigint NOT NULL DEFAULT 0,
   net_amount          bigint NOT NULL DEFAULT 0,
-  currency            text NOT NULL DEFAULT 'SAR',
+  currency            text NOT NULL DEFAULT 'YER',
   order_count         int NOT NULL DEFAULT 0,
   status              text NOT NULL DEFAULT 'pending',
   settled_at          timestamptz,

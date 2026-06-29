@@ -68,7 +68,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath "$PSScriptRoot\..\.."
 
 # 1. Dynamic host IP discovery based on Internet default route (avoiding sharing and virtual adapters)
 if ([string]::IsNullOrWhiteSpace($IP)) {
@@ -105,7 +105,7 @@ $Port = switch ($App) {
 Write-Host "`n========================================================" -ForegroundColor Gray
 Write-Host "👉 Active dynamic command running for app-$App:" -ForegroundColor Yellow
 Write-Host "========================================================" -ForegroundColor Gray
-Write-Host "Set-Location -LiteralPath 'C:\bthwani-suite-next'" -ForegroundColor White
+Write-Host "Set-Location -LiteralPath 'C:\bthwani-suite-next' # ALLOW_LOCAL_PATH_EXAMPLE" -ForegroundColor White
 Write-Host "`$env:REACT_NATIVE_PACKAGER_HOSTNAME = '$IP'" -ForegroundColor White
 Write-Host "`$env:EXPO_PUBLIC_DSH_API_BASE_URL = 'http://127.0.0.1:58080'" -ForegroundColor White
 Write-Host "`$env:NEXT_PUBLIC_DSH_API_BASE_URL = 'http://127.0.0.1:58080'" -ForegroundColor White
