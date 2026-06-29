@@ -1,5 +1,16 @@
-services/dsh/** @bthwani2-boop
-services/wlt/** @bthwani2-boop
-services/dsh/contracts/** @bthwani2-boop
-infra/docker/** @bthwani2-boop
-.github/workflows/** @bthwani2-boop
+# CODEOWNERS file for project-wide governance and reviews.
+
+# DSH owners
+services/dsh/**                                     @bthwani
+
+# WLT owners
+services/wlt/**                                     @bthwani
+
+# CI & GitHub Workflows owners
+.github/workflows/**                                @bthwani
+
+# Runtime configuration & script owners
+infra/docker/**                                     @bthwani
+
+# API contracts owners
+services/dsh/contracts/**                           @bthwani

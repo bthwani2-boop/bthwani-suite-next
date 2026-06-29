@@ -1,26 +1,23 @@
-name: Security
-description: Track non-sensitive security hardening work. Do not disclose active vulnerabilities here.
-title: "[security]: "
+name: Security Incident or Advisory
+description: Report a security-sensitive issue or maintainer review request.
 labels: ["security"]
 body:
-  - type: textarea
-    id: area
+  - type: markdown
     attributes:
-      label: Area
-      description: Identity, auth, WLT finance, DSH runtime, CI, Docker, or dependency surface.
+      value: |
+        WARNING: Do NOT disclose zero-day or high-risk vulnerabilities publicly.
+        Use this issue template only for internal tasks, hardening, or general maintainer policy.
+  - type: textarea
+    id: details
+    attributes:
+      label: Hardening Details
+      placeholder: Describe the security area (e.g. CORS, Identity token, Auth checks).
     validations:
       required: true
   - type: textarea
-    id: risk
+    id: resolution
     attributes:
-      label: Risk
-      description: Public, non-sensitive risk statement.
-    validations:
-      required: true
-  - type: textarea
-    id: required_proof
-    attributes:
-      label: Required Proof
-      description: Required checks or review before merge.
+      label: Proposed Mitigation
+      placeholder: Describe steps taken or required to harden.
     validations:
       required: true

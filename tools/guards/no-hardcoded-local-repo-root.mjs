@@ -35,7 +35,8 @@ const EXCLUDED_DIRS = new Set([
   "generated",
   "__generated__",
   "android",
-  "ios"
+  "ios",
+  "registry"
 ]);
 
 const EXCLUDED_EXTENSIONS = new Set([

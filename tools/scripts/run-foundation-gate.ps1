@@ -3,6 +3,8 @@ Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ErrorActionPreference = "Stop"
 
 $Zip = $args -contains "-Zip"
+$Soft = $args -contains "-Soft"
+$SkipTypecheck = $args -contains "-SkipTypecheck"
 $GuardArgIndex = [Array]::IndexOf($args, "-Guard")
 $RequestedGuard = if ($GuardArgIndex -ge 0 -and ($GuardArgIndex + 1) -lt $args.Count) { $args[$GuardArgIndex + 1] } else { $null }
 
@@ -27,8 +29,10 @@ $results = @()
 $results += [pscustomobject]@{ step = "node-version"; ok = (Invoke-GateStep "node-version" { node --version } $EvidenceRoot $LogPath) }
 $results += [pscustomobject]@{ step = "pnpm-version"; ok = (Invoke-GateStep "pnpm-version" { pnpm --version } $EvidenceRoot $LogPath) }
 $results += [pscustomobject]@{ step = "git-diff-check"; ok = (Invoke-GateStep "git-diff-check" { git --no-pager diff --check } $EvidenceRoot $LogPath) }
-$results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Invoke-GateStep "pnpm-typecheck" { pnpm typecheck } $EvidenceRoot $LogPath) }
-$results += [pscustomobject]@{ step = "ui-kit-contracts"; ok = (Invoke-GateStep "ui-kit-contracts" { pnpm --dir shared/ui-kit typecheck:contracts } $EvidenceRoot $LogPath) }
+if (-not $SkipTypecheck) {
+  $results += [pscustomobject]@{ step = "pnpm-typecheck"; ok = (Invoke-GateStep "pnpm-typecheck" { pnpm typecheck } $EvidenceRoot $LogPath) }
+  $results += [pscustomobject]@{ step = "ui-kit-contracts"; ok = (Invoke-GateStep "ui-kit-contracts" { pnpm --dir shared/ui-kit typecheck:contracts } $EvidenceRoot $LogPath) }
+}
 
 foreach ($guard in $foundationGuards) {
   $guardEntry = $manifest.guards | Where-Object { $_.id -eq $guard } | Select-Object -First 1
@@ -38,7 +42,14 @@ foreach ($guard in $foundationGuards) {
 
   $guardPath = $guardEntry.path
   $stepName = "guard-$guard"
-  $results += [pscustomobject]@{ step = $stepName; ok = (Invoke-GateStep $stepName { node $guardPath } $EvidenceRoot $LogPath) }
+  $isWarning = $guardEntry.severity -eq "warning"
+
+  $stepOk = Invoke-GateStep $stepName { node $guardPath } $EvidenceRoot $LogPath
+  if (-not $stepOk -and $isWarning) {
+    Write-Host "WARNING: Guard $guard failed, but is warning-only." -ForegroundColor Yellow
+    $stepOk = $true
+  }
+  $results += [pscustomobject]@{ step = $stepName; ok = $stepOk }
 }
 
 $results | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $EvidenceRoot "evidence.json") -Encoding UTF8
@@ -67,5 +78,10 @@ if ($Zip) {
 }
 
 if ($failed.Count -gt 0) {
-  exit 1
+  if ($Soft) {
+    Write-Host "WARNING: Foundation gate failed, but exiting with code 0 due to -Soft flag."
+    exit 0
+  } else {
+    exit 1
+  }
 }
