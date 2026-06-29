@@ -5,18 +5,21 @@ import { radius } from "../../tokens/radius";
 
 export type SurfaceProps = {
   children?: React.ReactNode;
-  tone?: "default" | "raised" | "inset" | "action" | "success" | "warning" | "danger" | "info";
-  borderless?: boolean;
-  fill?: boolean;
-  centered?: boolean;
-  padding?: string | number;
-  gap?: string | number;
-  width?: string | number;
-  maxWidth?: string | number;
-  onPress?: () => void;
-  hoverStyle?: Record<string, unknown>;
-  pressStyle?: Record<string, unknown>;
+  tone?: "default" | "raised" | "inset" | "action" | "success" | "warning" | "danger" | "info" | undefined;
+  borderless?: boolean | undefined;
+  fill?: boolean | undefined;
+  centered?: boolean | undefined;
+  padding?: string | number | undefined;
+  gap?: string | number | undefined;
+  width?: string | number | undefined;
+  maxWidth?: string | number | undefined;
+  onPress?: (() => void) | undefined;
+  hoverStyle?: Record<string, unknown> | undefined;
+  pressStyle?: Record<string, unknown> | undefined;
   style?: unknown;
+  radiusToken?: string | undefined;
+  elevationToken?: string | undefined;
+  border?: boolean | undefined;
 };
 
 const toneBg: Record<string, string> = {

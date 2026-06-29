@@ -106,7 +106,7 @@ export type WebRootLayoutProps = RootProvidersProps & {
   appName?: string;
 };
 
-export function buildWebRootMetadata({ appName, lang = 'ar', dir = 'rtl' }: { appName?: string; lang?: string; dir?: 'ltr' | 'rtl'; }) {
+export function buildWebRootMetadata({ appName, lang = 'ar', dir = 'rtl' }: { appName?: string | undefined; lang?: string | undefined; dir?: 'ltr' | 'rtl' | undefined; }) {
   return {
     title: appName ? appName : 'Control Panel',
     appName,
@@ -121,8 +121,8 @@ export function WebRootBody({
   themeMode = 'light',
 }: {
   children: ReactNode;
-  appName?: string;
-  themeMode?: ThemeMode;
+  appName?: string | undefined;
+  themeMode?: ThemeMode | undefined;
 }) {
   return (
     <body
@@ -146,10 +146,10 @@ export function WebDocumentShell({
   themeMode = 'light',
 }: {
   children: ReactNode;
-  appName?: string;
-  lang?: string;
-  dir?: 'ltr' | 'rtl';
-  themeMode?: ThemeMode;
+  appName?: string | undefined;
+  lang?: string | undefined;
+  dir?: 'ltr' | 'rtl' | undefined;
+  themeMode?: ThemeMode | undefined;
 }) {
   const themeStyles = buildWebThemeStyleSheet('[data-ui-root="true"], [data-bth-root="true"]');
   const combinedCss = `${webRootBodyCss}\n${themeStyles}`;

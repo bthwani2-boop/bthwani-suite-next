@@ -738,27 +738,27 @@ export type WebCommandStripFilter = WebCommandCenterFilter;
 
 export type WebCommandStripProps = {
   brandLabel: string;
-  surfaceTitle?: string;
-  searchPlaceholder?: string;
-  languageLabel?: string;
-  alertCountLabel?: string;
-  refreshLabel?: string;
-  profileControl?: ReactNode;
-  filters?: ReadonlyArray<WebCommandStripFilter>;
-  onFilterSelect?: (filterId: string) => void;
-  onBrandClick?: () => void;
-  onSearchClick?: () => void;
-  onRefreshClick?: () => void;
-  onLanguageClick?: () => void;
-  onAlertClick?: () => void;
+  surfaceTitle?: string | undefined;
+  searchPlaceholder?: string | undefined;
+  languageLabel?: string | undefined;
+  alertCountLabel?: string | undefined;
+  refreshLabel?: string | undefined;
+  profileControl?: ReactNode | undefined;
+  filters?: ReadonlyArray<WebCommandStripFilter> | undefined;
+  onFilterSelect?: ((filterId: string) => void) | undefined;
+  onBrandClick?: (() => void) | undefined;
+  onSearchClick?: (() => void) | undefined;
+  onRefreshClick?: (() => void) | undefined;
+  onLanguageClick?: (() => void) | undefined;
+  onAlertClick?: (() => void) | undefined;
 
   // New Smart Search Props
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
-  searchResults?: ReadonlyArray<WebSearchItem>;
-  onSearchResultSelect?: (id: string) => void;
-  searchEmptyLabel?: string;
-  searchHint?: string;
+  searchValue?: string | undefined;
+  onSearchChange?: ((value: string) => void) | undefined;
+  searchResults?: ReadonlyArray<WebSearchItem> | undefined;
+  onSearchResultSelect?: ((id: string) => void) | undefined;
+  searchEmptyLabel?: string | undefined;
+  searchHint?: string | undefined;
 };
 
 export function WebCommandStrip({

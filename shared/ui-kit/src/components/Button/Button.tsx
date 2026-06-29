@@ -6,7 +6,7 @@ export type ButtonProps = {
   children?: ReactNode | undefined;
   label?: string | undefined;
   size?: ("sm" | "md" | "lg") | undefined;
-  tone?: ("primary" | "secondary" | "ghost" | "danger" | "success") | undefined;
+  tone?: ("primary" | "secondary" | "ghost" | "danger" | "success" | "brand") | undefined;
   loading?: boolean | undefined;
   disabled?: boolean | undefined;
   fullWidth?: boolean | undefined;

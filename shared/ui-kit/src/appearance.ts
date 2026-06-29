@@ -52,7 +52,7 @@ type BThwaniInteractiveColors = {
   borderColor: string;
   textColor: string;
   iconColor: string;
-  shadow?: BThwaniAppearanceShadow;
+  shadow?: BThwaniAppearanceShadow | undefined;
 };
 
 type BThwaniInteractiveStates = {

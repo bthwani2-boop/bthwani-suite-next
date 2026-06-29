@@ -90,6 +90,28 @@ jobs:
       - name: Build
         run: pnpm run build
 
+  wlt-go:
+    name: WLT Go backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+
+      - name: Go test
+        working-directory: services/wlt/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: services/wlt/backend
+        run: go build ./...
+
   dsh-go:
     name: DSH Go backend
     runs-on: ubuntu-latest
@@ -162,8 +184,6 @@ jobs:
             --env-file infra/docker/env/runtime.env.example \
             -f infra/docker/compose.runtime.yml \
             -f infra/docker/compose.financial-simulators.yml \
-            --profile identity \
-            --profile dsh \
             --profile wlt \
             --profile financial-simulators \
             --profile mail \
@@ -185,8 +205,6 @@ jobs:
             throw "Timed out waiting for $Url"
           }
           docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime
-          Wait-ForUrl "http://localhost:58082/identity/health"
-          Wait-ForUrl "http://localhost:58080/dsh/health"
           Wait-ForUrl "http://localhost:58083/wlt/health"
           Wait-ForUrl "http://localhost:58090/__admin/mappings"
           Wait-ForUrl "http://localhost:8025/api/v1/info"
@@ -196,6 +214,23 @@ jobs:
         run: |
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles wlt
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles wlt
+
+      - name: Wait for WLT readiness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          function Wait-ForUrl($Url) {
+            for ($i = 1; $i -le 30; $i++) {
+              try {
+                Invoke-RestMethod $Url -TimeoutSec 5 | Out-Null
+                return
+              } catch {
+                Start-Sleep -Seconds 3
+              }
+            }
+            throw "Timed out waiting for $Url"
+          }
+          Wait-ForUrl "http://localhost:58083/wlt/readiness"
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke

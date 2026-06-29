@@ -1406,8 +1406,8 @@ export type WebControlPanelSplitPaneWidth = 'narrow' | 'regular' | 'wide';
 export type WebControlPanelSplitPaneProps = {
   primary?: React.ReactNode;
   secondary?: React.ReactNode;
-  secondaryPosition?: 'end' | 'start';
-  secondaryWidth?: WebControlPanelSplitPaneWidth;
+  secondaryPosition?: 'end' | 'start' | undefined;
+  secondaryWidth?: WebControlPanelSplitPaneWidth | undefined;
 };
 
 export function WebControlPanelSplitPane({
@@ -1442,7 +1442,7 @@ export type WebControlPanelWorkbenchProps = {
   main?: React.ReactNode;
   inspector?: React.ReactNode;
   footer?: React.ReactNode;
-  secondaryPosition?: 'end' | 'start';
+  secondaryPosition?: 'end' | 'start' | undefined;
   secondaryWidth?: WebControlPanelSplitPaneWidth;
 };
 

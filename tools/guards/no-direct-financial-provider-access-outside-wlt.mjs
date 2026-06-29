@@ -7,7 +7,6 @@ const allowedPrefixes = [
   "services/wlt/",
   "infra/docker/",
   "docs/runtime/",
-  "machine-readable/",
   ".devcontainer/",
   "package.json",
   "tools/guards/no-direct-financial-provider-access-outside-wlt.mjs",

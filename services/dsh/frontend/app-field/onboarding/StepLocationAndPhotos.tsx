@@ -2,7 +2,7 @@
 // Extracted 1:1 from bthwani-suite donor. No business logic here.
 import React, { useState, useMemo } from 'react';
 import { ActivityIndicator, Image, Pressable, View, StyleSheet, ScrollView } from 'react-native';
-import { TextField, Text, spacing, radius, borders, colorRoles, Icon } from '@bthwani/ui-kit';
+import { TextField, Text, spacing, radius, borders, colorRoles, Icon, Button, Surface } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm, FieldOnboardingValidationErrors } from '../../shared/field-onboarding';
 
 type PhotoKey = 'storefrontPhotoRef' | 'interiorPhotoRef' | 'signagePhotoRef';

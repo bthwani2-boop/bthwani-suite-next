@@ -2,8 +2,9 @@
 import React from 'react';
 import { Box, Surface, Text, Divider } from '../primitives';
 import { useDirection, useTheme } from '../providers';
-import { Icon, type IconName } from '../components/Icon/Icon';
-import { Button } from '../components/button';
+import { Icon } from '../components/Icon/Icon';
+type IconName = string;
+import { Button } from '../components/Button';
 import { colorPalette, withAlpha, neutralPalette, successPalette, dangerPalette } from '../foundation';
 
 /**
