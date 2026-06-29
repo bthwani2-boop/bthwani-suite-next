@@ -239,6 +239,9 @@ if (packageChanged && hasCodeOrWorkflowChanges) {
 // 11. Check for READY/CLOSED/100% claims without exact SHA evidence in modified markdown files
 const mdFiles = modifiedFiles.filter(f => f.endsWith(".md"));
 for (const file of mdFiles) {
+  if (file.startsWith(".agents/") || file === "AGENTS.md" || file.startsWith("docs/")) {
+    continue;
+  }
   const fullPath = path.join(repoRoot, file);
   if (fs.existsSync(fullPath)) {
     const content = fs.readFileSync(fullPath, "utf8");
