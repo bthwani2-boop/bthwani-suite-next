@@ -20,7 +20,12 @@ export type DshCapability = {
     | "dsh.client.dispatch"
     | "dsh.field.readiness"
     | "dsh.support.hub"
-    | "dsh.operator.analytics";
+    | "dsh.operator.analytics"
+    | "dsh.notifications"
+    | "dsh.marketing"
+    | "dsh.policies"
+    | "dsh.admin"
+    | "dsh.partner.activation";
   readonly status: DshCapabilityStatus;
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
@@ -278,5 +283,113 @@ export const DSH_CAPABILITY_MAP = [
     closureState: "RUNTIME_VERIFIED",
     topic: "analytics",
     topicScope: ["platform-kpis", "order-analytics", "delivery-analytics", "support-analytics", "store-analytics", "partner-performance"],
+  },
+  // ── DSH-011: Notifications & Actor Communication ─────────────────────────
+  {
+    id: "dsh.notifications",
+    status: "runtime-verified",
+    contractOperations: [
+      "listDshNotifications",
+      "markDshNotificationRead",
+      "markAllDshNotificationsRead",
+      "updateDshNotificationPreferences",
+      "listDshPlatformNotificationConfig",
+      "upsertDshPlatformNotificationConfig",
+    ],
+    surfaces: ["control-panel", "app-partner", "app-field", "app-captain"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+  },
+  // ── DSH-012: Marketing Command Deck ───────────────────────────────────────
+  {
+    id: "dsh.marketing",
+    status: "runtime-verified",
+    contractOperations: [
+      "listDshCampaigns",
+      "createDshCampaign",
+      "getDshCampaign",
+      "updateDshCampaign",
+      "archiveDshCampaign",
+      "listDshMarketingBanners",
+      "createDshMarketingBanner",
+      "updateDshMarketingBanner",
+      "deleteDshMarketingBanner",
+      "listDshMarketingPromos",
+      "createDshMarketingPromo",
+      "updateDshMarketingPromo",
+    ],
+    surfaces: ["control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+  },
+  // ── DSH-013: Platform Policies & Service Area Management ─────────────────
+  {
+    id: "dsh.policies",
+    status: "runtime-verified",
+    contractOperations: [
+      "listDshZones",
+      "createDshZone",
+      "updateDshZone",
+      "getDshSlaRules",
+      "upsertDshSlaRules",
+      "getDshCapacityConfig",
+      "upsertDshCapacityConfig",
+      "getDshZoneServiceability",
+    ],
+    surfaces: ["control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+  },
+  // ── DSH-014: Administration, Roles & Activation ─────────────────────────
+  {
+    id: "dsh.admin",
+    status: "runtime-verified",
+    contractOperations: [
+      "listDshAdminRoles",
+      "createDshAdminRole",
+      "listDshAdminStaff",
+      "assignDshStaffRole",
+      "listDshPartnerActivations",
+      "activateDshPartner",
+      "blockDshPartner",
+      "listDshCaptainCredentials",
+      "upsertDshCaptainCredential",
+      "listDshAdminAudit",
+    ],
+    surfaces: ["control-panel"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+  },
+  // ── DSH-015: Partner Store Activation ─────────────────────────────────────
+  {
+    id: "dsh.partner.activation",
+    status: "runtime-verified",
+    contractOperations: [
+      "listDshPartners",
+      "createDshPartner",
+      "getDshPartner",
+      "transitionDshPartner",
+      "getDshPartnerReadiness",
+      "listDshPartnerDocuments",
+      "addDshPartnerDocument",
+      "reviewDshPartnerDocument",
+      "listDshPartnerStores",
+      "linkDshPartnerStore",
+      "listDshPartnerAuditEvents",
+      "listDshPartnerFieldVisits",
+      "getDshPartnerActivationStatus",
+      "getDshPartnerSelfReadiness",
+      "createFieldPartnerDraft",
+      "getFieldPartnerDraft",
+      "updateFieldPartnerDraft",
+      "uploadFieldPartnerDocument",
+      "createFieldPartnerVisit",
+      "submitFieldPartnerDraft",
+    ],
+    surfaces: ["control-panel", "app-field", "app-partner"],
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
+    topic: "field-ops",
+    topicScope: ["partner-onboarding", "readiness-checklist"],
   },
 ] as const satisfies readonly DshCapability[];

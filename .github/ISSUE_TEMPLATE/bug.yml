@@ -1,26 +1,29 @@
-name: Bug
-description: Report a reproducible runtime or product defect.
-title: "[bug]: "
-labels: ["bug"]
+name: Bug Report
+description: Report a bug or issue in the workspace.
+labels: ["bug", "fix-required"]
 body:
-  - type: textarea
-    id: impact
+  - type: markdown
     attributes:
-      label: Impact
-      description: What breaks, for whom, and on which surface.
+      value: |
+        Please provide a clear and concise description of the bug.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: What goes wrong?
     validations:
       required: true
   - type: textarea
-    id: reproduce
+    id: steps
     attributes:
-      label: Reproduction
-      description: Exact steps, request, route, or command.
+      label: Steps to Reproduce
+      placeholder: 1. Go to...\n2. Click on...\n3. See error...
     validations:
       required: true
   - type: textarea
-    id: evidence
+    id: expected
     attributes:
-      label: Evidence
-      description: Logs, failing check, screenshot, or API response.
+      label: Expected Behavior
+      placeholder: What did you expect to happen?
     validations:
       required: true
