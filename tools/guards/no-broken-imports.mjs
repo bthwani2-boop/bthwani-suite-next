@@ -24,6 +24,7 @@ function aliasExists(alias) {
 }
 
 for (const file of listCodeFiles()) {
+  if (file.endsWith("next-env.d.ts")) continue;
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     const spec = item.specifier;
