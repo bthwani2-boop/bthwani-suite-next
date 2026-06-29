@@ -34,6 +34,101 @@ All repository modifications must comply with the following runtime contract:
 
 ---
 
+## Smart Automation Selection Rule
+
+Automation is mandatory as an execution method, but creating a new script is not always mandatory.
+
+Agents must choose the smallest sufficient automated path according to task size, risk, repetition, and affected surface.
+
+### Decision rule
+
+Before changing anything, the agent must classify the task into one of these automation levels:
+
+1. **No new script required**
+   Use this when the task is trivial, isolated, and non-repeating.
+
+   Examples:
+   * one-line typo
+   * wording fix
+   * small documentation correction
+   * single-file non-risky edit
+
+   Required:
+   * targeted diff review
+   * `git diff --check` or equivalent lightweight validation when a file is modified
+   * no broad scans
+   * no new script
+
+2. **Existing command or existing guard**
+   Use this when the repository already has a suitable guard, package script, test, typecheck, lint, Nx command, Graphify command, or local validation command.
+
+   Required:
+   * reuse existing tools first
+   * do not create duplicate scripts
+   * choose the smallest relevant command
+   * avoid full workspace checks unless justified
+
+3. **Small targeted script**
+   Use this when the task has a repeated pattern, but the scope is still narrow.
+
+   Required:
+   * script must be short, scoped, idempotent, and dry-run capable if it writes
+   * output must be concise
+   * no full repository scan unless needed
+
+4. **Single structured script**
+   Use this when the task has one clear domain and one linear flow:
+   check → apply → verify.
+
+   Required:
+   * clear input/output
+   * strict allowlist
+   * fail-closed behavior
+   * no bloated logs
+
+5. **Multiple small scripts**
+   Use this when the task is complex, cross-layer, high-risk, or requires separation of concerns.
+
+   Preferred split:
+   * diagnosis script under `tools/diagnostics`
+   * remediation/apply script under `tools/scripts`
+   * verification script under `tools/scripts` or `tools/diagnostics`
+   * lightweight gate only when useful
+
+   Required:
+   * each script has one clear job
+   * no duplicated logic
+   * no unnecessary fragmentation
+   * supports Close Loops
+
+### Prohibited
+
+Agents must not:
+* create a script just to satisfy the word “script”
+* create a large script for a tiny edit
+* manually chase repeated problems file by file
+* run full checks when a targeted check is enough
+* create duplicate tools when existing guards already solve the need
+* skip validation after modification
+* claim closure without an automated or tool-backed proof appropriate to the scope
+
+### Final principle
+
+The correct choice is:
+$$\text{Best Option} = \text{Smallest Sufficient Automation}$$
+* highest safety
+* lowest token cost
+* fastest reliable verification
+* no manual chasing
+* no script bloat
+
+If the agent is unsure whether a script is needed, it must first choose the lighter safe path.
+If the lighter path cannot prove correctness, it escalates to a targeted script.
+If a targeted script cannot prove full closure, it escalates to a structured FAAV loop.
+If any path carries unresolved risk, it must stop with `BLOCKED_NEEDS_EVIDENCE`.
+
+---
+
 ## 3. FAAV Pipeline (Execution Steps)
 
 ```json
@@ -69,7 +164,7 @@ Agents must execute modifications in a closed feedback loop.
 * **Post-Condition Check**: A validation command must run *after* the final write operation.
 * **Targeted Rediagnosis**: For multi-file changes or tasks marked `HIGH` risk, the diagnostic tool must run a final pass to confirm zero unresolved defects.
 * **State Transition Rules**:
-  * **Fail-Closed**: If a validator detects a regression or a state violation, revert the session state to `ACTIVE_BRANCH` HEAD and halt.
+  * **Fail-Closed**: If a validator detects a regression or a state violation, halt without applying further changes, report the failed state, and require explicit approval before any revert/reset/cleanup.
   * **Max Iterations ($N \le 2$)**: If the validation suite fails twice on the same assertion, immediately transition the state to `BLOCKED_NEEDS_EVIDENCE`.
   * **Telemetry Logging**: Write execution logs to `tools/registry/runs/` containing execution duration, touched file paths, and validator status summaries.
 

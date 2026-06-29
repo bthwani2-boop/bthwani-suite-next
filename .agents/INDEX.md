@@ -9,7 +9,7 @@ The default project execution model is **CODE_BASED_LEAN** as canonicalized in [
 * **Proportional Scaling**: Tiny tasks require small automated checks (no large/unnecessary scripts). High-risk or complex tasks require a full FAAV cycle and Close Loops.
 * **Complex Decision**: Complex tasks require consciously choosing the correct automation shape (e.g. single script or modular multi-script).
 
-### Tier 1 — Instant (0 skills, 0 checks)
+### Tier 1 — Instant (no skill, smallest suitable check when code changes)
 Trivial tasks. Execute immediately and respond.
 - Single-file edit, rename, typo, small fix, comment, formatting
 - Reading or explaining code/files
