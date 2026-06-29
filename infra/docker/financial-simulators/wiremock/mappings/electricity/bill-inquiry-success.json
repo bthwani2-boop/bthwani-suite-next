@@ -9,7 +9,7 @@
       "billId": "elec-100200",
       "status": "unpaid",
       "amountMinorUnits": 34500,
-      "currency": "SAR"
+      "currency": "YER"
     },
     "headers": {
       "Content-Type": "application/json"

@@ -79,7 +79,7 @@ func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, 
 	}
 	currency := input.Currency
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	debitCredit := input.DebitCredit
 	if debitCredit == "" {

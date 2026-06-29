@@ -89,7 +89,7 @@ func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
 	}
 	currency := input.Currency
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	const q = `
 		INSERT INTO wlt_refunds

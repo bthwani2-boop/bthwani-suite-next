@@ -24,17 +24,26 @@ func (f *fakeProvider) Post(ctx context.Context, path string, body any, meta pro
 
 func getTestDB(t *testing.T) *sql.DB {
 	dbURL := os.Getenv("DATABASE_URL")
+	requireDB := os.Getenv("WLT_REQUIRE_DB_TESTS") == "true"
 	if dbURL == "" {
 		// Fallback to local dev postgres port
 		dbURL = "postgres://wlt_runtime:wlt_runtime_password@localhost:55432/wlt_runtime?sslmode=disable"
 	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		t.Skipf("Skipping DB integration test: failed to open connection: %v", err)
+		if requireDB {
+			t.Fatalf("failed to open DB connection: %v", err)
+		} else {
+			t.Skipf("Skipping DB integration test: failed to open connection: %v", err)
+		}
 		return nil
 	}
 	if err := db.Ping(); err != nil {
-		t.Skipf("Skipping DB integration test: failed to ping DB: %v", err)
+		if requireDB {
+			t.Fatalf("failed to ping DB: %v", err)
+		} else {
+			t.Skipf("Skipping DB integration test: failed to ping DB: %v", err)
+		}
 		return nil
 	}
 	return db
@@ -68,7 +77,7 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 	}
 
 	// Run AuthorizeSessionWithProvider
-	session, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, 1000, "SAR", provider.RequestMeta{})
+	session, err := AuthorizeSessionWithProvider(ctx, db, client, sessionID, 1000, "YER", provider.RequestMeta{})
 	if err != nil {
 		t.Fatalf("AuthorizeSessionWithProvider returned error: %v", err)
 	}
@@ -82,8 +91,8 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 	if session.AmountMinorUnits != 1000 {
 		t.Errorf("expected amount 1000, got %d", session.AmountMinorUnits)
 	}
-	if session.Currency != "SAR" {
-		t.Errorf("expected currency 'SAR', got %q", session.Currency)
+	if session.Currency != "YER" {
+		t.Errorf("expected currency 'YER', got %q", session.Currency)
 	}
 
 	// Verify DB state directly
@@ -97,7 +106,7 @@ func TestAuthorizeSessionWithProvider_DBFlow(t *testing.T) {
 		t.Fatalf("failed to query DB row: %v", err)
 	}
 
-	if status != "authorized" || providerRef != "card-auth-001" || amount != 1000 || currency != "SAR" {
+	if status != "authorized" || providerRef != "card-auth-001" || amount != 1000 || currency != "YER" {
 		t.Errorf("DB values do not match: status=%q, ref=%q, amount=%d, currency=%q", status, providerRef, amount, currency)
 	}
 }
@@ -116,7 +125,7 @@ func TestCaptureSessionWithProvider_DBFlow(t *testing.T) {
 	var sessionID string
 	err := db.QueryRowContext(ctx, `
 		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-001', 1000, 'SAR')
+		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-001', 1000, 'YER')
 		RETURNING id`, checkoutIntentID).Scan(&sessionID)
 	if err != nil {
 		t.Fatalf("failed to insert test session: %v", err)
@@ -186,7 +195,7 @@ func TestProviderFailure_DBFlow(t *testing.T) {
 	}
 
 	// Run AuthorizeSessionWithProvider which should fail
-	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, 1000, "SAR", provider.RequestMeta{})
+	_, err = AuthorizeSessionWithProvider(ctx, db, client, sessionID, 1000, "YER", provider.RequestMeta{})
 	if err == nil {
 		t.Fatalf("expected error from AuthorizeSessionWithProvider, got nil")
 	}

@@ -50,20 +50,23 @@ $sessionId = $session.paymentSession.id
 # POST /wlt/payment-sessions/{id}/authorize
 $authorize = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions/$sessionId/authorize" -Body @{
   amountMinorUnits = 1000
-  currency = "SAR"
+  currency = "YER"
 }
 if ($authorize.paymentSession.status -ne "authorized") { throw "WLT authorize did not return authorized status" }
 if ($authorize.paymentSession.providerReference -ne "card-auth-001") { throw "WLT authorize did not persist providerReference from provider" }
+if ($authorize.paymentSession.currency -ne "YER") { throw "WLT authorize did not return YER currency: $($authorize.paymentSession.currency)" }
 
 # POST /wlt/payment-sessions/{id}/capture
 $capture = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions/$sessionId/capture"
 if ($capture.paymentSession.status -ne "captured") { throw "WLT capture did not return captured status" }
 if ($capture.paymentSession.providerReference -ne "card-capture-001") { throw "WLT capture did not persist providerReference from provider" }
+if ($capture.paymentSession.currency -ne "YER") { throw "WLT capture did not return YER currency: $($capture.paymentSession.currency)" }
 
 # GET /wlt/payment-sessions/{id}
 $readback = Invoke-WltJson -Method "GET" -Path "/wlt/payment-sessions/$sessionId"
 if ($readback.paymentSession.status -ne "captured") { throw "WLT readback did not preserve captured status" }
 if ($readback.paymentSession.providerReference -ne "card-capture-001") { throw "WLT readback did not preserve providerReference" }
+if ($readback.paymentSession.currency -ne "YER") { throw "WLT readback did not return YER currency: $($readback.paymentSession.currency)" }
 
 # 2. WireMock requests journal verification
 Write-Host "Verifying WireMock request journal at $WiremockUrl..."

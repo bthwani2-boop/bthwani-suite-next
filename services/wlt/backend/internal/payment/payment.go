@@ -89,7 +89,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	if amountMinorUnits <= 0 {
 		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")

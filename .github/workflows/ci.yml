@@ -75,6 +75,9 @@ jobs:
       - name: Guard — canonical host ports
         run: pnpm run guard:canonical-host-ports
 
+      - name: Guard — canonical currency Yemen
+        run: pnpm run guard:canonical-currency-yemen
+
       - name: Foundation gate
         run: pnpm run foundation:gate
 
@@ -111,6 +114,63 @@ jobs:
       - name: Go build
         working-directory: services/wlt/backend
         run: go build ./...
+
+  wlt-go-db:
+    name: WLT Go DB integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run WLT migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: wlt_runtime_password
+        run: |
+          for f in services/wlt/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Run WLT tests with DB required
+        working-directory: services/wlt/backend
+        env:
+          DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:5432/wlt_runtime?sslmode=disable
+          WLT_REQUIRE_DB_TESTS: "true"
+        run: go test -v ./...
 
   dsh-go:
     name: DSH Go backend

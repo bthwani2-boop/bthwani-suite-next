@@ -37,7 +37,7 @@ func TestAuthorizeProviderCallsFinancialProvider(t *testing.T) {
 		PaymentMethod:    "official_wallet",
 	}
 
-	result, err := authorizeProvider(context.Background(), client, session, 1000, "SAR", provider.RequestMeta{
+	result, err := authorizeProvider(context.Background(), client, session, 1000, "YER", provider.RequestMeta{
 		CorrelationID:  "corr-1",
 		IdempotencyKey: "idem-1",
 	})
@@ -66,7 +66,7 @@ func TestCaptureProviderCallsFinancialProvider(t *testing.T) {
 		ID:                "wps_1",
 		ProviderReference: "card-auth-001",
 		AmountMinorUnits:  1000,
-		Currency:          "SAR",
+		Currency:          "YER",
 	}
 
 	result, err := captureProvider(context.Background(), client, session, provider.RequestMeta{
@@ -92,7 +92,7 @@ func TestProviderFailureMappingIsReturned(t *testing.T) {
 	client := &recordingProvider{err: providerErr}
 	session := &PaymentSession{ID: "wps_1"}
 
-	_, err := authorizeProvider(context.Background(), client, session, 1000, "SAR", provider.RequestMeta{})
+	_, err := authorizeProvider(context.Background(), client, session, 1000, "YER", provider.RequestMeta{})
 	if !errors.As(err, &providerErr) {
 		t.Fatalf("expected provider error to be returned, got %v", err)
 	}

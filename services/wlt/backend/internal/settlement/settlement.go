@@ -103,7 +103,7 @@ func CreateSettlement(db *sql.DB, input CreateSettlementInput) (*Settlement, err
 	}
 	currency := input.Currency
 	if currency == "" {
-		currency = "SAR"
+		currency = "YER"
 	}
 	const q = `
 		INSERT INTO wlt_settlements

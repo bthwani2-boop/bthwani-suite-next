@@ -49,11 +49,11 @@ try {
   if ($_.Exception.Response.StatusCode.value__ -ne 400) { throw }
 }
 
-$authorize = Invoke-Json -Method "POST" -Path "/financial/card/authorize" -Body @{ amountMinorUnits = 1000; currency = "SAR" }
+$authorize = Invoke-Json -Method "POST" -Path "/financial/card/authorize" -Body @{ amountMinorUnits = 1000; currency = "YER" }
 if ($authorize.status -ne "authorized") { throw "card authorize success failed" }
 
 try {
-  Invoke-Json -Method "POST" -Path "/financial/card/authorize-declined" -Body @{ amountMinorUnits = 1000; currency = "SAR" } | Out-Null
+  Invoke-Json -Method "POST" -Path "/financial/card/authorize-declined" -Body @{ amountMinorUnits = 1000; currency = "YER" } | Out-Null
   throw "card declined scenario did not fail"
 } catch {
   if ($_.Exception.Response.StatusCode.value__ -ne 402) { throw }
@@ -73,7 +73,7 @@ try {
   if ($_.Exception.Response.StatusCode.value__ -ne 504) { throw }
 }
 
-$refund = Invoke-Json -Method "POST" -Path "/financial/card/refund" -Body @{ amountMinorUnits = 1000; currency = "SAR" }
+$refund = Invoke-Json -Method "POST" -Path "/financial/card/refund" -Body @{ amountMinorUnits = 1000; currency = "YER" }
 if ($refund.status -ne "refunded") { throw "refund success failed" }
 
 Write-Host "WireMock financial provider smoke: PASS"
