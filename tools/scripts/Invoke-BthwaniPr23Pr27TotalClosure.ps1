@@ -48,7 +48,7 @@ param(
   [string]$BranchName = 'fix/salvage-valid-progress-before-master-merge',
 
   [int[]]$PrNumbers = @(23,24,25,26,27),
-  [int]$ExpectedHighestPr = 27,
+  [int]$ExpectedHighestPr = 29,
   [string]$Pr23HeadSha = 'b4795a48c743d083e5e296b37dcea03384a2b3e5',
   [string]$Pr23MergeCommitSha = '1d1f3d78cb9eda55fff4003f4e0a3bb9882a10a4',
   [int64]$FailedCiRunId = 28398892283,
