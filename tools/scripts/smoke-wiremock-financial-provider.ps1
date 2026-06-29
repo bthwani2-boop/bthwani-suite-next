@@ -16,8 +16,8 @@ function Invoke-Json {
   )
 
   $headers = @{
-    "X-Correlation-ID" = "wlt-provider-smoke-$([guid]::NewGuid())"
-    "Idempotency-Key" = "wlt-provider-smoke-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "wiremock-provider-smoke-$([guid]::NewGuid())"
+    "Idempotency-Key" = "wiremock-provider-smoke-$([guid]::NewGuid())"
   }
   $uri = "$BaseUrl$Path"
   if ($null -eq $Body) {
@@ -76,4 +76,4 @@ try {
 $refund = Invoke-Json -Method "POST" -Path "/financial/card/refund" -Body @{ amountMinorUnits = 1000; currency = "SAR" }
 if ($refund.status -ne "refunded") { throw "refund success failed" }
 
-Write-Host "WLT financial provider smoke: PASS"
+Write-Host "WireMock financial provider smoke: PASS"

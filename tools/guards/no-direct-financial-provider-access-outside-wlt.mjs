@@ -9,8 +9,10 @@ const allowedPrefixes = [
   "docs/runtime/",
   "machine-readable/",
   ".devcontainer/",
+  "package.json",
   "tools/guards/no-direct-financial-provider-access-outside-wlt.mjs",
-  "tools/scripts/smoke-wlt-financial-provider.ps1",
+  "tools/scripts/smoke-wiremock-financial-provider.ps1",
+  "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
   ".github/workflows/"
 ];
 

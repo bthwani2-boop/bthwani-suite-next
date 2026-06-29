@@ -1,11 +1,13 @@
 package payment
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
 
@@ -27,6 +29,10 @@ type PaymentSession struct {
 type AuthorizeInput struct {
 	AmountMinorUnits int64  `json:"amountMinorUnits"`
 	Currency         string `json:"currency"`
+}
+
+type financialProvider interface {
+	Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error)
 }
 
 func scanSession(row *sql.Row) (*PaymentSession, error) {
@@ -51,6 +57,18 @@ func scanSession(row *sql.Row) (*PaymentSession, error) {
 	return &s, nil
 }
 
+func getSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
+	if sessionID == "" {
+		return nil, fmt.Errorf("paymentSessionId is required")
+	}
+	row := db.QueryRow(selectCols, sessionID)
+	s, err := scanSession(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return s, err
+}
+
 const selectCols = `
 	SELECT id, checkout_intent_id, client_id, store_id, payment_method,
 	       status, provider_reference, amount_minor_units, currency,
@@ -59,20 +77,40 @@ const selectCols = `
 	WHERE id = $1`
 
 func AuthorizeSession(db *sql.DB, sessionID string, amountMinorUnits int64, currency string) (*PaymentSession, error) {
+	client, err := newProviderClient()
+	if err != nil {
+		return nil, err
+	}
+	return AuthorizeSessionWithProvider(context.Background(), db, client, sessionID, amountMinorUnits, currency, provider.NewRequestMeta("wlt-authorize"))
+}
+
+func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, amountMinorUnits int64, currency string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
 	if currency == "" {
 		currency = "SAR"
 	}
+	if amountMinorUnits <= 0 {
+		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")
+	}
+	current, err := getSession(db, sessionID)
+	if err != nil || current == nil {
+		return current, err
+	}
+	result, err := authorizeProvider(ctx, client, current, amountMinorUnits, currency, meta)
+	if err != nil {
+		_ = markSessionFailed(db, sessionID)
+		return nil, err
+	}
 	const q = `
 		UPDATE wlt_payment_sessions
-		SET status = 'authorized', amount_minor_units = $2, currency = $3, updated_at = NOW()
+		SET status = 'authorized', provider_reference = $2, amount_minor_units = $3, currency = $4, updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
-	row := db.QueryRow(q, sessionID, amountMinorUnits, currency)
+	row := db.QueryRow(q, sessionID, result.ProviderReference, amountMinorUnits, currency)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -81,22 +119,114 @@ func AuthorizeSession(db *sql.DB, sessionID string, amountMinorUnits int64, curr
 }
 
 func CaptureSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
+	client, err := newProviderClient()
+	if err != nil {
+		return nil, err
+	}
+	return CaptureSessionWithProvider(context.Background(), db, client, sessionID, provider.NewRequestMeta("wlt-capture"))
+}
+
+func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
+	current, err := getSession(db, sessionID)
+	if err != nil || current == nil {
+		return current, err
+	}
+	if current.Status != "authorized" {
+		return nil, fmt.Errorf("payment session must be authorized before capture")
+	}
+	result, err := captureProvider(ctx, client, current, meta)
+	if err != nil {
+		_ = markSessionFailed(db, sessionID)
+		return nil, err
+	}
 	const q = `
 		UPDATE wlt_payment_sessions
-		SET status = 'captured', captured_at = NOW(), updated_at = NOW()
+		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
-	row := db.QueryRow(q, sessionID)
+	row := db.QueryRow(q, sessionID, result.ProviderReference)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return s, err
+}
+
+func authorizeProvider(ctx context.Context, client financialProvider, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	result, err := client.Post(ctx, "/financial/card/authorize", map[string]any{
+		"paymentSessionId":  session.ID,
+		"checkoutIntentId":  session.CheckoutIntentID,
+		"clientId":          session.ClientID,
+		"storeId":           session.StoreID,
+		"amountMinorUnits":  amountMinorUnits,
+		"currency":          currency,
+		"paymentMethod":     session.PaymentMethod,
+		"providerReference": session.ProviderReference,
+	}, meta)
+	if err != nil {
+		return provider.ProviderResult{}, err
+	}
+	if result.Status != "authorized" || result.ProviderReference == "" {
+		return provider.ProviderResult{}, fmt.Errorf("provider authorization returned invalid status or reference")
+	}
+	return result, nil
+}
+
+func captureProvider(ctx context.Context, client financialProvider, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	result, err := client.Post(ctx, "/financial/card/capture", map[string]any{
+		"paymentSessionId":  session.ID,
+		"providerReference": session.ProviderReference,
+		"amountMinorUnits":  session.AmountMinorUnits,
+		"currency":          session.Currency,
+	}, meta)
+	if err != nil {
+		return provider.ProviderResult{}, err
+	}
+	if result.Status != "captured" || result.ProviderReference == "" {
+		return provider.ProviderResult{}, fmt.Errorf("provider capture returned invalid status or reference")
+	}
+	return result, nil
+}
+
+func markSessionFailed(db *sql.DB, sessionID string) error {
+	_, err := db.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', updated_at = NOW() WHERE id = $1`, sessionID)
+	return err
+}
+
+func newProviderClient() (*provider.Client, error) {
+	config, err := provider.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return provider.NewClient(config), nil
+}
+
+func requestMeta(r *http.Request, prefix string) provider.RequestMeta {
+	meta := provider.NewRequestMeta(prefix)
+	if correlationID := r.Header.Get("X-Correlation-ID"); correlationID != "" {
+		meta.CorrelationID = correlationID
+	}
+	if idempotencyKey := r.Header.Get("Idempotency-Key"); idempotencyKey != "" {
+		meta.IdempotencyKey = idempotencyKey
+	}
+	return meta
+}
+
+func sendProviderError(w http.ResponseWriter, err error) {
+	if providerErr, ok := err.(provider.Error); ok {
+		message := providerErr.Message
+		if message == "" {
+			message = providerErr.Error()
+		}
+		shared.SendError(w, http.StatusBadGateway, "PROVIDER_ERROR", message)
+		return
+	}
+	shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 }
 
 func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
@@ -167,9 +297,14 @@ func HandleAuthorizeSession(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		session, err := AuthorizeSession(db, sessionID, input.AmountMinorUnits, input.Currency)
+		client, err := newProviderClient()
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+			return
+		}
+		session, err := AuthorizeSessionWithProvider(r.Context(), db, client, sessionID, input.AmountMinorUnits, input.Currency, requestMeta(r, "wlt-authorize"))
+		if err != nil {
+			sendProviderError(w, err)
 			return
 		}
 		if session == nil {
@@ -182,9 +317,14 @@ func HandleAuthorizeSession(db *sql.DB) http.HandlerFunc {
 
 func HandleCaptureSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := CaptureSession(db, r.PathValue("paymentSessionId"))
+		client, err := newProviderClient()
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+			return
+		}
+		session, err := CaptureSessionWithProvider(r.Context(), db, client, r.PathValue("paymentSessionId"), requestMeta(r, "wlt-capture"))
+		if err != nil {
+			sendProviderError(w, err)
 			return
 		}
 		if session == nil {

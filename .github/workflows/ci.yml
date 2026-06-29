@@ -191,7 +191,16 @@ jobs:
           Wait-ForUrl "http://localhost:58090/__admin/mappings"
           Wait-ForUrl "http://localhost:8025/api/v1/info"
 
-      - name: WLT provider smoke
+      - name: WLT migrations and seeds
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles wlt
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles wlt
+
+      - name: WireMock financial provider smoke
+        run: pnpm run runtime:wiremock:financial:smoke
+
+      - name: WLT provider-through-WLT smoke
         run: pnpm run runtime:wlt:provider:smoke
 
       - name: Docker compose ps

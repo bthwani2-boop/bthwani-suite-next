@@ -25,11 +25,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath "C:\bthwani-suite-next"
 
-$ComposeFile = ".\infra\docker\compose.runtime.yml"
-$FinancialComposeFile = ".\infra\docker\compose.financial-simulators.yml"
-$EnvFile     = ".\infra\docker\env\runtime.env.example"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../")).Path
+Set-Location -LiteralPath $RepoRoot
+
+$ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
+$FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simulators.yml"
+$EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 
 if (-not (Test-Path -LiteralPath $EnvFile)) {
   throw "Env file not found: $EnvFile"
@@ -94,6 +97,13 @@ function Wait-ForDshApi {
   throw "DSH API did not become healthy after $max attempts"
 }
 
+function Start-DshApi {
+  if ($script:ProfileList -notcontains "dsh") { return }
+  Write-Host "`n--- Starting DSH API after identity readiness ---"
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d dsh-api
+  if ($LASTEXITCODE -ne 0) { throw "DSH API start failed (exit $LASTEXITCODE)" }
+}
+
 function Wait-ForIdentityApi {
   $max = 20
   for ($i = 1; $i -le $max; $i++) {
@@ -108,7 +118,7 @@ function Wait-ForIdentityApi {
 }
 
 function Invoke-IdentityMigrate {
-  $MigrationDir = ".\core\identity\database\migrations"
+  $MigrationDir = "core/identity/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No identity migration files found in $MigrationDir" }
   Write-Host "`n--- Applying identity migrations ---"
@@ -150,7 +160,7 @@ function Invoke-IdentitySmoke {
 }
 
 function Invoke-Migrate {
-  $MigrationDir = ".\services\dsh\database\migrations"
+  $MigrationDir = "services/dsh/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
   Write-Host "`n--- Applying DSH migrations ---"
@@ -166,7 +176,7 @@ function Invoke-Migrate {
 }
 
 function Invoke-Seed {
-  $SeedDir = ".\services\dsh\database\seeds\local"
+  $SeedDir = "services/dsh/database/seeds/local"
   $SeedFiles = Get-ChildItem -LiteralPath $SeedDir -Filter "*.sql" | Sort-Object Name
   if ($SeedFiles.Count -eq 0) { throw "No seed files found in $SeedDir" }
   Write-Host "`n--- Applying DSH local seeds ---"
@@ -255,12 +265,12 @@ function Invoke-ValkeySmoke {
 
 function Invoke-WltFinancialProviderSmoke {
   Write-Host "`n--- WLT financial provider smoke ---"
-  pwsh -NoProfile -ExecutionPolicy Bypass -File ".\tools\scripts\smoke-wlt-financial-provider.ps1" -BaseUrl "http://localhost:58090"
+  pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:RepoRoot "tools/scripts/smoke-wlt-provider-through-wlt.ps1") -BaseUrl "http://localhost:58083"
   if ($LASTEXITCODE -ne 0) { throw "WLT financial provider smoke failed" }
 }
 
 function Invoke-WltMigrate {
-  $MigrationDir = ".\services\wlt\database\migrations"
+  $MigrationDir = "services/wlt/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
   Write-Host "`n--- Applying WLT migrations ---"
@@ -276,7 +286,7 @@ function Invoke-WltMigrate {
 }
 
 function Invoke-WltSeed {
-  $SeedDir = ".\services\wlt\database\seeds\local"
+  $SeedDir = "services/wlt/database/seeds/local"
   $SeedFiles = Get-ChildItem -LiteralPath $SeedDir -Filter "*.sql" | Sort-Object Name
   if ($SeedFiles.Count -eq 0) { throw "No seed files found in $SeedDir" }
   Write-Host "`n--- Applying WLT local seeds ---"
@@ -328,7 +338,8 @@ function Invoke-WltSmoke {
 
 function Invoke-MinioSmoke {
   Write-Host "`n--- MinIO smoke ---"
-  $MinioUrl = "http://localhost:57000"
+  $MinioPort = if ($env:BTHWANI_MINIO_API_PORT) { $env:BTHWANI_MINIO_API_PORT } else { "59000" }
+  $MinioUrl = "http://localhost:$MinioPort"
   $max = 15
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "  /minio/health/live attempt $i/$max"
@@ -348,7 +359,7 @@ function Invoke-MinioSmoke {
 
 function Invoke-DshMediaSeed {
   Write-Host "`n--- Applying DSH-001 MinIO media seed ---"
-  $MediaDirectory = (Resolve-Path ".\services\dsh\database\seeds\local\media").Path
+  $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
   $Mount = "${MediaDirectory}:/seed:ro"
   docker run --rm --network bthwani-runtime --volume $Mount `
     --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
@@ -579,6 +590,7 @@ elseif ($Action -eq "reset") {
     Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+    Start-DshApi
   }
   if ($ProfileList -contains "dsh") {
     Invoke-Migrate
@@ -656,6 +668,7 @@ elseif ($Action -eq "smoke") {
     Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+    Start-DshApi
   }
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
@@ -706,6 +719,7 @@ elseif ($Action -eq "all") {
     Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+    Start-DshApi
   }
 
   if ($ProfileList -contains "wlt") {
