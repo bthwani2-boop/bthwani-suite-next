@@ -1,4 +1,4 @@
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 
 $ErrorActionPreference = "Continue"
 
@@ -100,7 +100,7 @@ $md = @()
 $md += "# Go Deadcode Guard"
 $md += ""
 $md += "Session: $SessionId"
-$md += "Root: C:\bthwani-suite-next"
+$md += "Root: $((Get-Location).Path)"
 $md += ""
 $md += "| Name | Status | Evidence |"
 $md += "|---|---|---|"

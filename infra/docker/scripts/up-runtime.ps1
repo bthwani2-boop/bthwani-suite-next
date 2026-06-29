@@ -1,4 +1,4 @@
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = "Stop"
 

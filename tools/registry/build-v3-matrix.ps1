@@ -1,6 +1,6 @@
 # Build V3 Master Matrix — complete in single pass
 # Run from: C:\bthwani-suite-next
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
 $v3Header = "master_v3_id,master_id,slice_id,slice_order,service,section,surface,consumer_surfaces,app,actor,capability,journey_id,page_id,screen_id,logic_id,source_matrix,source_record_ids,source_path,target_path,route_path,target_anchor,fragment_id,layer,artifact_type,operation,domain_rule,business_domain_rules,db_state_lifecycle,dispatch_policy,pricing_policy,finance_policy,notification_triggers,integration_infrastructure,external_dependencies,ui_localization_rules,build_target,rbac_tenant_rule,audit_privacy_rule,rollback_compensation_rule,policy_parameters,policy_owner,provider_decision,api_contract,db_objects,auth_rule,wlt_boundary,wlt_dependency,idempotency_required,state_transitions,error_cases,negative_cases,performance_rule,observability_rule,ui_kit_compliance,visual_reference,evidence_required,decision,status,blocker_code,next_action,acceptance_gate,verification_command,risk,rollback,duplicate_key,notes"
