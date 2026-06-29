@@ -1,1 +1,0 @@
-no-vector-icons-direct-in-ui-kit: PASS

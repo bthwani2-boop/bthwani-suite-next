@@ -1,1 +1,0 @@
-no-safe-area-in-ui-kit-runtime: PASS

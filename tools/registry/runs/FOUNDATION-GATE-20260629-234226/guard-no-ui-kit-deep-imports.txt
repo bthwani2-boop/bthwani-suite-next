@@ -1,1 +1,0 @@
-no-ui-kit-deep-imports: PASS

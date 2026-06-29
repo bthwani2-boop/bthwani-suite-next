@@ -1,1 +1,0 @@
-no-raw-hex-outside-ui-kit-colors: PASS

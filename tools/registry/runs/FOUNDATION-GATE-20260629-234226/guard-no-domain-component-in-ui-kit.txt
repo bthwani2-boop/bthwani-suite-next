@@ -1,1 +1,0 @@
-no-domain-component-in-ui-kit: PASS

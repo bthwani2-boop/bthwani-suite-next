@@ -1,5 +1,0 @@
-status: FAIL
-session_id: FOUNDATION-GATE-20260629-234529
-evidence_root: C:\bthwani-suite-next\tools\registry\runs\FOUNDATION-GATE-20260629-234529
-zip_created: False
-guards_run: contracts-foundation, no-direct-tamagui-outside-ui-kit, no-ui-kit-deep-imports, no-local-design-system, no-raw-hex-outside-ui-kit, no-expo-in-ui-kit, no-react-native-runtime-dependency-in-ui-kit, no-safe-area-in-ui-kit-runtime, no-vector-icons-direct-in-ui-kit, no-domain-component-in-ui-kit, no-app-shell-design-ownership, no-duplicate-design-primitives, no-unsafe-ui-kit-tamagui-casts, ui-kit-token-binding, no-preview-demo-mock-runtime, no-broken-imports, service-fullstack-linkage, dsh-service-activation, go-backend-runtime, performance-runtime-baseline, docker-runtime-profiles, dsh-frontend-shared-ownership, wlt-dsh-frontend-shared-ownership, dsh-frontend-shared-boundary-imports, unified-fullstack-brain, canonical-host-ports, no-hardcoded-local-repo-root, dsh-store-role-boundary, dsh-catalog-ownership, dsh-cart-serviceability
