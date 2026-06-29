@@ -1,0 +1,29 @@
+  ΓÜá services\dsh\frontend\control-panel\administration\AdministrationDashboardScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\catalogs\CatalogDashboardScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\catalogs\drawers\CatalogWorkspaceDrawers.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\catalogs\products\CategoryControlRoom.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\dashboard\ControlPanelDshClosureDashboardScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\marketing\MarketingDashboardScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\AreaCapacityScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\AssistedOrderDeskScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\AuditSupportSlaScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\DispatchAssignmentScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\ExceptionsEscalationsScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\FulfillmentModeQueueSection.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\LiveOrdersScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\OpsOrderDetailPanel.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\OrderRescueScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\operations\PartnerStoresScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\partners\PartnerDetailPanel.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\partners\PartnerDetailScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\partners\PartnersReviewQueueScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\platform\DshPlatformVarsWorkspace.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\platform\PlatformDashboardScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\shared\ControlPanelDshActionQueue.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\support\SupportDashboardScreen.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+  ΓÜá services\dsh\frontend\control-panel\support\SupportWorkspaces.tsx: raw HTML interactive element in control-panel surface ΓÇö prefer @bthwani/app-shell components
+
+  24 warning(s) ΓÇö review raw HTML elements in control-panel
+
+DSH Frontend Shared Ownership Gate: PASS
+

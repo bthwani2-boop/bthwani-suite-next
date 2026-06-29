@@ -1,0 +1,42 @@
+no-unsafe-ui-kit-tamagui-casts: FAIL
+- shared/ui-kit/src/components/Box/Box.tsx:8 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Box/Box.tsx:40 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Box/Box.tsx:42 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Box/Box.tsx:43 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Box/Box.tsx:44 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Box/Box.tsx:45 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Divider/Divider.tsx:6 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/FilterRail/FilterRail.tsx:21 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Header/TopBar.tsx:12 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Icon/Icon.tsx:13 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Icon/Icon.tsx:34 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Screen/MobileScrollView.tsx:10 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Screen/MobileScrollView.tsx:25 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Screen/MobileScrollView.tsx:26 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/SearchField/SearchField.tsx:25 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/SectionHeader/SectionHeader.tsx:13 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/SegmentedControl/SegmentedControl.tsx:21 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Surface/Surface.tsx:56 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Surface/Surface.tsx:60 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Surface/Surface.tsx:61 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/components/Surface/Surface.tsx:64 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:33 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:88 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:136 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:142 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:168 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:195 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:221 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:250 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:306 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:362 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:364 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:380 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+- shared/ui-kit/src/web/control-panel.tsx:423 explicit any or any-cast is forbidden; use the typed internal Tamagui compatibility adapter
+Exception: C:\bthwani-suite-next\tools\scripts\gate-run-step.ps1:20
+Line |
+  20 |        throw "Native command exited with code $nativeExitCode."
+     |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Native command exited with code 1.
+
+

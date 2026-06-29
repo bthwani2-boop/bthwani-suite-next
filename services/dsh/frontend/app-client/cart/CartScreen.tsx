@@ -127,9 +127,9 @@ function PromoBanner({ onPress }: { onPress: () => void }) {
     <Surface
       tone="default"
       style={{
-        backgroundColor: "#FFFBEB",
+        backgroundColor: colorRoles.surfaceBase,
         borderWidth: 1,
-        borderColor: "#FEF3C7",
+        borderColor: colorRoles.surfaceBase,
         borderRadius: radius.md,
         padding: 12,
         marginBottom: 12,
@@ -582,7 +582,7 @@ export function CartScreen({
                       {/* Store Pins */}
                       {STORES_LOCATIONS.map(st => (
                         <View key={st.id} style={[styles.storePin, { top: st.y - 12, left: st.x - 12 }]}>
-                          <Icon name="storefront" size={14} color="#1D4ED8" />
+                          <Icon name="storefront" size={14} color={colorRoles.brandStructure} />
                           <Text style={styles.storePinLabel}>{st.name}</Text>
                         </View>
                       ))}
@@ -590,7 +590,7 @@ export function CartScreen({
                       {/* User Pin */}
                       <View style={[styles.userPin, { top: userPinPos.y - 20, left: userPinPos.x - 10 }]}>
                         <View style={styles.userPinPulse} />
-                        <Icon name="pin" size={20} color="#FF500D" />
+                        <Icon name="pin" size={20} color={colorRoles.brandAction} />
                       </View>
                     </Pressable>
                   </View>
@@ -929,7 +929,7 @@ export function CartScreen({
                   <View style={styles.modalCard}>
                     <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
                       <View style={[styles.modalIconBg, { backgroundColor: "rgba(5, 150, 105, 0.1)" }]}>
-                        <Icon name="location" size={20} color="#059669" />
+                        <Icon name="location" size={20} color={colorRoles.brandStructure} />
                       </View>
                       <View style={{ flex: 1, alignItems: "flex-end" }}>
                         <Text role="caption" style={{ color: colorRoles.textSecondary }}>عنوان التسليم المحدد</Text>
@@ -946,7 +946,7 @@ export function CartScreen({
                 <View style={styles.modalCard}>
                   <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
                     <View style={[styles.modalIconBg, { backgroundColor: "rgba(217, 119, 6, 0.1)" }]}>
-                      <Icon name="time-outline" size={20} color="#D97706" />
+                      <Icon name="time-outline" size={20} color={colorRoles.brandAction} />
                     </View>
                     <View style={{ flex: 1, alignItems: "flex-end" }}>
                       <Text role="caption" style={{ color: colorRoles.textSecondary }}>توجيهات ووقت التنفيذ</Text>
@@ -963,7 +963,7 @@ export function CartScreen({
                 </View>
 
                 {/* Billing invoice summary */}
-                <View style={[styles.modalCard, { backgroundColor: "#F8FAFC", borderColor: "#E2E8F0" }]}>
+                <View style={[styles.modalCard, { backgroundColor: colorRoles.surfaceBase, borderColor: colorRoles.surfaceBase }]}>
                   <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: 'right', marginBottom: 8, fontWeight: "bold" }}>تفاصيل الفاتورة المالية</Text>
                   
                   <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", marginVertical: 4 }}>
@@ -1016,9 +1016,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   policyBanner: {
-    backgroundColor: "#EFF5FC",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
-    borderColor: "#B4CFEA",
+    borderColor: colorRoles.surfaceBase,
     borderRadius: radius.md,
     padding: 12,
   },
@@ -1093,7 +1093,7 @@ const styles = StyleSheet.create({
   },
   pickerItemActive: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: "#FFF3ED",
+    backgroundColor: colorRoles.surfaceBase,
   },
   pickerItemContent: {
     flexDirection: "row-reverse",
@@ -1130,7 +1130,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   actionEditorBox: {
-    backgroundColor: "#F8F5F0",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: radius.sm,
     padding: 12,
     gap: 8,
@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
   qtyControlsContainer: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "#F8F5F0",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: radius.sm,
     padding: 2,
     gap: 4,
@@ -1247,8 +1247,8 @@ const styles = StyleSheet.create({
     color: colorRoles.brandAction,
   },
   blockedNoticeCard: {
-    backgroundColor: "#FFF1F0",
-    borderColor: "#FFA39E",
+    backgroundColor: colorRoles.surfaceBase,
+    borderColor: colorRoles.surfaceBase,
     borderWidth: 1,
     borderRadius: radius.md,
     padding: 12,
@@ -1288,7 +1288,7 @@ const styles = StyleSheet.create({
     color: colorRoles.textSecondary,
   },
   selectorTabTextActive: {
-    color: "#FFFFFF",
+    color: colorRoles.surfaceBase,
   },
   chip: {
     paddingHorizontal: 12,
@@ -1307,7 +1307,7 @@ const styles = StyleSheet.create({
     color: colorRoles.textSecondary,
   },
   chipTextActive: {
-    color: "#FFFFFF",
+    color: colorRoles.surfaceBase,
     fontWeight: "bold",
   },
   paymentCard: {
@@ -1320,7 +1320,7 @@ const styles = StyleSheet.create({
   },
   paymentCardActive: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: "#FFF3ED",
+    backgroundColor: colorRoles.surfaceBase,
   },
   radioDot: {
     width: 14,
@@ -1359,7 +1359,7 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: 320,
     height: 220,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     borderRadius: radius.md,
@@ -1375,12 +1375,12 @@ const styles = StyleSheet.create({
   mapCircle: {
     position: "absolute",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
     borderStyle: "dashed",
   },
   mapRoad: {
     position: "absolute",
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colorRoles.surfaceBase,
   },
   storePin: {
     position: "absolute",
@@ -1392,7 +1392,7 @@ const styles = StyleSheet.create({
   storePinLabel: {
     fontSize: 9,
     fontWeight: "bold",
-    color: "#1E3A8A",
+    color: colorRoles.brandStructure,
     backgroundColor: "rgba(255, 255, 255, 0.8)",
     paddingHorizontal: 4,
     paddingVertical: 1,
@@ -1417,14 +1417,14 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colorRoles.surfaceBase,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 24,
     maxHeight: "85%",
-    shadowColor: "#0F172A",
+    shadowColor: colorRoles.brandStructure,
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
@@ -1434,7 +1434,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colorRoles.surfaceBase,
     alignSelf: "center",
     marginBottom: 16,
   },
@@ -1445,25 +1445,25 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     marginBottom: 8,
     borderBottomWidth: 1.5,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colorRoles.surfaceBase,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#0F172A",
+    color: colorRoles.brandStructure,
     textAlign: "right",
   },
   closeButton: {
     padding: 6,
     borderRadius: 20,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colorRoles.surfaceBase,
   },
   modalCard: {
     padding: 16,
     borderRadius: 16,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1.5,
-    borderColor: "#F1F5F9",
+    borderColor: colorRoles.surfaceBase,
     marginVertical: 4,
   },
   modalIconBg: {

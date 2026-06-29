@@ -28,7 +28,7 @@ function BackIcon({ color = colorRoles.textPrimary }: { color?: string }) {
   );
 }
 
-function CarIcon({ color = '#FF500D' }: { color?: string }) {
+function CarIcon({ color = colorRoles.brandAction }: { color?: string }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h2m13-7H9v3h11v-3z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -38,7 +38,7 @@ function CarIcon({ color = '#FF500D' }: { color?: string }) {
   );
 }
 
-function BellIcon({ color = '#FF500D' }: { color?: string }) {
+function BellIcon({ color = colorRoles.brandAction }: { color?: string }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -47,10 +47,11 @@ function BellIcon({ color = '#FF500D' }: { color?: string }) {
   );
 }
 
-function LockIcon({ color = '#FF500D' }: { color?: string }) {
+// LockIcon color default has been fixed
+function LockIcon({ color = colorRoles.brandAction }: { color?: string }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 15v3m-5-6h10a2 2 0 012 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 012-2z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 15v3m-5-6h10a2 2 0 012 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 01-2-2z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       <Path d="M8 11V7a4 4 0 118 0v4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
@@ -181,8 +182,8 @@ function SwitchRow({ label, description, value, onValueChange, isLast = false }:
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: '#D1D5DB', true: '#FF500D' }}
-          thumbColor={value ? '#FFFFFF' : '#F3F4F6'}
+          trackColor={{ false: colorRoles.surfaceBase, true: colorRoles.brandAction }}
+          thumbColor={value ? colorRoles.surfaceBase : colorRoles.surfaceBase}
         />
       </View>
       {!isLast && <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginHorizontal: 16 }} />}
@@ -245,7 +246,7 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
             خيارات التفضيلات
           </Text>
 
-          <View style={{ borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 16, overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+          <View style={{ borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 16, overflow: 'hidden', backgroundColor: colorRoles.surfaceBase }}>
             {/* 1. Delivery */}
             <ActionStrip
               icon="car"
@@ -267,13 +268,13 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
                     width: '100%',
                     minHeight: 80,
                     borderWidth: 1,
-                    borderColor: '#D1D5DB',
+                    borderColor: colorRoles.surfaceBase,
                     borderRadius: 16,
                     paddingHorizontal: 16,
                     paddingVertical: 12,
                     textAlign: 'right',
                     color: colorRoles.textPrimary,
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: colorRoles.surfaceBase,
                   }}
                 />
                 <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1] }}>
@@ -284,10 +285,10 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
                       style={{
                         paddingVertical: 8,
                         paddingHorizontal: spacing[3],
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: colorRoles.surfaceBase,
                         borderRadius: 100,
                         borderWidth: 1,
-                        borderColor: '#D1D5DB',
+                        borderColor: colorRoles.surfaceBase,
                       }}
                     >
                       <Text role="bodySm" style={{ color: colorRoles.textPrimary }}>{s}</Text>
@@ -341,7 +342,7 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
             tone="primary"
             label="حفظ كل التفضيلات والتغييرات"
             onPress={handleSave}
-            style={{ backgroundColor: '#FF500D', borderRadius: 100, elevation: 2 }}
+            style={{ backgroundColor: colorRoles.brandAction, borderRadius: 100, elevation: 2 }}
           />
 
           <TouchableOpacity onPress={handleReset} style={{ alignSelf: 'center', marginTop: 12, padding: 8 }}>

@@ -1,0 +1,3 @@
+service-fullstack-linkage: PASS
+active services: dsh, wlt
+reserved services: knz, arb, amn, esf, mrf, snd, kwd

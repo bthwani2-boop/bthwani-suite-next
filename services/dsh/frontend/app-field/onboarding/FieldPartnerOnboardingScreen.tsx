@@ -309,13 +309,13 @@ export function FieldPartnerOnboardingScreen({
                     }}
                   >
                     {isComplete ? (
-                      <Icon name="checkmark" size={14} color="#FFF" />
+                      <Icon name="checkmark" size={14} color={colorRoles.surfaceBase} />
                     ) : (
                       <Text
                         role="caption"
                         style={{
                           fontWeight: 'bold',
-                          color: isActive ? '#FFF' : colorRoles.textMuted,
+                          color: isActive ? colorRoles.surfaceBase : colorRoles.textMuted,
                         }}
                       >
                         {index + 1}

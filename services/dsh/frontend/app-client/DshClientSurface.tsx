@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Svg, Circle, Rect, Path } from "react-native-svg";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
-import { brandScale } from "@bthwani/ui-kit";
+import { brandScale, colorRoles } from '@bthwani/ui-kit';
 import { configureIdentitySession } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../shared/_kernel/identity-api-base-url";
 
@@ -26,9 +26,9 @@ import { NotificationCenterScreen } from "./notifications/NotificationCenterScre
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
 
 const ICON_SIZE = 22;
-const ICON_COLOR_ACTIVE = "#FF500D";
-const ICON_COLOR_INACTIVE = "#888888";
-const ICON_COLOR_WHITE = "#FFFFFF";
+const ICON_COLOR_ACTIVE = colorRoles.brandAction;
+const ICON_COLOR_INACTIVE = colorRoles.brandStructure;
+const ICON_COLOR_WHITE = colorRoles.surfaceBase;
 
 function OrdersIcon({ active }: { active?: boolean }) {
   const c = active ? ICON_COLOR_ACTIVE : ICON_COLOR_INACTIVE;

@@ -1,10 +1,10 @@
 /**
  * BottomNavBar — DSH Captain Surface
  * Fully compliant with @bthwani/ui-kit design tokens:
- *   brandAction  #FF500D  → active icons / launcher active state
- *   brandStructure #0A2F5C → floating button default
+ *   brandAction  brandAction  → active icons / launcher active state
+ *   brandStructure brandStructure → floating button default
  *   textMuted    rgba(10,47,92,0.68) → inactive items
- *   surfaceBase  #FFFFFF  → pill background
+ *   surfaceBase  surfaceBase  → pill background
  *   borderSubtle rgba(10,47,92,0.10) → pill border
  */
 import React from 'react';
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   pill: {
     width: '100%',
     height: 64,
-    backgroundColor: lightThemeColors.surface,          // #FFFFFF
+    backgroundColor: lightThemeColors.surface,          // surfaceBase
     borderRadius: 32,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,                // rgba(10,47,92,0.10)
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: colorRoles.brandStructure,          // #0A2F5C
+    backgroundColor: colorRoles.brandStructure,          // brandStructure
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   floatingBtnActive: {
-    backgroundColor: colorRoles.brandAction,             // #FF500D
+    backgroundColor: colorRoles.brandAction,             // brandAction
     ...Platform.select({
       ios: { shadowColor: colorRoles.brandAction },
     }),

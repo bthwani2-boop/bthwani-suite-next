@@ -11,7 +11,8 @@ import {
   Text,
   spacing,
   lightThemeColors,
-} from "@bthwani/ui-kit";
+  colorRoles,
+} from '@bthwani/ui-kit';
 
 type Props = {
   readonly orderId: string;
@@ -93,37 +94,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: colorRoles.surfaceBase,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1E293B",
+    color: colorRoles.brandStructure,
   },
   greenBanner: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    borderColor: colorRoles.surfaceBase,
   },
   greenBannerText: {
-    color: "#15803D",
+    color: colorRoles.brandStructure,
     fontWeight: "bold",
     fontSize: 13,
   },
   infoCard: {
     padding: 16,
-    backgroundColor: "#FFF",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
   },
   cardTitle: {
     fontWeight: "bold",
     marginBottom: 16,
-    color: "#1E293B",
+    color: colorRoles.brandStructure,
     textAlign: "right",
   },
   detailRow: {
@@ -131,28 +132,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colorRoles.surfaceBase,
   },
   detailLabel: {
     fontSize: 14,
-    color: "#64748B",
+    color: colorRoles.brandStructure,
     fontWeight: "600",
   },
   detailValue: {
     fontSize: 14,
-    color: "#1E293B",
+    color: colorRoles.brandStructure,
     fontWeight: "bold",
   },
   noticeCard: {
     padding: 14,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: colorRoles.surfaceBase,
   },
   noticeText: {
     fontSize: 13,
-    color: "#1D4ED8",
+    color: colorRoles.brandStructure,
     textAlign: "right",
     lineHeight: 20,
   },

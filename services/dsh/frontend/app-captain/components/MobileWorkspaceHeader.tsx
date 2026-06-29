@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { Box, Button, Icon, Text, useTheme } from '@bthwani/ui-kit';
+import { Box, Button, Icon, Text, useTheme, colorRoles } from '@bthwani/ui-kit';
 
 export type MobileWorkspaceHeaderProps = {
   title: string;
@@ -20,13 +20,13 @@ export function MobileWorkspaceHeader({
   const theme = useTheme() as any;
 
   return (
-    <View style={[styles.container, { borderBottomColor: theme.line || '#EAEAEA', backgroundColor: theme.surfaceRaised || '#FFFFFF' }]}>
+    <View style={[styles.container, { borderBottomColor: theme.line || colorRoles.surfaceBase, backgroundColor: theme.surfaceRaised || colorRoles.surfaceBase }]}>
       <View style={styles.topRow}>
         <Pressable onPress={onBack} style={styles.backButton}>
-          <Icon name="arrow-forward-outline" size={20} color="#E53935" />
-          <Text style={[styles.backText, { color: '#E53935' }]}>{backLabel}</Text>
+          <Icon name="arrow-forward-outline" size={20} color={colorRoles.brandAction} />
+          <Text style={[styles.backText, { color: colorRoles.brandAction }]}>{backLabel}</Text>
         </Pressable>
-        <Icon name={icon} size={22} color={theme.textMuted || '#888888'} />
+        <Icon name={icon} size={22} color={theme.textMuted || colorRoles.brandStructure} />
       </View>
       <View style={styles.infoCol}>
         <Text role="titleMd">{title}</Text>

@@ -14,6 +14,7 @@ import {
   Text,
   spacing,
   radius,
+  colorRoles,
 } from '@bthwani/ui-kit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -216,9 +217,9 @@ export function BenefitsHubScreen({
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row-reverse',
-    backgroundColor: '#FFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: colorRoles.surfaceBase,
     paddingHorizontal: spacing[4],
   },
   tab: {
@@ -229,16 +230,16 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#FF500D',
+    borderBottomColor: colorRoles.brandAction,
   },
   tabText: {
     fontSize: 13,
-    color: '#64748B',
+    color: colorRoles.brandStructure,
     fontWeight: '600',
     textAlign: 'center',
   },
   tabTextActive: {
-    color: '#FF500D',
+    color: colorRoles.brandAction,
     fontWeight: '700',
   },
   content: {
@@ -247,10 +248,10 @@ const styles = StyleSheet.create({
   },
   rowCard: {
     padding: spacing[4],
-    backgroundColor: '#FFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colorRoles.surfaceBase,
     marginBottom: spacing[3],
   },
   rowContent: {
@@ -267,17 +268,17 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontWeight: '700',
-    color: '#1E293B',
+    color: colorRoles.brandStructure,
     textAlign: 'right',
     flex: 1,
   },
   rowSubtitle: {
-    color: '#475569',
+    color: colorRoles.brandStructure,
     textAlign: 'right',
     lineHeight: 20,
   },
   helperText: {
-    color: '#94A3B8',
+    color: colorRoles.surfaceBase,
     fontSize: 12,
     textAlign: 'right',
     marginTop: 2,

@@ -471,7 +471,7 @@ function ActiveOrderTracker({
     {
       id: "camera",
       label: "كاميرا",
-      icon: <Icon name="camera-outline" size={18} color={chatAttachments.includes("camera") ? colorRoles.brandAction : "#64748B"} />,
+      icon: <Icon name="camera-outline" size={18} color={chatAttachments.includes("camera") ? colorRoles.brandAction : colorRoles.brandStructure} />,
       selected: chatAttachments.includes("camera"),
       disabled: status === "delivered",
       onPress: () => toggleAttachment("camera")
@@ -479,7 +479,7 @@ function ActiveOrderTracker({
     {
       id: "video",
       label: "فيديو",
-      icon: <Icon name="videocam-outline" size={18} color={chatAttachments.includes("video") ? colorRoles.brandAction : "#64748B"} />,
+      icon: <Icon name="videocam-outline" size={18} color={chatAttachments.includes("video") ? colorRoles.brandAction : colorRoles.brandStructure} />,
       selected: chatAttachments.includes("video"),
       disabled: status === "delivered",
       onPress: () => toggleAttachment("video")
@@ -487,7 +487,7 @@ function ActiveOrderTracker({
     {
       id: "voice",
       label: "صوت",
-      icon: <Icon name="mic-outline" size={18} color={chatAttachments.includes("voice") ? colorRoles.brandAction : "#64748B"} />,
+      icon: <Icon name="mic-outline" size={18} color={chatAttachments.includes("voice") ? colorRoles.brandAction : colorRoles.brandStructure} />,
       selected: chatAttachments.includes("voice"),
       disabled: status === "delivered",
       onPress: () => toggleAttachment("voice")
@@ -514,10 +514,10 @@ function ActiveOrderTracker({
           <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "center" }}>
               <View style={styles.pulseIconContainer}>
-                <Icon name="pulse-outline" size={24} color="#FFF" />
+                <Icon name="pulse-outline" size={24} color={colorRoles.surfaceBase} />
               </View>
               <View style={{ alignItems: "flex-end" }}>
-                <Text role="titleMd" style={{ color: "#FFF", fontWeight: "bold" }}>
+                <Text role="titleMd" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>
                   {isDelivered ? "تم وصول الطلب بنجاح ✓" : "جاري توصيل ومتابعة طلبك"}
                 </Text>
                 <Text role="caption" style={{ color: "rgba(255, 255, 255, 0.9)", marginTop: 2, fontWeight: "600" }}>
@@ -534,13 +534,13 @@ function ActiveOrderTracker({
               <TouchableOpacity
                 style={[
                   { height: 44, borderRadius: 10, justifyContent: "center", alignItems: "center", flexDirection: "row-reverse", gap: 8 },
-                  customerBellRung ? { backgroundColor: "#10B981" } : { backgroundColor: colorRoles.brandAction }
+                  customerBellRung ? { backgroundColor: colorRoles.brandStructure } : { backgroundColor: colorRoles.brandAction }
                 ]}
                 onPress={handleRingCaptainBell}
                 disabled={customerBellRung}
               >
-                <Icon name="notifications-active" size={18} color="#FFF" />
-                <Text role="body" style={{ color: "#FFF", fontWeight: "bold" }}>
+                <Icon name="notifications-active" size={18} color={colorRoles.surfaceBase} />
+                <Text role="body" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>
                   {customerBellRung ? "تم رن جرس الكابتن ✓" : "قرع جرس الكابتن 🔔"}
                 </Text>
               </TouchableOpacity>
@@ -553,10 +553,10 @@ function ActiveOrderTracker({
           <Surface tone="action" style={styles.bellAlertCard}>
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12 }}>
               <View style={styles.bellPulseOutline}>
-                <Icon name="notifications" size={24} color="#FFF" />
+                <Icon name="notifications" size={24} color={colorRoles.surfaceBase} />
               </View>
               <View style={{ flex: 1, alignItems: "flex-end" }}>
-                <Text role="bodyStrong" style={{ color: "#FFF", fontWeight: "bold" }}>قرع الكابتن جرس الوصول! 🔔</Text>
+                <Text role="bodyStrong" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>قرع الكابتن جرس الوصول! 🔔</Text>
                 <Text role="caption" style={{ color: "rgba(255, 255, 255, 0.9)", marginTop: 2 }}>
                   تنبيه: الكابتن عند الباب الآن وبانتظارك لاستلام الطلب (حفاظاً على خصوصية رقمك الفعلي).
                 </Text>
@@ -582,7 +582,7 @@ function ActiveOrderTracker({
               <Icon
                 name={proximityState === "bell_rang" ? "notifications-active" : proximityState === "at_door" ? "home" : proximityState === "near_customer" ? "navigate" : "bicycle"}
                 size={22}
-                color={proximityState === "bell_rang" ? colorRoles.brandAction : proximityState === "at_door" ? colorRoles.success : proximityState === "near_customer" ? "#D97706" : colorRoles.brandAction}
+                color={proximityState === "bell_rang" ? colorRoles.brandAction : proximityState === "at_door" ? colorRoles.success : proximityState === "near_customer" ? colorRoles.brandAction : colorRoles.brandAction}
               />
               <Text role="bodySm" style={{ flex: 1, textAlign: "right", color: colorRoles.textPrimary }}>
                 {proximityState === "bell_rang"
@@ -620,7 +620,7 @@ function ActiveOrderTracker({
                     isCurrent && styles.milestoneDotCurrent
                   ]}>
                     {isPassed ? (
-                      <Icon name="checkmark" size={10} color="#FFF" />
+                      <Icon name="checkmark" size={10} color={colorRoles.surfaceBase} />
                     ) : (
                       <View style={isCurrent ? styles.milestoneDotInnerActive : null} />
                     )}
@@ -655,9 +655,9 @@ function ActiveOrderTracker({
                       isActive && styles.stepCircleActive,
                     ]}>
                       {isDone ? (
-                        <Icon name="checkmark-sharp" size={12} color="#FFF" />
+                        <Icon name="checkmark-sharp" size={12} color={colorRoles.surfaceBase} />
                       ) : (
-                        <Text style={[styles.stepNumberText, isActive && { color: "#FFF" }]}>{stepNum}</Text>
+                        <Text style={[styles.stepNumberText, isActive && { color: colorRoles.surfaceBase }]}>{stepNum}</Text>
                       )}
                     </View>
                     {index < steps.length - 1 && (
@@ -722,7 +722,7 @@ function ActiveOrderTracker({
                 <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                   <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "center" }}>
                     <View style={styles.chatAvatar}>
-                      <Icon name="bicycle" size={20} color="#FFF" />
+                      <Icon name="bicycle" size={20} color={colorRoles.surfaceBase} />
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
                       <Text role="bodyStrong" style={{ fontSize: 13, color: colorRoles.textPrimary }}>أحمد الكابتن (مكلّف بالتوصيل)</Text>
@@ -735,8 +735,8 @@ function ActiveOrderTracker({
                 </View>
               ) : (
                 <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "center", width: "100%" }}>
-                  <View style={[styles.chatAvatar, { backgroundColor: "#CBD5E1" }]}>
-                    <Icon name="bicycle" size={20} color="#64748B" />
+                  <View style={[styles.chatAvatar, { backgroundColor: colorRoles.surfaceBase }]}>
+                    <Icon name="bicycle" size={20} color={colorRoles.brandStructure} />
                   </View>
                   <View style={{ alignItems: "flex-end", flex: 1, marginRight: 8 }}>
                     <Text role="bodyStrong" style={{ fontSize: 13, color: colorRoles.textSecondary }}>جاري تعيين الكابتن...</Text>
@@ -783,10 +783,10 @@ function ActiveOrderTracker({
                     ]}
                   >
                     <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                      <Text style={[styles.messageSender, isClient && { color: "#FFF" }]}>{msg.sender}</Text>
+                      <Text style={[styles.messageSender, isClient && { color: colorRoles.surfaceBase }]}>{msg.sender}</Text>
                       <Text style={[styles.messageTime, isClient && { color: "rgba(255,255,255,0.7)" }]}>{msg.time}</Text>
                     </View>
-                    <Text style={[styles.messageBody, isClient && { color: "#FFF" }]}>{msg.text}</Text>
+                    <Text style={[styles.messageBody, isClient && { color: colorRoles.surfaceBase }]}>{msg.text}</Text>
                   </Surface>
                 </View>
               );
@@ -802,7 +802,7 @@ function ActiveOrderTracker({
                     {att === "camera" ? "📸 صورة جاهزة للإرفاق" : att === "video" ? "🎥 فيديو جاهز للإرفاق" : "🎙️ تسجيل صوتي"}
                   </Text>
                   <TouchableOpacity onPress={() => toggleAttachment(att)}>
-                    <Icon name="close" size={14} color="#EF4444" />
+                    <Icon name="close" size={14} color={colorRoles.brandAction} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -838,7 +838,7 @@ function ActiveOrderTracker({
               onChangeText={setChatInputValue}
               editable={status !== "delivered"}
               placeholder={status === "delivered" ? "تم إغلاق المحادثة بعد التسليم." : "اكتب رسالة سريعة هنا..."}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colorRoles.surfaceBase}
               multiline
               numberOfLines={3}
               textAlign="right"
@@ -858,7 +858,7 @@ function ActiveOrderTracker({
                 <Icon
                   name={isRTL ? "paper-plane" : "paper-plane-outline"}
                   size={16}
-                  color={chatInputValue.trim() || chatAttachments.length > 0 ? "#FFF" : "#94A3B8"}
+                  color={chatInputValue.trim() || chatAttachments.length > 0 ? colorRoles.surfaceBase : colorRoles.surfaceBase}
                 />
               </Pressable>
             </View>
@@ -876,7 +876,7 @@ function ActiveOrderTracker({
               <View style={{ flexDirection: "row-reverse", gap: 4 }}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity key={star} onPress={() => { setStoreRating(star); setRatingsSubmitted(false); }}>
-                    <Icon name={star <= storeRating ? "star" : "star-outline"} size={22} color="#F59E0B" />
+                    <Icon name={star <= storeRating ? "star" : "star-outline"} size={22} color={colorRoles.brandAction} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -888,7 +888,7 @@ function ActiveOrderTracker({
                 <View style={{ flexDirection: "row-reverse", gap: 4 }}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => { setCaptainRating(star); setRatingsSubmitted(false); }}>
-                      <Icon name={star <= captainRating ? "star" : "star-outline"} size={22} color="#F59E0B" />
+                      <Icon name={star <= captainRating ? "star" : "star-outline"} size={22} color={colorRoles.brandAction} />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -939,7 +939,7 @@ function ActiveOrderTracker({
                       >
                         <Text style={[
                           styles.supportChipText,
-                          supportReason === issue.id && { color: "#FFF" }
+                          supportReason === issue.id && { color: colorRoles.surfaceBase }
                         ]}>
                           {issue.label}
                         </Text>
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   statusHero: {
-    backgroundColor: "#0F172A", // extremely sleek deep slate black
+    backgroundColor: colorRoles.brandStructure, // extremely sleek deep slate black
     padding: spacing[4],
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     left: "12.5%",
     right: "12.5%",
     height: 3,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colorRoles.surfaceBase,
     zIndex: 1,
   },
   milestonesProgressLineActive: {
@@ -1079,9 +1079,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#FFF",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 2,
-    borderColor: "#CBD5E1",
+    borderColor: colorRoles.surfaceBase,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 4,
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create({
   },
   milestoneDotCurrent: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: "#FFF",
+    backgroundColor: colorRoles.surfaceBase,
   },
   milestoneDotInnerActive: {
     width: 10,
@@ -1111,7 +1111,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderColor: colorRoles.borderStrong,
-    backgroundColor: "#FFF",
+    backgroundColor: colorRoles.surfaceBase,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 2,
@@ -1158,17 +1158,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colorRoles.surfaceBase,
     paddingBottom: 8,
   },
   captainChatHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colorRoles.surfaceBase,
     padding: 12,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
     marginVertical: 6,
   },
   chatAvatar: {
@@ -1195,11 +1195,11 @@ const styles = StyleSheet.create({
   chatThreadArea: {
     maxHeight: 380,
     minHeight: 220,
-    backgroundColor: "#FAFBFD",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: radius.md,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
     marginVertical: 6,
   },
   messageBubbleWrapper: {
@@ -1222,7 +1222,7 @@ const styles = StyleSheet.create({
   },
   messageBubbleOther: {
     borderBottomRightRadius: 2,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colorRoles.surfaceBase,
   },
   messageSender: {
     fontSize: 10.5,
@@ -1242,7 +1242,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   systemBubble: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colorRoles.surfaceBase,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1293,8 +1293,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFF",
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
   },
   chatQuickActionSelected: {
     borderColor: colorRoles.brandAction,
@@ -1316,8 +1316,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
   },
   chatSendButtonActive: {
     borderColor: colorRoles.brandAction,
@@ -1340,8 +1340,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
-    backgroundColor: "#FFF",
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
   },
   supportChipActive: {
     backgroundColor: colorRoles.brandAction,
@@ -1352,9 +1352,9 @@ const styles = StyleSheet.create({
     color: colorRoles.textSecondary,
   },
   supportInput: {
-    backgroundColor: "#FFF",
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: colorRoles.surfaceBase,
     borderRadius: 8,
     padding: 8,
     fontSize: 12,
@@ -1365,10 +1365,10 @@ const styles = StyleSheet.create({
   },
   simulatorHeader: {
     padding: spacing[4],
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
     gap: spacing[2],
     marginBottom: 8,
   },
@@ -1383,8 +1383,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.sm,
     borderWidth: 1.5,
-    borderColor: "#CBD5E1",
-    backgroundColor: "#FFF",
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
     marginBottom: 4,
   },
   simBtnActive: {

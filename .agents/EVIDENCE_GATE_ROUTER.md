@@ -28,6 +28,11 @@ Not required by default:
 
 All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
 
+## Automation and Sizing Policy
+* **Automation is Mandatory**: Choosing the smallest sufficient verification level (e.g. `LOW` or `FOCUSED`) does NOT bypass the requirement for automated verification. It prevents excessive evidence packs or manual screenshot overhead while still demanding code-based automated verification (such as targeted guard scripts, local test runs, or precise status/hasher tools).
+* **No Manual Chasing**: Sizing down a gate must never be used to justify arbitrary manual files modifications without automated validation checks.
+
+
 ## Gate levels
 
 ### LOW

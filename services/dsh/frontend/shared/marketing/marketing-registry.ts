@@ -1,3 +1,4 @@
+import { colorRoles } from '@bthwani/ui-kit';
 /**
  * marketing-registry.ts
  *
@@ -135,7 +136,7 @@ export const PARTNER_GATE_CARDS: readonly PartnerGateCardViewModel[] = [
     surface: "تطبيق الشريك",
     auditNote: "بدون تدقيق إضافي",
     description: "بوابة تفعيل الشركاء تتحقق من جاهزية المتجر قبل إطلاق أي عروض تسويقية.",
-    statusColor: "#EAB308", // Yellow
+    statusColor: colorRoles.brandAction, // Yellow
     primaryActionLabel: "فتح الإشارات",
   },
   {
@@ -147,7 +148,7 @@ export const PARTNER_GATE_CARDS: readonly PartnerGateCardViewModel[] = [
     surface: "لوحة التحكم",
     auditNote: "بدون تدقيق إضافي",
     description: "بوابة نشر المنتجات تضمن سلامة مواصفات وصور المنتج قبل النشر.",
-    statusColor: "#F97316", // Orange
+    statusColor: colorRoles.brandAction, // Orange
     primaryActionLabel: "فتح إشارات التسليم",
   },
   {
@@ -159,7 +160,7 @@ export const PARTNER_GATE_CARDS: readonly PartnerGateCardViewModel[] = [
     surface: "تطبيق العميل",
     auditNote: "بدون تدقيق إضافي",
     description: "توقعات الظهور التجاري تقتصر على محاكاة العناصر المرئية للعملاء.",
-    statusColor: "#22C55E", // Green
+    statusColor: colorRoles.brandStructure, // Green
     primaryActionLabel: "فتح الحملات",
   },
 ] as const;

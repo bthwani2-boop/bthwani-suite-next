@@ -1,0 +1,10 @@
+docker-runtime-profiles: FAIL
+- services/wlt/evidence/docker/.gitkeep: missing required Docker runtime foundation file
+- services/wlt/evidence/docker/README.md: missing required Docker runtime foundation file
+Exception: C:\bthwani-suite-next\tools\scripts\gate-run-step.ps1:20
+Line |
+  20 |        throw "Native command exited with code $nativeExitCode."
+     |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Native command exited with code 1.
+
+

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Badge, Box, Button, Surface, Text, TextField } from '@bthwani/ui-kit';
+import { Badge, Box, Button, Surface, Text, TextField, colorRoles } from '@bthwani/ui-kit';
 import type { CompactOrderChatMessage } from '../../shared/delivery';
 import { CompactOrderChatBubble } from './CompactOrderChatBubble';
 
 const SurfaceAny = Surface as any;
 
 const localOverlayShadow = {
-  shadowColor: '#000',
+  shadowColor: colorRoles.brandStructure,
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.12,
   shadowRadius: 8,

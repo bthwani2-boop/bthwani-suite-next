@@ -1,5 +1,5 @@
 "use client";
-
+import { colorRoles } from '@bthwani/ui-kit';
 import React, { useState } from "react";
 import { OpsTheme } from "../../shared/operations";
 const opsTheme = OpsTheme;
@@ -120,7 +120,7 @@ export function TickerCommandDeck() {
       </div>
 
       {controller.selected !== null && controller.draft && (
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>
             {controller.selected.id ? "تعديل شريط إعلاني" : "إضافة شريط إعلاني جديد"}
           </h4>
@@ -281,7 +281,7 @@ export function VideoStudioCommandDeck() {
       </div>
 
       {controller.selected !== null && controller.draft && (
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>
             {controller.selected.id ? "تعديل فيديو" : "إضافة فيديو جديد"}
           </h4>
@@ -427,7 +427,7 @@ export function CampaignsCommandDeck() {
         )}
       </div>
 
-      <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+      <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
         <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>جدولة حملة تسويقية جديدة</h4>
 
         {errorMsg && (
@@ -532,7 +532,7 @@ export function PartnerOffersCommandDeck() {
       </div>
 
       {controller.selected !== null && controller.draft && (
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>
             {controller.selected.id ? "تعديل عرض شريك" : "إضافة عرض شريك جديد"}
           </h4>
@@ -612,7 +612,7 @@ export function BenefitsSubscriptionsCommandDeck() {
       <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>إدارة برنامج الولاء ونظام الاشتراكات</h3>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontWeight: 700 }}>مضاعف نقاط الولاء (Points Multiplier)</h4>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <span style={{ fontSize: "0.85rem" }}>المضاعف الحالي:</span>
@@ -623,11 +623,11 @@ export function BenefitsSubscriptionsCommandDeck() {
           <p style={{ fontSize: "0.75rem", opacity: 0.6, marginTop: "0.5rem" }}>المضاعف يتحكم في سرعة اكتساب النقاط للكباتن والعملاء على الطلبات المؤهلة.</p>
         </div>
 
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontWeight: 700 }}>مستويات وتصنيفات الولاء</h4>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {loyalty.tiers.map((tier) => (
-              <div key={tier.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: "0.5rem" }}>
+              <div key={tier.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid colorRoles.surfaceBase", paddingBottom: "0.5rem" }}>
                 <span style={{ fontWeight: 600 }}>{tier.name}</span>
                 <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>الحد الأدنى للنقاط: {tier.minimumPoints} نقطة</span>
                 <CpButton onClick={() => loyalty.updateTierPoints(tier.name, tier.minimumPoints + 100)} style={{ padding: "0.2rem 0.5rem" }}>+100</CpButton>
@@ -710,7 +710,7 @@ export function GrowthCommandDeck() {
       </div>
 
       {controller.selected !== null && controller.draft && (
-        <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontSize: "0.95rem", fontWeight: 700 }}>
             {controller.selected.id ? "تعديل مبادرة نمو" : "إضافة مبادرة نمو جديدة"}
           </h4>

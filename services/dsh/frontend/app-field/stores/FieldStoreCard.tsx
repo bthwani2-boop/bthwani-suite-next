@@ -16,11 +16,11 @@ type FieldStoreCardProps = {
 // ── Badge color mapper driven by shared statusTone ──────────────────────────
 function resolveBadgeColors(tone: 'success' | 'warning' | 'danger' | 'info' | 'muted'): { bg: string; fg: string } {
   const styles = {
-    success: { bg: '#EAFAF1', fg: '#1A7C40' },
-    danger:  { bg: '#FEF3F2', fg: '#C0392B' },
-    warning: { bg: '#FFF8EE', fg: '#E05F1B' },
-    info:    { bg: '#EFF6FF', fg: '#1D4ED8' },
-    muted:   { bg: '#F1F5F9', fg: '#475569' },
+    success: { bg: colorRoles.surfaceBase, fg: colorRoles.brandStructure },
+    danger:  { bg: colorRoles.surfaceBase, fg: colorRoles.brandAction },
+    warning: { bg: colorRoles.surfaceBase, fg: colorRoles.brandAction },
+    info:    { bg: colorRoles.surfaceBase, fg: colorRoles.brandStructure },
+    muted:   { bg: colorRoles.surfaceBase, fg: colorRoles.brandStructure },
   };
   return styles[tone] ?? styles.muted;
 }
@@ -72,14 +72,14 @@ export function FieldStoreCard({ partner, onPress }: FieldStoreCardProps) {
     >
       <View
         style={{
-          backgroundColor: '#FFF',
+          backgroundColor: colorRoles.surfaceBase,
           borderRadius: radius.lg,
           borderWidth: 1,
           borderColor: colorRoles.borderSubtle,
           padding: spacing[4],
           marginBottom: spacing[3],
           gap: spacing[3],
-          shadowColor: '#000',
+          shadowColor: colorRoles.brandStructure,
           shadowOpacity: 0.04,
           shadowOffset: { width: 0, height: 2 },
           shadowRadius: 6,

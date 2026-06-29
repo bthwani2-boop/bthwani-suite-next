@@ -12,6 +12,7 @@ import {
   Text,
   TextField,
   spacing,
+  colorRoles,
 } from '@bthwani/ui-kit';
 
 export type IdentityHubScreenProps = {
@@ -136,7 +137,7 @@ export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: Id
               {passwordMsg ? (
                 <Text
                   role="caption"
-                  style={[styles.fieldLabel, { color: passwordTone === 'success' ? '#15803D' : '#DC2626' }]}
+                  style={[styles.fieldLabel, { color: passwordTone === 'success' ? colorRoles.brandStructure : colorRoles.brandAction }]}
                 >
                   {passwordMsg}
                 </Text>
@@ -217,16 +218,16 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: spacing[4],
-    backgroundColor: '#FFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colorRoles.surfaceBase,
     gap: spacing[3],
     marginBottom: spacing[3],
   },
   dangerCard: {
-    borderColor: '#FECACA',
-    backgroundColor: '#FFF5F5',
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
   },
   cardHeader: {
     flexDirection: 'row-reverse',
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: 'bold',
-    color: '#1E293B',
+    color: colorRoles.brandStructure,
     textAlign: 'right',
   },
   statusText: {
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     textAlign: 'right',
-    color: '#64748B',
+    color: colorRoles.brandStructure,
   },
   actionRow: {
     flexDirection: 'row-reverse',
@@ -256,12 +257,12 @@ const styles = StyleSheet.create({
   },
   dangerTitle: {
     fontWeight: 'bold',
-    color: '#DC2626',
+    color: colorRoles.brandAction,
     textAlign: 'right',
   },
   dangerText: {
     textAlign: 'right',
-    color: '#B91C1C',
+    color: colorRoles.brandAction,
     lineHeight: 20,
   },
 });

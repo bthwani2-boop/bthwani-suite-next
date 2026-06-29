@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   paymentCardActive: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: "#FFF3ED",
+    backgroundColor: colorRoles.surfaceBase,
   },
   radioDot: {
     width: 14,

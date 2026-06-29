@@ -68,14 +68,14 @@ function FieldTopBar({
           style={{ padding: spacing[2] }}
           accessibilityLabel="بحث"
         >
-          <Icon name="search-outline" size={24} color="#FFFFFF" />
+          <Icon name="search-outline" size={24} color={colorRoles.surfaceBase} />
         </Pressable>
 
         {/* Center: title + subtitle */}
         <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
           <Text
             style={{
-              color: '#FFFFFF',
+              color: colorRoles.surfaceBase,
               fontWeight: 'bold',
               fontSize: 18,
               textAlign: 'center',
@@ -95,14 +95,14 @@ function FieldTopBar({
         {/* Right: bell + person icons */}
         <View style={{ flexDirection: 'row', gap: spacing[1] }}>
           <Pressable style={{ padding: spacing[2] }} accessibilityLabel="الإشعارات">
-            <Icon name="notifications-outline" size={24} color="#FFFFFF" />
+            <Icon name="notifications-outline" size={24} color={colorRoles.surfaceBase} />
           </Pressable>
           <Pressable
             onPress={onAccountPress}
             style={{ padding: spacing[2] }}
             accessibilityLabel="الحساب"
           >
-            <Icon name="person-outline" size={24} color="#FFFFFF" />
+            <Icon name="person-outline" size={24} color={colorRoles.surfaceBase} />
           </Pressable>
         </View>
       </View>
@@ -124,7 +124,7 @@ function NextStoreCard({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: '#FFF',
+        backgroundColor: colorRoles.surfaceBase,
         borderRadius: radius.lg,
         borderWidth: 1,
         borderColor: colorRoles.borderSubtle,
@@ -133,7 +133,7 @@ function NextStoreCard({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: spacing[3],
-        shadowColor: '#000',
+        shadowColor: colorRoles.brandStructure,
         shadowOpacity: 0.04,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 8,
@@ -190,13 +190,13 @@ function FilterPills({
               borderRadius: radius.round,
               borderWidth: 1,
               borderColor: selected ? colorRoles.textPrimary : colorRoles.borderSubtle,
-              backgroundColor: selected ? colorRoles.textPrimary : '#FFF',
+              backgroundColor: selected ? colorRoles.textPrimary : colorRoles.surfaceBase,
             }}
           >
             <Text
               style={{
                 fontSize: 13,
-                color: selected ? '#FFF' : colorRoles.textPrimary,
+                color: selected ? colorRoles.surfaceBase : colorRoles.textPrimary,
                 fontWeight: selected ? 'bold' : 'normal',
               }}
             >

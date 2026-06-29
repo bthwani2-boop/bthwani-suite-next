@@ -1,0 +1,4 @@
+
+> @bthwani/ui-kit@0.0.0 typecheck:contracts C:\bthwani-suite-next\shared\ui-kit
+> tsc --noEmit -p tsconfig.contracts.json
+

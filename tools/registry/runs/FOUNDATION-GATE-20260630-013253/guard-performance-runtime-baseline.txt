@@ -1,0 +1,42 @@
+
+=== CHECK 1: Performance Governance Doc ===
+  ✓ Performance governance doc: governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md
+
+=== CHECK 2: Measurement Status ===
+  ✓ Measurement status: NOT_MEASURED (correct — no load-test evidence yet)
+
+=== CHECK 3: DSH Backend Health Contract ===
+  ✓ DSH health endpoint in OpenAPI contract
+  ✓ DSH readiness endpoint in OpenAPI contract
+
+=== CHECK 4: DSH Backend Go Source ===
+  ✓ DSH backend directory exists
+  ✓ DSH backend go.mod present
+
+=== CHECK 5: No Unbounded Limits in DSH Backend ===
+  ✓ DSH backend go.mod readable — pagination checks deferred to Go tests
+
+=== CHECK 6: DSH Service Manifest ===
+  ✓ DSH service manifest exists
+  ✓ DSH service manifest has backendRuntimeReady
+
+=== CHECK 7: Identity Backend ===
+  ✓ Identity backend go.mod present
+
+=== CHECK 8: Live Topology Confirmed ===
+  ✓ performance-runtime-baseline uses live topology only
+
+=== CHECK 9: Inline Policy Constants ===
+  ✓ p95_api_reads_ms target: 300ms
+  ✓ p95_api_writes_ms target: 500ms
+  ✓ db_basic_query_ms target: 50ms
+  ✓ cpu_utilization_percent_max: 80%
+  ✓ error_rate_percent_max: 1%
+
+=== PERFORMANCE RUNTIME BASELINE RESULTS ===
+Checks passed : 16
+Errors        : 0
+Warnings      : 0
+RETIRED_MATRIX: NOT_USED
+
+RESULT: PASS

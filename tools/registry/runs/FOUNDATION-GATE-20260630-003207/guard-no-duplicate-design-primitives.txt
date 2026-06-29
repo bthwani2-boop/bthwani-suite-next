@@ -1,0 +1,1 @@
+no-duplicate-design-primitives: PASS

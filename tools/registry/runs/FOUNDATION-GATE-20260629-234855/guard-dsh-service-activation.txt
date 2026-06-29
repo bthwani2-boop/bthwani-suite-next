@@ -1,0 +1,32 @@
+dsh-service-activation: FAIL
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/runtime-all.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/runtime-status.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/foundation-gate.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/slice-gate.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/dsh-test.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/go-test.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/go-build.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-health.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-readiness.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/api-stores.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/app-client-reverify.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/git-diff-check.txt runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-client-store-discovery-reverify.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/control-panel-stores-admin-success.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/control-panel-store-detail-panel.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/control-panel-error-or-service-unavailable.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-partner-store-context.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-field-store-verification.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots/app-captain-store-pickup-context.png runtime-verified DSH-001 requires this evidence artifact
+- services/dsh/service.manifest.ts backendRuntimeReady must be true for runtime verification
+- services/dsh/service.manifest.ts databaseReady must be true for runtime verification
+- services/dsh/capability-map.ts Store Discovery must be runtime-bound with closureState FIX_REQUIRED
+- services/dsh/runtime-map.ts Store Discovery runtime map must point to evidence with state experience-fix-required
+- services/dsh/service.manifest.ts screensReady must remain false while DSH-001 is FIX_REQUIRED
+Exception: C:\bthwani-suite-next\tools\scripts\gate-run-step.ps1:20
+Line |
+  20 |        throw "Native command exited with code $nativeExitCode."
+     |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Native command exited with code 1.
+
+

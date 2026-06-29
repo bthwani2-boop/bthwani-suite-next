@@ -4,6 +4,19 @@
 
 All agents must strictly adhere to the [Command Safety Policy](.agents/COMMAND_SAFETY_POLICY.md).
 
+## Automated Execution Policy
+
+All agents must read and strictly adhere to the [Automated Execution Policy](.agents/AUTOMATED_EXECUTION_POLICY.md).
+* **Mandatory Automation**: Automation and smart scripting are mandatory. Manual file-by-file changes are banned as a primary method.
+* **Proportionality**: Creating new scripts is conditional and scaled to the task size.
+* **Standard Paths**:
+  * Diagnostics: [tools/diagnostics](./tools/diagnostics)
+  * Operations & Verification: [tools/scripts](./tools/scripts)
+  * Summarized Runs & Artifacts: [tools/registry/runs](./tools/registry/runs)
+* **Fail-Closed**: Any ambiguity or risk >= 1% halts execution.
+* **Complex Tasks**: Consciously choose between a single structured script or small modular scripts.
+* **Close Loops**: All future executions must operate under a Closed Loop (Diagnosis -> Plan -> Exec -> Verify -> Rediagnose -> Close/Block).
+
 ## Shared skills root
 
 All agents must use shared project skills from:

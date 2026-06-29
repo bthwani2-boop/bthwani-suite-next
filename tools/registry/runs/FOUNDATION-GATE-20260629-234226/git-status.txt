@@ -1,0 +1,6 @@
+?? node-gates-run2-utf8.log
+?? node-gates-run2.log
+?? search_results.txt
+?? tools/registry/runs/FOUNDATION-GATE-20260629-234226/
+?? tools/registry/runs/FOUNDATION-GATE-20260629-234529/
+?? tools/registry/runs/FOUNDATION-GATE-20260629-234545/

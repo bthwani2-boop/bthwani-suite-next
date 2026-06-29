@@ -7,7 +7,8 @@ import {
   ScrollScreen,
   Text,
   spacing,
-} from "@bthwani/ui-kit";
+  colorRoles,
+} from '@bthwani/ui-kit';
 
 export function DshCaptainOrdersScreen() {
   return (
@@ -47,7 +48,7 @@ export function DshCaptainOrdersScreen() {
           </View>
 
           <View style={styles.detailRow}>
-            <Text style={[styles.detailValue, { color: "#FF500D" }]}>4,500 ر.ي</Text>
+            <Text style={[styles.detailValue, { color: colorRoles.brandAction }]}>4,500 ر.ي</Text>
             <Text style={styles.detailLabel}>القيمة الإجمالية للطلب</Text>
           </View>
         </Card>
@@ -77,35 +78,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: colorRoles.surfaceBase,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#1E293B",
+    color: colorRoles.brandStructure,
   },
   infoCard: {
     padding: 16,
-    backgroundColor: "#FFF",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colorRoles.surfaceBase,
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colorRoles.surfaceBase,
   },
   detailLabel: {
     fontSize: 14,
-    color: "#64748B",
+    color: colorRoles.brandStructure,
     fontWeight: "600",
   },
   detailValue: {
     fontSize: 14,
-    color: "#1E293B",
+    color: colorRoles.brandStructure,
     fontWeight: "bold",
   },
 });

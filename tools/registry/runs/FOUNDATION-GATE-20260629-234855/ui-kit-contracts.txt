@@ -1,0 +1,14 @@
+
+> @bthwani/ui-kit@0.0.0 typecheck:contracts C:\bthwani-suite-next\shared\ui-kit
+> tsc --noEmit -p tsconfig.contracts.json
+
+src/components/Surface/Surface.tsx(1,10): error TS2300: Duplicate identifier 'colorRoles'.
+src/components/Surface/Surface.tsx(4,10): error TS2300: Duplicate identifier 'colorRoles'.
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 2.
+Exception: C:\bthwani-suite-next\tools\scripts\gate-run-step.ps1:20
+Line |
+  20 |        throw "Native command exited with code $nativeExitCode."
+     |        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Native command exited with code 2.
+
+

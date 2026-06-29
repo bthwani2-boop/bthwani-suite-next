@@ -1,0 +1,142 @@
+[
+  {
+    "step": "node-version",
+    "ok": true
+  },
+  {
+    "step": "pnpm-version",
+    "ok": true
+  },
+  {
+    "step": "git-diff-check",
+    "ok": true
+  },
+  {
+    "step": "pnpm-typecheck",
+    "ok": false
+  },
+  {
+    "step": "ui-kit-contracts",
+    "ok": false
+  },
+  {
+    "step": "guard-contracts-foundation",
+    "ok": true
+  },
+  {
+    "step": "guard-no-direct-tamagui-outside-ui-kit",
+    "ok": true
+  },
+  {
+    "step": "guard-no-ui-kit-deep-imports",
+    "ok": true
+  },
+  {
+    "step": "guard-no-local-design-system",
+    "ok": true
+  },
+  {
+    "step": "guard-no-raw-hex-outside-ui-kit",
+    "ok": true
+  },
+  {
+    "step": "guard-no-expo-in-ui-kit",
+    "ok": true
+  },
+  {
+    "step": "guard-no-react-native-runtime-dependency-in-ui-kit",
+    "ok": true
+  },
+  {
+    "step": "guard-no-safe-area-in-ui-kit-runtime",
+    "ok": true
+  },
+  {
+    "step": "guard-no-vector-icons-direct-in-ui-kit",
+    "ok": true
+  },
+  {
+    "step": "guard-no-domain-component-in-ui-kit",
+    "ok": true
+  },
+  {
+    "step": "guard-no-app-shell-design-ownership",
+    "ok": true
+  },
+  {
+    "step": "guard-no-duplicate-design-primitives",
+    "ok": true
+  },
+  {
+    "step": "guard-no-unsafe-ui-kit-tamagui-casts",
+    "ok": true
+  },
+  {
+    "step": "guard-ui-kit-token-binding",
+    "ok": true
+  },
+  {
+    "step": "guard-no-preview-demo-mock-runtime",
+    "ok": true
+  },
+  {
+    "step": "guard-no-broken-imports",
+    "ok": true
+  },
+  {
+    "step": "guard-service-fullstack-linkage",
+    "ok": true
+  },
+  {
+    "step": "guard-dsh-service-activation",
+    "ok": true
+  },
+  {
+    "step": "guard-go-backend-runtime",
+    "ok": true
+  },
+  {
+    "step": "guard-performance-runtime-baseline",
+    "ok": true
+  },
+  {
+    "step": "guard-docker-runtime-profiles",
+    "ok": true
+  },
+  {
+    "step": "guard-dsh-frontend-shared-ownership",
+    "ok": true
+  },
+  {
+    "step": "guard-wlt-dsh-frontend-shared-ownership",
+    "ok": true
+  },
+  {
+    "step": "guard-dsh-frontend-shared-boundary-imports",
+    "ok": true
+  },
+  {
+    "step": "guard-unified-fullstack-brain",
+    "ok": true
+  },
+  {
+    "step": "guard-canonical-host-ports",
+    "ok": true
+  },
+  {
+    "step": "guard-no-hardcoded-local-repo-root",
+    "ok": true
+  },
+  {
+    "step": "guard-dsh-store-role-boundary",
+    "ok": true
+  },
+  {
+    "step": "guard-dsh-catalog-ownership",
+    "ok": true
+  },
+  {
+    "step": "guard-dsh-cart-serviceability",
+    "ok": true
+  }
+]

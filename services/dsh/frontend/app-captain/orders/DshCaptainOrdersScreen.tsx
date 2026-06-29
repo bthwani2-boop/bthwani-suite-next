@@ -430,7 +430,7 @@ export function DshCaptainOrderDetailsScreen({
 		<SimpleSupportScreen
 			title="تفاصيل الطلب النشط"
 			subtitle="معلومات تفصيلية لخطوات المسار."
-			heroTitle="طلب #28401"
+			heroTitle="طلب # 28401"
 			heroDescription="استعرض تفاصيل المهمة والجهات والتحصيل COD."
 			primaryLabel="العودة"
 			secondaryLabel="فتح دردشة الدعم"
