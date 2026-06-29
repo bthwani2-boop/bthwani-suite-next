@@ -1,9 +1,0 @@
-tests 215 | pass 215 | fail 0 | cancelled 0 | skipped 0
-
-New tests added:
-  ✔ wlt-boundary-provider (6 assertions)
-  ✔ geo.status-updates (7 assertions)
-  ✔ provider-secret-visibility (7 assertions)
-  ✔ platform-provider.policy (5 assertions)
-  ✔ geo.customer-visibility.policy (10 assertions)
-  ✔ geo.operational-checkpoint.policy (7 assertions)

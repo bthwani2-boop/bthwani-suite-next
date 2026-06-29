@@ -1,5 +1,0 @@
-pnpm runtime:up
-pnpm runtime:migrate
-pnpm runtime:seed
-docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile dsh --profile identity --profile media up -d --build
-go run cmd/generate_evidence/main.go

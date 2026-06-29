@@ -1,3 +1,0 @@
-go build ./... in services/dsh/backend:
-Command completed successfully with exit code 0.
-No warnings or compilation errors.

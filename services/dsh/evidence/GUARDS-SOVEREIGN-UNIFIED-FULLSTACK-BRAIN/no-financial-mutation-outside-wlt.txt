@@ -1,6 +1,0 @@
-GUARD: no-financial-mutation-outside-wlt
-FILE: tools/guards/no-financial-mutation-outside-wlt.mjs
-RESULT: PASS
-MACHINE_READABLE: NOT_USED
-
-VERIFIED: No financial mutations (wallet, payment, refund, settlement, ledger, payout, commission) outside WLT service.

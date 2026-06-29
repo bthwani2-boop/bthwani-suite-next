@@ -1,5 +1,0 @@
-RESULT: PASS
-MACHINE_READABLE: NOT_USED
-Errors: 0
-Warnings: 0
-

@@ -1,9 +1,0 @@
-> @bthwani/dsh@0.0.0 test C:\bthwani-suite-next\services\dsh
-> vitest run
-
-Test Files  13 passed (13)
-     Tests  42 passed (42)
-  Snapshots  0 passed (0)
-   Time      2.37s
-   
-All DSH frontend tests passed successfully.

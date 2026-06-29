@@ -1,9 +1,0 @@
-SCAN: git grep machine-readable -- tools/ package.json .github/ services/ apps/ contracts/
-EXCLUDING: governance/ (docs only), services/dsh/evidence/, guard-slice-master-matrix-v2.mjs (dead), guard-slice-master-matrix-v3.mjs (scanner itself)
-
-ACTIVE GUARDS RESULT: 0 machine-readable dependencies
-DEAD CODE WARNED: tools/guards/guard-slice-master-matrix-v2.mjs (retired, not in manifest)
-GOVERNANCE DOCS: governance/14,15,16,17 contain historical references — NOT runtime dependencies
-
-STATUS: PASS
-MACHINE_READABLE: NOT_USED / NOT_RESTORED / NOT_REBUILT

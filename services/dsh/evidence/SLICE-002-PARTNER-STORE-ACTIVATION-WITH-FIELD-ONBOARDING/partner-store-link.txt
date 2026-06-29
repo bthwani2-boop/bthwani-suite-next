@@ -1,8 +1,0 @@
-Query: SELECT id, display_name, partner_id FROM dsh_stores WHERE partner_id = $1
-Columns: [id display_name partner_id]
-
-id: str_onboarding_99
-display_name: Burger Special
-partner_id: prt_0559adee341346dea7299abcc0c06d64
------------------------------------
-Total Rows: 1

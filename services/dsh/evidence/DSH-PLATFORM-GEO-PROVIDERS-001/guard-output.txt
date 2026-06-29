@@ -1,6 +1,0 @@
-guard:dsh-platform-geo-provider-governance  → PASS (0 errors)
-guard:dsh-frontend-shared-ownership         → PASS (3 warnings: raw HTML in control-panel — pre-existing)
-guard:no-financial-mutation-outside-wlt     → PASS
-guard:wlt-dsh-frontend-shared-ownership     → PASS
-contracts:lint                              → PASS
-git diff --check                            → PASS

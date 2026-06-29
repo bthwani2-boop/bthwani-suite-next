@@ -1,9 +1,0 @@
-Query: SELECT id, partner_id, visit_status, visit_notes FROM dsh_partner_field_visits WHERE partner_id = $1
-Columns: [id partner_id visit_status visit_notes]
-
-id: pfv_a6a12f26bf694d35bfbeff251f9d58f5
-partner_id: prt_0559adee341346dea7299abcc0c06d64
-visit_status: draft
-visit_notes: تمت زيارة الموقع والتأكد من لوحة المحل وعنوان الشارع الرئيسي.
------------------------------------
-Total Rows: 1
