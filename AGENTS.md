@@ -63,7 +63,7 @@ Match effort to task nature. Never over-engineer or under-deliver.
 
 | Tier | When | Action |
 |---|---|---|
-| **Instant** | Single file, typo, rename, comment, explain | Execute directly, 0 skills, no checks unless risk appears |
+| **Instant** | Single file, typo, rename, comment, explain | Execute directly, 0 skills, small targeted check post-modification |
 | **Focused** | Feature within one module/service | 1 task skill max, targeted code-based check only when useful |
 | **Standard** | Multi-file or cross-layer | authority + one task skill, affected/touched-area checks only |
 | **Full** | Finance, security, secrets, agent files | authority + router + task skill + evidence gate (finance/security/auth/data/runtime/agent/PR/release only) |

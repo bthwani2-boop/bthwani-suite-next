@@ -9,6 +9,7 @@ The default execution model for all tasks is **CODE_BASED_LEAN**. Normal impleme
 ### Core Rules
 - **Live-Code First**: Inspect only the directly relevant code paths. Reuse existing code first. Avoid adding unnecessary abstractions, files, or dependencies.
 - **Smallest Safe Diff**: Implement the smallest correct change that solves the task.
+- **Automation over Manual**: LEAN means using the "smallest sufficient automation" (e.g., targeted local guards or package scripts) to verify correctness. It strictly prohibits manual file-by-file modifications as a primary development method and requires automated validation checks post-remediation.
 - **No Screenshots by Default**: Normal UI fixes, components, and layout work do not require screenshots, recordings, or visual evidence by default.
 - **No Handoff/Evidence Packs by Default**: Do not generate evidence packs, handoff ZIP archives (`_HANDOFF.zip`), or command logs unless explicitly requested or required by specific escalation rules.
 - **No Full Checks by Default**: Do not run full repository typecheck, test suites, builds, Nx graphs, or Graphify scans by default. Only run targeted code-based validation for the touched/affected files when useful and available.
