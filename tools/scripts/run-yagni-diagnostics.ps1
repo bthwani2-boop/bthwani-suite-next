@@ -1,4 +1,4 @@
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath "$PSScriptRoot\..\.."
 
 $ErrorActionPreference = "Continue"
 

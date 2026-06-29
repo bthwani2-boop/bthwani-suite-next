@@ -48,6 +48,7 @@
     "guard:no-preview-demo-mock-runtime": "node tools/guards/no-preview-demo-mock-runtime.mjs",
     "guard:no-broken-imports": "node tools/guards/no-broken-imports.mjs",
     "guard:canonical-host-ports": "node tools/guards/canonical-host-ports.mjs",
+    "guard:no-hardcoded-local-repo-root": "node tools/guards/no-hardcoded-local-repo-root.mjs",
     "guard:canonical-currency-yemen": "node tools/guards/canonical-currency-yemen.mjs",
     "guard:wlt-dsh-frontend-shared-ownership": "node tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs",
     "guard:dsh-platform-geo-provider-governance": "node tools/guards/dsh-platform-geo-provider-governance-gate.mjs",

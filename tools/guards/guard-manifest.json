@@ -34,6 +34,7 @@
       "dsh-frontend-shared-boundary-imports",
       "unified-fullstack-brain",
       "canonical-host-ports",
+      "no-hardcoded-local-repo-root",
       "dsh-store-role-boundary",
       "dsh-catalog-ownership",
       "dsh-cart-serviceability"
@@ -52,6 +53,7 @@
       "dsh-frontend-shared-ownership",
       "wlt-dsh-frontend-shared-ownership",
       "canonical-host-ports",
+      "no-hardcoded-local-repo-root",
       "dsh-frontend-shared-boundary-imports",
       "unified-fullstack-brain"
     ]
@@ -191,6 +193,11 @@
       "id": "canonical-host-ports",
       "path": "tools/guards/canonical-host-ports.mjs",
       "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
+      "id": "no-hardcoded-local-repo-root",
+      "path": "tools/guards/no-hardcoded-local-repo-root.mjs",
+      "policySource": "governance/08_CLEANUP_AND_DEPRECATION.md"
     },
     {
       "id": "dsh-store-role-boundary",

@@ -75,6 +75,9 @@ jobs:
       - name: Guard — canonical host ports
         run: pnpm run guard:canonical-host-ports
 
+      - name: Guard — no hardcoded local repo root
+        run: pnpm run guard:no-hardcoded-local-repo-root
+
       - name: Guard — canonical currency Yemen
         run: pnpm run guard:canonical-currency-yemen
 
