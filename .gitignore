@@ -12,9 +12,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
-tools/registry/runs/**
-!tools/registry/runs/
-!tools/registry/runs/README.md
 
 graphify-out/
 
