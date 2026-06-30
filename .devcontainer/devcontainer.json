@@ -1,6 +1,15 @@
 {
   "name": "bthwani-suite-next",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/go:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
@@ -31,7 +40,7 @@
     "18102": { "label": "app-partner" },
     "18103": { "label": "app-captain" },
     "18104": { "label": "app-field" },
-    "8025":  { "label": "mailpit-ui" },
+    "8025": { "label": "mailpit-ui" },
     "58090": { "label": "wiremock-financial-provider" }
   },
   "customizations": {
