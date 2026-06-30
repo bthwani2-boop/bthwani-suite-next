@@ -19,6 +19,39 @@
 - [ ] backend
 - [ ] shared packages
 
+## Linked Issue
+<!-- #XX -->
+
+## Risk level
+<!-- Low / Medium / High / P0 -->
+
+## Exact SHA
+<!-- git rev-parse HEAD -->
+
+## CI run ID
+<!-- https://github.com/bthwani2-boop/bthwani-suite-next/actions/runs/... -->
+
+## CodeQL run ID
+<!-- https://github.com/bthwani2-boop/bthwani-suite-next/actions/runs/... -->
+
+## Runtime smoke result
+<!-- pass / skip / N/A -->
+
+## DB migration impact
+<!-- none / describe -->
+
+## Screens affected
+<!-- list or none -->
+
+## Rollback plan
+<!-- describe -->
+
+## Dependency contamination check
+<!-- pnpm install --frozen-lockfile passed / N/A -->
+
+## Logs/evidence committed
+<!-- yes / no / N/A -->
+
 ## Required evidence
 
 - [ ] `pnpm install --frozen-lockfile`

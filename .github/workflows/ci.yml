@@ -8,6 +8,12 @@ on:
     branches:
       - master
       - brach-validation
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual master baseline verification'
 
 permissions:
   contents: read
