@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# post-start.sh — Runs on every Codespace start (after on-create).
-# Prints port manifest and environment summary.
 set -euo pipefail
+
+export NVM_DIR="${NVM_DIR:-/usr/local/share/nvm}"
+if [ -s "${NVM_DIR}/nvm.sh" ]; then
+  . "${NVM_DIR}/nvm.sh"
+fi
+export PATH="${NVM_DIR}/current/bin:/usr/local/bin:${PATH}"
+hash -r || true
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
@@ -21,7 +26,9 @@ echo "║  8025   │  mailpit-ui                                    ║"
 echo "║  58090  │  wiremock-financial-provider                   ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
+echo "  user: $(id -un)"
 echo "  node: $(node --version)   pnpm: $(pnpm --version)   go: $(go version | awk '{print $3}')"
+echo "  docker: $(docker --version)"
 echo ""
-echo "  Run 'pnpm run foundation:gate' to verify workspace integrity."
+echo "  Run 'pnpm run runtime:codespaces:check' to verify Codespaces runtime."
 echo ""

@@ -1,32 +1,43 @@
 #!/usr/bin/env bash
-# on-create.sh — Runs once when the Codespace container is created.
-# Installs and verifies all required toolchain components.
 set -euo pipefail
 
-echo "=== bthwani-suite-next: on-create ==="
+export NVM_DIR="${NVM_DIR:-/usr/local/share/nvm}"
+if [ -s "${NVM_DIR}/nvm.sh" ]; then
+  . "${NVM_DIR}/nvm.sh"
+fi
+export PATH="${NVM_DIR}/current/bin:/usr/local/bin:${PATH}"
+hash -r || true
 
-# Enable corepack and pin pnpm version
+echo "=== bthwani-suite-next: on-create ==="
+echo "user: $(id -un)"
+echo "path: ${PATH}"
+
+command -v node
+node --version
+
+command -v corepack
+corepack --version
 corepack enable
 corepack prepare pnpm@10.34.2 --activate
-echo "pnpm: $(pnpm --version)"
+hash -r || true
 
-# Verify Node version
-echo "node: $(node --version)"
+command -v pnpm
+pnpm --version
+test "$(pnpm --version)" = "10.34.2"
 
-# Verify Go
-echo "go: $(go version)"
+command -v go
+go version
 
-# Verify Docker CLI
-echo "docker: $(docker --version)"
-echo "docker compose: $(docker compose version)"
+command -v docker
+docker --version
+docker compose version
 
-# Verify GitHub CLI
-echo "gh: $(gh --version | head -1)"
+command -v gh
+gh --version | head -1
 
-# Verify PostgreSQL client
-echo "psql: $(psql --version)"
+command -v psql
+psql --version
 
-# Install root dependencies (frozen)
 pnpm install --frozen-lockfile
 
 echo "=== on-create complete ==="
