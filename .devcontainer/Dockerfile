@@ -12,4 +12,4 @@ RUN set -eux; \
     corepack prepare pnpm@10.34.2 --activate; \
     pnpm --version
 
-USER vscode
+USER node

@@ -9,7 +9,7 @@
     "memory": "8gb",
     "storage": "32gb"
   },
-  "remoteUser": "vscode",
+  "remoteUser": "node",
   "features": {
     "ghcr.io/devcontainers/features/go:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
