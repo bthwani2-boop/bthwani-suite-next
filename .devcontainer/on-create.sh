@@ -1,32 +1,20 @@
 #!/usr/bin/env bash
-# on-create.sh — Runs once when the Codespace container is created.
-# Installs and verifies all required toolchain components.
 set -euo pipefail
 
-echo "=== bthwani-suite-next: on-create ==="
+PNPM_HOME="/workspaces/.codespaces/shared/pnpm-home"
+mkdir -p "${PNPM_HOME}"
+export PNPM_HOME
+export PATH="${PNPM_HOME}:${PATH}"
 
-# Enable corepack and pin pnpm version
-corepack enable
+command -v node
+node --version
+command -v corepack
+corepack --version
+corepack enable --install-directory "${PNPM_HOME}"
 corepack prepare pnpm@10.34.2 --activate
-echo "pnpm: $(pnpm --version)"
+hash -r || true
+command -v pnpm
+pnpm --version
+test "$(pnpm --version)" = "10.34.2"
 
-# Verify Node version
-echo "node: $(node --version)"
-
-# Verify Go
-echo "go: $(go version)"
-
-# Verify Docker CLI
-echo "docker: $(docker --version)"
-echo "docker compose: $(docker compose version)"
-
-# Verify GitHub CLI
-echo "gh: $(gh --version | head -1)"
-
-# Verify PostgreSQL client
-echo "psql: $(psql --version)"
-
-# Install root dependencies (frozen)
-pnpm install --frozen-lockfile
-
-echo "=== on-create complete ==="
+echo "on-create complete: pnpm is available from ${PNPM_HOME}"

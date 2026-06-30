@@ -1,15 +1,20 @@
 {
   "name": "bthwani-suite-next",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
   "features": {
     "ghcr.io/devcontainers/features/go:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/powershell:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/postgresql:1": {}
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
   },
-  "onCreateCommand": "bash .devcontainer/on-create.sh",
-  "postStartCommand": "bash .devcontainer/post-start.sh",
   "forwardPorts": [
     58080,
     58082,
@@ -31,13 +36,13 @@
     "18102": { "label": "app-partner" },
     "18103": { "label": "app-captain" },
     "18104": { "label": "app-field" },
-    "8025":  { "label": "mailpit-ui" },
+    "8025": { "label": "mailpit-ui" },
     "58090": { "label": "wiremock-financial-provider" }
   },
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "pwsh"
+        "terminal.integrated.defaultProfile.linux": "bash"
       },
       "extensions": [
         "golang.go",
