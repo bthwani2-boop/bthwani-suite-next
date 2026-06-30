@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     padding: spacing[6],
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colorRoles.surfaceBase,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,

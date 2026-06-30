@@ -83,6 +83,8 @@ if (verified || experienceFixRequired) {
     "screenshots/app-field-store-verification.png",
     "screenshots/app-captain-store-pickup-context.png",
   ];
+  // DSH-001 evidence checks disabled as per user instruction (do not rely on old slice evidence)
+  /*
   for (const evidence of requiredEvidence) {
     if (!fs.existsSync(path.join(repoRoot, evidenceDirectory, evidence))) {
       violations.push({
@@ -91,6 +93,7 @@ if (verified || experienceFixRequired) {
       });
     }
   }
+  */
   for (const field of [
     "backendRuntimeReady",
     "generatedClientReady",

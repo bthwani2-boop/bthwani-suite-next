@@ -1,0 +1,1 @@
+{"version":3,"file":"MobileStickyPrimaryAction.d.ts","sourceRoot":"","sources":["MobileStickyPrimaryAction.tsx"],"names":[],"mappings":"AACA,OAAO,KAAK,MAAM,OAAO,CAAC;AAK1B,MAAM,MAAM,8BAA8B,GAAG;IAC3C,KAAK,EAAE,MAAM,CAAC;IACd,OAAO,EAAE,MAAM,IAAI,CAAC;IACpB,QAAQ,CAAC,EAAE,OAAO,CAAC;CACpB,CAAC;AAEF,wBAAgB,yBAAyB,CAAC,EACxC,KAAK,EACL,OAAO,EACP,QAAQ,GACT,EAAE,8BAA8B,qBAMhC"}

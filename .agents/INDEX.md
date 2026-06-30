@@ -2,13 +2,20 @@
 
 ## ⚡ Execution Model — Proportional to Task Nature
 
-The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity**. No more, no less.
+The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity** in accordance with the [Automated Execution Policy](./AUTOMATED_EXECUTION_POLICY.md).
 
-### Tier 1 — Instant (0 skills, 0 checks)
+### Execution & Automation Rules:
+* **LeanCTX as Context Layer**: LeanCTX is the default context and diagnostics layer when active. Agents must use `ctx_*` tools before native equivalents.
+* **Mandatory Automation**: All levels must use the smallest sufficient automation/checks. Scattered manual file-by-file chasing is strictly banned.
+* **Proportional Scaling**: Tiny tasks require small automated checks (no large/unnecessary scripts). High-risk or complex tasks require a full FAAV cycle and Close Loops.
+* **Complex Decision**: Complex tasks require consciously choosing the correct automation shape (e.g. single script or modular multi-script).
+
+### Tier 1 — Instant / Minimal Validation (no skills, small targeted check post-modification)
 Trivial tasks. Execute immediately and respond.
 - Single-file edit, rename, typo, small fix, comment, formatting
 - Reading or explaining code/files
 - Safe read-only commands (`git status`, `git log`, `git diff`)
+- Minimal validation post-modification (no new scripts needed, but must run a lightweight validation check)
 
 ### Tier 2 — Focused (1 skill max)
 Normal feature work within a single service or module.

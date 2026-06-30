@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from '@bthwani/ui-kit';
+import { Box, Text, colorRoles } from '@bthwani/ui-kit';
 import {
   WebControlDisclosureItem,
   WebControlPanelKpiStrip,
@@ -136,8 +136,8 @@ export function ControlPanelDshClosureHubScreen() {
               className={styles.surfaceTab}
               style={{
                 backgroundColor: sub.id === activeSubTab ? 'rgba(255, 80, 13, 0.1)' : 'transparent',
-                color: sub.id === activeSubTab ? '#FF500D' : '#64748B',
-                borderColor: sub.id === activeSubTab ? '#FF500D' : 'transparent',
+                color: sub.id === activeSubTab ? colorRoles.brandAction : colorRoles.brandStructure,
+                borderColor: sub.id === activeSubTab ? colorRoles.brandAction : 'transparent',
               }}
             >
               {sub.label}

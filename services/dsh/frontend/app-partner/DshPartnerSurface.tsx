@@ -1,6 +1,6 @@
 import React from 'react';
 import { BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
-import { Button, Card, Icon, Text, spacing } from '@bthwani/ui-kit';
+import { Button, Card, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { storeScopeOptions } from './dsh-partner.navigation-bridge';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
@@ -13,15 +13,15 @@ import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-u
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
 const COLORS = {
-  background: '#F8F5F0',
-  surface: '#FFFFFF',
-  text: '#0A2F5C',
-  textMuted: '#64748B',
-  brand: '#0A2F5C',
-  brandAction: '#FF500D',
-  line: '#E2E8F0',
-  success: '#1F8B4C',
-  white: '#FFFFFF',
+  background: colorRoles.surfaceBase,
+  surface: colorRoles.surfaceBase,
+  text: colorRoles.brandStructure,
+  textMuted: colorRoles.brandStructure,
+  brand: colorRoles.brandStructure,
+  brandAction: colorRoles.brandAction,
+  line: colorRoles.surfaceBase,
+  success: colorRoles.brandStructure,
+  white: colorRoles.surfaceBase,
 };
 
 export function DshPartnerSurface(props: DshPartnerSurfaceProps) {

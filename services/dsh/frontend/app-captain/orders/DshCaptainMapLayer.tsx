@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, View } from 'react-native';
-import { borders, Box, Surface } from '@bthwani/ui-kit';
+import { borders, Box, Surface, colorRoles } from '@bthwani/ui-kit';
 import { useTheme } from '@bthwani/ui-kit';
 import type { MapHeatZone } from '../../shared/delivery';
 
@@ -65,7 +65,7 @@ export function DshCaptainMapLayer({
           ))}
 
           <Box style={{ position: 'absolute', top: 182, left: 148, alignItems: 'center', gap: 6 }}>
-            <Box style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#C62828', borderWidth: 4, borderColor: '#FFFFFF' }} />
+            <Box style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colorRoles.brandAction, borderWidth: 4, borderColor: colorRoles.surfaceBase }} />
           </Box>
 
           <Box style={{ position: 'absolute', left: 8, right: 8, top: 4, zIndex: 9999, elevation: 20 }}>

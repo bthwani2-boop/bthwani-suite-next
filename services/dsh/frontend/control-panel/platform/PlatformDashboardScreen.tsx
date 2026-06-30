@@ -1,5 +1,5 @@
 "use client";
-
+import { colorRoles } from '@bthwani/ui-kit';
 import { useState, useMemo } from "react";
 import {
   CpButton,
@@ -49,8 +49,8 @@ function MainTabButton({
         padding: "0.625rem 1.125rem",
         background: "none",
         border: "none",
-        borderBottom: active ? "2px solid #FF500D" : "2px solid transparent",
-        color: active ? "#FF500D" : "currentColor",
+        borderBottom: active ? "2px solid colorRoles.brandAction" : "2px solid transparent",
+        color: active ? colorRoles.brandAction : "currentColor",
         fontWeight: active ? 700 : 500,
         fontSize: "0.875rem",
         cursor: "pointer",
@@ -80,8 +80,8 @@ function ScopeTabButton({
       onClick={onClick}
       style={{
         padding: "0.5rem 1rem",
-        background: active ? "#FF500D" : "transparent",
-        color: active ? "#FFF" : "currentColor",
+        background: active ? colorRoles.brandAction : "transparent",
+        color: active ? colorRoles.surfaceBase : "currentColor",
         border: active ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
         borderRadius: "999px",
         fontWeight: active ? 700 : 500,
@@ -237,7 +237,7 @@ export function PlatformDashboardScreen() {
         <span>المالك: <strong>{PLATFORM_OWNERSHIP.owner}</strong></span>
         <span>والتدقيق: <strong>{PLATFORM_OWNERSHIP.ownerPath}</strong></span>
         <span>الخدمات النشطة: {PLATFORM_OWNERSHIP.activeServices}</span>
-        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, #065F46)', fontWeight: 600 }}>{PLATFORM_OWNERSHIP.status}</span>
+        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, colorRoles.brandStructure)', fontWeight: 600 }}>{PLATFORM_OWNERSHIP.status}</span>
       </div>
     </DataTablePageFrame>
   );

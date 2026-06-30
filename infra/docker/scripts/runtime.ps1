@@ -77,8 +77,17 @@ function Wait-ForPostgres {
   $max = 30
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "Waiting for Postgres ($i/$max)..."
-    docker compose @(Get-ComposeBase) exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime 2>$null
-    if ($LASTEXITCODE -eq 0) { Write-Host "Postgres: healthy"; return }
+    # Ensure Postgres is up and accepting queries on the initialized runtime database
+    docker compose @(Get-ComposeBase) exec -T postgres psql -U bthwani_runtime -d bthwani_runtime -c "SELECT 1" 2>$null
+    if ($LASTEXITCODE -eq 0) {
+      # Make sure the initialization is fully finished (which creates identity_runtime) and the real server has started
+      docker compose @(Get-ComposeBase) exec -T postgres psql -U identity_runtime -d identity_runtime -c "SELECT 1" 2>$null
+      if ($LASTEXITCODE -eq 0) {
+        Start-Sleep -Seconds 2
+        Write-Host "Postgres: healthy"
+        return
+      }
+    }
     Start-Sleep -Seconds 3
   }
   throw "Postgres did not become healthy after $max attempts"
@@ -671,23 +680,38 @@ elseif ($Action -eq "reset") {
   docker info | Out-Null
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) down -v --remove-orphans
   Write-Host "Volumes removed. Restarting..."
-  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d
+  
+  # Start database first to avoid API health checks deadlocking on missing tables
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
   Wait-ForPostgres
+
+  # Run database migrations before starting the API containers
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate
+  }
+  if ($ProfileList -contains "wlt") {
+    Invoke-WltMigrate
+    Invoke-WltSeed
+  }
+  if ($ProfileList -contains "dsh") {
+    Invoke-Migrate
+    Invoke-Seed
+  }
+
+  # Start the remaining containers
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d
+
+  # Wait for APIs and run smoke tests
+  if ($ProfileList -contains "identity") {
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
     Start-DshApi
   }
   if ($ProfileList -contains "dsh") {
-    Invoke-Migrate
-    Invoke-Seed
     Wait-ForDshApi
     Invoke-DshSmoke
   }
   if ($ProfileList -contains "wlt") {
-    Invoke-WltMigrate
-    Invoke-WltSeed
     Wait-ForWltApi
     Invoke-WltSmoke
   }
@@ -795,30 +819,40 @@ elseif ($Action -eq "all") {
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) down -v --remove-orphans
   Write-Host "down: OK"
 
-  # up
+  # Start database first to avoid API health checks deadlocking on missing tables
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --build postgres
+  Wait-ForPostgres
+
+  # Run database migrations before starting the API containers
+  if ($ProfileList -contains "identity") {
+    Invoke-IdentityMigrate
+  }
+  if ($ProfileList -contains "wlt") {
+    Invoke-WltMigrate
+    Invoke-WltSeed
+  }
+  if ($ProfileList -contains "dsh") {
+    Invoke-Migrate
+    Invoke-Seed
+  }
+
+  # Build and start all other services
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --build
   Write-Host "up: OK"
 
-  # postgres ready
-  Wait-ForPostgres
-
+  # Wait for APIs and run smoke tests
   if ($ProfileList -contains "identity") {
-    Invoke-IdentityMigrate
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
     Start-DshApi
   }
 
   if ($ProfileList -contains "wlt") {
-    Invoke-WltMigrate
-    Invoke-WltSeed
     Wait-ForWltApi
     Invoke-WltSmoke
   }
 
   if ($ProfileList -contains "dsh") {
-    Invoke-Migrate
-    Invoke-Seed
     Wait-ForDshApi
     Invoke-DshSmoke
   }

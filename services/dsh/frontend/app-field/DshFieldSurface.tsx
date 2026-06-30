@@ -72,11 +72,11 @@ function FieldBottomNavBar({
         flexDirection: 'row',
         height: 72 + insets.bottom,
         paddingBottom: insets.bottom,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colorRoles.surfaceBase,
         borderTopWidth: 1,
         borderTopColor: colorRoles.borderSubtle,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: colorRoles.brandStructure,
         shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 0.06,
         shadowRadius: 12,
@@ -109,7 +109,7 @@ function FieldBottomNavBar({
           })}
           accessibilityLabel="إضافة ملف جديد"
         >
-          <Icon name="add" size={30} color="#FFFFFF" />
+          <Icon name="add" size={30} color={colorRoles.surfaceBase} />
         </Pressable>
         <Text
           style={{

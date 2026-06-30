@@ -42,7 +42,7 @@ import {
   ComplianceRiskWorkspace,
   MessagesWorkspace,
 } from "./SupportWorkspaces";
-import { lightThemeColors } from "@bthwani/ui-kit";
+import { lightThemeColors, colorRoles } from '@bthwani/ui-kit';
 
 // ─── Inline badge ─────────────────────────────────────────────────────────────
 
@@ -82,8 +82,8 @@ function MainTabButton({ active, onClick, children }: { active: boolean; onClick
       onClick={onClick}
       style={{
         padding: "0.625rem 1rem",
-        background: active ? "#FF500D" : "transparent",
-        color: active ? "#FFF" : "currentColor",
+        background: active ? colorRoles.brandAction : "transparent",
+        color: active ? colorRoles.surfaceBase : "currentColor",
         border: active ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
         borderRadius: "0.5rem",
         fontWeight: active ? 700 : 500,
@@ -105,8 +105,8 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       onClick={onClick}
       style={{
         padding: "0.25rem 0.75rem",
-        background: active ? "#FF500D" : "transparent",
-        color: active ? "#FFF" : "currentColor",
+        background: active ? colorRoles.brandAction : "transparent",
+        color: active ? colorRoles.surfaceBase : "currentColor",
         border: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
         borderRadius: "999px",
         fontSize: "0.775rem",
@@ -431,9 +431,9 @@ export function SupportDashboardScreen() {
                         onClick={() => void ticketCtrl.operatorUpdateTicket(selectedTicket.id, { status: "resolved" })}
                         style={{
                           flex: 1,
-                          background: "#D1FAE5",
-                          color: 'var(--status-success-strong, #065F46)',
-                          border: "1px solid #6EE7B7",
+                          background: colorRoles.surfaceBase,
+                          color: 'var(--status-success-strong, colorRoles.brandStructure)',
+                          border: "1px solid colorRoles.surfaceBase",
                           borderRadius: "0.5rem",
                         }}
                       >
@@ -521,7 +521,7 @@ export function SupportDashboardScreen() {
         <span>المالك: <strong>{SUPPORT_OWNERSHIP.owner}</strong></span>
         <span>رقلتق: 1/2</span>
         <span>الخدمات المشتركة: —</span>
-        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, #065F46)', fontWeight: 600 }}>جاهز</span>
+        <span style={{ marginInlineStart: "auto", color: 'var(--status-success-strong, colorRoles.brandStructure)', fontWeight: 600 }}>جاهز</span>
       </div>
     </DataTablePageFrame>
   );

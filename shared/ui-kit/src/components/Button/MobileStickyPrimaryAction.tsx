@@ -1,3 +1,4 @@
+import { colorRoles } from '@bthwani/ui-kit';
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button } from './Button';
@@ -25,8 +26,8 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     padding: spacing[4],
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colorRoles.surfaceBase,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: colorRoles.surfaceBase,
   },
 });

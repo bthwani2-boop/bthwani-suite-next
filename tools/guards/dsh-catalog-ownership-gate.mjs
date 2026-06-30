@@ -41,7 +41,7 @@ for (const required of [
   "services/dsh/frontend/shared/catalog/catalog.api.ts",
   "services/dsh/frontend/shared/catalog/use-catalog-controller.tsx",
   "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
-  "services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
+  "services/dsh/frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx",
   "services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
   "services/wlt/frontend/shared/dsh/wlt-dsh-checkout-handoff.contract.ts",
 ]) {

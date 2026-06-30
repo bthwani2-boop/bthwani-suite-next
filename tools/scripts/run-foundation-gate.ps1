@@ -78,6 +78,16 @@ if ($Zip) {
 }
 
 if ($failed.Count -gt 0) {
+  Write-Host "--- DETAILED ERROR LOGS FOR FAILED STEPS ---" -ForegroundColor Red
+  foreach ($f in $failed) {
+    Write-Host "=== FAILED STEP: $($f.step) ===" -ForegroundColor Red
+    $filePath = Join-Path $EvidenceRoot "$($f.step).txt"
+    if (Test-Path $filePath) {
+      Get-Content -LiteralPath $filePath | Write-Host
+    } else {
+      Write-Host "No log file found at $filePath"
+    }
+  }
   if ($Soft) {
     Write-Host "WARNING: Foundation gate failed, but exiting with code 0 due to -Soft flag."
     exit 0

@@ -1,5 +1,5 @@
 "use client";
-
+import { colorRoles } from '@bthwani/ui-kit';
 import { useState, useMemo } from "react";
 import {
   CpButton,
@@ -45,10 +45,10 @@ type StatusTone = "warning" | "success" | "danger" | "neutral";
 
 function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
   const toneColors: Record<StatusTone, { bg: string; color: string }> = {
-    warning: { bg: opsTheme.warningSurface, color: 'var(--status-warning-text, #92400E)' },
-    success: { bg: opsTheme.successSurface, color: 'var(--status-success-strong, #065F46)' },
-    danger:  { bg: opsTheme.dangerSurface, color: 'var(--status-danger-strong, #991B1B)' },
-    neutral: { bg: 'var(--surface-muted, #F1F5F9)', color: opsTheme.textMuted },
+    warning: { bg: opsTheme.warningSurface, color: 'var(--status-warning-text, colorRoles.brandAction)' },
+    success: { bg: opsTheme.successSurface, color: 'var(--status-success-strong, colorRoles.brandStructure)' },
+    danger:  { bg: opsTheme.dangerSurface, color: 'var(--status-danger-strong, colorRoles.brandAction)' },
+    neutral: { bg: 'var(--surface-muted, colorRoles.surfaceBase)', color: opsTheme.textMuted },
   };
   const { bg, color } = toneColors[tone];
   return (
@@ -86,8 +86,8 @@ function TabButton({
       onClick={onClick}
       style={{
         padding: "0.5rem 1rem",
-        background: active ? "#FF500D" : "transparent",
-        color: active ? "#FFF" : "currentColor",
+        background: active ? colorRoles.brandAction : "transparent",
+        color: active ? colorRoles.surfaceBase : "currentColor",
         border: active ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
         borderRadius: "0.5rem",
         fontWeight: active ? 700 : 500,
@@ -121,8 +121,8 @@ function MainTabButton({
         padding: "0.625rem 1.125rem",
         background: "none",
         border: "none",
-        borderBottom: active ? "2px solid #FF500D" : "2px solid transparent",
-        color: active ? "#FF500D" : "currentColor",
+        borderBottom: active ? "2px solid colorRoles.brandAction" : "2px solid transparent",
+        color: active ? colorRoles.brandAction : "currentColor",
         fontWeight: active ? 700 : 500,
         fontSize: "0.875rem",
         cursor: "pointer",
@@ -537,8 +537,8 @@ export function CatalogDashboardScreen() {
                         width: 36,
                         height: 36,
                         borderRadius: 8,
-                        background: "#F1F5F9",
-                        border: "1px solid #E2E8F0",
+                        background: colorRoles.surfaceBase,
+                        border: "1px solid colorRoles.surfaceBase",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -606,9 +606,9 @@ export function CatalogDashboardScreen() {
                             style={{
                               fontSize: "0.75rem",
                               padding: "0.2rem 0.5rem",
-                              background: "#D1FAE5",
-                              color: "var(--status-success-strong, #065F46)",
-                              border: "1px solid #6EE7B7",
+                              background: colorRoles.surfaceBase,
+                              color: "var(--status-success-strong, colorRoles.brandStructure)",
+                              border: "1px solid colorRoles.surfaceBase",
                               borderRadius: "0.375rem",
                               cursor: "pointer",
                             }}
@@ -630,9 +630,9 @@ export function CatalogDashboardScreen() {
                             style={{
                               fontSize: "0.75rem",
                               padding: "0.2rem 0.5rem",
-                              background: "#FEE2E2",
-                              color: "var(--status-danger-strong, #991B1B)",
-                              border: "1px solid #FCA5A5",
+                              background: colorRoles.surfaceBase,
+                              color: "var(--status-danger-strong, colorRoles.brandAction)",
+                              border: "1px solid colorRoles.surfaceBase",
                               borderRadius: "0.375rem",
                               cursor: "pointer",
                             }}

@@ -11,7 +11,8 @@ import {
   StateView,
   Text,
   lightThemeColors,
-} from "@bthwani/ui-kit";
+  colorRoles,
+} from '@bthwani/ui-kit';
 import { usePartnersController } from "../../shared/partner";
 
 type Props = {
@@ -75,8 +76,8 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
               </div>
 
               <Card style={{ padding: '0.5rem 1rem', backgroundColor: 'rgba(185,106,6,0.08)', border: `1.5px solid rgba(185,106,6,0.25)`, alignItems: 'center' }}>
-                <Text style={{ fontSize: '10px', color: '#b96a06', marginBottom: '2px' }}>المرحلة الحالية</Text>
-                <Text style={{ fontSize: '14px', fontWeight: '700', color: '#b96a06' }}>تم التقديم</Text>
+                <Text style={{ fontSize: '10px', color: colorRoles.brandAction, marginBottom: '2px' }}>المرحلة الحالية</Text>
+                <Text style={{ fontSize: '14px', fontWeight: '700', color: colorRoles.brandAction }}>تم التقديم</Text>
               </Card>
             </div>
 

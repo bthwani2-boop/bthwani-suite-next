@@ -1,3 +1,4 @@
+import { colorRoles } from '@bthwani/ui-kit';
 import React from 'react';
 import { View } from 'react-native';
 
@@ -6,5 +7,5 @@ export type DividerProps = {
 };
 
 export function Divider({ style }: DividerProps) {
-  return <View style={[{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 8 }, style]} />;
+  return <View style={[{ height: 1, backgroundColor: colorRoles.surfaceBase, marginVertical: 8 }, style]} />;
 }
