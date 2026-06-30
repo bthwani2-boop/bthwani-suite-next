@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PNPM_HOME="${HOME}/.local/bin"
+PNPM_HOME="/workspaces/.codespaces/shared/pnpm-home"
 mkdir -p "${PNPM_HOME}"
 export PNPM_HOME
 export PATH="${PNPM_HOME}:${PATH}"
