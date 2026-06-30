@@ -7,6 +7,12 @@ on:
     branches: [ "master" ]
   schedule:
     - cron: '30 18 * * 1'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual master baseline verification'
 
 jobs:
   analyze:

@@ -14,3 +14,26 @@ infra/docker/**                                     @bthwani
 
 # API contracts owners
 services/dsh/contracts/**                           @bthwani
+
+# Shared UI kit
+shared/ui-kit/**                                    @bthwani
+
+# DSH/WLT frontend shared packages
+services/dsh/frontend/shared/**                     @bthwani
+services/wlt/frontend/shared/**                     @bthwani
+
+# All apps (client, partner, captain, field)
+apps/**                                             @bthwani
+
+# All GitHub governance files (CODEOWNERS, templates, dependabot)
+.github/**                                          @bthwani
+
+# Documentation
+docs/**                                             @bthwani
+
+# Tooling and scripts
+tools/**                                            @bthwani
+
+# Infrastructure
+infra/**                                            @bthwani
+
