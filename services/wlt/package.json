@@ -11,7 +11,7 @@
     "lint": "node ../../tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs && node ../../tools/guards/no-financial-mutation-outside-wlt.mjs"
   },
   "dependencies": {
-    "react": "19.2.3"
+    "react": "19.2.7"
   },
   "devDependencies": {
     "@types/node": "22.16.0",
