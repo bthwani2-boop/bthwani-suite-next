@@ -65,6 +65,23 @@ const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
 for (const file of markdownFiles) {
   if (!file.content) continue;
 
+  // Check for forbidden local path formats anywhere in the text
+  const forbiddenTextRegex = /file:\/\/\/|\b[c-z]:[\\\/]/i;
+  if (forbiddenTextRegex.test(file.content)) {
+    violations.push({
+      file: file.rel,
+      message: `Contains forbidden local/Windows path format (e.g. file:/// or c:/ or C:\\) in file text.`
+    });
+  }
+
+  // Check for forbidden/conflicting "0 checks" phrasing
+  if (/0\s+checks/i.test(file.content)) {
+    violations.push({
+      file: file.rel,
+      message: `Contains forbidden/conflicting phrasing '0 checks' or similar.`
+    });
+  }
+
   let match;
   // Reset regex lastIndex
   linkRegex.lastIndex = 0;
@@ -122,6 +139,47 @@ for (const file of markdownFiles) {
         message: "Missing reference to standard runs registry directory 'tools/registry/runs'."
       });
     }
+  }
+}
+
+// 7.1 Verify standard paths physical existence on disk
+const requiredDirs = [
+  "tools/diagnostics",
+  "tools/scripts",
+  "tools/registry/runs"
+];
+for (const dir of requiredDirs) {
+  const dirPath = path.join(repoRoot, dir);
+  if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) {
+    violations.push({
+      file: dir,
+      message: `Required standard directory "${dir}" does not exist on disk.`
+    });
+  }
+}
+
+// 7.2 Verify presence of rules in AUTOMATED_EXECUTION_POLICY.md / AGENTS.md
+const policyFile = markdownFiles.find(f => f.rel === ".agents/AUTOMATED_EXECUTION_POLICY.md");
+const agentsFile = markdownFiles.find(f => f.rel === "AGENTS.md");
+if (policyFile && policyFile.content) {
+  const policyText = policyFile.content;
+  if (!/LeanCTX Integration Rule/i.test(policyText) && !(agentsFile && agentsFile.content && /LeanCTX Integration Rule/i.test(agentsFile.content))) {
+    violations.push({
+      file: ".agents/AUTOMATED_EXECUTION_POLICY.md",
+      message: "Missing 'LeanCTX Integration Rule' section in policy or AGENTS.md."
+    });
+  }
+  if (!/Smart Automation Selection Rule/i.test(policyText)) {
+    violations.push({
+      file: ".agents/AUTOMATED_EXECUTION_POLICY.md",
+      message: "Missing 'Smart Automation Selection Rule' section in policy."
+    });
+  }
+  if (/revert the session state to ACTIVE_BRANCH HEAD/i.test(policyText)) {
+    violations.push({
+      file: ".agents/AUTOMATED_EXECUTION_POLICY.md",
+      message: "Contains forbidden auto-revert phrase: 'revert the session state to ACTIVE_BRANCH HEAD'."
+    });
   }
 }
 

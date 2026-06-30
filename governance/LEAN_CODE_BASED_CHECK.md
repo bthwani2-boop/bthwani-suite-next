@@ -1,6 +1,7 @@
 # Lean Code-Based Check
 
 Default project execution uses code-based checks.
+`Lean = LeanCTX-first context gathering + smallest sufficient automation.`
 
 ## Canonical Policy: CODE_BASED_LEAN Default
 

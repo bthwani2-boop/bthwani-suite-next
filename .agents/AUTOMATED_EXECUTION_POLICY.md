@@ -34,98 +34,77 @@ All repository modifications must comply with the following runtime contract:
 
 ---
 
+## LeanCTX Integration Rule
+When LeanCTX is active, the agent must prioritize `ctx_*` tools over their native equivalents.
+* **Tool Preference**:
+  * Read/cat → `ctx_read`
+  * Glob/find → `ctx_glob`
+  * Grep/search → `ctx_search`
+  * Shell/bash → `ctx_shell`
+  * Directory tree/listing → `ctx_tree`
+  * Multi-step context gathering → `ctx_compose`
+  * Symbol lookup → `ctx_symbol`
+  * Semantic lookup → `ctx_semantic_search`
+  * Call graph investigation → `ctx_callgraph`
+* **Invariants**:
+  * NEVER use native Read, Grep, Shell, or Glob commands when `ctx_*` equivalents are available.
+  * If LeanCTX is unavailable or insufficient for a specific action, the agent must fall back to the smallest safe native equivalent and document the reason in the prompt response.
+  * LeanCTX is the default layer for context gathering, diagnostics, and understanding, while automation scripts and guards are for execution and verification when necessary.
+
+---
+
 ## Smart Automation Selection Rule
+Automation is mandatory as an execution method, but creating a new script is conditional. The agent must choose the smallest sufficient automated path to maximize safety and token efficiency.
 
-Automation is mandatory as an execution method, but creating a new script is not always mandatory.
+### Decision Rule & Levels
+Before executing modifications, the agent must evaluate the task and choose the appropriate level:
 
-Agents must choose the smallest sufficient automated path according to task size, risk, repetition, and affected surface.
+#### A. No New Script Required
+* **Criteria**: Tiny edits (typos, isolated documentation fixes, single-line modifications).
+* **Requirements**:
+  * Use LeanCTX or targeted reads to understand scope.
+  * Execute a targeted diff review.
+  * Run `git diff --check` or a lightweight validation after the modification.
+  * Do not run broad workspace scans.
+  * Do not create any new scripts.
 
-### Decision rule
+#### B. Existing Command or Guard
+* **Criteria**: A suitable guard (`pnpm run guard:*`), package script, unit test, linter, Nx command, or Graphify command already exists.
+* **Requirements**:
+  * Reuse the existing commands/guards first to prevent tool duplication.
+  * Select the smallest sufficient command/filter (avoid full-workspace checks unless strictly justified).
 
-Before changing anything, the agent must classify the task into one of these automation levels:
+#### C. Small Targeted Script
+* **Criteria**: Repeated pattern with narrow scope.
+* **Requirements**:
+  * Create a short, scoped, idempotent script.
+  * Support `--dry-run` or dry-run validation if writing.
+  * Output must be concise status summaries.
+  * Do not scan unrelated files.
 
-1. **No new script required**
-   Use this when the task is trivial, isolated, and non-repeating.
+#### D. Single Structured Script
+* **Criteria**: Single domain task with a linear flow: check → apply → verify.
+* **Requirements**:
+  * Clear input/output boundaries.
+  * Strict allowlist/filter of files.
+  * Fail-closed behavior.
+  * Summarized telemetry logs.
 
-   Examples:
-   * one-line typo
-   * wording fix
-   * small documentation correction
-   * single-file non-risky edit
+#### E. Multiple Small Scripts
+* **Criteria**: Complex, multi-layered, or high-risk tasks requiring separation of concerns.
+* **Requirements**:
+  * Separate scripts: `diagnose` under `tools/diagnostics`, `apply` (remediation) under `tools/scripts`, and `verify` under `tools/scripts` or `tools/diagnostics`.
+  * Lightweight validation gates only when useful.
+  * Each script must have one clear, single responsibility.
+  * Support full Close Loops.
 
-   Required:
-   * targeted diff review
-   * `git diff --check` or equivalent lightweight validation when a file is modified
-   * no broad scans
-   * no new script
-
-2. **Existing command or existing guard**
-   Use this when the repository already has a suitable guard, package script, test, typecheck, lint, Nx command, Graphify command, or local validation command.
-
-   Required:
-   * reuse existing tools first
-   * do not create duplicate scripts
-   * choose the smallest relevant command
-   * avoid full workspace checks unless justified
-
-3. **Small targeted script**
-   Use this when the task has a repeated pattern, but the scope is still narrow.
-
-   Required:
-   * script must be short, scoped, idempotent, and dry-run capable if it writes
-   * output must be concise
-   * no full repository scan unless needed
-
-4. **Single structured script**
-   Use this when the task has one clear domain and one linear flow:
-   check → apply → verify.
-
-   Required:
-   * clear input/output
-   * strict allowlist
-   * fail-closed behavior
-   * no bloated logs
-
-5. **Multiple small scripts**
-   Use this when the task is complex, cross-layer, high-risk, or requires separation of concerns.
-
-   Preferred split:
-   * diagnosis script under `tools/diagnostics`
-   * remediation/apply script under `tools/scripts`
-   * verification script under `tools/scripts` or `tools/diagnostics`
-   * lightweight gate only when useful
-
-   Required:
-   * each script has one clear job
-   * no duplicated logic
-   * no unnecessary fragmentation
-   * supports Close Loops
-
-### Prohibited
-
-Agents must not:
-* create a script just to satisfy the word “script”
-* create a large script for a tiny edit
-* manually chase repeated problems file by file
-* run full checks when a targeted check is enough
-* create duplicate tools when existing guards already solve the need
-* skip validation after modification
-* claim closure without an automated or tool-backed proof appropriate to the scope
-
-### Final principle
-
-The correct choice is:
+### Core Principle
 $$\text{Best Option} = \text{Smallest Sufficient Automation}$$
-* highest safety
-* lowest token cost
-* fastest reliable verification
-* no manual chasing
-* no script bloat
+* LeanCTX first for understanding and diagnosis, then scripts/guards for execution and verification when necessary.
+* Never create a script just to satisfy the word "script".
+* Never claim closure without an automated or tool-backed validation appropriate to the scope.
+* If any automated path carries unresolved risk, halt with `BLOCKED_NEEDS_EVIDENCE`.
 
-If the agent is unsure whether a script is needed, it must first choose the lighter safe path.
-If the lighter path cannot prove correctness, it escalates to a targeted script.
-If a targeted script cannot prove full closure, it escalates to a structured FAAV loop.
-If any path carries unresolved risk, it must stop with `BLOCKED_NEEDS_EVIDENCE`.
 
 ---
 

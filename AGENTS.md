@@ -9,6 +9,7 @@ All agents must strictly adhere to the [Command Safety Policy](.agents/COMMAND_S
 All agents must read and strictly adhere to the [Automated Execution Policy](.agents/AUTOMATED_EXECUTION_POLICY.md).
 * **Mandatory Automation & Selection**: Automation is mandatory, but new script creation is conditional. Agents must choose the smallest sufficient automated method for the task: existing guard, package script, targeted check, small script, single structured script, or multiple specialized scripts.
 * **Proportionality**: Tiny edits do not require new scripts, but still require an appropriate lightweight validation after modification. Repeated, multi-file, cross-layer, or high-risk work must use scripted or tool-backed diagnosis, remediation, verification, and targeted re-diagnosis. Manual file-by-file chasing is prohibited as a primary method.
+* **LeanCTX Integration**: LeanCTX is the default context and diagnostics layer when active. Agents must use `ctx_*` tools before native equivalents when available. LeanCTX does not replace execution scripts or guards when verifiable/provable verification is needed, and scripts do not replace LeanCTX for context gathering and understanding.
 * **Standard Paths**:
   * Diagnostics: [tools/diagnostics](./tools/diagnostics)
   * Operations & Verification: [tools/scripts](./tools/scripts)
@@ -62,7 +63,7 @@ Match effort to task nature. Never over-engineer or under-deliver.
 
 | Tier | When | Action |
 |---|---|---|
-| **Instant** | Single file, typo, rename, comment, explain | Execute directly, 0 skills, small targeted check post-modification |
+| **Instant / Minimal Validation** | Single file, typo, rename, comment, explain | Execute directly, 0 skills, minimal validation (no new script) |
 | **Focused** | Feature within one module/service | 1 task skill max, targeted code-based check only when useful |
 | **Standard** | Multi-file or cross-layer | authority + one task skill, affected/touched-area checks only |
 | **Full** | Finance, security, secrets, agent files | authority + router + task skill + evidence gate (finance/security/auth/data/runtime/agent/PR/release only) |

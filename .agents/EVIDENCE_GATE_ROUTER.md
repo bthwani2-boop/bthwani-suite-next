@@ -29,7 +29,8 @@ Not required by default:
 All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
 
 ## Automation and Sizing Policy
-* **Automation is Mandatory**: Choosing the smallest sufficient verification level (e.g. `LOW` or `FOCUSED`) does NOT bypass the requirement for automated verification. It prevents excessive evidence packs or manual screenshot overhead while still demanding code-based automated verification (such as targeted guard scripts, local test runs, or precise status/hasher tools).
+* **LeanCTX Lifecycle Integration**: Sizing down a gate does not bypass LeanCTX. LeanCTX must be utilized in the understanding and diagnostic phase of all tasks. Automated execution scripts or guards are strictly for the execution and verification/evidence phase as required.
+* **Automation is Mandatory**: Choosing the smallest sufficient verification level (e.g. `LOW` or `FOCUSED`) does NOT bypass the requirement for automated verification. It does not mean a script is always created (as per the Smart Automation Selection levels), nor does it permit manual edits without verification. It demands code-based automated verification appropriate to the scope (such as targeted guard runs, `git diff --check`, or precise status tools).
 * **No Manual Chasing**: Sizing down a gate must never be used to justify arbitrary manual files modifications without automated validation checks.
 
 
