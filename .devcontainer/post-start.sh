@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -s "${NVM_DIR:-/usr/local/share/nvm}/nvm.sh" ]; then
+  . "${NVM_DIR:-/usr/local/share/nvm}/nvm.sh"
+fi
+hash -r || true
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║          bthwani-suite-next — Codespace Ready            ║"

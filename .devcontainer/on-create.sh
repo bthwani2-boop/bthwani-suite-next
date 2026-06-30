@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -s "${NVM_DIR:-/usr/local/share/nvm}/nvm.sh" ]; then
+  . "${NVM_DIR:-/usr/local/share/nvm}/nvm.sh"
+fi
+hash -r || true
+
 echo "=== bthwani-suite-next: on-create ==="
 echo "user: $(id -un)"
 echo "path: ${PATH}"
