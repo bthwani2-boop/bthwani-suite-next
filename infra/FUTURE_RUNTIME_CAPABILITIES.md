@@ -6,13 +6,16 @@
 
 ## Current Execution Boundary
 
-ينفذ الآن فقط:
+ينفذ الآن في CI والبيئة المحلية:
 
-* WLT Go CI
-* WLT DB integration proof
-* WLT financial docker smoke
-* WireMock request journal proof
+* Node gates (CI / Node / PNPM gates)
+* DSH Go backend & DB integration
+* Identity Go backend
+* WLT Go backend & DB integration
+* Docker runtime smoke
+* CodeQL analysis (Go, JS/TS)
 * YER default currency guard
+* WireMock request journal proof
 
 لا ينفذ الآن:
 
@@ -104,14 +107,14 @@
     When: only if Cloudflare is not available.
 
 13. DSH-RUNTIME-SMOKE-001 — DSH Runtime Smoke
-    Status: future
+    Status: active (integrated in CI/Docker runtime smoke, v2 scope defined in issue #43)
     Owner: dsh/backend
-    Why not now: do not mix DSH failure with WLT financial proof.
+    Why not now: V2 scope defined in issue #43.
 
 14. IDENTITY-RUNTIME-SMOKE-001 — Identity Runtime Smoke
-    Status: future
+    Status: active (integrated in CI/Docker runtime smoke, v2 scope defined in issue #44)
     Owner: identity
-    Why not now: do not mix identity failure with WLT financial proof.
+    Why not now: V2 scope defined in issue #44.
 
 15. DEV-MULTI-CURRENCY-001 — Multi-currency Support
     Status: future
