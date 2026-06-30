@@ -1,0 +1,1 @@
+{"version":3,"file":"tamagui-config.d.ts","sourceRoot":"","sources":["tamagui-config.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,aAAa,EAAE,MAAM,SAAS,CAAC;AAYxC,eAAO,MAAM,aAAa,EAAE,UAAU,CAAC,OAAO,aAAa,CAuDzD,CAAC;AAEH,MAAM,MAAM,aAAa,GAAG,OAAO,aAAa,CAAC;AAEjD,OAAO,QAAQ,SAAS,CAAC;IACvB,UAAU,mBAAoB,SAAQ,aAAa;KAAG;CACvD;AAED,eAAe,aAAa,CAAC"}

@@ -5,7 +5,7 @@ import test from "node:test";
 test("catalog UI roots delegate runtime logic to shared", () => {
   for (const file of [
     "frontend/app-client/catalog/PublishedCatalogScreen.tsx",
-    "frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
+    "frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx",
     "frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
   ]) {
     const source = fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
