@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export NVM_DIR="${NVM_DIR:-/usr/local/share/nvm}"
-if [ -s "${NVM_DIR}/nvm.sh" ]; then
-  . "${NVM_DIR}/nvm.sh"
-fi
-export PATH="${NVM_DIR}/current/bin:/usr/local/bin:${PATH}"
-hash -r || true
-
 echo "=== bthwani-suite-next: on-create ==="
 echo "user: $(id -un)"
 echo "path: ${PATH}"
