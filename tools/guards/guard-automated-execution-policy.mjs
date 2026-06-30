@@ -198,6 +198,12 @@ if (!fs.existsSync(codeqlPath)) {
       message: "CodeQL workflow is disabled (missing init/analyze steps)."
     });
   }
+  if (codeqlContent.includes("continue-on-error")) {
+    violations.push({
+      file: ".github/workflows/codeql.yml",
+      message: "CodeQL workflow must not use continue-on-error."
+    });
+  }
 }
 
 // 9. Check modified files compared to master for evidence/log contamination
