@@ -2,8 +2,8 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict
 **File:** `10/10` (Amendment)
-**Repository:** `bthwani2-boop/bthwani-suite-next`
-**Remote ref:** `start`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
 **Source path:** `tools/plan/command_operational_journey_unified` + harvested from `tools/plan/command_old_new`
 **Amendment date:** `2026-07-01`
 **Scope:** يسد فجوة السماح بالقفز/التجاهل أثناء كتابة أمر التنفيذ وخطة التنفيذ والتشخيص والتحليل والتنفيذ، ويضيف Docker/hosting/runtime كطبقة إلزامية لا يجوز إسقاطها، ويحمل guards/أوامر تحقق كانت موجودة فقط في `command_old_new` ولم تُنقل بقوة كافية إلى `07`.

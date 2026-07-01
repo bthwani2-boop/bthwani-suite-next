@@ -2,10 +2,10 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `02/09`  
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Remote ref:** `start`  
+**Repository:** `<REPO_REMOTE>`  
+**Remote ref:** `<REF>`  
 **Source path:** `tools/plan/command_operational_journey_unified`  
-**GitHub file SHA observed:** `617ed1f69bc91d42ce8c433b92c252b7abda2ce3`  
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** REF Resolution Gate، Human-Gated Git/GitHub، تعريف 100%، المصدر الحاكم، منع machine-readable، وبروتوكول القرار.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
@@ -27,20 +27,20 @@
 ### 4.2 أوامر التحقق المقترحة
 
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-git ls-remote --heads origin start
-git ls-remote --tags origin start
-git ls-remote origin start
-git fetch origin start --prune
-git rev-parse origin/start
-git log -1 --oneline origin/start
+Set-Location -LiteralPath "<REPO_LOCAL>"
+git ls-remote --heads origin <REF>
+git ls-remote --tags origin <REF>
+git ls-remote origin <REF>
+git fetch origin <REF> --prune
+git rev-parse origin/<REF>
+git log -1 --oneline origin/<REF>
 ```
 
 ### 4.3 المخرج الإلزامي للبوابة
 
 ```yaml
 ref_resolution_gate:
-  requested_ref: start
+  requested_ref: <REF>
   resolved: PASS | FAIL
   resolved_from: branch | tag | commit | N/A
   resolved_commit_sha:
@@ -81,9 +81,9 @@ rebase remote
 ### 5.2 أمثلة أوامر بشرية صريحة ومقبولة
 
 ```text
-نفّذ commit الآن على الفرع start
+نفّذ commit الآن على الفرع <LOCAL_BRANCH>
 ادفع التغييرات إلى GitHub
-أنشئ PR من start إلى main
+أنشئ PR من <LOCAL_BRANCH> إلى <BASE_REF>
 ادمج هذا PR
 أنشئ tag باسم <tag>
 ```
@@ -269,9 +269,9 @@ safe_interim_decision: FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
 لا تزامن المحلي إلا عند الحاجة لتنفيذ تعديل محلي.
 
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
+Set-Location -LiteralPath "<REPO_LOCAL>"
 git fetch --all --prune
-git checkout start
+git checkout <LOCAL_BRANCH>
 git status --short
 git diff --check
 git log --oneline --decorate -n 20
@@ -279,7 +279,7 @@ git log --oneline --decorate -n 20
 
 القواعد:
 
-- إذا كان `start` غير موجود في GitHub Remote: `BLOCKED_NEEDS_EVIDENCE`.
+- إذا كان `<REF>` غير موجود في GitHub Remote: `BLOCKED_NEEDS_EVIDENCE`.
 - إذا ظهر working tree غير نظيف وغير مفهوم: `BLOCKED_NEEDS_EVIDENCE`.
 - إذا ظهرت تغييرات بشرية محلية: لا تكتب فوقها دون تصريح.
 - المسموح فقط تعديل working tree وإخراج تقرير وأوامر مقترحة.

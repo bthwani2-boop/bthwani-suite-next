@@ -2,12 +2,12 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v1  
 **File count:** 11 Markdown files (10 protocol files + 1 execution amendment) + 1 trace file  
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Remote ref:** `start`  
+**Repository:** `<REPO_REMOTE>`  
+**Remote ref:** `<REF>`  
 **Source path:** `tools/plan/command_operational_journey_unified` (see also `LEGACY_SOURCE_TRACE.md`)  
-**GitHub file SHA observed:** `617ed1f69bc91d42ce8c433b92c252b7abda2ce3`  
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Compared source v1 upload:** `Pasted text.txt`  
-**Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_start.md`  
+**Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_<REF>.md`  
 **Package version:** `v3-modular-11files-strict-amended`  
 **Date:** `2026-07-01`
 

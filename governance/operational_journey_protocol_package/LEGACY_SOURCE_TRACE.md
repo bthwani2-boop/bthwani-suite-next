@@ -1,8 +1,8 @@
 # LEGACY_SOURCE_TRACE — تتبع مصادر ما قبل الحزمة
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict
-**Repository:** `bthwani2-boop/bthwani-suite-next`
-**Remote ref:** `start`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
 **Date:** `2026-07-01`
 **Scope:** يوثّق مصادر ما قبل الحزمة الحالية ويمنع حذفها قبل اكتمال الترحيل، حفاظًا على traceability.
 

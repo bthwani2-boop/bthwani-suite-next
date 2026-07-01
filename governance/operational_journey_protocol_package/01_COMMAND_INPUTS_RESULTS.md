@@ -2,10 +2,10 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `01/09`  
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Remote ref:** `start`  
+**Repository:** `<REPO_REMOTE>`  
+**Remote ref:** `<REF>`  
 **Source path:** `tools/plan/command_operational_journey_unified`  
-**GitHub file SHA observed:** `617ed1f69bc91d42ce8c433b92c252b7abda2ce3`  
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** الغرض الحاكم، قالب الاستخدام، الأمر المباشر، والنتائج الوحيدة المسموحة.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
@@ -42,16 +42,16 @@ PROTOCOL_VIOLATION
 
 ```text
 REPO_REMOTE:
-bthwani2-boop/bthwani-suite-next
+<REPO_REMOTE>
 
 REPO_LOCAL:
-C:\bthwani-suite-next
+<REPO_LOCAL>
 
 LOCAL_BRANCH:
-start
+<LOCAL_BRANCH>
 
 REF:
-start
+<REF>
 
 BASE_REF:
 <اكتب base ref عند مراجعة PR أو الدمج، وإلا اكتب N/A>
@@ -89,10 +89,10 @@ OUT_OF_SCOPE:
 ```text
 نفّذ مراجعة أو تنفيذًا أو إغلاقًا عمليًا وجنائيًا للرحلة المحددة أدناه، من GitHub Remote فقط، وفق بروتوكول الرحلة التشغيلية الموحدة v2-strict.
 
-REPO_REMOTE: bthwani2-boop/bthwani-suite-next
-REPO_LOCAL: C:\bthwani-suite-next
-LOCAL_BRANCH: start
-REF: start
+REPO_REMOTE: <REPO_REMOTE>
+REPO_LOCAL: <REPO_LOCAL>
+LOCAL_BRANCH: <LOCAL_BRANCH>
+REF: <REF>
 BASE_REF: <N/A أو base ref>
 DONOR_REMOTE_READ_ONLY: bthwani2-boop/bthwani-suite
 DONOR_LOCAL_READ_ONLY: C:\bthwani-suite
