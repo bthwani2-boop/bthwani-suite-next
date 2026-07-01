@@ -2,10 +2,10 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `08/09`  
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Remote ref:** `start`  
+**Repository:** `<REPO_REMOTE>`  
+**Remote ref:** `<REF>`  
 **Source path:** `tools/plan/command_operational_journey_unified`  
-**GitHub file SHA observed:** `617ed1f69bc91d42ce8c433b92c252b7abda2ce3`  
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** قواعد التنفيذ في الكود الحي، معيار إخراج أوامر Antigravity، والتقرير النهائي الإلزامي.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
@@ -67,10 +67,10 @@ invalid_transition
 ```yaml
 antigravity_command:
   title:
-  repository: bthwani2-boop/bthwani-suite-next
-  local_path: C:\bthwani-suite-next
-  local_branch: start
-  remote_ref: start
+  repository: <REPO_REMOTE>
+  local_path: <REPO_LOCAL>
+  local_branch: <LOCAL_BRANCH>
+  remote_ref: <REF>
   resolved_commit_required: true
   base_ref:
   task:
@@ -174,9 +174,9 @@ antigravity_command:
 ```yaml
 result:
 task_mode:
-ref: start
+ref: <REF>
 base_ref:
-local_branch: start
+local_branch: <LOCAL_BRANCH>
 resolved_commit_sha:
 journey_or_topic:
 final_decision_reason:

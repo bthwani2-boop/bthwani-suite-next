@@ -2,10 +2,10 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `05/09`  
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Remote ref:** `start`  
+**Repository:** `<REPO_REMOTE>`  
+**Remote ref:** `<REF>`  
 **Source path:** `tools/plan/command_operational_journey_unified`  
-**GitHub file SHA observed:** `617ed1f69bc91d42ce8c433b92c252b7abda2ce3`  
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** مصفوفات طبقات الباك إند، قاعدة البيانات، API client، SSOT، الظهور، الصلاحيات، والاختبار المستند إلى المخاطر.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
