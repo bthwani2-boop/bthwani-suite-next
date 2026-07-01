@@ -1,6 +1,6 @@
 // Steps barrel export
 export { StepBasicsProfile } from './StepBasicsProfile';
 export { StepLocationAndPhotos } from './StepLocationAndPhotos';
-export { StepDocuments } from './StepDocuments';
+export { StepEvidence } from './StepEvidence';
 export { StepAgreementReview } from './StepAgreementReview';
-export type { DocumentItem, DocumentKind, DocumentStatus } from './StepDocuments';
+export type { EvidenceItem, EvidenceKind } from './StepEvidence';

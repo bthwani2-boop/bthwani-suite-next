@@ -1,7 +1,9 @@
 package store
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -9,18 +11,21 @@ import (
 	"github.com/lib/pq"
 )
 
-const storeColumns = `id, slug, display_name, status, city_code, service_area_code,
+const storeColumns = `id, COALESCE(partner_id,''), slug, display_name, status, city_code, service_area_code,
 	serviceability_status, rating_average, rating_count, delivery_eta_min,
 	delivery_eta_max, is_visible, hero_image_url, logo_url, category,
 	delivery_modes, is_free_delivery, distance_km, follower_count,
 	has_pro_badge, has_coupon_badge, points_multiplier, is_popular, version,
 	partner_readiness, catalog_approval_status, marketing_visibility,
+	COALESCE(address_line,''), COALESCE(coverage_summary,''), COALESCE(operating_hours,''),
+	COALESCE(delivery_readiness,''), COALESCE(storefront_photo_ref,''),
+	COALESCE(interior_photo_ref,''), COALESCE(signage_photo_ref,''),
 	created_at, updated_at`
 
 func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 	var row DshStoreRow
 	err := scanner.Scan(
-		&row.ID, &row.Slug, &row.DisplayName, &row.Status, &row.CityCode,
+		&row.ID, &row.PartnerID, &row.Slug, &row.DisplayName, &row.Status, &row.CityCode,
 		&row.ServiceAreaCode, &row.ServiceabilityStatus, &row.RatingAverage,
 		&row.RatingCount, &row.DeliveryEtaMin, &row.DeliveryEtaMax, &row.IsVisible,
 		&row.HeroImageURL, &row.LogoURL, &row.Category, pq.Array(&row.DeliveryModes),
@@ -28,6 +33,9 @@ func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 		&row.HasCouponBadge, &row.PointsMultiplier, &row.IsPopular,
 		&row.Version,
 		&row.PartnerReadiness, &row.CatalogApprovalStatus, &row.MarketingVisibility,
+		&row.AddressLine, &row.CoverageSummary, &row.OperatingHours,
+		&row.DeliveryReadiness, &row.StorefrontPhotoRef, &row.InteriorPhotoRef,
+		&row.SignagePhotoRef,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	return row, err
@@ -184,4 +192,71 @@ func CreateDraftStore(db *sql.DB, input CreateDraftStoreInput) (DshStoreRow, err
 		return DshStoreRow{}, fmt.Errorf("failed to load created draft store: %w", err)
 	}
 	return row, nil
+}
+
+func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, correlationID string, input FieldStoreDraftInput) (FieldPartnerStoreDraft, StoreAuditEvent, error) {
+	if storeID == "" || actorID == "" {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, fmt.Errorf("invalid field store draft input")
+	}
+	before, err := scanStore(db.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
+	if err == sql.ErrNoRows {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, ErrScopedStoreNotFound
+	}
+	if err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+
+	_, err = db.ExecContext(ctx, `
+		UPDATE dsh_stores
+		SET display_name = COALESCE($2, display_name),
+		    city_code = COALESCE($3, city_code),
+		    service_area_code = COALESCE($4, service_area_code),
+		    address_line = COALESCE($5, address_line),
+		    coverage_summary = COALESCE($6, coverage_summary),
+		    operating_hours = COALESCE($7, operating_hours),
+		    delivery_readiness = COALESCE($8, delivery_readiness),
+		    storefront_photo_ref = COALESCE($9, storefront_photo_ref),
+		    interior_photo_ref = COALESCE($10, interior_photo_ref),
+		    signage_photo_ref = COALESCE($11, signage_photo_ref),
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $1`,
+		storeID, input.DisplayName, input.CityCode, input.ServiceAreaCode,
+		input.AddressLine, input.CoverageSummary, input.OperatingHours,
+		input.DeliveryReadiness, input.StorefrontPhotoRef, input.InteriorPhotoRef,
+		input.SignagePhotoRef,
+	)
+	if err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+
+	after, err := scanStore(db.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
+	if err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+	audit := StoreAuditEvent{
+		ID:            eventID("audit"),
+		ActorID:       actorID,
+		ActorRole:     "field",
+		StoreID:       storeID,
+		Action:        "field_store_draft_updated",
+		FromState:     map[string]any{"store": RowToFieldPartnerStoreDraft(before)},
+		ToState:       map[string]any{"store": RowToFieldPartnerStoreDraft(after)},
+		Reason:        "field onboarding store draft update",
+		CorrelationID: correlationID,
+		CreatedAt:     time.Now().UTC(),
+	}
+	beforeJSON, _ := json.Marshal(audit.FromState)
+	afterJSON, _ := json.Marshal(audit.ToState)
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO dsh_store_action_audit
+		  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10)`,
+		audit.ID, audit.ActorID, audit.ActorRole, audit.StoreID, audit.Action,
+		string(beforeJSON), string(afterJSON), audit.Reason, audit.CorrelationID, audit.CreatedAt,
+	)
+	if err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+	return RowToFieldPartnerStoreDraft(after), audit, nil
 }

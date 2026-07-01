@@ -101,7 +101,7 @@ export const dshServiceManifest = {
       "getDshSupportAnalytics",
       "getDshStoreAnalytics",
       "getDshPartnerPerformance",
-      // Partner Store Activation Journey
+      // Partner Onboarding & Store Publication Journey
       "listDshPartners",
       "createDshPartner",
       "getDshPartner",
@@ -153,7 +153,7 @@ export const dshServiceManifest = {
       "useClientTrackingController",
       "useOperatorAnalyticsDashboardController",
       "usePartnerPerformanceController",
-      // Partner Store Activation Journey
+      // Partner Onboarding & Store Publication Journey
       "usePartnerOnboardingController",
       "usePartnerAdminController",
       "usePartnerSelfController",

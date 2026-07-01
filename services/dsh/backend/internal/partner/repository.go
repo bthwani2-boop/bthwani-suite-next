@@ -491,7 +491,7 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 	return v, nil
 }
 
-func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerStore, error) {
+func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, error) {
 	rows, err := db.Query(`
 		SELECT id, partner_id, slug, display_name, status, is_visible, city_code, created_at
 		FROM dsh_stores
@@ -502,9 +502,9 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerStore, error) {
 	}
 	defer rows.Close()
 
-	stores := []PartnerStore{}
+	stores := []PartnerLinkedStore{}
 	for rows.Next() {
-		var s PartnerStore
+		var s PartnerLinkedStore
 		var createdAt time.Time
 		if err := rows.Scan(&s.ID, &s.PartnerID, &s.Slug, &s.DisplayName, &s.Status, &s.IsVisible, &s.CityCode, &createdAt); err != nil {
 			return nil, err
@@ -515,7 +515,7 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerStore, error) {
 	return stores, rows.Err()
 }
 
-func LinkPartnerStore(db *sql.DB, partnerID, storeID, actorID string) ([]PartnerStore, error) {
+func LinkPartnerStore(db *sql.DB, partnerID, storeID, actorID string) ([]PartnerLinkedStore, error) {
 	if partnerID == "" || storeID == "" {
 		return nil, ErrInvalid
 	}

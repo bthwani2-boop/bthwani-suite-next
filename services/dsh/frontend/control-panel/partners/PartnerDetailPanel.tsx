@@ -13,9 +13,10 @@ import type {
 import {
   getDshPartnerActivationStatusLabel,
   formatDshPartnerAuditEventLabel,
-  getDshPartnerActivationStateMetadata,
+  getDshPartnerDecisionCommands,
   buildPartnerReadinessViewModel,
   DOCUMENT_TYPE_LABELS,
+  type DshPartnerDecisionCommandId,
 } from "../../shared/partner";
 
 type Props = {
@@ -42,19 +43,24 @@ export function PartnerDetailPanel({
   onLoadReadiness,
 }: Props) {
   const [activeTab, setActiveTab] = useState<"info" | "documents" | "visits" | "audit" | "readiness">("info");
-  const [transitionTarget, setTransitionTarget] = useState<DshPartnerActivationStatus | "">("");
+  const [selectedDecisionId, setSelectedDecisionId] = useState<DshPartnerDecisionCommandId | null>(null);
   const [transitionReason, setTransitionReason] = useState("");
   const [reviewDocId, setReviewDocId] = useState<string | null>(null);
   const [reviewDecision, setReviewDecision] = useState<"approved" | "rejected" | "needs_resubmit">("approved");
   const [reviewReason, setReviewReason] = useState("");
 
-  const meta = getDshPartnerActivationStateMetadata(partner.activationStatus);
-  const allowedNext = meta?.allowedNextStatuses ?? [];
+  const decisions = getDshPartnerDecisionCommands(partner.activationStatus);
+  const selectedDecision = decisions.find((decision) => decision.id === selectedDecisionId) ?? null;
+  const reasonIsMissing = !!selectedDecision?.reasonRequired && transitionReason.trim().length < 3;
+  const readinessBlocked = !!selectedDecision &&
+    (selectedDecision.id === "activate_partner" || selectedDecision.id === "show_store_to_client") &&
+    readiness !== null &&
+    !readiness.canActivate;
 
   const handleTransition = () => {
-    if (!transitionTarget) return;
-    onTransition(transitionTarget, transitionReason);
-    setTransitionTarget("");
+    if (!selectedDecision || reasonIsMissing || readinessBlocked) return;
+    onTransition(selectedDecision.targetStatus, transitionReason.trim());
+    setSelectedDecisionId(null);
     setTransitionReason("");
   };
 
@@ -137,27 +143,39 @@ export function PartnerDetailPanel({
             </tbody>
           </table>
 
-          {allowedNext.length > 0 && (
+          {decisions.length > 0 && (
             <div style={{ marginTop: "2rem", padding: "1rem", border: `1px solid var(--dsh-card-border)`, borderRadius: "0.5rem", background: "var(--dsh-card-bg)" }}>
-              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "1rem", color: "var(--dsh-text-primary)" }}>تغيير الحالة</h3>
-              <div style={{ marginBottom: "0.75rem" }}>
-                <label style={{ display: "block", fontSize: "0.875rem", color: "var(--dsh-text-secondary)", marginBottom: "0.375rem" }}>
-                  الحالة الجديدة
-                </label>
-                <select
-                  value={transitionTarget}
-                  onChange={(e) => setTransitionTarget(e.target.value as DshPartnerActivationStatus)}
-                  style={{ width: "100%", padding: "0.5rem", borderRadius: "0.375rem", border: `1px solid var(--dsh-card-border)`, fontSize: "0.875rem", fontFamily: "var(--font-arabic)" }}
-                >
-                  <option value="">اختر الحالة</option>
-                  {allowedNext.map((s) => (
-                    <option key={s} value={s}>{getDshPartnerActivationStatusLabel(s)}</option>
-                  ))}
-                </select>
+              <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "1rem", color: "var(--dsh-text-primary)" }}>قرارات الشركاء</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                {decisions.map((decision) => {
+                  const selected = selectedDecisionId === decision.id;
+                  return (
+                    <button
+                      key={decision.id}
+                      type="button"
+                      onClick={() => setSelectedDecisionId(selected ? null : decision.id)}
+                      style={{
+                        padding: "0.75rem",
+                        borderRadius: "0.5rem",
+                        border: selected ? "1px solid var(--dsh-sidebar-accent)" : "1px solid var(--dsh-card-border)",
+                        backgroundColor: selected ? "rgba(59,123,255,0.08)" : "var(--dsh-card-bg)",
+                        color: "var(--dsh-text-primary)",
+                        textAlign: "right",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-arabic)",
+                      }}
+                    >
+                      <span style={{ display: "block", fontWeight: 700 }}>{decision.label}</span>
+                      <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--dsh-text-muted)", marginTop: "0.25rem" }}>
+                        {decision.description}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               <div style={{ marginBottom: "0.75rem" }}>
                 <label style={{ display: "block", fontSize: "0.875rem", color: "var(--dsh-text-secondary)", marginBottom: "0.375rem" }}>
-                  السبب (مطلوب للتدقيق)
+                  السبب {selectedDecision?.reasonRequired ? "(إلزامي)" : "(اختياري للتدقيق)"}
                 </label>
                 <input
                   type="text"
@@ -166,17 +184,27 @@ export function PartnerDetailPanel({
                   placeholder="أدخل سبب التغيير"
                   style={{ width: "100%", padding: "0.5rem", borderRadius: "0.375rem", border: `1px solid var(--dsh-card-border)`, fontSize: "0.875rem", fontFamily: "var(--font-arabic)" }}
                 />
+                {reasonIsMissing && (
+                  <div style={{ color: "var(--status-danger, #b42318)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>
+                    السبب مطلوب لهذا القرار.
+                  </div>
+                )}
+                {readinessBlocked && (
+                  <div style={{ color: "var(--status-danger, #b42318)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>
+                    لا يمكن تنفيذ القرار قبل اكتمال الجاهزية: {readiness?.blockedReason ?? "بوابات الجاهزية غير مكتملة"}.
+                  </div>
+                )}
               </div>
               <button
-                disabled={!transitionTarget || actionState.kind === "loading"}
+                disabled={!selectedDecision || reasonIsMissing || readinessBlocked || actionState.kind === "loading"}
                 onClick={handleTransition}
                 style={{
                   padding: "0.625rem 1.25rem",
-                  backgroundColor: transitionTarget ? "var(--dsh-sidebar-accent)" : "var(--dsh-text-muted)",
+                  backgroundColor: selectedDecision && !reasonIsMissing && !readinessBlocked ? "var(--dsh-sidebar-accent)" : "var(--dsh-text-muted)",
                   color: "white",
                   border: "none",
                   borderRadius: "0.375rem",
-                  cursor: transitionTarget ? "pointer" : "default",
+                  cursor: selectedDecision && !reasonIsMissing && !readinessBlocked ? "pointer" : "default",
                   fontWeight: 600,
                   fontFamily: "var(--font-arabic)",
                 }}

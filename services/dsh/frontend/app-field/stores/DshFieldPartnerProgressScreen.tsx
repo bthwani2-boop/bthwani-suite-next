@@ -26,7 +26,6 @@ import {
 export type DshFieldPartnerProgressScreenProps = {
   readonly partnerId: string;
   readonly onBack: () => void;
-  readonly onOpenProducts?: (partnerId: string) => void;
 };
 
 const DOCUMENT_STATUS_LABELS: Record<string, string> = {
@@ -61,7 +60,7 @@ function SectionCard({ title, children }: { readonly title: string; readonly chi
   );
 }
 
-export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProducts }: DshFieldPartnerProgressScreenProps) {
+export function DshFieldPartnerProgressScreen({ partnerId, onBack }: DshFieldPartnerProgressScreenProps) {
   const { state, statusLabel, isClientVisible, reload } = useFieldPartnerProgressController(partnerId);
 
   if (state.kind === 'loading' || state.kind === 'idle') {
@@ -162,14 +161,6 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
             ))
           )}
         </SectionCard>
-
-        {onOpenProducts && (
-          <Button
-            label="المنتجات التجريبية"
-            tone="primary"
-            onPress={() => onOpenProducts(partnerId)}
-          />
-        )}
 
         <Button label="تحديث" tone="secondary" onPress={() => void reload()} />
         <Button label="رجوع" tone="ghost" onPress={onBack} />

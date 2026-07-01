@@ -7,7 +7,9 @@ import type {
   DshPartnerFieldVisit,
   DshPartnerReadiness,
   DshPartnerAuditEvent,
-  DshPartnerStore,
+  DshPartnerLinkedStore,
+  DshFieldPartnerStoreDraft,
+  DshFieldPartnerStoreDraftInput,
   DshCreatePartnerInput,
   DshUpdatePartnerRequest,
   DshPartnerTransitionInput,
@@ -15,8 +17,6 @@ import type {
   DshReviewDocumentInput,
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
-  DshFieldPartnerProduct,
-  DshFieldPartnerProductInput,
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -82,11 +82,11 @@ export function reviewPartnerDocument(partnerId: string, docId: string, input: D
   return request(`/dsh/operator/partners/${partnerId}/documents/${docId}/review`, { method: "PATCH", body: input });
 }
 
-export function fetchPartnerStores(partnerId: string): Promise<{ stores: DshPartnerStore[]; total: number }> {
+export function fetchPartnerStores(partnerId: string): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
   return request(`/dsh/operator/partners/${partnerId}/stores`);
 }
 
-export function linkPartnerStore(partnerId: string, storeId: string): Promise<{ stores: DshPartnerStore[]; total: number }> {
+export function linkPartnerStore(partnerId: string, storeId: string): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
   return request(`/dsh/operator/partners/${partnerId}/stores`, { method: "POST", body: { storeId } });
 }
 
@@ -156,29 +156,13 @@ export function fieldListFieldVisits(partnerId: string): Promise<{ visits: DshPa
 }
 
 // ── Field: draft store + trial products ────────────────────────────────────
-// Every partner has exactly one auto-created draft store from the moment it
-// is created. Trial products land in the same catalog control-panel reviews
-// later; they are never visible to app-client until catalog is approved.
-
-export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string }> {
+export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft }> {
   return request(`/dsh/field/partners/${partnerId}/store`);
 }
 
-export function fieldListPartnerProducts(partnerId: string): Promise<{ products: DshFieldPartnerProduct[] }> {
-  return request(`/dsh/field/partners/${partnerId}/products`);
-}
-
-export function fieldCreatePartnerProduct(
+export function fieldUpdatePartnerStore(
   partnerId: string,
-  input: DshFieldPartnerProductInput
-): Promise<{ product: DshFieldPartnerProduct }> {
-  return request(`/dsh/field/partners/${partnerId}/products`, { method: "POST", body: input });
-}
-
-export function fieldUpdatePartnerProduct(
-  partnerId: string,
-  productId: string,
-  input: DshFieldPartnerProductInput
-): Promise<{ product: DshFieldPartnerProduct }> {
-  return request(`/dsh/field/partners/${partnerId}/products/${productId}`, { method: "PATCH", body: input });
+  input: DshFieldPartnerStoreDraftInput
+): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft; audit: unknown }> {
+  return request(`/dsh/field/partners/${partnerId}/store`, { method: "PATCH", body: input });
 }

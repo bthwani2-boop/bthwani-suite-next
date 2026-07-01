@@ -20,6 +20,7 @@ export type FieldPartnerDraftForm = {
 
   // ── Location (Step 2) ──────────────────────────────────────────
   city: string;
+  serviceAreaCode: string;
   addressLine: string;
   coverageSummary: string;
 
@@ -130,14 +131,20 @@ export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm
 
 export function getLocationMediaMissingCount(form: Partial<FieldPartnerDraftForm>): number {
   let count = 0;
+  if (!form.city?.trim()) count++;
   if (!form.addressLine?.trim()) count++;
-  if (!form.storefrontPhotoRef?.trim()) count++;
-  if (!form.interiorPhotoRef?.trim()) count++;
   return count;
 }
 
-export function getDocumentsMissingCount(uploadedDocumentTypes: DshPartnerDocumentType[]): number {
-  return REQUIRED_DOCUMENT_TYPES.filter((type) => !uploadedDocumentTypes.includes(type)).length;
+export function getDocumentsMissingCount(
+  uploadedDocumentTypes: DshPartnerDocumentType[],
+  form: Partial<FieldPartnerDraftForm> = {}
+): number {
+  let count = REQUIRED_DOCUMENT_TYPES.filter((type) => !uploadedDocumentTypes.includes(type)).length;
+  if (!form.storefrontPhotoRef?.trim()) count++;
+  if (!form.interiorPhotoRef?.trim()) count++;
+  if (!form.signagePhotoRef?.trim()) count++;
+  return count;
 }
 
 export function getAgreementReviewMissingCount(
@@ -150,22 +157,11 @@ export function getAgreementReviewMissingCount(
   // + basics missing forwarded
   count += getBasicsProfileMissingCount(form);
   count += getLocationMediaMissingCount(form);
-  count += getDocumentsMissingCount(uploadedDocumentTypes);
+  count += getDocumentsMissingCount(uploadedDocumentTypes, form);
   return count;
 }
 
 // ── Global required missing items list (mirrors donor getPartnerRequiredMissingItems) ──
-
-const DOCUMENT_TYPE_MISSING_LABELS: Record<DshPartnerDocumentType, string> = {
-  national_id: "هوية المالك",
-  commercial_register: "السجل التجاري",
-  lease_agreement: "عقد الإيجار أو الملكية",
-  health_certificate: "شهادة صحة / ترخيص",
-  store_photo: "صورة المتجر",
-  owner_photo: "صورة المالك",
-  other: "مستند آخر",
-};
-
 export function getFieldRequiredMissingItems(
   form: Partial<FieldPartnerDraftForm>,
   uploadedDocumentTypes: DshPartnerDocumentType[]
@@ -173,10 +169,15 @@ export function getFieldRequiredMissingItems(
   const missing: string[] = [];
   if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
-  if (!form.storefrontPhotoRef?.trim()) missing.push("صورة الواجهة");
+  if (!form.city?.trim()) missing.push("المدينة");
+  if (!form.addressLine?.trim()) missing.push("العنوان");
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
+  if (!form.deliveryReadiness?.trim()) missing.push("جاهزية التوصيل");
   for (const type of REQUIRED_DOCUMENT_TYPES) {
-    if (!uploadedDocumentTypes.includes(type)) missing.push(DOCUMENT_TYPE_MISSING_LABELS[type]);
+    if (!uploadedDocumentTypes.includes(type)) missing.push(`مستند ${type}`);
   }
+  if (!form.storefrontPhotoRef?.trim()) missing.push("صورة واجهة المتجر");
+  if (!form.interiorPhotoRef?.trim()) missing.push("صورة داخل المتجر");
+  if (!form.signagePhotoRef?.trim()) missing.push("صورة اللوحة التجارية");
   return missing;
 }

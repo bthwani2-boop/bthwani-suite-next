@@ -88,95 +88,25 @@ func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load store")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "store": row})
+	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "store": store.RowToFieldPartnerStoreDraft(*row)})
 }
 
-// GET /dsh/field/partners/{partnerId}/products
-func (s *protectedStoreServer) handleFieldListPartnerProducts(w http.ResponseWriter, r *http.Request) {
-	_, storeID, ok := s.fieldPartnerStore(w, r)
-	if !ok {
-		return
-	}
-	products, err := catalog.ListProducts(r.Context(), s.db, storeID, false)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"products": products})
-}
-
-// POST /dsh/field/partners/{partnerId}/products — trial products the field
-// agent collects while onboarding; land in the same draft catalog control-panel
-// reviews later. Not visible to app-client until catalog is approved.
-func (s *protectedStoreServer) handleFieldCreatePartnerProduct(w http.ResponseWriter, r *http.Request) {
+// PATCH /dsh/field/partners/{partnerId}/store
+func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWriter, r *http.Request) {
 	actorID, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	var input catalog.ProductInput
+	var input store.FieldStoreDraftInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	if strings.TrimSpace(input.SKU) == "" {
-		input.SKU = fmt.Sprintf("field-%d", time.Now().UnixNano())
-	}
-	item, err := catalog.UpsertProduct(r.Context(), s.db, actorID, "field", storeID, "", correlationID(r), input)
+	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, correlationID(r), input)
 	if err != nil {
-		s.writeCatalogError(w, err)
+		s.writeStoreError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"product": item})
-}
-
-// PATCH /dsh/field/partners/{partnerId}/products/{productId} — the field UI only
-// collects name + priceReference, so fields it never sends (SKU, description,
-// category, version) are carried over from the existing record instead of
-// being silently wiped by UpsertProduct's full-row replace.
-func (s *protectedStoreServer) handleFieldUpdatePartnerProduct(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
-	if !ok {
-		return
-	}
-	var input catalog.ProductInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	productID := r.PathValue("productId")
-	existing, err := catalog.ListProducts(r.Context(), s.db, storeID, false)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	found := false
-	for _, p := range existing {
-		if p.ID != productID {
-			continue
-		}
-		found = true
-		if strings.TrimSpace(input.SKU) == "" {
-			input.SKU = p.SKU
-		}
-		if strings.TrimSpace(input.Description) == "" {
-			input.Description = p.Description
-		}
-		if input.CategoryID == nil {
-			input.CategoryID = p.CategoryID
-		}
-		if input.ExpectedVersion == 0 {
-			input.ExpectedVersion = p.Version
-		}
-		break
-	}
-	if !found {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "product not found")
-		return
-	}
-	item, err := catalog.UpsertProduct(r.Context(), s.db, actorID, "field", storeID, productID, correlationID(r), input)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"product": item})
+	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "store": row, "audit": audit})
 }
 
 func (s *protectedStoreServer) handlePartnerCatalog(w http.ResponseWriter, r *http.Request) {

@@ -5,7 +5,7 @@ info:
   description: >
     Delivery and shopping hub service contract. Core capabilities include Store Discovery,
     Home Discovery, Catalog Management, Cart & Serviceability, Checkout & WLT Handoff,
-    Order Fulfillment, Dispatch & Captain Delivery, Field Onboarding & Store Activation,
+    Order Fulfillment, Dispatch & Captain Delivery, Partner Onboarding & Store Publication,
     Support, and Analytics.
     WLT handoff uses reference fields only; no financial mutation inside DSH.
 
@@ -2899,7 +2899,7 @@ paths:
   /dsh/field/partners/{partnerId}/store:
     get:
       operationId: getFieldPartnerStore
-      summary: Field agent reads the draft store auto-created with a partner it owns.
+      summary: Field agent reads the first store draft linked to a partner it owns.
       tags: [DshPartnerActivation]
       security:
         - bearerAuth: []
@@ -2915,17 +2915,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [storeId]
+                required: [storeId, store]
                 properties:
                   storeId: { type: string }
+                  store: { $ref: "#/components/schemas/DshFieldPartnerStoreDraft" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-
-  /dsh/field/partners/{partnerId}/products:
-    get:
-      operationId: listFieldPartnerProducts
-      summary: Field agent lists trial products entered for a partner's draft store.
+    patch:
+      operationId: updateFieldPartnerStore
+      summary: Field agent updates first-store draft data without publishing it to clients.
       tags: [DshPartnerActivation]
       security:
         - bearerAuth: []
@@ -2934,71 +2933,26 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateFieldPartnerStoreDraftRequest" }
       responses:
         "200":
-          description: Draft store products.
+          description: Store draft updated.
           content:
             application/json:
               schema:
                 type: object
-                required: [products]
+                required: [storeId, store, audit]
                 properties:
-                  products:
-                    type: array
-                    items: { type: object }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    post:
-      operationId: createFieldPartnerProduct
-      summary: Field agent adds a trial product (name + descriptive price) to a partner's draft store.
-      tags: [DshPartnerActivation]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogProductInput" }
-      responses:
-        "201":
-          description: Product created.
+                  storeId: { type: string }
+                  store: { $ref: "#/components/schemas/DshFieldPartnerStoreDraft" }
+                  audit: { type: object }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
-
-  /dsh/field/partners/{partnerId}/products/{productId}:
-    patch:
-      operationId: updateFieldPartnerProduct
-      summary: Field agent updates a trial product's name/price for a partner's draft store.
-      tags: [DshPartnerActivation]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: partnerId
-          in: path
-          required: true
-          schema: { type: string }
-        - name: productId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogProductInput" }
-      responses:
-        "200":
-          description: Product updated.
-        "400": { $ref: "#/components/responses/InvalidRequest" }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409": { $ref: "#/components/responses/Conflict" }
 
   /dsh/field/partners/{partnerId}/documents:
     get:
@@ -3542,6 +3496,71 @@ components:
             version:
               type: integer
               minimum: 1
+
+    DshFieldPartnerStoreDraft:
+      type: object
+      required:
+        - storeId
+        - partnerId
+        - displayName
+        - cityCode
+        - serviceAreaCode
+        - addressLine
+        - coverageSummary
+        - operatingHours
+        - deliveryReadiness
+        - storefrontPhotoRef
+        - interiorPhotoRef
+        - signagePhotoRef
+        - status
+        - isVisible
+        - partnerReadiness
+        - catalogApprovalStatus
+        - marketingVisibility
+        - version
+      properties:
+        storeId: { type: string }
+        partnerId: { type: string }
+        displayName: { type: string }
+        cityCode: { type: string }
+        serviceAreaCode: { type: string }
+        addressLine: { type: string }
+        coverageSummary: { type: string }
+        operatingHours: { type: string }
+        deliveryReadiness: { type: string }
+        storefrontPhotoRef: { type: string }
+        interiorPhotoRef: { type: string }
+        signagePhotoRef: { type: string }
+        status:
+          $ref: "#/components/schemas/DshStoreStatus"
+        isVisible: { type: boolean }
+        partnerReadiness:
+          type: string
+          enum: [pending, ready, blocked]
+        catalogApprovalStatus:
+          type: string
+          enum: [draft, submitted, approved, rejected]
+        marketingVisibility:
+          type: string
+          enum: [hidden, visible]
+        version:
+          type: integer
+          minimum: 1
+
+    DshUpdateFieldPartnerStoreDraftRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName: { type: string }
+        cityCode: { type: string }
+        serviceAreaCode: { type: string }
+        addressLine: { type: string }
+        coverageSummary: { type: string }
+        operatingHours: { type: string }
+        deliveryReadiness: { type: string }
+        storefrontPhotoRef: { type: string }
+        interiorPhotoRef: { type: string }
+        signagePhotoRef: { type: string }
 
     DshPagination:
       type: object
@@ -5220,7 +5239,7 @@ components:
         document: { $ref: "#/components/schemas/DshPartnerDocument" }
         review: { $ref: "#/components/schemas/DshPartnerDocumentReview" }
 
-    DshPartnerStore:
+    DshPartnerLinkedStore:
       type: object
       required: [id, partnerId, slug, displayName, status, isVisible, cityCode, createdAt]
       properties:
@@ -5239,7 +5258,7 @@ components:
       properties:
         stores:
           type: array
-          items: { $ref: "#/components/schemas/DshPartnerStore" }
+          items: { $ref: "#/components/schemas/DshPartnerLinkedStore" }
         total: { type: integer }
 
     DshLinkPartnerStoreRequest:

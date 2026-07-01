@@ -885,8 +885,353 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Client reads live delivery tracking for their own order. */
+        /** Client reads order delivery status updates for their own order. Does not expose captain coordinates or movement. */
         get: operations["getDshClientOrderTracking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/stores/{storeId}/visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List field visits for a store. */
+        get: operations["listDshFieldVisits"];
+        put?: never;
+        /** Field agent starts a new store visit. */
+        post: operations["createDshFieldVisit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/visits/{visitId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Field agent marks a visit complete. */
+        post: operations["completeDshFieldVisit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/visits/{visitId}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all readiness checks for a visit. */
+        get: operations["listDshVisitChecks"];
+        /** Field agent records or updates a readiness checklist item. */
+        put: operations["upsertDshReadinessCheck"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/stores/{storeId}/escalations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Field agent raises a quality escalation for a store. */
+        post: operations["createDshReadinessEscalation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/field-readiness/escalations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator views all field readiness escalations with optional status filter. */
+        get: operations["listDshOperatorEscalations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/field-readiness/escalations/{escalationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Operator acknowledges or resolves an escalation. */
+        patch: operations["updateDshOperatorEscalation"];
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/onboarding-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner views their store's field onboarding status. */
+        get: operations["getDshPartnerOnboardingStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List support tickets submitted by the current user. */
+        get: operations["listDshMyTickets"];
+        put?: never;
+        /** Any authenticated user creates a support ticket. */
+        post: operations["createDshSupportTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/support/tickets/{ticketId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single support ticket. */
+        get: operations["getDshSupportTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/support/tickets/{ticketId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List messages in a support ticket thread. */
+        get: operations["listDshTicketMessages"];
+        put?: never;
+        /** Add a message to a support ticket thread. */
+        post: operations["addDshTicketMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator lists all support tickets with optional status filter. */
+        get: operations["listDshOperatorTickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/tickets/{ticketId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Operator updates ticket status or assignee. */
+        patch: operations["updateDshOperatorTicket"];
+        trace?: never;
+    };
+    "/dsh/operator/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator lists incidents with optional status filter. */
+        get: operations["listDshIncidents"];
+        put?: never;
+        /** Operator raises a new operational incident. */
+        post: operations["createDshIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/incidents/{incidentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Operator resolves or sets an incident to monitoring. */
+        patch: operations["updateDshIncident"];
+        trace?: never;
+    };
+    "/dsh/operator/analytics/platform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform-wide operational KPIs for the operator dashboard. */
+        get: operations["getDshPlatformKpis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Order volume and fulfillment analytics for a given period. */
+        get: operations["getDshOrderAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Delivery assignment and completion analytics. */
+        get: operations["getDshDeliveryAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Support ticket volume and resolution analytics. */
+        get: operations["getDshSupportAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Store activity and readiness analytics. */
+        get: operations["getDshStoreAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/analytics/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Authenticated partner's own store performance summary. */
+        get: operations["getDshPartnerPerformance"];
         put?: never;
         post?: never;
         delete?: never;
@@ -913,159 +1258,820 @@ export interface paths {
         trace?: never;
     };
     "/dsh/notifications": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List notifications for the authenticated actor. */
         get: operations["listDshNotifications"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/notifications/{notificationId}/read": {
-        parameters: { query?: never; header?: never; path: { notificationId: string; }; cookie?: never; };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a single notification as read. */
         post: operations["markDshNotificationRead"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/notifications/read-all": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all notifications read for the authenticated actor. */
         post: operations["markAllDshNotificationsRead"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/notifications/preferences": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         get?: never;
+        /** Update notification preferences for the authenticated actor. */
         put: operations["updateDshNotificationPreferences"];
-        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/notifications/config": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List platform-level notification topic configurations. */
         get: operations["listDshPlatformNotificationConfig"];
+        /** Upsert platform-level notification config for a topic. */
         put: operations["upsertDshPlatformNotificationConfig"];
-        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/marketing/campaigns": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List marketing campaigns. */
         get: operations["listDshCampaigns"];
         put?: never;
+        /** Create a marketing campaign. */
         post: operations["createDshCampaign"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/marketing/campaigns/{campaignId}": {
-        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single marketing campaign. */
         get: operations["getDshCampaign"];
         put?: never;
         post?: never;
+        /** Archive a marketing campaign. */
         delete: operations["archiveDshCampaign"];
-        options?: never; head?: never;
+        options?: never;
+        head?: never;
+        /** Update a marketing campaign. */
         patch: operations["updateDshCampaign"];
         trace?: never;
     };
     "/dsh/operator/marketing/banners": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List marketing banners. */
         get: operations["listDshMarketingBanners"];
         put?: never;
+        /** Create a marketing banner. */
         post: operations["createDshMarketingBanner"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/marketing/banners/{bannerId}": {
-        parameters: { query?: never; header?: never; path: { bannerId: string; }; cookie?: never; };
-        get?: never; put?: never; post?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a marketing banner. */
         delete: operations["deleteDshMarketingBanner"];
-        options?: never; head?: never;
+        options?: never;
+        head?: never;
+        /** Update a marketing banner. */
         patch: operations["updateDshMarketingBanner"];
         trace?: never;
     };
     "/dsh/operator/marketing/promos": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List marketing promos. */
         get: operations["listDshMarketingPromos"];
         put?: never;
+        /** Create a marketing promo. */
         post: operations["createDshMarketingPromo"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/marketing/promos/{promoId}": {
-        parameters: { query?: never; header?: never; path: { promoId: string; }; cookie?: never; };
-        get?: never; put?: never; post?: never; delete?: never; options?: never; head?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a marketing promo. */
         patch: operations["updateDshMarketingPromo"];
         trace?: never;
     };
     "/dsh/operator/platform/zones": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List service zones. */
         get: operations["listDshZones"];
         put?: never;
+        /** Create a service zone. */
         post: operations["createDshZone"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/platform/zones/{zoneId}": {
-        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
-        get?: never; put?: never; post?: never; delete?: never; options?: never; head?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a service zone. */
         patch: operations["updateDshZone"];
         trace?: never;
     };
     "/dsh/operator/platform/sla-rules": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get SLA rules for a zone. */
         get: operations["getDshSlaRules"];
+        /** Upsert SLA rules for a zone. */
         put: operations["upsertDshSlaRules"];
-        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/platform/capacity": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get capacity configuration for a zone. */
         get: operations["getDshCapacityConfig"];
+        /** Upsert capacity configuration for a zone. */
         put: operations["upsertDshCapacityConfig"];
-        post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/platform/serviceability/{zoneId}": {
-        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get live serviceability state for a zone. */
         get: operations["getDshZoneServiceability"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/roles": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin roles. */
         get: operations["listDshAdminRoles"];
         put?: never;
+        /** Create an admin role. */
         post: operations["createDshAdminRole"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/staff": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin staff members. */
         get: operations["listDshAdminStaff"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/staff/{staffId}/roles": {
-        parameters: { query?: never; header?: never; path: { staffId: string; }; cookie?: never; };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign a role to a staff member. */
         post: operations["assignDshStaffRole"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List partners with lifecycle status and filters. */
+        get: operations["listDshPartners"];
+        put?: never;
+        /** Create a new partner profile (operator or field actor). */
+        post: operations["createDshPartner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get partner detail. */
+        get: operations["getDshPartner"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transition a partner to a new lifecycle status. */
+        post: operations["transitionDshPartner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get partner readiness checklist. */
+        get: operations["getDshPartnerReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List documents for a partner. */
+        get: operations["listDshPartnerDocuments"];
+        put?: never;
+        /** Add a document reference for a partner. */
+        post: operations["addDshPartnerDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/documents/{docId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Review (approve/reject) a partner document. */
+        patch: operations["reviewDshPartnerDocument"];
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List stores linked to a partner. */
+        get: operations["listDshPartnerStores"];
+        put?: never;
+        /** Link an existing store to a partner. */
+        post: operations["linkDshPartnerStore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List activation events (audit trail) for a partner. */
+        get: operations["listDshPartnerAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partners/{partnerId}/field-visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List field visits recorded for a partner. */
+        get: operations["listDshPartnerFieldVisits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/activation/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own current activation status. */
+        get: operations["getDshPartnerActivationStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/activation/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own readiness checklist. */
+        get: operations["getDshPartnerSelfReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List partner drafts created by the calling field actor. */
+        get: operations["listFieldPartnerDrafts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Field agent creates a new partner intake draft. */
+        post: operations["createFieldPartnerDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Field agent gets partner draft details. */
+        get: operations["getFieldPartnerDraft"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Field agent updates partner draft details. */
+        patch: operations["updateFieldPartnerDraft"];
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Field agent reads the activation readiness of a partner draft it owns. */
+        get: operations["getFieldPartnerReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Field agent reads the first store draft linked to a partner it owns. */
+        get: operations["getFieldPartnerStore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Field agent updates first-store draft data without publishing it to clients. */
+        patch: operations["updateFieldPartnerStore"];
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Field agent lists documents uploaded for a partner draft it owns. */
+        get: operations["listFieldPartnerDocuments"];
+        put?: never;
+        /** Field agent uploads a document for partner onboarding. */
+        post: operations["uploadFieldPartnerDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/media/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Field agent uploads a binary document/photo, receiving a mediaRef to attach via uploadFieldPartnerDocument. */
+        post: operations["uploadFieldMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/media/{mediaRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream back a previously uploaded document/photo for review. */
+        get: operations["getMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Field agent records a partner-level onboarding visit. */
+        post: operations["createFieldPartnerVisit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/field-visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Field agent lists field visits recorded for a partner draft it owns. */
+        get: operations["listFieldPartnerFieldVisits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Field agent submits partner draft for review. */
+        post: operations["submitFieldPartnerDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/partners": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List partner activation requests. */
         get: operations["listDshPartnerActivations"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/partners/{partnerId}/activate": {
-        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate a partner. */
         post: operations["activateDshPartner"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/partners/{partnerId}/block": {
-        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Block a partner. */
         post: operations["blockDshPartner"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/captains": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List captain credentials. */
         get: operations["listDshCaptainCredentials"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/captains/{captainId}/credential": {
-        parameters: { query?: never; header?: never; path: { captainId: string; }; cookie?: never; };
-        get?: never; put?: never;
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upsert credential for a captain. */
         post: operations["upsertDshCaptainCredential"];
-        delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
     "/dsh/operator/admin/audit": {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List admin audit log entries. */
         get: operations["listDshAdminAudit"];
-        put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
 }
 export type webhooks = Record<string, never>;
@@ -1124,6 +2130,41 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             version: number;
+        };
+        DshFieldPartnerStoreDraft: {
+            storeId: string;
+            partnerId: string;
+            displayName: string;
+            cityCode: string;
+            serviceAreaCode: string;
+            addressLine: string;
+            coverageSummary: string;
+            operatingHours: string;
+            deliveryReadiness: string;
+            storefrontPhotoRef: string;
+            interiorPhotoRef: string;
+            signagePhotoRef: string;
+            status: components["schemas"]["DshStoreStatus"];
+            isVisible: boolean;
+            /** @enum {string} */
+            partnerReadiness: "pending" | "ready" | "blocked";
+            /** @enum {string} */
+            catalogApprovalStatus: "draft" | "submitted" | "approved" | "rejected";
+            /** @enum {string} */
+            marketingVisibility: "hidden" | "visible";
+            version: number;
+        };
+        DshUpdateFieldPartnerStoreDraftRequest: {
+            displayName?: string;
+            cityCode?: string;
+            serviceAreaCode?: string;
+            addressLine?: string;
+            coverageSummary?: string;
+            operatingHours?: string;
+            deliveryReadiness?: string;
+            storefrontPhotoRef?: string;
+            interiorPhotoRef?: string;
+            signagePhotoRef?: string;
         };
         DshPagination: {
             limit: number;
@@ -1446,7 +2487,7 @@ export interface components {
             state: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
-            /** @description Opaque WLT-owned payment-session reference. */
+            /** @description Opaque WLT-owned payment-session reference. DSH never mutates financial truth. */
             wltPaymentSessionId: string;
             deliveryAddress: string;
             note: string;
@@ -1580,6 +2621,284 @@ export interface components {
             reference: string;
             note?: string;
         };
+        /** @enum {string} */
+        DshVisitType: "onboarding" | "periodic" | "escalation_followup";
+        /** @enum {string} */
+        DshVisitStatus: "in_progress" | "complete" | "escalated";
+        /** @enum {string} */
+        DshCheckType: "location_verified" | "documents_uploaded" | "product_list_submitted" | "equipment_checked" | "safety_compliant" | "hygiene_compliant";
+        /** @enum {string} */
+        DshCheckStatus: "pending" | "passed" | "failed";
+        /** @enum {string} */
+        DshEscalationStatus: "open" | "acknowledged" | "resolved" | "escalated_further";
+        /** @enum {string} */
+        DshEscalationSeverity: "low" | "medium" | "high" | "critical";
+        /** @enum {string} */
+        DshEscalationCategory: "document_missing" | "safety_violation" | "location_mismatch" | "product_compliance" | "equipment_failure" | "other";
+        DshFieldVisit: {
+            id: string;
+            storeId: string;
+            fieldAgentId: string;
+            visitType: components["schemas"]["DshVisitType"];
+            status: components["schemas"]["DshVisitStatus"];
+            notes: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshFieldVisitResponse: {
+            visit: components["schemas"]["DshFieldVisit"];
+        };
+        DshFieldVisitsResponse: {
+            visits: components["schemas"]["DshFieldVisit"][];
+        };
+        DshCreateFieldVisitRequest: {
+            visitType?: components["schemas"]["DshVisitType"];
+        };
+        DshReadinessCheck: {
+            id: string;
+            visitId: string;
+            storeId: string;
+            checkType: components["schemas"]["DshCheckType"];
+            status: components["schemas"]["DshCheckStatus"];
+            evidenceUrl: string;
+            notes: string;
+            verifiedBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshReadinessCheckResponse: {
+            check: components["schemas"]["DshReadinessCheck"];
+        };
+        DshReadinessChecksResponse: {
+            checks: components["schemas"]["DshReadinessCheck"][];
+        };
+        DshUpsertReadinessCheckRequest: {
+            checkType: components["schemas"]["DshCheckType"];
+            status: components["schemas"]["DshCheckStatus"];
+            evidenceUrl?: string;
+            notes?: string;
+        };
+        DshReadinessEscalation: {
+            id: string;
+            visitId: string;
+            storeId: string;
+            raisedBy: string;
+            severity: components["schemas"]["DshEscalationSeverity"];
+            category: components["schemas"]["DshEscalationCategory"];
+            description: string;
+            status: components["schemas"]["DshEscalationStatus"];
+            resolvedBy?: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolutionNote: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshEscalationResponse: {
+            escalation: components["schemas"]["DshReadinessEscalation"];
+        };
+        DshEscalationsResponse: {
+            escalations: components["schemas"]["DshReadinessEscalation"][];
+        };
+        DshCreateEscalationRequest: {
+            visitId?: string;
+            severity: components["schemas"]["DshEscalationSeverity"];
+            category: components["schemas"]["DshEscalationCategory"];
+            description: string;
+        };
+        DshUpdateEscalationRequest: {
+            status: components["schemas"]["DshEscalationStatus"];
+            resolutionNote?: string;
+        };
+        DshOnboardingStatusResponse: {
+            storeId: string;
+            totalVisits: number;
+            completedVisits: number;
+            openEscalations: number;
+            onboardingComplete: boolean;
+            /** @enum {string} */
+            status: "pending" | "complete" | "escalation_required";
+        };
+        /** @enum {string} */
+        DshTicketStatus: "open" | "in_review" | "pending_user" | "resolved" | "closed";
+        /** @enum {string} */
+        DshTicketPriority: "low" | "normal" | "high" | "urgent";
+        /** @enum {string} */
+        DshTicketCategory: "order_issue" | "delivery_issue" | "store_quality" | "payment_reference" | "account_access" | "app_bug" | "other";
+        /** @enum {string} */
+        DshSenderRole: "client" | "partner" | "captain" | "operator" | "system";
+        /** @enum {string} */
+        DshIncidentStatus: "open" | "monitoring" | "resolved";
+        /** @enum {string} */
+        DshIncidentSeverity: "low" | "medium" | "high" | "critical";
+        /** @enum {string} */
+        DshIncidentScope: "delivery" | "stores" | "payments" | "platform" | "unknown";
+        DshSupportTicket: {
+            id: string;
+            storeId: string;
+            reporterId: string;
+            reporterRole: string;
+            subject: string;
+            description: string;
+            category: components["schemas"]["DshTicketCategory"];
+            priority: components["schemas"]["DshTicketPriority"];
+            status: components["schemas"]["DshTicketStatus"];
+            assignedTo: string;
+            orderId: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            closedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshTicketResponse: {
+            ticket: components["schemas"]["DshSupportTicket"];
+        };
+        DshTicketsResponse: {
+            tickets: components["schemas"]["DshSupportTicket"][];
+        };
+        DshCreateTicketRequest: {
+            subject: string;
+            description: string;
+            category: components["schemas"]["DshTicketCategory"];
+            priority?: components["schemas"]["DshTicketPriority"];
+            storeId?: string;
+            orderId?: string;
+        };
+        DshUpdateTicketRequest: {
+            status: components["schemas"]["DshTicketStatus"];
+            assignedTo?: string;
+        };
+        DshSupportMessage: {
+            id: string;
+            ticketId: string;
+            senderId: string;
+            senderRole: components["schemas"]["DshSenderRole"];
+            body: string;
+            isInternal: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshMessageResponse: {
+            message: components["schemas"]["DshSupportMessage"];
+        };
+        DshMessagesResponse: {
+            messages: components["schemas"]["DshSupportMessage"][];
+        };
+        DshAddMessageRequest: {
+            body: string;
+            isInternal?: boolean;
+        };
+        DshIncident: {
+            id: string;
+            title: string;
+            description: string;
+            severity: components["schemas"]["DshIncidentSeverity"];
+            status: components["schemas"]["DshIncidentStatus"];
+            affectedScope: components["schemas"]["DshIncidentScope"];
+            raisedBy: string;
+            resolvedBy?: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            postmortemUrl: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshIncidentResponse: {
+            incident: components["schemas"]["DshIncident"];
+        };
+        DshIncidentsResponse: {
+            incidents: components["schemas"]["DshIncident"][];
+        };
+        DshCreateIncidentRequest: {
+            title: string;
+            description: string;
+            severity: components["schemas"]["DshIncidentSeverity"];
+            affectedScope?: components["schemas"]["DshIncidentScope"];
+        };
+        DshUpdateIncidentRequest: {
+            status: components["schemas"]["DshIncidentStatus"];
+            postmortemUrl?: string;
+        };
+        DshPlatformKpisResponse: {
+            totalOrders: number;
+            deliveredOrders: number;
+            cancelledOrders: number;
+            activeStores: number;
+            openTickets: number;
+            fieldVisitsCompleted: number;
+            openEscalations: number;
+            openIncidents: number;
+            period: string;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        DshOrderStatusCount: {
+            status: string;
+            count: number;
+        };
+        DshOrderAnalyticsResponse: {
+            totalOrders: number;
+            byStatus: components["schemas"]["DshOrderStatusCount"][];
+            period: string;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        DshDeliveryAnalyticsResponse: {
+            totalAssignments: number;
+            acceptedAssignments: number;
+            completedAssignments: number;
+            declinedAssignments: number;
+            period: string;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        DshTicketCategoryCount: {
+            category: string;
+            count: number;
+        };
+        DshSupportAnalyticsResponse: {
+            totalTickets: number;
+            openTickets: number;
+            resolvedTickets: number;
+            byCategory: components["schemas"]["DshTicketCategoryCount"][];
+            period: string;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        DshStoreAnalyticsResponse: {
+            totalStores: number;
+            activeStores: number;
+            suspendedStores: number;
+            pendingReadiness: number;
+            readinessComplete: number;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        DshPartnerPerformanceResponse: {
+            storeId: string;
+            totalOrders: number;
+            acceptedOrders: number;
+            rejectedOrders: number;
+            period: string;
+            /** Format: date-time */
+            generatedAt: string;
+        };
         /** @description Contains opaque WLT references only. No amount, ledger, refund, settlement, or signature verification logic belongs to DSH. */
         WltPaymentCallbackEnvelope: {
             paymentSessionId: string;
@@ -1597,8 +2916,10 @@ export interface components {
             body: string;
             actionUrl: string;
             isRead: boolean;
+            /** Format: date-time */
             createdAt: string;
-            readAt?: string;
+            /** Format: date-time */
+            readAt?: string | null;
         };
         DshNotificationsListResponse: {
             notifications: components["schemas"]["DshNotification"][];
@@ -1616,6 +2937,7 @@ export interface components {
             actorType: string;
             topic: string;
             enabled: boolean;
+            /** Format: date-time */
             updatedAt: string;
         };
         DshNotificationPreferenceResponse: {
@@ -1628,6 +2950,7 @@ export interface components {
             isEnabled: boolean;
             description: string;
             updatedBy: string;
+            /** Format: date-time */
             updatedAt: string;
         };
         DshPlatformNotificationConfigListResponse: {
@@ -1647,10 +2970,14 @@ export interface components {
             name: string;
             status: string;
             zoneId: string;
+            /** Format: date */
             startDate: string;
+            /** Format: date */
             endDate: string;
             contentRef: string;
+            /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
             updatedAt: string;
         };
         DshCampaignsListResponse: {
@@ -1663,13 +2990,16 @@ export interface components {
         DshCreateCampaignRequest: {
             name: string;
             zoneId: string;
+            /** Format: date */
             startDate: string;
+            /** Format: date */
             endDate: string;
             contentRef: string;
         };
         DshUpdateCampaignRequest: {
             name?: string;
             status?: string;
+            /** Format: date */
             endDate?: string;
             contentRef?: string;
         };
@@ -1680,8 +3010,11 @@ export interface components {
             targetUrl: string;
             zone: string;
             status: string;
+            /** Format: date-time */
             publishAt: string;
+            /** Format: date-time */
             expiresAt: string;
+            /** Format: date-time */
             createdAt: string;
         };
         DshMarketingBannersListResponse: {
@@ -1696,13 +3029,222 @@ export interface components {
             imageUrl: string;
             targetUrl: string;
             zone: string;
+            /** Format: date-time */
             publishAt: string;
+            /** Format: date-time */
             expiresAt: string;
         };
         DshUpdateMarketingBannerRequest: {
             title?: string;
             status?: string;
+            /** Format: date-time */
             expiresAt?: string;
+        };
+        DshPartner: {
+            id: string;
+            legalNameAr: string;
+            legalNameEn?: string;
+            displayName: string;
+            /** @enum {string} */
+            legalIdentityType: "commercial_register" | "national_id" | "freelancer_certificate";
+            legalIdentityNumber: string;
+            ownerName: string;
+            primaryPhone: string;
+            secondaryPhone?: string;
+            email?: string;
+            /** @enum {string} */
+            category: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
+            /** @enum {string} */
+            activationStatus: "draft" | "submitted" | "field_visit_scheduled" | "field_visit_completed" | "documents_missing" | "documents_uploaded" | "documents_verified" | "catalog_not_ready" | "catalog_ready" | "delivery_modes_not_ready" | "delivery_modes_ready" | "ops_review" | "ops_approved" | "ops_rejected" | "partner_active" | "partner_deactivated" | "client_visible" | "client_hidden";
+            rejectionReason?: string;
+            createdBy?: string;
+            assignedFieldAgent?: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPartnersListResponse: {
+            partners: components["schemas"]["DshPartner"][];
+            total: number;
+        };
+        DshPartnerListResponse: {
+            partners: components["schemas"]["DshPartner"][];
+            pagination: {
+                total: number;
+                limit: number;
+                offset: number;
+            };
+        };
+        DshCreatePartnerRequest: {
+            legalNameAr: string;
+            legalNameEn?: string;
+            displayName: string;
+            /** @enum {string} */
+            legalIdentityType: "national_id" | "commercial_registration" | "other";
+            legalIdentityNumber: string;
+            ownerName: string;
+            primaryPhone: string;
+            secondaryPhone?: string;
+            email?: string;
+            /** @enum {string} */
+            category: "restaurant" | "grocery" | "pharmacy" | "bakery" | "other";
+            createdBy?: string;
+            assignedFieldAgent?: string;
+            idempotencyKey?: string;
+        };
+        DshPartnerTransitionRequest: {
+            toStatus: string;
+            reason?: string;
+            actorId?: string;
+            /** @enum {string} */
+            actorSurface?: "app-field" | "app-partner" | "app-captain" | "control-panel" | "system";
+            correlationId?: string;
+            version?: number;
+        };
+        DshPartnerTransitionResponse: {
+            partner: components["schemas"]["DshPartner"];
+            event: components["schemas"]["DshPartnerAuditEvent"];
+        };
+        DshPartnerActivationStatus: {
+            id: string;
+            displayName: string;
+            legalNameAr: string;
+            category: string;
+            activationStatus: string;
+            primaryPhone: string;
+            email?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPartnerReadiness: {
+            partnerId: string;
+            canActivate: boolean;
+            blockedReason?: string;
+            checklist: components["schemas"]["DshPartnerReadinessItem"][];
+        };
+        DshPartnerReadinessItem: {
+            id: string;
+            label: string;
+            satisfied: boolean;
+            blockedReason?: string;
+        };
+        DshPartnerDocument: {
+            id: string;
+            partnerId: string;
+            /** @enum {string} */
+            documentType: "national_id" | "commercial_register" | "lease_agreement" | "health_certificate" | "store_photo" | "owner_photo" | "other";
+            /** @enum {string} */
+            documentStatus: "pending" | "under_review" | "approved" | "rejected";
+            uploadedByActorId: string;
+            mediaRef: string;
+            notes?: string;
+            rejectionReason?: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPartnerDocumentsListResponse: {
+            documents: components["schemas"]["DshPartnerDocument"][];
+        };
+        DshAddPartnerDocumentRequest: {
+            /** @enum {string} */
+            documentType: "national_id" | "commercial_register" | "lease_agreement" | "health_certificate" | "store_photo" | "owner_photo" | "other";
+            mediaRef: string;
+            notes?: string;
+        };
+        DshReviewPartnerDocumentRequest: {
+            /** @enum {string} */
+            decision: "approved" | "rejected" | "needs_resubmit";
+            reason?: string;
+        };
+        DshPartnerDocumentReview: {
+            id: string;
+            documentId: string;
+            partnerId: string;
+            reviewedByActorId: string;
+            /** @enum {string} */
+            decision: "approved" | "rejected" | "needs_resubmit";
+            reason: string;
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshPartnerDocumentReviewResponse: {
+            document: components["schemas"]["DshPartnerDocument"];
+            review: components["schemas"]["DshPartnerDocumentReview"];
+        };
+        DshPartnerLinkedStore: {
+            id: string;
+            partnerId: string;
+            slug: string;
+            displayName: string;
+            status: string;
+            isVisible: boolean;
+            cityCode: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshPartnerStoresListResponse: {
+            stores: components["schemas"]["DshPartnerLinkedStore"][];
+            total: number;
+        };
+        DshLinkPartnerStoreRequest: {
+            storeId: string;
+        };
+        DshPartnerAuditEvent: {
+            /** Format: uuid */
+            id: string;
+            partnerId: string;
+            fromStatus: string;
+            toStatus: string;
+            actorId: string;
+            actorSurface: string;
+            reason?: string;
+            correlationId?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshPartnerAuditEventsListResponse: {
+            events: components["schemas"]["DshPartnerAuditEvent"][];
+            total: number;
+        };
+        DshUpdatePartnerRequest: {
+            displayName?: string;
+            ownerName?: string;
+            primaryPhone?: string;
+            secondaryPhone?: string;
+            email?: string;
+            notes?: string;
+        };
+        DshPartnerFieldVisit: {
+            id: string;
+            partnerId: string;
+            storeId: string;
+            fieldActorId: string;
+            /** @enum {string} */
+            visitStatus: "draft" | "in_progress" | "submitted" | "escalated";
+            visitNotes: string;
+            locationLatitude?: number | null;
+            locationLongitude?: number | null;
+            evidenceMediaRefs: string[];
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            submittedAt?: string | null;
+        };
+        DshCreatePartnerFieldVisitRequest: {
+            storeId: string;
+            visitNotes: string;
+            locationLatitude?: number;
+            locationLongitude?: number;
+            evidenceMediaRefs?: string[];
         };
         DshMarketingPromo: {
             id: string;
@@ -1712,8 +3254,11 @@ export interface components {
             discountValue: number;
             zone: string;
             status: string;
+            /** Format: date */
             startDate: string;
+            /** Format: date */
             endDate: string;
+            /** Format: date-time */
             createdAt: string;
         };
         DshMarketingPromosListResponse: {
@@ -1729,12 +3274,15 @@ export interface components {
             discountType: string;
             discountValue: number;
             zone: string;
+            /** Format: date */
             startDate: string;
+            /** Format: date */
             endDate: string;
         };
         DshUpdateMarketingPromoRequest: {
             title?: string;
             status?: string;
+            /** Format: date */
             endDate?: string;
         };
         DshZone: {
@@ -1744,7 +3292,9 @@ export interface components {
             polygon: string;
             cityCode: string;
             serviceAreaCode: string;
+            /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
             updatedAt: string;
         };
         DshZonesListResponse: {
@@ -1770,10 +3320,11 @@ export interface components {
             captainSlaMinutes: number;
             partnerSlaMinutes: number;
             version: number;
+            /** Format: date-time */
             updatedAt: string;
         };
         DshSlaRulesResponse: {
-            rules: components["schemas"]["DshSlaRule"][];
+            rules: components["schemas"]["DshSlaRule"];
         };
         DshUpsertSlaRulesRequest: {
             zoneId: string;
@@ -1784,6 +3335,7 @@ export interface components {
             zoneId: string;
             maxConcurrentOrders: number;
             warningThreshold: number;
+            /** Format: date-time */
             updatedAt: string;
         };
         DshCapacityConfigResponse: {
@@ -1804,6 +3356,7 @@ export interface components {
             id: string;
             name: string;
             permissions: string[];
+            /** Format: date-time */
             createdAt: string;
         };
         DshAdminRolesListResponse: {
@@ -1821,6 +3374,7 @@ export interface components {
             id: string;
             username: string;
             roles: string[];
+            /** Format: date-time */
             createdAt: string;
         };
         DshStaffListResponse: {
@@ -1833,8 +3387,10 @@ export interface components {
         DshPartnerActivation: {
             partnerId: string;
             status: string;
+            /** Format: date-time */
             submittedAt: string;
-            reviewedAt?: string;
+            /** Format: date-time */
+            reviewedAt?: string | null;
             reviewedBy?: string;
             rejectionReason?: string;
         };
@@ -1843,7 +3399,7 @@ export interface components {
             total: number;
         };
         DshActivatePartnerRequest: {
-            note?: string;
+            note: string;
         };
         DshBlockPartnerRequest: {
             reason: string;
@@ -1854,7 +3410,8 @@ export interface components {
             vehicleType: string;
             vehiclePlate: string;
             status: string;
-            verifiedAt?: string;
+            /** Format: date-time */
+            verifiedAt?: string | null;
         };
         DshCaptainCredentialsListResponse: {
             captains: components["schemas"]["DshCaptainCredential"][];
@@ -1872,7 +3429,8 @@ export interface components {
             action: string;
             targetId: string;
             targetType: string;
-            details: string;
+            details: Record<string, never>;
+            /** Format: date-time */
             createdAt: string;
         };
         DshAdminAuditListResponse: {
@@ -3018,6 +4576,13 @@ export interface operations {
             };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            /** @description WLT payment-session handoff is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     getDshCheckoutIntent: {
@@ -3529,6 +5094,618 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listDshFieldVisits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of visits. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshFieldVisitsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshFieldVisit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateFieldVisitRequest"];
+            };
+        };
+        responses: {
+            /** @description Visit created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshFieldVisitResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    completeDshFieldVisit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                visitId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visit marked complete. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshFieldVisitResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshVisitChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                visitId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of checks. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshReadinessChecksResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    upsertDshReadinessCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                visitId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertReadinessCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Check recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshReadinessCheckResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createDshReadinessEscalation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateEscalationRequest"];
+            };
+        };
+        responses: {
+            /** @description Escalation created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshEscalationResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshOperatorEscalations: {
+        parameters: {
+            query?: {
+                status?: "open" | "acknowledged" | "resolved" | "escalated_further";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of escalations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshEscalationsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshOperatorEscalation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                escalationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateEscalationRequest"];
+            };
+        };
+        responses: {
+            /** @description Escalation updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshEscalationResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshPartnerOnboardingStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Onboarding status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOnboardingStatusResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshMyTickets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshTicketsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateTicketRequest"];
+            };
+        };
+        responses: {
+            /** @description Ticket created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshTicketResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ticket detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshTicketResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshTicketMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMessagesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    addDshTicketMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAddMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Message added. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshOperatorTickets: {
+        parameters: {
+            query?: {
+                status?: "open" | "in_review" | "pending_user" | "resolved" | "closed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshTicketsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshOperatorTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateTicketRequest"];
+            };
+        };
+        responses: {
+            /** @description Ticket updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshTicketResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshIncidents: {
+        parameters: {
+            query?: {
+                status?: "open" | "monitoring" | "resolved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of incidents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshIncidentsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateIncidentRequest"];
+            };
+        };
+        responses: {
+            /** @description Incident created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshIncidentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateIncidentRequest"];
+            };
+        };
+        responses: {
+            /** @description Incident updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshIncidentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshPlatformKpis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Platform KPIs snapshot. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPlatformKpisResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshOrderAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order analytics breakdown. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderAnalyticsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshDeliveryAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery analytics breakdown. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDeliveryAnalyticsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshSupportAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Support analytics breakdown. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSupportAnalyticsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshStoreAnalytics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store analytics snapshot. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreAnalyticsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshPartnerPerformance: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner performance metrics for their own store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerPerformanceResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
     acceptWltPaymentCallbackEnvelope: {
         parameters: {
             query?: never;
@@ -3552,320 +5729,1655 @@ export interface operations {
         };
     };
     listDshNotifications: {
-        parameters: { query?: { limit?: number; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshNotificationsListResponse"]; }; };
+            /** @description Notifications list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshNotificationsListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     markDshNotificationRead: {
-        parameters: { query?: never; header?: never; path: { notificationId: string; }; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshNotificationResponse"]; }; };
+            /** @description Notification marked read. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshNotificationResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     markAllDshNotificationsRead: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": { markedCount: number; }; }; };
+            /** @description All notifications marked read. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        markedCount: number;
+                    };
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     updateDshNotificationPreferences: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpdateNotificationPreferenceRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateNotificationPreferenceRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshNotificationPreferenceResponse"]; }; };
+            /** @description Preference updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshNotificationPreferenceResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     listDshPlatformNotificationConfig: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshPlatformNotificationConfigListResponse"]; }; };
+            /** @description Platform notification config list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPlatformNotificationConfigListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     upsertDshPlatformNotificationConfig: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpsertPlatformNotificationConfigRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertPlatformNotificationConfigRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshPlatformNotificationConfigResponse"]; }; };
+            /** @description Config upserted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPlatformNotificationConfigResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     listDshCampaigns: {
-        parameters: { query?: { limit?: number; status?: string; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignsListResponse"]; }; };
+            /** @description Campaigns list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCampaignsListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     createDshCampaign: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshCreateCampaignRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateCampaignRequest"];
+            };
+        };
         responses: {
-            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignResponse"]; }; };
+            /** @description Campaign created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCampaignResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     getDshCampaign: {
-        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignResponse"]; }; };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updateDshCampaign: {
-        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpdateCampaignRequest"]; }; };
-        responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCampaignResponse"]; }; };
-            400: components["responses"]["InvalidRequest"];
+            /** @description Campaign detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCampaignResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     archiveDshCampaign: {
-        parameters: { query?: never; header?: never; path: { campaignId: string; }; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            204: { headers: { [name: string]: unknown; }; content?: never; };
+            /** @description Campaign archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateDshCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateCampaignRequest"];
+            };
+        };
+        responses: {
+            /** @description Campaign updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCampaignResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     listDshMarketingBanners: {
-        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingBannersListResponse"]; }; };
+            /** @description Banners list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMarketingBannersListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     createDshMarketingBanner: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshCreateMarketingBannerRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateMarketingBannerRequest"];
+            };
+        };
         responses: {
-            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingBannerResponse"]; }; };
+            /** @description Banner created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMarketingBannerResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
-    updateDshMarketingBanner: {
-        parameters: { query?: never; header?: never; path: { bannerId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpdateMarketingBannerRequest"]; }; };
+    deleteDshMarketingBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bannerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingBannerResponse"]; }; };
-            400: components["responses"]["InvalidRequest"];
+            /** @description Banner deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
-    deleteDshMarketingBanner: {
-        parameters: { query?: never; header?: never; path: { bannerId: string; }; cookie?: never; };
-        requestBody?: never;
+    updateDshMarketingBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bannerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateMarketingBannerRequest"];
+            };
+        };
         responses: {
-            204: { headers: { [name: string]: unknown; }; content?: never; };
+            /** @description Banner updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMarketingBannerResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     listDshMarketingPromos: {
-        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingPromosListResponse"]; }; };
+            /** @description Promos list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMarketingPromosListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     createDshMarketingPromo: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshCreateMarketingPromoRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateMarketingPromoRequest"];
+            };
+        };
         responses: {
-            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingPromoResponse"]; }; };
+            /** @description Promo created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMarketingPromoResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     updateDshMarketingPromo: {
-        parameters: { query?: never; header?: never; path: { promoId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpdateMarketingPromoRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                promoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateMarketingPromoRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshMarketingPromoResponse"]; }; };
+            /** @description Promo updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshMarketingPromoResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     listDshZones: {
-        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZonesListResponse"]; }; };
+            /** @description Zones list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshZonesListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     createDshZone: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshCreateZoneRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateZoneRequest"];
+            };
+        };
         responses: {
-            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZoneResponse"]; }; };
+            /** @description Zone created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshZoneResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     updateDshZone: {
-        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpdateZoneRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateZoneRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZoneResponse"]; }; };
+            /** @description Zone updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshZoneResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     getDshSlaRules: {
-        parameters: { query?: { zoneId?: string; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query: {
+                zoneId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshSlaRulesResponse"]; }; };
+            /** @description SLA rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSlaRulesResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
         };
     };
     upsertDshSlaRules: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpsertSlaRulesRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertSlaRulesRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshSlaRulesResponse"]; }; };
+            /** @description SLA rules upserted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSlaRulesResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     getDshCapacityConfig: {
-        parameters: { query?: { zoneId?: string; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query: {
+                zoneId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCapacityConfigResponse"]; }; };
+            /** @description Capacity config. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCapacityConfigResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
         };
     };
     upsertDshCapacityConfig: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpsertCapacityConfigRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertCapacityConfigRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCapacityConfigResponse"]; }; };
+            /** @description Capacity config upserted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCapacityConfigResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     getDshZoneServiceability: {
-        parameters: { query?: never; header?: never; path: { zoneId: string; }; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshZoneServiceabilityResponse"]; }; };
+            /** @description Zone serviceability state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshZoneServiceabilityResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     listDshAdminRoles: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshAdminRolesListResponse"]; }; };
+            /** @description Admin roles list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshAdminRolesListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     createDshAdminRole: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshCreateAdminRoleRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateAdminRoleRequest"];
+            };
+        };
         responses: {
-            201: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshAdminRoleResponse"]; }; };
+            /** @description Admin role created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshAdminRoleResponse"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };
     listDshAdminStaff: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshStaffListResponse"]; }; };
+            /** @description Staff list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStaffListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     assignDshStaffRole: {
-        parameters: { query?: never; header?: never; path: { staffId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshAssignStaffRoleRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staffId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAssignStaffRoleRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; }; }; };
+            /** @description Role assigned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStaffMember"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
-    listDshPartnerActivations: {
-        parameters: { query?: { status?: string; }; header?: never; path?: never; cookie?: never; };
+    listDshPartners: {
+        parameters: {
+            query?: {
+                status?: string;
+                category?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshPartnerActivationsListResponse"]; }; };
+            /** @description Partners list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createDshPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreatePartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description Partner created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartner"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDshPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartner"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    transitionDshPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPartnerTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Partner after transition. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerTransitionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description Invalid state transition. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshErrorResponse"];
+                };
+            };
+        };
+    };
+    getDshPartnerReadiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner readiness. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerReadiness"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDocumentsListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addDshPartnerDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAddPartnerDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Document added. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDocument"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    reviewDshPartnerDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshReviewPartnerDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Document after review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDocumentReviewResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerStores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner stores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerStoresListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    linkDshPartnerStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshLinkPartnerStoreRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated partner stores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerStoresListResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerAuditEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner audit events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerAuditEventsListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerFieldVisits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner field visits. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        visits: components["schemas"]["DshPartnerFieldVisit"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshPartnerActivationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner activation status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerActivationStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshPartnerSelfReadiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner readiness checklist. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerReadiness"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listFieldPartnerDrafts: {
+        parameters: {
+            query?: {
+                status?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Field partner drafts list, scoped to the calling field actor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createFieldPartnerDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreatePartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description Partner draft created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartner"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getFieldPartnerDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartner"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateFieldPartnerDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdatePartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated partner draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartner"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getFieldPartnerReadiness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner readiness. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerReadiness"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getFieldPartnerStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner's draft store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        storeId: string;
+                        store: components["schemas"]["DshFieldPartnerStoreDraft"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateFieldPartnerStore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateFieldPartnerStoreDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Store draft updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        storeId: string;
+                        store: components["schemas"]["DshFieldPartnerStoreDraft"];
+                        audit: Record<string, never>;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listFieldPartnerDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        documents: components["schemas"]["DshPartnerDocument"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    uploadFieldPartnerDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshAddPartnerDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Document uploaded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerDocument"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    uploadFieldMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    partnerId: string;
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Media uploaded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mediaRef: string;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mediaRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Media stream. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createFieldPartnerVisit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreatePartnerFieldVisitRequest"];
+            };
+        };
+        responses: {
+            /** @description Partner field visit recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerFieldVisit"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listFieldPartnerFieldVisits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner field visits. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        visits: components["schemas"]["DshPartnerFieldVisit"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    submitFieldPartnerDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Partner submitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        partner?: components["schemas"]["DshPartner"];
+                        event?: components["schemas"]["DshPartnerAuditEvent"];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Invalid transition. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshPartnerActivations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner activations list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerActivationsListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     activateDshPartner: {
-        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshActivatePartnerRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshActivatePartnerRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; status: string; }; }; };
+            /** @description Partner activated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerActivation"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     blockDshPartner: {
-        parameters: { query?: never; header?: never; path: { partnerId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshBlockPartnerRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshBlockPartnerRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; }; }; };
+            /** @description Partner blocked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerActivation"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     listDshCaptainCredentials: {
-        parameters: { query?: never; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshCaptainCredentialsListResponse"]; }; };
+            /** @description Captain credentials list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCaptainCredentialsListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
     upsertDshCaptainCredential: {
-        parameters: { query?: never; header?: never; path: { captainId: string; }; cookie?: never; };
-        requestBody: { content: { "application/json": components["schemas"]["DshUpsertCaptainCredentialRequest"]; }; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                captainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertCaptainCredentialRequest"];
+            };
+        };
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": { success: boolean; }; }; };
+            /** @description Captain credential upserted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCaptainCredential"];
+                };
+            };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
     };
     listDshAdminAudit: {
-        parameters: { query?: { actorType?: string; action?: string; limit?: number; }; header?: never; path?: never; cookie?: never; };
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            200: { headers: { [name: string]: unknown; }; content: { "application/json": components["schemas"]["DshAdminAuditListResponse"]; }; };
+            /** @description Audit log entries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshAdminAuditListResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };
