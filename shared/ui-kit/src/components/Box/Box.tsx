@@ -1,4 +1,4 @@
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles } from '../../tokens/colors';
 import React from 'react';
 import { View, I18nManager } from 'react-native';
 import { spacing } from '../../tokens/spacing';

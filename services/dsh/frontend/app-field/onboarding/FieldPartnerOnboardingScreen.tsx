@@ -6,10 +6,11 @@
 import React from 'react';
 import { Platform, Pressable, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import {
   Badge,
   Button,
-  Card,
   Text,
   Header,
   IconButton,
@@ -31,11 +32,14 @@ import {
   type FieldOnboardingController,
 } from '../../shared/field-onboarding';
 import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
+import { uploadFieldMedia } from '../../shared/media';
 import { StepBasicsProfile } from './StepBasicsProfile';
 import { StepLocationAndPhotos } from './StepLocationAndPhotos';
 import { StepDocuments } from './StepDocuments';
 import { StepAgreementReview } from './StepAgreementReview';
 import type { DocumentItem, DocumentKind } from './StepDocuments';
+
+type BranchPhotoKey = 'storefrontPhotoRef' | 'interiorPhotoRef' | 'signagePhotoRef';
 
 const DOCUMENT_KIND_TO_PARTNER_TYPE: Record<DocumentKind, DshPartnerDocumentType> = {
   commercial_registration: 'commercial_register',
@@ -66,17 +70,13 @@ const DOCUMENT_LABELS: Record<DocumentKind, string> = {
 export type FieldPartnerOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
   readonly onBack?: () => void;
-  readonly onUploadDocument?: (kind: DshPartnerDocumentType, partnerId?: string) => void;
-  readonly onEscalate?: () => void;
-  readonly onGoToProducts?: () => void;
+  readonly onOpenProducts?: (partnerId: string) => void;
 };
 
 export function FieldPartnerOnboardingScreen({
   controller: controllerProp,
   onBack,
-  onUploadDocument,
-  onEscalate,
-  onGoToProducts,
+  onOpenProducts,
 }: FieldPartnerOnboardingScreenProps = {}) {
   const identity = useIdentitySession();
   const ownController = useFieldPartnerOnboardingController();
@@ -86,7 +86,65 @@ export function FieldPartnerOnboardingScreen({
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
   const [fieldNotes, setFieldNotes] = React.useState('');
-  const [docLoading] = React.useState<Record<string, boolean>>({});
+  const [docLoading, setDocLoading] = React.useState<Record<string, boolean>>({});
+  const [photoLoading, setPhotoLoading] = React.useState<Record<string, boolean>>({});
+
+  const handlePickDocument = React.useCallback(async (kind: DocumentKind) => {
+    if (!state.partnerId) return;
+    setDocLoading((s) => ({ ...s, [kind]: true }));
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const mediaRef = await uploadFieldMedia(state.partnerId, {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? 'application/octet-stream',
+      });
+      await controller.uploadDocument(DOCUMENT_KIND_TO_PARTNER_TYPE[kind], mediaRef);
+    } finally {
+      setDocLoading((s) => ({ ...s, [kind]: false }));
+    }
+  }, [state.partnerId, controller]);
+
+  const handlePickPhoto = React.useCallback(async (key: BranchPhotoKey, source: 'camera' | 'library') => {
+    setPhotoLoading((s) => ({ ...s, [key]: true }));
+    try {
+      let picked: { uri: string; name: string; mimeType: string } | null = null;
+
+      if (source === 'camera') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) return;
+        const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+        if (!result.canceled && result.assets?.[0]) {
+          const asset = result.assets[0];
+          picked = { uri: asset.uri, name: asset.fileName ?? `${key}-${Date.now()}.jpg`, mimeType: asset.mimeType ?? 'image/jpeg' };
+        }
+      } else {
+        // "library" attaches any existing file (document or photo) from the device — not camera-only.
+        const result = await DocumentPicker.getDocumentAsync({
+          type: ['application/pdf', 'image/*'],
+          copyToCacheDirectory: true,
+        });
+        if (!result.canceled && result.assets?.[0]) {
+          const asset = result.assets[0];
+          picked = { uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream' };
+        }
+      }
+
+      if (!picked) return;
+      updateForm({ [key]: picked.uri });
+      if (state.partnerId) {
+        const mediaRef = await uploadFieldMedia(state.partnerId, picked);
+        controller.addEvidenceRef(mediaRef);
+      }
+    } finally {
+      setPhotoLoading((s) => ({ ...s, [key]: false }));
+    }
+  }, [state.partnerId, updateForm, controller]);
 
   // Derived values (safe — no hooks below this line)
   const form = state.form;
@@ -189,9 +247,9 @@ export function FieldPartnerOnboardingScreen({
           errors={validationErrors}
           readOnly={false}
           onChange={updateForm}
-          cameraLoading={docLoading}
-          isNativePickerAvailable={false}
-          onPickPhoto={() => undefined}
+          cameraLoading={photoLoading}
+          isNativePickerAvailable={true}
+          onPickPhoto={handlePickPhoto}
           locationLatitude={state.locationLatitude}
           locationLongitude={state.locationLongitude}
           onLocationChange={controller.updateLocation}
@@ -203,23 +261,32 @@ export function FieldPartnerOnboardingScreen({
         <StepDocuments
           documents={documents}
           loadingMap={docLoading}
-          onUploadDocument={(kind) => onUploadDocument?.(DOCUMENT_KIND_TO_PARTNER_TYPE[kind], state.partnerId ?? undefined)}
+          onUploadDocument={(kind) => void handlePickDocument(kind)}
         />
       );
     }
     if (groupId === 'agreement_review') {
       return (
-        <StepAgreementReview
-          form={form}
-          readOnly={false}
-          onChange={updateForm}
-          missingItems={missingItems}
-          fieldNotes={fieldNotes}
-          onFieldNotesChange={(v) => {
-            setFieldNotes(v);
-            updateVisitNotes(v);
-          }}
-        />
+        <View style={{ gap: spacing[3] }}>
+          <StepAgreementReview
+            form={form}
+            readOnly={false}
+            onChange={updateForm}
+            missingItems={missingItems}
+            fieldNotes={fieldNotes}
+            onFieldNotesChange={(v) => {
+              setFieldNotes(v);
+              updateVisitNotes(v);
+            }}
+          />
+          {onOpenProducts && state.partnerId && (
+            <Button
+              label="إضافة منتجات تجريبية للشريك"
+              tone="secondary"
+              onPress={() => onOpenProducts(state.partnerId as string)}
+            />
+          )}
+        </View>
       );
     }
     return null;
@@ -257,36 +324,6 @@ export function FieldPartnerOnboardingScreen({
         </View>
 
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-        {/* ── Products Warning Banner ── */}
-        <Card
-          style={{
-            backgroundColor: colorRoles.surfaceWarm,
-            borderWidth: 1,
-            borderColor: colorRoles.warning,
-            borderRadius: radius.md,
-            padding: spacing[3],
-          }}
-        >
-          <View style={{ gap: spacing[1], alignItems: 'flex-end' }}>
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: spacing[2] }}>
-              <Icon name="alert-circle-outline" size={20} tone="warning" />
-              <Text role="bodyStrong" style={{ color: colorRoles.warning, textAlign: 'right', fontWeight: 'bold' }}>
-                بانتظار رفع المنتجات الابتدائية
-              </Text>
-            </View>
-            <Text role="bodySm" tone="muted" style={{ textAlign: 'right', marginTop: spacing[1] }}>
-              تم استكمال البيانات الأساسية والتراخيص، ولكن المتجر لا يعتبر جاهزاً للتفعيل حتى يتم رفع المنتجات الابتدائية للكتالوج.
-            </Text>
-            <Button
-              label="رفع المنتجات الابتدائية الآن"
-              tone="primary"
-              size="sm"
-              onPress={() => onGoToProducts?.()}
-              style={{ marginTop: spacing[2], alignSelf: 'flex-start' }}
-            />
-          </View>
-        </Card>
 
         {/* ── Vertical timeline accordion ── */}
         <View style={{ gap: spacing[2] }}>
@@ -422,32 +459,13 @@ export function FieldPartnerOnboardingScreen({
           paddingBottom: spacing[3] + insets.bottom,
         }}
       >
-        {/* تصعيد عائق */}
-        <Pressable
-          onPress={() => onEscalate?.()}
-          style={{
-            flex: 1,
-            backgroundColor: colorRoles.surfaceBase,
-            borderColor: colorRoles.brandAction,
-            borderWidth: 1,
-            borderRadius: radius.md,
-            height: 48,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text role="bodyStrong" style={{ color: colorRoles.brandAction, fontWeight: 'bold' }}>
-            تصعيد عائق
-          </Text>
-        </Pressable>
-
         {/* التالي / إرسال */}
         <Button
           label={isLastGroup ? 'إرسال للمراجعة' : `التالي: ${nextLabel}`}
           tone={canSubmit && isLastGroup ? 'success' : 'primary'}
           disabled={isLastGroup ? !canSubmit : false}
           onPress={() => void goToNext()}
-          style={{ flex: 2 }}
+          style={{ flex: 1 }}
         />
       </View>
     </View>

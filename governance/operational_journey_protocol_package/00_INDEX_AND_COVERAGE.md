@@ -30,10 +30,10 @@
 | `00_INDEX_AND_COVERAGE.md` | فهرس الحزمة، مصادرها، مصفوفة تغطية v1→v3، ومصفوفة v2→v3. |
 | `01_COMMAND_INPUTS_RESULTS.md` | الغرض، قالب الإدخال، الأمر المباشر، النتائج المسموحة. |
 | `02_REMOTE_REF_SOURCE_GIT_GATES.md` | REF Gate، Human Gate، 100% Evidence، المصدر، machine-readable، القرار، المحلي. |
-| `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` | تعريف الرحلة، الطوبولوجيا، حدود الملكية، DSH/WLT، المانح. |
-| `04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md` | project_area، surfaces، control-panel sections، binding chain. |
-| `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` | backend/database/API client/SSOT/visibility/auth/risk matrices. |
-| `06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md` | topic organization، consolidation، sequence، performance، cleanup، external reference. |
+| `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` | تعريف الرحلة، الطوبولوجيا، حدود الملكية، DSH/WLT، المانح، وحدود الكيانات Partner/Store. |
+| `04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md` | project_area، entity_boundary_matrix، surfaces، surface_entity_language_matrix، control-panel sections، binding chain. |
+| `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` | backend/database/API client/SSOT/visibility/auth/risk matrices، partner_store_database_truth_matrix، store_client_visibility_gate_matrix. |
+| `06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md` | topic organization، consolidation، sequence، performance، cleanup، zero_defect_closure_matrix (تدقيق نهائي شامل ضد الأخطاء/النقص/التناقض/التبعثر/التكرار/المحتوى الميت/التسرب المعمّم)، external reference. |
 | `07_VERIFICATION_RUNTIME_CI_PR.md` | verification commands، runtime evidence، CI، PR/merge. |
 | `08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md` | implementation rules، Antigravity command، final report schema. |
 | `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | acceptance rule، quick command، closing rule. |
@@ -78,6 +78,11 @@ coverage_result:
 | `9) بروتوكول القرار المهني` | `02_REMOTE_REF_SOURCE_GIT_GATES.md` |
 | `10) مزامنة المحلي عند التنفيذ فقط` | `02_REMOTE_REF_SOURCE_GIT_GATES.md` |
 | `11) تعريف الرحلة قبل التنفيذ` | `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` |
+| `Entity Boundary Gate — Partner vs Store` | `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` |
+| `entity_boundary_matrix` | `04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md` |
+| `surface_entity_language_matrix` | `04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md` |
+| `partner_store_database_truth_matrix` | `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` |
+| `store_client_visibility_gate_matrix` | `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` |
 | `12) Canonical Repository Topology` | `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` |
 | `13) حدود الملكية السيادية` | `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` |
 | `14) قاعدة العقل الموحد Full-Stack Brain` | `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` |
@@ -191,6 +196,11 @@ coverage_result:
 | `topic_file_organization_matrix` | `PASS` |
 | `consolidation_matrix` | `PASS` |
 | `journey_sequence_matrix` | `PASS` |
+| `zero_defect_closure_matrix` | `PASS` |
+| `entity_boundary_matrix` | `PASS` |
+| `surface_entity_language_matrix` | `PASS` |
+| `partner_store_database_truth_matrix` | `PASS` |
+| `store_client_visibility_gate_matrix` | `PASS` |
 | `services/dsh/frontend/shared` | `PASS` |
 | `services/wlt/frontend/shared/dsh` | `PASS` |
 | `fetch/axios` | `PASS` |
@@ -241,3 +251,83 @@ change_control_for_protocol_package:
 ```
 
 انظر أيضًا: `10_EXECUTION_PLAN_NO_SKIP_GATE.md` قسم 35 لقاعدة التحكم بالتغيير المحدّثة، و`LEGACY_SOURCE_TRACE.md` لشروط حذف المصادر القديمة.
+
+---
+
+## 8) سجل تعديل الحزمة
+
+```yaml
+package_changelog:
+  - date: 2026-07-01
+    change: >-
+      إضافة zero_defect_closure_matrix في 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md (قسم 24.1)
+      كطبقة تدقيق نهائي موحّدة تغطي صراحةً: errors, deficiency_gaps, contradiction,
+      scattering_fragmentation, duplication, dead_content, leakage (معمّم وليس ماليًا فقط),
+      other_defective_state.
+    impacted_files:
+      - 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
+      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
+      - 00_INDEX_AND_COVERAGE.md
+    reason: سد فجوة أن بند "لا تسرب" في القبول النهائي (28) كان مقصورًا على البعد المالي فقط،
+      وتوحيد كل فئات العيوب تحت جدول تدقيق واحد إلزامي بدل توزّعها الضمني بين عدة matrices.
+    file_count_change: false
+    deleted_content: none
+  - date: 2026-07-01
+    change: >-
+      إضافة 06#24.2 (التنفيذ الإلزامي المباشر) لمنع FIX_REQUIRED معلّق: عند
+      task_mode: implementation_or_closure يجب معالجة كل فئة FAIL فعليًا في الكود الحي (بما فيها
+      الحذف المباشر RETIRE_DEAD بعد فحص 24) قبل PASS، إلا إذا تحوّلت لـ BLOCKED_NEEDS_EVIDENCE
+      بدليل حقيقي. عند analysis_only/merge_review يُمنع التنفيذ لكن يُلزم required_action +
+      required_owner + verification_command لكل فئة FAIL لمنع تحوّل التقرير إلى ضجيج بلا قرار.
+      تكرار فئة FAIL غير معالجة عبر رحلات implementation_or_closure متتالية = PROTOCOL_VIOLATION.
+    impacted_files:
+      - 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
+      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
+      - 00_INDEX_AND_COVERAGE.md
+    reason: طلب المستخدم توضيح أن معالجة كل العيوب (بما فيها الحذف المباشر) إلزامية وليست
+      مجرد توصيف/تقرير، مع الحفاظ على Human-Gated Git/GitHub Change Control (02) كما هو —
+      التنفيذ المباشر هنا هو تعديل شجرة العمل المحلية ضمن نطاق مصرّح به، لا commit/push/PR تلقائي.
+    file_count_change: false
+    deleted_content: none
+  - date: 2026-07-01
+    change: >-
+      تعزيز 06#24.2 بمنح full_execution_authority صريحة للوكيل عند task_mode: implementation_or_closure
+      داخل النطاق المعرّف في 03 (بلا تأكيد بشري لكل خطوة على حدة)، وتحديد هدف رقمي ملزم لكل عنصر:
+      صفر أخطاء/تناقض/تكرار/فجوات/ضجيج/ضعف منطقي أو تشغيلي/تشتت/فشل/عيوب. أُضيفت فئة deficiency_gaps
+      وcontradiction إلى قائمة الإجراءات الفعلية الإلزامية في zero_defect_closure_matrix، وأُضيف بند
+      PROTOCOL_VIOLATION صريح لأي تقرير تشخيص بلا تنفيذ عند implementation_or_closure، وحُظر التأجيل
+      بعبارات عامة بلا BLOCKED_NEEDS_EVIDENCE موثق. عُكس هذا في معيار القبول النهائي 09#28.
+    impacted_files:
+      - 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
+      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
+      - 00_INDEX_AND_COVERAGE.md
+    reason: طلب المستخدم صراحةً رفض أي مخرج تشخيصي فقط، ومنح الوكيل صلاحية تنفيذ فوري كامل
+      (حذف/نقل/دمج/إضافة/تعديل) بدقة 100% وصفر عيوب من جميع النواحي، مع بقاء Human-Gated Git (02)
+      كما هو لأنه يحكم Git/GitHub لا تعديل شجرة العمل نفسها.
+    file_count_change: false
+    deleted_content: none
+  - date: 2026-07-02
+    change: >-
+      إضافة Entity Boundary Gate — Partner vs Store كقاعدة دومين حاكمة: قسم 11.1 في
+      03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md (تعريف Partner كـ كيان اعتماد/هوية/وثائق/قرار مقابل
+      Store كـ كيان ظهور/كتالوج/طلبات/اكتشاف، Partner 1->N Stores)، مع توسيع topic_definition بحقل
+      entity_boundary. أُضيفت entity_boundary_matrix (17.1.1) وsurface_entity_language_matrix (17.2.1)
+      في 04، وpartner_store_database_truth_matrix (17.6.1) وstore_client_visibility_gate_matrix (17.9.1)
+      في 05 — الأخيرة تلزم listDshStores/getDshHomeDiscovery/getDshStoreById بنفس بوابات الظهور. عُكس
+      هذا في بنود القبول النهائي 09#28 والنسخة المختصرة 09#29، وفي mandatory_outputs وfailure_conditions
+      في 10#31.
+    impacted_files:
+      - 03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md
+      - 04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md
+      - 05_MATRICES_BACKEND_DATABASE_API_SECURITY.md
+      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
+      - 10_EXECUTION_PLAN_NO_SKIP_GATE.md
+      - 00_INDEX_AND_COVERAGE.md
+    reason: البروتوكول كان يضبط الطوبولوجيا والملكية العامة (shared brain، UI-only surfaces) لكن
+      لم يعرّف صراحة الفرق بين الشريك (Partner) والمتجر (Store)، مما يسمح بلبس دومين حقيقي
+      (مثال: عرض Store للعميل قبل اكتمال Partner approval، أو self-activation من app-partner).
+      تم التعديل داخل الملفات الست الموجودة دون إضافة ملف جديد، حسب طلب المستخدم واتساقًا مع
+      قاعدة عدم زيادة عدد ملفات الحزمة في 00#7 و10#35.
+    file_count_change: false
+    deleted_content: none
+```

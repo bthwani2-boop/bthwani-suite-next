@@ -5,16 +5,15 @@ import { FieldPartnerOnboardingScreen } from './onboarding/FieldPartnerOnboardin
 import { DshFieldVisitScreen } from './escalation/DshFieldVisitScreen';
 import { DshFieldReadinessChecklistScreen } from './escalation/DshFieldReadinessChecklistScreen';
 import { DshFieldEscalationScreen } from './escalation/DshFieldEscalationScreen';
-import { DshFieldStoresScreen } from './stores/DshFieldStoresScreen';
+import { DshFieldPartnersScreen } from './stores/DshFieldPartnersScreen';
 import { FieldStoreVerificationScreen } from './stores/FieldStoreVerificationScreen';
+import { DshFieldPartnerProgressScreen } from './stores/DshFieldPartnerProgressScreen';
 import { DshFieldProfileHomeScreen } from './account/DshFieldProfileHomeScreen';
 import { DshFieldProfileScreen } from './account/DshFieldProfileScreen';
 import { DshFieldStoresHistoryScreen } from './stores/DshFieldStoresHistoryScreen';
 import { DshFieldFinanceScreen } from './finance/DshFieldFinanceScreen';
-import { DshFieldDocumentUploadScreen } from './onboarding/DshFieldDocumentUploadScreen';
-import { DshFieldStoreProductsUploadScreen } from './stores/DshFieldStoreProductsUploadScreen';
+import { DshFieldPartnerProductsScreen } from './stores/DshFieldPartnerProductsScreen';
 import type { useDshFieldSurfaceModel } from './field.surface-model';
-import type { DshPartnerDocumentType } from '../shared/partner';
 import type { FieldOnboardingController } from '../shared/field-onboarding';
 
 type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
@@ -33,25 +32,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
       <FieldPartnerOnboardingScreen
         controller={onboardingController}
         onBack={actions.popRoute}
-        onUploadDocument={(kind: DshPartnerDocumentType) =>
-          actions.pushRoute({
-            kind: 'document-upload',
-            storeId: onboardingController.state.partnerId ?? 'onboarding-draft',
-            docKind: kind,
-          })
-        }
-        onEscalate={() =>
-          actions.pushRoute({
-            kind: 'escalation',
-            storeId: onboardingController.state.partnerId ?? 'onboarding-draft',
-          })
-        }
-        onGoToProducts={() =>
-          actions.pushRoute({
-            kind: 'products-upload',
-            storeId: onboardingController.state.partnerId ?? 'onboarding-draft',
-          })
-        }
+        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
     );
   }
@@ -73,6 +54,16 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
   }
   if (route.kind === 'verification') {
     return <FieldStoreVerificationScreen />;
+  }
+
+  if (route.kind === 'partner-progress') {
+    return (
+      <DshFieldPartnerProgressScreen
+        partnerId={route.partnerId}
+        onBack={actions.popRoute}
+        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
+      />
+    );
   }
 
   if (route.kind === 'checklist') {
@@ -109,21 +100,10 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
     return <DshFieldFinanceScreen onBack={actions.popRoute} />;
   }
 
-  if (route.kind === 'document-upload') {
-    return (
-      <DshFieldDocumentUploadScreen
-        controller={onboardingController}
-        partnerId={route.storeId}
-        onBack={actions.popRoute}
-        {...(route.docKind ? { docKind: route.docKind } : {})}
-      />
-    );
-  }
-
   if (route.kind === 'products-upload') {
     return (
-      <DshFieldStoreProductsUploadScreen
-        storeId={route.storeId}
+      <DshFieldPartnerProductsScreen
+        partnerId={route.partnerId}
         onBack={actions.popRoute}
       />
     );
@@ -139,10 +119,16 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
   }
 
   return (
-    <DshFieldStoresScreen
-      onOpenStore={(storeId) => actions.pushRoute({ kind: 'verification', storeId })}
+    <DshFieldPartnersScreen
+      onOpenPartner={(partnerId, activationStatus) =>
+        actions.pushRoute(
+          activationStatus === 'draft'
+            ? { kind: 'onboarding', partnerId }
+            : { kind: 'partner-progress', partnerId }
+        )
+      }
       onOpenAccount={() => actions.pushRoute({ kind: 'account' })}
-      onCreateStore={() => actions.pushRoute({ kind: 'onboarding' })}
+      onCreatePartner={() => actions.pushRoute({ kind: 'onboarding' })}
     />
   );
 }

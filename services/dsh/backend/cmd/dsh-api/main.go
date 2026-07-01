@@ -14,6 +14,7 @@ import (
 
 	"dsh-api/internal/auth"
 	dshHttp "dsh-api/internal/http"
+	"dsh-api/internal/media"
 	"dsh-api/internal/wlt"
 )
 
@@ -47,7 +48,9 @@ func main() {
 	}
 	log.Println("[dsh-api] database connected successfully")
 
-	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wlt.NewClient(wltBaseURL))
+	mediaClient := newMediaClientOrNil()
+
+	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wlt.NewClient(wltBaseURL), mediaClient)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	server := &http.Server{
@@ -83,4 +86,30 @@ func main() {
 	}
 
 	log.Println("[dsh-api] shutdown complete")
+}
+
+// newMediaClientOrNil connects to MinIO if DSH_MINIO_ENDPOINT is configured.
+// A missing or unreachable media store disables upload/download routes
+// (they respond 503) instead of preventing dsh-api from starting.
+func newMediaClientOrNil() *media.Client {
+	endpoint := os.Getenv("DSH_MINIO_ENDPOINT")
+	if endpoint == "" {
+		log.Println("[dsh-api] DSH_MINIO_ENDPOINT not set, media upload routes disabled")
+		return nil
+	}
+	accessKey := os.Getenv("DSH_MINIO_ACCESS_KEY")
+	secretKey := os.Getenv("DSH_MINIO_SECRET_KEY")
+	bucket := os.Getenv("DSH_MINIO_BUCKET")
+	useSSL := os.Getenv("DSH_MINIO_USE_SSL") == "true"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := media.NewClient(ctx, endpoint, accessKey, secretKey, bucket, useSSL)
+	if err != nil {
+		log.Printf("[dsh-api] media store unavailable, upload routes disabled: %v", err)
+		return nil
+	}
+	log.Println("[dsh-api] media store connected")
+	return client
 }

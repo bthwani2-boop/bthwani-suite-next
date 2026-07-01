@@ -2874,7 +2874,158 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/field/partners/{partnerId}/readiness:
+    get:
+      operationId: getFieldPartnerReadiness
+      summary: Field agent reads the activation readiness of a partner draft it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner readiness.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/partners/{partnerId}/store:
+    get:
+      operationId: getFieldPartnerStore
+      summary: Field agent reads the draft store auto-created with a partner it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner's draft store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [storeId]
+                properties:
+                  storeId: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/partners/{partnerId}/products:
+    get:
+      operationId: listFieldPartnerProducts
+      summary: Field agent lists trial products entered for a partner's draft store.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Draft store products.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [products]
+                properties:
+                  products:
+                    type: array
+                    items: { type: object }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createFieldPartnerProduct
+      summary: Field agent adds a trial product (name + descriptive price) to a partner's draft store.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCatalogProductInput" }
+      responses:
+        "201":
+          description: Product created.
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/{partnerId}/products/{productId}:
+    patch:
+      operationId: updateFieldPartnerProduct
+      summary: Field agent updates a trial product's name/price for a partner's draft store.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCatalogProductInput" }
+      responses:
+        "200":
+          description: Product updated.
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /dsh/field/partners/{partnerId}/documents:
+    get:
+      operationId: listFieldPartnerDocuments
+      summary: Field agent lists documents uploaded for a partner draft it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documents]
+                properties:
+                  documents:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerDocument" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: uploadFieldPartnerDocument
       summary: Field agent uploads a document for partner onboarding.
@@ -2898,6 +3049,58 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshPartnerDocument" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/media/uploads:
+    post:
+      operationId: uploadFieldMedia
+      summary: Field agent uploads a binary document/photo, receiving a mediaRef to attach via uploadFieldPartnerDocument.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [partnerId, file]
+              properties:
+                partnerId: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Media uploaded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mediaRef]
+                properties:
+                  mediaRef: { type: string }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/media/{mediaRef}:
+    get:
+      operationId: getMedia
+      summary: Stream back a previously uploaded document/photo for review.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mediaRef
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Media stream.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2926,6 +3129,33 @@ paths:
               schema: { $ref: "#/components/schemas/DshPartnerFieldVisit" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/field/partners/{partnerId}/field-visits:
+    get:
+      operationId: listFieldPartnerFieldVisits
+      summary: Field agent lists field visits recorded for a partner draft it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner field visits.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [visits]
+                properties:
+                  visits:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerFieldVisit" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /dsh/field/partners/{partnerId}/submit:
     post:

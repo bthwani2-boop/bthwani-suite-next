@@ -1,4 +1,4 @@
-// app-field — DshFieldStoresScreen
+// app-field — DshFieldPartnersScreen
 // نسخة طبق الأصل من مانح dsh-suite — شاشة ملفات الانضمام الميدانية
 import React from 'react';
 import { ScrollView, View, Pressable, StatusBar, Platform } from 'react-native';
@@ -14,12 +14,12 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
-import { FieldStoreCard } from './FieldStoreCard';
+import { FieldPartnerCard } from './FieldPartnerCard';
 
-type DshFieldStoresScreenProps = {
-  readonly onOpenStore: (storeId: string) => void;
+type DshFieldPartnersScreenProps = {
+  readonly onOpenPartner: (partnerId: string, activationStatus: string) => void;
   readonly onOpenAccount: () => void;
-  readonly onCreateStore: () => void;
+  readonly onCreatePartner: () => void;
 };
 
 type FilterOptionId = 'all' | 'today' | 'ready' | 'follow-up' | 'pending';
@@ -110,7 +110,7 @@ function FieldTopBar({
 }
 
 // ─── Priority "Next Store" card (donor: المتجر التالي في جولتك) ─────────────
-function NextStoreCard({
+function NextPartnerCard({
   displayName,
   subtitle,
   onPress,
@@ -209,18 +209,21 @@ function FilterPills({
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export function DshFieldStoresScreen({
-  onOpenStore,
+export function DshFieldPartnersScreen({
+  onOpenPartner,
   onOpenAccount,
-  onCreateStore,
-}: DshFieldStoresScreenProps) {
+  onCreatePartner,
+}: DshFieldPartnersScreenProps) {
   const controller = useFieldPartnerDraftsController();
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showSearch, setShowSearch] = React.useState(false);
   const [activeFilter, setActiveFilter] = React.useState<FilterOptionId>('all');
 
-  const partnersList = controller.listState.kind === 'success' ? controller.listState.partners : [];
+  // Once a partner is visible to clients, its onboarding job is done — it
+  // disappears from the field agent's active list immediately.
+  const partnersList = (controller.listState.kind === 'success' ? controller.listState.partners : [])
+    .filter((partner) => partner.activationStatus !== 'client_visible');
 
   const filteredPartners = React.useMemo(() => {
     return partnersList.filter((partner) => {
@@ -308,10 +311,10 @@ export function DshFieldStoresScreen({
         {/* Priority store card */}
         {priorityPartner && (
           <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[4] }}>
-            <NextStoreCard
+            <NextPartnerCard
               displayName={priorityPartner.displayName || 'ملف انضمام جديد'}
               subtitle={`${priorityPartner.category} · ${priorityPartner.primaryPhone}`}
-              onPress={() => onOpenStore(priorityPartner.id)}
+              onPress={() => onOpenPartner(priorityPartner.id, priorityPartner.activationStatus)}
             />
           </View>
         )}
@@ -340,7 +343,7 @@ export function DshFieldStoresScreen({
           }}
         >
           <Text style={{ fontWeight: 'bold', fontSize: 16 }}>ملفات الانضمام</Text>
-          <Button label="ملف جديد" tone="primary" size="sm" onPress={onCreateStore} />
+          <Button label="ملف جديد" tone="primary" size="sm" onPress={onCreatePartner} />
         </View>
 
         {/* Search */}
@@ -359,10 +362,10 @@ export function DshFieldStoresScreen({
         <View style={{ paddingHorizontal: spacing[4] }}>
           {filteredPartners.length > 0 ? (
             filteredPartners.map((partner) => (
-              <FieldStoreCard
+              <FieldPartnerCard
                 key={partner.id}
                 partner={partner}
-                onPress={() => onOpenStore(partner.id)}
+                onPress={() => onOpenPartner(partner.id, partner.activationStatus)}
               />
             ))
           ) : (

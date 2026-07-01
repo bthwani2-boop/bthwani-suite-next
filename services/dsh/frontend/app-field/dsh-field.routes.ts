@@ -2,11 +2,12 @@
 // Configuration for routing, screen registry, and types.
 // No JSX. No ui-kit.
 
-import type { DshPartnerSummary, DshPartnerDocumentType } from '../shared/partner';
+import type { DshPartnerSummary } from '../shared/partner';
 
 export type DshFieldRoute =
   | 'stores'
   | 'onboarding'
+  | 'partner-progress'
   | 'visit'
   | 'verification'
   | 'checklist'
@@ -15,12 +16,12 @@ export type DshFieldRoute =
   | 'history'
   | 'finance'
   | 'escalation'
-  | 'document-upload'
   | 'products-upload';
 
 export type DshFieldRouteState =
   | { kind: 'stores' }
   | { kind: 'onboarding'; partnerId?: string }
+  | { kind: 'partner-progress'; partnerId: string }
   | { kind: 'visit'; storeId: string }
   | { kind: 'verification'; storeId: string }
   | { kind: 'checklist'; visitId: string; storeId: string }
@@ -29,8 +30,7 @@ export type DshFieldRouteState =
   | { kind: 'history' }
   | { kind: 'finance' }
   | { kind: 'escalation'; storeId: string; visitId?: string }
-  | { kind: 'document-upload'; storeId: string; docKind?: DshPartnerDocumentType }
-  | { kind: 'products-upload'; storeId: string };
+  | { kind: 'products-upload'; partnerId: string };
 
 export type DshFieldNavigationCommand = {
   token: number;

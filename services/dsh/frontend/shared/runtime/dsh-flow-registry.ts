@@ -964,7 +964,7 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
     actor: 'field',
     domain: 'field-operations',
     routeHint: '/app-field/stores',
-    screenOwner: 'DshFieldStoresScreen.tsx + DshFieldStoreOnboardingScreen.tsx',
+    screenOwner: 'DshFieldPartnersScreen.tsx + DshFieldStoreOnboardingScreen.tsx',
     primaryAction: 'Open a candidate store and submit onboarding readiness.',
     requiredStates: ['loading', 'empty', 'error', 'success', 'offline', 'disabled'],
     evidenceStatus: 'needs-visual-evidence',

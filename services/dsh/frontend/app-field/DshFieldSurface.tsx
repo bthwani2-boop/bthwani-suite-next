@@ -134,8 +134,8 @@ function FieldBottomNavBar({
 // ─── Surface ─────────────────────────────────────────────────────────────────
 export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) {
   const fieldSurface = useDshFieldSurfaceModel(command);
-  // Owned here (not inside a route screen) so the draft survives navigation
-  // to sibling routes like document-upload and back.
+  // Owned here (not inside a route screen) so the draft survives across
+  // wizard groups and re-entry into the onboarding screen.
   const onboardingController = useFieldPartnerOnboardingController();
 
   const identity = useIdentitySession();

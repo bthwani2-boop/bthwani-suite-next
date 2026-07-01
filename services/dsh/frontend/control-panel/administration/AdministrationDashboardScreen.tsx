@@ -30,7 +30,6 @@ import {
   type AdminMainTabId,
 } from "../../shared/administration";
 import {
-  usePartnerActivationController,
   useCaptainCredentialController,
   useAdminAuditController,
 } from "../../shared/administration";
@@ -46,20 +45,6 @@ import {
   type DshRolePermissionEntry,
 } from "../../shared/identity-access/dsh-role-permission.model";
 import { opsTheme } from "../../shared/operations";
-
-const ACTIVATION_BADGE: Record<string, string> = {
-  submitted: opsTheme.warning,
-  ops_approved: opsTheme.success,
-  partner_active: opsTheme.success,
-  blocked: opsTheme.danger,
-};
-
-const ACTIVATION_LABELS: Record<string, string> = {
-  submitted: "Ã™â€¦Ã™ÂÃ™â€šÃ™Å½Ã˜Â¯Ã™â€˜Ã™Å½Ã™â€¦",
-  ops_approved: "Ã™â€¦Ã™Ë†Ã˜Â§Ã™ÂÃ™â€šÃ˜Â© Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€¦Ã™â€žÃ™Å Ã˜Â§Ã˜Âª",
-  partner_active: "Ã™â€ Ã˜Â´Ã˜Â·",
-  blocked: "Ã™â€¦Ã˜Â­Ã˜Â¸Ã™Ë†Ã˜Â±",
-};
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Tab button (underline style) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
@@ -121,8 +106,6 @@ export function AdministrationDashboardScreen() {
   const [mainTab, setMainTab] = useState<AdminMainTabId>("overview");
 
   // Sub-controllers for real operational data
-  const { state: partnerState, reload: reloadPartners, activate: activatePartner, block: blockPartner } =
-    usePartnerActivationController(identity.state.kind);
   const { state: captainState } = useCaptainCredentialController(identity.state.kind);
   const { state: auditState } = useAdminAuditController(identity.state.kind);
 
@@ -357,74 +340,6 @@ export function AdministrationDashboardScreen() {
           </div>
         </div>
 
-        {/* Real Partner Activations table from controller */}
-        <div style={{ background: opsTheme.surface, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜ÂªÃ™ÂÃ˜Â¹Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â´Ã˜Â±Ã™Æ’Ã˜Â§Ã˜Â¡ Ã™â€šÃ™Å Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â§Ã™â€ Ã˜ÂªÃ˜Â¸Ã˜Â§Ã˜Â± (Real Data)</h3>
-          {partnerState.kind === "loading" && <CpStatePanel role="status" title="Ã˜Â¬Ã˜Â§Ã˜Â±Ã™Â Ã˜ÂªÃ˜Â­Ã™â€¦Ã™Å Ã™â€ž Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜ÂªÃ™ÂÃ˜Â¹Ã™Å Ã™â€žÃ¢â‚¬Â¦" />}
-          {partnerState.kind === "error" && (
-            <CpStatePanel role="alert" title="Ã˜ÂªÃ˜Â¹Ã˜Â°Ã˜Â± Ã˜ÂªÃ˜Â­Ã™â€¦Ã™Å Ã™â€ž Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â´Ã˜Â±Ã™Æ’Ã˜Â§Ã˜Â¡" description={partnerState.message}>
-              <CpButton onClick={reloadPartners}>Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â­Ã˜Â§Ã™Ë†Ã™â€žÃ˜Â©</CpButton>
-            </CpStatePanel>
-          )}
-          {partnerState.kind === "success" && (
-            <CpTable aria-label="Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜ÂªÃ™ÂÃ˜Â¹Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â´Ã˜Â±Ã™Æ’Ã˜Â§Ã˜Â¡">
-              <thead>
-                <tr>
-                  <CpTableHeaderCell>Ã™â€¦Ã˜Â¹Ã˜Â±Ã™â€˜Ã™Â Ã˜Â§Ã™â€žÃ˜Â´Ã˜Â±Ã™Å Ã™Æ’</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â­Ã˜Â§Ã™â€žÃ˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã™â€žÃ™Â</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody>
-                {partnerState.data.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>Ã™â€žÃ˜Â§ Ã˜ÂªÃ™Ë†Ã˜Â¬Ã˜Â¯ Ã˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜ÂªÃ™ÂÃ˜Â¹Ã™Å Ã™â€ž Ã™â€¦Ã˜Â¹Ã™â€žÃ™â€˜Ã™â€šÃ˜Â© Ã˜Â­Ã˜Â§Ã™â€žÃ™Å Ã˜Â§Ã™â€¹.</td>
-                  </tr>
-                ) : (
-                  partnerState.data.map((p) => (
-                    <tr key={p.partnerId}>
-                      <CpTableCell><strong>{p.partnerId}</strong></CpTableCell>
-                      <CpTableCell>
-                        <span style={{
-                          display: "inline-block",
-                          padding: "0.15rem 0.5rem",
-                          borderRadius: "999px",
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          background: `${ACTIVATION_BADGE[p.status] ?? colorRoles.brandStructure}20`,
-                          color: ACTIVATION_BADGE[p.status] ?? colorRoles.brandStructure,
-                          border: `1px solid ${ACTIVATION_BADGE[p.status] ?? colorRoles.brandStructure}40`,
-                        }}>
-                          {ACTIVATION_LABELS[p.status] ?? p.status}
-                        </span>
-                      </CpTableCell>
-                      <CpTableCell>{p.reviewedBy || "Ã¢â‚¬â€"}</CpTableCell>
-                      <CpTableCell>
-                        {p.status === "submitted" && (
-                          <div style={{ display: "flex", gap: "0.35rem" }}>
-                            <CpButton
-                              style={{ background: opsTheme.successSurface, color: "var(--status-success-strong, colorRoles.brandStructure)", fontSize: "0.75rem", padding: "0.2rem 0.5rem", border: `1px solid var(--status-success-border, colorRoles.surfaceBase)`, borderRadius: "0.375rem" }}
-                              onClick={() => void activatePartner(p.partnerId, "Ã˜ÂªÃ™â€¦ Ã˜Â§Ã™â€žÃ˜ÂªÃ™ÂÃ˜Â¹Ã™Å Ã™â€ž Ã™â€¦Ã™â€  Ã™â€žÃ™Ë†Ã˜Â­Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¯Ã˜Â§Ã˜Â±Ã˜Â©")}
-                            >
-                              Ã˜ÂªÃ™â€ Ã˜Â´Ã™Å Ã˜Â·
-                            </CpButton>
-                            <CpButton
-                              style={{ background: opsTheme.dangerSurface, color: "var(--status-danger-strong, colorRoles.brandAction)", fontSize: "0.75rem", padding: "0.2rem 0.5rem", border: `1px solid var(--status-danger-border, colorRoles.surfaceBase)`, borderRadius: "0.375rem" }}
-                              onClick={() => void blockPartner(p.partnerId, "Ã˜ÂªÃ™â€¦ Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â¸Ã˜Â± Ã™â€¦Ã™â€  Ã™â€žÃ™Ë†Ã˜Â­Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¯Ã˜Â§Ã˜Â±Ã˜Â©")}
-                            >
-                              Ã˜Â­Ã˜Â¸Ã˜Â±
-                            </CpButton>
-                          </div>
-                        )}
-                      </CpTableCell>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </CpTable>
-          )}
-        </div>
       </div>
     );
   };

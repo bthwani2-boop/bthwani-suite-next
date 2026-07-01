@@ -28,11 +28,10 @@ export type FieldPartnerDraftForm = {
   interiorPhotoRef: string;
   signagePhotoRef: string;
 
-  // ── Offer / Agreement (Step 4) ────────────────────────────────
-  preliminaryOffer: string;
+  // ── Operational agreement (Step 4) — non-financial only.
+  // Commission/financial terms are owned by WLT and are never captured here.
   operatingHours: string;
   deliveryReadiness: string;
-  financeNote: string;
 };
 
 export type FieldPartnerDraftStep =
@@ -66,6 +65,7 @@ export const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string>
 
 export type FieldOnboardingDraftState = {
   partnerId: string | null;
+  partnerVersion: number | null;
   step: FieldPartnerDraftStep;
   form: Partial<FieldPartnerDraftForm>;
   visitNotes: string;
@@ -83,6 +83,7 @@ export type FieldOnboardingDraftState = {
 export function initialDraftState(): FieldOnboardingDraftState {
   return {
     partnerId: null,
+    partnerVersion: null,
     step: "identity",
     form: {
       legalIdentityType: "commercial_register",
@@ -144,10 +145,8 @@ export function getAgreementReviewMissingCount(
   uploadedDocumentTypes: DshPartnerDocumentType[]
 ): number {
   let count = 0;
-  if (!form.preliminaryOffer?.trim()) count++;
   if (!form.operatingHours?.trim()) count++;
   if (!form.deliveryReadiness?.trim()) count++;
-  if (!form.financeNote?.trim()) count++;
   // + basics missing forwarded
   count += getBasicsProfileMissingCount(form);
   count += getLocationMediaMissingCount(form);
@@ -175,7 +174,6 @@ export function getFieldRequiredMissingItems(
   if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.storefrontPhotoRef?.trim()) missing.push("صورة الواجهة");
-  if (!form.preliminaryOffer?.trim()) missing.push("العرض أو الاتفاق المبدئي");
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
   for (const type of REQUIRED_DOCUMENT_TYPES) {
     if (!uploadedDocumentTypes.includes(type)) missing.push(DOCUMENT_TYPE_MISSING_LABELS[type]);

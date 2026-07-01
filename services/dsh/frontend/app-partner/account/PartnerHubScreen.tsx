@@ -69,6 +69,8 @@ import {
   type DshPartnerLifecycleStage,
 } from '../../shared/partner/partner.journey';
 import { getDshPartnerActivationStatusLabel } from '../../shared/partner/partner-activation.model';
+import { usePartnerSelfController } from '../../shared/partner/use-partner-self-controller';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
 import { InventoryCatalogScreen } from '../Catalog/InventoryCatalogScreen';
 import { PromotionsScreen } from './PromotionsScreen';
@@ -1618,6 +1620,11 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const activeCanonicalStore = React.useMemo((): DshCanonicalStoreCard | undefined => {
     return undefined;
   }, []);
+  const identity = useIdentitySession();
+  const { statusState: selfStatusState } = usePartnerSelfController(identity.state.kind);
+  const resolvedActivationStatus = selfStatusState.kind === 'success'
+    ? selfStatusState.partner.activationStatus
+    : mapPublishStageToPartnerActivationStatus(activeCanonicalStore?.publishStage);
   const _storeMediaId = activeCanonicalStore?.id ?? canonicalStoreId;
   const resolvedActiveZoneLabel = activeCanonicalStore?.zoneLabel ?? activeZoneLabel;
 
@@ -1640,13 +1647,13 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const storeVisibility = React.useMemo(() => {
     return resolveDshStoreClientVisibility({
       publishStage: activeCanonicalStore?.publishStage,
-      activationStatus: mapPublishStageToPartnerActivationStatus(activeCanonicalStore?.publishStage),
+      activationStatus: resolvedActivationStatus,
       catalogPublished: listingEnabled,
       deliveryModesReady: serviceModes.some((mode) => mode.enabled),
       serviceabilityAvailable: true,
       storeOpen: isAvailable,
     });
-  }, [listingEnabled, activeCanonicalStore?.publishStage, serviceModes, isAvailable]);
+  }, [listingEnabled, activeCanonicalStore?.publishStage, resolvedActivationStatus, serviceModes, isAvailable]);
 
   const visibilityLabel = listingEnabled ? 'مفعّل' : 'موقوف';
 
@@ -1723,7 +1730,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             deliveryReadinessLabel={activeCanonicalStore?.deliveryReadinessLabel}
             coverageSummary={activeCanonicalStore?.coverageSummary}
             publishStage={activeCanonicalStore?.publishStage}
-            activationStatus={mapPublishStageToPartnerActivationStatus(activeCanonicalStore?.publishStage)}
+            activationStatus={resolvedActivationStatus}
             serviceModes={serviceModes}
             onOpenStoreScope={onOpenStoreScope}
           />
