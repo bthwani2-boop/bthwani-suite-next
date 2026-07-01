@@ -483,7 +483,7 @@ control_panel_section_code_matrix:
 أي قسم مصنف NOT_APPLICABLE بلا سبب = FIX_REQUIRED.  
 أي قسم Control Panel مصنف PRIMARY أو SECONDARY أو READ_ONLY يجب أن يذكر related_routes وowned_decisions أو read_only_data وallowed_actions وforbidden_actions وstate_cases_used. أي قسم بلا هذه التفاصيل = FIX_REQUIRED.  
 القسم PRIMARY هو مالك القرار داخل لوحة التحكم، ولا يجوز لقسم آخر تنفيذ قراره إلا إذا كان مصرحًا له في shared policy.  
-ممنوع استخدام screenshot أو manual navigation كشرط إلزامي داخل هذا البروتوكول.
+التحقق كودي بالكامل (Code-Based Check) دون أي متطلبات مرئية أو يدوية.
 
 الإثبات المعتمد هنا Code-Based فقط، ويجب أن يثبت من:
 - imports/exports
@@ -871,7 +871,7 @@ BLOCKED_NEEDS_EVIDENCE
 
 ## 11.1) الأداء، السرعة، التسمية، حجم الملفات، وتنظيم Topic folders
 
-يجب فحص الأداء والتنظيم كجزء من أي رحلة تشغيلية، Code-Based فقط، دون الاعتماد على screenshots أو manual navigation.
+يجب فحص الأداء والتنظيم كجزء من أي رحلة تشغيلية بنمط كودي (Code-Based Check) بالكامل.
 
 ### Performance & Speed Code Checks
 
@@ -1376,7 +1376,7 @@ manifest/status updates إن وجدت
 ```text
 README/status يخالف guard/test/runtime evidence = FIX_REQUIRED
 CI غير متاح = CI_NOT_CONFIGURED وليس PASS
-الإثبات البصري أو اليدوي ليس شرطًا في هذا البروتوكول؛ القبول يعتمد على الأدلة الكودية والفحوصات.
+القبول يعتمد بالكامل على الأدلة الكودية والفحوصات (Code-Based Check).
 غياب typecheck/test/build المناسب = FIX_REQUIRED
 غياب دليل backend/database عند دخولها في النطاق = FIX_REQUIRED
 وجود منطق داخل surface بدل shared = FIX_REQUIRED
