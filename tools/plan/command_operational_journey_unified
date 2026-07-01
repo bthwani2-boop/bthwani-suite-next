@@ -167,6 +167,9 @@ REASON: local working tree غير نظيف أو غير مفهوم
 قبل أي تعديل، اكتب تعريفًا تنفيذيًا للرحلة يحتوي:
 
 ```yaml
+resolved_ref:
+resolved_commit_sha:
+remote_head_verified_at:
 purpose:
 in_scope:
 out_of_scope:
@@ -195,6 +198,10 @@ guards_required:
 evidence_required:
 ```
 
+أي سطح أو قسم أو طبقة مستبعدة يجب أن تُذكر صراحة في OUT_OF_SCOPE مع سبب الاستبعاد ودليل عدم التأثر. الاستبعاد الصامت = FIX_REQUIRED.
+
+لا يكفي أن يفتح السطح شاشة أو يعرض بطاقة. كل سطح مصنف REQUIRED يجب أن يثبت دوره التشغيلي الكامل داخل الرحلة، بما يشمل الحالة، الإجراء، القيود، الأخطاء، والرجوع إلى shared controller. أي سطح مطلوب لكنه مجرد عرض سطحي = FIX_REQUIRED.
+
 لا تقبل تعريفًا عامًا مثل:
 
 ```text
@@ -205,6 +212,235 @@ frontend
 ```
 
 يجب تحديد القسم والسطح والدور والملكية بدقة.
+
+## 5.1) مصفوفة إلزامية لمنع تجاهل الأسطح والأقسام
+
+قبل أي تنفيذ أو مراجعة، يجب إنشاء مصفوفتين إلزاميتين:
+
+### surface_code_coverage_matrix
+
+يجب ذكر كل سطح من الأسطح التالية صراحة، حتى لو كان غير داخل النطاق:
+
+- app-client
+- app-partner
+- app-field
+- app-captain
+- control-panel
+
+لكل سطح يجب تحديد:
+
+```yaml
+surface_code_coverage_matrix:
+  app-client:
+    role: REQUIRED | READ_ONLY | FORBIDDEN | NOT_APPLICABLE
+    reason:
+    surface_path:
+    entry_file:
+    imports_shared_brain: PASS | FAIL
+    uses_shared_controller_or_view_model: PASS | FAIL
+    has_direct_api_call: PASS | FAIL
+    has_local_business_logic: PASS | FAIL
+    has_local_state_machine: PASS | FAIL
+    has_local_permission_logic: PASS | FAIL
+    has_duplicated_domain_types: PASS | FAIL
+    verification_command:
+
+  app-partner:
+    role:
+    reason:
+    surface_path:
+    entry_file:
+    imports_shared_brain:
+    uses_shared_controller_or_view_model:
+    has_direct_api_call:
+    has_local_business_logic:
+    has_local_state_machine:
+    has_local_permission_logic:
+    has_duplicated_domain_types:
+    verification_command:
+
+  app-field:
+    role:
+    reason:
+    surface_path:
+    entry_file:
+    imports_shared_brain:
+    uses_shared_controller_or_view_model:
+    has_direct_api_call:
+    has_local_business_logic:
+    has_local_state_machine:
+    has_local_permission_logic:
+    has_duplicated_domain_types:
+    verification_command:
+
+  app-captain:
+    role:
+    reason:
+    surface_path:
+    entry_file:
+    imports_shared_brain:
+    uses_shared_controller_or_view_model:
+    has_direct_api_call:
+    has_local_business_logic:
+    has_local_state_machine:
+    has_local_permission_logic:
+    has_duplicated_domain_types:
+    verification_command:
+
+  control-panel:
+    role:
+    reason:
+    surface_path:
+    entry_file:
+    imports_shared_brain:
+    uses_shared_controller_or_view_model:
+    has_direct_api_call:
+    has_local_business_logic:
+    has_local_state_machine:
+    has_local_permission_logic:
+    has_duplicated_domain_types:
+    verification_command:
+```
+
+ممنوع حذف أي سطح من المصفوفة.  
+أي سطح غير مذكور = FIX_REQUIRED.  
+أي سطح مستبعد دون سبب ودليل عدم التأثر = FIX_REQUIRED.  
+أي سطح REQUIRED بلا verification_command أو لا يستورد shared brain أو لا يستخدم controller/view-model المعتمد = FIX_REQUIRED.  
+أي surface يحتوي business logic أو direct API أو local state machine أو local permission logic = FIX_REQUIRED.
+
+### control_panel_section_code_matrix
+
+يجب ذكر كل قسم من أقسام لوحة التحكم التالية صراحة، حتى لو كان غير داخل النطاق:
+
+- partners
+- catalog
+- operations
+- support
+- marketing
+- platform
+- finance_or_wlt
+- administration
+
+لكل قسم يجب تحديد:
+
+```yaml
+control_panel_section_code_matrix:
+  partners:
+    role: PRIMARY | SECONDARY | READ_ONLY | FORBIDDEN | NOT_APPLICABLE
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared: PASS | FAIL
+    forbidden_actions_enforced: PASS | FAIL
+    has_local_business_logic: PASS | FAIL
+    has_direct_api_call: PASS | FAIL
+    verification_command:
+
+  catalog:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+
+  operations:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+
+  support:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+
+  marketing:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+
+  platform:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+
+  finance_or_wlt:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+
+  administration:
+    role:
+    reason:
+    section_path:
+    entry_file:
+    shared_brain_import:
+    allowed_actions_defined_in_shared:
+    forbidden_actions_enforced:
+    has_local_business_logic:
+    has_direct_api_call:
+    verification_command:
+```
+
+ممنوع الاكتفاء بكلمة control-panel عامة.  
+أي قسم غير مذكور في المصفوفة = FIX_REQUIRED.  
+أي قسم مصنف NOT_APPLICABLE بلا سبب = FIX_REQUIRED.  
+القسم PRIMARY هو مالك القرار داخل لوحة التحكم، ولا يجوز لقسم آخر تنفيذ قراره إلا إذا كان مصرحًا له في shared policy.  
+ممنوع استخدام screenshot أو manual navigation كشرط إلزامي داخل هذا البروتوكول.
+
+الإثبات المعتمد هنا Code-Based فقط، ويجب أن يثبت من:
+- imports/exports
+- shared controller usage
+- shared view-model usage
+- API client ownership
+- absence of direct fetch/axios in surfaces
+- absence of local business logic in surfaces
+- absence of local state machine in surfaces
+- absence of local permission/role policy in surfaces
+- guard results
+- typecheck/test/build results
+- backend/API/database evidence when داخل النطاق
+
 
 ## 6) المسارات السيادية الحاكمة
 
@@ -522,6 +758,252 @@ FIX_REQUIRED
 BLOCKED_NEEDS_EVIDENCE
 ```
 
+## 11.1) الأداء، السرعة، التسمية، حجم الملفات، وتنظيم Topic folders
+
+يجب فحص الأداء والتنظيم كجزء من أي رحلة تشغيلية، Code-Based فقط، دون الاعتماد على screenshots أو manual navigation.
+
+### Performance & Speed Code Checks
+
+أي رحلة يجب أن تثبت أنها لا تضيف بطئًا أو تعقيدًا غير مبرر عبر:
+- عدم تنفيذ عمليات ثقيلة داخل render.
+- عدم بناء view-models داخل surface إذا كان مكانها shared.
+- عدم تكرار API calls بين الأسطح لنفس المصدر.
+- عدم وجود fetch/axios مباشر داخل surfaces.
+- عدم تحميل بيانات كبيرة دفعة واحدة إذا كانت تحتاج pagination أو filtering أو lazy loading.
+- عدم وجود loops أو transforms مكلفة داخل components.
+- عدم تمرير raw API response إلى UI مباشرة.
+- عدم تكرار نفس mapping أو formatting في أكثر من سطح.
+- عدم استيراد ملفات ضخمة أو index واسع يؤدي إلى تحميل غير مطلوب.
+- عدم وضع constants ضخمة أو fixtures أو mock data داخل runtime path.
+- عدم وجود preview/demo/mock runtime truth.
+
+أي خلل أداء داخل النطاق = FIX_REQUIRED.
+
+### File Size Rules
+
+يجب فحص حجم الملفات وعدد الأسطر داخل نطاق الرحلة.
+
+القواعد:
+- أي screen/component file أكبر من 350 سطر = FIX_REQUIRED إلا إذا وُجد سبب معماري موثق.
+- أي screen/component file أكبر من 500 سطر = MUST_SPLIT.
+- أي shared controller/hook أكبر من 300 سطر = REVIEW_SPLIT.
+- أي ملف يخلط types + controller + UI + constants + API client = MUST_SPLIT.
+- أي ملف يحمل أكثر من مسؤولية واحدة = REFACTOR_SPLIT.
+- أي Topic بلا تقسيم واضح إلى files صغيرة = FIX_REQUIRED.
+- أي ملف ضخم داخل surface يجب تقسيمه إلى:
+  - Screen shell
+  - sections
+  - rows/cards
+  - empty/error/loading views
+  - local UI-only helpers فقط
+- أي منطق مستخرج من surface يجب أن ينتقل إلى shared brain المناسب.
+
+### Naming Rules
+
+يجب أن تكون أسماء الملفات واضحة، قصيرة، قابلة للبحث، وتمثل مسؤولية واحدة.
+
+ممنوع:
+- أسماء غامضة مثل new, old, temp, final, final2, test2, copy, backup.
+- أسماء تحتوي legacy أو random أو غير مرتبطة بالرحلة.
+- أسماء طويلة جدًا تصف أكثر من مسؤولية.
+- أسماء لا توضّح السطح أو الدومين أو الوظيفة.
+- تكرار أسماء متشابهة تؤدي للبس.
+- ملفات باسم عام مثل helpers.ts أو utils.ts داخل Topic إذا كانت تحتوي منطقًا حاكمًا غير مصنف.
+
+النمط المقترح داخل shared:
+- <topic>.types.ts
+- <topic>.state.ts
+- <topic>.view-model.ts
+- <topic>.controller.ts
+- <topic>.api.ts
+- <topic>.adapters.ts
+- <topic>.policy.ts
+- <topic>.validation.ts
+- <topic>.constants.ts
+- <topic>.index.ts
+
+النمط المقترح داخل surface:
+- <Topic>Screen.tsx
+- <Topic>Section.tsx
+- <Topic>Card.tsx
+- <Topic>Row.tsx
+- <Topic>EmptyState.tsx
+- <Topic>ErrorState.tsx
+- <Topic>LoadingState.tsx
+
+### Topic Folder Organization
+
+كل رحلة يجب أن تكون منظّمة داخل Topic folder واضح في العقل الحاكم.
+
+DSH shared:
+services/dsh/frontend/shared/<topic>/
+
+WLT-for-DSH shared:
+services/wlt/frontend/shared/dsh/<topic>/
+
+داخل shared topic folder يجب ترتيب الملفات حسب المسؤولية:
+
+```text
+<topic>/
+  index.ts
+  <topic>.types.ts
+  <topic>.state.ts
+  <topic>.view-model.ts
+  <topic>.controller.ts
+  <topic>.api.ts
+  <topic>.adapters.ts
+  <topic>.policy.ts
+  <topic>.validation.ts
+  <topic>.constants.ts
+```
+
+ليس كل ملف إلزاميًا دائمًا، لكن أي مسؤولية موجودة يجب أن تكون في ملفها الصحيح.
+
+داخل surface يجب أن يبقى التنظيم UI فقط:
+
+```text
+services/dsh/frontend/<surface>/<topic>/
+  <Topic>Screen.tsx
+  components/
+    <Topic>Section.tsx
+    <Topic>Card.tsx
+    <Topic>Row.tsx
+    <Topic>EmptyState.tsx
+    <Topic>ErrorState.tsx
+    <Topic>LoadingState.tsx
+```
+
+ممنوع داخل surface topic folder:
+- api.ts
+- repository.ts
+- controller.ts
+- state-machine.ts
+- policy.ts
+- validation.ts
+- permission.ts
+- lifecycle.ts
+- financial logic
+- duplicated domain types
+
+### Code-Based Organization Matrix
+
+لكل رحلة يجب إخراج هذه المصفوفة:
+
+```yaml
+topic_file_organization_matrix:
+  shared_brain:
+    topic_folder:
+    files:
+      - path:
+        responsibility:
+        line_count:
+        naming_status: PASS | FAIL
+        size_status: PASS | REVIEW_SPLIT | MUST_SPLIT
+        ownership_status: PASS | FAIL
+        action:
+  surfaces:
+    app-client:
+      role: REQUIRED | READ_ONLY | FORBIDDEN | NOT_APPLICABLE
+      topic_folder:
+      files:
+        - path:
+          responsibility:
+          line_count:
+          imports_shared_brain: PASS | FAIL
+          has_direct_api_call: PASS | FAIL
+          has_business_logic: PASS | FAIL
+          size_status: PASS | REVIEW_SPLIT | MUST_SPLIT
+          naming_status: PASS | FAIL
+          action:
+    app-partner:
+      role:
+      topic_folder:
+      files:
+    app-field:
+      role:
+      topic_folder:
+      files:
+    app-captain:
+      role:
+      topic_folder:
+      files:
+    control-panel:
+      role:
+      topic_folder:
+      files:
+```
+
+أي سطح غير مذكور = FIX_REQUIRED.
+أي ملف بلا responsibility واضحة = FIX_REQUIRED.
+أي ملف كبير بلا split decision = FIX_REQUIRED.
+أي اسم ملف غامض أو مضلل = FIX_REQUIRED.
+أي business logic داخل surface = FIX_REQUIRED.
+أي shared topic folder غير منظم = FIX_REQUIRED.
+أي رحلة لا تقدم topic_file_organization_matrix و surface_code_coverage_matrix و control_panel_section_code_matrix = FIX_REQUIRED.
+
+### Verification Commands
+
+استخدم أوامر Code-Based مناسبة، مثل:
+
+```powershell
+Set-Location -LiteralPath "C:\bthwani-suite-next"
+
+# كشف الملفات الكبيرة داخل نطاق DSH/WLT frontend
+Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts,*.tsx |
+  ForEach-Object {
+    $lines = (Get-Content $_.FullName).Count
+    [PSCustomObject]@{
+      Lines = $lines
+      Path = $_.FullName
+    }
+  } |
+  Where-Object { $_.Lines -gt 350 } |
+  Sort-Object Lines -Descending
+
+# كشف أسماء الملفات المشبوهة
+Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts,*.tsx |
+  Where-Object {
+    $_.Name -match "(old|temp|copy|backup|final|final2|test2|new|legacy)"
+  } |
+  Select-Object FullName
+
+# كشف fetch/axios داخل الأسطح
+git grep -n "fetch\\|axios" -- services/dsh/frontend/control-panel services/dsh/frontend/app-client services/dsh/frontend/app-partner services/dsh/frontend/app-field services/dsh/frontend/app-captain services/wlt/frontend/control-panel services/wlt/frontend/app-client services/wlt/frontend/app-partner services/wlt/frontend/app-field services/wlt/frontend/app-captain
+
+# كشف process.env داخل الأسطح
+git grep -n "process\\.env" -- services/dsh/frontend/control-panel services/dsh/frontend/app-client services/dsh/frontend/app-partner services/dsh/frontend/app-field services/dsh/frontend/app-captain services/wlt/frontend/control-panel services/wlt/frontend/app-client services/wlt/frontend/app-partner services/wlt/frontend/app-field services/wlt/frontend/app-captain
+```
+
+ثم شغّل الفحوصات العامة المناسبة:
+
+```powershell
+pnpm run typecheck
+pnpm run lint
+pnpm run test
+pnpm run build
+pnpm run guard:dsh-frontend-shared-ownership
+pnpm run guard:wlt-dsh-frontend-shared-ownership
+pnpm run guard:no-direct-fetch-in-screen
+pnpm run guard:no-preview-demo-mock-runtime
+pnpm run guard:no-broken-imports
+```
+
+### Acceptance Rule
+
+لا تقبل الرحلة إذا بقي داخل نطاقها:
+- شاشة ضخمة غير مقسمة.
+- ملف باسم غامض أو مضلل.
+- ملف يحتوي أكثر من مسؤولية.
+- Topic غير منظم داخل shared brain.
+- UI surface يحتوي business logic.
+- UI surface يحتوي direct API call.
+- repeated mapping أو duplicated types بين الأسطح.
+- ملف كبير دون قرار تقسيم.
+- helper/utils عام يحتوي منطقًا حاكمًا غير مصنف.
+- import واسع يسبب تحميلًا غير مبرر.
+- أي مؤشر أداء سيئ قابل للإثبات من الكود.
+
+
 ## 12) الفحوصات المستهدفة
 
 شغّل فقط ما ينطبق فعليًا على الرحلة، ولا تعتبر أي فحص ناجحًا إلا بمخرج PASS فعلي.
@@ -586,8 +1068,14 @@ API smoke evidence
 database/migration proof
 Docker proof
 CI status
-screenshots لكل سطح وحالة مهمة
-manual navigation proof
+surface_code_coverage_matrix
+control_panel_section_code_matrix
+imports/exports evidence
+shared brain binding evidence
+direct API absence evidence
+surface business-logic absence evidence
+guard evidence
+typecheck/test/build evidence
 PR/commit diff
 changed files list
 manifest/status updates إن وجدت
