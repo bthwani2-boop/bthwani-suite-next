@@ -1,4 +1,5 @@
--- DSH-002: Home Discovery local seed
+-- LEGACY_FILENAME_ONLY — not a slice reference
+-- Home Discovery: Home Discovery local seed
 -- Inserts banners, promos, categories, and links stores to categories
 
 -- Banners

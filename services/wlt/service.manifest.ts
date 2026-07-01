@@ -18,14 +18,14 @@ export const wltServiceManifest = {
   frontendReady: true,
   frontendDshBoundaryReady: true,
 
-  // WLT-000 Foundation: reference-only endpoints require fresh slice-gate and API health evidence at services/wlt/evidence/WLT-000-runtime-foundation/.
-  // WLT-001: minimal payment-session reference create/read is active for DSH-005 handoff.
-  // WLT-001+ financial mutations remain NOT_APPROVED_YET and out of scope.
+  // WLT Foundation Foundation: reference-only endpoints require fresh journey-gate and API health evidence at services/wlt/evidence/WLT Foundation-runtime-foundation/.
+  // WLT Payment Sessions: minimal payment-session reference create/read is active for DSH handoff.
+  // WLT Payment Sessions+ financial mutations remain NOT_APPROVED_YET and out of scope.
   referenceRuntimeVerified: true,
-  sliceRuntimeVerified: false,
+  journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
   mutationRuntimeReady: false,
-  mutationSlicesApproved: false,
+  mutationJourneysApproved: false,
 
   boundaries: {
     owns: [

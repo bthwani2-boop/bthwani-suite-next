@@ -6,8 +6,8 @@
   "hostPort": 58080,
   "internalPort": 8080,
   "database": "dsh_runtime",
-  "activatedInSlice": "DSH-001",
+  "activatedInSlice": "Store Discovery",
   "dependsOn": ["postgres"],
-  "activationGate": "DSH-001: Dockerfile + migrations + seed + /health + /readiness + API smoke complete",
+  "activationGate": "Store Discovery: Dockerfile + migrations + seed + /health + /readiness + API smoke complete",
   "forbidden": ["memory repo", "CORS wildcard", "donor container names", "donor ports", "mock/demo/preview runtime data"]
 }

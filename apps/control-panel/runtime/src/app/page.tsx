@@ -15,7 +15,7 @@ const SECTION_CARDS = [
     title: "العمليات و Checkout",
     description: "متابعة نوايا checkout ومرجع WLT التشغيلي. رصد لحظي للطلبات دون أزرار مالية.",
     metric: "نشط",
-    metricLabel: "DSH-005",
+    metricLabel: "متصل",
     metricColor: "rgb(0, 194, 168)",
     link: "/dsh/operations",
     buttonText: "فتح غرفة العمليات",
@@ -240,7 +240,7 @@ export default function RootPage() {
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.25rem", flexWrap: "wrap" }}>
                 {[
                   { label: "النظام نشط", color: "rgb(0, 194, 168)" },
-                  { label: "DSH-005 مُشغَّل", color: "rgb(59, 123, 255)" },
+                  { label: "DSH مُشغَّل", color: "rgb(59, 123, 255)" },
                   { label: "WLT متصل", color: "rgb(124, 92, 255)" },
                 ].map((chip) => (
                   <span key={chip.label} style={{

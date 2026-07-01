@@ -1,4 +1,4 @@
--- WLT-000 local seed: financial reference data for DSH store-linked orders and actors.
+-- WLT Foundation local seed: financial reference data for DSH store-linked orders and actors.
 
 -- Payment status references (one per sample order)
 INSERT INTO wlt_payment_status_refs (id, order_id, status)

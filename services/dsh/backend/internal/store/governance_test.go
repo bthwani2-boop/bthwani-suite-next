@@ -9,7 +9,7 @@ func TestStoreGovernanceValidationSets(t *testing.T) {
 		}
 	}
 	if validStoreStatus("deleted") {
-		t.Fatal("deleted must not be accepted as a DSH-001 lifecycle state")
+		t.Fatal("deleted must not be accepted as a Store Discovery lifecycle state")
 	}
 	if !validDeliveryModes([]string{"delivery", "pickup", "express"}) {
 		t.Fatal("canonical delivery modes must be accepted")

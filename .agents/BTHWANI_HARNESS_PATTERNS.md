@@ -10,7 +10,7 @@ This document defines which design patterns from `revfactory/harness` are adopte
 | **Orchestrator / Supervisor Routing** | Yes | `.agents/INDEX.md`, `AGENTS.md` | Guides top-level agent routing to specific sub-skills rather than using a single monolithic instructions block. |
 | **Producer-Reviewer Pattern** | Yes | `.agents/skills/bthwani-patch-review-evidence` | Separates change proposal (producer) from verification/evidence collection (reviewer) for critical updates. |
 | **QA-after-each-unit** | Yes | `.agents/EVIDENCE_GATE_ROUTER.md` | Enforces running verification tests immediately after modifying any unit/component, preventing regression accumulation. |
-| **Final Closure Judge** | Yes | `.agents/skills/bthwani-final-slice-closure-judge` | Restricts declaring a task complete without multi-dimensional evidence (visual, backend, contract, etc.). |
+| **Final Closure Judge** | Yes | `.agents/skills/bthwani-final-journey-closure-judge` | Restricts declaring a task complete without multi-dimensional evidence (visual, backend, contract, etc.). |
 | **Skill References Structure** | Yes | `.agents/skills/` | Standardizes each skill into a standalone directory containing a `SKILL.md` file and optional supporting assets. |
 | **Minimal Active Skill Set** | Yes | `.agents/INDEX.md` | Enforces a rule where an agent may activate at most three skills per task, maintaining focus. |
 

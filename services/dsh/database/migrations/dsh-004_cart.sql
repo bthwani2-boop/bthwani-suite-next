@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-004: Cart & Serviceability Quote
 -- Creates dsh_carts and dsh_cart_items tables for client cart persistence.
 -- Financial amounts are NOT stored here — priceReference is a display label from the catalog.

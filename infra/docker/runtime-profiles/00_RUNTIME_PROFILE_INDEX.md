@@ -9,7 +9,7 @@ Forbidden:
 - compose.local.yml
 - compose.full.yml
 - compose.slice.yml
-- per-slice compose files
+- per-journey compose files
 
 Profiles reserved:
 
@@ -22,6 +22,6 @@ Activation rule:
 
 - postgres runs by default
 - media runs only with -Profile media
-- dsh is activated only inside a DSH slice after backend/Dockerfile/health exists
-- wlt is activated only inside a WLT/payment slice after backend/Dockerfile/health exists
+- dsh is activated only inside a DSH journey after backend/Dockerfile/health exists
+- wlt is activated only inside a WLT/payment journey after backend/Dockerfile/health exists
 - no donor containers, networks, ports, or volumes are allowed

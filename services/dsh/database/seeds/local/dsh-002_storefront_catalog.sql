@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 UPDATE dsh_stores
 SET partner_readiness = 'ready',
     catalog_approval_status = 'approved',

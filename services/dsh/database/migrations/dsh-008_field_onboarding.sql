@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-008: Field Verification & Store Quality Assurance
 -- Field agents record visits, complete readiness checklists, and escalate issues.
 -- Partners see their onboarding status. Operators govern the readiness pipeline.

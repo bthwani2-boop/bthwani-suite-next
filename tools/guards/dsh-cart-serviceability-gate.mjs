@@ -17,7 +17,7 @@ const requiredSharedFiles = [
 
 for (const required of requiredSharedFiles) {
   if (!fs.existsSync(path.join(repoRoot, required))) {
-    violations.push({ file: required, message: "required DSH-004 shared cart brain file is missing" });
+    violations.push({ file: required, message: "required Cart & Serviceability shared cart brain file is missing" });
   }
 }
 
@@ -29,7 +29,7 @@ const requiredSurfaceFiles = [
 
 for (const required of requiredSurfaceFiles) {
   if (!fs.existsSync(path.join(repoRoot, required))) {
-    violations.push({ file: required, message: "required DSH-004 surface screen is missing" });
+    violations.push({ file: required, message: "required Cart & Serviceability surface screen is missing" });
   }
 }
 
@@ -68,7 +68,7 @@ for (const screenPath of surfaceScreens) {
   if (!/from\s+["'][^"']*shared\/cart/.test(source) && !/from\s+["'][^"']*\.\.\/shared\/cart/.test(source)) {
     violations.push({
       file: toPosix(screenPath),
-      message: "DSH-004 surface screen must import controller from shared/cart, not own local fetch",
+      message: "Cart & Serviceability surface screen must import controller from shared/cart, not own local fetch",
     });
   }
 
@@ -76,7 +76,7 @@ for (const screenPath of surfaceScreens) {
   if (/\bfetch\s*\(/.test(source)) {
     violations.push({
       file: toPosix(screenPath),
-      message: "DSH-004 surface screen must not call fetch directly; use shared cart controller",
+      message: "Cart & Serviceability surface screen must not call fetch directly; use shared cart controller",
     });
   }
 }
@@ -93,7 +93,7 @@ for (const file of listCodeFiles()) {
   if (financialMutationPattern.test(source)) {
     violations.push({
       file: rel,
-      message: "DSH-004 shared cart must not contain financial mutations (WLT boundary violation)",
+      message: "Cart & Serviceability shared cart must not contain financial mutations (WLT boundary violation)",
     });
   }
 }

@@ -56,7 +56,7 @@ export function HomeDiscoveryAdminScreen({ kind }: { readonly kind: DshHomeAdmin
       dir="rtl"
       header={
         <CpPageHeader title={meta.title}>
-          <p>تحكم مباشر بالمحتوى الذي يستهلكه تطبيق العميل عبر DSH-002.</p>
+          <p>تحكم مباشر بالمحتوى الذي يستهلكه تطبيق العميل عبر Home Discovery.</p>
         </CpPageHeader>
       }
       stateView={

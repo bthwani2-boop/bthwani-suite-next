@@ -8,7 +8,7 @@ summary: Use machine-readable matrices for planning, coverage, and closure check
 
 ## Invoke when
 
-- CSV matrices are used for slice planning, screen coverage, extraction, DSH/WLT logic, or control-panel coverage
+- CSV matrices are used for journey planning, screen coverage, extraction, DSH/WLT logic, or control-panel coverage
 - a task asks for numerical closure or gap analysis
 
 ## Read before
@@ -21,7 +21,7 @@ Treat matrices as structured evidence inputs. Cross-check claims against actual 
 
 ## Forbidden
 
-- do not close a slice from matrix status alone
+- do not close a journey from matrix status alone
 - do not ignore repo files that contradict a matrix
 - do not convert exploratory rows into implemented truth
 

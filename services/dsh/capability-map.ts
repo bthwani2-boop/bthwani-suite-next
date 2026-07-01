@@ -148,7 +148,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "catalog",
     topicScope: ["browse", "partner-manage", "operator-govern"],
   },
-  // ── DSH-004: Cart & Serviceability ───────────────────────────────────────
+  // ── Cart & Serviceability ─────────────────────────────────────────────────
   {
     id: "dsh.client.cart",
     status: "runtime-verified",
@@ -166,7 +166,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "commerce",
     topicScope: ["cart", "serviceability"],
   },
-  // ── DSH-005: Checkout Intent & WLT Handoff ───────────────────────────────
+  // ── Checkout Intent & WLT Handoff ─────────────────────────────────────────
   {
     id: "dsh.client.checkout",
     status: "runtime-verified",
@@ -182,7 +182,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "commerce",
     topicScope: ["checkout", "wlt-handoff"],
   },
-  // ── DSH-006: Order Fulfillment & Partner Acceptance ──────────────────────
+  // ── Order Fulfillment & Partner Acceptance ────────────────────────────────
   {
     id: "dsh.client.orders",
     status: "runtime-verified",
@@ -203,7 +203,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "commerce",
     topicScope: ["order-fulfillment", "partner-acceptance"],
   },
-  // ── DSH-007: Dispatch & Captain Delivery Lifecycle ───────────────────────
+  // ── Dispatch & Captain Delivery Lifecycle ─────────────────────────────────
   {
     id: "dsh.client.dispatch",
     status: "runtime-verified",
@@ -223,7 +223,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "commerce",
     topicScope: ["dispatch", "captain-delivery", "client-tracking"],
   },
-  // ── DSH-008: Field Verification & Store Quality Assurance ────────────────
+  // ── Field Verification & Store Quality Assurance ──────────────────────────
   {
     id: "dsh.field.readiness",
     status: "runtime-verified",
@@ -244,7 +244,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "field-ops",
     topicScope: ["field-visits", "readiness-checklist", "escalation", "partner-onboarding"],
   },
-  // ── DSH-009: Support, Incidents & Escalation Room ────────────────────────
+  // ── Support, Incidents & Escalation Room ───────────────────────────────────
   {
     id: "dsh.support.hub",
     status: "runtime-verified",
@@ -266,7 +266,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "support",
     topicScope: ["ticket-submission", "ticket-management", "incident-management"],
   },
-  // ── DSH-010: Platform Analytics & Operational Reporting ──────────────────
+  // ── Platform Analytics & Operational Reporting ────────────────────────────
   {
     id: "dsh.operator.analytics",
     status: "runtime-verified",
@@ -284,7 +284,7 @@ export const DSH_CAPABILITY_MAP = [
     topic: "analytics",
     topicScope: ["platform-kpis", "order-analytics", "delivery-analytics", "support-analytics", "store-analytics", "partner-performance"],
   },
-  // ── DSH-011: Notifications & Actor Communication ─────────────────────────
+  // ── Notifications & Actor Communication ───────────────────────────────────
   {
     id: "dsh.notifications",
     status: "runtime-verified",
@@ -300,7 +300,7 @@ export const DSH_CAPABILITY_MAP = [
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },
-  // ── DSH-012: Marketing Command Deck ───────────────────────────────────────
+  // ── Marketing Command Deck ─────────────────────────────────────────────────
   {
     id: "dsh.marketing",
     status: "runtime-verified",
@@ -322,7 +322,7 @@ export const DSH_CAPABILITY_MAP = [
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },
-  // ── DSH-013: Platform Policies & Service Area Management ─────────────────
+  // ── Platform Policies & Service Area Management ───────────────────────────
   {
     id: "dsh.policies",
     status: "runtime-verified",
@@ -340,7 +340,7 @@ export const DSH_CAPABILITY_MAP = [
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },
-  // ── DSH-014: Administration, Roles & Activation ─────────────────────────
+  // ── Administration, Roles & Activation ────────────────────────────────────
   {
     id: "dsh.admin",
     status: "runtime-verified",
@@ -360,7 +360,7 @@ export const DSH_CAPABILITY_MAP = [
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },
-  // ── DSH-015: Partner Store Activation ─────────────────────────────────────
+  // ── Partner Store Activation ───────────────────────────────────────────────
   {
     id: "dsh.partner.activation",
     status: "runtime-verified",

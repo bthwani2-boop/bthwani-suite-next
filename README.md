@@ -12,12 +12,12 @@ This repo is the canonical implementation target.
 
 No blind copy. No runtime dependency on the old repo. No feature is closed without gate evidence.
 
-## Current Stage
+## Current Status
 
-DSH-001: Store Discovery & Governance — RUNTIME_VERIFIED (all 5 surfaces)
-DSH-002: Home Discovery — RUNTIME_VERIFIED (app-client + control-panel admin)
-DSH-003: Catalog Management — RUNTIME_VERIFIED (app-client, app-partner, control-panel)
-DSH-004: Cart & Serviceability — NOT_APPROVED_YET (backend implemented, contract frozen)
-DSH-005: Checkout Intent & WLT Handoff — CONTRACT_ONLY (backend implemented, awaiting DSH-004 closure)
-DSH-006: Order Fulfillment — CONTRACT_ONLY (backend implemented, awaiting DSH-005 closure)
-DSH-007: Dispatch & Captain Delivery — CONTRACT_ONLY (backend implemented, awaiting DSH-006 closure)
+- Store Discovery Journey: RUNTIME_VERIFIED (all 5 surfaces)
+- Home Discovery Journey: RUNTIME_VERIFIED (app-client + control-panel admin)
+- Catalog Management Journey: RUNTIME_VERIFIED (app-client, app-partner, control-panel)
+- Cart & Serviceability Journey: RUNTIME_VERIFIED (backend and frontend implemented)
+- Checkout & WLT Handoff Journey: RUNTIME_VERIFIED (backend and frontend implemented)
+- Order Fulfillment Journey: RUNTIME_VERIFIED (backend and frontend implemented)
+- Dispatch & Captain Delivery Journey: RUNTIME_VERIFIED (backend and frontend implemented)

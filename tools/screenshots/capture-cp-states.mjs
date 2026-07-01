@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Playwright script to capture control-panel store management screenshots
- * for all required DSH-001 evidence states.
+ * for all required Store Discovery evidence states.
  */
 
 import { chromium } from "playwright";
@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(fileURLToPath(import.meta.url), "../../..");
 const SCREENSHOTS_DIR = join(
   ROOT,
-  "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface/screenshots",
+  "services/dsh/evidence/Store Discovery-store-discovery-fullstack-multi-surface/screenshots",
 );
 
 const CP_URL = "http://localhost:13000";

@@ -3,15 +3,10 @@ info:
   title: BThwani DSH Service API
   version: 0.5.0
   description: >
-    Delivery and shopping hub service contract. DSH-001 store discovery and governance
-    (RUNTIME_VERIFIED). DSH-002 home discovery (RUNTIME_VERIFIED). DSH-003 catalog
-    management (RUNTIME_VERIFIED). DSH-004 cart and serviceability (RUNTIME_VERIFIED).
-    DSH-005 checkout intent and WLT handoff, DSH-006 order fulfillment, DSH-007
-    dispatch and captain delivery — backend handlers registered, frontend surface UI
-    not yet approved (NOT_APPROVED_YET). DSH-008 field verification and store quality
-    assurance (RUNTIME_VERIFIED). DSH-009 support incidents and escalation room
-    (RUNTIME_VERIFIED). DSH-010 platform analytics and operational reporting —
-    backend implementation NOT_APPROVED_YET, handlers inactive.
+    Delivery and shopping hub service contract. Core capabilities include Store Discovery,
+    Home Discovery, Catalog Management, Cart & Serviceability, Checkout & WLT Handoff,
+    Order Fulfillment, Dispatch & Captain Delivery, Field Onboarding & Store Activation,
+    Support, and Analytics.
     WLT handoff uses reference fields only; no financial mutation inside DSH.
 
 x-bthwani-owner: services/dsh
@@ -768,7 +763,7 @@ paths:
       responses:
         "200": { description: Catalog audit timeline. }
 
-  # ─── DSH-004: Cart & Serviceability Quote ────────────────────────────────
+  # ─── Cart & Serviceability Quote ────────────────────────────────
   # Runtime handlers registered in server.go. Client must be authenticated.
   # Financial amounts are NEVER computed by DSH — priceReference is a label
   # from the catalog. All wallet/payment truth is WLT-owned.
@@ -891,7 +886,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # ─── DSH-005: Checkout Intent & WLT Handoff ──────────────────────────────
+  # ─── Checkout Intent & WLT Handoff ──────────────────────────────
   # Implemented. DSH creates intent records only; payment truth is WLT-owned.
   # wltPaymentSessionId is an opaque WLT-owned payment-session reference.
   # ──────────────────────────────────────────────────────────────────────────
@@ -981,7 +976,7 @@ paths:
               schema: { $ref: "#/components/schemas/DshOperatorCheckoutIntentsResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
-  # ─── DSH-006: Order Fulfillment & Partner Acceptance ────────────────────────
+  # ─── Order Fulfillment & Partner Acceptance ────────────────────────
   /dsh/client/orders:
     post:
       operationId: createDshOrder
@@ -1340,7 +1335,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-008: Field Verification & Store Quality Assurance ──────────────────
+  # ── Field Verification & Store Quality Assurance ──────────────────
 
   /dsh/field/stores/{storeId}/visits:
     post:
@@ -1533,7 +1528,7 @@ paths:
               schema: { $ref: "#/components/schemas/DshOnboardingStatusResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
-  # ── DSH-009: Support, Incidents & Escalation Room ──────────────────────────
+  # ── Support, Incidents & Escalation Room ──────────────────────────
 
   /dsh/support/tickets:
     post:
@@ -1749,7 +1744,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-010: Platform Analytics & Operational Reporting ────────────────────
+  # ── Platform Analytics & Operational Reporting ────────────────────
   /dsh/operator/analytics/platform:
     get:
       operationId: getDshPlatformKpis
@@ -1871,7 +1866,7 @@ paths:
       responses:
         "501": { description: Contract-only; signature and payment truth remain WLT-owned. }
 
-  # ── DSH-011: Notifications ─────────────────────────────────────────────────
+  # ── Notifications ─────────────────────────────────────────────────
   /dsh/notifications:
     get:
       operationId: listDshNotifications
@@ -1982,7 +1977,7 @@ paths:
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
-  # ── DSH-012: Marketing ─────────────────────────────────────────────────────
+  # ── Marketing ─────────────────────────────────────────────────────
   /dsh/operator/marketing/campaigns:
     get:
       operationId: listDshCampaigns
@@ -2217,7 +2212,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-013: Platform Policies ────────────────────────────────────────────
+  # ── Platform Policies ────────────────────────────────────────────
   /dsh/operator/platform/zones:
     get:
       operationId: listDshZones
@@ -2380,7 +2375,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-014: Administration ────────────────────────────────────────────────
+  # ── Administration ────────────────────────────────────────────────
   /dsh/operator/admin/roles:
     get:
       operationId: listDshAdminRoles
@@ -2457,7 +2452,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ─── DSH-015: Partner Store Activation ──────────────────────────────────────
+  # ─── Partner Store Activation ──────────────────────────────────────
 
   /dsh/operator/partners:
     get:
@@ -3836,7 +3831,7 @@ components:
           type: string
           format: date-time
 
-    # ─── DSH-004: Cart schemas ────────────────────────────────────────────────
+    # ─── Cart schemas ────────────────────────────────────────────────
 
     DshCartItem:
       type: object
@@ -3930,7 +3925,7 @@ components:
           enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
         reason: { type: string }
 
-    # ─── DSH-005: Checkout Intent schemas ────────────────────────────────────
+    # ─── Checkout Intent schemas ────────────────────────────────────
 
     DshCheckoutIntent:
       type: object
@@ -3989,7 +3984,7 @@ components:
           items:
             $ref: "#/components/schemas/DshCheckoutIntent"
 
-    # ─── DSH-006: Order schemas ──────────────────────────────────────────────
+    # ─── Order schemas ──────────────────────────────────────────────
     DshOrderStatus:
       type: string
       enum: [pending, store_accepted, preparing, ready_for_pickup, driver_assigned, driver_arrived_store, picked_up, arrived_customer, delivered, cancelled]
@@ -4065,7 +4060,7 @@ components:
           type: string
           description: Mandatory rejection reason from partner.
 
-    # ─── DSH-007: Dispatch schemas ───────────────────────────────────────────
+    # ─── Dispatch schemas ───────────────────────────────────────────
     DshAssignmentStatus:
       type: string
       enum: [offered, accepted, declined, completed]
@@ -4153,7 +4148,7 @@ components:
         note:
           type: string
 
-    # ── DSH-008: Field Readiness ──────────────────────────────────────────────
+    # ── Field Readiness ──────────────────────────────────────────────
 
     DshVisitType:
       type: string
@@ -4316,7 +4311,7 @@ components:
           type: string
           enum: [pending, complete, escalation_required]
 
-    # ── DSH-009: Support ──────────────────────────────────────────────────────
+    # ── Support ──────────────────────────────────────────────────────
 
     DshTicketStatus:
       type: string
@@ -4478,7 +4473,7 @@ components:
         status: { $ref: "#/components/schemas/DshIncidentStatus" }
         postmortemUrl: { type: string }
 
-    # ── DSH-010: Analytics Schemas ─────────────────────────────────────────
+    # ── Analytics Schemas ─────────────────────────────────────────
     DshPlatformKpisResponse:
       type: object
       required: [totalOrders, deliveredOrders, cancelledOrders, activeStores, openTickets, fieldVisitsCompleted, openEscalations, openIncidents, period, generatedAt]
@@ -4577,7 +4572,7 @@ components:
         Contains opaque WLT references only. No amount, ledger, refund, settlement,
         or signature verification logic belongs to DSH.
 
-    # ── DSH-011: Notification Schemas ─────────────────────────────────────────
+    # ── Notification Schemas ─────────────────────────────────────────
     DshNotification:
       type: object
       required: [id, actorId, actorType, topic, title, body, actionUrl, isRead, createdAt]
@@ -4670,7 +4665,7 @@ components:
         isEnabled: { type: boolean }
         description: { type: string }
 
-    # ── DSH-012: Marketing Schemas ─────────────────────────────────────────────
+    # ── Marketing Schemas ─────────────────────────────────────────────
     DshCampaign:
       type: object
       required: [id, name, status, zoneId, startDate, endDate, contentRef, createdAt, updatedAt]
@@ -4765,7 +4760,7 @@ components:
         status: { type: string }
         expiresAt: { type: string, format: date-time }
 
-    # ─── DSH-015: Partner Store Activation schemas ────────────────────────────
+    # ─── Partner Store Activation schemas ────────────────────────────
 
     DshPartner:
       type: object
@@ -5110,7 +5105,7 @@ components:
         status: { type: string }
         endDate: { type: string, format: date }
 
-    # ── DSH-013: Platform Policies Schemas ────────────────────────────────────
+    # ── Platform Policies Schemas ────────────────────────────────────
     DshZone:
       type: object
       required: [id, name, status, polygon, cityCode, serviceAreaCode, createdAt, updatedAt]
@@ -5211,7 +5206,7 @@ components:
         activeOrders: { type: integer }
         capacityPct: { type: number }
 
-    # ── DSH-014: Administration Schemas ───────────────────────────────────────
+    # ── Administration Schemas ───────────────────────────────────────
     DshAdminRole:
       type: object
       required: [id, name, permissions, createdAt]

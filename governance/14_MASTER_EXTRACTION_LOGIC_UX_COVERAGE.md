@@ -5,12 +5,12 @@ Stage: PHASE_10_11_MASTER_EXTRACTION_LOGIC_UX_COVERAGE
 
 ## Purpose
 
-Define the measurable pre-slice inventory for extracting useful DSH/WLT knowledge
+Define the measurable pre-journey inventory for extracting useful DSH/WLT knowledge
 from the donor repository without treating donor source, design, or runtime claims
 as target-repository truth.
 
 This phase creates a corrected inventory and exposes the next blocking
-dependency. It does not make DSH-001 plan-ready, runtime-ready, production-ready,
+dependency. It does not make Store Discovery plan-ready, runtime-ready, production-ready,
 verified, or closed.
 
 ## Scope
@@ -30,7 +30,7 @@ The active scope is:
 - Inventories donor artifacts and records an extraction decision for each entry.
 - Defines DSH/WLT operational rules and financial ownership.
 - Defines control-panel pages, mobile journeys, and screen-state obligations.
-- Defines target paths and slice ownership before implementation.
+- Defines target paths and journey ownership before implementation.
 - Identifies blocked, rejected, reserved, and inventory-only work.
 - Creates evidence for the contract-planning gate.
 
@@ -54,7 +54,7 @@ The canonical machine-readable coverage files are:
 5. `machine-readable/screen_state_coverage_matrix.csv`
 6. `machine-readable/donor_control_panel_alias_matrix.csv`
 
-CSV identifiers must be unique. Required fields must be non-empty. Slice,
+CSV identifiers must be unique. Required fields must be non-empty. Journey,
 capability, screen, journey, and control-panel references must remain consistent
 across matrices.
 
@@ -67,12 +67,12 @@ across matrices.
 - `REJECT`: artifact or pattern must not enter target runtime.
 
 Donor screens are normally `REFERENCE_ONLY`. Donor backend, contracts, and shared
-logic are never target truth without slice-level review and target evidence.
+logic are never target truth without journey-level review and target evidence.
 
 ## Status meanings
 
 - `INVENTORY_ONLY`: recorded but not approved for implementation.
-- `READY_FOR_SLICE`: reserved for a future row whose complete entry gate has passed.
+- `READY_FOR_JOURNEY`: reserved for a future row whose complete entry gate has passed.
 - `BLOCKED_NEEDS_EVIDENCE`: a required source or decision lacks evidence.
 - `BLOCKED_NEEDS_WLT`: WLT ownership or contract is unresolved.
 - `BLOCKED_NEEDS_API_CONTRACT`: an API contract must be defined first.
@@ -80,9 +80,9 @@ logic are never target truth without slice-level review and target evidence.
 - `RESERVED_INVENTORY`: intentionally inactive capability or section.
 - `REJECTED`: prohibited source or pattern.
 
-The repaired Phase 10/11 matrices must not assign `READY_FOR_SLICE` to DSH-001
+The repaired Phase 10/11 matrices must not assign `READY_FOR_JOURNEY` to Store Discovery
 while Store Discovery is absent from the service-owned OpenAPI. No row receives
-a completion state until its slice is implemented and backed by contract, test,
+a completion state until its journey is implemented and backed by contract, test,
 runtime, and visual evidence where applicable.
 
 ## Immediate rejection rules
@@ -98,7 +98,7 @@ inside app shells.
 
 Every operation must declare:
 
-- Actor, surface, service owner, capability, and slice.
+- Actor, surface, service owner, capability, and journey.
 - Domain invariants and state transitions.
 - API, database, authentication, and object-ownership expectations.
 - Validation, errors, negative cases, conflict, concurrency, timeout, and retry behavior.
@@ -181,7 +181,7 @@ Screens must not display fabricated live data while offline or blocked.
 
 Donor design is visual reference only:
 
-1. Capture the useful visual pattern during the implementing slice.
+1. Capture the useful visual pattern during the implementing journey.
 2. Map it to public `@bthwani/ui-kit` exports.
 3. Rebuild in the canonical target path.
 4. Verify RTL, small-screen overflow, loading, empty, error, permission, blocked,
@@ -190,14 +190,14 @@ Donor design is visual reference only:
 
 Copying a donor screen as target source is prohibited.
 
-## Slice-start rule
+## Journey-start rule
 
-DSH-001 must not start until:
+Store Discovery must not start until:
 
 - All six matrices pass structural and semantic checks.
 - `services/dsh/contracts/dsh.openapi.yaml` defines and passes review for
   `GET /dsh/stores` and `GET /dsh/stores/{storeId}`.
-- Every mandatory slice, operation, page, journey, and screen state is present.
+- Every mandatory journey, operation, page, journey, and screen state is present.
 - Financial ownership, idempotency, authorization, list performance, and screen
   state checks report zero gaps.
 - Source paths are evidenced or explicitly blocked.
@@ -209,7 +209,7 @@ The current repaired result is:
 REPAIR_COMPLETE_BLOCKED_NEEDS_API_CONTRACT
 ```
 
-DSH-001 rows remain `BLOCKED_NEEDS_API_CONTRACT`. Later rows remain
+Store Discovery rows remain `BLOCKED_NEEDS_API_CONTRACT`. Later rows remain
 `INVENTORY_ONLY`, `BLOCKED_NEEDS_WLT`, or `RESERVED_INVENTORY`.
 
 ## Acceptance condition

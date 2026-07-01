@@ -90,8 +90,8 @@ jobs:
       - name: Foundation gate
         run: pnpm run foundation:gate
 
-      - name: Slice gate
-        run: pnpm run slice:gate
+      - name: Journey gate
+        run: pnpm run journey:gate
 
       - name: Typecheck
         run: pnpm run typecheck

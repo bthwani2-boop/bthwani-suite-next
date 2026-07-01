@@ -31,7 +31,7 @@ Work that crosses module or layer boundaries.
 ### Tier 4 — Escalated Evidence (3 skills, evidence gate)
 High-risk or cross-service work.
 - Finance (WLT/DSH money), security, secrets, auth, agent/skill files
-- Multi-service slice, Docker, CI, dependency changes
+- Multi-service journey, Docker, CI, dependency changes
 - Load: authority + `bthwani-evidence-gate-router` + task skill
 - Evidence gate is not default. Use it only for high-risk work, final closure, PR readiness, release readiness, or explicit user request.
 
@@ -49,7 +49,7 @@ High-risk or cross-service work.
 ### Safety and quality
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
 - Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
-- Final closure judge. (Final-only / Closure phase) → `bthwani-final-slice-closure-judge`
+- Final closure judge. (Final-only / Closure phase) → `bthwani-final-journey-closure-judge`
 
 ### Repository foundation
 - Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
@@ -58,9 +58,9 @@ High-risk or cross-service work.
 - Matrix-driven closure or coverage → `bthwani-machine-readable-matrix-governor`
 
 ### Full-stack and runtime
-- Service slice → `bthwani-service-fullstack-slice`
+- Service journey → `bthwani-service-fullstack-journey`
 - API/client/runtime binding → `bthwani-api-runtime-binding`
-- Docker/data-plane/runtime smoke → `bthwani-docker-slice-runtime`
+- Docker/data-plane/runtime smoke → `bthwani-docker-journey-runtime`
 - Runtime env/provider/service slots → `bthwani-platform-runtime-config`
 
 ### UI and finance

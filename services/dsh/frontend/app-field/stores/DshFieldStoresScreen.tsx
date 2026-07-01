@@ -373,7 +373,7 @@ export function DshFieldStoresScreen({
                 لا توجد نتائج مطابقة
               </Text>
               <Text style={{ textAlign: 'center', color: colorRoles.textMuted, fontSize: 13 }}>
-                جرّب تغيير الشريحة أو إلغاء البحث
+                جرّب تغيير فلتر البحث أو إلغاء البحث
               </Text>
             </View>
           )}

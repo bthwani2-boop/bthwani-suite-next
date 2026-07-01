@@ -20,7 +20,7 @@ Active scope:
 - active contract: `services/dsh/contracts/dsh.openapi.yaml`
 - current surfaces: app-client, app-partner, app-captain, app-field, control-panel
 - runtime binding: blocked until backend implementation and runtime evidence exist
-- next product slice: `DSH-001 Store Discovery`
+- next operational journey: Store Discovery
 
 ## Required service files
 
@@ -40,7 +40,7 @@ services/dsh/
 - A declared surface without a screen remains planned, not implemented.
 - A declared capability without its required chain remains blocked.
 - DSH must not calculate or mutate WLT financial truth.
-- DSH-001 cannot close before OpenAPI, backend, client, frontend, tests, and evidence are linked.
+- Store Discovery cannot close before OpenAPI, backend, client, frontend, tests, and evidence are linked.
 
 ## Forbidden Phase 10A claims
 
@@ -50,15 +50,15 @@ services/dsh/
 - generated client ready
 - database ready
 - production ready
-- DSH-001 closed
+- Store Discovery closed
 
 ## Validation
 
 - DSH manifest and maps must be internally linked.
 - DSH OpenAPI must remain a valid service-owned contract.
 - service linkage guard must pass.
-- foundation and slice gates must propagate native command failures.
+- foundation and journey gates must propagate native command failures.
 
 ## Acceptance condition
 
-Accepted only when the DSH service files exist, current contract truth is represented without runtime inflation, service linkage passes, typecheck passes, and both foundation and DSH activation slice gates pass.
+Accepted only when the DSH service files exist, current contract truth is represented without runtime inflation, service linkage passes, typecheck passes, and both foundation and DSH activation journey gates pass.

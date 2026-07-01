@@ -7,7 +7,7 @@ x-bthwani-policy:
       - "infra/docker/compose.local.yml"
       - "infra/docker/compose.full.yml"
       - "infra/docker/compose.slice.yml"
-      - "per-slice compose files"
+      - "per-journey compose files"
   postgres: "active by default through Docker"
   minio: "media profile only"
   redis: "not active"

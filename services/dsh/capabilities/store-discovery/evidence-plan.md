@@ -1,7 +1,7 @@
-# DSH-001 Store Discovery — Slice Evidence Plan
+# Store Discovery Store Discovery — Journey Evidence Plan
 
-## Slice Identity
-- Slice ID: DSH-001
+## Journey Identity
+- Journey ID: Store Discovery
 - Capability ID: dsh.store.discovery
 - Service Owner: services/dsh
 - Primary Surface: app-client
@@ -58,7 +58,7 @@
 - dsh-package-build.txt
 - dsh-package-test.txt
 - dsh-package-lint.txt
-- slice-gate.txt
+- journey-gate.txt
 - app-client-store-discovery-screenshot.png
 - machine-readable-audit.md
 - donor-extraction-notes.md

@@ -20,4 +20,4 @@ Status: CANONICAL
 
 ## Acceptance condition
 
-Accepted only when live-like slices run through Docker and service schemas stay under service database folders.
+Accepted only when live-like journeys run through Docker and service schemas stay under service database folders.

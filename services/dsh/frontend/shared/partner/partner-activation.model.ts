@@ -1,4 +1,4 @@
-// Canonical partner activation state model for DSH-015.
+// Canonical partner activation state model for Partner Store Activation.
 // Adapted from donor dsh-partner-activation.model.ts — architectural boundaries enforced.
 //
 // System rules (enforced here, never in surfaces):

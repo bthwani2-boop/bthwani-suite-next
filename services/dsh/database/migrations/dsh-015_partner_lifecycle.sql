@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-015: Partner Lifecycle & Store Activation (SLICE-002)
 -- Partners are first-class entities separate from stores.
 -- Partner owns N stores; activation lifecycle is partner-level.

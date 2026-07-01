@@ -47,19 +47,19 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/catalog/submissions", protected.handleCatalogSubmissions)
 	mux.HandleFunc("POST /dsh/operator/catalog/{storeId}/decision", protected.handleCatalogDecision)
 	mux.HandleFunc("GET /dsh/operator/catalog/{storeId}/audit", protected.handleCatalogAudit)
-	// DSH-004: Cart & Serviceability
+	// Cart & Serviceability
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart/items/{itemId}", protected.handleRemoveCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart", protected.handleClearCart)
 	mux.HandleFunc("POST /dsh/client/cart/serviceability", protected.handleCartServiceability)
 	mux.HandleFunc("GET /dsh/operator/carts", protected.handleOperatorCarts)
-	// DSH-005: Checkout Intent & WLT Handoff
+	// Checkout Intent & WLT Handoff
 	mux.HandleFunc("POST /dsh/client/checkout-intents", protected.handleCreateCheckoutIntent)
 	mux.HandleFunc("GET /dsh/client/checkout-intents/{intentId}", protected.handleGetCheckoutIntent)
 	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/cancel", protected.handleCancelCheckoutIntent)
 	mux.HandleFunc("GET /dsh/operator/checkout-intents", protected.handleOperatorCheckoutIntents)
-	// DSH-006: Order Fulfillment & Partner Acceptance
+	// Order Fulfillment & Partner Acceptance
 	mux.HandleFunc("POST /dsh/client/orders", protected.handleCreateOrder)
 	mux.HandleFunc("GET /dsh/client/orders", protected.handleListClientOrders)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}", protected.handleGetClientOrder)
@@ -69,7 +69,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparing", protected.handleMarkPreparing)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/ready", protected.handleMarkReadyForPickup)
 	mux.HandleFunc("GET /dsh/operator/orders", protected.handleListOperatorOrders)
-	// DSH-007: Dispatch & Captain Delivery Lifecycle
+	// Dispatch & Captain Delivery Lifecycle
 	mux.HandleFunc("POST /dsh/operator/dispatch/assignments", protected.handleCreateDispatchAssignment)
 	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.handleListOperatorDispatchAssignments)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments", protected.handleListCaptainDispatchAssignments)
@@ -79,7 +79,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/pod", protected.handleSubmitDispatchPoD)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
 
-	// DSH-008: Field Verification & Store Quality Assurance
+	// Field Verification & Store Quality Assurance
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateFieldVisit)
 	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)
 	mux.HandleFunc("POST /dsh/field/visits/{visitId}/complete", protected.handleCompleteFieldVisit)
@@ -90,7 +90,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.handleUpdateEscalation)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/onboarding-status", protected.handlePartnerOnboardingStatus)
 
-	// DSH-009: Support, Incidents & Escalation Room
+	// Support, Incidents & Escalation Room
 	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateSupportTicket)
 	mux.HandleFunc("GET /dsh/support/tickets", protected.handleListMyTickets)
 	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}", protected.handleGetTicket)
@@ -102,7 +102,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/incidents", protected.handleListIncidents)
 	mux.HandleFunc("PATCH /dsh/operator/incidents/{incidentId}", protected.handleUpdateIncident)
 
-	// DSH-010: Platform Analytics & Operational Reporting
+	// Platform Analytics & Operational Reporting
 	mux.HandleFunc("GET /dsh/operator/analytics/platform", protected.handlePlatformKpis)
 	mux.HandleFunc("GET /dsh/operator/analytics/orders", protected.handleOrderAnalytics)
 	mux.HandleFunc("GET /dsh/operator/analytics/delivery", protected.handleDeliveryAnalytics)
@@ -110,7 +110,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/analytics/stores", protected.handleStoreAnalytics)
 	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.handlePartnerPerformance)
 
-	// DSH-011: Notifications & Actor Communication
+	// Notifications & Actor Communication
 	mux.HandleFunc("GET /dsh/notifications", protected.handleListNotifications)
 	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
 	mux.HandleFunc("POST /dsh/notifications/read-all", protected.handleMarkAllNotificationsRead)
@@ -118,7 +118,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
 	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.handleUpsertPlatformNotificationConfig)
 
-	// DSH-012: Marketing Command Deck
+	// Marketing Command Deck
 	mux.HandleFunc("GET /dsh/operator/marketing/campaigns", protected.handleListCampaigns)
 	mux.HandleFunc("POST /dsh/operator/marketing/campaigns", protected.handleCreateCampaign)
 	mux.HandleFunc("GET /dsh/operator/marketing/campaigns/{campaignId}", protected.handleGetCampaign)
@@ -132,7 +132,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("POST /dsh/operator/marketing/promos", protected.handleCreatePromo)
 	mux.HandleFunc("PATCH /dsh/operator/marketing/promos/{promoId}", protected.handleUpdatePromo)
 
-	// DSH-013: Platform Policies & Service Area Management
+	// Platform Policies & Service Area Management
 	mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
 	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
 	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
@@ -142,7 +142,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
 
-	// DSH-015: Partner Store Activation
+	// Partner Store Activation
 	// Operator namespace
 	mux.HandleFunc("GET /dsh/operator/partners", protected.handleListPartners)
 	mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)
@@ -169,7 +169,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
 	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.handlePartnerActivationReadiness)
 
-	// DSH-014: Administration, Roles & Activation
+	// Administration, Roles & Activation
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)
 	mux.HandleFunc("POST /dsh/operator/admin/roles", protected.handleCreateRole)
 	mux.HandleFunc("GET /dsh/operator/admin/staff", protected.handleListStaff)

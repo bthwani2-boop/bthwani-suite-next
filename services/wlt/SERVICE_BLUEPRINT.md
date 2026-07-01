@@ -33,4 +33,4 @@ DSH and application shells may store or display WLT references and statuses only
 
 ## Activation Rule
 
-No WLT runtime, database, generated client, or frontend surface may be marked ready until a dedicated WLT slice passes contract, backend, database, Docker, and evidence gates.
+No WLT runtime, database, generated client, or frontend surface may be marked ready until a dedicated WLT journey passes contract, backend, database, Docker, and evidence gates.

@@ -1,7 +1,7 @@
 # DSH Service Blueprint
 
 Status: ACTIVE_RUNTIME_BLUEPRINT
-Current Runtime Stage: DSH-015_PARTNER_STORE_ACTIVATION_RUNTIME_VERIFIED
+Current Runtime State: RUNTIME_VERIFIED
 Closure State: RUNTIME_VERIFIED
 Contract: `contracts/dsh.openapi.yaml`
 Runtime Port: `58080` (container internal: `8080`)
@@ -18,21 +18,21 @@ This blueprint reflects the current DSH runtime map and surface map.
 
 The active runtime capabilities are:
 
-- DSH-001 — Store Discovery and system readiness: verified.
-- DSH-002 — Home Discovery: verified.
-- DSH-003 — Catalog Management: verified.
-- DSH-004 — Cart and Serviceability: verified.
-- DSH-005 — Checkout Intent and WLT Handoff: verified.
-- DSH-006 — Order Fulfillment and partner acceptance: verified.
-- DSH-007 — Dispatch and Captain Delivery: verified.
-- DSH-008 — Field Verification and Store Quality Assurance: verified.
-- DSH-009 — Support, Incidents, and Escalation Room: verified.
-- DSH-010 — Platform Analytics and Operational Reporting: verified.
-- DSH-011 — Notifications and Actor Communication: verified.
-- DSH-012 — Marketing Command Deck: verified.
-- DSH-013 — Platform Policies and Service Area Management: verified.
-- DSH-014 — Administration, Roles, and Activation: verified.
-- DSH-015 — Partner Store Activation: verified.
+- Store Discovery and system readiness: verified.
+- Home Discovery: verified.
+- Catalog Management: verified.
+- Cart and Serviceability: verified.
+- Checkout Intent and WLT Handoff: verified.
+- Order Fulfillment and partner acceptance: verified.
+- Dispatch and Captain Delivery: verified.
+- Field Verification and Store Quality Assurance: verified.
+- Support, Incidents, and Escalation Room: verified.
+- Platform Analytics and Operational Reporting: verified.
+- Notifications and Actor Communication: verified.
+- Marketing Command Deck: verified.
+- Platform Policies and Service Area Management: verified.
+- Administration, Roles, and Activation: verified.
+- Partner Store Activation: verified.
 
 ## Active Surfaces
 
@@ -247,16 +247,16 @@ Financial provider access, ledger mutation, wallet balance mutation, settlement,
 
 Runtime evidence is expected under capability-specific DSH evidence folders, including:
 
-- `services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface`
-- `services/dsh/evidence/DSH-002-client-home-discovery`
-- `services/dsh/evidence/DSH-003-catalog-fullstack`
-- `services/dsh/evidence/DSH-004-cart-serviceability`
-- `services/dsh/evidence/DSH-005-checkout-intent`
-- `services/dsh/evidence/DSH-006-order-fulfillment`
-- `services/dsh/evidence/DSH-007-dispatch-delivery-lifecycle`
-- `services/dsh/evidence/DSH-008-field-readiness`
-- `services/dsh/evidence/DSH-009-support-incidents`
-- `services/dsh/evidence/DSH-010-analytics-finance-visibility`
+- `services/dsh/evidence/Store Discovery-store-discovery-fullstack-multi-surface`
+- `services/dsh/evidence/Home Discovery-client-home-discovery`
+- `services/dsh/evidence/Catalog Management-catalog-fullstack`
+- `services/dsh/evidence/Cart & Serviceability-cart-serviceability`
+- `services/dsh/evidence/Checkout & WLT Handoff-checkout-intent`
+- `services/dsh/evidence/Order Fulfillment-order-fulfillment`
+- `services/dsh/evidence/Dispatch & Captain Delivery-dispatch-delivery-lifecycle`
+- `services/dsh/evidence/Field Verification-field-readiness`
+- `services/dsh/evidence/Support-support-incidents`
+- `services/dsh/evidence/Analytics-analytics-finance-visibility`
 - `services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt`
 - `services/dsh/evidence/brach-validation-final-closure/dsh-015-runtime-smoke.txt`
 
@@ -274,6 +274,7 @@ pnpm run guard:no-broken-imports
 pnpm run guard:no-direct-fetch-in-screen
 pnpm run guard:no-financial-mutation-outside-wlt
 pnpm run guard:no-direct-financial-provider-access-outside-wlt
+pnpm run guard:no-legacy-journey-labels
 pnpm run typecheck
 pnpm run build
 ```
