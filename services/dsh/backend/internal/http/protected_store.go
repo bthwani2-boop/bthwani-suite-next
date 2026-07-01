@@ -200,6 +200,10 @@ func (s *protectedStoreServer) handleListPartnerAudit(w http.ResponseWriter, r *
 	s.servePartnerHandler(w, r, partner.HandleListAudit(s.db), "operator")
 }
 
+func (s *protectedStoreServer) handleFieldListPartnerDrafts(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListFieldPartnerDrafts(s.db), "field")
+}
+
 func (s *protectedStoreServer) handleFieldCreatePartnerDraft(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerHandler(w, r, partner.HandleFieldCreateDraft(s.db), "field")
 }

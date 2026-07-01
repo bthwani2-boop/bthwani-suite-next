@@ -92,8 +92,13 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	conds := []string{}
 	i := 1
 	if q.ActivationStatus != "" {
-		conds = append(conds, "activation_status = $"+string(rune('0'+i)))
+		conds = append(conds, "activation_status = $"+itoa(i))
 		args = append(args, q.ActivationStatus)
+		i++
+	}
+	if q.CreatedByActorID != "" {
+		conds = append(conds, "created_by_actor_id = $"+itoa(i))
+		args = append(args, q.CreatedByActorID)
 		i++
 	}
 

@@ -28,12 +28,19 @@ import {
   getDocumentsMissingCount,
   getAgreementReviewMissingCount,
   getFieldRequiredMissingItems,
+  type FieldOnboardingController,
 } from '../../shared/field-onboarding';
+import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
 import { StepBasicsProfile } from './StepBasicsProfile';
 import { StepLocationAndPhotos } from './StepLocationAndPhotos';
 import { StepDocuments } from './StepDocuments';
 import { StepAgreementReview } from './StepAgreementReview';
-import type { DocumentItem } from './StepDocuments';
+import type { DocumentItem, DocumentKind } from './StepDocuments';
+
+const DOCUMENT_KIND_TO_PARTNER_TYPE: Record<DocumentKind, DshPartnerDocumentType> = {
+  commercial_registration: 'commercial_register',
+  identity_proof: 'national_id',
+};
 
 type GroupId = 'basics_profile' | 'location_media' | 'documents' | 'agreement_review';
 
@@ -51,38 +58,29 @@ const GROUP_LABELS: Record<GroupId, string> = {
   agreement_review: 'الاتفاق والمراجعة النهائية',
 };
 
-const DEFAULT_DOCUMENTS: readonly DocumentItem[] = [
-  {
-    id: 'commercial_registration',
-    label: 'السجل التجاري',
-    required: true,
-    status: 'missing',
-    referenceLabel: 'لا يوجد مرجع مرفوع بعد',
-  },
-  {
-    id: 'identity_proof',
-    label: 'الهوية الوطنية للمالك',
-    required: true,
-    status: 'missing',
-    referenceLabel: 'لا يوجد مرجع مرفوع بعد',
-  },
-];
+const DOCUMENT_LABELS: Record<DocumentKind, string> = {
+  commercial_registration: 'السجل التجاري',
+  identity_proof: 'الهوية الوطنية للمالك',
+};
 
 export type FieldPartnerOnboardingScreenProps = {
+  readonly controller?: FieldOnboardingController;
   readonly onBack?: () => void;
-  readonly onUploadDocument?: (kind: any, partnerId?: string) => void;
+  readonly onUploadDocument?: (kind: DshPartnerDocumentType, partnerId?: string) => void;
   readonly onEscalate?: () => void;
   readonly onGoToProducts?: () => void;
 };
 
 export function FieldPartnerOnboardingScreen({
+  controller: controllerProp,
   onBack,
   onUploadDocument,
   onEscalate,
   onGoToProducts,
 }: FieldPartnerOnboardingScreenProps = {}) {
   const identity = useIdentitySession();
-  const controller = useFieldPartnerOnboardingController();
+  const ownController = useFieldPartnerOnboardingController();
+  const controller = controllerProp ?? ownController;
   const insets = useSafeAreaInsets();
   const { state, validationErrors, updateForm, updateVisitNotes, submitDraft } = controller;
 
@@ -94,14 +92,27 @@ export function FieldPartnerOnboardingScreen({
   const form = state.form;
   const activeGroupIndex = GROUP_ORDER.indexOf(activeGroup);
   const isLastGroup = activeGroupIndex === GROUP_ORDER.length - 1;
-  const missingItems = getFieldRequiredMissingItems(form);
-  const canSubmit = missingItems.length === 0;
+  const documents: readonly DocumentItem[] = REQUIRED_DOCUMENT_TYPES.map((partnerType) => {
+    const kind = (Object.keys(DOCUMENT_KIND_TO_PARTNER_TYPE) as DocumentKind[]).find(
+      (k) => DOCUMENT_KIND_TO_PARTNER_TYPE[k] === partnerType
+    ) as DocumentKind;
+    const uploaded = state.uploadedDocumentTypes.includes(partnerType);
+    return {
+      id: kind,
+      label: DOCUMENT_LABELS[kind],
+      required: true,
+      status: uploaded ? 'uploaded' : 'missing',
+      referenceLabel: uploaded ? 'تم رفع المستند' : 'لا يوجد مرجع مرفوع بعد',
+    };
+  });
+  const missingItems = getFieldRequiredMissingItems(form, state.uploadedDocumentTypes);
+  const canSubmit = !!state.partnerId && missingItems.length === 0;
 
   const groupMissingCounts: Record<GroupId, number> = {
     basics_profile: getBasicsProfileMissingCount(form),
     location_media: getLocationMediaMissingCount(form),
-    documents: getDocumentsMissingCount(),
-    agreement_review: getAgreementReviewMissingCount(form),
+    documents: getDocumentsMissingCount(state.uploadedDocumentTypes),
+    agreement_review: getAgreementReviewMissingCount(form, state.uploadedDocumentTypes),
   };
 
   // ── Auth guard (after all hooks) ─────────────────────────────────────────
@@ -147,7 +158,11 @@ export function FieldPartnerOnboardingScreen({
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────
-  const goToNext = () => {
+  const goToNext = async () => {
+    if (activeGroup === 'basics_profile') {
+      const created = await controller.ensureDraftCreated();
+      if (!created) return;
+    }
     if (isLastGroup) {
       if (canSubmit) void submitDraft();
       return;
@@ -186,9 +201,9 @@ export function FieldPartnerOnboardingScreen({
     if (groupId === 'documents') {
       return (
         <StepDocuments
-          documents={DEFAULT_DOCUMENTS}
+          documents={documents}
           loadingMap={docLoading}
-          onUploadDocument={(kind) => onUploadDocument?.(kind, state.partnerId ?? undefined)}
+          onUploadDocument={(kind) => onUploadDocument?.(DOCUMENT_KIND_TO_PARTNER_TYPE[kind], state.partnerId ?? undefined)}
         />
       );
     }
@@ -431,7 +446,7 @@ export function FieldPartnerOnboardingScreen({
           label={isLastGroup ? 'إرسال للمراجعة' : `التالي: ${nextLabel}`}
           tone={canSubmit && isLastGroup ? 'success' : 'primary'}
           disabled={isLastGroup ? !canSubmit : false}
-          onPress={goToNext}
+          onPress={() => void goToNext()}
           style={{ flex: 2 }}
         />
       </View>

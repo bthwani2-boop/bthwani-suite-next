@@ -11,6 +11,7 @@ import { useIdentitySession, devBypassLogin, configureIdentitySession } from '@b
 import { AuthLoginCard } from '../shared/auth/AuthLoginCard';
 import { useAndroidBackHandler } from '../shared/runtime/useAndroidBackHandler';
 import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
+import { useFieldPartnerOnboardingController } from '../shared/field-onboarding';
 
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
@@ -133,8 +134,12 @@ function FieldBottomNavBar({
 // ─── Surface ─────────────────────────────────────────────────────────────────
 export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) {
   const fieldSurface = useDshFieldSurfaceModel(command);
+  // Owned here (not inside a route screen) so the draft survives navigation
+  // to sibling routes like document-upload and back.
+  const onboardingController = useFieldPartnerOnboardingController();
 
   const identity = useIdentitySession();
+  const insets = useSafeAreaInsets();
 
   useAndroidBackHandler(
     React.useCallback(() => {
@@ -173,8 +178,6 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     );
   }
 
-  const insets = useSafeAreaInsets();
-
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       {/* Global orange status bar for all screens */}
@@ -194,6 +197,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
         <DshFieldRouteRenderer
           model={fieldSurface.model}
           actions={fieldSurface.actions}
+          onboardingController={onboardingController}
         />
       </View>
 
@@ -202,9 +206,10 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
           <FieldBottomNavBar
             activeId={fieldSurface.model.bottomNav.activeId}
-            onLauncherPress={() =>
-              fieldSurface.actions.pushRoute({ kind: 'onboarding' })
-            }
+            onLauncherPress={() => {
+              onboardingController.reset();
+              fieldSurface.actions.pushRoute({ kind: 'onboarding' });
+            }}
             onSelect={(id: string) => {
               if (id === 'tasks')   fieldSurface.actions.resetToStores();
               if (id === 'history') fieldSurface.actions.pushRoute({ kind: 'history' });

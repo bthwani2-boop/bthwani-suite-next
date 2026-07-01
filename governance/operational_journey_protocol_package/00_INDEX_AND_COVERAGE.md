@@ -1,24 +1,25 @@
 # 00 — فهرس الحزمة ومصفوفة عدم إسقاط البنود
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File count:** 10 Markdown files exactly  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v1  
+**File count:** 11 Markdown files (10 protocol files + 1 execution amendment) + 1 trace file  
 **Repository:** `bthwani2-boop/bthwani-suite-next`  
 **Remote ref:** `start`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** `tools/plan/command_operational_journey_unified` (see also `LEGACY_SOURCE_TRACE.md`)  
 **GitHub file SHA observed:** `617ed1f69bc91d42ce8c433b92c252b7abda2ce3`  
 **Compared source v1 upload:** `Pasted text.txt`  
 **Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_start.md`  
-**Package version:** `v3-modular-10files-strict`  
+**Package version:** `v3-modular-11files-strict-amended`  
 **Date:** `2026-07-01`
 
 ---
 
 ## 0) قرار التقسيم
 
-تم تقسيم البروتوكول إلى 10 ملفات فقط، مع الحفاظ على قاعدة أن الحزمة وحدة واحدة.  
+تم تقسيم البروتوكول إلى 10 ملفات، مع الحفاظ على قاعدة أن الحزمة وحدة واحدة.
+أضيف ملف تعديل إلزامي حادي عشر (`10_EXECUTION_PLAN_NO_SKIP_GATE.md`) يسد فجوة القفز أثناء كتابة أوامر/خطط التنفيذ ويضيف طبقة Docker/Hosting/Runtime مستقلة، بالإضافة إلى `LEGACY_SOURCE_TRACE.md` لتتبع مصادر ما قبل الحزمة.  
 لا يجوز استخدام ملف منفرد لإعلان `PASS` أو `IMPLEMENTATION_PASS` أو `MERGE_READY`.
 
-أي وكيل يستخدم هذه الحزمة يجب أن يبدأ من هذا الملف، ثم يفتح الملفات ذات العلاقة حسب النطاق.
+أي وكيل يستخدم هذه الحزمة يجب أن يبدأ من هذا الملف، ثم يفتح الملفات ذات العلاقة حسب النطاق، **بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` قبل كتابة أي أمر تنفيذ أو خطة تنفيذ**.
 
 ---
 
@@ -36,6 +37,8 @@
 | `07_VERIFICATION_RUNTIME_CI_PR.md` | verification commands، runtime evidence، CI، PR/merge. |
 | `08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md` | implementation rules، Antigravity command، final report schema. |
 | `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | acceptance rule، quick command، closing rule. |
+| `10_EXECUTION_PLAN_NO_SKIP_GATE.md` | Amendment: Execution Plan No-Skip Gate، docker_hosting_runtime_matrix، guards محصودة من `command_old_new`. |
+| `LEGACY_SOURCE_TRACE.md` | تتبع مصادر ما قبل الحزمة (`command_old_new`, `command_operational_journey_unified`) وشروط الحذف اللاحقة. |
 
 ---
 
@@ -45,11 +48,13 @@
 coverage_result:
   source_v1_headings_checked: 58
   source_v2_h2_sections_checked: 31
-  package_files_count: 10
+  package_files_count: 11
   missing_v2_h2_sections: 0
   unmapped_v1_headings_detected: 0
   duplicate_governing_sources_created: false
   split_method: semantic_domain_split_with_traceability_matrix
+  amendment_added: 10_EXECUTION_PLAN_NO_SKIP_GATE.md
+  amendment_reason: no_skip_gate_for_execution_plans + docker_hosting_runtime_matrix + old_new_guards_harvest
   decision: COVERAGE_PASS_BY_SECTION_AND_KEY_CONCEPT_CHECK
 ```
 
@@ -212,6 +217,8 @@ coverage_result:
 5. اقرأ 07 قبل أي حكم تحقق أو CI أو PR.
 6. اقرأ 08 عند التنفيذ أو عند إنتاج أمر Antigravity أو تقرير نهائي.
 7. اقرأ 09 قبل إعلان أي قبول أو قبل استخدام الأمر المختصر.
+8. اقرأ 10 إلزاميًا قبل كتابة أي أمر تنفيذ أو خطة تنفيذ أو تشخيص أو تحليل، ولإكمال docker_hosting_runtime_matrix.
+9. راجع LEGACY_SOURCE_TRACE.md قبل أي قرار حذف أو أرشفة لملفات ما قبل الحزمة.
 ```
 
 ---
@@ -222,11 +229,15 @@ coverage_result:
 
 ```yaml
 change_control_for_protocol_package:
+  current_file_count: 11
   update_all_impacted_files: required
   update_v1_v2_coverage_mapping: required
   update_manifest: required
   rerun_section_coverage_check: required
   no_silent_deletion: required
   no_unmapped_section: required
+  legacy_source_deletion_requires: LEGACY_SOURCE_TRACE.md conditions satisfied
   result_if_broken: FIX_REQUIRED
 ```
+
+انظر أيضًا: `10_EXECUTION_PLAN_NO_SKIP_GATE.md` قسم 35 لقاعدة التحكم بالتغيير المحدّثة، و`LEGACY_SOURCE_TRACE.md` لشروط حذف المصادر القديمة.

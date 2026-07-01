@@ -13,8 +13,7 @@ import {
   colorRoles,
   Icon,
 } from '@bthwani/ui-kit';
-import { useIdentitySession } from '@bthwani/core-identity';
-import { usePartnerAdminController } from '../../shared/partner';
+import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
 import { FieldStoreCard } from './FieldStoreCard';
 
 type DshFieldStoresScreenProps = {
@@ -215,8 +214,7 @@ export function DshFieldStoresScreen({
   onOpenAccount,
   onCreateStore,
 }: DshFieldStoresScreenProps) {
-  const identity = useIdentitySession();
-  const controller = usePartnerAdminController(identity.state.kind);
+  const controller = useFieldPartnerDraftsController();
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showSearch, setShowSearch] = React.useState(false);

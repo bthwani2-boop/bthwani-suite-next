@@ -119,6 +119,38 @@ func HandleListPartners(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GET /dsh/field/partners  — list partner drafts created by the calling field actor
+func HandleListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		q := PartnerListQuery{
+			ActivationStatus: r.URL.Query().Get("status"),
+			CreatedByActorID: actorID,
+			Limit:            20,
+			Offset:           0,
+		}
+		if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 {
+			q.Limit = l
+		}
+		if o, err := strconv.Atoi(r.URL.Query().Get("offset")); err == nil && o >= 0 {
+			q.Offset = o
+		}
+		list, total, err := ListPartners(db, q)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field partner drafts")
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]any{
+			"partners": list,
+			"pagination": map[string]int{
+				"total":  total,
+				"limit":  q.Limit,
+				"offset": q.Offset,
+			},
+		})
+	}
+}
+
 // GET /dsh/partners/{partnerId}  — get partner detail (operator)
 func HandleGetPartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

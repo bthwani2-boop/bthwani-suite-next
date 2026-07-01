@@ -341,6 +341,7 @@ type PartnerStore struct {
 
 type PartnerListQuery struct {
 	ActivationStatus string
+	CreatedByActorID string
 	Limit            int
 	Offset           int
 }
