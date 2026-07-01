@@ -169,7 +169,7 @@ export function FieldStoreVerificationScreen() {
           <Text role="titleSm">توصية التحقق</Text>
           <Text tone="secondary">{field.recommendation}</Text>
           <Text role="caption" tone="muted">
-            رفع الوثائق والاعتماد الميداني الفعلي يظل ضمن DSH-008 بعد اعتماده.
+            رفع الوثائق والاعتماد الميداني الفعلي يظل ضمن Field Verification بعد اعتماده.
           </Text>
         </View>
       </Card>

@@ -28,20 +28,20 @@ do {
 } while ($true)
 Write-Host "Postgres: healthy"
 
-Write-Host "`n--- Applying DSH-001 migration ---"
+Write-Host "`n--- Applying Store Discovery migration ---"
 Get-Content -LiteralPath $Migration -Raw |
   docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
     psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
 
-if ($LASTEXITCODE -ne 0) { throw "DSH-001 migration failed (exit $LASTEXITCODE)" }
+if ($LASTEXITCODE -ne 0) { throw "Store Discovery migration failed (exit $LASTEXITCODE)" }
 Write-Host "Migration: OK"
 
-Write-Host "`n--- Applying DSH-001 local seed ---"
+Write-Host "`n--- Applying Store Discovery local seed ---"
 Get-Content -LiteralPath $Seed -Raw |
   docker compose --env-file $EnvFile -f $ComposeFile exec -T postgres `
     psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
 
-if ($LASTEXITCODE -ne 0) { throw "DSH-001 seed failed (exit $LASTEXITCODE)" }
+if ($LASTEXITCODE -ne 0) { throw "Store Discovery seed failed (exit $LASTEXITCODE)" }
 Write-Host "Seed: OK"
 
 Write-Host "`napply-dsh-store-discovery-db: PASS"

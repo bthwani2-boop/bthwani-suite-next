@@ -2,7 +2,7 @@
 // Unified Fullstack Brain Guard
 // Policy: governance/02_SERVICES_AND_SURFACES.md
 //
-// Enforces: ONE source of truth per domain/slice inside sovereign shared brains.
+// Enforces: ONE source of truth per domain/journey inside sovereign shared brains.
 // Surfaces are UI-only renderers. All logic, state, validation, permission,
 // lifecycle, and role policy must live in the sovereign shared brain.
 //

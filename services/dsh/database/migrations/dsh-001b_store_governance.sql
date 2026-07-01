@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 ALTER TABLE dsh_stores
   ADD COLUMN IF NOT EXISTS version integer NOT NULL DEFAULT 1;
 

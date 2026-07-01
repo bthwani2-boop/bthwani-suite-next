@@ -20,7 +20,7 @@ No governance file is canonical unless listed here.
 7. 06_EVIDENCE_AND_GATES.md
 8. 07_SECURITY_AND_SECRETS.md
 9. 08_CLEANUP_AND_DEPRECATION.md
-10. 09_SLICE_OPERATING_MODEL.md
+10. 09_JOURNEY_OPERATING_MODEL.md
 11. 10_TOOLCHAIN_VERSION_LOCK.md
 12. 11_INTERFACE_BLUEPRINTS.md
 13. 13_DSH_SERVICE_ACTIVATION.md
@@ -37,8 +37,8 @@ No governance file is canonical unless listed here.
 - BLOCKED_NEEDS_BLUEPRINT
 - BLOCKED_NEEDS_API_CONTRACT
 - BLOCKED_NEEDS_RUNTIME_EVIDENCE
-- OUT_OF_SCOPE_FOR_THIS_SLICE
+- OUT_OF_SCOPE_FOR_THIS_JOURNEY
 
 ## Acceptance condition
 
-Accepted only when all listed files exist, every listed file has an `Acceptance condition`, and no product slice starts before `foundation:gate` passes.
+Accepted only when all listed files exist, every listed file has an `Acceptance condition`, and no operational journey starts before `foundation:gate` passes.

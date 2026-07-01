@@ -6,7 +6,7 @@ Stage: REPAIR_PHASE_10_11_SURFACE_OWNERSHIP_AND_MATRIX_NORMALIZATION
 ## Purpose
 
 Keep Phase 10/11 matrices consistent enough to act as a strict entry gate for
-future slices without creating code, contracts, database objects, or runtime.
+future journeys without creating code, contracts, database objects, or runtime.
 
 ## Allowed service owners
 
@@ -35,30 +35,30 @@ The seven main sections are `partners`, `operations`, `wallet-finance`,
 `support`, `marketing`, `catalog`, and `platform`. `shell-overview` is a shell
 landing context, not an eighth main section.
 
-## Canonical slice map
+## Canonical journey map
 
-- DSH-001 store discovery
-- DSH-002 storefront catalog and catalog base
-- DSH-003 cart and serviceability
-- DSH-004 checkout intent
-- DSH-005 order tracking
-- DSH-006 partner orders and partner catalog actions
-- DSH-007 captain tasks
-- DSH-008 field onboarding
-- DSH-009 address-zone serviceability
-- DSH-010 order cancellation and refund bridge
-- DSH-011 operations room only
-- DSH-012 media references
-- DSH-013 notification readiness
-- DSH-014 support
-- DSH-015 marketing
-- WLT-001 payment sessions
-- WLT-002 refund status
-- WLT-003 settlement status reads
-- WLT-004 commission and COD references
-- WLT-005 ledger, audit, and reconciliation references
-- DSH-WLT-001 through DSH-WLT-004 integration slices
-- PLATFORM-001 platform readiness
+- Store Discovery Journey
+- Catalog Management Journey
+- Cart & Serviceability Journey
+- Checkout & WLT Handoff Journey
+- Order Fulfillment Journey
+- Partner Orders and Catalog Actions Journey
+- Captain Tasks Journey
+- Field Onboarding Journey
+- Address-Zone Serviceability Journey
+- Order Cancellation and Refund Bridge Journey
+- Operations Room Journey
+- Media References Journey
+- Notification Readiness Journey
+- Support Journey
+- Marketing Journey
+- Payment Sessions capability
+- Refund Status capability
+- Settlement Status Reads capability
+- Commission and COD References capability
+- Ledger, Audit, and Reconciliation References capability
+- Integration capability flows
+- Platform Readiness capability
 
 ## DSH/WLT ownership rule
 
@@ -73,7 +73,7 @@ must not mutate financial truth.
 ## Platform ownership rule
 
 Platform pages and platform-readiness rows belong to `core`, use
-`slice_id=PLATFORM-001`, and target `apps/control-panel/sections/platform`.
+`journey_id=PLATFORM-001`, and target `apps/control-panel/sections/platform`.
 Platform must not be placed below `services/dsh`.
 
 ## Frontend shared surface rule
@@ -84,7 +84,7 @@ not owners of shared logic.
 
 ## No dsh-wlt service owner rule
 
-`dsh-wlt` is permitted only as an integration scope or integration slice ID.
+`dsh-wlt` is permitted only as an integration scope or integration journey ID.
 Every target below `services/dsh` or `services/wlt` has the corresponding real
 service owner.
 
@@ -103,12 +103,12 @@ App mounts target `apps/app-client`, `apps/app-partner`, `apps/app-captain`,
 
 ## Mobile capability ownership rule
 
-- Client notifications use DSH-013.
-- Field intake and assignment conflicts use DSH-008.
+- Client notifications use Platform Policies.
+- Field intake and assignment conflicts use Field Verification.
 - Captain payment-reference reads remain DSH-owned captain-task UI with a
   DSH-WLT integration dependency.
 - Partner catalog management is distinct from client storefront browsing.
-- Mobile support entry uses DSH-014; support queues remain control-panel behavior.
+- Mobile support entry uses Administration; support queues remain control-panel behavior.
 
 ## Acceptance gates
 
@@ -116,71 +116,71 @@ App mounts target `apps/app-client`, `apps/app-partner`, `apps/app-captain`,
 - Platform-under-DSH, `dsh-wlt` service owners, forbidden blueprint targets,
   `apps/shared/runtime`, shared-surface mismatches, mobile ownership mismatches,
   invalid page types, donor misclassification, and harmful duplicates are zero.
-- DSH-011 contains operations only.
-- Payment sessions map to WLT-001.
-- DSH-001 includes all required layers but remains non-ready while contract or
+- operations-room contains operations only.
+- Payment sessions map to WLT Payment Sessions.
+- Store Discovery includes all required layers but remains non-ready while contract or
   domain requirements are blocked.
 - `git diff --check` and the foundation gate pass.
 
 ## Final logic and metadata consistency rules
 
 The following rules were added during REPAIR_PHASE_10_11_FINAL_LOGIC_AND_METADATA_CONSISTENCY.
-All must pass before any slice execution begins.
+All must pass before any journey execution begins.
 
 ### Core identity must not target DSH paths
 
 Any row with `service = core` must not have `target_path` starting with
 `services/dsh/`. Core identity artifacts use `core/identity/reference/` paths.
-Violations must be corrected to `CORE-IDENTITY-001` with `REFERENCE_ONLY` decision.
+Violations must be corrected to `core-identity` with `REFERENCE_ONLY` decision.
 
-### SPEC slice must match slice_id
+### SPEC journey must match journey_id
 
 Any `source_path` starting with `SPEC:` must use the format `SPEC:<SLICE_ID>:<layer>`.
-The captured slice segment must equal `slice_id`. Mismatches are blocking.
+The captured journey segment must equal `journey_id`. Mismatches are blocking.
 
 Correct format examples:
 
-- `SPEC:DSH-014:governance` with `slice_id=DSH-014`
-- `SPEC:PLATFORM-001:evidence` with `slice_id=PLATFORM-001`
-- `SPEC:RESERVED:reserved-service-knz` with `slice_id=RESERVED`
-- `SPEC:FOUNDATION:services/_template-required` with `slice_id=FOUNDATION`
+- `SPEC:Administration:governance` with `journey_id=support`
+- `SPEC:PLATFORM-001:evidence` with `journey_id=PLATFORM-001`
+- `SPEC:RESERVED:reserved-service-knz` with `journey_id=RESERVED`
+- `SPEC:FOUNDATION:services/_template-required` with `journey_id=FOUNDATION`
 
 ### operations-room / support split
 
 `operations-support` is not a valid executable capability.
 
-- `section=operations` or `slice_id=DSH-011` → `capability=operations-room`
-- `section=support` or `slice_id=DSH-014` → `capability=support-queue` or `capability=support-entry`
+- `section=operations` or `journey_id=operations-room` → `capability=operations-room`
+- `section=support` or `journey_id=support` → `capability=support-queue` or `capability=support-entry`
 
 No row with `capability=operations-support` and `status != RESERVED_INVENTORY` may remain.
 
 ### WLT direct logic coverage rule
 
-WLT-002 must have at least 5 direct WLT logic rows with:
+Refund Status capability must have at least 5 direct WLT logic rows with:
 
-- `service=wlt`, `capability=refund-status`, `slice_id=WLT-002`
+- `service=wlt`, `capability=refund-status`, `journey_id=refund-status`
 - Coverage: create, get, idempotency, callback, audit, DSH read reference
 
-WLT-003 must have at least 4 direct WLT logic rows with:
+Settlement Status Reads capability must have at least 4 direct WLT logic rows with:
 
-- `service=wlt`, `capability=settlement-status-read`, `slice_id=WLT-003`
+- `service=wlt`, `capability=settlement-status-read`, `journey_id=settlement-status-read`
 - Coverage: list, get, read model, DSH read reference, audit
 
-Bridge rows (DSH-WLT-002, DSH-WLT-003) do not substitute for WLT's own logic rows.
+Bridge rows (Refund and Settlement Integration flows) do not substitute for WLT's own logic rows.
 
 ### Support-entry logic rule
 
-DSH-014 must have at least 4 direct support-entry logic rows with:
+Support Journey must have at least 4 direct support-entry logic rows with:
 
-- `service=dsh`, `capability=support-entry`, `slice_id=DSH-014`
+- `service=dsh`, `capability=support-entry`, `journey_id=support`
 - One row per actor: client, partner, captain, field
 
-### Marketing DSH-015 rule
+### Marketing Journey rule
 
-Any row with `capability=marketing` and `slice_id=DSH-015` must not reference
-`DSH-011` in `api_contract`. Marketing contracts belong to DSH-015.
+Any row with `capability=marketing` and `journey_id=marketing` must not reference
+`operations-room` in `api_contract`. Marketing contracts belong to marketing.
 
-Correct: `NEW_REQUIRED: DSH marketing review contract in DSH-015`
+Correct: `NEW_REQUIRED: DSH marketing review contract in marketing`
 
 ### settlement-status-read canonical naming
 
@@ -197,9 +197,9 @@ The `target_path` must also use `settlement-status-read` not `settlement-read-mo
 
 `commission-cod-reference` is not a valid executable capability. Split as follows:
 
-- Content focused on commission → `capability=commission-reference`, `slice_id=WLT-004`
-- Content focused on COD/cash-on-delivery → `capability=cod-reference`, `slice_id=WLT-004`
-- Aggregate rows that cover both → `capability=wallet-finance-summary`, `slice_id=WLT-004 or WLT-005`
+- Content focused on commission → `capability=commission-reference`, `journey_id=commission-cod`
+- Content focused on COD/cash-on-delivery → `capability=cod-reference`, `journey_id=commission-cod`
+- Aggregate rows that cover both → `capability=wallet-finance-summary`, `journey_id=commission-cod or WLT Ledger`
 
 ### Control-panel section path strategy
 
@@ -239,9 +239,9 @@ Any row with `decision=ADOPT_AS_IS` must have `evidence` containing one of:
 If no explicit target verification exists, change decision to `ADAPT_NORMALIZE` or
 `REFERENCE_ONLY` as appropriate.
 
-### DSH-001 readiness remains blocked until contract/domain readiness
+### Store Discovery readiness remains blocked until contract/domain readiness
 
-`DSH-001` must not have `status=READY_FOR_SLICE` until a separate step explicitly
+`Store Discovery` must not have `status=READY_FOR_JOURNEY` until a separate step explicitly
 approves the following contracts:
 
 - `GET /dsh/stores`
@@ -250,30 +250,30 @@ approves the following contracts:
 - Store DB schema
 - Store auth and serviceability rules
 
-No row in any matrix may reach `READY_FOR_SLICE` during the final consistency repair.
+No row in any matrix may reach `READY_FOR_JOURNEY` during the final consistency repair.
 The target gate after this repair is:
 
 ```text
-PHASE_10_11_MATRICES_CONSISTENT_NOT_SLICE_READY
+PHASE_10_11_MATRICES_CONSISTENT_NOT_JOURNEY_READY
 ```
 
 The next step after this gate is:
 
 ```text
-DSH-001_CONTRACT_AND_DOMAIN_READINESS
+Store Discovery_CONTRACT_AND_DOMAIN_READINESS
 ```
 
-## Slice Execution Master Matrix
+## Journey Execution Master Matrix
 
 Canonical file:
 
 ```text
-machine-readable/slice_execution_master_matrix.csv
+machine-readable/journey_execution_master_matrix.csv
 ```
 
-Purpose: Unified pre-slice execution map generated from all six source matrices
+Purpose: Unified pre-journey execution map generated from all six source matrices
 (extraction, logic coverage, control-panel, mobile UX, screen state, and donor
-alias). It is the single gate reference for slice readiness verification.
+alias). It is the single gate reference for journey readiness verification.
 
 Rules:
 
@@ -281,7 +281,7 @@ Rules:
   execution gate.
 - Row count must be ≥ 900.
 - All 48 required columns must be present.
-- `status` must not include `READY_FOR_SLICE` or `VERIFIED` before slice
+- `status` must not include `READY_FOR_JOURNEY` or `VERIFIED` before journey
   readiness phase.
 - `service` must be one of `dsh`, `wlt`, `core`, `shared-ui-kit`,
   `shared-app-shell`, or `reserved`. `dsh-wlt` is not a valid service owner.
@@ -304,7 +304,7 @@ Accepted only when every normalization check reports zero violations and the
 final result remains conservative:
 
 ```text
-PHASE_10_11_MATRICES_CONSISTENT_NOT_SLICE_READY
+PHASE_10_11_MATRICES_CONSISTENT_NOT_JOURNEY_READY
 ```
 
 ---
@@ -314,7 +314,7 @@ PHASE_10_11_MATRICES_CONSISTENT_NOT_SLICE_READY
 ### V3 file canonical path
 
 ```text
-machine-readable/slice_execution_master_matrix_v3.csv
+machine-readable/journey_execution_master_matrix_v3.csv
 ```
 
 ### V3 vs V2 differences
@@ -329,7 +329,7 @@ machine-readable/slice_execution_master_matrix_v3.csv
 
 ### V3 canonical column order
 
-Exact header required — stored in guard-slice-master-matrix-v3.mjs as EXACT_HEADER constant.
+Exact header required — stored in guard-journey-operating-model.mjs as EXACT_HEADER constant.
 
 ### Machine-readable source rule
 
@@ -362,11 +362,11 @@ No new real-service `SERVICE_BLUEPRINT.md` may be created.
 ### Guard commands
 
 ```bash
-node tools/guards/guard-slice-master-matrix-v2.mjs
-node tools/guards/guard-slice-master-matrix-v3.mjs
+node tools/guards/guard-journey-operating-model.mjs
+node tools/guards/guard-journey-operating-model.mjs
 ```
 
-Both must exit 0 before any slice execution begins.
+Both must exit 0 before any journey execution begins.
 
 ### Evidence requirements for V3 closure
 

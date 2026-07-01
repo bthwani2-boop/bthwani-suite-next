@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 CREATE TABLE IF NOT EXISTS dsh_stores (
   id                   text        PRIMARY KEY,
   slug                 text        NOT NULL UNIQUE,

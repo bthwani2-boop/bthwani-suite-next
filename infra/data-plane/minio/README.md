@@ -9,4 +9,4 @@ MinIO is not active by default.
 
 ## Rule
 
-MinIO is allowed only when a media slice needs bucket/object storage behavior.
+MinIO is allowed only when a media journey needs bucket/object storage behavior.

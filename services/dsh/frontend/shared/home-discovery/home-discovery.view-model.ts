@@ -1,5 +1,5 @@
 /**
- * DSH-002 Home Discovery — View Model
+ * Home Discovery — View Model
  * Maps DTOs to screen-safe view models.
  * Returns semantic roles, never raw hex.
  * DB-backed runtime data only.

@@ -9,7 +9,7 @@ summary: Protect WLT financial truth and DSH/WLT integration boundaries.
 ## Invoke when
 
 - DSH checkout, payment status, COD, commission, refund, settlement, payout, wallet, ledger, or order financial state is touched
-- a slice crosses DSH and WLT
+- a journey crosses DSH and WLT
 
 ## Read before
 

@@ -156,7 +156,7 @@ Enforce these branch prefixes via ruleset or team convention:
 | `feature/` | Product feature work |
 | `fix/` | Bug fixes |
 | `chore/` | Governance, tooling, CI changes |
-| `slice/` | Atomic service slices |
+| `journey/` | Atomic service journeys |
 | `hotfix/` | Emergency production fixes |
 | `dependabot/` | Automated dependency updates (auto-managed) |
 

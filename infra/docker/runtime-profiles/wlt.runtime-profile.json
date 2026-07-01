@@ -7,6 +7,6 @@
   "internalPort": 8083,
   "database": "wlt_runtime",
   "dependsOn": ["postgres"],
-  "activationGate": "WLT slice backend Dockerfile + migrations + seed + health/readiness + financial smoke",
+  "activationGate": "WLT journey backend Dockerfile + migrations + seed + health/readiness + financial smoke",
   "financialBoundary": "WLT owns wallet/payment/refund/settlement/COD/ledger/reconciliation"
 }

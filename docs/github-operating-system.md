@@ -14,7 +14,7 @@ This repository uses GitHub as the decision gate, not only as remote storage.
 ## Required Labels
 
 - `bug`
-- `slice`
+- `journey`
 - `runtime`
 - `gate`
 - `security`
@@ -23,7 +23,7 @@ This repository uses GitHub as the decision gate, not only as remote storage.
 
 ## Required Checks
 
-The merge decision must be based on GitHub Actions results for the exact SHA under review. Required checks include contracts, frontend ownership guards, no-financial-mutation guards, Go backends, DB integration when present, Docker runtime smoke, typecheck, test, build, foundation gate, and slice gate.
+The merge decision must be based on GitHub Actions results for the exact SHA under review. Required checks include contracts, frontend ownership guards, no-financial-mutation guards, Go backends, DB integration when present, Docker runtime smoke, typecheck, test, build, foundation gate, and journey gate.
 
 ## Closure Rule
 

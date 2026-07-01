@@ -1,5 +1,5 @@
 /**
- * DSH-002 Home Discovery — Shared Engine Public API
+ * Home Discovery — Shared Engine Public API
  */
 export * from './home-discovery.types';
 export * from './home-discovery.view-model';

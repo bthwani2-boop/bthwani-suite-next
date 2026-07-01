@@ -45,7 +45,7 @@ export function withStoreDiscoveryFilter(
   };
 }
 
-/** DSH-015: Client surfaces MUST call this before rendering store lists. */
+/** Client surfaces MUST call this before rendering store lists. */
 export function filterClientEligibleStores(
   stores: readonly DshStoreCardViewModel[],
 ): readonly DshStoreCardViewModel[] {

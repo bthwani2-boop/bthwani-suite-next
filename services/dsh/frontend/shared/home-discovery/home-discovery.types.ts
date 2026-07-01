@@ -1,5 +1,5 @@
 /**
- * DSH-002 Home Discovery — Domain Types
+ * Home Discovery — Domain Types
  * Derived from OpenAPI-generated types; DB-backed runtime data only.
  */
 

@@ -1,5 +1,5 @@
-// guard-slice-master-matrix-v3.mjs
-// Sovereign Brain & Live Topology Guard — v3
+// guard-journey-operating-model.mjs
+// Sovereign Brain & Live Topology Guard
 // Policy: governance/02_SERVICES_AND_SURFACES.md
 //
 // Method: live repository topology + sovereign brain contracts + unified fullstack brain
@@ -59,8 +59,8 @@ if (existsSync(MR_DIR)) {
   err(`${RETIRED_MATRIX_ROOT}/ directory still exists`);
 }
 
-// Active guards: those registered in guard-manifest.json foundation/slice sets
-const THIS_FILE = 'tools/guards/guard-slice-master-matrix-v3.mjs';
+// Active guards: those registered in guard-manifest.json foundation/journey sets
+const THIS_FILE = 'tools/guards/guard-journey-operating-model.mjs';
 const DEAD_CODE_PREFIXES = [
   'tools/registry/',
   'tools/plan/',
@@ -357,12 +357,12 @@ if (existsSync(manifestPath)) {
   try {
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     const hasInFoundation = (manifest.guardSets?.foundation || []).includes('unified-fullstack-brain');
-    const hasInSlice = (manifest.guardSets?.slice || []).includes('unified-fullstack-brain');
+    const hasInJourney = (manifest.guardSets?.journey || []).includes('unified-fullstack-brain');
     const hasEntry = (manifest.guards || []).some(g => g.id === 'unified-fullstack-brain');
     if (!hasInFoundation) err('unified-fullstack-brain not in guard-manifest foundation set');
     else pass('unified-fullstack-brain registered in foundation set');
-    if (!hasInSlice) err('unified-fullstack-brain not in guard-manifest slice set');
-    else pass('unified-fullstack-brain registered in slice set');
+    if (!hasInJourney) err('unified-fullstack-brain not in guard-manifest journey set');
+    else pass('unified-fullstack-brain registered in journey set');
     if (!hasEntry) err('unified-fullstack-brain has no entry in guard-manifest guards array');
     else pass('unified-fullstack-brain guard entry found');
   } catch (e) {
@@ -435,7 +435,7 @@ const result = errors.length === 0 ? 'PASS' : 'FAIL';
 
 const output = {
   timestamp: new Date().toISOString(),
-  guard: 'matrix-v3-live-topology',
+  guard: 'journey-operating-model-live-topology',
   retired_matrix: 'NOT_USED',
   result,
   errors,

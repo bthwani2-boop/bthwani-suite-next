@@ -1,5 +1,5 @@
 /**
- * DSH-002 Home Discovery — Policy
+ * Home Discovery Home Discovery — Policy
  * Access gates, capability checks, and client-side filter behavior.
  * Lives in shared so any surface can reuse filter logic without re-implementing it.
  */

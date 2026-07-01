@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type)
 VALUES
   ('partner-local-001', 'partner', 'store-1001', 'own'),

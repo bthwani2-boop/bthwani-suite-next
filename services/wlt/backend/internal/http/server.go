@@ -27,13 +27,13 @@ func NewRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payment-sessions", reference.HandleCreatePaymentSession(db))
 	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSession(db))
 
-	// WLT-001: Payment Capture Lifecycle
+	// WLT Payment Sessions: Payment Capture Lifecycle
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/authorize", payment.HandleAuthorizeSession(db))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/capture", payment.HandleCaptureSession(db))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", payment.HandleExpireSession(db))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", payment.HandleMarkCodCollected(db))
 
-	// WLT-002: Refunds
+	// WLT Refund Status: Refunds
 	mux.HandleFunc("POST /wlt/refunds", refund.HandleCreateRefund(db))
 	mux.HandleFunc("GET /wlt/refunds/{refundId}", refund.HandleGetRefund(db))
 	mux.HandleFunc("GET /wlt/refunds", refund.HandleListRefunds(db))
@@ -41,14 +41,14 @@ func NewRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", refund.HandleCompleteRefund(db))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", refund.HandleRejectRefund(db))
 
-	// WLT-003: Settlements
+	// WLT Settlement Status: Settlements
 	mux.HandleFunc("GET /wlt/settlements/summary", settlement.HandleGetSettlementSummary(db))
 	mux.HandleFunc("POST /wlt/settlements", settlement.HandleCreateSettlement(db))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}", settlement.HandleGetSettlement(db))
 	mux.HandleFunc("GET /wlt/settlements", settlement.HandleListSettlements(db))
 	mux.HandleFunc("POST /wlt/settlements/{settlementId}/post", settlement.HandlePostSettlement(db))
 
-	// WLT-004: COD Commission
+	// WLT Commission: COD Commission
 	mux.HandleFunc("POST /wlt/cod-records", cod.HandleCreateCodRecord(db))
 	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", cod.HandleGetCodRecord(db))
 	mux.HandleFunc("GET /wlt/cod-records", cod.HandleListCodRecords(db))
@@ -57,7 +57,7 @@ func NewRouter(db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/commissions", cod.HandleCreateCommission(db))
 	mux.HandleFunc("GET /wlt/commissions", cod.HandleListCommissions(db))
 
-	// WLT-005: Ledger Audit
+	// WLT Ledger: Ledger Audit
 	mux.HandleFunc("POST /wlt/ledger/entries", ledger.HandleAppendLedgerEntry(db))
 	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", ledger.HandleGetLedgerEntry(db))
 	mux.HandleFunc("GET /wlt/ledger/entries", ledger.HandleListLedgerEntries(db))

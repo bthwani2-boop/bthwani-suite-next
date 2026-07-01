@@ -58,8 +58,8 @@ for (const rel of REQUIRED_BOUNDARY_FILES) {
 
 // ── 2. WLT manifest sliceRuntimeVerified validation ──
 const wltManifest = "services/wlt/service.manifest.ts";
-const WLT_000_EVIDENCE_DIR = "services/wlt/evidence/WLT-000-runtime-foundation";
-const WLT_000_SLICE_GATE = path.join(root, WLT_000_EVIDENCE_DIR, "slice-gate.txt");
+const WLT_000_EVIDENCE_DIR = "services/wlt/evidence/WLT Foundation-runtime-foundation";
+const WLT_000_SLICE_GATE = path.join(root, WLT_000_EVIDENCE_DIR, "journey-gate.txt");
 const WLT_000_API_HEALTH = path.join(root, WLT_000_EVIDENCE_DIR, "api-health.txt");
 
 if (fs.existsSync(path.join(root, wltManifest))) {
@@ -72,7 +72,7 @@ if (fs.existsSync(path.join(root, wltManifest))) {
     if (!evidenceExists) {
       violations.push({
         file: wltManifest,
-        message: `FORBIDDEN: sliceRuntimeVerified: true requires evidence at ${WLT_000_EVIDENCE_DIR} (slice-gate.txt + api-health.txt). Evidence is missing.`,
+        message: `FORBIDDEN: sliceRuntimeVerified: true requires evidence at ${WLT_000_EVIDENCE_DIR} (journey-gate.txt + api-health.txt). Evidence is missing.`,
       });
     }
   }

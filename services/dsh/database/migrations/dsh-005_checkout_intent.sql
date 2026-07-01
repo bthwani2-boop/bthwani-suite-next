@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-005: Checkout Intent & WLT Handoff
 -- Creates dsh_checkout_intents table for client checkout intent persistence.
 -- Financial amounts are NOT computed here — priceReference labels come from catalog/cart.

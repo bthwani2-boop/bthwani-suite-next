@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-SLICE-001 publication gates and DSH-SLICE-002 storefront catalog.
 
 ALTER TABLE dsh_stores

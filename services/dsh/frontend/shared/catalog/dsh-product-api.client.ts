@@ -78,7 +78,7 @@ export type DshListProductsResponse = {
   };
 };
 
-// ─── J-002 / DSH-SLICE-002B: Category Structure ─────────────────────────────
+// ─── J-002 / DSH-JOURNEY-002B: Category Structure ─────────────────────────────
 
 export type DshCategoryRecord = {
   readonly id: string;
@@ -111,7 +111,7 @@ export type DshListCategoriesResponse = {
   };
 };
 
-// ─── J-002 / DSH-SLICE-002D: Partner Local Overrides ────────────────────────
+// ─── J-002 / DSH-JOURNEY-002D: Partner Local Overrides ────────────────────────
 
 export type DshCatalogOverrideInput = {
   readonly product_id: string;
@@ -139,7 +139,7 @@ export type DshUpdateCatalogOverridesResponse = {
   readonly overrides: readonly DshCatalogOverrideRecord[];
 };
 
-// ─── J-002 / DSH-SLICE-002E: Approval Workflow ──────────────────────────────
+// ─── J-002 / DSH-JOURNEY-002E: Approval Workflow ──────────────────────────────
 
 export type DshUpdateCatalogApprovalRequest = {
   readonly item_id: string;
@@ -156,7 +156,7 @@ export type DshCatalogApprovalRecord = {
   readonly created_at: string;
 };
 
-// ─── J-002 / DSH-SLICE-002G: Catalog Conflict Audit ─────────────────────────
+// ─── J-002 / DSH-JOURNEY-002G: Catalog Conflict Audit ─────────────────────────
 
 export type DshCatalogConflict = {
   readonly id: string;

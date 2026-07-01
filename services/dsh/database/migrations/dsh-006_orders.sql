@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-006: Order Fulfillment & Partner Acceptance
 -- Creates dsh_orders, dsh_order_items, dsh_order_status_events tables.
 -- Financial truth (settlement, refund, payment mutation) belongs to WLT — not stored here.

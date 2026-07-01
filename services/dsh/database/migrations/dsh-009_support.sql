@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-009: Support, Incidents & Escalation Room
 -- Clients, partners, and captains submit tickets. Operators manage the support hub.
 -- DSH owns ticket lifecycle state only. Financial disputes route to WLT by reference.

@@ -1,4 +1,4 @@
-// DSH-015: Partner Store Activation — shared brain public barrel.
+// Partner Store Activation — shared brain public barrel.
 // Surfaces import ONLY from this file, never from internal subpaths.
 
 export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem } from "./partner-activation.model";

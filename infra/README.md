@@ -12,7 +12,7 @@ Forbidden in Foundation-005:
 infra/docker/compose.local.yml
 infra/docker/compose.full.yml
 infra/docker/compose.slice.yml
-per-slice compose files
+per-journey compose files
 ```
 
 Current data-plane policy:

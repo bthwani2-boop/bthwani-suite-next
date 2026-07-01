@@ -23,4 +23,4 @@ Authentication belongs to `core/identity`.
 
 ## Acceptance condition
 
-Accepted only when secret scan evidence exists for security-sensitive slices and no committed file contains real secrets.
+Accepted only when secret scan evidence exists for security-sensitive journeys and no committed file contains real secrets.

@@ -13,20 +13,20 @@ Version: 2026.06.24-v1
 - `bthwani-security-secrets-privacy` — Block secrets, sensitive logs, unsafe config, and privacy leaks.
 - `bthwani-agent-handoff-evidence-pack` — Create or review evidence packs under tools/registry/runs. (Explicit-request-only)
 - `bthwani-agent-skill-integrity` — Validate agent files, catalog sync, skill structure, and adapter thinness.
-- `bthwani-foundation-execution` — Execute foundation slice work against governance, package metadata, and guard baseline.
+- `bthwani-foundation-execution` — Execute foundation journey work against governance, package metadata, and guard baseline.
 - `bthwani-legacy-extraction` — Extract from donor/realtest only after conflict review and rewrite for next.
 - `external-agent-donor-reference` — Use approved external agent repositories as read-only inspiration only; never clone, install, execute, auto-sync, or copy wholesale.
 - `bthwani-machine-readable-matrix-governor` — Use CSV matrices as planning input only; closure evidence only in final gate.
-- `bthwani-service-fullstack-slice` — Close service slices across contract, backend, client, UI, and runtime. (Code-based implementation by default, full evidence only in final/high-risk).
+- `bthwani-service-fullstack-journey` — Close service slices across contract, backend, client, UI, and runtime. (Code-based implementation by default, full evidence only in final/high-risk).
 - `bthwani-api-runtime-binding` — Protect OpenAPI -> generated client -> adapter -> screen/runtime binding.
-- `bthwani-docker-slice-runtime` — Verify Docker/data-plane/runtime smoke only for runtime-relevant tasks.
+- `bthwani-docker-journey-runtime` — Verify Docker/data-plane/runtime smoke only for runtime-relevant tasks.
 - `bthwani-platform-runtime-config` — Control environment, provider, service slot, URL, and runtime configuration boundaries.
 - `bthwani-ui-kit-design-lock` — Enforce shared/ui-kit ownership and Brand Lock (Visual evidence is escalation-only).
 - `bthwani-screen-flow-binding` — Bind routes/screens/view-models/states/client contracts (Visual evidence is escalation-only).
 - `bthwani-dsh-wlt-finance-boundary` — Protect WLT financial truth and DSH/WLT integration boundaries.
 - `bthwani-frontend-design-excellence` — Enforce premium, modern, dynamic, mobile-first, RTL-correct, and visually stunning frontend design quality.
 - `bthwani-premium-visual-design-surgeon` — Perform deep visual dissection and premium UI implementation (Visual evidence is escalation-only).
-- `bthwani-final-slice-closure-judge` — Judge if a slice is fully closed and ready by verifying multi-dimensional evidence. (Final-only)
+- `bthwani-final-journey-closure-judge` — Judge if a journey is fully closed and ready by verifying multi-dimensional evidence. (Final-only)
 - `nx-workspace` — Inspect Nx workspace, projects, targets, and graph.
 - `nx-run-tasks` — Run `nx run`, `run-many`, `affected`, filters, and task debugging.
 - `nx-import` — Controlled import/migration from donor or external repos.

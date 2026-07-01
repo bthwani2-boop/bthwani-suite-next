@@ -72,7 +72,7 @@ export const MARKETING_SECTION_TABS: readonly MarketingSectionTabMeta[] = [
   { id: "eligibility", label: "الأهلية" },
   { id: "suppression", label: "الكبت" },
   { id: "auditing",    label: "التدقيق" },
-  { id: "segments",    label: "الشرائح" },
+  { id: "segments",    label: "الفئات المستهدفة" },
 ] as const;
 
 // ─── KPIs Builder ──────────────────────────────────────────────────────────────

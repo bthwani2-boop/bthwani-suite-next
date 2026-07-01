@@ -95,7 +95,7 @@ $NodeChecks = @(
   "pnpm run guard:no-hardcoded-local-repo-root",
   "pnpm run guard:canonical-currency-yemen",
   "pnpm run foundation:gate",
-  "pnpm run slice:gate",
+  "pnpm run journey:gate",
   "pnpm run typecheck",
   "pnpm run test",
   "pnpm run build"
@@ -387,7 +387,7 @@ function Get-RemoteTruth {
     "## CI run $FailedCiRunId",
     '',
     'Expected known failures:',
-    '- Node / PNPM gates → Foundation gate failed; Slice gate/typecheck/test/build skipped.',
+    '- Node / PNPM gates → Foundation gate failed; Journey gate/typecheck/test/build skipped.',
     '- Docker runtime smoke → Full runtime reset and smoke failed; WireMock/WLT provider smoke skipped.',
     '',
     "## CodeQL run $FailedCodeQlRunId",

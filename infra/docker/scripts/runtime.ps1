@@ -367,7 +367,7 @@ function Invoke-MinioSmoke {
 }
 
 function Invoke-DshMediaSeed {
-  Write-Host "`n--- Applying DSH-001 MinIO media seed ---"
+  Write-Host "`n--- Applying Store Discovery MinIO media seed ---"
   $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
   $Mount = "${MediaDirectory}:/seed:ro"
   docker run --rm --network bthwani-runtime --volume $Mount `
@@ -432,7 +432,7 @@ function Invoke-DshSmoke {
   $governance = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $governanceHeaders -ContentType "application/json" -Body $governanceBody -TimeoutSec 10
   if ($governance.audit.actorRole -ne "operator") { throw "operator governance audit missing" }
 
-  # DSH-SLICE-001: prove the publication gate changes persisted state.
+  # DSH-JOURNEY-001: prove the publication gate changes persisted state.
   $hideHeaders = @{
     Authorization = "Bearer $operatorToken"
     "Idempotency-Key" = "smoke-hide-$([guid]::NewGuid())"
@@ -466,7 +466,7 @@ function Invoke-DshSmoke {
   $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10
   if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
 
-  # DSH-SLICE-002: partner writes real catalog rows, submits, and operator approves.
+  # DSH-JOURNEY-002: partner writes real catalog rows, submits, and operator approves.
   $partnerToken = Get-LocalActorToken "bthwani"
   $partnerHeaders = @{
     Authorization = "Bearer $partnerToken"
@@ -510,7 +510,7 @@ function Invoke-DshSmoke {
   $catalogAudit = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/audit" -Headers $operatorHeaders -TimeoutSec 10
   if ($catalogAudit.events.Count -lt 1) { throw "catalog audit evidence is missing" }
 
-  # DSH-015: partner lifecycle from field draft to client-visible store readiness.
+  # Partner Store Activation: partner lifecycle from field draft to client-visible store readiness.
   $fieldToken = Get-LocalActorToken "field"
   $fieldHeaders = @{
     Authorization = "Bearer $fieldToken"
@@ -526,24 +526,24 @@ function Invoke-DshSmoke {
     ownerName = "مالك فحص الشركاء"
     primaryPhone = "+96777$($partnerSuffix.ToString().Substring($partnerSuffix.ToString().Length - 7))"
     category = "grocery"
-    notes = "DSH-015 runtime smoke"
+    notes = "Partner Store Activation runtime smoke"
   } | ConvertTo-Json
   $partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
-  if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "DSH-015 draft create did not return partner id" }
+  if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "Partner Store Activation draft create did not return partner id" }
 
-  $submitBody = @{ reason = "field submitted DSH-015 smoke partner" } | ConvertTo-Json
+  $submitBody = @{ reason = "field submitted Partner Store Activation smoke partner" } | ConvertTo-Json
   $submitted = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
-  if ($submitted.partner.activationStatus -ne "submitted") { throw "DSH-015 submit did not reach submitted" }
+  if ($submitted.partner.activationStatus -ne "submitted") { throw "Partner Store Activation submit did not reach submitted" }
 
   $visitBody = @{
     storeId = "store-1002"
-    visitNotes = "field visit for DSH-015 smoke"
+    visitNotes = "field visit for Partner Store Activation smoke"
     locationLatitude = 15.3229
     locationLongitude = 44.2075
     evidenceMediaRefs = @("media_visit_smoke_front.jpg")
   } | ConvertTo-Json
   $visit = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
-  if ($visit.visitStatus -ne "submitted") { throw "DSH-015 field visit was not submitted" }
+  if ($visit.visitStatus -ne "submitted") { throw "Partner Store Activation field visit was not submitted" }
 
   $docBody = @{
     documentType = "commercial_register"
@@ -551,7 +551,7 @@ function Invoke-DshSmoke {
     notes = "commercial register smoke document"
   } | ConvertTo-Json
   $doc = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
-  if ([string]::IsNullOrWhiteSpace($doc.id)) { throw "DSH-015 document upload did not return document id" }
+  if ([string]::IsNullOrWhiteSpace($doc.id)) { throw "Partner Store Activation document upload did not return document id" }
 
   $transitionHeaders = @{
     Authorization = "Bearer $operatorToken"
@@ -560,42 +560,42 @@ function Invoke-DshSmoke {
   function Invoke-PartnerTransition([string] $PartnerId, [string] $ToStatus) {
     $body = @{
       toStatus = $ToStatus
-      reason = "DSH-015 runtime smoke transition to $ToStatus"
+      reason = "Partner Store Activation runtime smoke transition to $ToStatus"
     } | ConvertTo-Json
     $result = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$PartnerId/transition" -Method Post -Headers $transitionHeaders -ContentType "application/json" -Body $body -TimeoutSec 10
-    if ($result.partner.activationStatus -ne $ToStatus) { throw "DSH-015 transition to $ToStatus failed" }
-    if ($result.event.actorSurface -ne "control-panel") { throw "DSH-015 transition actor_surface was $($result.event.actorSurface)" }
+    if ($result.partner.activationStatus -ne $ToStatus) { throw "Partner Store Activation transition to $ToStatus failed" }
+    if ($result.event.actorSurface -ne "control-panel") { throw "Partner Store Activation transition actor_surface was $($result.event.actorSurface)" }
     return $result
   }
 
   Invoke-PartnerTransition $partnerDraft.id "documents_uploaded" | Out-Null
   $reviewBody = @{
     decision = "approved"
-    reason = "DSH-015 smoke review approved"
+    reason = "Partner Store Activation smoke review approved"
   } | ConvertTo-Json
   $review = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $operatorHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
-  if ($review.document.documentStatus -ne "approved") { throw "DSH-015 document review did not approve document" }
+  if ($review.document.documentStatus -ne "approved") { throw "Partner Store Activation document review did not approve document" }
 
   $linkBody = @{ storeId = "store-1002" } | ConvertTo-Json
   $linkedStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $linkBody -TimeoutSec 10
-  if ($linkedStores.total -lt 1) { throw "DSH-015 partner store link returned no stores" }
+  if ($linkedStores.total -lt 1) { throw "Partner Store Activation partner store link returned no stores" }
 
   foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "partner_active", "client_visible")) {
     Invoke-PartnerTransition $partnerDraft.id $toStatus | Out-Null
   }
   $readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
-  if ($readiness.partnerId -ne $partnerDraft.id) { throw "DSH-015 readiness response did not match partner" }
+  if ($readiness.partnerId -ne $partnerDraft.id) { throw "Partner Store Activation readiness response did not match partner" }
   $audit = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/audit" -Headers $operatorHeaders -TimeoutSec 10
-  if ($audit.events.Count -lt 7) { throw "DSH-015 audit did not include the full transition chain" }
-  if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "DSH-015 audit final status is not client_visible" }
+  if ($audit.events.Count -lt 7) { throw "Partner Store Activation audit did not include the full transition chain" }
+  if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "Partner Store Activation audit final status is not client_visible" }
   $linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1002" -Headers $operatorHeaders -TimeoutSec 10
-  if ($linkedStore.store.partnerReadiness -ne "ready") { throw "DSH-015 linked store partner_readiness is not ready" }
+  if ($linkedStore.store.partnerReadiness -ne "ready") { throw "Partner Store Activation linked store partner_readiness is not ready" }
 
   $partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status" -Headers $partnerHeaders -TimeoutSec 10
-  if ([string]::IsNullOrWhiteSpace($partnerSelfStatus.activationStatus)) { throw "DSH-015 partner self status missing activationStatus" }
+  if ([string]::IsNullOrWhiteSpace($partnerSelfStatus.activationStatus)) { throw "Partner Store Activation partner self status missing activationStatus" }
   $partnerSelfReadiness = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/readiness" -Headers $partnerHeaders -TimeoutSec 10
-  if ([string]::IsNullOrWhiteSpace($partnerSelfReadiness.partnerId)) { throw "DSH-015 partner self readiness missing partnerId" }
-  Write-Host "  DSH-015 partner lifecycle smoke: PASS"
+  if ([string]::IsNullOrWhiteSpace($partnerSelfReadiness.partnerId)) { throw "Partner Store Activation partner self readiness missing partnerId" }
+  Write-Host "  Partner Store Activation partner lifecycle smoke: PASS"
 
   if ($script:ProfileList -contains "wlt") {
     $clientToken = Get-LocalActorToken "client"
@@ -619,7 +619,7 @@ function Invoke-DshSmoke {
       fulfillmentMode = "bthwani_delivery"
       paymentMethod = "cod"
       deliveryAddress = "runtime smoke checkout address"
-      note = "runtime DSH-005 smoke"
+      note = "runtime Checkout & WLT Handoff smoke"
     } | ConvertTo-Json
     $checkout = Invoke-RestMethod "http://localhost:58080/dsh/client/checkout-intents" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
     Write-Host "  /dsh/client/checkout-intents: $($checkout.intent.id) / WLT=$($checkout.intent.wltPaymentSessionId)"
@@ -627,7 +627,7 @@ function Invoke-DshSmoke {
     $operatorCheckout = Invoke-RestMethod "http://localhost:58080/dsh/operator/checkout-intents" -Headers $operatorHeaders -TimeoutSec 10
     if ($operatorCheckout.intents.Count -lt 1) { throw "operator checkout intent list returned no rows" }
   } else {
-    Write-Host "  DSH-005 checkout handoff smoke skipped because wlt profile is not active."
+    Write-Host "  Checkout & WLT Handoff checkout handoff smoke skipped because wlt profile is not active."
   }
 
   foreach ($actor in @(
@@ -643,7 +643,7 @@ function Invoke-DshSmoke {
   }
 
 
-  # DSH-002: Home Discovery endpoint smoke
+  # Home Discovery: Home Discovery endpoint smoke
   $homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery" -TimeoutSec 10 -ErrorAction Stop
   $bannerCount    = if ($homeDisc.banners)    { $homeDisc.banners.Count }    else { 0 }
   $promoCount     = if ($homeDisc.promos)     { $homeDisc.promos.Count }     else { 0 }

@@ -105,7 +105,7 @@ if (existsSync(serviceManifestPath)) {
   }
 }
 
-// 6. Guard: dsh.client.home-discovery RUNTIME_VERIFIED requires stage to include DSH-002_RUNTIME_VERIFIED
+// 6. Guard: dsh.client.home-discovery RUNTIME_VERIFIED requires runtimeState to be RUNTIME_VERIFIED
 if (existsSync(CAPABILITY_MAP_PATH) && existsSync(serviceManifestPath)) {
   const capMapSrc = readFileSync(CAPABILITY_MAP_PATH, "utf8");
   const manifestSrc = readFileSync(serviceManifestPath, "utf8");
@@ -114,10 +114,10 @@ if (existsSync(CAPABILITY_MAP_PATH) && existsSync(serviceManifestPath)) {
       capMapSrc,
     );
   if (homeDiscoveryVerified) {
-    const stageIncludesDsh002 = /DSH-002_RUNTIME_VERIFIED/.test(manifestSrc);
-    if (!stageIncludesDsh002) {
+    const runtimeStateVerified = /runtimeState:\s*["']RUNTIME_VERIFIED["']/.test(manifestSrc);
+    if (!runtimeStateVerified) {
       errors.push(
-        "dsh.client.home-discovery is RUNTIME_VERIFIED but service.manifest stage does not include DSH-002_RUNTIME_VERIFIED",
+        "dsh.client.home-discovery is RUNTIME_VERIFIED but service.manifest runtimeState is not RUNTIME_VERIFIED",
       );
     }
   }

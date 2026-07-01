@@ -11,6 +11,6 @@ Do not create services/wlt/backend/Dockerfile until all are true:
 - no financial mutation outside WLT
 - runtime does not use donor container names, donor ports, or donor volumes
 
-First allowed activation slice:
+First allowed activation journey:
 
-- First WLT/payment/finance slice, not DSH-001 Store Discovery
+- First WLT/payment/finance journey, not Store Discovery Store Discovery

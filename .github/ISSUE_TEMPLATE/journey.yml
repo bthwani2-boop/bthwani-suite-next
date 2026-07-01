@@ -1,16 +1,16 @@
-name: Feature Slice
-description: Propose or track a new feature slice.
-labels: ["slice", "needs-evidence"]
+name: Feature Journey
+description: Propose or track a new operational journey / capability.
+labels: ["journey", "needs-evidence"]
 body:
   - type: markdown
     attributes:
       value: |
-        Track implementation of feature slices with required evidence.
+        Track implementation of feature journeys with required evidence.
   - type: input
-    id: slice-id
+    id: journey-id
     attributes:
-      label: Slice ID
-      placeholder: e.g., DSH-016
+      label: Journey ID
+      placeholder: e.g., notifications
     validations:
       required: true
   - type: textarea

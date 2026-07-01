@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json && node ../../tools/scripts/link-dsh-dist.mjs",
     "pretest": "tsc -p tsconfig.json && node ../../tools/scripts/link-dsh-dist.mjs",
     "test": "node --test tests/*.test.mjs",
-    "lint": "node ../../tools/guards/no-preview-demo-mock-runtime.mjs && node ../../tools/guards/no-memory-repo-in-slice-runtime.mjs",
+    "lint": "node ../../tools/guards/no-preview-demo-mock-runtime.mjs && node ../../tools/guards/no-memory-repo-in-journey-runtime.mjs",
     "guard:shared-ownership": "node ../../tools/guards/dsh-frontend-shared-ownership-gate.mjs"
   },
   "peerDependencies": {

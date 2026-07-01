@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-011: Notifications & Actor Communication
 -- Creates notification tables with actor-scoped routing.
 

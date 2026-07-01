@@ -8,11 +8,11 @@ Stage: MASTER_MATRIX_V3_BUSINESS_RULES_AND_OPERATIONAL_CLOSURE
 ## Purpose
 
 Defines the complete business rules, domain ownership boundaries, and operational
-constraints that govern `machine-readable/slice_execution_master_matrix_v3.csv`
-and all future slice execution decisions.
+constraints that govern `machine-readable/journey_execution_master_matrix_v3.csv`
+and all future journey execution decisions.
 
-This document is the authoritative reference for anyone executing a slice.
-No slice may begin without all relevant rows in this document passing their gate.
+This document is the authoritative reference for anyone executing a journey.
+No journey may begin without all relevant rows in this document passing their gate.
 
 ---
 
@@ -56,7 +56,7 @@ Excel files in `machine-readable/` are display artifacts only. CSVs are canonica
 `dsh-wlt`, `platform`, `control-panel`, `app-client`, `app-partner`,
 `app-captain`, `app-field`
 
-`dsh-wlt` is permitted only in: `slice_id`, `integration_infrastructure`,
+`dsh-wlt` is permitted only in: `journey_id`, `integration_infrastructure`,
 `wlt_dependency`, `notes`.
 
 ---
@@ -78,9 +78,9 @@ Excel files in `machine-readable/` are display artifacts only. CSVs are canonica
 `BLOCKED_NEEDS_VISUAL_EVIDENCE`, `BLOCKED_NEEDS_EVIDENCE`, `RESERVED_INVENTORY`,
 `REJECTED`
 
-**Forbidden status values:** `READY_FOR_SLICE`, `VERIFIED`
+**Forbidden status values:** `READY_FOR_JOURNEY`, `VERIFIED`
 
-No row may carry `READY_FOR_SLICE` or `VERIFIED` before a slice-specific gate
+No row may carry `READY_FOR_JOURNEY` or `VERIFIED` before a journey-specific gate
 is explicitly declared and approved.
 
 ---
@@ -354,7 +354,7 @@ Real services use `service.manifest.ts` as the active machine-readable contract.
 - `SERVICE_BLUEPRINT.md` is allowed **only** in `services/_template` as template
 - Existing real-service `SERVICE_BLUEPRINT.md` is legacy reference until migrated to `service.manifest.ts` and governance docs
 - No new real-service `SERVICE_BLUEPRINT.md` may be created
-- WLT service manifest (`services/wlt/service.manifest.ts`) must exist before any WLT-001 or DSH-WLT execution
+- WLT service manifest (`services/wlt/service.manifest.ts`) must exist before any WLT Payment Sessions or DSH-WLT execution
 
 ---
 
@@ -362,16 +362,16 @@ Real services use `service.manifest.ts` as the active machine-readable contract.
 
 All 11 donor aliases must be represented in V3:
 
-| Donor alias | Target | Service | Slice |
+| Donor alias | Target | Service | Journey |
 | --- | --- | --- | --- |
 | dashboard | shell-overview | shared-app-shell | PLATFORM-001 |
-| operations | operations | dsh | DSH-011 |
-| finance | wallet-finance | wlt | WLT-001 |
-| catalogs | catalog | dsh | DSH-002 |
+| operations | operations | dsh | operations-room |
+| finance | wallet-finance | wlt | WLT Payment Sessions |
+| catalogs | catalog | dsh | Home Discovery |
 | community-services | RESERVED\_INVENTORY | reserved | RESERVED-001 |
-| support | support | dsh | DSH-014 |
-| partners | partners | dsh | DSH-006 |
-| marketing | marketing | dsh | DSH-015 |
+| support | support | dsh | Administration |
+| partners | partners | dsh | Order Fulfillment |
+| marketing | marketing | dsh | marketing |
 | platform | platform | core | PLATFORM-001 |
 | administration | platform | core | PLATFORM-001 |
 | hr | RESERVED\_INVENTORY | reserved | RESERVED-002 |
@@ -401,18 +401,18 @@ Blocked endpoints (minimum — all at `status = BLOCKED_NEEDS_API_CONTRACT`):
 
 ```bash
 # V2 validation
-node tools/guards/guard-slice-master-matrix-v2.mjs
+node tools/guards/guard-journey-operating-model.mjs
 
 # V3 validation
-node tools/guards/guard-slice-master-matrix-v3.mjs
+node tools/guards/guard-journey-operating-model.mjs
 
 # Set evidence root
 $env:BTH_EVIDENCE_ROOT = "tools/registry/runs/<SESSION_ID>"
-node tools/guards/guard-slice-master-matrix-v2.mjs
-node tools/guards/guard-slice-master-matrix-v3.mjs
+node tools/guards/guard-journey-operating-model.mjs
+node tools/guards/guard-journey-operating-model.mjs
 ```
 
-Both must exit 0 before any slice execution begins.
+Both must exit 0 before any journey execution begins.
 
 ---
 
@@ -434,10 +434,10 @@ Before declaring this phase complete:
 ## Next Allowed Action
 
 ```text
-DSH-001_CONTRACT_AND_DOMAIN_READINESS
+Store Discovery_CONTRACT_AND_DOMAIN_READINESS
 ```
 
 This is the only permitted next step after this closure phase.
-No slice execution, no backend handler, no frontend screen, no route,
-no migration, no endpoint may be created until DSH-001 contract readiness
+No journey execution, no backend handler, no frontend screen, no route,
+no migration, no endpoint may be created until Store Discovery contract readiness
 is declared.

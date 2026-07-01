@@ -9,6 +9,6 @@ It must not become active until it has:
 - service.manifest.ts
 - contracts/arb.openapi.yaml
 - package.json with check script
-- one approved slice plan
+- one approved journey plan
 - acceptance gates
 - runtime evidence

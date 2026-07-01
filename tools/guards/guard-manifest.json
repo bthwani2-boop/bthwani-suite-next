@@ -37,12 +37,13 @@
       "no-hardcoded-local-repo-root",
       "dsh-store-role-boundary",
       "dsh-catalog-ownership",
-      "dsh-cart-serviceability"
+      "dsh-cart-serviceability",
+      "no-legacy-slice-labels"
     ],
-    "slice": [
+    "journey": [
       "no-direct-fetch-in-screen",
       "no-preview-demo-mock-runtime",
-      "no-memory-repo-in-slice-runtime",
+      "no-memory-repo-in-journey-runtime",
       "no-financial-mutation-outside-wlt",
       "no-broken-imports",
       "service-fullstack-linkage",
@@ -55,7 +56,8 @@
       "canonical-host-ports",
       "no-hardcoded-local-repo-root",
       "dsh-frontend-shared-boundary-imports",
-      "unified-fullstack-brain"
+      "unified-fullstack-brain",
+      "no-legacy-slice-labels"
     ]
   },
   "guards": [
@@ -143,9 +145,14 @@
       "policySource": "governance/08_CLEANUP_AND_DEPRECATION.md"
     },
     {
-      "id": "no-memory-repo-in-slice-runtime",
-      "path": "tools/guards/no-memory-repo-in-slice-runtime.mjs",
+      "id": "no-memory-repo-in-journey-runtime",
+      "path": "tools/guards/no-memory-repo-in-journey-runtime.mjs",
       "policySource": "governance/05_DOCKER_AND_DATA_PLANE.md"
+    },
+    {
+      "id": "no-legacy-slice-labels",
+      "path": "tools/guards/no-legacy-slice-labels.mjs",
+      "policySource": "governance/08_CLEANUP_AND_DEPRECATION.md"
     },
     {
       "id": "no-financial-mutation-outside-wlt",

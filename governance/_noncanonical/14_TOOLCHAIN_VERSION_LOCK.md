@@ -6,4 +6,4 @@ TypeScript: 5.9.3
 Go: 1.26.4
 
 Mobile/web frameworks are not installed during foundation.
-Expo, React Native, Next.js, and Tamagui are added only when their slice requires them.
+Expo, React Native, Next.js, and Tamagui are added only when their journey requires them.

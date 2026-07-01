@@ -33,7 +33,7 @@ export type DshStoreCardViewModel = {
   readonly hasCouponBadge: boolean;
   readonly pointsMultiplier: number | null;
   readonly isPopular: boolean;
-  /** DSH-015: true only when backend confirms partner onboarding_status = 'client_visible' */
+  /** true only when backend confirms partner onboarding_status = 'client_visible' */
   readonly isClientEligible: boolean;
 };
 

@@ -36,7 +36,7 @@ Invoke this skill when the task includes any of the following:
 - fixing fragmented UI implementation
 - removing raw visual tokens or local design systems
 - aligning DSH/WLT surfaces with the BThwani brand and `@bthwani/ui-kit`
-- preparing UI work for slice closure
+- preparing UI work for journey closure
 
 ## Must read before execution
 
@@ -364,7 +364,7 @@ During implementation:
 8. Keep each surface UI-only.
 9. Add local UI only when it is truly surface-specific and not reusable.
 10. Keep the code small, direct, typed, and maintainable.
-11. Do not broaden the slice beyond the current topic.
+11. Do not broaden the journey beyond the current topic.
 12. Remove or merge duplicate visual implementations when proven safe.
 
 ## Required checks
@@ -373,7 +373,7 @@ For normal UI implementation:
 - run the targeted package typecheck/lint only when available and useful
 
 Do not run all of:
-graphify, foundation gate, slice gate, full typecheck, full lint, full test, full build, affected checks, and multiple guards by default.
+graphify, foundation gate, journey gate, full typecheck, full lint, full test, full build, affected checks, and multiple guards by default.
 
 Use those only when final visual closure or high-risk ownership change requires them.
 
@@ -393,7 +393,7 @@ Do not require long output blocks for normal execution.
 
 ## Closure checklist
 
-A design slice may close only when all applicable items pass:
+A design journey may close only when all applicable items pass:
 
 - target interface is reachable
 - owner path is correct

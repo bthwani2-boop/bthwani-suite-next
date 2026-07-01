@@ -40,7 +40,7 @@ export type WltPaymentSessionStatusReference =
   | "failed"
   | "expired";
 
-// WLT-002
+// WLT Refund Status
 export type WltRefundStatus =
   | "requested"
   | "approved"
@@ -63,7 +63,7 @@ export type WltDshRefundReference = {
   readonly updatedAt: string;
 };
 
-// WLT-003
+// WLT Settlement Status
 export type WltSettlementStatus =
   | "pending"
   | "processing"
@@ -95,7 +95,7 @@ export type WltDshSettlementSummary = {
   readonly settlementCount: number;
 };
 
-// WLT-004
+// WLT Commission
 export type WltCodStatus =
   | "pending_collection"
   | "collected"
@@ -142,7 +142,7 @@ export type WltDshCommissionReference = {
   readonly createdAt: string;
 };
 
-// WLT-005
+// WLT Ledger
 export type WltLedgerDebitCredit = "debit" | "credit";
 
 export type WltLedgerActorType =

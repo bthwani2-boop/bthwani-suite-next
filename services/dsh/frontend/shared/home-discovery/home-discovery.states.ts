@@ -1,5 +1,5 @@
 /**
- * DSH-002 Home Discovery — UI States
+ * Home Discovery Home Discovery — UI States
  * Discriminated union for all screen states.
  * DB-backed runtime data in success state only.
  */

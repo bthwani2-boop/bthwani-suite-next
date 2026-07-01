@@ -78,7 +78,7 @@ export function CheckoutActivityScreen() {
   const stateView = controller.loadState === "loading"
     ? <StatePanel title="جاري تحميل نشاط checkout" description="يتم تحميل نوايا الدفع ومرجع WLT من DSH." />
     : controller.loadState === "empty"
-      ? <StatePanel title="لا توجد نوايا checkout" description="ستظهر هنا أي نية دفع تنشأ من DSH-005." />
+      ? <StatePanel title="لا توجد نوايا checkout" description="ستظهر هنا أي نية دفع تنشأ من DSH." />
       : controller.loadState === "error"
         ? <StatePanel title="تعذر تحميل نشاط checkout" description="تحقق من صلاحيات operator واتصال DSH API." />
         : undefined;
@@ -89,7 +89,7 @@ export function CheckoutActivityScreen() {
       header={<CpPageHeader title="نشاط checkout ومرجع WLT" />}
       toolbar={
         <section style={TOOLBAR_STYLE}>
-          <strong>حدود الشريحة</strong>
+          <strong>حدود الخدمة والرحلة التشغيلية</strong>
           <p style={{ margin: "0.35rem 0 0", opacity: 0.75 }}>
             هذه الشاشة مراقبة تشغيلية فقط: DSH يعرض نية checkout، و WLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
           </p>

@@ -1,6 +1,6 @@
 import { fail, lineNumber, listCodeFiles, read } from "./_guard-utils.mjs";
 
-const guardId = "no-memory-repo-in-slice-runtime";
+const guardId = "no-memory-repo-in-journey-runtime";
 const violations = [];
 
 const regex = /\b(InMemory|MemoryRepository|memoryRepository|memoryRepo|new\s+Map\s*\(|memory\s+repo)\b/g;
@@ -15,7 +15,7 @@ for (const file of listCodeFiles()) {
     violations.push({
       file,
       line: lineNumber(content, match.index),
-      message: `memory repository/runtime state is forbidden in slice runtime: ${match[0]}`
+      message: `memory repository/runtime state is forbidden in journey runtime: ${match[0]}`
     });
   }
 }

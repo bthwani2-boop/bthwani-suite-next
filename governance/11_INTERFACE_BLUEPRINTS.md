@@ -5,7 +5,7 @@ Stage: PHASE-9A_CURRENT_PHASE_INTERFACE_CONTRACTS
 
 ## Purpose
 
-Phase 9A defines interface ownership contracts before product slices. It does not create runtime shells, page templates, navigation runtime, auth-session runtime, or repeated screen blueprint files.
+Phase 9A defines interface ownership contracts before capability journeys. It does not create runtime shells, page templates, navigation runtime, auth-session runtime, or repeated screen blueprint files.
 
 The remaining Phase 9 work is activated incrementally:
 
@@ -36,7 +36,7 @@ dsh, wlt, knz, arb, amn, esf, mrf, snd, kwd.
 
 dsh, wlt.
 
-`CURRENT_PHASE` describes the Phase 9A planning boundary. It does not declare a service runtime-active or a product slice closed.
+`CURRENT_PHASE` describes the Phase 9A planning boundary. It does not declare a service runtime-active or a product journey closed.
 
 ## Reserved Services
 
@@ -90,10 +90,10 @@ Forbidden locations:
 
 Do not create `SCREEN_BLUEPRINT.md` under every surface.
 
-Screen and slice planning must be expressed through:
+Screen and journey planning must be expressed through:
 
-- `services/<service>/service.manifest.ts` only when the service enters an active slice
-- `tools/registry/runs/<SESSION>/slice-scope.md` during execution when needed
+- `services/<service>/service.manifest.ts` only when the service enters an active journey
+- `tools/registry/runs/<SESSION>/journey-scope.md` during execution when needed
 
 ## Reserved Interface Artifacts Register
 
@@ -123,7 +123,7 @@ Creating any reserved artifact requires an activation gate.
 Before creating any reserved artifact, the implementing agent must provide:
 
 1. artifact name
-2. active slice name
+2. active journey name
 3. service owner
 4. surface owner and consumers
 5. reason the artifact is needed now
@@ -131,7 +131,7 @@ Before creating any reserved artifact, the implementing agent must provide:
 7. exact files to be created
 8. forbidden responsibilities check
 9. typecheck command
-10. foundation or slice gate command
+10. foundation or journey gate command
 11. evidence path
 
 Any reserved artifact created without this gate is invalid.
@@ -140,7 +140,7 @@ Any reserved artifact created without this gate is invalid.
 
 ### 9B — Service Activation Manifest
 
-Open with the first real service slice, expected to be `DSH-001 Store Discovery`. Create only the active service manifest and scope it to the active slice. Before slice closure, satisfy service activation requirements through `services/<service>/service.manifest.ts` and slice evidence. Do not create `SERVICE_BLUEPRINT.md` unless a later activation gate explicitly approves it, and resolve any older governance or guard requirement before activating the slice. Do not create manifests for inactive services.
+Open with the first real service capability, expected to be `Store Discovery`. Create only the active service manifest and scope it to the active journey. Before journey closure, satisfy service activation requirements through `services/<service>/service.manifest.ts` and journey evidence. Do not create `SERVICE_BLUEPRINT.md` unless a later activation gate explicitly approves it, and resolve any older governance or guard requirement before activating the journey. Do not create manifests for inactive services.
 
 ### 9C — Mobile Interface Runtime
 
@@ -156,7 +156,7 @@ A service-local flow remains under its owning service. Move navigation infrastru
 
 ### 9F — Control Panel Interface
 
-Open with the first real control-panel slice. Governance document 12, shell layouts, and page templates remain reserved until the activation gate passes.
+Open with the first real control-panel journey. Governance document 12, shell layouts, and page templates remain reserved until the activation gate passes.
 
 A page template may be created only when a real page has:
 
@@ -170,11 +170,11 @@ A page template may be created only when a real page has:
 
 ### 9G — Webapp and Website
 
-`webapp` and `website` remain reserved until an approved `WEBAPP-001` or `WEBSITE-001` slice updates the current-phase contracts.
+`webapp` and `website` remain reserved until an approved webapp or website journey updates the current-phase contracts.
 
 ### 9H — Reserved Service Activation
 
-Activate one reserved service at a time through an approved service slice. Add only that service and its approved surfaces to current-phase contracts, then create only the artifacts required by that slice.
+Activate one reserved service at a time through an approved service journey. Add only that service and its approved surfaces to current-phase contracts, then create only the artifacts required by that journey.
 
 ## Phase 10A — DSH Service Activation
 
@@ -182,7 +182,7 @@ Phase 10A activates the DSH service contract through `services/dsh/service.manif
 
 The activation is limited to the contract-backed system capability already present in `services/dsh/contracts/dsh.openapi.yaml`. It does not claim that Store Discovery, a commerce runtime, or a screen is implemented.
 
-`DSH-001 Store Discovery` remains the first product slice. Its capability may be declared as the next slice, but it cannot become runtime-active or closed until its OpenAPI, backend, client, frontend, tests, and evidence exist.
+`Store Discovery` remains the first capability journey. Its capability may be declared as the next journey, but it cannot become runtime-active or closed until its OpenAPI, backend, client, frontend, tests, and evidence exist.
 
 ## Control Panel Reserved Taxonomy
 
@@ -223,7 +223,7 @@ This file is accepted only when:
 - no navigation, auth-session, rtl, or locale runtime folder is added
 - no repeated `SCREEN_BLUEPRINT.md` file is added
 - no real-service `service.manifest.ts` is created without an activation scope
-- DSH activation declares only contract-backed current behavior and does not pre-close DSH-001
+- DSH activation declares only contract-backed current behavior and does not pre-close Store Discovery
 - current phase services remain dsh and wlt only
 - reserved services do not enter current phase maps
 - reserved surfaces do not enter current phase maps

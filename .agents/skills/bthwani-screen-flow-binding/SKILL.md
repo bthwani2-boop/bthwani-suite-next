@@ -13,7 +13,7 @@ summary: Bind routes, screens, view-models, states, and visual evidence.
 
 ## Read before
 
-`governance/09_SLICE_OPERATING_MODEL.md`, screen matrices, app route files, ui-kit contracts, API binding skill when data-backed
+`governance/09_JOURNEY_OPERATING_MODEL.md`, screen matrices, app route files, ui-kit contracts, API binding skill when data-backed
 
 ## Execution contract
 
