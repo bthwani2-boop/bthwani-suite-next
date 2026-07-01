@@ -167,9 +167,8 @@ REASON: local working tree غير نظيف أو غير مفهوم
 قبل أي تعديل، اكتب تعريفًا تنفيذيًا للرحلة يحتوي:
 
 ```yaml
-resolved_ref:
+ref:
 resolved_commit_sha:
-remote_head_verified_at:
 purpose:
 in_scope:
 out_of_scope:
@@ -198,6 +197,8 @@ guards_required:
 evidence_required:
 ```
 
+المستخدم يكتب REF فقط. الوكيل يجب أن يثبت commit SHA الذي فحصه في التقرير النهائي كـ resolved_commit_sha.
+
 أي سطح أو قسم أو طبقة مستبعدة يجب أن تُذكر صراحة في OUT_OF_SCOPE مع سبب الاستبعاد ودليل عدم التأثر. الاستبعاد الصامت = FIX_REQUIRED.
 
 لا يكفي أن يفتح السطح شاشة أو يعرض بطاقة. كل سطح مصنف REQUIRED يجب أن يثبت دوره التشغيلي الكامل داخل الرحلة، بما يشمل الحالة، الإجراء، القيود، الأخطاء، والرجوع إلى shared controller. أي سطح مطلوب لكنه مجرد عرض سطحي = FIX_REQUIRED.
@@ -215,12 +216,11 @@ frontend
 
 ## 5.1) مصفوفة إلزامية لمنع تجاهل الأسطح والأقسام
 
-قبل أي تنفيذ أو مراجعة، يجب إنشاء مصفوفتين إلزاميتين:
+قبل أي تنفيذ أو مراجعة، يجب إنشاء مصفوفات إلزامية وسلسلة ربط:
 
 ### surface_code_coverage_matrix
 
 يجب ذكر كل سطح من الأسطح التالية صراحة، حتى لو كان غير داخل النطاق:
-
 - app-client
 - app-partner
 - app-field
@@ -236,13 +236,13 @@ surface_code_coverage_matrix:
     reason:
     surface_path:
     entry_file:
-    imports_shared_brain: PASS | FAIL
-    uses_shared_controller_or_view_model: PASS | FAIL
-    has_direct_api_call: PASS | FAIL
-    has_local_business_logic: PASS | FAIL
-    has_local_state_machine: PASS | FAIL
-    has_local_permission_logic: PASS | FAIL
-    has_duplicated_domain_types: PASS | FAIL
+    imports_shared_brain: PASS | FAIL | N/A
+    uses_shared_controller_or_view_model: PASS | FAIL | N/A
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_state_machine_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   app-partner:
@@ -250,13 +250,13 @@ surface_code_coverage_matrix:
     reason:
     surface_path:
     entry_file:
-    imports_shared_brain:
-    uses_shared_controller_or_view_model:
-    has_direct_api_call:
-    has_local_business_logic:
-    has_local_state_machine:
-    has_local_permission_logic:
-    has_duplicated_domain_types:
+    imports_shared_brain: PASS | FAIL | N/A
+    uses_shared_controller_or_view_model: PASS | FAIL | N/A
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_state_machine_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   app-field:
@@ -264,13 +264,13 @@ surface_code_coverage_matrix:
     reason:
     surface_path:
     entry_file:
-    imports_shared_brain:
-    uses_shared_controller_or_view_model:
-    has_direct_api_call:
-    has_local_business_logic:
-    has_local_state_machine:
-    has_local_permission_logic:
-    has_duplicated_domain_types:
+    imports_shared_brain: PASS | FAIL | N/A
+    uses_shared_controller_or_view_model: PASS | FAIL | N/A
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_state_machine_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   app-captain:
@@ -278,13 +278,13 @@ surface_code_coverage_matrix:
     reason:
     surface_path:
     entry_file:
-    imports_shared_brain:
-    uses_shared_controller_or_view_model:
-    has_direct_api_call:
-    has_local_business_logic:
-    has_local_state_machine:
-    has_local_permission_logic:
-    has_duplicated_domain_types:
+    imports_shared_brain: PASS | FAIL | N/A
+    uses_shared_controller_or_view_model: PASS | FAIL | N/A
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_state_machine_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   control-panel:
@@ -292,26 +292,26 @@ surface_code_coverage_matrix:
     reason:
     surface_path:
     entry_file:
-    imports_shared_brain:
-    uses_shared_controller_or_view_model:
-    has_direct_api_call:
-    has_local_business_logic:
-    has_local_state_machine:
-    has_local_permission_logic:
-    has_duplicated_domain_types:
+    imports_shared_brain: PASS | FAIL | N/A
+    uses_shared_controller_or_view_model: PASS | FAIL | N/A
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_state_machine_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 ```
 
 ممنوع حذف أي سطح من المصفوفة.  
 أي سطح غير مذكور = FIX_REQUIRED.  
 أي سطح مستبعد دون سبب ودليل عدم التأثر = FIX_REQUIRED.  
+N/A مسموح فقط إذا كان role = FORBIDDEN أو NOT_APPLICABLE، ويجب أن يكون reason مكتوبًا.  
 أي سطح REQUIRED بلا verification_command أو لا يستورد shared brain أو لا يستخدم controller/view-model المعتمد = FIX_REQUIRED.  
 أي surface يحتوي business logic أو direct API أو local state machine أو local permission logic = FIX_REQUIRED.
 
 ### control_panel_section_code_matrix
 
 يجب ذكر كل قسم من أقسام لوحة التحكم التالية صراحة، حتى لو كان غير داخل النطاق:
-
 - partners
 - catalog
 - operations
@@ -330,11 +330,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared: PASS | FAIL
-    forbidden_actions_enforced: PASS | FAIL
-    has_local_business_logic: PASS | FAIL
-    has_direct_api_call: PASS | FAIL
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   catalog:
@@ -342,11 +349,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   operations:
@@ -354,11 +368,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   support:
@@ -366,11 +387,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   marketing:
@@ -378,11 +406,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   platform:
@@ -390,11 +425,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   finance_or_wlt:
@@ -402,11 +444,18 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 
   administration:
@@ -414,17 +463,25 @@ control_panel_section_code_matrix:
     reason:
     section_path:
     entry_file:
+    related_routes:
+    owned_decisions:
+    allowed_actions:
+    forbidden_actions:
+    read_only_data:
+    state_cases_used:
     shared_brain_import:
-    allowed_actions_defined_in_shared:
-    forbidden_actions_enforced:
-    has_local_business_logic:
-    has_direct_api_call:
+    shared_controller_or_view_model:
+    direct_api_absence: PASS | FAIL | N/A
+    local_business_logic_absence: PASS | FAIL | N/A
+    local_permission_logic_absence: PASS | FAIL | N/A
+    duplicated_domain_types_absence: PASS | FAIL | N/A
     verification_command:
 ```
 
 ممنوع الاكتفاء بكلمة control-panel عامة.  
 أي قسم غير مذكور في المصفوفة = FIX_REQUIRED.  
 أي قسم مصنف NOT_APPLICABLE بلا سبب = FIX_REQUIRED.  
+أي قسم Control Panel مصنف PRIMARY أو SECONDARY أو READ_ONLY يجب أن يذكر related_routes وowned_decisions أو read_only_data وallowed_actions وforbidden_actions وstate_cases_used. أي قسم بلا هذه التفاصيل = FIX_REQUIRED.  
 القسم PRIMARY هو مالك القرار داخل لوحة التحكم، ولا يجوز لقسم آخر تنفيذ قراره إلا إذا كان مصرحًا له في shared policy.  
 ممنوع استخدام screenshot أو manual navigation كشرط إلزامي داخل هذا البروتوكول.
 
@@ -440,6 +497,60 @@ control_panel_section_code_matrix:
 - guard results
 - typecheck/test/build results
 - backend/API/database evidence when داخل النطاق
+
+أي مصفوفة ناقصة أو عامة أو غير مثبتة بأمر تحقق = FIX_REQUIRED.
+
+### binding_chain_matrix
+
+أي رحلة فيها backend/API/frontend يجب أن تثبت سلسلة الربط من backend route إلى API contract إلى API client إلى shared controller/view-model إلى surface usage. أي حلقة مفقودة = FIX_REQUIRED.
+
+```yaml
+binding_chain_matrix:
+  backend:
+    routes:
+    handlers:
+    services:
+    repositories:
+    database_tables:
+    migrations:
+  api_contract:
+    openapi_paths:
+    request_response_schemas:
+    error_schemas:
+  api_client:
+    client_files:
+    generated_or_shared:
+    direct_surface_api_absence: PASS | FAIL | N/A
+  shared_brain:
+    controller:
+    state:
+    view_model:
+    policy:
+    validation:
+  surfaces:
+    app-client:
+      role:
+      imports_shared_controller: PASS | FAIL | N/A
+    app-partner:
+      role:
+      imports_shared_controller: PASS | FAIL | N/A
+    app-field:
+      role:
+      imports_shared_controller: PASS | FAIL | N/A
+    app-captain:
+      role:
+      imports_shared_controller: PASS | FAIL | N/A
+    control-panel:
+      role:
+      imports_shared_controller: PASS | FAIL | N/A
+  verification:
+    typecheck:
+    tests:
+    guards:
+    build:
+```
+
+أي رحلة بلا surface_code_coverage_matrix و control_panel_section_code_matrix و topic_file_organization_matrix و consolidation_matrix و journey_sequence_matrix و binding_chain_matrix = FIX_REQUIRED.
 
 
 ## 6) المسارات السيادية الحاكمة
@@ -783,7 +894,7 @@ BLOCKED_NEEDS_EVIDENCE
 
 يجب فحص حجم الملفات وعدد الأسطر داخل نطاق الرحلة.
 
-القواعد:
+Frontend File Size Rules:
 - أي screen/component file أكبر من 350 سطر = FIX_REQUIRED إلا إذا وُجد سبب معماري موثق.
 - أي screen/component file أكبر من 500 سطر = MUST_SPLIT.
 - أي shared controller/hook أكبر من 300 سطر = REVIEW_SPLIT.
@@ -797,6 +908,12 @@ BLOCKED_NEEDS_EVIDENCE
   - empty/error/loading views
   - local UI-only helpers فقط
 - أي منطق مستخرج من surface يجب أن ينتقل إلى shared brain المناسب.
+
+Backend File Size Rules:
+- أي backend handler file أكبر من 400 سطر = REVIEW_SPLIT.
+- أي backend service/repository أكبر من 500 سطر = REVIEW_SPLIT.
+- أي handler يخلط routing + validation + business rules + persistence = MUST_SPLIT.
+- أي repository يحتوي business decision logic = FIX_REQUIRED.
 
 ### Naming Rules
 
@@ -861,8 +978,22 @@ services/wlt/frontend/shared/dsh/<topic>/
 
 داخل surface يجب أن يبقى التنظيم UI فقط:
 
+DSH UI surfaces:
 ```text
 services/dsh/frontend/<surface>/<topic>/
+  <Topic>Screen.tsx
+  components/
+    <Topic>Section.tsx
+    <Topic>Card.tsx
+    <Topic>Row.tsx
+    <Topic>EmptyState.tsx
+    <Topic>ErrorState.tsx
+    <Topic>LoadingState.tsx
+```
+
+WLT UI surfaces:
+```text
+services/wlt/frontend/<surface>/<topic>/
   <Topic>Screen.tsx
   components/
     <Topic>Section.tsx
@@ -897,9 +1028,9 @@ topic_file_organization_matrix:
       - path:
         responsibility:
         line_count:
-        naming_status: PASS | FAIL
+        naming_status: PASS | FAIL | N/A
         size_status: PASS | REVIEW_SPLIT | MUST_SPLIT
-        ownership_status: PASS | FAIL
+        ownership_status: PASS | FAIL | N/A
         action:
   surfaces:
     app-client:
@@ -909,11 +1040,15 @@ topic_file_organization_matrix:
         - path:
           responsibility:
           line_count:
-          imports_shared_brain: PASS | FAIL
-          has_direct_api_call: PASS | FAIL
-          has_business_logic: PASS | FAIL
+          imports_shared_brain: PASS | FAIL | N/A
+          direct_api_absence: PASS | FAIL | N/A
+          local_business_logic_absence: PASS | FAIL | N/A
+          process_env_absence: PASS | FAIL | N/A
+          storage_access_absence: PASS | FAIL | N/A
+          raw_api_mapping_absence: PASS | FAIL | N/A
+          cross_service_internal_import_absence: PASS | FAIL | N/A
           size_status: PASS | REVIEW_SPLIT | MUST_SPLIT
-          naming_status: PASS | FAIL
+          naming_status: PASS | FAIL | N/A
           action:
     app-partner:
       role:
@@ -948,7 +1083,28 @@ topic_file_organization_matrix:
 ```powershell
 Set-Location -LiteralPath "C:\bthwani-suite-next"
 
-# كشف الملفات الكبيرة داخل نطاق DSH/WLT frontend
+# فحص النطاق المحدد فقط لحجم الملفات
+$TopicPaths = @(
+  "services\dsh\frontend\shared\<topic>",
+  "services\dsh\frontend\app-client\<topic>",
+  "services\dsh\frontend\app-partner\<topic>",
+  "services\dsh\frontend\app-field\<topic>",
+  "services\dsh\frontend\app-captain\<topic>",
+  "services\dsh\frontend\control-panel\<topic>"
+)
+
+Get-ChildItem -Path $TopicPaths -Include *.ts,*.tsx -ErrorAction SilentlyContinue |
+  ForEach-Object {
+    $lines = (Get-Content $_.FullName).Count
+    [PSCustomObject]@{
+      Lines = $lines
+      Path = $_.FullName
+    }
+  } |
+  Where-Object { $_.Lines -gt 350 } |
+  Sort-Object Lines -Descending
+
+# الفحص العام الموسع (اختياري)
 Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts,*.tsx |
   ForEach-Object {
     $lines = (Get-Content $_.FullName).Count
@@ -1003,6 +1159,129 @@ pnpm run guard:no-broken-imports
 - import واسع يسبب تحميلًا غير مبرر.
 - أي مؤشر أداء سيئ قابل للإثبات من الكود.
 
+
+## 11.2) قاعدة الإكمال والتجميع ومنع التبعثر
+
+أي رحلة تشغيلية يجب أن تعالج النقص والتكرار والتناقض والتشظي داخل نطاقها أو داخل أي ملف/سطح/طبقة مرتبطة بها مباشرة.
+
+المطلوب:
+- أي منطق ناقص داخل نطاق الرحلة يجب إضافته في مالكه الصحيح.
+- أي منطق مكرر بين أكثر من surface يجب نقله إلى shared brain المناسب.
+- أي types أو states أو view-models أو permissions أو validation مكررة يجب جمعها في ملف قياسي واحد داخل Topic folder المناسب.
+- أي API binding مكرر أو مباشر داخل surface يجب نقله إلى API client/adapters داخل shared brain.
+- أي business logic داخل surface يجب نقله إلى shared brain.
+- أي financial reference مرتبط بـ DSH يجب أن يمر عبر WLT-for-DSH shared brain عند الحاجة.
+- أي ملف يحتوي أكثر من مسؤولية يجب تقسيمه.
+- أي ملفات متعددة تؤدي نفس المسؤولية يجب دمجها أو اختيار مالك واحد لها.
+- أي تناقض بين surface وسطح آخر لنفس الحالة أو القرار أو الإجراء = FIX_REQUIRED.
+- أي تناقض بين backend/API/OpenAPI/API client/shared/surface = FIX_REQUIRED.
+- أي نقص مثبت داخل نطاق الرحلة لا يجوز تركه كتعليق أو ملاحظة؛ يجب إصلاحه أو تصنيفه BLOCKED_NEEDS_EVIDENCE بسبب محدد.
+
+قاعدة المالك القياسي:
+- DSH domain logic → services/dsh/frontend/shared/<topic>/
+- WLT-for-DSH financial references → services/wlt/frontend/shared/dsh/<topic>/
+- UI composition فقط → services/<service>/frontend/<surface>/<topic>/
+- backend truth → backend handlers/services/repositories حسب طبقة المسؤولية
+- API contract truth → OpenAPI/contracts
+- database truth → migrations/tables/repositories
+
+أي تشظي بلا سبب معماري موثق = FIX_REQUIRED.
+
+### consolidation_matrix
+
+لكل رحلة يجب إخراج مصفوفة تجميع:
+
+```yaml
+consolidation_matrix:
+  duplicated_or_scattered_items:
+    - item:
+      current_paths:
+      problem:
+      canonical_owner:
+      required_action: MERGE_DUPLICATE | MOVE_TO_OWNER | REFACTOR_SPLIT | RETIRE_DEAD | KEEP_ACTIVE
+      verification_command:
+  missing_items:
+    - item:
+      required_owner:
+      why_required:
+      required_action:
+      verification_command:
+  contradictions:
+    - item:
+      conflicting_paths:
+      expected_truth_owner:
+      required_action:
+      verification_command:
+```
+
+أي رحلة بلا consolidation_matrix = FIX_REQUIRED.
+أي عنصر مكرر أو متشظي بلا قرار = FIX_REQUIRED.
+أي نقص داخل النطاق بلا إجراء = FIX_REQUIRED.
+
+## 11.3) قاعدة التسلسل واستكمال ما تبقى
+
+لا يجوز تنفيذ رحلة جديدة كأنها معزولة عن ما سبق. قبل أي تنفيذ أو مراجعة، يجب فحص الحالة السابقة من GitHub Remote وتحديد ما تم إنجازه وما بقي مفتوحًا وما يعتمد عليه التوبك الحالي.
+
+المطلوب قبل التنفيذ:
+
+```yaml
+journey_sequence_matrix:
+  current_journey:
+  previous_related_journeys:
+    - name:
+      status: PASS | FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
+      evidence:
+      remaining_gaps:
+      dependency_on_current_journey:
+  prerequisites:
+    - item:
+      status: PASS | FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
+      verification_command:
+  carry_forward_items:
+    - item:
+      source_journey:
+      reason_carried_forward:
+      required_owner:
+      required_action:
+      verification_command:
+  execution_order:
+    - step:
+      reason:
+      blocks:
+      verification_command:
+```
+
+القواعد:
+- إذا كانت الرحلة الحالية تعتمد على نقص من رحلة سابقة، لا يجوز تجاهله.
+- إذا كان النقص السابق مانعًا للتشغيل الحالي، فالنتيجة FIX_REQUIRED.
+- إذا كان النقص السابق خارج نطاق الرحلة الحالية ولا يمنعها، يجب وضعه في carry_forward_items مع سبب واضح.
+- لا يجوز إعادة تنفيذ ما ثبت أنه PASS إلا إذا ظهر تناقض جديد من الكود أو الأدلة.
+- لا يجوز القفز إلى خطوة لاحقة إذا كانت prerequisite مرتبطة لم تثبت.
+- لا يجوز ترك أي عمل متبقٍ بلا مالك أو verification_command.
+- أي carry_forward item بلا مالك أو سبب أو أمر تحقق = FIX_REQUIRED.
+- أي ترتيب تنفيذ غير مبرر = FIX_REQUIRED.
+
+الهدف: التنفيذ يكون متسلسلًا، تراكميًا، ومنظمًا؛ يبدأ مما ثبت، ويكمل ما تبقى، ولا يعيد فتح المغلق إلا بدليل، ولا يترك فجوات بين الرحلات.
+
+## 11.4) قواعد عامة إضافية للرحلة والتحقق
+
+### External Reference Rule
+استخدم المصادر الرسمية أو المفتوحة الموثوقة فقط عند وجود فجوة تشغيلية أو تقنية لا يمكن حسمها من الريبو أو العقود أو المانح. يجب توثيق:
+- ما الفجوة؟
+- لماذا لا يكفي الريبو لحسمها؟
+- ما المصدر أو الممارسة التي تم اعتمادها؟
+- كيف تم تطبيقها داخل بنية المشروع؟
+- ما الدليل الكودي على التطبيق؟
+ممنوع نسخ كود خارجي عشوائيًا أو إدخال dependency جديدة دون سبب مباشر وفحص أثر.
+
+### Related-Scope Closure Rule
+لا يجوز اعتبار الرحلة مغلقة إذا بقي أي ملف أو سطح أو قسم أو API أو backend module أو database table أو migration أو shared controller أو API client أو guard أو test مرتبط بالنطاق دون فحص. الارتباط يثبت عبر imports/exports، routes، OpenAPI، API clients، database references، shared brain usage، surface bindings، guards، tests، أو affected graph.
+
+### Completion & Consolidation Rule
+أي منطق مكرر أو متشظي بين عدة ملفات يجب جمعه في مالك قياسي واحد حسب السياق وبشكل موثق.
+
+### Journey Sequence / Carry-Forward Rule
+قبل البدء بأي رحلة جديدة، يجب مراجعة وحصر ما تم تنفيذه سابقًا وما بقي معلقًا، وتمرير carry forward بنمط منظم وتراكمي.
 
 ## 12) الفحوصات المستهدفة
 
@@ -1086,7 +1365,7 @@ manifest/status updates إن وجدت
 ```text
 README/status يخالف guard/test/runtime evidence = FIX_REQUIRED
 CI غير متاح = CI_NOT_CONFIGURED وليس PASS
-screenshot واحد لا يثبت رحلة متعددة الأسطح
+الإثبات البصري أو اليدوي ليس شرطًا في هذا البروتوكول؛ القبول يعتمد على الأدلة الكودية والفحوصات.
 غياب typecheck/test/build المناسب = FIX_REQUIRED
 غياب دليل backend/database عند دخولها في النطاق = FIX_REQUIRED
 وجود منطق داخل surface بدل shared = FIX_REQUIRED
@@ -1127,10 +1406,13 @@ BLOCKED_NEEDS_EVIDENCE
 اكتب نتيجة واحدة فقط:
 
 ```text
-PASS
+ANALYSIS_PASS
+IMPLEMENTATION_PASS
 FIX_REQUIRED
 BLOCKED_NEEDS_EVIDENCE
 DO_NOT_MERGE
+
+ملاحظة: PASS يجب أن يوضح نوع المهمة: analysis_only (وتكتب ANALYSIS_PASS) أو implementation_or_closure (وتكتب IMPLEMENTATION_PASS).
 ```
 
 ثم تقريرًا مختصرًا ومنظمًا:
