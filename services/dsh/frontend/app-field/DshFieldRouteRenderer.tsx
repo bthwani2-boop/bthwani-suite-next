@@ -12,7 +12,6 @@ import { DshFieldProfileHomeScreen } from './account/DshFieldProfileHomeScreen';
 import { DshFieldProfileScreen } from './account/DshFieldProfileScreen';
 import { DshFieldStoresHistoryScreen } from './stores/DshFieldStoresHistoryScreen';
 import { DshFieldFinanceScreen } from './finance/DshFieldFinanceScreen';
-import { DshFieldPartnerProductsScreen } from './stores/DshFieldPartnerProductsScreen';
 import type { useDshFieldSurfaceModel } from './field.surface-model';
 import type { FieldOnboardingController } from '../shared/field-onboarding';
 
@@ -32,7 +31,6 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
       <FieldPartnerOnboardingScreen
         controller={onboardingController}
         onBack={actions.popRoute}
-        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
     );
   }
@@ -61,7 +59,6 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
       <DshFieldPartnerProgressScreen
         partnerId={route.partnerId}
         onBack={actions.popRoute}
-        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
     );
   }
@@ -98,15 +95,6 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
 
   if (route.kind === 'finance') {
     return <DshFieldFinanceScreen onBack={actions.popRoute} />;
-  }
-
-  if (route.kind === 'products-upload') {
-    return (
-      <DshFieldPartnerProductsScreen
-        partnerId={route.partnerId}
-        onBack={actions.popRoute}
-      />
-    );
   }
 
   if (route.kind === 'escalation') {

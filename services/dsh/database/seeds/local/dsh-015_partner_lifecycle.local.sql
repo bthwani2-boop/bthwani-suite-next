@@ -1,5 +1,5 @@
 -- LEGACY_FILENAME_ONLY — not a slice reference
--- Partner Store Activation: Partner Onboarding and Store Activation local seed.
+-- Partner Onboarding & Store Publication local seed.
 -- The audit trail below follows the backend state machine exactly.
 
 INSERT INTO dsh_partners (

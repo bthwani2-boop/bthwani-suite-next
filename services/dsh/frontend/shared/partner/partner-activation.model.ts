@@ -1,4 +1,4 @@
-// Canonical partner activation state model for Partner Store Activation.
+// Canonical partner onboarding and store publication state model.
 // Adapted from donor dsh-partner-activation.model.ts — architectural boundaries enforced.
 //
 // System rules (enforced here, never in surfaces):
@@ -53,6 +53,27 @@ export type DshPartnerActivationStateMetadata = {
   readonly blockedReason: string;
   readonly auditRequired: boolean;
   readonly allowedNextStatuses: ReadonlyArray<DshPartnerActivationStatus>;
+};
+
+export type DshPartnerDecisionCommandId =
+  | 'preliminary_accept'
+  | 'request_missing_documents'
+  | 'schedule_field_visit'
+  | 'reject_partner'
+  | 'approve_documents'
+  | 'start_ops_review'
+  | 'approve_ops'
+  | 'activate_partner'
+  | 'show_store_to_client'
+  | 'hide_store_from_client'
+  | 'deactivate_partner';
+
+export type DshPartnerDecisionCommand = {
+  readonly id: DshPartnerDecisionCommandId;
+  readonly label: string;
+  readonly description: string;
+  readonly targetStatus: DshPartnerActivationStatus;
+  readonly reasonRequired: boolean;
 };
 
 export const DSH_PARTNER_ACTIVATION_STATES: ReadonlyArray<DshPartnerActivationStateMetadata> = [
@@ -232,6 +253,94 @@ export function getDshPartnerActivationStateMetadata(
   return DSH_PARTNER_ACTIVATION_STATES.find(
     (s) => s.status === status,
   ) as DshPartnerActivationStateMetadata;
+}
+
+export const DSH_PARTNER_DECISION_COMMANDS: ReadonlyArray<DshPartnerDecisionCommand> = [
+  {
+    id: 'preliminary_accept',
+    label: 'قبول مبدئي',
+    description: 'نقل الملف من الاستلام إلى مسار الزيارة أو المراجعة التالية.',
+    targetStatus: 'documents_uploaded',
+    reasonRequired: false,
+  },
+  {
+    id: 'request_missing_documents',
+    label: 'طلب نواقص',
+    description: 'إرجاع الملف للشريك لاستكمال الوثائق المطلوبة.',
+    targetStatus: 'documents_missing',
+    reasonRequired: true,
+  },
+  {
+    id: 'schedule_field_visit',
+    label: 'جدولة زيارة',
+    description: 'طلب زيارة ميدانية قبل متابعة الاعتماد.',
+    targetStatus: 'field_visit_scheduled',
+    reasonRequired: false,
+  },
+  {
+    id: 'reject_partner',
+    label: 'رفض',
+    description: 'رفض الملف في مراجعة العمليات مع سبب إلزامي.',
+    targetStatus: 'ops_rejected',
+    reasonRequired: true,
+  },
+  {
+    id: 'approve_documents',
+    label: 'اعتماد الوثائق',
+    description: 'تأكيد اكتمال الوثائق والانتقال للجاهزية التالية.',
+    targetStatus: 'documents_verified',
+    reasonRequired: false,
+  },
+  {
+    id: 'start_ops_review',
+    label: 'بدء مراجعة العمليات',
+    description: 'رفع الملف إلى المراجعة التشغيلية النهائية.',
+    targetStatus: 'ops_review',
+    reasonRequired: false,
+  },
+  {
+    id: 'approve_ops',
+    label: 'اعتماد العمليات',
+    description: 'اعتماد الملف تشغيليًا قبل تفعيل الشريك.',
+    targetStatus: 'ops_approved',
+    reasonRequired: false,
+  },
+  {
+    id: 'activate_partner',
+    label: 'تفعيل الشريك',
+    description: 'تفعيل الشريك دون إظهاره للعميل قبل اكتمال بوابات المتجر.',
+    targetStatus: 'partner_active',
+    reasonRequired: false,
+  },
+  {
+    id: 'show_store_to_client',
+    label: 'إظهار المتجر للعميل',
+    description: 'إتاحة المتجر للعميل بعد اكتمال بوابات الظهور.',
+    targetStatus: 'client_visible',
+    reasonRequired: false,
+  },
+  {
+    id: 'hide_store_from_client',
+    label: 'إخفاء المتجر عن العميل',
+    description: 'إخفاء المتجر مع بقاء الشريك نشطًا.',
+    targetStatus: 'client_hidden',
+    reasonRequired: true,
+  },
+  {
+    id: 'deactivate_partner',
+    label: 'تعطيل الشريك',
+    description: 'إيقاف الشريك وإخفاء متاجره عن العميل.',
+    targetStatus: 'partner_deactivated',
+    reasonRequired: true,
+  },
+];
+
+export function getDshPartnerDecisionCommands(
+  status: DshPartnerActivationStatus,
+): ReadonlyArray<DshPartnerDecisionCommand> {
+  const meta = getDshPartnerActivationStateMetadata(status);
+  const allowed = new Set(meta.allowedNextStatuses);
+  return DSH_PARTNER_DECISION_COMMANDS.filter((command) => allowed.has(command.targetStatus));
 }
 
 export function isDshPartnerClientVisible(status: DshPartnerActivationStatus): boolean {

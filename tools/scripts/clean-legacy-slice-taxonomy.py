@@ -26,7 +26,7 @@ def main():
         (r"\bDSH-012\b", "Marketing"),
         (r"\bDSH-013\b", "Platform Policies"),
         (r"\bDSH-014\b", "Administration"),
-        (r"\bDSH-015\b", "Partner Store Activation"),
+        (r"\bDSH-015\b", "Partner Onboarding & Store Publication"),
         (r"(?<!\.)\bslices\b", "journeys"),
         (r"(?<!\.)\bslice\b", "journey"),
         (r"(?<!\.)\bSlices\b", "Journeys"),

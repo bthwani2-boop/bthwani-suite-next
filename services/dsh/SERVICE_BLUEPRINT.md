@@ -32,7 +32,7 @@ The active runtime capabilities are:
 - Marketing Command Deck: verified.
 - Platform Policies and Service Area Management: verified.
 - Administration, Roles, and Activation: verified.
-- Partner Store Activation: verified.
+- Partner Onboarding & Store Publication: verified.
 
 ## Active Surfaces
 
@@ -200,7 +200,7 @@ All DSH primary surfaces are active runtime surfaces:
 - `upsertDshCaptainCredential`
 - `listDshAdminAudit`
 
-### Partner Store Activation
+### Partner Onboarding & Store Publication
 
 - `listDshPartners`
 - `createDshPartner`
@@ -283,3 +283,5 @@ pnpm run build
 
 - This file is documentation. The executable truth remains the contract, runtime map, service manifest, generated clients, backend handlers, database migrations, surfaces, and passing guard/runtime evidence.
 - Any future mismatch between this file and executable code must be treated as documentation drift and corrected immediately.
+- Evidence checklist verification SHA: 9b9ef50311f328a362c9fb1b02806ca887d89887
+

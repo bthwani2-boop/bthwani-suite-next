@@ -5,7 +5,7 @@
 import { useCallback, useState } from "react";
 import {
   fieldCreateDraft,
-  fieldUpdatePartner,
+  fieldUpdatePartnerStore,
   fieldSubmitPartner,
   fieldUploadDocument,
   fieldCreateVisit,
@@ -36,6 +36,21 @@ export type FieldOnboardingController = {
   submitDraft: () => Promise<void>;
   reset: () => void;
 };
+
+function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
+  return {
+    displayName: form.displayName ?? "",
+    cityCode: form.city ?? "",
+    serviceAreaCode: form.serviceAreaCode ?? form.city ?? "",
+    addressLine: form.addressLine ?? "",
+    coverageSummary: form.coverageSummary ?? "",
+    operatingHours: form.operatingHours ?? "",
+    deliveryReadiness: form.deliveryReadiness ?? "",
+    storefrontPhotoRef: form.storefrontPhotoRef ?? "",
+    interiorPhotoRef: form.interiorPhotoRef ?? "",
+    signagePhotoRef: form.signagePhotoRef ?? "",
+  };
+}
 
 export function useFieldPartnerOnboardingController(): FieldOnboardingController {
   const [state, setState] = useState<FieldOnboardingDraftState>(initialDraftState);
@@ -91,6 +106,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         category: form.category ?? "default",
         notes: form.notes ?? "",
       });
+      await fieldUpdatePartnerStore(res.id, buildStoreDraftInput(form));
       setState((s) => ({ ...s, partnerId: res.id, partnerVersion: res.version, submitError: null }));
       return true;
     } catch (err) {
@@ -154,21 +170,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     setState((s) => ({ ...s, isSubmitting: true, submitError: null }));
 
     try {
-      // Persist non-financial operational notes (hours/delivery readiness) —
-      // commission/financial terms are never captured or sent from app-field.
-      const { operatingHours, deliveryReadiness } = state.form;
-      const operationalNoteParts = [
-        operatingHours?.trim() ? `ساعات العمل: ${operatingHours.trim()}` : "",
-        deliveryReadiness?.trim() ? `جاهزية التوصيل: ${deliveryReadiness.trim()}` : "",
-      ].filter(Boolean);
-      if (operationalNoteParts.length > 0 && state.partnerVersion !== null) {
-        const updated = await fieldUpdatePartner(
-          state.partnerId,
-          { notes: operationalNoteParts.join(" | ") },
-          state.partnerVersion
-        );
-        setState((s) => ({ ...s, partnerVersion: updated.version }));
-      }
+      await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
 
       // Create field visit if we have location or notes
       if (state.visitNotes || state.locationLatitude !== null) {

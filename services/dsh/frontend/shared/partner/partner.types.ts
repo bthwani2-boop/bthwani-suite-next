@@ -85,7 +85,7 @@ export type DshPartnerAuditEvent = {
   readonly createdAt: string;
 };
 
-export type DshPartnerStore = {
+export type DshPartnerLinkedStore = {
   readonly id: string;
   readonly partnerId: string;
   readonly slug: string;
@@ -96,27 +96,40 @@ export type DshPartnerStore = {
   readonly createdAt: string;
 };
 
-export type DshFieldPartnerProduct = {
-  readonly id: string;
+export type DshFieldPartnerStoreDraft = {
   readonly storeId: string;
-  readonly categoryId: string | null;
-  readonly name: string;
-  readonly description: string;
-  readonly sku: string;
-  readonly priceReference: string;
-  readonly isActive: boolean;
+  readonly partnerId: string;
+  readonly displayName: string;
+  readonly cityCode: string;
+  readonly serviceAreaCode: string;
+  readonly addressLine: string;
+  readonly coverageSummary: string;
+  readonly operatingHours: string;
+  readonly deliveryReadiness: string;
+  readonly storefrontPhotoRef: string;
+  readonly interiorPhotoRef: string;
+  readonly signagePhotoRef: string;
+  readonly status: string;
+  readonly isVisible: boolean;
+  readonly partnerReadiness: string;
+  readonly catalogApprovalStatus: string;
+  readonly marketingVisibility: string;
   readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
 };
 
-export type DshFieldPartnerProductInput = {
-  readonly name: string;
-  readonly description?: string;
-  readonly priceReference: string;
-  readonly isActive?: boolean;
-  readonly expectedVersion?: number;
-};
+export type DshFieldPartnerStoreDraftInput = Partial<Pick<
+  DshFieldPartnerStoreDraft,
+  | 'displayName'
+  | 'cityCode'
+  | 'serviceAreaCode'
+  | 'addressLine'
+  | 'coverageSummary'
+  | 'operatingHours'
+  | 'deliveryReadiness'
+  | 'storefrontPhotoRef'
+  | 'interiorPhotoRef'
+  | 'signagePhotoRef'
+>>;
 
 export type DshCreatePartnerInput = {
   readonly legalNameAr: string;
@@ -399,4 +412,3 @@ export type DshPartnerRoute =
   | 'team-management';
 
 export type PartnerHubSection = 'hub' | 'profile' | 'operations' | 'inventory' | 'wallet' | 'analytics' | 'settings';
-

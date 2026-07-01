@@ -328,7 +328,7 @@ type CreateFieldVisitInput struct {
 	FieldActorID      string   `json:"-"`
 }
 
-type PartnerStore struct {
+type PartnerLinkedStore struct {
 	ID          string `json:"id"`
 	PartnerID   string `json:"partnerId"`
 	Slug        string `json:"slug"`

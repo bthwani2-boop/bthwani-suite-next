@@ -7,7 +7,6 @@ import React from 'react';
 import { Platform, Pressable, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import {
   Badge,
   Button,
@@ -35,10 +34,11 @@ import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shar
 import { uploadFieldMedia } from '../../shared/media';
 import { StepBasicsProfile } from './StepBasicsProfile';
 import { StepLocationAndPhotos } from './StepLocationAndPhotos';
-import { StepDocuments } from './StepDocuments';
+import { StepEvidence } from './StepEvidence';
 import { StepAgreementReview } from './StepAgreementReview';
-import type { DocumentItem, DocumentKind } from './StepDocuments';
+import type { EvidenceItem } from './StepEvidence';
 
+type DocumentKind = 'commercial_registration' | 'identity_proof';
 type BranchPhotoKey = 'storefrontPhotoRef' | 'interiorPhotoRef' | 'signagePhotoRef';
 
 const DOCUMENT_KIND_TO_PARTNER_TYPE: Record<DocumentKind, DshPartnerDocumentType> = {
@@ -46,19 +46,19 @@ const DOCUMENT_KIND_TO_PARTNER_TYPE: Record<DocumentKind, DshPartnerDocumentType
   identity_proof: 'national_id',
 };
 
-type GroupId = 'basics_profile' | 'location_media' | 'documents' | 'agreement_review';
+type GroupId = 'basics_profile' | 'location_media' | 'evidence' | 'agreement_review';
 
 const GROUP_ORDER: readonly GroupId[] = [
   'basics_profile',
   'location_media',
-  'documents',
+  'evidence',
   'agreement_review',
 ];
 
 const GROUP_LABELS: Record<GroupId, string> = {
   basics_profile: 'البيانات الأساسية للمتجر',
-  location_media: 'الموقع والصور الميدانية',
-  documents: 'المستندات والتراخيص الرسمية',
+  location_media: 'الموقع الجغرافي',
+  evidence: 'المستندات والصور المرفقة',
   agreement_review: 'الاتفاق والمراجعة النهائية',
 };
 
@@ -67,16 +67,20 @@ const DOCUMENT_LABELS: Record<DocumentKind, string> = {
   identity_proof: 'الهوية الوطنية للمالك',
 };
 
+const PHOTO_LABELS: Record<BranchPhotoKey, string> = {
+  storefrontPhotoRef: 'صورة الواجهة الخارجية للمحل',
+  interiorPhotoRef: 'صورة المتجر من الداخل والرفوف',
+  signagePhotoRef: 'صورة اللوحة التجارية المطابقة للترخيص',
+};
+
 export type FieldPartnerOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
   readonly onBack?: () => void;
-  readonly onOpenProducts?: (partnerId: string) => void;
 };
 
 export function FieldPartnerOnboardingScreen({
   controller: controllerProp,
   onBack,
-  onOpenProducts,
 }: FieldPartnerOnboardingScreenProps = {}) {
   const identity = useIdentitySession();
   const ownController = useFieldPartnerOnboardingController();
@@ -86,90 +90,82 @@ export function FieldPartnerOnboardingScreen({
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
   const [fieldNotes, setFieldNotes] = React.useState('');
-  const [docLoading, setDocLoading] = React.useState<Record<string, boolean>>({});
-  const [photoLoading, setPhotoLoading] = React.useState<Record<string, boolean>>({});
+  const [evidenceLoading, setEvidenceLoading] = React.useState<Record<string, boolean>>({});
 
-  const handlePickDocument = React.useCallback(async (kind: DocumentKind) => {
-    if (!state.partnerId) return;
-    setDocLoading((s) => ({ ...s, [kind]: true }));
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled || !result.assets?.[0]) return;
+  // Evidence (documents + branch photos) uses the same already-working
+  // expo-image-picker module (camera + gallery) instead of expo-document-picker,
+  // which isn't linked in the currently installed native build.
+  const pickImage = React.useCallback(async (source: 'camera' | 'library', fallbackName: string) => {
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) return null;
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+      if (result.canceled || !result.assets?.[0]) return null;
       const asset = result.assets[0];
-      const mediaRef = await uploadFieldMedia(state.partnerId, {
-        uri: asset.uri,
-        name: asset.name,
-        mimeType: asset.mimeType ?? 'application/octet-stream',
-      });
-      await controller.uploadDocument(DOCUMENT_KIND_TO_PARTNER_TYPE[kind], mediaRef);
-    } finally {
-      setDocLoading((s) => ({ ...s, [kind]: false }));
+      return { uri: asset.uri, name: asset.fileName ?? `${fallbackName}-${Date.now()}.jpg`, mimeType: asset.mimeType ?? 'image/jpeg' };
     }
-  }, [state.partnerId, controller]);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return null;
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+    if (result.canceled || !result.assets?.[0]) return null;
+    const asset = result.assets[0];
+    return { uri: asset.uri, name: asset.fileName ?? `${fallbackName}-${Date.now()}.jpg`, mimeType: asset.mimeType ?? 'image/jpeg' };
+  }, []);
 
-  const handlePickPhoto = React.useCallback(async (key: BranchPhotoKey, source: 'camera' | 'library') => {
-    setPhotoLoading((s) => ({ ...s, [key]: true }));
+  const handlePickEvidence = React.useCallback(async (item: EvidenceItem, source: 'camera' | 'library') => {
+    setEvidenceLoading((s) => ({ ...s, [item.key]: true }));
     try {
-      let picked: { uri: string; name: string; mimeType: string } | null = null;
-
-      if (source === 'camera') {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) return;
-        const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-        if (!result.canceled && result.assets?.[0]) {
-          const asset = result.assets[0];
-          picked = { uri: asset.uri, name: asset.fileName ?? `${key}-${Date.now()}.jpg`, mimeType: asset.mimeType ?? 'image/jpeg' };
-        }
-      } else {
-        // "library" attaches any existing file (document or photo) from the device — not camera-only.
-        const result = await DocumentPicker.getDocumentAsync({
-          type: ['application/pdf', 'image/*'],
-          copyToCacheDirectory: true,
-        });
-        if (!result.canceled && result.assets?.[0]) {
-          const asset = result.assets[0];
-          picked = { uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream' };
-        }
-      }
-
+      const picked = await pickImage(source, item.key);
       if (!picked) return;
-      updateForm({ [key]: picked.uri });
-      if (state.partnerId) {
+      if (item.kind === 'document') {
+        if (!state.partnerId) return;
         const mediaRef = await uploadFieldMedia(state.partnerId, picked);
-        controller.addEvidenceRef(mediaRef);
+        await controller.uploadDocument(DOCUMENT_KIND_TO_PARTNER_TYPE[item.key as DocumentKind], mediaRef);
+      } else {
+        if (state.partnerId) {
+          const mediaRef = await uploadFieldMedia(state.partnerId, picked);
+          updateForm({ [item.key]: mediaRef });
+          controller.addEvidenceRef(mediaRef);
+        } else {
+          updateForm({ [item.key]: picked.uri });
+        }
       }
     } finally {
-      setPhotoLoading((s) => ({ ...s, [key]: false }));
+      setEvidenceLoading((s) => ({ ...s, [item.key]: false }));
     }
-  }, [state.partnerId, updateForm, controller]);
+  }, [state.partnerId, controller, updateForm, pickImage]);
 
   // Derived values (safe — no hooks below this line)
   const form = state.form;
   const activeGroupIndex = GROUP_ORDER.indexOf(activeGroup);
   const isLastGroup = activeGroupIndex === GROUP_ORDER.length - 1;
-  const documents: readonly DocumentItem[] = REQUIRED_DOCUMENT_TYPES.map((partnerType) => {
-    const kind = (Object.keys(DOCUMENT_KIND_TO_PARTNER_TYPE) as DocumentKind[]).find(
-      (k) => DOCUMENT_KIND_TO_PARTNER_TYPE[k] === partnerType
-    ) as DocumentKind;
-    const uploaded = state.uploadedDocumentTypes.includes(partnerType);
-    return {
-      id: kind,
-      label: DOCUMENT_LABELS[kind],
-      required: true,
-      status: uploaded ? 'uploaded' : 'missing',
-      referenceLabel: uploaded ? 'تم رفع المستند' : 'لا يوجد مرجع مرفوع بعد',
-    };
-  });
+  const evidenceItems: readonly EvidenceItem[] = [
+    ...REQUIRED_DOCUMENT_TYPES.map((partnerType): EvidenceItem => {
+      const kind = (Object.keys(DOCUMENT_KIND_TO_PARTNER_TYPE) as DocumentKind[]).find(
+        (k) => DOCUMENT_KIND_TO_PARTNER_TYPE[k] === partnerType
+      ) as DocumentKind;
+      return {
+        key: kind,
+        kind: 'document',
+        label: DOCUMENT_LABELS[kind],
+        status: state.uploadedDocumentTypes.includes(partnerType) ? 'uploaded' : 'missing',
+      };
+    }),
+    ...(Object.keys(PHOTO_LABELS) as BranchPhotoKey[]).map((key): EvidenceItem => ({
+      key,
+      kind: 'photo',
+      label: PHOTO_LABELS[key],
+      status: form[key]?.trim() ? 'uploaded' : 'missing',
+      previewUri: form[key],
+    })),
+  ];
   const missingItems = getFieldRequiredMissingItems(form, state.uploadedDocumentTypes);
   const canSubmit = !!state.partnerId && missingItems.length === 0;
 
   const groupMissingCounts: Record<GroupId, number> = {
     basics_profile: getBasicsProfileMissingCount(form),
     location_media: getLocationMediaMissingCount(form),
-    documents: getDocumentsMissingCount(state.uploadedDocumentTypes),
+    evidence: getDocumentsMissingCount(state.uploadedDocumentTypes, form),
     agreement_review: getAgreementReviewMissingCount(form, state.uploadedDocumentTypes),
   };
 
@@ -247,21 +243,18 @@ export function FieldPartnerOnboardingScreen({
           errors={validationErrors}
           readOnly={false}
           onChange={updateForm}
-          cameraLoading={photoLoading}
-          isNativePickerAvailable={true}
-          onPickPhoto={handlePickPhoto}
           locationLatitude={state.locationLatitude}
           locationLongitude={state.locationLongitude}
           onLocationChange={controller.updateLocation}
         />
       );
     }
-    if (groupId === 'documents') {
+    if (groupId === 'evidence') {
       return (
-        <StepDocuments
-          documents={documents}
-          loadingMap={docLoading}
-          onUploadDocument={(kind) => void handlePickDocument(kind)}
+        <StepEvidence
+          items={evidenceItems}
+          loadingMap={evidenceLoading}
+          onPick={(item, source) => void handlePickEvidence(item, source)}
         />
       );
     }
@@ -279,13 +272,6 @@ export function FieldPartnerOnboardingScreen({
               updateVisitNotes(v);
             }}
           />
-          {onOpenProducts && state.partnerId && (
-            <Button
-              label="إضافة منتجات تجريبية للشريك"
-              tone="secondary"
-              onPress={() => onOpenProducts(state.partnerId as string)}
-            />
-          )}
         </View>
       );
     }

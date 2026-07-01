@@ -56,7 +56,7 @@ enforced as hard gates before any journey execution begins:
 - WLT Refund Status must have at least 5 direct WLT logic rows (refund-status)
 - WLT Settlement Status must have at least 4 direct WLT logic rows (settlement-status-read)
 - Administration must have at least 4 support-entry logic rows (client, partner, captain, field)
-- Marketing api_contract must reference Partner Store Activation, not Notifications
+- Marketing api_contract must reference Partner Onboarding & Store Publication, not Notifications
 - settlement-status-read is the canonical capability name (not settlement-read-model)
 - commission-cod-reference must be split into commission-reference, cod-reference, or wallet-finance-summary
 - Control-panel target_path must use section folder (not capability folder)

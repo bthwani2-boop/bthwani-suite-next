@@ -1,4 +1,4 @@
-import type { DshPartner, DshPartnerSummary, DshPartnerDocument, DshPartnerReadiness, DshPartnerAuditEvent, DshPartnerStore } from "./partner.types";
+import type { DshPartner, DshPartnerSummary, DshPartnerDocument, DshPartnerReadiness, DshPartnerAuditEvent, DshPartnerLinkedStore } from "./partner.types";
 
 // ── List state ────────────────────────────────────────────────────────────────
 
@@ -61,6 +61,6 @@ export type DshPartnerAuditState =
 export type DshPartnerStoresState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly stores: DshPartnerStore[]; readonly total: number }
+  | { readonly kind: "success"; readonly stores: DshPartnerLinkedStore[]; readonly total: number }
   | { readonly kind: "empty" }
   | { readonly kind: "error"; readonly message: string };

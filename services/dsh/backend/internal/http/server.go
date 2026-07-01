@@ -145,7 +145,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
 
-	// Partner Store Activation
+	// Partner Onboarding & Store Publication
 	// Operator namespace
 	mux.HandleFunc("GET /dsh/operator/partners", protected.handleListPartners)
 	mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)
@@ -172,9 +172,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleFieldCreatePartnerVisit)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleFieldSubmitPartnerDraft)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/store", protected.handleFieldGetPartnerStore)
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/products", protected.handleFieldListPartnerProducts)
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/products", protected.handleFieldCreatePartnerProduct)
-	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/products/{productId}", protected.handleFieldUpdatePartnerProduct)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/store", protected.handleFieldUpdatePartnerStore)
 
 	// Partner self namespace
 	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
