@@ -12,6 +12,7 @@ const ALLOWED_EXCEPTIONS = new Set([
   "getLiveOrderDecisions",
   "applyDiscoveryFilter",
   "fieldUploadDocument",
+  "uploadFieldMedia",
   "mapPublishStageToPartnerActivationStatus",
   "dshPromotionCandidates",
   "defaultServiceModes",

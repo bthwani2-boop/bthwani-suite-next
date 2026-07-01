@@ -10,6 +10,7 @@ import (
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/homediscovery"
+	"dsh-api/internal/media"
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
@@ -19,6 +20,7 @@ type protectedStoreServer struct {
 	db       *sql.DB
 	identity *auth.Client
 	wlt      *wlt.Client
+	media    *media.Client
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +91,8 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
-func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client) *protectedStoreServer {
-	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient}
+func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaClient *media.Client) *protectedStoreServer {
+	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient, media: mediaClient}
 }
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
@@ -177,7 +179,7 @@ func (s *protectedStoreServer) handleListPartnerDocuments(w http.ResponseWriter,
 }
 
 func (s *protectedStoreServer) handleAddPartnerDocument(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleFieldUploadDocument(s.db), "operator")
+	s.servePartnerHandler(w, r, partner.HandleAddDocument(s.db), "operator")
 }
 
 func (s *protectedStoreServer) handleReviewPartnerDocument(w http.ResponseWriter, r *http.Request) {
@@ -226,6 +228,18 @@ func (s *protectedStoreServer) handleFieldCreatePartnerVisit(w http.ResponseWrit
 
 func (s *protectedStoreServer) handleFieldSubmitPartnerDraft(w http.ResponseWriter, r *http.Request) {
 	s.servePartnerHandler(w, r, partner.HandleFieldSubmitPartner(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldGetReadiness(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldListDocuments(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldListFieldVisits(s.db), "field")
 }
 
 func (s *protectedStoreServer) handlePartnerActivationReadiness(w http.ResponseWriter, r *http.Request) {

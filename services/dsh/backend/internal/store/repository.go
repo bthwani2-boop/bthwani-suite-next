@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -126,4 +127,61 @@ func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
 		return nil, fmt.Errorf("failed to query store by id: %w", err)
 	}
 	return &row, nil
+}
+
+// GetStoreByPartnerID resolves the store owned by partnerID, ignoring the
+// public visibility gate (used by internal/field/operator surfaces, never by
+// app-client). Returns nil if the partner has no linked store.
+func GetStoreByPartnerID(db *sql.DB, partnerID string) (*DshStoreRow, error) {
+	row, err := scanStore(db.QueryRow(
+		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1",
+		partnerID,
+	))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query store by partner id: %w", err)
+	}
+	return &row, nil
+}
+
+type CreateDraftStoreInput struct {
+	PartnerID   string
+	DisplayName string
+	CityCode    string
+	Category    string
+}
+
+// CreateDraftStore inserts a new, unpublished store linked to a partner.
+// Never visible to app-client: is_visible=false, status=inactive,
+// serviceability=unavailable, and partner_readiness/catalog_approval_status/
+// marketing_visibility keep their safe column defaults (pending/draft/hidden).
+func CreateDraftStore(db *sql.DB, input CreateDraftStoreInput) (DshStoreRow, error) {
+	id := fmt.Sprintf("store-%d", time.Now().UnixNano())
+	category := input.Category
+	if category == "" {
+		category = "default"
+	}
+	cityCode := input.CityCode
+	if cityCode == "" {
+		cityCode = "unassigned"
+	}
+
+	_, err := db.Exec(`
+		INSERT INTO dsh_stores (
+			id, slug, display_name, status, city_code, service_area_code,
+			serviceability_status, is_visible, category, partner_id
+		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5)`,
+		id, input.DisplayName, cityCode, category, input.PartnerID,
+	)
+	if err != nil {
+		return DshStoreRow{}, fmt.Errorf("failed to create draft store: %w", err)
+	}
+
+	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", id))
+	if err != nil {
+		return DshStoreRow{}, fmt.Errorf("failed to load created draft store: %w", err)
+	}
+	return row, nil
 }

@@ -9,6 +9,7 @@ export {
   isDshPartnerActivationComplete,
   getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
+  formatDshPartnerAuditEventLabel,
   getDshPartnerReadinessChecklist,
 } from "./partner-activation.model";
 
@@ -18,6 +19,7 @@ export type {
   DshCreatePartnerInput, DshUpdatePartnerRequest, DshPartnerTransitionInput,
   DshAddDocumentInput, DshReviewDocumentInput, DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
+  DshFieldPartnerProduct, DshFieldPartnerProductInput,
 } from "./partner.types";
 
 export type {
@@ -40,6 +42,10 @@ export {
 } from "./use-partner-admin-controller";
 
 export { usePartnerSelfController } from "./use-partner-self-controller";
+export { useFieldPartnerProgressController } from "./use-field-partner-progress-controller";
+export type { FieldPartnerProgressState } from "./use-field-partner-progress-controller";
+export { useFieldPartnerProductsController } from "./use-field-partner-products-controller";
+export type { FieldPartnerProductsState } from "./use-field-partner-products-controller";
 export * from "./partner-registry";
 export * from "./use-partners-controller";
 
@@ -52,6 +58,9 @@ export {
   fieldCreateVisit,
   fieldSubmitPartner,
   fetchListFieldVisits,
+  fieldGetReadiness,
+  fieldListDocuments,
+  fieldListFieldVisits,
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";

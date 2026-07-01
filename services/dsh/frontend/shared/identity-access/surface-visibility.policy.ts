@@ -22,7 +22,7 @@ import {
   isDshModeDispatchRequired,
   type DshFulfillmentDeliveryMode,
   type DshDeliveryModeTrackingStageFilter,
-} from '../delivery';
+} from '../delivery/delivery.contract';
 
 // ─── Surface capability per mode ──────────────────────────────────────────────
 

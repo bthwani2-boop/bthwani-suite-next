@@ -17,14 +17,18 @@
 
 ```text
 project_area_matrix
+entity_boundary_matrix عند دخول Partner أو Store في النطاق
 surface_code_coverage_matrix
+surface_entity_language_matrix عند دخول Partner أو Store في النطاق
 control_panel_section_code_matrix
 binding_chain_matrix
 backend_layer_matrix عند دخول backend في النطاق
 database_truth_matrix عند دخول database في النطاق
+partner_store_database_truth_matrix عند دخول Partner أو Store في database في النطاق
 api_client_policy_matrix عند دخول API/client في النطاق
 ssot_matrix
 publishability_visibility_matrix عند دخول الظهور/النشر في النطاق
+store_client_visibility_gate_matrix عند دخول Store visibility للعميل في النطاق
 auth_permission_matrix عند دخول الصلاحيات في النطاق
 risk_based_test_matrix
 topic_file_organization_matrix
@@ -121,6 +125,59 @@ project_area_matrix:
 - أي مجال غير مذكور = `FIX_REQUIRED`.
 - أي `NOT_APPLICABLE` بلا سبب ودليل عدم التأثر = `FIX_REQUIRED`.
 
+### 17.1.1 entity_boundary_matrix
+
+إلزامي كلما دخل Partner أو Store في نطاق الرحلة (انظر `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` قسم 11.1).
+
+```yaml
+entity_boundary_matrix:
+  partner:
+    domain_meaning:
+    canonical_backend_model:
+    canonical_database_tables:
+    canonical_openapi_schemas:
+    canonical_frontend_types:
+    owned_statuses:
+    owned_actions:
+    forbidden_actions:
+    allowed_surfaces:
+    forbidden_surfaces:
+    verification_command:
+  store:
+    domain_meaning:
+    canonical_backend_model:
+    canonical_database_tables:
+    canonical_openapi_schemas:
+    canonical_frontend_types:
+    owned_statuses:
+    owned_actions:
+    forbidden_actions:
+    allowed_surfaces:
+    forbidden_surfaces:
+    verification_command:
+  relationship:
+    cardinality: "Partner 1 -> N Stores"
+    join_field:
+    legacy_nullability_policy:
+    new_flow_requirement:
+    verification_command:
+  conflation_check:
+    partner_used_as_store: PASS | FAIL
+    store_used_as_partner: PASS | FAIL
+    mixed_activation_visibility_status: PASS | FAIL
+    ambiguous_labels_absence: PASS | FAIL
+    ambiguous_routes_absence: PASS | FAIL
+    ambiguous_types_absence: PASS | FAIL
+    required_action:
+```
+
+قواعد:
+
+- أي استخدام لـ Partner بمعنى Store = `FIX_REQUIRED`.
+- أي استخدام لـ Store بمعنى Partner = `FIX_REQUIRED`.
+- أي status واحد يحاول تمثيل اعتماد الشريك وظهور المتجر معًا بلا فصل صريح = `FIX_REQUIRED`.
+- أي UI label يسبب لبسًا بين ملف الشريك والمتجر الظاهر للعميل = `FIX_REQUIRED`.
+
 ### 17.2 surface_code_coverage_matrix
 
 يجب ذكر كل سطح حتى لو كان خارج النطاق:
@@ -214,6 +271,45 @@ surface_code_coverage_matrix:
 - ممنوع حذف أي سطح.
 - `N/A` مسموح فقط إذا كان الدور `FORBIDDEN` أو `NOT_APPLICABLE` مع reason.
 - أي surface يحتوي business logic أو direct API أو state machine أو permission logic = `FIX_REQUIRED`.
+
+### 17.2.1 surface_entity_language_matrix
+
+إلزامي كلما دخل Partner أو Store في نطاق الرحلة.
+
+```yaml
+surface_entity_language_matrix:
+  app-field:
+    partner_labels_allowed:
+    store_labels_allowed:
+    forbidden_labels:
+    allowed_partner_actions:
+    allowed_store_actions:
+    forbidden_actions:
+    verification_command:
+  control-panel:
+    partner_section_labels:
+    store_section_labels:
+    allowed_partner_decisions:
+    allowed_store_decisions:
+    forbidden_mixed_decisions:
+    verification_command:
+  app-partner:
+    partner_status_labels:
+    store_management_labels:
+    forbidden_self_activation_labels:
+    verification_command:
+  app-client:
+    visible_entity: StoreOnly
+    forbidden_partner_exposure: PASS | FAIL
+    verification_command:
+```
+
+قواعد:
+
+- app-client يجب أن يكون Store-only.
+- app-field يجب أن يقول ملف شريك / بيانات متجر أول، لا تفعيل متجر.
+- control-panel يجب أن يفصل بين قسم الشركاء وقسم المتاجر.
+- app-partner لا يعرض أي زر أو نص يوحي بأن الشريك يفعّل نفسه.
 
 ### 17.3 control_panel_section_code_matrix
 

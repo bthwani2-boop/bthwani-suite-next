@@ -15,6 +15,8 @@ import type {
   DshReviewDocumentInput,
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
+  DshFieldPartnerProduct,
+  DshFieldPartnerProductInput,
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -139,4 +141,44 @@ export function fieldSubmitPartner(partnerId: string): Promise<{ partner: DshPar
 
 export function fetchListFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
   return request(`/dsh/operator/partners/${partnerId}/field-visits`);
+}
+
+export function fieldGetReadiness(partnerId: string): Promise<DshPartnerReadiness> {
+  return request(`/dsh/field/partners/${partnerId}/readiness`);
+}
+
+export function fieldListDocuments(partnerId: string): Promise<{ documents: DshPartnerDocument[] }> {
+  return request(`/dsh/field/partners/${partnerId}/documents`);
+}
+
+export function fieldListFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
+  return request(`/dsh/field/partners/${partnerId}/field-visits`);
+}
+
+// ── Field: draft store + trial products ────────────────────────────────────
+// Every partner has exactly one auto-created draft store from the moment it
+// is created. Trial products land in the same catalog control-panel reviews
+// later; they are never visible to app-client until catalog is approved.
+
+export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string }> {
+  return request(`/dsh/field/partners/${partnerId}/store`);
+}
+
+export function fieldListPartnerProducts(partnerId: string): Promise<{ products: DshFieldPartnerProduct[] }> {
+  return request(`/dsh/field/partners/${partnerId}/products`);
+}
+
+export function fieldCreatePartnerProduct(
+  partnerId: string,
+  input: DshFieldPartnerProductInput
+): Promise<{ product: DshFieldPartnerProduct }> {
+  return request(`/dsh/field/partners/${partnerId}/products`, { method: "POST", body: input });
+}
+
+export function fieldUpdatePartnerProduct(
+  partnerId: string,
+  productId: string,
+  input: DshFieldPartnerProductInput
+): Promise<{ product: DshFieldPartnerProduct }> {
+  return request(`/dsh/field/partners/${partnerId}/products/${productId}`, { method: "PATCH", body: input });
 }

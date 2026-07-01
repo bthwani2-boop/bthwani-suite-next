@@ -84,7 +84,14 @@ func ListCategories(db *sql.DB) ([]HomeCategory, error) {
 }
 
 func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, error) {
-	conditions := []string{"s.is_visible = true", "s.status = 'active'"}
+	conditions := []string{
+		"s.is_visible = true",
+		"s.status = 'active'",
+		"s.serviceability_status IN ('serviceable','limited')",
+		"s.partner_readiness = 'ready'",
+		"s.catalog_approval_status = 'approved'",
+		"s.marketing_visibility = 'visible'",
+	}
 	params := []any{}
 	idx := 1
 

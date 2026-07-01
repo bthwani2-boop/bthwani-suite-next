@@ -34,12 +34,22 @@ execution_plan_completeness_gate:
     - execution_step_coverage_matrix
     - skipped_item_matrix
     - out_of_scope_justification_matrix
+    - entity_boundary_matrix
+    - surface_entity_language_matrix
+    - partner_store_database_truth_matrix
+    - store_client_visibility_gate_matrix
   failure_conditions:
     - أي ملف من ملفات البروتوكول (00-10) غير مذكور
     - أي بند مستبعد بلا سبب ودليل عدم التأثر
     - أي خطوة تنفيذ بلا verification_command
     - أي خطة لا تغطي Docker/runtime/CI/database/backend/API/shared/surfaces عند دخولها في النطاق
     - أي استخدام لعبارات عامة مثل "حسب الحاجة" أو "عند اللزوم" أو "لاحقًا" دون معيار حسم
+    - أي رحلة DSH فيها Partner أو Store ولا تحتوي entity_boundary_matrix
+    - أي app-client يعرض Partner أو يعتمد على Partner label بدل Store
+    - أي app-field يملك activation أو client visibility decision
+    - أي app-partner يملك self-activation
+    - أي endpoint discovery/list/get يعرض Store للعميل دون نفس visibility gates
+    - أي status أو schema أو route يخلط بين Partner lifecycle وStore publication
   result_if_failed: PROTOCOL_VIOLATION
 ```
 

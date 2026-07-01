@@ -12,6 +12,7 @@ import type {
 } from "../../shared/partner";
 import {
   getDshPartnerActivationStatusLabel,
+  formatDshPartnerAuditEventLabel,
   getDshPartnerActivationStateMetadata,
   buildPartnerReadinessViewModel,
   DOCUMENT_TYPE_LABELS,
@@ -340,7 +341,7 @@ export function PartnerDetailPanel({
             <div key={evt.id} style={{ padding: "0.75rem 1rem", borderBottom: `1px solid var(--dsh-content-bg)` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 500, color: "var(--dsh-text-primary)" }}>
-                  {getDshPartnerActivationStatusLabel(evt.fromStatus as DshPartnerActivationStatus)} → {getDshPartnerActivationStatusLabel(evt.toStatus as DshPartnerActivationStatus)}
+                  {formatDshPartnerAuditEventLabel(evt.fromStatus, evt.toStatus)}
                 </span>
                 <span style={{ fontSize: "0.8125rem", color: "var(--dsh-text-muted)" }}>{new Date(evt.createdAt).toLocaleString("ar-SA")}</span>
               </div>

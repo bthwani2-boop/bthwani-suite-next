@@ -25,16 +25,8 @@ export function StepAgreementReview({
   return (
     <View style={{ gap: spacing[4] }}>
       <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold', color: colorRoles.textPrimary }}>
-        عرض العقد وساعات العمل
+        ساعات العمل والتوصيل
       </Text>
-
-      <TextField
-        label="عرض العمولة المبدئي (%)"
-        value={form.preliminaryOffer ?? ''}
-        disabled={readOnly}
-        onChangeText={(v) => onChange({ preliminaryOffer: v })}
-        placeholder="مثال: 12% من قيمة الطلب"
-      />
 
       <TextField
         label="ساعات العمل اليومية"
@@ -50,14 +42,6 @@ export function StepAgreementReview({
         disabled={readOnly}
         onChangeText={(v) => onChange({ deliveryReadiness: v })}
         placeholder="مثال: جاهز بتغطية سريعة كباتن بثواني"
-      />
-
-      <TextField
-        label="ملاحظات المحاسبة والمالية"
-        value={form.financeNote ?? ''}
-        disabled={readOnly}
-        onChangeText={(v) => onChange({ financeNote: v })}
-        placeholder="ملاحظات مرجعية للحسابات والعمولات"
       />
 
       <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[2] }} />

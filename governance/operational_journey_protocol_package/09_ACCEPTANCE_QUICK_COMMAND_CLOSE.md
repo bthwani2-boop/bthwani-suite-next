@@ -25,17 +25,31 @@
 لا كود ميت داخل النطاق
 لا mock/demo/preview كحقيقة تشغيلية
 لا تسرب مالي خارج WLT
+لا تسرب من أي نوع آخر خارج مالكه الصحيح (منطق/state/أسرار/process.env/raw API response)
 لا تناقض بين الأدلة والادعاء
 لا CI PASS غير مثبت
 لا route أو handler أو client مكسور
 لا migration أو database proof ناقص عند الحاجة
 لا gaps معلنة أو مخفية داخل الرحلة
+لا تبعثر لنفس المسؤولية بلا canonical_owner واحد
+لا عنصر داخل النطاق بلا zero_defect_closure_matrix مكتمل (انظر 06#24.1)
+لا FIX_REQUIRED معلّق بلا تنفيذ فعلي (حذف/نقل/دمج/إضافة/تعديل) عند task_mode: implementation_or_closure (انظر 06#24.2)
+لا تقرير تشخيص بديل عن التنفيذ الفعلي عند task_mode: implementation_or_closure
+صفر أخطاء، صفر تناقض، صفر تكرار، صفر فجوات، صفر ضجيج، صفر ضعف/نقص منطقي أو تشغيلي، صفر تشتت، صفر فشل، صفر عيوب — لكل عنصر داخل النطاق
 كل الفحوصات المناسبة PASS
 كل الأدلة من نفس ref/head ونفس resolved_commit_sha
 لا مصدرين للحقيقة نفسها SSOT
 لا PASS بلا evidence عملي واضح
 لا إجراء Git/GitHub change تلقائي من طرف الوكيل
 لا Antigravity command عام أو غير قابل للتنفيذ المباشر
+لا خلط بين Partner وStore في الاسم أو الدور أو الحالة أو الصلاحية
+لا Partner lifecycle داخل Store visibility بلا mapping صريح
+لا Store publication داخل Partner activation بلا owner واضح
+لا ظهور Partner في app-client
+لا self-activation من app-partner
+لا نشر Store للعميل من app-field
+كل endpoint يعرض Stores للعميل يطبق نفس visibility gates
+كل رحلة onboarding تحدد Partner-owned truths وStore-owned truths قبل التنفيذ
 ```
 
 إذا فشل بند واحد داخل النطاق:
@@ -68,7 +82,7 @@ JOURNEY / TOPIC: <اسم الرحلة أو التوبك>
 TASK: <analysis_only | implementation_or_closure | merge_review>
 OUT_OF_SCOPE: <ما لا يجب لمسه مع السبب>
 
-طبق REF Resolution Gate من GitHub Remote ولا تستخدم default branch إذا فشل REF. ثبّت resolved_commit_sha. طبّق Human-Gated Git/GitHub Change Control ولا تنشئ branch/commit/push/PR/merge/tag/release دون أمر بشري مستقل. اعتبر النتيجة FIX_REQUIRED حتى تثبت evidence matrix عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. لا تعتمد على machine-readable كحقيقة حاكمة. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن surfaces UI فقط. امنع direct API وbusiness logic وstate machine وpermission policy وprocess.env وraw API mapping داخل surfaces. WLT هو مالك الحقيقة المالية الوحيد، وDSH يعرض references/status/metadata للقراءة فقط. استخدم المانح قراءة فقط لاستخراج القيمة دون نقل بنيته أو فوضاه. غطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس resolved_commit_sha. أخرج نتيجة واحدة فقط: ANALYSIS_PASS أو IMPLEMENTATION_PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE أو MERGE_READY أو PROTOCOL_VIOLATION، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
+طبق REF Resolution Gate من GitHub Remote ولا تستخدم default branch إذا فشل REF. ثبّت resolved_commit_sha. طبّق Human-Gated Git/GitHub Change Control ولا تنشئ branch/commit/push/PR/merge/tag/release دون أمر بشري مستقل. اعتبر النتيجة FIX_REQUIRED حتى تثبت evidence matrix عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. عرّف حدود Partner وStore قبل التنفيذ: Partner هو كيان الاعتماد والوثائق والهوية والقرار، وStore هو كيان الظهور والكتالوج والطلبات والاكتشاف. لا تستخدمهما كمرادفين. أي خلط في routes أو schemas أو DB أو UI labels أو statuses أو permissions يعتبر FIX_REQUIRED. لا تعتمد على machine-readable كحقيقة حاكمة. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن surfaces UI فقط. امنع direct API وbusiness logic وstate machine وpermission policy وprocess.env وraw API mapping داخل surfaces. WLT هو مالك الحقيقة المالية الوحيد، وDSH يعرض references/status/metadata للقراءة فقط. استخدم المانح قراءة فقط لاستخراج القيمة دون نقل بنيته أو فوضاه. غطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس resolved_commit_sha. أخرج نتيجة واحدة فقط: ANALYSIS_PASS أو IMPLEMENTATION_PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE أو MERGE_READY أو PROTOCOL_VIOLATION، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
 ```
 
 ---

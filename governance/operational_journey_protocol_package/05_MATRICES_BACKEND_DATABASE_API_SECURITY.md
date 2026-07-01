@@ -111,6 +111,43 @@ database_truth_matrix:
 - أي جدول ثانٍ لنفس الحقيقة يجب تصنيفه.
 - أي اختلاف بين database constraints وbackend model وOpenAPI schema وfrontend types = `FIX_REQUIRED`.
 
+### 17.6.1 partner_store_database_truth_matrix
+
+إلزامي كلما دخل Partner أو Store في database في نطاق الرحلة.
+
+```yaml
+partner_store_database_truth_matrix:
+  partner_truth:
+    canonical_table:
+    required_columns:
+    forbidden_columns:
+    lifecycle_status_columns:
+    verification_command:
+  store_truth:
+    canonical_table:
+    required_columns:
+    forbidden_columns:
+    publication_visibility_columns:
+    verification_command:
+  relationship_truth:
+    canonical_join:
+    nullable_allowed_for_legacy: true | false
+    nullable_allowed_for_new_onboarding: true | false
+    backfill_required: true | false
+    verification_command:
+  duplicate_truth_check:
+    duplicate_partner_identity_in_store: PASS | FAIL
+    duplicate_store_visibility_in_partner: PASS | FAIL
+    duplicate_activation_status: PASS | FAIL
+    required_action:
+```
+
+قواعد:
+
+- partner identity لا تُكرر داخل store إلا كـ denormalized read model موثق.
+- store visibility لا تُحكم من Partner وحده إذا كان endpoint يعرض stores.
+- أي جدولين يملكان نفس lifecycle أو visibility بدون owner واحد = `FIX_REQUIRED`.
+
 ### 17.7 api_client_policy_matrix
 
 ```yaml
@@ -190,6 +227,39 @@ publishability_visibility_matrix:
 ```text
 approved أو active وحدها لا تكفي. كل بوابة ظهور يجب إثباتها.
 ```
+
+### 17.9.1 store_client_visibility_gate_matrix
+
+إلزامي كلما دخل عرض Store للعميل في نطاق الرحلة.
+
+```yaml
+store_client_visibility_gate_matrix:
+  listDshStores:
+    must_filter_by_partner_readiness:
+    must_filter_by_store_status:
+    must_filter_by_catalog_approval:
+    must_filter_by_serviceability:
+    must_filter_by_marketing_visibility:
+    must_hide_when_partner_deactivated:
+    must_hide_when_client_hidden:
+    verification_command:
+  getDshHomeDiscovery:
+    must_filter_by_partner_readiness:
+    must_filter_by_store_status:
+    must_filter_by_catalog_approval:
+    must_filter_by_serviceability:
+    must_filter_by_marketing_visibility:
+    must_hide_when_partner_deactivated:
+    must_hide_when_client_hidden:
+    verification_command:
+  getDshStoreById:
+    same_visibility_policy_as_list:
+    verification_command:
+```
+
+قاعدة حاكمة:
+
+كل endpoint يعرض Stores للعميل يجب أن يطبق نفس بوابات الظهور. لا يكفي أن يكون `listDshStores` صحيحًا إذا كان `getDshHomeDiscovery` أو `getStoreById` يتجاوز نفس البوابات.
 
 ### 17.10 auth_permission_matrix
 

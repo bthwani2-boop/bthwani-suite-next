@@ -18,14 +18,14 @@ function isSameRoute(left: DshFieldRouteState, right: DshFieldRouteState): boole
   if (left.kind === 'onboarding' && right.kind === 'onboarding') {
     return left.partnerId === right.partnerId;
   }
+  if (left.kind === 'partner-progress' && right.kind === 'partner-progress') {
+    return left.partnerId === right.partnerId;
+  }
   if (left.kind === 'escalation' && right.kind === 'escalation') {
     return left.storeId === right.storeId && left.visitId === right.visitId;
   }
-  if (left.kind === 'document-upload' && right.kind === 'document-upload') {
-    return left.storeId === right.storeId && left.docKind === right.docKind;
-  }
   if (left.kind === 'products-upload' && right.kind === 'products-upload') {
-    return left.storeId === right.storeId;
+    return left.partnerId === right.partnerId;
   }
   return true;
 }
@@ -44,11 +44,8 @@ function resolveCommandRoute(command?: DshFieldNavigationCommand): DshFieldRoute
   if (command.target === 'escalation' && command.storeId) {
     return { kind: 'escalation', storeId: command.storeId, ...(command.visitId ? { visitId: command.visitId } : {}) };
   }
-  if (command.target === 'document-upload' && command.storeId) {
-    return { kind: 'document-upload', storeId: command.storeId };
-  }
-  if (command.target === 'products-upload' && command.storeId) {
-    return { kind: 'products-upload', storeId: command.storeId };
+  if (command.target === 'products-upload' && command.partnerId) {
+    return { kind: 'products-upload', partnerId: command.partnerId };
   }
   if (
     command.target === 'stores' ||
@@ -66,7 +63,7 @@ export function resolveFieldBottomActiveId(route: DshFieldRouteState): string {
   if (route.kind === 'stores') return 'tasks';
   if (route.kind === 'history') return 'history';
   if (route.kind === 'finance') return 'finance';
-  if (['account', 'profile', 'onboarding', 'visit', 'checklist', 'escalation', 'products-upload'].includes(route.kind)) {
+  if (['account', 'profile', 'onboarding', 'partner-progress', 'visit', 'checklist', 'escalation', 'products-upload'].includes(route.kind)) {
     return 'profile';
   }
   return '';

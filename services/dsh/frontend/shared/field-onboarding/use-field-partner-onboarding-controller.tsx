@@ -5,6 +5,7 @@
 import { useCallback, useState } from "react";
 import {
   fieldCreateDraft,
+  fieldUpdatePartner,
   fieldSubmitPartner,
   fieldUploadDocument,
   fieldCreateVisit,
@@ -90,7 +91,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         category: form.category ?? "default",
         notes: form.notes ?? "",
       });
-      setState((s) => ({ ...s, partnerId: res.id, submitError: null }));
+      setState((s) => ({ ...s, partnerId: res.id, partnerVersion: res.version, submitError: null }));
       return true;
     } catch (err) {
       const msg = err && typeof err === "object" && "status" in err
@@ -153,6 +154,22 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     setState((s) => ({ ...s, isSubmitting: true, submitError: null }));
 
     try {
+      // Persist non-financial operational notes (hours/delivery readiness) —
+      // commission/financial terms are never captured or sent from app-field.
+      const { operatingHours, deliveryReadiness } = state.form;
+      const operationalNoteParts = [
+        operatingHours?.trim() ? `ساعات العمل: ${operatingHours.trim()}` : "",
+        deliveryReadiness?.trim() ? `جاهزية التوصيل: ${deliveryReadiness.trim()}` : "",
+      ].filter(Boolean);
+      if (operationalNoteParts.length > 0 && state.partnerVersion !== null) {
+        const updated = await fieldUpdatePartner(
+          state.partnerId,
+          { notes: operationalNoteParts.join(" | ") },
+          state.partnerVersion
+        );
+        setState((s) => ({ ...s, partnerVersion: updated.version }));
+      }
+
       // Create field visit if we have location or notes
       if (state.visitNotes || state.locationLatitude !== null) {
         const visitPayload: import("../partner").DshCreatePartnerFieldVisitRequest = {

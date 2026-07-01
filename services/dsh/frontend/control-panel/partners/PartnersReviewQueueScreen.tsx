@@ -11,7 +11,6 @@ import {
   StateView,
   Text,
   lightThemeColors,
-  colorRoles,
 } from '@bthwani/ui-kit';
 import { usePartnersController } from "../../shared/partner";
 
@@ -57,133 +56,82 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
 
   const renderInboxContent = () => {
     if (activeSubTab === 'registration') {
+      if (adminController.listState.kind === 'loading' || adminController.listState.kind === 'idle') {
+        return (
+          <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
+            <Text role="body" tone="muted">جارٍ تحميل ملفات الانضمام…</Text>
+          </Card>
+        );
+      }
+
+      if (adminController.listState.kind === 'error') {
+        return (
+          <StateView
+            title="تعذر تحميل ملفات الانضمام"
+            description={adminController.listState.message}
+          />
+        );
+      }
+
+      if (adminController.listState.kind === 'empty' || adminController.rows.length === 0) {
+        return (
+          <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
+            <Text role="body" tone="muted">لا توجد ملفات انضمام حالياً.</Text>
+          </Card>
+        );
+      }
+
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Main Onboarding File Details - مخبز عون */}
-          <Card style={{ padding: '1.5rem', border: `1px solid ${lightThemeColors.borderColor}` }}>
-            {/* Header section of application card */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <Text role="caption" tone="muted">ملف الانضمام</Text>
-                <Text role="titleLg" style={{ marginTop: '0.25rem', fontWeight: 'bold' }}>مخبز عون</Text>
-                <Text role="body" tone="muted" style={{ fontSize: '12px', marginTop: '0.25rem', fontFamily: 'monospace' }}>
-                  store-1781677110084990779
-                </Text>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <Badge label="بيانات متجر" tone="action" />
-                  <Badge label="تطبيق الميداني" tone="info" />
-                </div>
-              </div>
-
-              <Card style={{ padding: '0.5rem 1rem', backgroundColor: 'rgba(185,106,6,0.08)', border: `1.5px solid rgba(185,106,6,0.25)`, alignItems: 'center' }}>
-                <Text style={{ fontSize: '10px', color: colorRoles.brandAction, marginBottom: '2px' }}>المرحلة الحالية</Text>
-                <Text style={{ fontSize: '14px', fontWeight: '700', color: colorRoles.brandAction }}>تم التقديم</Text>
-              </Card>
-            </div>
-
-            {/* Basic Store Data Grid */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <Text role="caption" tone="muted" style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>بيانات المتجر الأساسية</Text>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem' }}>
-                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                  <Text role="caption" tone="muted">العنوان</Text>
-                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>بيت بوس</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                  <Text role="caption" tone="muted">التصنيف</Text>
-                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>بقالة ومواد غذائية</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                  <Text role="caption" tone="muted">مرحلة النشر</Text>
-                  <Text role="body" style={{ fontWeight: 'bold', color: lightThemeColors.danger, marginTop: '0.25rem' }}>pending_review</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                  <Text role="caption" tone="muted">وقت الإرسال</Text>
-                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>2026/06/17، 9:18 ص</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                  <Text role="caption" tone="muted">استلام من المتجر</Text>
-                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>لا</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.01)' }}>
-                  <Text role="caption" tone="muted">توصيل المتجر</Text>
-                  <Text role="body" style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>لا</Text>
-                </Card>
-              </div>
-            </div>
-
-            {/* Contact & operations */}
-            <div>
-              <Text role="caption" tone="muted" style={{ fontWeight: 'bold', marginBottom: '0.5rem', display: 'block' }}>بيانات التواصل والعمل</Text>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <Card style={{ padding: '0.75rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text role="body">📞 رقم التواصل</Text>
-                  <Text role="body" tone="muted" style={{ fontStyle: 'italic' }}>لم يُرسل بعد من التطبيق الميداني</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text role="body">🕐 ساعات العمل</Text>
-                  <Text role="body" tone="muted" style={{ fontStyle: 'italic' }}>لم يُرسل بعد من التطبيق الميداني</Text>
-                </Card>
-                <Card style={{ padding: '0.75rem', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text role="body">📋 ملخص الكتالوج</Text>
-                  <Text role="body" tone="muted" style={{ fontStyle: 'italic' }}>لم يُرسل بعد من التطبيق الميداني</Text>
-                </Card>
-              </div>
+          <Card style={{ padding: '1rem' }}>
+            <Text role="titleMd" style={{ marginBottom: '1rem' }}>قائمة الشركاء والمقدمين</Text>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
+                    <th style={{ padding: '0.75rem' }}>اسم الشريك</th>
+                    <th style={{ padding: '0.75rem' }}>رقم الجوال</th>
+                    <th style={{ padding: '0.75rem' }}>الحالة</th>
+                    <th style={{ padding: '0.75rem' }}>الإجراء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminController.rows.map((row) => {
+                    const originalPartner = adminController.listState.kind === 'success'
+                      ? adminController.listState.partners.find(p => p.id === row.id)
+                      : null;
+                    const phone = originalPartner?.primaryPhone || '—';
+                    return (
+                      <tr key={row.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
+                        <td style={{ padding: '0.75rem' }}>
+                          <Text style={{ fontWeight: 'bold' }}>{row.displayName}</Text>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>{phone}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <Badge
+                            label={row.statusLabel}
+                            tone={
+                              row.statusTone === 'muted' ? 'neutral' :
+                              row.statusTone === 'success' ? 'success' :
+                              row.statusTone === 'warning' ? 'warning' :
+                              row.statusTone === 'danger' ? 'danger' : 'info'
+                            }
+                          />
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <Button
+                            label="فتح"
+                            tone="secondary"
+                            onPress={() => onOpenPartner && onOpenPartner(row.id)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </Card>
-
-          {/* Table of other partners */}
-          {adminController.listState.kind === 'success' && adminController.rows.length > 0 && (
-            <Card style={{ padding: '1rem' }}>
-              <Text role="titleMd" style={{ marginBottom: '1rem' }}>قائمة الشركاء والمقدمين الآخرين</Text>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
-                  <thead>
-                    <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
-                      <th style={{ padding: '0.75rem' }}>اسم الشريك</th>
-                      <th style={{ padding: '0.75rem' }}>رقم الجوال</th>
-                      <th style={{ padding: '0.75rem' }}>الحالة</th>
-                      <th style={{ padding: '0.75rem' }}>الإجراء</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adminController.rows.map((row) => {
-                      const originalPartner = adminController.listState.kind === 'success'
-                        ? adminController.listState.partners.find(p => p.id === row.id)
-                        : null;
-                      const phone = originalPartner?.primaryPhone || '—';
-                      return (
-                        <tr key={row.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
-                          <td style={{ padding: '0.75rem' }}>
-                            <Text style={{ fontWeight: 'bold' }}>{row.displayName}</Text>
-                          </td>
-                          <td style={{ padding: '0.75rem' }}>{phone}</td>
-                          <td style={{ padding: '0.75rem' }}>
-                            <Badge
-                              label={row.statusLabel}
-                              tone={
-                                row.statusTone === 'muted' ? 'neutral' :
-                                row.statusTone === 'success' ? 'success' :
-                                row.statusTone === 'warning' ? 'warning' :
-                                row.statusTone === 'danger' ? 'danger' : 'info'
-                              }
-                            />
-                          </td>
-                          <td style={{ padding: '0.75rem' }}>
-                            <Button
-                              label="فتح"
-                              tone="secondary"
-                              onPress={() => onOpenPartner && onOpenPartner(row.id)}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
         </div>
       );
     }

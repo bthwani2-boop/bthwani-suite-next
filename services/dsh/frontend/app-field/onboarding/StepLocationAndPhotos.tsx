@@ -2,6 +2,7 @@
 // Extracted 1:1 from bthwani-suite donor. No business logic here.
 import React, { useState, useMemo } from 'react';
 import { ActivityIndicator, Image, Pressable, View, StyleSheet, ScrollView } from 'react-native';
+import * as Location from 'expo-location';
 import { TextField, Text, spacing, radius, borders, colorRoles, Icon, Button, Surface } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm, FieldOnboardingValidationErrors } from '../../shared/field-onboarding';
 
@@ -14,7 +15,7 @@ type Props = {
   readonly onChange: (patch: Partial<FieldPartnerDraftForm>) => void;
   readonly cameraLoading: Record<string, boolean>;
   readonly isNativePickerAvailable: boolean;
-  readonly onPickPhoto: (key: PhotoKey) => void;
+  readonly onPickPhoto: (key: PhotoKey, source: 'camera' | 'library') => void;
   readonly locationLatitude: number | null;
   readonly locationLongitude: number | null;
   readonly onLocationChange: (lat: number, lon: number) => void;
@@ -76,40 +77,45 @@ export function StepLocationAndPhotos({
     onChange({ addressLine: closestLandmark!.name });
   };
 
-  const handleLocateMe = () => {
-    if (readOnly) return;
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const x = Math.max(10, Math.min(310, Math.round((longitude - 44.1500) * 320.0 / 0.0600)));
-          const y = Math.max(10, Math.min(210, Math.round((15.3800 - latitude) * 220.0 / 0.0800)));
-          setPinPos({ x, y });
-          onLocationChange(latitude, longitude);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
 
-          let closestLandmark = LANDMARKS[0];
-          let minDistance = 999999.0;
-          for (const lm of LANDMARKS) {
-            const dx = lm.x - x;
-            const dy = lm.y - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDistance) {
-              minDistance = dist;
-              closestLandmark = lm;
-            }
-          }
-          onChange({ addressLine: closestLandmark!.name });
-        },
-        () => {
-          setPinPos({ x: 160, y: 140 });
-          onLocationChange(15.3520, 44.1780);
-          onChange({ addressLine: LANDMARKS[0]!.name });
-        }
-      );
-    } else {
-      setPinPos({ x: 160, y: 140 });
-      onLocationChange(15.3520, 44.1780);
-      onChange({ addressLine: LANDMARKS[0]!.name });
+  const applyRealCoordinates = (latitude: number, longitude: number) => {
+    const x = Math.max(10, Math.min(310, Math.round((longitude - 44.1500) * 320.0 / 0.0600)));
+    const y = Math.max(10, Math.min(210, Math.round((15.3800 - latitude) * 220.0 / 0.0800)));
+    setPinPos({ x, y });
+    onLocationChange(latitude, longitude);
+
+    let closestLandmark = LANDMARKS[0];
+    let minDistance = 999999.0;
+    for (const lm of LANDMARKS) {
+      const dx = lm.x - x;
+      const dy = lm.y - y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestLandmark = lm;
+      }
+    }
+    onChange({ addressLine: closestLandmark!.name });
+  };
+
+  const handleLocateMe = async () => {
+    if (readOnly) return;
+    setLocateError(null);
+    setLocating(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        setLocateError('لم يُسمح بالوصول لموقع الجهاز. فعّل صلاحية الموقع للمتابعة.');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      applyRealCoordinates(position.coords.latitude, position.coords.longitude);
+    } catch {
+      setLocateError('تعذر تحديد الموقع الحالي. تأكد من تفعيل خدمة الموقع بالجهاز والمحاولة مجددًا.');
+    } finally {
+      setLocating(false);
     }
   };
 
@@ -126,8 +132,7 @@ export function StepLocationAndPhotos({
 
     return (
       <View key={photoKey} style={{ gap: spacing[1], marginVertical: 6 }}>
-        <Pressable
-          onPress={readOnly ? undefined : () => onPickPhoto(photoKey)}
+        <View
           style={{
             borderWidth: 1.5,
             borderStyle: hasRealImage ? 'solid' : 'dashed',
@@ -142,8 +147,9 @@ export function StepLocationAndPhotos({
             overflow: 'hidden',
           }}
         >
-          {/* Right: Image Preview / Icon */}
-          <View
+          {/* Right: Image Preview / Icon — tapping captures a new photo with the camera */}
+          <Pressable
+            onPress={readOnly ? undefined : () => onPickPhoto(photoKey, 'camera')}
             style={{
               flexDirection: 'row-reverse',
               alignItems: 'center',
@@ -213,12 +219,14 @@ export function StepLocationAndPhotos({
                 </Text>
               )}
             </View>
-          </View>
+          </Pressable>
 
-          {/* Left: Action Icon */}
+          {/* Left: Action Icon — attaches an existing file/photo from the device, no camera */}
           {!readOnly && (
             <View style={{ paddingStart: spacing[2] }}>
-              <View
+              <Pressable
+                onPress={() => onPickPhoto(photoKey, 'library')}
+                hitSlop={12}
                 style={{
                   width: 32,
                   height: 32,
@@ -231,10 +239,10 @@ export function StepLocationAndPhotos({
                 }}
               >
                 <Icon name={hasRealImage ? 'sync-outline' : 'add-outline'} size={18} tone="muted" />
-              </View>
+              </Pressable>
             </View>
           )}
-        </Pressable>
+        </View>
       </View>
     );
   };
@@ -253,12 +261,18 @@ export function StepLocationAndPhotos({
         
         {!readOnly && (
           <Button
-            label="تحديد موقع الفرع الحالي بالـ GPS 🎯"
+            label={locating ? 'جارٍ تحديد الموقع…' : 'تحديد موقع الفرع الحالي بالـ GPS 🎯'}
             tone="secondary"
             size="sm"
             onPress={handleLocateMe}
+            disabled={locating}
             style={{ alignSelf: 'center', marginVertical: 4, width: 320 }}
           />
+        )}
+        {locateError && (
+          <Text role="caption" style={{ color: colorRoles.danger, textAlign: 'center' }}>
+            {locateError}
+          </Text>
         )}
 
         <View style={styles.mapContainer}>

@@ -64,15 +64,13 @@ export function usePartnersController({
   const adminController = usePartnerAdminController(authKind);
 
   const activePartnersCount = useMemo(() => {
-    if (adminController.listState.kind !== 'success') return 4;
-    const count = adminController.listState.partners.filter(p => p.activationStatus === 'partner_active').length;
-    return count > 0 ? count : 4;
+    if (adminController.listState.kind !== 'success') return 0;
+    return adminController.listState.partners.filter(p => p.activationStatus === 'partner_active').length;
   }, [adminController.listState]);
 
   const pendingCount = useMemo(() => {
-    if (adminController.listState.kind !== 'success') return 12;
-    const count = adminController.listState.partners.filter(p => p.activationStatus === 'submitted').length;
-    return count > 0 ? count : 12;
+    if (adminController.listState.kind !== 'success') return 0;
+    return adminController.listState.partners.filter(p => p.activationStatus === 'submitted').length;
   }, [adminController.listState]);
 
   const handleSelectTab = useCallback((id: string) => {

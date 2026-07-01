@@ -7,11 +7,12 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/health"
 	"dsh-api/internal/homediscovery"
+	"dsh-api/internal/media"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
 
-func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *http.ServeMux {
+func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaClient *media.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
@@ -20,7 +21,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
-	protected := newProtectedStoreServer(db, identityClient, wltClient)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaClient)
+	mux.HandleFunc("POST /dsh/field/media/uploads", protected.handleFieldMediaUpload)
+	mux.HandleFunc("GET /dsh/media/{mediaRef...}", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
 	mux.HandleFunc("GET /dsh/operator/stores", protected.handleOperatorStores)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.handleOperatorStoreDetail)
@@ -161,10 +164,17 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/field/partners", protected.handleFieldListPartnerDrafts)
 	mux.HandleFunc("POST /dsh/field/partners/drafts", protected.handleFieldCreatePartnerDraft)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", protected.handleFieldGetPartnerDraft)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/readiness", protected.handleFieldGetPartnerReadiness)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/documents", protected.handleFieldListPartnerDocuments)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/field-visits", protected.handleFieldListPartnerFieldVisits)
 	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.handleFieldUpdatePartnerDraft)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", protected.handleFieldUploadPartnerDocument)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleFieldCreatePartnerVisit)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleFieldSubmitPartnerDraft)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/store", protected.handleFieldGetPartnerStore)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/products", protected.handleFieldListPartnerProducts)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/products", protected.handleFieldCreatePartnerProduct)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/products/{productId}", protected.handleFieldUpdatePartnerProduct)
 
 	// Partner self namespace
 	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)

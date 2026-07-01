@@ -60,6 +60,54 @@ topic_definition:
 6. أي سطح `REQUIRED` يجب أن يثبت دوره التشغيلي لا مجرد ظهور شاشة.
 7. أي سطح UI يعالج القرار بدل shared brain = `FIX_REQUIRED`.
 
+وسّع `topic_definition` أعلاه بهذه الحقول الإلزامية كلما كانت الرحلة تمس Partner أو Store:
+
+```yaml
+entity_boundary:
+  primary_entity:
+  secondary_entities:
+  partner_store_relationship:
+  partner_owned_truths:
+  store_owned_truths:
+  forbidden_entity_conflation:
+  naming_policy:
+```
+
+غياب `entity_boundary` مكتملًا في أي رحلة DSH فيها Partner أو Store = `FIX_REQUIRED`.
+
+### 11.1) Entity Boundary Gate — Partner vs Store
+
+قاعدة حاكمة:
+
+لا يجوز استخدام `Partner` و`Store` كمرادفين داخل أي رحلة DSH.
+
+التعريف الملزم:
+
+- `Partner` / الشريك:
+  هو الكيان القانوني أو التجاري أو التشغيلي الذي يخضع للانضمام والاعتماد والتحقق.
+  يملك الهوية القانونية، الوثائق، المالك، حالة الانضمام، قرارات الاعتماد، سجل التدقيق، والجاهزية التشغيلية العامة.
+
+- `Store` / المتجر:
+  هو نقطة البيع أو الفرع أو الواجهة التجارية التي تظهر للعميل وتستقبل الكتالوج والطلبات.
+  يملك الاسم الظاهر للعميل، الفرع/الموقع، الكتالوج، أوقات العمل، serviceability، marketing visibility، client visibility، وربط الطلبات.
+
+العلاقة الحاكمة:
+
+```text
+Partner owns one or many Stores.
+Store belongs to zero or one Partner during legacy/backfill, and must belong to one Partner for new onboarding flows.
+```
+
+قواعد الفصل:
+
+- أي حالة مرتبطة بالهوية، الوثائق، الزيارة، الموافقة، الرفض، الاعتماد، أو أهلية الشريك = Partner lifecycle.
+- أي حالة مرتبطة بالكتالوج، الظهور للعميل، الاكتشاف، الخدمة، الطلبات، أو التسويق = Store publication/visibility.
+- app-field ينشئ ملف انضمام Partner ويجمع بيانات Store الأول كجزء من الملف، ولا يفعّل Partner ولا ينشر Store.
+- control-panel يملك قرارات اعتماد Partner وقرارات نشر/إخفاء Store حسب الصلاحيات.
+- app-partner يرى حالة Partner onboarding ويدير Store فقط بعد السماح، ولا يملك self-activation.
+- app-client لا يرى Partner إطلاقًا؛ يرى Stores فقط.
+- أي route أو schema أو UI label أو type أو status يخلط بين Partner وStore بلا mapping صريح = `FIX_REQUIRED`.
+
 ---
 
 ## 12) Canonical Repository Topology

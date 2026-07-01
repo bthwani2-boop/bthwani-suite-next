@@ -59,6 +59,26 @@ func versionFromQuery(r *http.Request) int {
 	return v
 }
 
+// requireFieldOwnsPartner verifies the requesting field actor created the
+// partner draft at partnerID. Returns false and writes the response if the
+// partner does not exist or belongs to a different field actor.
+func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, partnerID, actorID string) bool {
+	p, err := GetPartner(db, partnerID)
+	if errors.Is(err, ErrNotFound) {
+		sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+		return false
+	}
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
+		return false
+	}
+	if p.CreatedByActorID != actorID {
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
+		return false
+	}
+	return true
+}
+
 // ─── Handlers ──────────────────────────────────────────────────────────────
 
 // POST /dsh/partners  — create partner (control-panel or field)
@@ -188,8 +208,7 @@ func HandleUpdatePartner(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partners/{partnerId}/readiness
-func HandleGetReadiness(db *sql.DB) http.HandlerFunc {
+func readinessHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pid := partnerIDFromPath(r)
 		p, err := GetPartner(db, pid)
@@ -212,6 +231,23 @@ func HandleGetReadiness(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		sendJSON(w, http.StatusOK, ComputeReadiness(p, total, approved, storeCount))
+	}
+}
+
+// GET /dsh/partners/{partnerId}/readiness — operator, any partner
+func HandleGetReadiness(db *sql.DB) http.HandlerFunc {
+	return readinessHandler(db)
+}
+
+// GET /dsh/field/partners/{partnerId}/readiness — field, only its own draft
+func HandleFieldGetReadiness(db *sql.DB) http.HandlerFunc {
+	inner := readinessHandler(db)
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
+		inner(w, r)
 	}
 }
 
@@ -243,6 +279,10 @@ func HandleActivationTransition(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner was modified concurrently")
 			return
 		}
+		if errors.Is(err, ErrInvalid) {
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "reason is required to reject or deactivate a partner")
+			return
+		}
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "transition failed")
 			return
@@ -254,7 +294,7 @@ func HandleActivationTransition(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partners/{partnerId}/documents
+// GET /dsh/partners/{partnerId}/documents — operator, any partner
 func HandleListDocuments(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		docs, err := ListDocuments(db, partnerIDFromPath(r))
@@ -263,6 +303,18 @@ func HandleListDocuments(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		sendJSON(w, http.StatusOK, map[string]any{"documents": docs})
+	}
+}
+
+// GET /dsh/field/partners/{partnerId}/documents — field, only its own draft
+func HandleFieldListDocuments(db *sql.DB) http.HandlerFunc {
+	inner := HandleListDocuments(db)
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
+		inner(w, r)
 	}
 }
 
@@ -295,7 +347,7 @@ func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partners/{partnerId}/field-visits
+// GET /dsh/partners/{partnerId}/field-visits — operator, any partner
 func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		visits, err := ListFieldVisits(db, partnerIDFromPath(r))
@@ -304,6 +356,18 @@ func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		sendJSON(w, http.StatusOK, map[string]any{"visits": visits})
+	}
+}
+
+// GET /dsh/field/partners/{partnerId}/field-visits — field, only its own draft
+func HandleFieldListFieldVisits(db *sql.DB) http.HandlerFunc {
+	inner := HandleListFieldVisits(db)
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
+		inner(w, r)
 	}
 }
 
@@ -322,6 +386,7 @@ func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
 // POST /dsh/partners/{partnerId}/stores
 func HandleLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
 		var input struct {
 			StoreID string `json:"storeId"`
 		}
@@ -329,7 +394,7 @@ func HandleLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
-		stores, err := LinkPartnerStore(db, partnerIDFromPath(r), input.StoreID)
+		stores, err := LinkPartnerStore(db, partnerIDFromPath(r), input.StoreID, actorID)
 		if errors.Is(err, ErrInvalid) {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "storeId is required")
 			return
@@ -390,12 +455,22 @@ func HandleFieldCreateDraft(db *sql.DB) http.HandlerFunc {
 
 // GET /dsh/field/partners/{partnerId}  — field reads partner draft
 func HandleFieldGetPartner(db *sql.DB) http.HandlerFunc {
-	return HandleGetPartner(db)
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
+		HandleGetPartner(db)(w, r)
+	}
 }
 
 // PATCH /dsh/field/partners/{partnerId}  — field updates allowed fields
 func HandleFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
 		var input UpdatePartnerInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
@@ -414,8 +489,7 @@ func HandleFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// POST /dsh/field/partners/{partnerId}/documents  — field uploads document
-func HandleFieldUploadDocument(db *sql.DB) http.HandlerFunc {
+func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		var input UploadDocumentInput
@@ -442,10 +516,30 @@ func HandleFieldUploadDocument(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// POST /dsh/field/partners/{partnerId}/documents  — field uploads document to its own draft
+func HandleFieldUploadDocument(db *sql.DB) http.HandlerFunc {
+	inner := uploadDocumentHandler(db)
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
+		inner(w, r)
+	}
+}
+
+// POST /dsh/operator/partners/{partnerId}/documents — operator adds a document to any partner
+func HandleAddDocument(db *sql.DB) http.HandlerFunc {
+	return uploadDocumentHandler(db)
+}
+
 // POST /dsh/field/partners/{partnerId}/visits  — field creates partner-level visit
 func HandleFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
 		var input CreateFieldVisitInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
@@ -472,6 +566,9 @@ func HandleFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 func HandleFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
+		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+			return
+		}
 		var body struct {
 			Reason string `json:"reason"`
 		}

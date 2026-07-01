@@ -50,7 +50,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stores, err := LinkPartnerStore(db, p.ID, "store-1002")
+	stores, err := LinkPartnerStore(db, p.ID, "store-1002", "operator-local-001")
 	if err != nil {
 		t.Fatal(err)
 	}

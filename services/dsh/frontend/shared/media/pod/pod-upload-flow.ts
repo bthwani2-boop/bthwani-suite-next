@@ -3,8 +3,8 @@
 // No JSX. No ui-kit. No Tamagui.
 
 import React from 'react';
-import type { CaptainAppMode } from '../../delivery';
-import { getCaptainLifecycleForOrderStage } from '../../delivery';
+import type { CaptainAppMode } from '../../delivery/captain.contract';
+import { getCaptainLifecycleForOrderStage } from '../../delivery/delivery.policy';
 
 export function usePodUploadFlow() {
   const [captainPodState, setCaptainPodState] = React.useState<'ready' | 'loading' | 'success' | 'error' | 'retry-required'>('ready');

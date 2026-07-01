@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+
+	"dsh-api/internal/store"
 )
 
 // ─── Partner CRUD ──────────────────────────────────────────────────────────
@@ -55,6 +57,19 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		}
 		return Partner{}, err
 	}
+
+	// Every partner owns exactly one store from creation onward (app-field
+	// collects the first store's data as part of the onboarding file). The
+	// store starts fully unpublished — is_visible=false, status=inactive —
+	// and stays invisible to app-client until control-panel approves it.
+	if _, err := store.CreateDraftStore(db, store.CreateDraftStoreInput{
+		PartnerID:   p.ID,
+		DisplayName: p.DisplayName,
+		Category:    p.Category,
+	}); err != nil {
+		return Partner{}, err
+	}
+
 	return p, nil
 }
 
@@ -147,9 +162,9 @@ func UpdatePartner(db *sql.DB, partnerID string, input UpdatePartnerInput, expec
 			display_name     = COALESCE(NULLIF($2,''), display_name),
 			owner_name       = COALESCE(NULLIF($3,''), owner_name),
 			primary_phone    = COALESCE(NULLIF($4,''), primary_phone),
-			secondary_phone  = $5,
-			email            = $6,
-			notes            = $7,
+			secondary_phone  = COALESCE(NULLIF($5,''), secondary_phone),
+			email            = COALESCE(NULLIF($6,''), email),
+			notes            = COALESCE(NULLIF($7,''), notes),
 			version          = version + 1,
 			updated_at       = NOW()
 		WHERE id = $1 AND version = $8
@@ -201,6 +216,10 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 
 	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
+	}
+
+	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated) && strings.TrimSpace(input.Reason) == "" {
+		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 
 	var updated Partner
@@ -284,8 +303,14 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 		return Document{}, ErrNotFound
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		return Document{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
 	var d Document
-	err := db.QueryRow(`
+	err = tx.QueryRow(`
 		INSERT INTO dsh_partner_documents
 			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id)
 		VALUES ($1,$2,$3,$4,$5)
@@ -294,7 +319,16 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID,
 	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
 		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
-	return d, err
+	if err != nil {
+		return Document{}, err
+	}
+	if err := recordActivationEvent(tx, partnerID, "document_uploaded:"+d.DocumentType, input.UploadedByActorID, "app-field", input.Notes); err != nil {
+		return Document{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Document{}, err
+	}
+	return d, nil
 }
 
 func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
@@ -375,6 +409,10 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 		return Document{}, DocumentReview{}, err
 	}
 
+	if err := recordActivationEvent(tx, partnerID, "document_reviewed:"+input.Decision, input.ReviewedByActorID, "control-panel", input.Reason); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return Document{}, DocumentReview{}, err
 	}
@@ -407,11 +445,17 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		mediaRefs = []string{}
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		return FieldVisit{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
 	var v FieldVisit
 	var lat, lon sql.NullFloat64
 	var submittedAt sql.NullTime
 	var storeIDOut sql.NullString
-	err := db.QueryRow(`
+	err = tx.QueryRow(`
 		INSERT INTO dsh_partner_field_visits
 			(partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude, evidence_media_refs, submitted_at)
 		VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,NOW())
@@ -423,6 +467,12 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
 		&v.Version, &v.CreatedAt, &submittedAt)
 	if err != nil {
+		return FieldVisit{}, err
+	}
+	if err := recordActivationEvent(tx, input.PartnerID, "field_visit_submitted", input.FieldActorID, "app-field", input.VisitNotes); err != nil {
+		return FieldVisit{}, err
+	}
+	if err := tx.Commit(); err != nil {
 		return FieldVisit{}, err
 	}
 	if lat.Valid {
@@ -465,7 +515,7 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerStore, error) {
 	return stores, rows.Err()
 }
 
-func LinkPartnerStore(db *sql.DB, partnerID, storeID string) ([]PartnerStore, error) {
+func LinkPartnerStore(db *sql.DB, partnerID, storeID, actorID string) ([]PartnerStore, error) {
 	if partnerID == "" || storeID == "" {
 		return nil, ErrInvalid
 	}
@@ -485,6 +535,9 @@ func LinkPartnerStore(db *sql.DB, partnerID, storeID string) ([]PartnerStore, er
 	}
 	if affected == 0 {
 		return nil, ErrNotFound
+	}
+	if err := recordActivationEvent(db, partnerID, "store_linked:"+storeID, actorID, "control-panel", ""); err != nil {
+		return nil, err
 	}
 	return ListPartnerStores(db, partnerID)
 }
@@ -575,6 +628,25 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 }
 
 // ─── Activation audit ──────────────────────────────────────────────────────
+
+// execer is satisfied by both *sql.DB and *sql.Tx, letting audit events be
+// recorded either standalone or as part of an existing transaction.
+type execer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+// recordActivationEvent appends a non-transition activation event (document
+// upload, document review, field visit, store link) to the same audit trail
+// TransitionStatus writes to, so the full partner lifecycle is visible from
+// a single ordered timeline instead of being scattered across tables.
+func recordActivationEvent(x execer, partnerID, toStatus, actorID, actorSurface, reason string) error {
+	_, err := x.Exec(`
+		INSERT INTO dsh_partner_activation_events
+			(partner_id, from_status, to_status, actor_id, actor_surface, reason)
+		VALUES ($1, '', $2, $3, $4, $5)`,
+		partnerID, toStatus, actorID, actorSurface, reason)
+	return err
+}
 
 func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, error) {
 	rows, err := db.Query(`

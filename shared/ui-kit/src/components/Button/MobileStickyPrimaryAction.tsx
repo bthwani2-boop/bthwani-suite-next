@@ -1,4 +1,4 @@
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles } from '../../tokens/colors';
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button } from './Button';

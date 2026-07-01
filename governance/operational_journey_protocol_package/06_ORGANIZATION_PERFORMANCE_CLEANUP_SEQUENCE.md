@@ -335,6 +335,97 @@ file_decision_matrix:
 
 ---
 
+### 24.1 قاعدة التنظيف والتشطيب النهائي الشامل (Zero-Defect Closure)
+
+قبل أي `PASS` أو `IMPLEMENTATION_PASS` أو `MERGE_READY`، يجب فحص كل عنصر داخل النطاق (ملف/route/handler/matrix row) مقابل كل فئة من فئات العيوب التالية دون استثناء واحد. هذه الطبقة تدقيق نهائي فوق `topic_file_organization_matrix` و`consolidation_matrix` و`file_decision_matrix`، ولا تحل محلها.
+
+```yaml
+zero_defect_closure_matrix:
+  scope_item:
+  defect_categories_checked:
+    errors:
+      definition: "منطق خاطئ، route/handler/client مكسور، تعارض بين الكود والعقد/OpenAPI"
+      status: PASS | FAIL | N/A
+      evidence:
+    deficiency_gaps:
+      definition: "نقص وظيفي أو توثيقي أو اختباري، حالة غير معالجة، حقل matrix فارغ"
+      status: PASS | FAIL | N/A
+      evidence:
+    contradiction:
+      definition: "تعارض بين مصدرين للحقيقة، بين الأدلة والادعاء، أو بين ملفين يصفان نفس الشيء بشكل مختلف"
+      status: PASS | FAIL | N/A
+      evidence:
+    scattering_fragmentation:
+      definition: "نفس المسؤولية موزعة في أكثر من مكان بلا مالك واحد (canonical_owner)"
+      status: PASS | FAIL | N/A
+      evidence:
+    duplication:
+      definition: "كود أو منطق أو نوع أو مسار مكرر بلا سبب معماري موثق"
+      status: PASS | FAIL | N/A
+      evidence:
+    dead_content:
+      definition: "كود/ملف/route/export غير مستخدم في أي import أو route أو test أو runtime"
+      status: PASS | FAIL | N/A
+      evidence:
+    leakage:
+      definition: >-
+        تسرب أي نوع من مالكه الصحيح إلى مكان غير مخوّل، ويشمل دون حصر: تسرب مالي خارج WLT،
+        تسرب business logic/state/validation/permission/lifecycle إلى surfaces، تسرب process.env
+        أو أسرار أو مفاتيح إلى كود عميل/شاشات، تسرب raw API response إلى UI، تسرب بيانات داخلية
+        عبر حقول API عامة، تسرب mock/demo/preview كحقيقة تشغيلية.
+      status: PASS | FAIL | N/A
+      evidence:
+    other_defective_state:
+      definition: "أي حالة أخرى لا تندرج تحت ما سبق لكنها تخالف قواعد الحجم/التسمية/التنظيم في هذا الملف"
+      status: PASS | FAIL | N/A
+      evidence:
+  final_decision: KEEP_ACTIVE | REFACTOR_SPLIT | MERGE_DUPLICATE | RETIRE_DEAD | MOVE_TO_OWNER | FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
+```
+
+قواعد صارمة:
+
+```text
+أي فئة أعلاه بحالة FAIL أو بلا evidence = FIX_REQUIRED فورًا، بغض النظر عن حالة الفئات الأخرى.
+لا يجوز final_decision: KEEP_ACTIVE إذا كانت أي فئة N/A بلا مبرر موثق داخل evidence.
+تعريف leakage هنا يوسّع ويُلزم بند 28 في 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md (لا تسرب مالي خارج WLT) ليشمل كل أنواع التسرب لا المالي فقط.
+هذا الجدول إلزامي على كل عنصر داخل النطاق بلا استثناء، ولا يجوز اعتبار الرحلة PASS ما لم يكتمل لكل عنصر.
+```
+
+### 24.2 التنفيذ الإلزامي المباشر — منع FIX_REQUIRED المعلّق ومنع التشخيص فقط
+
+`FIX_REQUIRED` ليس مخرجًا نهائيًا مقبولًا لإغلاق أي عنصر عندما تسمح مهمة الرحلة بالتنفيذ. **تشخيص بلا تنفيذ = مخرج غير مقبول عند `task_mode: implementation_or_closure`.** القاعدة تُطبَّق حسب `task_mode` المعرّف في `01_COMMAND_INPUTS_RESULTS.md` و`03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md`:
+
+```text
+عند task_mode: implementation_or_closure
+  - الوكيل يملك صلاحية تنفيذية كاملة ومسبقة (Full Execution Authority) داخل حدود النطاق المعرّف في 03، بلا حاجة لتأكيد بشري إضافي لكل خطوة على حدة، على أن يبقى كل تنفيذ داخل شجرة العمل المحلية فقط (انظر القيد أدناه).
+  - أي فئة FAIL في zero_defect_closure_matrix يجب معالجتها مباشرة وفوريًا في الكود الحي داخل النطاق أثناء نفس الجلسة، وليس فقط توصيفها أو جدولتها لاحقًا:
+      dead_content        -> حذف مباشر للملف/الكود/المجلد غير المستخدم (RETIRE_DEAD)، بعد فحص 24 (imports/routes/manifests/tests/guards/runtime/API/OpenAPI/database)
+      duplication         -> دمج فعلي في مالك واحد (MERGE_DUPLICATE)
+      scattering_fragmentation -> نقل فعلي إلى canonical_owner (MOVE_TO_OWNER)
+      deficiency_gaps      -> إضافة فعلية للناقص (كود/اختبار/توثيق/حقل matrix) وليس فقط الإشارة إليه
+      other_defective_state / errors -> إصلاح فعلي أو تقسيم (REFACTOR_SPLIT / FIX)
+      contradiction        -> حسم فعلي لمصدر الحقيقة الواحد (SSOT) وحذف/تصحيح النسخة المتعارضة
+      leakage              -> إزالة فعلية للتسرب من مكانه غير المخوّل وإعادته لمالكه الصحيح
+  - يُمنع منعًا باتًا: تأجيل التنفيذ، الاكتفاء بتقرير تشخيصي، اقتراح خطة دون تطبيقها، أو "الهروب" من فئة FAIL بتصنيفها N/A بلا مبرر موثق.
+  - يُمنع تسليم أي مخرج يحتوي بندًا واحدًا بحالة FIX_REQUIRED دون تنفيذ فعلي، إلا إذا تحوّل فعليًا إلى BLOCKED_NEEDS_EVIDENCE بسبب نقص إثبات حقيقي (بيئة/وصول/بيانات لا يملكها الوكيل) — وهذا الاستثناء الوحيد المقبول، وليس هروبًا من التنفيذ بل حالة موثقة بدليل صريح.
+  - الهدف الرقمي الملزم لكل عنصر داخل النطاق: صفر أخطاء، صفر تناقض، صفر تكرار، صفر فجوات، صفر ضجيج (لا تقارير بلا تنفيذ)، صفر ضعف أو نقص في المنطق أو التشغيل، صفر تشتت/تبعثر، صفر فشل، وصفر عيوب — وأي عنصر لا يحقق هذا كاملًا يبقى `FIX_REQUIRED` وواجب المعالجة الفورية في نفس الجلسة، لا التالية.
+  - الحذف/النقل/الدمج/الإضافة/التعديل هنا كلها تعديلات في شجرة العمل المحلية ضمن نطاق التنفيذ المصرّح به فقط، ولا تُلغي Human-Gated Git/GitHub Change Control في 02_REMOTE_REF_SOURCE_GIT_GATES.md: أي commit/push/PR/merge/tag/release يبقى ممنوعًا دون أمر بشري مستقل صريح. الصلاحية الكاملة هنا صلاحية تنفيذ كود، لا صلاحية Git/GitHub.
+
+عند task_mode: analysis_only أو merge_review
+  - يُمنع التنفيذ المباشر (لا حذف ولا تعديل كود) لأن المهمة نفسها لا تخوّل ذلك.
+  - لكن يُمنع أيضًا إغلاق أي فئة FAIL بدون required_action + required_owner + verification_command صريحة وقابلة للتنفيذ لاحقًا، حتى لا يتحول zero_defect_closure_matrix إلى تقرير ضجيج بلا قرار.
+```
+
+قواعد صارمة إضافية:
+
+```text
+أي زيارة implementation_or_closure لاحقة على نفس النطاق تجد فئة FAIL سبق توصيفها ولم تُعالج بلا BLOCKED_NEEDS_EVIDENCE موثق = PROTOCOL_VIOLATION (تراكم عيوب غير معالجة عبر رحلات متتالية).
+أي وكيل ينتج تقرير تشخيص فقط (بلا تنفيذ فعلي) عند task_mode: implementation_or_closure دون أن يحوّل كل بند إلى BLOCKED_NEEDS_EVIDENCE موثق = PROTOCOL_VIOLATION.
+لا يجوز تبرير التأجيل بعبارات عامة مثل "يفضّل لاحقًا" أو "خارج الوقت الحالي" ما لم يكن ذلك موثقًا كـ BLOCKED_NEEDS_EVIDENCE بسبب محدد وقابل للتحقق.
+```
+
+---
+
 ## 25) External Reference Rule
 
 استخدم مصادر خارجية رسمية أو مفتوحة موثوقة فقط عند وجود فجوة لا يمكن حسمها من الريبو أو العقود أو المانح.
