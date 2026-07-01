@@ -1,0 +1,744 @@
+# ALLOW_LOCAL_PATH_EXAMPLE
+# أمر التنفيذ الحاكم — بروتوكول الرحلة التشغيلية الموحدة
+# Sovereign Execution Command — Unified Operational Journey Protocol
+# GitHub Remote First / Full-Stack Multi-Surface / Evidence-Gated
+# النسخة: v1 (2026-07-01)
+
+## 0) طريقة الاستخدام
+
+استخدم هذا الأمر عند مراجعة أو تنفيذ أو إغلاق أي رحلة تشغيلية أو Topic داخل المشروع.
+
+املأ القيم التالية قبل الإرسال للوكيل المنفذ:
+
+```text
+REPO_REMOTE:
+bthwani2-boop/bthwani-suite-next
+
+REPO_LOCAL:
+C:\bthwani-suite-next
+
+REF:
+<اكتب ref المباشر: branch أو commit أو tag>
+
+BASE_REF عند مراجعة PR أو الدمج:
+<اكتب base ref عند الحاجة>
+
+DONOR_REMOTE_READ_ONLY:
+bthwani2-boop/bthwani-suite
+
+DONOR_LOCAL_READ_ONLY:
+C:\bthwani-suite
+
+JOURNEY / TOPIC:
+<اكتب اسم الرحلة أو التوبك المطلوب مراجعته أو تنفيذه>
+
+TASK:
+<اكتب المطلوب بدقة>
+
+OUT_OF_SCOPE:
+<اكتب ما لا يجب لمسه>
+```
+
+## 1) قاعدة المصدر الحاكم
+
+ابدأ من GitHub Remote فقط.
+
+ممنوع الاعتماد على الذاكرة أو الانطباع أو ادعاءات سابقة أو README غير مدعوم بدليل أو نجاح ظاهري من واجهة واحدة.
+
+الحالة الافتراضية لأي رحلة:
+
+```text
+FIX_REQUIRED
+```
+
+ولا تتحول إلى:
+
+```text
+PASS
+```
+
+إلا إذا ثبتت بالأدلة العملية من نفس ref/head.
+
+إذا تعذر إثبات معلومة حاكمة:
+
+```text
+BLOCKED_NEEDS_EVIDENCE
+```
+
+مع توضيح ما الناقص، وأين يوجد أثره، ولماذا يمنع الحسم، وكيف يتم التحقق منه.
+
+## 2) قاعدة عدم الاعتماد على machine-readable
+
+ممنوع الاعتماد على `machine-readable/` كمرجع حاكم أو مصدر قرار.
+
+أي قرار يجب أن يثبت من:
+
+```text
+live repository topology
+actual source files
+contracts
+backend routes
+database migrations
+shared controllers/state/view-models
+surface bindings
+guards
+tests
+runtime evidence
+CI evidence إن وجد
+GitHub commit/diff/PR evidence
+```
+
+أي guard أو script أو تقرير لا يزال يعتمد على `machine-readable/` كحقيقة حاكمة:
+
+```text
+FIX_REQUIRED
+```
+
+ولا يعالج ذلك بإعادة بناء machine-readable، بل بإعادة القرار إلى الواقع الحي في الريبو.
+
+## 3) بروتوكول القرار المهني
+
+تعامل مع الطلب كقرار هندسي يجب حسمه بالأدلة.
+
+نفّذ بالترتيب:
+
+```text
+1. افهم الهدف والنطاق والسياق.
+2. افحص GitHub Remote ref مباشرة.
+3. افحص commits وdiff وPRs وchanged files عند وجودها.
+4. افحص الملفات الحية والمسارات والطبقات والأسطح والتبعيات.
+5. افحص backend/API/database/runtime عند دخولها في النطاق.
+6. افحص shared brains قبل الأسطح.
+7. افحص guards/tests/typecheck/build/evidence.
+8. لا تقبل نجاحًا ظاهريًا أو تقريرًا بلا دليل.
+9. حوّل أي غموض إلى نقص محدد قابل للتحقق.
+10. اختر أقل معالجة مخاطرة وأعلى معالجة دقة.
+```
+
+ممنوع ترك أي بند بصيغة عامة مثل:
+
+```text
+يحتاج مراجعة لاحقًا
+قد يكون صحيحًا
+غالبًا يعمل
+غير واضح
+```
+
+كل بند غامض يجب تحويله إلى:
+
+```text
+missing_item
+path_or_scope
+why_it_blocks_decision
+required_evidence
+verification_command
+safe_interim_decision
+```
+
+## 4) مزامنة المحلي عند التنفيذ فقط
+
+عند الحاجة لتنفيذ تعديل محلي، طابق المحلي مع الريموت قبل أي تغيير:
+
+```powershell
+Set-Location -LiteralPath "C:\bthwani-suite-next"
+git fetch --all --prune
+git checkout <REF>
+git status --short
+git diff --check
+git log --oneline --decorate -n 20
+```
+
+إذا كان ref محليًا فقط وغير موجود في GitHub Remote:
+
+```text
+RESULT: BLOCKED_NEEDS_EVIDENCE
+REASON: ref غير متاح في GitHub Remote
+```
+
+إذا ظهرت تغييرات محلية غير مفهومة:
+
+```text
+RESULT: BLOCKED_NEEDS_EVIDENCE
+REASON: local working tree غير نظيف أو غير مفهوم
+```
+
+## 5) تعريف الرحلة قبل التنفيذ
+
+قبل أي تعديل، اكتب تعريفًا تنفيذيًا للرحلة يحتوي:
+
+```yaml
+purpose:
+in_scope:
+out_of_scope:
+owning_service:
+owning_shared_brain:
+related_backend_modules:
+related_database_tables:
+migrations_required:
+api_contracts_required:
+api_clients_required:
+required_surfaces:
+optional_surfaces:
+read_only_surfaces:
+forbidden_surfaces:
+primary_control_panel_section:
+secondary_control_panel_sections:
+read_only_control_panel_sections:
+forbidden_control_panel_sections:
+permissions:
+states:
+state_transitions:
+loading_empty_error_success_contract:
+blocked_disabled_retry_offline_contract:
+tests_required:
+guards_required:
+evidence_required:
+```
+
+لا تقبل تعريفًا عامًا مثل:
+
+```text
+control-panel
+mobile apps
+backend
+frontend
+```
+
+يجب تحديد القسم والسطح والدور والملكية بدقة.
+
+## 6) المسارات السيادية الحاكمة
+
+### 6.1 DSH Frontend Brain
+
+العقل الحاكم لكل DSH Frontend:
+
+```text
+services/dsh/frontend/shared
+```
+
+يملك:
+
+```text
+types
+states
+state machines
+view-models
+controllers/hooks
+API clients/adapters
+permissions
+role/view policies
+validation rules
+transforms
+lifecycle rules
+registry/config/domain constants
+loading/empty/error/success contracts
+blocked/disabled/retry/offline contracts
+shared providers
+DSH-facing WLT read-only integration bindings
+```
+
+### 6.2 DSH UI-only surfaces
+
+هذه المسارات UI فقط:
+
+```text
+services/dsh/frontend/control-panel
+services/dsh/frontend/app-partner
+services/dsh/frontend/app-field
+services/dsh/frontend/app-client
+services/dsh/frontend/app-captain
+```
+
+مسموح فيها:
+
+```text
+rendering
+layout
+labels
+icons
+navigation composition
+role-specific visible rendering
+calling shared controller hooks
+passing UI props
+surface-specific composition
+```
+
+ممنوع فيها:
+
+```text
+fetch/axios مباشر
+API adapters/repositories
+state machines
+controller-core
+business lifecycle logic
+domain validation
+permission logic
+role policy
+view policy
+process.env أو URL construction
+storage access كمنطق تشغيلي
+cross-service internal imports
+duplicated domain types/status/view-models
+raw API response mapping
+financial truth أو mutation
+```
+
+### 6.3 WLT-for-DSH Brain
+
+العقل الحاكم لأي عرض أو ربط مالي مرجعي بين WLT و DSH:
+
+```text
+services/wlt/frontend/shared/dsh
+```
+
+يملك:
+
+```text
+WLT-for-DSH types
+states
+contracts
+view-models
+read-only API adapters/controllers
+financial reference mappings
+commission/COD/payment/refund/settlement status references
+read-only bindings consumed by DSH shared
+```
+
+### 6.4 WLT UI-only surfaces
+
+هذه المسارات UI فقط:
+
+```text
+services/wlt/frontend/control-panel
+services/wlt/frontend/app-partner
+services/wlt/frontend/app-field
+services/wlt/frontend/app-client
+services/wlt/frontend/app-captain
+```
+
+ممنوع فيها:
+
+```text
+financial mutation
+ledger/payment/refund/settlement/commission/payout truth
+API adapter مباشر
+state machine
+controller-core
+financial permission logic
+business lifecycle logic
+```
+
+### 6.5 Apps runtime
+
+هذه المسارات bootstrap فقط:
+
+```text
+apps/app-client/runtime
+apps/app-partner/runtime
+apps/app-field/runtime
+apps/app-captain/runtime
+apps/control-panel/runtime
+```
+
+مسموح فيها:
+
+```text
+provider wrapping
+navigation entry point
+runtime bootstrap
+surface mounting
+```
+
+ممنوع فيها:
+
+```text
+business logic
+API binding
+state machine
+controllers
+financial logic
+```
+
+## 7) قاعدة العقل الفول ستاك الموحد
+
+كل رحلة داخل DSH أو WLT-for-DSH يجب أن تمتلك مصدر منطق واحد فقط:
+
+```text
+DSH:
+services/dsh/frontend/shared/<domain>
+
+WLT-for-DSH:
+services/wlt/frontend/shared/dsh/<domain>
+```
+
+كل سطح يستهلك نفس:
+
+```text
+controller
+state contract
+view-model
+validation
+permissions
+lifecycle
+role/view policy
+API binding
+error/loading/empty/success contract
+```
+
+أي اختلاف بين الأسطح يجب أن يكون policy مصرّحًا داخل shared، وليس منطقًا منفصلًا داخل surface.
+
+## 8) حدود DSH/WLT المالية
+
+WLT هو المالك الوحيد للحقيقة المالية.
+
+ممنوع على DSH امتلاك أو تنفيذ:
+
+```text
+payment mutation
+wallet mutation
+refund finalization
+settlement posting
+commission truth
+COD financial truth
+ledger mutation
+reconciliation
+financial reports truth
+provider direct access
+```
+
+DSH مسموح له فقط بعرض references/status/metadata المالية للقراءة.
+
+أي mutation مالي خارج WLT:
+
+```text
+RESULT: FIX_REQUIRED
+```
+
+## 9) استخدام المانح قراءة فقط
+
+استخدم المانح كمصدر استخراج وتحليل فقط عند وجود حاجة فعلية.
+
+استخرج منه فقط ما يثبت أنه مفيد:
+
+```text
+screen experience
+user flows
+interaction behavior
+visual rhythm
+banners
+carousels
+motion patterns
+state presentation
+cross-surface relationships
+experience assets
+```
+
+ممنوع نقل:
+
+```text
+مسارات المانح
+بنيته كما هي
+كوده الميت
+mock/demo/preview كحقيقة تشغيلية
+ownership خاطئة
+منطق مالي داخل DSH
+تصميم محلي مكرر
+API access مباشر من الشاشات
+أي نمط لا يتوافق مع بنية الجديد
+```
+
+كل قيمة صالحة تُعاد بناؤها داخل بنية الريبو الجديد فقط.
+
+## 10) تنفيذ الإغلاق في الكود الحي
+
+نفّذ حسب النطاق الفعلي للرحلة:
+
+```text
+Backend handlers/services/repositories
+Database tables/migrations/seeds
+OpenAPI/API contracts
+Generated or shared API clients
+Shared frontend brain
+WLT-for-DSH shared brain عند الحاجة
+UI surfaces
+Runtime routes/navigation
+Permissions/states/transitions
+Tests/guards/evidence
+```
+
+قواعد التنفيذ:
+
+```text
+لا تعتمد على mock/demo/preview كحقيقة تشغيلية.
+لا تنشئ نظام تصميم موازٍ.
+استخدم @bthwani/ui-kit و @bthwani/app-shell حيث يلزم.
+لا تفتح نطاقًا جديدًا إلا إذا كان blocker مباشرًا للرحلة.
+لا تنقل ملفًا أو تحذفه قبل إثبات علاقاته.
+لا تعدل المانح.
+لا تغيّر API أو migration أو route بلا فحص أثر.
+```
+
+يجب تغطية حالات الواجهة ذات العلاقة:
+
+```text
+loading
+empty
+error
+success
+blocked
+disabled
+retry
+offline
+forbidden
+not_found
+conflict
+invalid_transition
+```
+
+## 11) تنظيف الملفات والتكرار داخل النطاق
+
+قبل حذف أو نقل أو دمج أي ملف، أثبت حالته عبر:
+
+```text
+imports/exports
+routes/navigation
+manifests/registry
+tests
+guards
+Graphify/Nx إن وجد
+runtime usage
+API/client bindings
+```
+
+صنّف كل ملف مشكوك فيه بقرار واحد فقط:
+
+```text
+KEEP_ACTIVE
+REFACTOR_SPLIT
+MERGE_DUPLICATE
+RETIRE_DEAD
+MOVE_TO_OWNER
+FIX_REQUIRED
+BLOCKED_NEEDS_EVIDENCE
+```
+
+## 12) الفحوصات المستهدفة
+
+شغّل فقط ما ينطبق فعليًا على الرحلة، ولا تعتبر أي فحص ناجحًا إلا بمخرج PASS فعلي.
+
+```powershell
+Set-Location -LiteralPath "C:\bthwani-suite-next"
+
+git status --short
+git diff --check
+
+pnpm run foundation:gate
+pnpm run graphify
+pnpm run typecheck
+pnpm run lint
+pnpm run test
+pnpm run build
+pnpm run nx:projects
+pnpm run affected:typecheck
+pnpm run affected:lint
+pnpm run affected:test
+pnpm run affected:build
+pnpm run guard:unified-fullstack-brain
+pnpm run guard:dsh-frontend-shared-ownership
+pnpm run guard:wlt-dsh-frontend-shared-ownership
+pnpm run guard:dsh-frontend-shared-boundary-imports
+pnpm run guard:no-financial-mutation-outside-wlt
+pnpm run guard:no-direct-fetch-in-screen
+pnpm run guard:no-preview-demo-mock-runtime
+pnpm run guard:no-broken-imports
+```
+
+إذا فشل أي فحص مرتبط بالنطاق:
+
+```text
+RESULT: FIX_REQUIRED
+```
+
+مع:
+
+```text
+failing_command
+failing_check
+path
+root_cause
+required_action
+verification_command
+```
+
+## 13) أدلة الإغلاق
+
+راجع أو أنشئ أدلة قابلة للتحقق حسب النطاق:
+
+```text
+guard-results
+typecheck-results
+test-results
+build-results
+nx-results
+graphify-results
+runtime-status
+API smoke evidence
+database/migration proof
+Docker proof
+CI status
+screenshots لكل سطح وحالة مهمة
+manual navigation proof
+PR/commit diff
+changed files list
+manifest/status updates إن وجدت
+```
+
+قواعد الأدلة:
+
+```text
+README/status يخالف guard/test/runtime evidence = FIX_REQUIRED
+CI غير متاح = CI_NOT_CONFIGURED وليس PASS
+screenshot واحد لا يثبت رحلة متعددة الأسطح
+غياب typecheck/test/build المناسب = FIX_REQUIRED
+غياب دليل backend/database عند دخولها في النطاق = FIX_REQUIRED
+وجود منطق داخل surface بدل shared = FIX_REQUIRED
+وجود financial mutation خارج WLT = FIX_REQUIRED
+وجود mock/demo/preview كحقيقة تشغيلية = FIX_REQUIRED
+```
+
+## 14) مراجعة PR أو الدمج
+
+عند مراجعة PR أو commit range، افحص:
+
+```text
+changed files
+commit intent
+scope containment
+base/head diff
+CI status
+guards/tests/build evidence
+ownership boundaries
+DSH/WLT financial boundary
+surface/shared split
+runtime impact
+API/database impact
+dead code or duplication
+unexplained files
+```
+
+القرار الوحيد المقبول قبل الدمج:
+
+```text
+MERGE_READY
+DO_NOT_MERGE
+BLOCKED_NEEDS_EVIDENCE
+```
+
+## 15) المخرج النهائي
+
+اكتب نتيجة واحدة فقط:
+
+```text
+PASS
+FIX_REQUIRED
+BLOCKED_NEEDS_EVIDENCE
+DO_NOT_MERGE
+```
+
+ثم تقريرًا مختصرًا ومنظمًا:
+
+```yaml
+result:
+ref:
+base_ref:
+journey_or_topic:
+final_decision_reason:
+scope:
+out_of_scope:
+topic_definition:
+remote_evidence_reviewed:
+what_is_correct:
+what_is_wrong:
+what_is_missing:
+files_changed_or_required:
+donor_value_used:
+donor_value_rejected:
+backend_api_database_status:
+dsh_shared_ownership_status:
+wlt_for_dsh_boundary_status:
+ui_surfaces_status:
+control_panel_sections_status:
+runtime_status:
+guards_status:
+tests_status:
+ci_status:
+evidence_status:
+merge_decision:
+remaining_blockers:
+next_required_action:
+```
+
+لكل blocker:
+
+```yaml
+path:
+problem:
+root_cause:
+impact:
+priority:
+required_action:
+verification_command:
+```
+
+## 16) معيار القبول النهائي
+
+لا يوجد قبول نهائي إلا إذا تحقق الآتي داخل النطاق:
+
+```text
+كل منطق في مالكه الصحيح
+كل surface UI فقط
+كل shared brain مسؤول عن المنطق المشترك
+لا API مباشر من الشاشات
+لا state/permission/validation/lifecycle داخل surfaces
+لا تكرار غير مبرر
+لا كود ميت داخل النطاق
+لا mock/demo/preview كحقيقة تشغيلية
+لا تسرب مالي خارج WLT
+لا تناقض بين الأدلة والادعاء
+لا CI PASS غير مثبت
+لا route أو handler أو client مكسور
+لا migration أو database proof ناقص عند الحاجة
+لا gaps معلنة أو مخفية داخل الرحلة
+كل الفحوصات المناسبة PASS
+كل الأدلة من نفس ref/head
+```
+
+إذا فشل بند واحد داخل النطاق:
+
+```text
+RESULT: FIX_REQUIRED
+```
+
+إذا تعذر الإثبات:
+
+```text
+RESULT: BLOCKED_NEEDS_EVIDENCE
+```
+
+## 17) صيغة الأمر المختصر للاستخدام السريع
+
+```text
+نفّذ مراجعة/تنفيذًا عمليًا وجنائيًا للرحلة التالية من GitHub Remote إلى الكود الحي، وفق بروتوكول الرحلة التشغيلية الموحدة، دون اعتماد على المحلي أو الذاكرة أو أي ادعاء غير مثبت.
+
+REPO_REMOTE: bthwani2-boop/bthwani-suite-next
+REPO_LOCAL: C:\bthwani-suite-next
+REF: <ref مباشر>
+BASE_REF: <عند الحاجة>
+DONOR_REMOTE_READ_ONLY: bthwani2-boop/bthwani-suite
+DONOR_LOCAL_READ_ONLY: C:\bthwani-suite
+JOURNEY / TOPIC: <اسم الرحلة أو التوبك>
+TASK: <المطلوب>
+OUT_OF_SCOPE: <ما لا يجب لمسه>
+
+ابدأ من GitHub Remote فقط، واعتبر النتيجة FIX_REQUIRED حتى تثبت الأدلة عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن الأسطح UI فقط. استخدم المانح قراءة فقط لاستخراج القيمة الصحيحة دون نقل بنيته. نفّذ الإصلاح في الكود الحي، وغطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. لا تقبل mock/demo/preview كحقيقة تشغيلية، ولا أي منطق مالي خارج WLT، ولا أي منطق business داخل surfaces. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس ref/head. أخرج نتيجة واحدة فقط: PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
+```
