@@ -1090,7 +1090,14 @@ $TopicPaths = @(
   "services\dsh\frontend\app-partner\<topic>",
   "services\dsh\frontend\app-field\<topic>",
   "services\dsh\frontend\app-captain\<topic>",
-  "services\dsh\frontend\control-panel\<topic>"
+  "services\dsh\frontend\control-panel\<topic>",
+
+  "services\wlt\frontend\shared\dsh\<topic>",
+  "services\wlt\frontend\app-client\<topic>",
+  "services\wlt\frontend\app-partner\<topic>",
+  "services\wlt\frontend\app-field\<topic>",
+  "services\wlt\frontend\app-captain\<topic>",
+  "services\wlt\frontend\control-panel\<topic>"
 )
 
 Get-ChildItem -Path $TopicPaths -Include *.ts,*.tsx -ErrorAction SilentlyContinue |
@@ -1349,6 +1356,10 @@ Docker proof
 CI status
 surface_code_coverage_matrix
 control_panel_section_code_matrix
+binding_chain_matrix
+topic_file_organization_matrix
+consolidation_matrix
+journey_sequence_matrix
 imports/exports evidence
 shared brain binding evidence
 direct API absence evidence
@@ -1510,5 +1521,5 @@ JOURNEY / TOPIC: <اسم الرحلة أو التوبك>
 TASK: <المطلوب>
 OUT_OF_SCOPE: <ما لا يجب لمسه>
 
-ابدأ من GitHub Remote فقط، واعتبر النتيجة FIX_REQUIRED حتى تثبت الأدلة عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن الأسطح UI فقط. استخدم المانح قراءة فقط لاستخراج القيمة الصحيحة دون نقل بنيته. نفّذ الإصلاح في الكود الحي، وغطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. لا تقبل mock/demo/preview كحقيقة تشغيلية، ولا أي منطق مالي خارج WLT، ولا أي منطق business داخل surfaces. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس ref/head. أخرج نتيجة واحدة فقط: PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
+ابدأ من GitHub Remote فقط، واعتبر النتيجة FIX_REQUIRED حتى تثبت الأدلة عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن الأسطح UI فقط. استخدم المانح قراءة فقط لاستخراج القيمة الصحيحة دون نقل بنيته. نفّذ الإصلاح في الكود الحي، وغطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. لا تقبل mock/demo/preview كحقيقة تشغيلية، ولا أي منطق مالي خارج WLT، ولا أي منطق business داخل surfaces. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس ref/head. أخرج نتيجة واحدة فقط: ANALYSIS_PASS أو IMPLEMENTATION_PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
 ```
