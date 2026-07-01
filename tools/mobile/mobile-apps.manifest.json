@@ -14,7 +14,8 @@
       "scheme": "bthwani-client-next",
       "androidPackage": "com.bthwani.client.next",
       "iosBundleIdentifier": "com.bthwani.client.next",
-      "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2"
+      "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
+      "features": ["location", "maps", "notifications", "secureStore"]
     },
     "app-partner": {
       "name": "app-partner-next",
@@ -22,7 +23,8 @@
       "scheme": "bthwani-partner-next",
       "androidPackage": "com.bthwani.partner.next",
       "iosBundleIdentifier": "com.bthwani.partner.next",
-      "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580"
+      "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
+      "features": ["camera", "video", "notifications", "secureStore"]
     },
     "app-captain": {
       "name": "app-captain-next",
@@ -30,7 +32,8 @@
       "scheme": "bthwani-captain-next",
       "androidPackage": "com.bthwani.captain.next",
       "iosBundleIdentifier": "com.bthwani.captain.next",
-      "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6"
+      "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
+      "features": ["location", "maps", "camera", "notifications", "secureStore"]
     },
     "app-field": {
       "name": "app-field-next",
@@ -38,7 +41,8 @@
       "scheme": "bthwani-field-next",
       "androidPackage": "com.bthwani.field.next",
       "iosBundleIdentifier": "com.bthwani.field.next",
-      "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914"
+      "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914",
+      "features": ["location", "maps", "camera", "notifications", "secureStore"]
     }
   }
 }
