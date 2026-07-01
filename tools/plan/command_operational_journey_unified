@@ -17,6 +17,9 @@ bthwani2-boop/bthwani-suite-next
 REPO_LOCAL:
 C:\bthwani-suite-next
 
+LOCAL_BRANCH:
+<اكتب اسم الفرع المحلي الذي يعمل عليه الإنسان>
+
 REF:
 <اكتب ref المباشر: branch أو commit أو tag>
 
@@ -38,6 +41,51 @@ TASK:
 OUT_OF_SCOPE:
 <اكتب ما لا يجب لمسه>
 ```
+
+## 0.1) بوابة التحكم البشري بالتغييرات
+
+* ذكر LOCAL_BRANCH للسياق فقط وليس إذنًا بأي إجراء Git/GitHub.
+* ممنوع على الوكيل إنشاء branch أو commit أو push أو Pull Request أو merge أو tag أو release تلقائيًا.
+* كل إجراء Git/GitHub تغييري يحتاج أمرًا بشريًا صريحًا ومستقلًا من مطور المشروع.
+* أمثلة أوامر صريحة مقبولة:
+  * نفّذ commit الآن على الفرع <branch>
+  * ادفع التغييرات إلى GitHub
+  * أنشئ PR من <head> إلى <base>
+  * ادمج هذا PR
+* أمثلة غير كافية ولا تُعد إذنًا:
+  * ابدأ التصحيح
+  * نفّذ الرحلة
+  * أغلق التوبك
+  * راجع الملف
+  * طبّق البروتوكول
+  * التزم بهذا الملف
+* عند التنفيذ المحلي، المسموح فقط تعديل working tree وعرض الأدلة والأوامر المقترحة.
+* أي مخالفة = PROTOCOL_VIOLATION.
+
+## 0.2) تعريف 100% داخل هذا البروتوكول
+
+* 100% لا تعني ادعاءً لفظيًا.
+* لا يجوز إعلان 100% أو مغلق أو جاهز أو مكتمل أو صفر أخطاء أو صفر فجوات أو لا مشاكل إلا مع evidence matrix.
+* يجب أن تحتوي evidence matrix على:
+  * command
+  * path_or_scope
+  * expected_result
+  * actual_result
+  * numeric_measurement
+  * pass_fail_status
+* أي PASS بلا command/output/path/expected/actual = FIX_REQUIRED.
+* إذا تعذر القياس أو الإثبات = BLOCKED_NEEDS_EVIDENCE.
+* معيار "صفر" داخل النطاق يُعرّف كالتالي:
+  * صفر أخطاء مثبتة
+  * صفر تناقض مثبت
+  * صفر تكرار غير مبرر
+  * صفر فجوات معلنة أو مخفية
+  * صفر منطق في غير مالكه
+  * صفر direct API داخل UI surfaces
+  * صفر mock/demo/preview كحقيقة تشغيلية
+  * صفر financial mutation خارج WLT
+  * صفر PASS بلا دليل
+  * صفر ضجيج في التقرير النهائي
 
 ## 1) قاعدة المصدر الحاكم
 
@@ -66,6 +114,25 @@ BLOCKED_NEEDS_EVIDENCE
 ```
 
 مع توضيح ما الناقص، وأين يوجد أثره، ولماذا يمنع الحسم، وكيف يتم التحقق منه.
+
+## 1.1) بوابة حل REF من GitHub Remote
+
+* يجب حل REF مباشرة من GitHub Remote كـ branch أو tag أو commit قبل أي فحص.
+* ممنوع استخدام default branch إذا فشل REF.
+* ممنوع البحث عن فروع مشابهة.
+* ممنوع استبدال REF من عند الوكيل.
+* ممنوع تحليل local branch بدل REF الريموت.
+* إذا فشل REF:
+  * RESULT: BLOCKED_NEEDS_EVIDENCE
+  * REASON: REF غير موجود أو غير قابل للحل في GitHub Remote
+  * STOP: yes
+* بعد حل REF يجب تثبيت:
+  * ref
+  * resolved_commit_sha
+  * resolved_from
+  * verification_command
+* كل الأدلة يجب أن تكون من نفس resolved_commit_sha أو من diff موثق بين BASE_REF وREF عند مراجعة PR.
+* أي دليل من commit آخر بلا تصريح = FIX_REQUIRED.
 
 ## 2) قاعدة عدم الاعتماد على machine-readable
 
@@ -218,6 +285,94 @@ frontend
 
 قبل أي تنفيذ أو مراجعة، يجب إنشاء مصفوفات إلزامية وسلسلة ربط:
 
+### project_area_matrix
+
+مصفوفة نطاق المشروع الإلزامية:
+
+```yaml
+project_area_matrix:
+  dsh:
+    role: IN_SCOPE | READ_ONLY | NOT_APPLICABLE | FORBIDDEN
+    reason:
+    paths:
+      - services/dsh
+    verification_command:
+  wlt:
+    role:
+    reason:
+    paths:
+      - services/wlt
+    verification_command:
+  apps_runtime:
+    role:
+    reason:
+    paths:
+      - apps
+    verification_command:
+  packages:
+    role:
+    reason:
+    paths:
+      - packages
+    verification_command:
+  tools:
+    role:
+    reason:
+    paths:
+      - tools
+    verification_command:
+  scripts:
+    role:
+    reason:
+    paths:
+      - tools/scripts
+      - tools/guards
+    verification_command:
+  ci:
+    role:
+    reason:
+    paths:
+      - .github/workflows
+    verification_command:
+  docker:
+    role:
+    reason:
+    paths:
+      - docker
+      - docker-compose.yml
+    verification_command:
+  docs:
+    role:
+    reason:
+    paths:
+      - docs
+    verification_command:
+  database:
+    role:
+    reason:
+    paths:
+      - database
+    verification_command:
+  contracts:
+    role:
+    reason:
+    paths:
+      - services/dsh/contracts
+      - services/wlt/contracts
+    verification_command:
+  root_config:
+    role:
+    reason:
+    paths:
+      - package.json
+      - pnpm-workspace.yaml
+      - nx.json
+    verification_command:
+```
+
+* أي مجال غير مذكور = FIX_REQUIRED.
+* أي NOT_APPLICABLE بلا سبب ودليل عدم التأثر = FIX_REQUIRED.
+
 ### surface_code_coverage_matrix
 
 يجب ذكر كل سطح من الأسطح التالية صراحة، حتى لو كان غير داخل النطاق:
@@ -243,6 +398,9 @@ surface_code_coverage_matrix:
     local_state_machine_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   app-partner:
@@ -257,6 +415,9 @@ surface_code_coverage_matrix:
     local_state_machine_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   app-field:
@@ -271,6 +432,9 @@ surface_code_coverage_matrix:
     local_state_machine_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   app-captain:
@@ -285,6 +449,9 @@ surface_code_coverage_matrix:
     local_state_machine_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   control-panel:
@@ -299,6 +466,9 @@ surface_code_coverage_matrix:
     local_state_machine_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 ```
 
@@ -342,6 +512,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   catalog:
@@ -361,6 +534,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   operations:
@@ -380,6 +556,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   support:
@@ -399,6 +578,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   marketing:
@@ -418,6 +600,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   platform:
@@ -437,6 +622,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   finance_or_wlt:
@@ -456,6 +644,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 
   administration:
@@ -475,6 +666,9 @@ control_panel_section_code_matrix:
     local_business_logic_absence: PASS | FAIL | N/A
     local_permission_logic_absence: PASS | FAIL | N/A
     duplicated_domain_types_absence: PASS | FAIL | N/A
+    raw_api_mapping_absence: PASS | FAIL | N/A
+    process_env_absence: PASS | FAIL | N/A
+    storage_operational_logic_absence: PASS | FAIL | N/A
     verification_command:
 ```
 
@@ -551,6 +745,285 @@ binding_chain_matrix:
 ```
 
 أي رحلة بلا surface_code_coverage_matrix و control_panel_section_code_matrix و topic_file_organization_matrix و consolidation_matrix و journey_sequence_matrix و binding_chain_matrix = FIX_REQUIRED.
+
+### backend_layer_matrix
+
+مصفوفة طبقات الباك إند:
+
+```yaml
+backend_layer_matrix:
+  routes:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  auth_middleware:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  handlers:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  validation:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  services:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  domain_policy:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  repositories:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  transactions:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  migrations:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  audit_events:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+  error_mapping:
+    paths:
+    owns:
+    must_not_own:
+    verification_command:
+```
+
+* قواعد حاكمة:
+  * routes لا تملك logic.
+  * handler لا يملك business decision نهائي إذا كان هناك service/domain policy.
+  * repository لا يملك business lifecycle decision.
+  * service/domain policy يملك القرار التشغيلي.
+  * error mapping يجب أن يطابق contract.
+  * أي خلط طبقي بلا سبب موثق = FIX_REQUIRED.
+
+### database_truth_matrix
+
+مصفوفة حقيقة قواعد البيانات:
+
+```yaml
+database_truth_matrix:
+  tables:
+    - name:
+      classification: CANONICAL | READ_MODEL | PROJECTION | LEGACY_TO_RETIRE | BUG
+      schema_path:
+      verification_command:
+  migrations:
+    - migration_file:
+      status:
+      verification_command:
+  frontend_backend_type_alignment:
+    db_model_path:
+    backend_model_path:
+    openapi_schema_path:
+    frontend_type_path:
+    alignment_status: PASS | FAIL
+    verification_command:
+```
+
+* قواعد حاكمة:
+  * أي حقيقة تشغيلية يجب أن تمتلك مصدرًا واحدًا فقط.
+  * أي جدول ثانٍ لنفس الحقيقة يجب تصنيفه: CANONICAL أو READ_MODEL أو PROJECTION أو LEGACY_TO_RETIRE أو BUG.
+  * أي اختلاف بين database constraints وbackend model وOpenAPI schema وfrontend types = FIX_REQUIRED.
+
+### api_client_policy_matrix
+
+مصفوفة سياسة عميل API:
+
+```yaml
+api_client_policy_matrix:
+  contract_path:
+  client_generation_enabled: true | false
+  generated_client_path:
+  shared_client_path:
+  manual_fetch_used: true | false
+  manual_fetch_justification:
+  contract_type_alignment: PASS | FAIL
+  error_mapping_alignment: PASS | FAIL
+  verification_command:
+```
+
+* قواعد حاكمة:
+  * generated client هو الأصل عند وجود OpenAPI clientGeneration.
+  * shared manual client مسموح فقط بسبب موثق.
+  * direct fetch داخل shared api.ts يجب أن يكون adapter معزولًا، لا business logic.
+  * fetch/axios داخل surface = FIX_REQUIRED.
+  * أي اختلاف بين OpenAPI وclient types = FIX_REQUIRED.
+
+### ssot_matrix
+
+مصفوفة مصدر الحقيقة الوحيد (SSOT):
+
+```yaml
+ssot_matrix:
+  - truth_name:
+    canonical_owner:
+    canonical_path:
+    consumers:
+      - path:
+    duplicate_sources:
+      - path:
+    conflict_status: PASS | FAIL
+    required_action:
+    verification_command:
+```
+
+* قواعد حاكمة:
+  * أي مصدرين لنفس status أو permission أو lifecycle أو readiness أو visibility أو financial reference أو operational truth = FIX_REQUIRED.
+
+### publishability_visibility_matrix
+
+مصفوفة النشر والظهور:
+
+```yaml
+publishability_visibility_matrix:
+  - entity:
+    final_state_required:
+    backend_filters:
+    database_fields:
+    readiness_flags:
+    approval_flags:
+    serviceability_flags:
+    catalog_or_content_flags:
+    marketing_visibility_flags:
+    api_query_path:
+    api_response_schema:
+    surface_rendering_path:
+    positive_case_visible: PASS | FAIL
+    negative_case_hidden: PASS | FAIL
+    verification_command:
+```
+
+* قواعد حاكمة:
+  * لا يكفي approved أو active وحدها. كل بوابة ظهور يجب إثباتها بالكامل.
+
+### auth_permission_matrix
+
+مصفوفة الصلاحيات والمصادقة:
+
+```yaml
+auth_permission_matrix:
+  - actor:
+    role:
+    surface:
+    backend_auth_middleware:
+    actor_session_mapping:
+    role_to_surface_mapping:
+    allowed_actions:
+    forbidden_actions:
+    forbidden_role_test: PASS | FAIL
+    unauthenticated_case: PASS | FAIL
+    forbidden_case: PASS | FAIL
+    ui_401_403_handling: PASS | FAIL
+    permission_source_owner:
+    verification_command:
+```
+
+* قواعد حاكمة:
+  * permission truth وrole policy لا تكون داخل UI surface.
+
+### evidence_layers
+
+* Code-Based Gate إلزامي دائمًا.
+* Runtime Evidence إلزامي عند التنفيذ أو الإغلاق التشغيلي لكنه لا يستبدل Code-Based Gate.
+* screenshots/manual navigation/recording أدلة إضافية فقط.
+* runtime success مع code failure = FIX_REQUIRED.
+* screenshot success مع broken code path = FIX_REQUIRED.
+
+### risk_based_test_matrix
+
+مصفوفة الاختبار المستند إلى المخاطر:
+
+```yaml
+risk_based_test_matrix:
+  state_machine_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  api_contract_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  database_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  permission_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  visibility_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  financial_reference_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  multi_surface_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  runtime_bootstrap_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+  guard_or_tooling_changed:
+    affected: true | false
+    test_path:
+    verification_command:
+```
+
+* قواعد حاكمة:
+  * غياب test مناسب لخطر داخل النطاق = FIX_REQUIRED.
+
+## Canonical Repository Topology
+
+* DSH shared:
+  services/dsh/frontend/shared
+* DSH surfaces:
+  services/dsh/frontend/control-panel
+  services/dsh/frontend/app-partner
+  services/dsh/frontend/app-field
+  services/dsh/frontend/app-client
+  services/dsh/frontend/app-captain
+* WLT-for-DSH shared:
+  services/wlt/frontend/shared/dsh
+* WLT surfaces:
+  services/wlt/frontend/control-panel
+  services/wlt/frontend/app-partner
+  services/wlt/frontend/app-field
+  services/wlt/frontend/app-client
+  services/wlt/frontend/app-captain
+* Apps runtime:
+  apps/app-client/runtime
+  apps/app-partner/runtime
+  apps/app-field/runtime
+  apps/app-captain/runtime
+  apps/control-panel/runtime
+* DSH OpenAPI:
+  services/dsh/contracts/dsh.openapi.yaml
+* أي مسار غير مثبت من الريبو = BLOCKED_NEEDS_EVIDENCE.
 
 
 ## 6) المسارات السيادية الحاكمة
@@ -1384,6 +1857,13 @@ CI غير متاح = CI_NOT_CONFIGURED وليس PASS
 وجود mock/demo/preview كحقيقة تشغيلية = FIX_REQUIRED
 ```
 
+### 13.1) قواعد بيئة التطوير المستمر (CI)
+
+* بيئة CI غير المتاحة يتم تصنيفها كـ CI_NOT_CONFIGURED وليس PASS.
+* في مهام التحليل فقط (analysis_only): يمكن إخراج نتيجة ANALYSIS_PASS مع توضيح أن CI غير مهيأ (CI_NOT_CONFIGURED).
+* في مهام التنفيذ والإغلاق (implementation_or_closure): يمنع إخراج نتيجة IMPLEMENTATION_PASS مع عدم إثبات نجاح فحص بيئة CI إلا في حالة وجود بديل محلي أو ريموت مكافئ وموثق بالأدلة.
+* في مراجعة الدمج (merge_review): يمنع إخراج نتيجة MERGE_READY في حال عدم إثبات نجاح فحص بيئة CI.
+
 ## 14) مراجعة PR أو الدمج
 
 عند مراجعة PR أو commit range، افحص:
@@ -1412,6 +1892,54 @@ DO_NOT_MERGE
 BLOCKED_NEEDS_EVIDENCE
 ```
 
+## Antigravity Command Output Standard
+
+إذا كان المطلوب إنتاج أمر لوكيل Google Antigravity أو أي نموذج ذكاء اصطناعي، يجب أن يكون الناتج أمرًا تنفيذيًا مباشرًا لا يحتاج تفسيرًا إضافيًا.
+
+يجب أن يحتوي الأمر الناتج على:
+
+```yaml
+antigravity_command:
+  title:
+  repository:
+  local_path:
+  local_branch:
+  remote_ref:
+  resolved_commit_required: true
+  base_ref:
+  task:
+  out_of_scope:
+  human_change_control_notice:
+  execution_principles:
+  sequential_phases:
+    - phase_number:
+      phase_name:
+      objective:
+      actions:
+      files_or_paths_to_check:
+      expected_evidence:
+      blocking_conditions:
+      verification_commands:
+      pass_criteria:
+  required_matrices:
+  required_commands:
+  forbidden_actions:
+  final_report_schema:
+```
+
+* خصائص الأمر الناتج:
+  * مرقم ومتسلسل.
+  * قابل للنسخ والتنفيذ مباشرة.
+  * يحتوي أوامر تحقق محددة.
+  * يفصل التحليل عن التنفيذ عن الإغلاق.
+  * يمنع commit/branch/PR/push/merge التلقائي.
+  * يحوّل 100% إلى evidence gates.
+  * لا يحتوي عبارات عامة بلا path أو command أو expected output.
+  * كل خطوة لها pass/fail/block condition.
+  * كل blocker له path/root_cause/impact/action/verification.
+
+أي أمر ناتج لا يحقق ذلك = FIX_REQUIRED.
+
 ## 15) المخرج النهائي
 
 اكتب نتيجة واحدة فقط:
@@ -1422,6 +1950,7 @@ IMPLEMENTATION_PASS
 FIX_REQUIRED
 BLOCKED_NEEDS_EVIDENCE
 DO_NOT_MERGE
+PROTOCOL_VIOLATION
 
 ملاحظة: PASS يجب أن يوضح نوع المهمة: analysis_only (وتكتب ANALYSIS_PASS) أو implementation_or_closure (وتكتب IMPLEMENTATION_PASS).
 ```
@@ -1432,12 +1961,18 @@ DO_NOT_MERGE
 result:
 ref:
 base_ref:
+local_branch:
+resolved_commit_sha:
 journey_or_topic:
 final_decision_reason:
 scope:
 out_of_scope:
 topic_definition:
 remote_evidence_reviewed:
+human_change_control_status:
+ssot_status:
+publishability_visibility_status:
+auth_permission_status:
 what_is_correct:
 what_is_wrong:
 what_is_missing:
@@ -1491,7 +2026,11 @@ verification_command:
 لا migration أو database proof ناقص عند الحاجة
 لا gaps معلنة أو مخفية داخل الرحلة
 كل الفحوصات المناسبة PASS
-كل الأدلة من نفس ref/head
+كل الأدلة من نفس ref/head ونفس resolved_commit_sha
+لا مصدرين للحقيقة نفسها (SSOT)
+لا PASS بلا evidence عملي واضح
+لا إجراء Git/GitHub change تلقائي من طرف الوكيل
+لا Antigravity command عام أو غير قابل للتنفيذ المباشر
 ```
 
 إذا فشل بند واحد داخل النطاق:
@@ -1509,10 +2048,11 @@ RESULT: BLOCKED_NEEDS_EVIDENCE
 ## 17) صيغة الأمر المختصر للاستخدام السريع
 
 ```text
-نفّذ مراجعة/تنفيذًا عمليًا وجنائيًا للرحلة التالية من GitHub Remote إلى الكود الحي، وفق بروتوكول الرحلة التشغيلية الموحدة، دون اعتماد على المحلي أو الذاكرة أو أي ادعاء غير مثبت.
+نفّذ مراجعة/تنفيذًا عمليًا وجنائيًا للرحلة التالية من GitHub Remote إلى الكود الحي، وفق بروتوقول الرحلة التشغيلية الموحدة، دون اعتماد على المحلي أو الذاكرة أو أي ادعاء غير مثبت.
 
 REPO_REMOTE: bthwani2-boop/bthwani-suite-next
 REPO_LOCAL: C:\bthwani-suite-next
+LOCAL_BRANCH: <الفرع المحلي الحالي>
 REF: <ref مباشر>
 BASE_REF: <عند الحاجة>
 DONOR_REMOTE_READ_ONLY: bthwani2-boop/bthwani-suite
@@ -1521,5 +2061,5 @@ JOURNEY / TOPIC: <اسم الرحلة أو التوبك>
 TASK: <المطلوب>
 OUT_OF_SCOPE: <ما لا يجب لمسه>
 
-ابدأ من GitHub Remote فقط، واعتبر النتيجة FIX_REQUIRED حتى تثبت الأدلة عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن الأسطح UI فقط. استخدم المانح قراءة فقط لاستخراج القيمة الصحيحة دون نقل بنيته. نفّذ الإصلاح في الكود الحي، وغطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. لا تقبل mock/demo/preview كحقيقة تشغيلية، ولا أي منطق مالي خارج WLT، ولا أي منطق business داخل surfaces. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس ref/head. أخرج نتيجة واحدة فقط: ANALYSIS_PASS أو IMPLEMENTATION_PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
+طبق بوابة حل الـ REF من GitHub Remote (REF Resolution Gate) وبوابة التحكم البشري بالتغييرات (Human-Gated Git/GitHub) بحيث يمنع أي إجراء Git تلقائي. اعتمد معايير إنتاج الأوامر (Antigravity Command Output Standard) وقواعد منع الادعاءات اللفظية (Anti-Claim Rule) مع التحقق من مصدر الحقيقة الوحيد (SSOT) وبوابات النشر والظهور (Publishability/Visibility) والصلاحيات (Auth/Permission) وتطبيق الاختبارات المستندة للمخاطر (Risk-Based Tests). ابدأ من GitHub Remote فقط، واعتبر النتيجة FIX_REQUIRED حتى تثبت الأدلة عكس ذلك. عرّف النطاق والمالكين والأسطح وأقسام لوحة التحكم قبل التنفيذ. التزم بأن services/dsh/frontend/shared هو عقل DSH، وأن services/wlt/frontend/shared/dsh هو عقل WLT-for-DSH، وأن الأسطح UI فقط. استخدم المانح قراءة فقط لاستخراج القيمة الصحيحة دون نقل بنيته. نفّذ الإصلاح في الكود الحي، وغطِّ Backend/API/Database/OpenAPI/API clients/shared/surfaces/runtime/tests/guards/evidence حسب النطاق. لا تقبل mock/demo/preview كحقيقة تشغيلية، ولا أي منطق مالي خارج WLT، ولا أي منطق business داخل surfaces. شغّل الفحوصات المناسبة، وراجع الأدلة من نفس ref/head. أخرج نتيجة واحدة فقط: ANALYSIS_PASS أو IMPLEMENTATION_PASS أو FIX_REQUIRED أو BLOCKED_NEEDS_EVIDENCE أو DO_NOT_MERGE أو PROTOCOL_VIOLATION، مع blockers بصيغة path/problem/root_cause/impact/priority/required_action/verification_command.
 ```
