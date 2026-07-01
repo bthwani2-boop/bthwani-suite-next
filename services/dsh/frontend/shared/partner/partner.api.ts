@@ -104,6 +104,15 @@ export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
 
 // ── Field intake ──────────────────────────────────────────────────────────────
 
+export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {
+  const q = new URLSearchParams();
+  if (params.status) q.set("status", params.status);
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.offset) q.set("offset", String(params.offset));
+  const qs = q.toString();
+  return request(`/dsh/field/partners${qs ? `?${qs}` : ""}`);
+}
+
 export function fieldCreateDraft(input: DshCreatePartnerInput): Promise<DshPartner> {
   return request("/dsh/field/partners/drafts", { method: "POST", body: input });
 }

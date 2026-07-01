@@ -18,9 +18,13 @@ import {
 } from '@bthwani/ui-kit';
 import { fieldUploadDocument } from '../../shared/partner';
 import type { DshPartnerDocumentType } from '../../shared/partner';
+import type { FieldOnboardingController } from '../../shared/field-onboarding';
 
 export type DshFieldDocumentUploadScreenProps = {
-  readonly storeId: string;
+  /** When present and carrying an active draft, uploads go through the shared onboarding controller. */
+  readonly controller?: FieldOnboardingController;
+  /** Fallback target partner id used when there is no active onboarding draft (e.g. direct re-upload for an existing partner). */
+  readonly partnerId?: string;
   readonly docKind?: DshPartnerDocumentType;
   readonly onBack: () => void;
 };
@@ -33,8 +37,10 @@ const DOC_KINDS: readonly { id: DshPartnerDocumentType; label: string; descripti
   { id: 'store_photo', label: 'صورة المتجر الرئيسية', description: 'صورة توضح تجهيزات المتجر والممرات', icon: 'image-outline' },
 ];
 
-export function DshFieldDocumentUploadScreen({ storeId, docKind, onBack }: DshFieldDocumentUploadScreenProps) {
+export function DshFieldDocumentUploadScreen({ controller, partnerId, docKind, onBack }: DshFieldDocumentUploadScreenProps) {
   const isRtl = true;
+
+  const effectivePartnerId = controller?.state.partnerId ?? partnerId ?? null;
 
   const [selectedKind, setSelectedKind] = React.useState<DshPartnerDocumentType>(
     docKind ?? 'commercial_register'
@@ -46,21 +52,30 @@ export function DshFieldDocumentUploadScreen({ storeId, docKind, onBack }: DshFi
   const [success, setSuccess] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-
   const handleFormSubmit = async () => {
     if (!documentRef.trim()) {
       setErrorMsg('يرجى تحديد أو إدخال رمز الوسائط (media key).');
       return;
     }
+    if (!effectivePartnerId) {
+      setErrorMsg('يجب إنشاء ملف الشريك أولًا قبل رفع المستندات.');
+      return;
+    }
     setErrorMsg(null);
     setLoading(true);
     try {
-      await fieldUploadDocument(storeId, {
-        documentType: selectedKind,
-        mediaRef: documentRef.trim(),
-        notes: 'مرفوع عبر تطبيق الميداني',
-      });
-      setSuccess(true);
+      const ok = controller?.state.partnerId
+        ? await controller.uploadDocument(selectedKind, documentRef.trim())
+        : await fieldUploadDocument(effectivePartnerId, {
+            documentType: selectedKind,
+            mediaRef: documentRef.trim(),
+            notes: 'مرفوع عبر تطبيق الميداني',
+          }).then(() => true);
+      if (ok) {
+        setSuccess(true);
+      } else {
+        setErrorMsg('تعذر رفع المستند. يرجى التحقق من اتصال الشبكة.');
+      }
     } catch (err: unknown) {
       setErrorMsg('تعذر رفع المستند. يرجى التحقق من اتصال الشبكة.');
     } finally {
@@ -97,7 +112,7 @@ export function DshFieldDocumentUploadScreen({ storeId, docKind, onBack }: DshFi
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <Header
         title="إثبات الوثائق والصور"
-        subtitle={`معرف المتجر: ${storeId}`}
+        subtitle={`معرف الشريك: ${effectivePartnerId ?? 'غير متوفر'}`}
       />
       <ScrollView
         style={{ flex: 1 }}

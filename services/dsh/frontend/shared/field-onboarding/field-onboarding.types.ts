@@ -1,6 +1,9 @@
 // Field onboarding types — for the app-field partner draft creation flow.
 // No JSX. No ui-kit.
 
+import type { DshPartnerDocumentType } from "../partner";
+import { REQUIRED_DOCUMENT_TYPES } from "../partner";
+
 export type FieldPartnerDraftForm = {
   // ── Identity (Step 1) ──────────────────────────────────────────
   legalNameAr: string;
@@ -70,6 +73,7 @@ export type FieldOnboardingDraftState = {
   locationLongitude: number | null;
   evidenceMediaRefs: string[];
   uploadedDocumentIds: string[];
+  uploadedDocumentTypes: DshPartnerDocumentType[];
   isDirty: boolean;
   isSubmitting: boolean;
   submitError: string | null;
@@ -89,6 +93,7 @@ export function initialDraftState(): FieldOnboardingDraftState {
     locationLongitude: null,
     evidenceMediaRefs: [],
     uploadedDocumentIds: [],
+    uploadedDocumentTypes: [],
     isDirty: false,
     isSubmitting: false,
     submitError: null,
@@ -130,12 +135,14 @@ export function getLocationMediaMissingCount(form: Partial<FieldPartnerDraftForm
   return count;
 }
 
-export function getDocumentsMissingCount(): number {
-  // Documents are always 2 until uploaded via field upload flow
-  return 2;
+export function getDocumentsMissingCount(uploadedDocumentTypes: DshPartnerDocumentType[]): number {
+  return REQUIRED_DOCUMENT_TYPES.filter((type) => !uploadedDocumentTypes.includes(type)).length;
 }
 
-export function getAgreementReviewMissingCount(form: Partial<FieldPartnerDraftForm>): number {
+export function getAgreementReviewMissingCount(
+  form: Partial<FieldPartnerDraftForm>,
+  uploadedDocumentTypes: DshPartnerDocumentType[]
+): number {
   let count = 0;
   if (!form.preliminaryOffer?.trim()) count++;
   if (!form.operatingHours?.trim()) count++;
@@ -144,21 +151,34 @@ export function getAgreementReviewMissingCount(form: Partial<FieldPartnerDraftFo
   // + basics missing forwarded
   count += getBasicsProfileMissingCount(form);
   count += getLocationMediaMissingCount(form);
-  count += getDocumentsMissingCount();
+  count += getDocumentsMissingCount(uploadedDocumentTypes);
   return count;
 }
 
 // ── Global required missing items list (mirrors donor getPartnerRequiredMissingItems) ──
 
-export function getFieldRequiredMissingItems(form: Partial<FieldPartnerDraftForm>): string[] {
+const DOCUMENT_TYPE_MISSING_LABELS: Record<DshPartnerDocumentType, string> = {
+  national_id: "هوية المالك",
+  commercial_register: "السجل التجاري",
+  lease_agreement: "عقد الإيجار أو الملكية",
+  health_certificate: "شهادة صحة / ترخيص",
+  store_photo: "صورة المتجر",
+  owner_photo: "صورة المالك",
+  other: "مستند آخر",
+};
+
+export function getFieldRequiredMissingItems(
+  form: Partial<FieldPartnerDraftForm>,
+  uploadedDocumentTypes: DshPartnerDocumentType[]
+): string[] {
   const missing: string[] = [];
   if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.storefrontPhotoRef?.trim()) missing.push("صورة الواجهة");
   if (!form.preliminaryOffer?.trim()) missing.push("العرض أو الاتفاق المبدئي");
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
-  // Always: documents are uploaded via field flow, default to missing
-  missing.push("السجل التجاري");
-  missing.push("هوية المالك");
+  for (const type of REQUIRED_DOCUMENT_TYPES) {
+    if (!uploadedDocumentTypes.includes(type)) missing.push(DOCUMENT_TYPE_MISSING_LABELS[type]);
+  }
   return missing;
 }

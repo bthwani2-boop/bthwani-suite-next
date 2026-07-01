@@ -8,6 +8,7 @@ import {
   fieldSubmitPartner,
   fieldUploadDocument,
   fieldCreateVisit,
+  type DshPartnerDocumentType,
 } from "../partner";
 import {
   initialDraftState,
@@ -26,6 +27,9 @@ export type FieldOnboardingController = {
   updateVisitNotes: (notes: string) => void;
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
+  /** Validates the identity step and creates the partner draft if it doesn't exist yet. Returns false if blocked. */
+  ensureDraftCreated: () => Promise<boolean>;
+  uploadDocument: (kind: DshPartnerDocumentType, mediaRef: string) => Promise<boolean>;
   nextStep: () => Promise<void>;
   prevStep: () => void;
   submitDraft: () => Promise<void>;
@@ -61,45 +65,73 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     });
   }, []);
 
+  const ensureDraftCreated = useCallback(async (): Promise<boolean> => {
+    const errors = validateIdentityStep(state.form);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return false;
+    }
+    setValidationErrors({});
+
+    if (state.partnerId) return true;
+
+    const form = state.form;
+    try {
+      const res = await fieldCreateDraft({
+        legalNameAr: form.legalNameAr!,
+        displayName: form.displayName!,
+        primaryPhone: form.primaryPhone ?? "",
+        legalIdentityType: form.legalIdentityType ?? "commercial_register",
+        legalIdentityNumber: form.legalIdentityNumber!,
+        legalNameEn: form.legalNameEn ?? "",
+        ownerName: form.ownerName ?? "",
+        secondaryPhone: form.secondaryPhone ?? "",
+        email: form.email ?? "",
+        category: form.category ?? "default",
+        notes: form.notes ?? "",
+      });
+      setState((s) => ({ ...s, partnerId: res.id, submitError: null }));
+      return true;
+    } catch (err) {
+      const msg = err && typeof err === "object" && "status" in err
+        ? `فشل إنشاء مسودة الشريك (رمز الخطأ: ${(err as any).status})`
+        : "فشل إنشاء مسودة الشريك";
+      setState((s) => ({ ...s, submitError: msg }));
+      return false;
+    }
+  }, [state]);
+
+  const uploadDocument = useCallback(async (kind: DshPartnerDocumentType, mediaRef: string): Promise<boolean> => {
+    if (!state.partnerId) {
+      setState((s) => ({ ...s, submitError: "يجب إنشاء ملف الشريك أولًا قبل رفع المستندات" }));
+      return false;
+    }
+    try {
+      const doc = await fieldUploadDocument(state.partnerId, {
+        documentType: kind,
+        mediaRef,
+        notes: "مرفوع عبر تطبيق الميداني",
+      });
+      setState((s) => ({
+        ...s,
+        uploadedDocumentIds: s.uploadedDocumentIds.includes(doc.id) ? s.uploadedDocumentIds : [...s.uploadedDocumentIds, doc.id],
+        uploadedDocumentTypes: s.uploadedDocumentTypes.includes(kind) ? s.uploadedDocumentTypes : [...s.uploadedDocumentTypes, kind],
+        submitError: null,
+      }));
+      return true;
+    } catch (err) {
+      setState((s) => ({ ...s, submitError: "تعذر رفع المستند. يرجى التحقق من اتصال الشبكة." }));
+      return false;
+    }
+  }, [state.partnerId]);
+
   const nextStep = useCallback(async () => {
     const steps: FieldPartnerDraftStep[] = ["identity", "owner", "store", "location", "documents", "visit-notes", "review"];
     const currentIdx = steps.indexOf(state.step);
 
-    // Validate current step
     if (state.step === "identity") {
-      const errors = validateIdentityStep(state.form);
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        return;
-      }
-      setValidationErrors({});
-
-      // Create the draft if not yet created
-      if (!state.partnerId) {
-        const form = state.form;
-        try {
-          const res = await fieldCreateDraft({
-            legalNameAr: form.legalNameAr!,
-            displayName: form.displayName!,
-            primaryPhone: form.primaryPhone ?? "",
-            legalIdentityType: form.legalIdentityType ?? "commercial_register",
-            legalIdentityNumber: form.legalIdentityNumber!,
-            legalNameEn: form.legalNameEn ?? "",
-            ownerName: form.ownerName ?? "",
-            secondaryPhone: form.secondaryPhone ?? "",
-            email: form.email ?? "",
-            category: form.category ?? "default",
-            notes: form.notes ?? "",
-          });
-          setState((s) => ({ ...s, partnerId: res.id, submitError: null }));
-        } catch (err) {
-          const msg = err && typeof err === "object" && "status" in err
-            ? `فشل إنشاء مسودة الشريك (رمز الخطأ: ${(err as any).status})`
-            : "فشل إنشاء مسودة الشريك";
-          setState((s) => ({ ...s, submitError: msg }));
-          return;
-        }
-      }
+      const created = await ensureDraftCreated();
+      if (!created) return;
     }
 
     if (state.step === "owner") {
@@ -114,7 +146,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     if (currentIdx < steps.length - 1) {
       setState((s) => ({ ...s, step: steps[currentIdx + 1]! }));
     }
-  }, [state]);
+  }, [state, ensureDraftCreated]);
 
   const submitDraft = useCallback(async () => {
     if (!state.partnerId) return;
@@ -160,6 +192,8 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     updateVisitNotes,
     updateLocation,
     addEvidenceRef,
+    ensureDraftCreated,
+    uploadDocument,
     nextStep,
     prevStep,
     submitDraft,

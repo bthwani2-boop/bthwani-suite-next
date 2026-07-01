@@ -15,38 +15,41 @@ import { DshFieldDocumentUploadScreen } from './onboarding/DshFieldDocumentUploa
 import { DshFieldStoreProductsUploadScreen } from './stores/DshFieldStoreProductsUploadScreen';
 import type { useDshFieldSurfaceModel } from './field.surface-model';
 import type { DshPartnerDocumentType } from '../shared/partner';
+import type { FieldOnboardingController } from '../shared/field-onboarding';
 
 type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
 
 type Props = {
   readonly model: FieldSurfaceBinding['model'];
   readonly actions: FieldSurfaceBinding['actions'];
+  readonly onboardingController: FieldOnboardingController;
 };
 
-export function DshFieldRouteRenderer({ model, actions }: Props): React.ReactElement {
+export function DshFieldRouteRenderer({ model, actions, onboardingController }: Props): React.ReactElement {
   const { route } = model;
 
   if (route.kind === 'onboarding') {
     return (
       <FieldPartnerOnboardingScreen
+        controller={onboardingController}
         onBack={actions.popRoute}
-        onUploadDocument={(kind: DshPartnerDocumentType, partnerId?: string) =>
+        onUploadDocument={(kind: DshPartnerDocumentType) =>
           actions.pushRoute({
             kind: 'document-upload',
-            storeId: partnerId ?? 'onboarding-draft',
+            storeId: onboardingController.state.partnerId ?? 'onboarding-draft',
             docKind: kind,
           })
         }
         onEscalate={() =>
           actions.pushRoute({
             kind: 'escalation',
-            storeId: 'onboarding-draft',
+            storeId: onboardingController.state.partnerId ?? 'onboarding-draft',
           })
         }
         onGoToProducts={() =>
           actions.pushRoute({
             kind: 'products-upload',
-            storeId: 'onboarding-draft',
+            storeId: onboardingController.state.partnerId ?? 'onboarding-draft',
           })
         }
       />
@@ -109,7 +112,8 @@ export function DshFieldRouteRenderer({ model, actions }: Props): React.ReactEle
   if (route.kind === 'document-upload') {
     return (
       <DshFieldDocumentUploadScreen
-        storeId={route.storeId}
+        controller={onboardingController}
+        partnerId={route.storeId}
         onBack={actions.popRoute}
         {...(route.docKind ? { docKind: route.docKind } : {})}
       />
