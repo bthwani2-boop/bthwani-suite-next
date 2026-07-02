@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import {
-  fetchCampaigns, createCampaign, updateCampaign, deleteCampaign,
+  fetchCampaigns, createCampaign, updateCampaign, archiveCampaign,
   fetchBanners, createBanner, updateBanner, deleteBanner,
   fetchPromos, createPromo, updatePromo,
 } from "./marketing.api";
@@ -221,7 +221,15 @@ export function useTickersController(authKind: string) {
 
   const plan = useMemo(() => buildMarketingTickerPlan("all", items), [items]);
 
-  return { items, selected, draft, setDraft, select, save, remove, toggleStatus, togglePinned, plan, reload: () => {} };
+  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for tickers yet
+  // (only campaigns/banners/promos are API-backed — see marketing_partner_offer_matrix.md).
+  // save/remove/toggleStatus below mutate in-memory state only and DO NOT persist.
+  return {
+    items, selected, draft, setDraft, select, save, remove, toggleStatus, togglePinned, plan,
+    reload: () => {},
+    isBackedByApi: false,
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لشريط الأخبار حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+  };
 }
 
 export function useVideosController(authKind: string) {
@@ -264,7 +272,13 @@ export function useVideosController(authKind: string) {
     }));
   }, []);
 
-  return { items, selected, draft, setDraft, select, save, remove, toggleStatus, reload: () => {} };
+  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for videos yet.
+  return {
+    items, selected, draft, setDraft, select, save, remove, toggleStatus,
+    reload: () => {},
+    isBackedByApi: false,
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لاستوديو الفيديو حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+  };
 }
 
 export function usePartnerOffersController(authKind: string) {
@@ -307,7 +321,16 @@ export function usePartnerOffersController(authKind: string) {
     }));
   }, []);
 
-  return { items, selected, draft, setDraft, select, save, remove, toggleStatus, reload: () => {} };
+  // FIX_REQUIRED: no dsh_partner_offers backend table/handler exists yet — see
+  // marketing_partner_offer_matrix.md. Partner-side submission already correctly
+  // targets a review queue (not self-publish); the operator review side here is
+  // still local-state only.
+  return {
+    items, selected, draft, setDraft, select, save, remove, toggleStatus,
+    reload: () => {},
+    isBackedByApi: false,
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعروض الشركاء حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+  };
 }
 
 export function useGrowthController(authKind: string) {
@@ -350,7 +373,13 @@ export function useGrowthController(authKind: string) {
     }));
   }, []);
 
-  return { items, selected, draft, setDraft, select, save, remove, toggleStatus, reload: () => {} };
+  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for growth items yet.
+  return {
+    items, selected, draft, setDraft, select, save, remove, toggleStatus,
+    reload: () => {},
+    isBackedByApi: false,
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعناصر النمو حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+  };
 }
 
 export function useLoyaltyController() {
@@ -369,7 +398,13 @@ export function useLoyaltyController() {
     setTiers(prev => prev.map(t => t.name === name ? { ...t, minimumPoints: points } : t));
   }, []);
 
-  return { pointMultiplier, tiers, updateMultiplier, updateTierPoints };
+  // FIX_REQUIRED: no dsh_marketing_* / loyalty backend table exists — this whole
+  // controller is a local-state simulation with hardcoded default tiers.
+  return {
+    pointMultiplier, tiers, updateMultiplier, updateTierPoints,
+    isBackedByApi: false,
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لبرنامج الولاء حتى الآن — القيم هنا افتراضية ومحلية ولا تُحفظ.",
+  };
 }
 
 export type OperationalMetrics = {
@@ -397,7 +432,14 @@ export function useVisibilityGatesController() {
     });
   }, []);
 
-  return { bypassedGates, toggleBypass, metrics };
+  // FIX_REQUIRED: `metrics` are hardcoded placeholder numbers, not runtime data
+  // (no delivery/rating backend query is wired here). toggleBypass is a local-only
+  // UI toggle and does not call any governance API.
+  return {
+    bypassedGates, toggleBypass, metrics,
+    isBackedByApi: false,
+    persistenceDisabledReason: "المقاييس هنا ثابتة (placeholder) وبوابة التجاوز محلية فقط — لا يوجد تكامل خلفي حتى الآن.",
+  };
 }
 
 export type CatalogReviewItem = {
@@ -422,7 +464,13 @@ export function useCatalogReviewController() {
     setItems(prev => prev.map(item => item.id === id ? { ...item, hasBadImage: false } : item));
   }, []);
 
-  return { items, approveImage, reload: load };
+  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for image/product
+  // review yet; load() always resolves to an empty list and approveImage is local-only.
+  return {
+    items, approveImage, reload: load,
+    isBackedByApi: false,
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لمراجعة صور المنتجات حتى الآن.",
+  };
 }
 
 export function useCampaignsController(authKind: string) {
@@ -451,7 +499,7 @@ export function useCampaignsController(authKind: string) {
     update: async (id: string, body: { status?: string; title?: string }) => {
       await updateCampaign(id, body); await load();
     },
-    remove: async (id: string) => { await deleteCampaign(id); await load(); },
+    remove: async (id: string) => { await archiveCampaign(id); await load(); },
   };
 }
 

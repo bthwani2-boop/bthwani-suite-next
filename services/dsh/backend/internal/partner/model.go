@@ -11,7 +11,7 @@ var (
 	ErrForbidden                    = errors.New("partner action forbidden")
 	ErrInvalidTransition            = errors.New("invalid partner status transition")
 	ErrConflict                     = errors.New("partner conflict — duplicate legal identity")
-	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, catalog approved, and marketing visible")
+	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, partner-ready, catalog approved, and marketing visible")
 )
 
 // ─── Activation status (18 states) ────────────────────────────────────────
@@ -223,6 +223,7 @@ func ComputeReadiness(
 		storeActive &&
 		storeIsVisible &&
 		storeServiceable &&
+		storePartnerReadinessReady &&
 		storeCatalogApproved &&
 		storeMarketingVisible &&
 		partnerActiveDone
@@ -249,6 +250,8 @@ func ComputeReadiness(
 		storePublicationBlockedReason = "الفرع مخفي من لوحة التحكم"
 	} else if !storeServiceable {
 		storePublicationBlockedReason = "الفرع خارج الخدمة أو غير متوفر حالياً"
+	} else if !storePartnerReadinessReady {
+		storePublicationBlockedReason = "جاهزية الشريك غير مكتملة للفرع"
 	} else if !storeCatalogApproved {
 		storePublicationBlockedReason = "الكتالوج الخاص بالفرع غير معتمد"
 	} else if !storeMarketingVisible {

@@ -154,17 +154,21 @@ export const DSH_RUNTIME_MAP = [
     runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
+  // FIX_REQUIRED: campaign "archive" is a hard DB delete, no target/visibility-gate
+  // enforcement, no audit trail (5 of 8 planned tables missing), 7 of 10 control-panel
+  // command decks are local-state-only fakes, zero backend test coverage.
+  // See services/dsh/evidence/marketing-command-deck-final-closure/ for full findings.
   {
     capabilityId: "dsh.marketing",
     backendImplemented: true,
-    sharedBrainReady: true,
-    runtimeBound: true,
-    screensReady: true,
-    databaseReady: true,
+    sharedBrainReady: false,
+    runtimeBound: false,
+    screensReady: false,
+    databaseReady: false,
     generatedClientReady: true,
-    surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
+    surfaceBindingApproved: false,
+    state: "experience-fix-required",
+    runtimeEvidence: null,
   },
   // ── Platform Policies & Service Area Management ──────────────────────────
   {

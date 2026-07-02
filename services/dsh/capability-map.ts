@@ -301,9 +301,12 @@ export const DSH_CAPABILITY_MAP = [
     closureState: "RUNTIME_VERIFIED",
   },
   // ── Marketing Command Deck ─────────────────────────────────────────────────
+  // FIX_REQUIRED: see services/dsh/evidence/marketing-command-deck-final-closure/.
+  // surfaces list corrected — marketing impacts app-client (home-discovery banners/promos)
+  // and app-partner (offer submission), not only control-panel.
   {
     id: "dsh.marketing",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: [
       "listDshCampaigns",
       "createDshCampaign",
@@ -318,9 +321,9 @@ export const DSH_CAPABILITY_MAP = [
       "createDshMarketingPromo",
       "updateDshMarketingPromo",
     ],
-    surfaces: ["control-panel"],
-    runtimeBound: true,
-    closureState: "RUNTIME_VERIFIED",
+    surfaces: ["control-panel", "app-client", "app-partner"],
+    runtimeBound: false,
+    closureState: "FIX_REQUIRED",
   },
   // ── Platform Policies & Service Area Management ───────────────────────────
   {

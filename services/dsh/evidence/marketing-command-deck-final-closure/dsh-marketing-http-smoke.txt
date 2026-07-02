@@ -1,0 +1,27 @@
+=== DSH Marketing HTTP smoke test — resolved_commit_sha ffefae77656dbc3308313ad6d1bd483cb903b737 (+backend fixes applied on top, uncommitted) ===
+Container: bthwani-dsh-api-runtime, rebuilt from working tree at 2026-07-02T13:51:09Z
+
+1. Create campaign, no target:
+{"campaign":{"id":"b37d8b8f-d847-4243-930e-8236cd2c3586","title":"Good Target Campaign","description":"","status":"draft","startDate":"","endDate":"","targetType":"store","targetId":"store-1002","audience":"all","createdBy":"operator-local-001","createdAt":"2026-07-02T13:50:37.753335Z","updatedAt":"2026-07-02T13:50:37.753335Z"}}
+
+2. Create campaign, invalid store target -> 400 TARGET_GATE_FAILED:
+{"code":"TARGET_GATE_FAILED","message":"target failed the client-visibility gate"}
+
+3. Archive (soft) -> row survives with status=cancelled, archived_at set:
+                  id                  |  status   |          archived_at          
+--------------------------------------+-----------+-------------------------------
+ b37d8b8f-d847-4243-930e-8236cd2c3586 | cancelled | 2026-07-02 13:50:48.642499+00
+(1 row)
+
+
+4. Unauthenticated request -> 401 UNAUTHENTICATED:
+{"code":"UNAUTHENTICATED","message":"bearer session is missing or invalid"}
+
+
+5. Audit trail for the above campaign:
+ entity_type | action  |      actor_id      |            correlation_id            |          created_at           
+-------------+---------+--------------------+--------------------------------------+-------------------------------
+ campaign    | create  | operator-local-001 | ebc1620e-c1ca-4522-8849-d285e1eebb68 | 2026-07-02 13:50:37.766468+00
+ campaign    | archive | operator-local-001 | f1edf336-00d0-4e96-8790-461883517480 | 2026-07-02 13:50:48.661211+00
+(2 rows)
+
