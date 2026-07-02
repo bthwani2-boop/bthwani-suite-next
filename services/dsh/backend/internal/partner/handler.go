@@ -6,6 +6,9 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"dsh-api/internal/store"
 )
 
 // ─── JSON helpers (reuse store.SendJSON pattern) ───────────────────────────
@@ -225,12 +228,32 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count documents")
 			return
 		}
-		storeCount, err := CountStores(db, pid)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count stores")
-			return
+
+		var hasStore bool
+		var storeActive bool
+		var storeServiceable bool
+		var storePartnerReadinessReady bool
+		var storeCatalogApproved bool
+		var storeMarketingVisible bool
+		var storeIsVisible bool
+
+		linkedStore, err := store.GetStoreByPartnerID(db, pid)
+		if err == nil && linkedStore != nil {
+			hasStore = true
+			storeActive = (linkedStore.Status == store.StatusActive)
+			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
+			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
+			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")
+			storeMarketingVisible = (linkedStore.MarketingVisibility == "visible")
+			storeIsVisible = linkedStore.IsVisible
 		}
-		sendJSON(w, http.StatusOK, ComputeReadiness(p, total, approved, storeCount))
+
+		sendJSON(w, http.StatusOK, ComputeReadiness(
+			p, total, approved,
+			hasStore, storeActive, storeServiceable,
+			storePartnerReadinessReady, storeCatalogApproved,
+			storeMarketingVisible, storeIsVisible,
+		))
 	}
 }
 
@@ -284,6 +307,10 @@ func HandleActivationTransition(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if err != nil {
+			if strings.Contains(err.Error(), "store publication gates failed") {
+				sendError(w, http.StatusUnprocessableEntity, "STORE_PUBLICATION_GATES_FAILED", err.Error())
+				return
+			}
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "transition failed")
 			return
 		}
@@ -675,11 +702,31 @@ func HandlePartnerMeReadiness(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count documents")
 			return
 		}
-		storeCount, err := CountStores(db, pid)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count stores")
-			return
+
+		var hasStore bool
+		var storeActive bool
+		var storeServiceable bool
+		var storePartnerReadinessReady bool
+		var storeCatalogApproved bool
+		var storeMarketingVisible bool
+		var storeIsVisible bool
+
+		linkedStore, err := store.GetStoreByPartnerID(db, pid)
+		if err == nil && linkedStore != nil {
+			hasStore = true
+			storeActive = (linkedStore.Status == store.StatusActive)
+			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
+			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
+			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")
+			storeMarketingVisible = (linkedStore.MarketingVisibility == "visible")
+			storeIsVisible = linkedStore.IsVisible
 		}
-		sendJSON(w, http.StatusOK, ComputeReadiness(p, total, approved, storeCount))
+
+		sendJSON(w, http.StatusOK, ComputeReadiness(
+			p, total, approved,
+			hasStore, storeActive, storeServiceable,
+			storePartnerReadinessReady, storeCatalogApproved,
+			storeMarketingVisible, storeIsVisible,
+		))
 	}
 }

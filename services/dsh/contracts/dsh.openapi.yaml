@@ -5156,11 +5156,15 @@ components:
 
     DshPartnerReadiness:
       type: object
-      required: [partnerId, canActivate, checklist]
+      required: [partnerId, canActivate, canActivatePartner, canPublishStoreToClient, checklist]
       properties:
         partnerId: { type: string }
         canActivate: { type: boolean }
+        canActivatePartner: { type: boolean }
+        canPublishStoreToClient: { type: boolean }
         blockedReason: { type: string }
+        partnerActivationBlockedReason: { type: string }
+        storePublicationBlockedReason: { type: string }
         checklist:
           type: array
           items: { $ref: "#/components/schemas/DshPartnerReadinessItem" }

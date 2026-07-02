@@ -46,7 +46,11 @@ export type DshPartnerDetailViewModel = {
 
 export type DshPartnerReadinessViewModel = {
   readonly allGatesPassed: boolean;
+  readonly canActivatePartner: boolean;
+  readonly canPublishStoreToClient: boolean;
   readonly blockerLabel: string;
+  readonly partnerActivationBlockedReason: string;
+  readonly storePublicationBlockedReason: string;
   readonly items: readonly { id: string; label: string; satisfied: boolean; blockedReason?: string | undefined }[];
 };
 
@@ -112,7 +116,11 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
 export function buildPartnerReadinessViewModel(r: DshPartnerReadiness): DshPartnerReadinessViewModel {
   return {
     allGatesPassed: r.canActivate,
+    canActivatePartner: r.canActivatePartner,
+    canPublishStoreToClient: r.canPublishStoreToClient,
     blockerLabel: r.blockedReason ?? "",
+    partnerActivationBlockedReason: r.partnerActivationBlockedReason ?? "",
+    storePublicationBlockedReason: r.storePublicationBlockedReason ?? "",
     items: r.checklist.map(item => ({
       id: item.id,
       label: item.label,

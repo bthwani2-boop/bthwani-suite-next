@@ -8,7 +8,7 @@ Runtime Port: `58080` (container internal: `8080`)
 
 ## Purpose
 
-DSH owns operational commerce and delivery truth: store discovery, home discovery, catalog, cart, serviceability, checkout intent, order fulfillment, dispatch, field readiness, support, operational analytics, policies, administration, and partner store activation.
+DSH owns operational commerce and delivery truth: store discovery, home discovery, catalog, cart, serviceability, checkout intent, order fulfillment, dispatch, field readiness, support, operational analytics, policies, administration, and partner onboarding & store publication.
 
 WLT exclusively owns wallet, payment, refund, settlement, payout, commission, COD financial truth, ledger, reconciliation, and finance reporting. DSH may expose operational/visibility views that reference financial state, but financial mutation and provider access remain WLT-owned.
 

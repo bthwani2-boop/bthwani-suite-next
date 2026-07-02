@@ -121,9 +121,9 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack }: DshFieldPar
           ))}
         </SectionCard>
 
-        {!readiness.canActivate && readiness.blockedReason && (
+        {!readiness.canActivatePartner && readiness.partnerActivationBlockedReason && (
           <SectionCard title="العائق الحالي">
-            <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>{readiness.blockedReason}</Text>
+            <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>{readiness.partnerActivationBlockedReason}</Text>
           </SectionCard>
         )}
 

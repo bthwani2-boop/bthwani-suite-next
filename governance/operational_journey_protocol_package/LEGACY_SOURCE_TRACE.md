@@ -32,7 +32,7 @@ legacy_sources:
     extracted_items:
       - guard:matrix:v3
       - guard:canonical-host-ports
-      - slice:gate
+      - slice:gate <!-- no-legacy-slice-labels-ignore -->
       - pnpm install --frozen-lockfile
       - go test/go build لـ services/dsh/backend
       - go test/go build لـ core/identity/backend

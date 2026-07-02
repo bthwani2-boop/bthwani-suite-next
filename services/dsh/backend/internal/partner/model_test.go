@@ -95,7 +95,7 @@ func TestIsClientVisible(t *testing.T) {
 
 func TestComputeReadiness_canActivate(t *testing.T) {
 	p := Partner{ID: "prt_001", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 2, 1, 1)
+	r := ComputeReadiness(p, 2, 1, true, true, true, true, true, true, true)
 	if !r.CanActivate {
 		t.Fatalf("expected CanActivate=true for ops_approved with docs+store, got blocked: %s", r.BlockedReason)
 	}
@@ -106,7 +106,7 @@ func TestComputeReadiness_canActivate(t *testing.T) {
 
 func TestComputeReadiness_blockedNoDocs(t *testing.T) {
 	p := Partner{ID: "prt_002", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 0, 0, 1)
+	r := ComputeReadiness(p, 0, 0, true, true, true, true, true, true, true)
 	if r.CanActivate {
 		t.Fatal("cannot activate without approved documents")
 	}
@@ -117,7 +117,7 @@ func TestComputeReadiness_blockedNoDocs(t *testing.T) {
 
 func TestComputeReadiness_blockedNoStore(t *testing.T) {
 	p := Partner{ID: "prt_003", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 2, 1, 0)
+	r := ComputeReadiness(p, 2, 1, false, false, false, false, false, false, false)
 	if r.CanActivate {
 		t.Fatal("cannot activate without a linked store")
 	}
@@ -128,7 +128,7 @@ func TestComputeReadiness_blockedNoStore(t *testing.T) {
 
 func TestComputeReadiness_blockedWrongStatus(t *testing.T) {
 	p := Partner{ID: "prt_004", ActivationStatus: StatusDocumentsMissing}
-	r := ComputeReadiness(p, 2, 1, 1)
+	r := ComputeReadiness(p, 2, 1, true, true, true, true, true, true, true)
 	if r.CanActivate {
 		t.Fatal("cannot activate when status is documents_missing")
 	}
@@ -136,7 +136,7 @@ func TestComputeReadiness_blockedWrongStatus(t *testing.T) {
 
 func TestComputeReadiness_checklistStructure(t *testing.T) {
 	p := Partner{ID: "prt_005", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 2, 2, 1)
+	r := ComputeReadiness(p, 2, 2, true, true, true, true, true, true, true)
 	if len(r.Checklist) == 0 {
 		t.Fatal("checklist must not be empty")
 	}
@@ -148,12 +148,12 @@ func TestComputeReadiness_checklistStructure(t *testing.T) {
 			if !item.Satisfied {
 				t.Error("documents item should be satisfied")
 			}
-		case "store":
+		case "linked_store":
 			foundStore = true
 			if !item.Satisfied {
 				t.Error("store item should be satisfied")
 			}
-		case "activation":
+		case "ops_approved":
 			foundActivation = true
 		}
 	}
@@ -165,7 +165,7 @@ func TestComputeReadiness_checklistStructure(t *testing.T) {
 
 func TestComputeReadiness_partnerIDPropagated(t *testing.T) {
 	p := Partner{ID: "prt_006", ActivationStatus: StatusDraft}
-	r := ComputeReadiness(p, 0, 0, 0)
+	r := ComputeReadiness(p, 0, 0, false, false, false, false, false, false, false)
 	if r.PartnerID != "prt_006" {
 		t.Errorf("expected PartnerID='prt_006', got %q", r.PartnerID)
 	}

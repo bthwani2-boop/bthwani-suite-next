@@ -3123,7 +3123,11 @@ export interface components {
         DshPartnerReadiness: {
             partnerId: string;
             canActivate: boolean;
+            canActivatePartner: boolean;
+            canPublishStoreToClient: boolean;
             blockedReason?: string;
+            partnerActivationBlockedReason?: string;
+            storePublicationBlockedReason?: string;
             checklist: components["schemas"]["DshPartnerReadinessItem"][];
         };
         DshPartnerReadinessItem: {
