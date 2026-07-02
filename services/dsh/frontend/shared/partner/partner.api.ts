@@ -46,6 +46,9 @@ const baseUrl = resolveDshApiBaseUrl();
  * | fieldUpdatePartnerStore   | PATCH  | /dsh/field/partners/{partnerId}/store                     | updateFieldPartnerStore              |
  * | fieldListDocuments        | GET    | /dsh/field/partners/{partnerId}/documents                 | getFieldPartnerDocuments             |
  * | fieldListFieldVisits      | GET    | /dsh/field/partners/{partnerId}/field-visits             | getFieldPartnerVisits                |
+ *
+ * Manual shared adapter; screens must not fetch directly; mapped to OpenAPI
+ * operationIds until generated client facade is stabilized.
  */
 type RequestOptions = { readonly method?: string; readonly body?: unknown };
 
@@ -181,8 +184,7 @@ export function fieldListFieldVisits(partnerId: string): Promise<{ visits: DshPa
   return request(`/dsh/field/partners/${partnerId}/field-visits`);
 }
 
-// ── Field: draft store + trial products ────────────────────────────────────
-// Field: first-store draft
+// ── Field: first-store draft ────────────────────────────────────────────────
 export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft }> {
   return request(`/dsh/field/partners/${partnerId}/store`);
 }
