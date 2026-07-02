@@ -22,33 +22,47 @@ import type {
 const baseUrl = resolveDshApiBaseUrl();
 
 /**
- * OpenAPI Operation Binding Matrix
+ * OpenAPI Operation Binding Matrix — contracts/dsh.openapi.yaml
  * This file implements the manual shared API adapter. Each function maps directly to an OpenAPI operationId.
  *
- * | Function Name             | Method | Route                                                     | OpenAPI operationId                  |
- * |---------------------------|--------|-----------------------------------------------------------|--------------------------------------|
- * | fetchPartners             | GET    | /dsh/operator/partners                                    | listDshPartners                      |
- * | createPartner             | POST   | /dsh/operator/partners                                    | createDshPartner                     |
- * | fetchPartnerDetail        | GET    | /dsh/operator/partners/{partnerId}                        | getDshPartnerDetail                  |
- * | updatePartner             | PATCH  | /dsh/operator/partners/{partnerId}                        | updateDshPartner                     |
- * | postActivationTransition  | POST   | /dsh/operator/partners/{partnerId}/activation-transitions | postDshPartnerActivationTransition  |
- * | fetchPartnerReadiness     | GET    | /dsh/operator/partners/{partnerId}/readiness              | getDshPartnerReadiness               |
- * | fetchPartnerDocuments     | GET    | /dsh/operator/partners/{partnerId}/documents              | listDshPartnerDocuments              |
- * | uploadPartnerDocument     | POST   | /dsh/operator/partners/{partnerId}/documents              | uploadDshPartnerDocument             |
- * | reviewPartnerDocument     | POST   | /dsh/operator/partners/{partnerId}/documents/{doc}/revs   | reviewDshPartnerDocument             |
- * | fetchPartnerFieldVisits   | GET    | /dsh/operator/partners/{partnerId}/field-visits          | listDshPartnerFieldVisits           |
- * | createPartnerFieldVisit   | POST   | /dsh/operator/partners/{partnerId}/field-visits          | createDshPartnerFieldVisit           |
- * | fetchPartnerStores        | GET    | /dsh/operator/partners/{partnerId}/stores                 | listDshPartnerStores                 |
- * | linkPartnerStore          | POST   | /dsh/operator/partners/{partnerId}/stores                 | linkDshPartnerStore                  |
- * | fetchPartnerSelfStatus    | GET    | /dsh/partner/me                                           | getDshPartnerSelfStatus              |
- * | fetchPartnerSelfReadiness  | GET    | /dsh/partner/me/readiness                                 | getDshPartnerSelfReadiness           |
- * | fieldGetPartnerStore      | GET    | /dsh/field/partners/{partnerId}/store                     | getFieldPartnerStore                 |
- * | fieldUpdatePartnerStore   | PATCH  | /dsh/field/partners/{partnerId}/store                     | updateFieldPartnerStore              |
- * | fieldListDocuments        | GET    | /dsh/field/partners/{partnerId}/documents                 | getFieldPartnerDocuments             |
- * | fieldListFieldVisits      | GET    | /dsh/field/partners/{partnerId}/field-visits             | getFieldPartnerVisits                |
+ * | Function Name            | Method | Route                                                   | OpenAPI operationId          |
+ * |--------------------------|--------|---------------------------------------------------------|------------------------------|
+ * | fetchPartners            | GET    | /dsh/operator/partners                                  | listDshPartners              |
+ * | createPartner            | POST   | /dsh/operator/partners                                  | createDshPartner             |
+ * | fetchPartner             | GET    | /dsh/operator/partners/{partnerId}                      | getDshPartner                |
+ * | transitionPartner        | POST   | /dsh/operator/partners/{partnerId}/transition           | transitionDshPartner         |
+ * | fetchPartnerReadiness    | GET    | /dsh/operator/partners/{partnerId}/readiness            | getDshPartnerReadiness       |
+ * | fetchPartnerDocuments    | GET    | /dsh/operator/partners/{partnerId}/documents            | listDshPartnerDocuments      |
+ * | addPartnerDocument       | POST   | /dsh/operator/partners/{partnerId}/documents            | addDshPartnerDocument        |
+ * | reviewPartnerDocument    | PATCH  | /dsh/operator/partners/{partnerId}/documents/{docId}/review | reviewDshPartnerDocument |
+ * | fetchPartnerStores       | GET    | /dsh/operator/partners/{partnerId}/stores               | listDshPartnerStores         |
+ * | linkPartnerStore         | POST   | /dsh/operator/partners/{partnerId}/stores               | linkDshPartnerStore          |
+ * | fetchPartnerAuditEvents  | GET    | /dsh/operator/partners/{partnerId}/audit                | listDshPartnerAuditEvents    |
+ * | fetchListFieldVisits     | GET    | /dsh/operator/partners/{partnerId}/field-visits         | listDshPartnerFieldVisits    |
+ * | fetchPartnerSelfStatus   | GET    | /dsh/partner/activation/status                          | getDshPartnerActivationStatus |
+ * | fetchPartnerSelfReadiness | GET   | /dsh/partner/activation/readiness                       | getDshPartnerSelfReadiness   |
+ * | fieldListDrafts          | GET    | /dsh/field/partners                                     | listFieldPartnerDrafts       |
+ * | fieldCreateDraft         | POST   | /dsh/field/partners/drafts                              | createFieldPartnerDraft      |
+ * | fieldGetPartner          | GET    | /dsh/field/partners/{partnerId}                         | getFieldPartnerDraft         |
+ * | fieldUpdatePartner       | PATCH  | /dsh/field/partners/{partnerId}                         | updateFieldPartnerDraft      |
+ * | fieldGetReadiness        | GET    | /dsh/field/partners/{partnerId}/readiness               | getFieldPartnerReadiness     |
+ * | fieldGetPartnerStore     | GET    | /dsh/field/partners/{partnerId}/store                   | getFieldPartnerStore         |
+ * | fieldUpdatePartnerStore  | PATCH  | /dsh/field/partners/{partnerId}/store                   | updateFieldPartnerStore      |
+ * | fieldUploadDocument      | POST   | /dsh/field/partners/{partnerId}/documents               | uploadFieldPartnerDocument   |
+ * | fieldListDocuments       | GET    | /dsh/field/partners/{partnerId}/documents               | listFieldPartnerDocuments    |
+ * | fieldCreateVisit         | POST   | /dsh/field/partners/{partnerId}/visits                  | createFieldPartnerVisit      |
+ * | fieldListFieldVisits     | GET    | /dsh/field/partners/{partnerId}/field-visits            | listFieldPartnerFieldVisits  |
+ * | fieldSubmitPartner       | POST   | /dsh/field/partners/{partnerId}/submit                  | submitFieldPartnerDraft      |
  *
- * Manual shared adapter; screens must not fetch directly; mapped to OpenAPI
- * operationIds until generated client facade is stabilized.
+ * api_client_policy: manual shared adapter (Option B).
+ * - All functions live in the DSH shared brain only; screens must never fetch directly
+ *   (proof: guard:no-direct-fetch-in-screen).
+ * - Every function is bound to one OpenAPI operationId above; any drift between this
+ *   table and contracts/dsh.openapi.yaml is a defect.
+ * - Reason the generated facade is not used yet: the generated openapi-typescript client
+ *   (clients/generated/dsh-api.ts) exposes types only — no runnable request facade is
+ *   generated for these operations, so this isolated adapter carries transport until a
+ *   generated request facade is stabilized. No business logic lives here.
  */
 type RequestOptions = { readonly method?: string; readonly body?: unknown };
 

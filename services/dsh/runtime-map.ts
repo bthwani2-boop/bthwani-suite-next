@@ -151,7 +151,7 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
   {
@@ -164,7 +164,7 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Platform Policies & Service Area Management ──────────────────────────
   {
@@ -177,7 +177,7 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Administration, Roles & Activation ──────────────────────────────────
   {
@@ -190,9 +190,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
-  // ── Partner Store Activation ──────────────────────────────────────────────
+  // ── Partner Onboarding & Store Publication ──────────────────────────────────────────────
   {
     capabilityId: "dsh.partner.activation",
     backendImplemented: true,
@@ -203,6 +203,6 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-015-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
 ] as const satisfies readonly DshRuntimeBinding[];
