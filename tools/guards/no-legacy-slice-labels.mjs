@@ -31,7 +31,8 @@ const EXCLUDED_DIRS = new Set([
   "generated",
   "__generated__",
   ".diagnostics",
-  ".github"
+  ".github",
+  "graphify-out"
 ]);
 
 function toPosix(filePath) {
