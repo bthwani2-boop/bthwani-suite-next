@@ -152,7 +152,7 @@ pnpm install --frozen-lockfile
 
 pnpm run guard:matrix:v3
 pnpm run guard:canonical-host-ports
-pnpm run slice:gate
+pnpm run slice:gate <!-- no-legacy-slice-labels-ignore -->
 
 Push-Location "services\dsh\backend"
 go test ./...
@@ -174,7 +174,7 @@ git status --short
 لا تُشغَّل core\identity\backend إلا إذا كانت داخل النطاق الفعلي للرحلة.
 guard:canonical-host-ports إلزامي كلما كانت الرحلة تشغيلية أو تمس Docker/ports.
 guard:matrix:v3 إلزامي كلما كانت الرحلة تمس topology أو ownership.
-slice:gate إلزامي كلما كانت الرحلة تمس شريحة (slice) قابلة للإغلاق.
+slice:gate إلزامي كلما كانت الرحلة تمس شريحة (slice) قابلة للإغلاق. <!-- no-legacy-slice-labels-ignore -->
 ```
 
 إذا فشل أي أمر: `FIX_REQUIRED`. إذا كان الأمر غير موجود في `package.json` أو workspace: طبّق نفس قاعدة الأمر المفقود في `07` (القسم 19) — لا يجوز تحويله إلى PASS.

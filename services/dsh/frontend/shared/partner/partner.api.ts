@@ -21,6 +21,32 @@ import type {
 
 const baseUrl = resolveDshApiBaseUrl();
 
+/**
+ * OpenAPI Operation Binding Matrix
+ * This file implements the manual shared API adapter. Each function maps directly to an OpenAPI operationId.
+ *
+ * | Function Name             | Method | Route                                                     | OpenAPI operationId                  |
+ * |---------------------------|--------|-----------------------------------------------------------|--------------------------------------|
+ * | fetchPartners             | GET    | /dsh/operator/partners                                    | listDshPartners                      |
+ * | createPartner             | POST   | /dsh/operator/partners                                    | createDshPartner                     |
+ * | fetchPartnerDetail        | GET    | /dsh/operator/partners/{partnerId}                        | getDshPartnerDetail                  |
+ * | updatePartner             | PATCH  | /dsh/operator/partners/{partnerId}                        | updateDshPartner                     |
+ * | postActivationTransition  | POST   | /dsh/operator/partners/{partnerId}/activation-transitions | postDshPartnerActivationTransition  |
+ * | fetchPartnerReadiness     | GET    | /dsh/operator/partners/{partnerId}/readiness              | getDshPartnerReadiness               |
+ * | fetchPartnerDocuments     | GET    | /dsh/operator/partners/{partnerId}/documents              | listDshPartnerDocuments              |
+ * | uploadPartnerDocument     | POST   | /dsh/operator/partners/{partnerId}/documents              | uploadDshPartnerDocument             |
+ * | reviewPartnerDocument     | POST   | /dsh/operator/partners/{partnerId}/documents/{doc}/revs   | reviewDshPartnerDocument             |
+ * | fetchPartnerFieldVisits   | GET    | /dsh/operator/partners/{partnerId}/field-visits          | listDshPartnerFieldVisits           |
+ * | createPartnerFieldVisit   | POST   | /dsh/operator/partners/{partnerId}/field-visits          | createDshPartnerFieldVisit           |
+ * | fetchPartnerStores        | GET    | /dsh/operator/partners/{partnerId}/stores                 | listDshPartnerStores                 |
+ * | linkPartnerStore          | POST   | /dsh/operator/partners/{partnerId}/stores                 | linkDshPartnerStore                  |
+ * | fetchPartnerSelfStatus    | GET    | /dsh/partner/me                                           | getDshPartnerSelfStatus              |
+ * | fetchPartnerSelfReadiness  | GET    | /dsh/partner/me/readiness                                 | getDshPartnerSelfReadiness           |
+ * | fieldGetPartnerStore      | GET    | /dsh/field/partners/{partnerId}/store                     | getFieldPartnerStore                 |
+ * | fieldUpdatePartnerStore   | PATCH  | /dsh/field/partners/{partnerId}/store                     | updateFieldPartnerStore              |
+ * | fieldListDocuments        | GET    | /dsh/field/partners/{partnerId}/documents                 | getFieldPartnerDocuments             |
+ * | fieldListFieldVisits      | GET    | /dsh/field/partners/{partnerId}/field-visits             | getFieldPartnerVisits                |
+ */
 type RequestOptions = { readonly method?: string; readonly body?: unknown };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -156,6 +182,7 @@ export function fieldListFieldVisits(partnerId: string): Promise<{ visits: DshPa
 }
 
 // ── Field: draft store + trial products ────────────────────────────────────
+// Field: first-store draft
 export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft }> {
   return request(`/dsh/field/partners/${partnerId}/store`);
 }

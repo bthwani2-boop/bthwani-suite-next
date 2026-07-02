@@ -1757,7 +1757,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
 
           <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
             <Badge label={getDshPartnerActivationStatusLabel(selfStatusState.partner.activationStatus)} tone="info" />
-            <Badge label={selfReadinessState.kind === 'success' && selfReadinessState.readiness.canActivate ? 'جاهز للمراجعة' : 'بانتظار استكمال الاعتماد'} tone={selfReadinessState.kind === 'success' && selfReadinessState.readiness.canActivate ? 'success' : 'warning'} />
+            <Badge label={selfReadinessState.kind === 'success' && selfReadinessState.readiness.canActivatePartner ? 'جاهز للمراجعة' : 'بانتظار استكمال الاعتماد'} tone={selfReadinessState.kind === 'success' && selfReadinessState.readiness.canActivatePartner ? 'success' : 'warning'} />
           </View>
 
           <View style={{ gap: spacing[2], alignItems: 'flex-end' }}>

@@ -222,6 +222,34 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 
+	if input.ToStatus == StatusClientVisible {
+		var storeID string
+		var storeStatus string
+		var storeIsVisible bool
+		var storeServiceability string
+		var storeCatalogApproval string
+		var storeMarketingVisibility string
+
+		err = tx.QueryRow(`
+			SELECT id, status, is_visible, serviceability_status, catalog_approval_status, marketing_visibility
+			FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID,
+		).Scan(&storeID, &storeStatus, &storeIsVisible, &storeServiceability, &storeCatalogApproval, &storeMarketingVisibility)
+		if errors.Is(err, sql.ErrNoRows) {
+			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
+		}
+		if err != nil {
+			return Partner{}, ActivationEvent{}, err
+		}
+
+		if storeStatus != "active" ||
+			!storeIsVisible ||
+			(storeServiceability != "serviceable" && storeServiceability != "limited") ||
+			storeCatalogApproval != "approved" ||
+			storeMarketingVisibility != "visible" {
+			return Partner{}, ActivationEvent{}, ErrStorePublicationGatesFailed
+		}
+	}
+
 	var updated Partner
 	err = tx.QueryRow(`
 		UPDATE dsh_partners SET
@@ -268,6 +296,25 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 			partnerID, readiness,
 		); err != nil {
 			return Partner{}, ActivationEvent{}, err
+		}
+
+		// Write to dsh_store_action_audit
+		var storeID string
+		_ = tx.QueryRow(`SELECT id FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID).Scan(&storeID)
+		if storeID != "" {
+			auditID := "evt-" + itoa(int(time.Now().UnixNano()))
+			action := "store_partner_readiness_updated"
+			reason := "partner transition to " + string(input.ToStatus)
+			role := "operator"
+			if input.ActorSurface == "app-field" {
+				role = "field"
+			}
+			_, _ = tx.Exec(`
+				INSERT INTO dsh_store_action_audit
+				  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
+				VALUES ($1,$2,$3,$4,$5,'{}'::jsonb,'{}'::jsonb,$6,$7,NOW())`,
+				auditID, input.ActorID, role, storeID, action, reason, input.CorrelationID,
+			)
 		}
 	}
 

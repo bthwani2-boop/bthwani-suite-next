@@ -53,9 +53,9 @@ export function PartnerDetailPanel({
   const selectedDecision = decisions.find((decision) => decision.id === selectedDecisionId) ?? null;
   const reasonIsMissing = !!selectedDecision?.reasonRequired && transitionReason.trim().length < 3;
   const readinessBlocked = !!selectedDecision &&
-    (selectedDecision.id === "activate_partner" || selectedDecision.id === "show_store_to_client") &&
     readiness !== null &&
-    !readiness.canActivate;
+    ((selectedDecision.id === "activate_partner" && !readiness.canActivatePartner) ||
+     (selectedDecision.id === "show_store_to_client" && !readiness.canPublishStoreToClient));
 
   const handleTransition = () => {
     if (!selectedDecision || reasonIsMissing || readinessBlocked) return;

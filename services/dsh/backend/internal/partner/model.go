@@ -6,11 +6,12 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("partner not found")
-	ErrInvalid           = errors.New("invalid partner input")
-	ErrForbidden         = errors.New("partner action forbidden")
-	ErrInvalidTransition = errors.New("invalid partner status transition")
-	ErrConflict          = errors.New("partner conflict — duplicate legal identity")
+	ErrNotFound                     = errors.New("partner not found")
+	ErrInvalid                      = errors.New("invalid partner input")
+	ErrForbidden                    = errors.New("partner action forbidden")
+	ErrInvalidTransition            = errors.New("invalid partner status transition")
+	ErrConflict                     = errors.New("partner conflict — duplicate legal identity")
+	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, catalog approved, and marketing visible")
 )
 
 // ─── Activation status (18 states) ────────────────────────────────────────
@@ -184,38 +185,84 @@ type ReadinessItem struct {
 }
 
 type PartnerReadiness struct {
-	PartnerID     string          `json:"partnerId"`
-	CanActivate   bool            `json:"canActivate"`
-	BlockedReason string          `json:"blockedReason,omitempty"`
-	Checklist     []ReadinessItem `json:"checklist"`
+	PartnerID                      string          `json:"partnerId"`
+	CanActivate                    bool            `json:"canActivate"`
+	CanActivatePartner             bool            `json:"canActivatePartner"`
+	CanPublishStoreToClient        bool            `json:"canPublishStoreToClient"`
+	BlockedReason                  string          `json:"blockedReason,omitempty"`
+	PartnerActivationBlockedReason string          `json:"partnerActivationBlockedReason,omitempty"`
+	StorePublicationBlockedReason  string          `json:"storePublicationBlockedReason,omitempty"`
+	Checklist                      []ReadinessItem `json:"checklist"`
 }
 
-func ComputeReadiness(p Partner, documentCount, approvedDocCount, storeCount int) PartnerReadiness {
+func ComputeReadiness(
+	p Partner,
+	documentCount, approvedDocCount int,
+	hasStore bool,
+	storeActive bool,
+	storeServiceable bool,
+	storePartnerReadinessReady bool,
+	storeCatalogApproved bool,
+	storeMarketingVisible bool,
+	storeIsVisible bool,
+) PartnerReadiness {
 	docsDone := approvedDocCount > 0
-	storeDone := storeCount > 0
 
-	statusDone := p.ActivationStatus == StatusOpsApproved ||
+	opsApprovedDone := p.ActivationStatus == StatusOpsApproved ||
 		p.ActivationStatus == StatusPartnerActive ||
 		p.ActivationStatus == StatusClientVisible ||
 		p.ActivationStatus == StatusClientHidden
 
-	canActivate := docsDone && storeDone && IsTransitionAllowed(p.ActivationStatus, StatusPartnerActive)
+	partnerActiveDone := p.ActivationStatus == StatusPartnerActive ||
+		p.ActivationStatus == StatusClientVisible ||
+		p.ActivationStatus == StatusClientHidden
 
-	blockedReason := ""
+	canActivatePartner := docsDone && hasStore && IsTransitionAllowed(p.ActivationStatus, StatusPartnerActive)
+
+	canPublishStoreToClient := hasStore &&
+		storeActive &&
+		storeIsVisible &&
+		storeServiceable &&
+		storeCatalogApproved &&
+		storeMarketingVisible &&
+		partnerActiveDone
+
+	partnerActivationBlockedReason := ""
 	if !docsDone {
-		blockedReason = "وثائق مطلوبة غائبة أو غير معتمدة"
-	} else if !storeDone {
-		blockedReason = "لا يوجد فرع مربوط بالشريك"
-	} else if !canActivate {
-		blockedReason = "الحالة الحالية لا تسمح بالتفعيل المباشر — أكمل المراحل السابقة أولاً"
+		partnerActivationBlockedReason = "وثائق مطلوبة غائبة أو غير معتمدة"
+	} else if !hasStore {
+		partnerActivationBlockedReason = "لا يوجد فرع مربوط بالشريك"
+	} else if !canActivatePartner {
+		if p.ActivationStatus != StatusPartnerActive && p.ActivationStatus != StatusClientVisible && p.ActivationStatus != StatusClientHidden {
+			partnerActivationBlockedReason = "الحالة الحالية لا تسمح بالتفعيل المباشر — أكمل المراحل السابقة أولاً"
+		}
 	}
 
-	_ = statusDone
+	storePublicationBlockedReason := ""
+	if !hasStore {
+		storePublicationBlockedReason = "لا يوجد فرع مربوط بالشريك"
+	} else if !partnerActiveDone {
+		storePublicationBlockedReason = "الشريك غير نشط حالياً"
+	} else if !storeActive {
+		storePublicationBlockedReason = "حالة الفرع غير نشطة"
+	} else if !storeIsVisible {
+		storePublicationBlockedReason = "الفرع مخفي من لوحة التحكم"
+	} else if !storeServiceable {
+		storePublicationBlockedReason = "الفرع خارج الخدمة أو غير متوفر حالياً"
+	} else if !storeCatalogApproved {
+		storePublicationBlockedReason = "الكتالوج الخاص بالفرع غير معتمد"
+	} else if !storeMarketingVisible {
+		storePublicationBlockedReason = "الظهور التسويقي للفرع غير مفعل"
+	}
 
 	return PartnerReadiness{
-		PartnerID:     p.ID,
-		CanActivate:   canActivate,
-		BlockedReason: blockedReason,
+		PartnerID:                      p.ID,
+		CanActivate:                    canActivatePartner,
+		CanActivatePartner:             canActivatePartner,
+		CanPublishStoreToClient:        canPublishStoreToClient,
+		BlockedReason:                  partnerActivationBlockedReason,
+		PartnerActivationBlockedReason: partnerActivationBlockedReason,
+		StorePublicationBlockedReason:  storePublicationBlockedReason,
 		Checklist: []ReadinessItem{
 			{
 				ID:            "documents",
@@ -224,15 +271,58 @@ func ComputeReadiness(p Partner, documentCount, approvedDocCount, storeCount int
 				BlockedReason: map[bool]string{false: "الوثائق غير مكتملة أو لم يتم التحقق منها"}[docsDone],
 			},
 			{
-				ID:            "store",
+				ID:            "linked_store",
 				Label:         "فرع مربوط بالشريك",
-				Satisfied:     storeDone,
-				BlockedReason: map[bool]string{false: "لا يوجد فرع مربوط بالشريك"}[storeDone],
+				Satisfied:     hasStore,
+				BlockedReason: map[bool]string{false: "لا يوجد فرع مربوط بالشريك"}[hasStore],
 			},
 			{
-				ID:        "activation",
-				Label:     "اعتماد العمليات",
-				Satisfied: statusDone,
+				ID:            "ops_approved",
+				Label:         "اعتماد العمليات",
+				Satisfied:     opsApprovedDone,
+				BlockedReason: map[bool]string{false: "بانتظار اعتماد العمليات"}[opsApprovedDone],
+			},
+			{
+				ID:            "partner_active",
+				Label:         "الشريك نشط",
+				Satisfied:     partnerActiveDone,
+				BlockedReason: map[bool]string{false: "الشريك غير نشط"}[partnerActiveDone],
+			},
+			{
+				ID:            "store_status_active",
+				Label:         "حالة الفرع نشطة",
+				Satisfied:     storeActive,
+				BlockedReason: map[bool]string{false: "حالة الفرع غير نشطة"}[storeActive],
+			},
+			{
+				ID:            "store_serviceability",
+				Label:         "تغطية الخدمة للفرع",
+				Satisfied:     storeServiceable,
+				BlockedReason: map[bool]string{false: "الفرع غير مغطى بالخدمة حالياً"}[storeServiceable],
+			},
+			{
+				ID:            "partner_readiness_ready",
+				Label:         "جاهزية الشريك للفرع",
+				Satisfied:     storePartnerReadinessReady,
+				BlockedReason: map[bool]string{false: "جاهزية الشريك غير مكتملة للفرع"}[storePartnerReadinessReady],
+			},
+			{
+				ID:            "catalog_approved",
+				Label:         "كتالوج الفرع معتمد",
+				Satisfied:     storeCatalogApproved,
+				BlockedReason: map[bool]string{false: "كتالوج الفرع غير معتمد"}[storeCatalogApproved],
+			},
+			{
+				ID:            "marketing_visible",
+				Label:         "الظهور التسويقي للفرع",
+				Satisfied:     storeMarketingVisible,
+				BlockedReason: map[bool]string{false: "الظهور التسويقي للفرع غير مفعل"}[storeMarketingVisible],
+			},
+			{
+				ID:            "is_visible",
+				Label:         "الفرع مرئي",
+				Satisfied:     storeIsVisible,
+				BlockedReason: map[bool]string{false: "الفرع مخفي"}[storeIsVisible],
 			},
 		},
 	}
