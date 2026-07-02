@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/electricity/payments/reversal-required"
+  },
+  "response": {
+    "status": 202,
+    "jsonBody": {
+      "providerReference": "elec-reversal-001",
+      "status": "reversal_required"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

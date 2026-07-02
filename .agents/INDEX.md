@@ -2,13 +2,20 @@
 
 ## ⚡ Execution Model — Proportional to Task Nature
 
-The agent must **match effort to task complexity**. No more, no less.
+The default project execution model is **CODE_BASED_LEAN** as canonicalized in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md). The agent must **match effort to task complexity** in accordance with the [Automated Execution Policy](./AUTOMATED_EXECUTION_POLICY.md).
 
-### Tier 1 — Instant (0 skills, 0 checks)
+### Execution & Automation Rules:
+* **LeanCTX as Context Layer**: LeanCTX is the default context and diagnostics layer when active. Agents must use `ctx_*` tools before native equivalents.
+* **Mandatory Automation**: All levels must use the smallest sufficient automation/checks. Scattered manual file-by-file chasing is strictly banned.
+* **Proportional Scaling**: Tiny tasks require small automated checks (no large/unnecessary scripts). High-risk or complex tasks require a full FAAV cycle and Close Loops.
+* **Complex Decision**: Complex tasks require consciously choosing the correct automation shape (e.g. single script or modular multi-script).
+
+### Tier 1 — Instant / Minimal Validation (no skills, small targeted check post-modification)
 Trivial tasks. Execute immediately and respond.
 - Single-file edit, rename, typo, small fix, comment, formatting
 - Reading or explaining code/files
 - Safe read-only commands (`git status`, `git log`, `git diff`)
+- Minimal validation post-modification (no new scripts needed, but must run a lightweight validation check)
 
 ### Tier 2 — Focused (1 skill max)
 Normal feature work within a single service or module.
@@ -21,12 +28,12 @@ Work that crosses module or layer boundaries.
 - Multi-file feature, API + frontend binding, screen routing
 - Load: `bthwani-current-workspace-authority` + one task skill
 
-### Tier 4 — Full Evidence (3 skills, evidence gate)
+### Tier 4 — Escalated Evidence (3 skills, evidence gate)
 High-risk or cross-service work.
 - Finance (WLT/DSH money), security, secrets, auth, agent/skill files
-- Multi-service slice, Docker, CI, dependency changes
+- Multi-service journey, Docker, CI, dependency changes
 - Load: authority + `bthwani-evidence-gate-router` + task skill
-- Evidence gate and closure check required before commit
+- Evidence gate is not default. Use it only for high-risk work, final closure, PR readiness, release readiness, or explicit user request.
 
 ---
 
@@ -35,31 +42,32 @@ High-risk or cross-service work.
 ### Tooling and evidence
 - Graph/ownership/context unclear → `graphify`
 - Need guard selection → `bthwani-guard-command-router`
-- Review local diff/patch → `bthwani-patch-review-evidence`
-- Need registry evidence pack → `bthwani-agent-handoff-evidence-pack`
+- Review local diff/patch (Escalation-only / PR review) → `bthwani-patch-review-evidence`
+- Create evidence packs only when explicitly requested. (Explicit-request-only) → `bthwani-agent-handoff-evidence-pack`
 - Updating or auditing agent files → `bthwani-agent-skill-integrity`
 
 ### Safety and quality
 - Duplication/dead code/refactor risk → `bthwani-clean-code-guard`
 - Secrets/privacy/config risk → `bthwani-security-secrets-privacy`
-- Task closure/dimension evidence check → `bthwani-final-slice-closure-judge`
+- Final closure judge. (Final-only / Closure phase) → `bthwani-final-journey-closure-judge`
 
 ### Repository foundation
 - Foundation/governance/toolchain baseline → `bthwani-foundation-execution`
 - Donor or realtest extraction → `bthwani-legacy-extraction`
+- External agent donor reference, agent inspiration, or agency-agents review (Use only when user asks to design/improve agents/skills or internal agent design is blocked. Do not load by default) → `external-agent-donor-reference`
 - Matrix-driven closure or coverage → `bthwani-machine-readable-matrix-governor`
 
 ### Full-stack and runtime
-- Service slice → `bthwani-service-fullstack-slice`
+- Service journey → `bthwani-service-fullstack-journey`
 - API/client/runtime binding → `bthwani-api-runtime-binding`
-- Docker/data-plane/runtime smoke → `bthwani-docker-slice-runtime`
+- Docker/data-plane/runtime smoke → `bthwani-docker-journey-runtime`
 - Runtime env/provider/service slots → `bthwani-platform-runtime-config`
 
 ### UI and finance
-- UI kit/design system → `bthwani-ui-kit-design-lock`
-- Screen/route/state/visual binding → `bthwani-screen-flow-binding`
+- UI kit/design system (Visual evidence is escalation-only) → `bthwani-ui-kit-design-lock`
+- Route/state/screen binding (Visual evidence is escalation-only) → `bthwani-screen-flow-binding`
 - DSH/WLT money boundary → `bthwani-dsh-wlt-finance-boundary`
-- Premium 2026 visual surgery / donor extraction / RTL / design closure → `bthwani-premium-visual-design-surgeon`
+- Premium UI execution/design system alignment (Visual evidence is escalation-only) → `bthwani-premium-visual-design-surgeon`
 
 
 

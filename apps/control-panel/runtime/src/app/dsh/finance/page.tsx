@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { FinanceDashboardScreen } from "@dsh-cp/finance";
 import {
   ControlPanelShell,
@@ -28,7 +29,11 @@ export default function FinancePage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<FinanceDashboardScreen />}
+      main={
+        <Suspense fallback={<div>جاري تحميل المالية...</div>}>
+          <FinanceDashboardScreen />
+        </Suspense>
+      }
     />
   );
 }

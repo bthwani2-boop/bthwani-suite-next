@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { fail, read, repoRoot } from "./_guard-utils.mjs";
 
@@ -60,14 +59,12 @@ if (violations.length === 0) {
   }
 
   const backendDirectory = path.join(repoRoot, "services/dsh/backend");
-  const goCache = path.join(repoRoot, "graphify-out", "cache", "go-build");
-  fs.mkdirSync(goCache, { recursive: true });
   for (const args of [["test", "./..."], ["build", "./..."]]) {
     const result = spawnSync("go", args, {
       cwd: backendDirectory,
       encoding: "utf8",
       shell: process.platform === "win32",
-      env: { ...process.env, GOCACHE: goCache, TMP: os.tmpdir(), TEMP: os.tmpdir() },
+      env: process.env,
     });
     if (result.status !== 0) {
       violations.push({

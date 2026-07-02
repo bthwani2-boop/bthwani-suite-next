@@ -1,5 +1,5 @@
 import React, { type ReactNode } from "react";
-import { XStack, YStack } from "tamagui";
+import { Pressable, View } from "react-native";
 import { Text } from "../Text";
 import { colorRoles } from "../../tokens/colors";
 
@@ -18,7 +18,7 @@ export type ChipProps = {
 
 export function Chip({ label, selected = false, disabled = false, icon, onPress }: ChipProps) {
   return (
-    <XStack
+    <Pressable
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -29,14 +29,14 @@ export function Chip({ label, selected = false, disabled = false, icon, onPress 
         ...(disabled ? { opacity: 0.5 } : {}),
       }}
     >
-      <XStack style={{
+      <View style={{
         ...styles.innerContainer,
         ...(isRtl ? styles.rowReverse : {}),
       }}>
         {icon != null && (
-          <YStack style={styles.iconContainer}>
+          <View style={styles.iconContainer}>
             {icon}
-          </YStack>
+          </View>
         )}
         <Text
           style={{
@@ -47,8 +47,8 @@ export function Chip({ label, selected = false, disabled = false, icon, onPress 
         >
           {label}
         </Text>
-      </XStack>
-    </XStack>
+      </View>
+    </Pressable>
   );
 }
 

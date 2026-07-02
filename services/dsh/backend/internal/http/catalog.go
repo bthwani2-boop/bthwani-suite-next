@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"dsh-api/internal/catalog"
+	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 )
 
@@ -38,6 +39,73 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 		return store.StoreActor{}, "", false
 	}
 	return actor, row.ID, true
+}
+
+// fieldPartnerStore resolves the store owned by the partner draft at
+// {partnerId} in the URL, requiring the calling field actor to be the one
+// who created that partner draft, and requiring the partner to already have
+// a linked store (every partner gets one automatically on creation).
+func (s *protectedStoreServer) fieldPartnerStore(w http.ResponseWriter, r *http.Request) (actorID, storeID string, ok bool) {
+	actor, reqOk := s.requireActor(w, r, "field")
+	if !reqOk {
+		return "", "", false
+	}
+	partnerID := r.PathValue("partnerId")
+	p, err := partner.GetPartner(s.db, partnerID)
+	if errors.Is(err, partner.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+		return "", "", false
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
+		return "", "", false
+	}
+	if p.CreatedByActorID != actor.ID {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
+		return "", "", false
+	}
+	row, err := store.GetStoreByPartnerID(s.db, partnerID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner store")
+		return "", "", false
+	}
+	if row == nil {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner has no linked store yet")
+		return "", "", false
+	}
+	return actor.ID, row.ID, true
+}
+
+// GET /dsh/field/partners/{partnerId}/store
+func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter, r *http.Request) {
+	_, storeID, ok := s.fieldPartnerStore(w, r)
+	if !ok {
+		return
+	}
+	row, err := store.GetStoreByPartnerID(s.db, r.PathValue("partnerId"))
+	if err != nil || row == nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load store")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "store": store.RowToFieldPartnerStoreDraft(*row)})
+}
+
+// PATCH /dsh/field/partners/{partnerId}/store
+func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWriter, r *http.Request) {
+	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	if !ok {
+		return
+	}
+	var input store.FieldStoreDraftInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, correlationID(r), input)
+	if err != nil {
+		s.writeStoreError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "store": row, "audit": audit})
 }
 
 func (s *protectedStoreServer) handlePartnerCatalog(w http.ResponseWriter, r *http.Request) {

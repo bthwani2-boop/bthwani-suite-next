@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/common/provider-maintenance"
+  },
+  "response": {
+    "status": 503,
+    "jsonBody": {
+      "code": "PROVIDER_MAINTENANCE",
+      "message": "Provider is under maintenance"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

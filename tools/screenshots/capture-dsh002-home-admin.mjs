@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(import.meta.url), "../../..");
-const output = join(root, "services/dsh/evidence/DSH-002-home-discovery-fullstack/screenshots");
+const output = join(root, "services/dsh/evidence/Home Discovery-home-discovery-fullstack/screenshots");
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const baseUrl = "http://localhost:13000";

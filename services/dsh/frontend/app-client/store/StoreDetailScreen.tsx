@@ -4,20 +4,37 @@ import { useStoreDetailController } from '../../shared/store';
 import { usePublishedCatalogController } from '../../shared/catalog';
 import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/catalog.types';
 import { StoreDetailShell } from './StoreDetailShell';
+import { useIdentitySession } from '@bthwani/core-identity';
+import { useCartController } from '../../shared/cart';
 
 type Props = Readonly<{
   storeId: string;
   onBack?: (() => void) | undefined;
+  onGoToCart?: (() => void) | undefined;
 }>;
 
-export function StoreDetailScreen({ storeId, onBack }: Props) {
+export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
+  const identity = useIdentitySession();
+  const authKind = identity.state.kind === 'authenticated' ? 'authenticated' : 'unauthenticated';
   const storeCtrl = useStoreDetailController(storeId);
   const catalogCtrl = usePublishedCatalogController(storeId);
+  const cartCtrl = useCartController(storeId, authKind);
 
   const handleRetry = useCallback(() => {
     storeCtrl.retry();
     catalogCtrl.retry();
-  }, [storeCtrl, catalogCtrl]);
+    cartCtrl.retry();
+  }, [storeCtrl, catalogCtrl, cartCtrl]);
+
+  const handleAddToCart = useCallback((product: CatalogProduct, quantity: number, mode: string) => {
+    void cartCtrl.addItem({
+      productId: product.id,
+      productName: product.name,
+      priceReference: product.priceReference,
+      quantity,
+      fulfillmentMode: mode as any,
+    });
+  }, [cartCtrl]);
 
   if (storeCtrl.state.kind === 'loading' || catalogCtrl.state.kind === 'loading') {
     return <LoadingState title="جاري تحميل واجهة المتجر…" />;
@@ -76,7 +93,9 @@ export function StoreDetailScreen({ storeId, onBack }: Props) {
       products={products}
       favoriteIds={storeCtrl.favoriteIds}
       onToggleFavorite={storeCtrl.toggleFavorite}
+      onAddToCart={handleAddToCart}
       onBack={onBack}
+      onGoToCart={onGoToCart}
     />
   );
 }

@@ -30,6 +30,7 @@ const (
 
 type DshStoreRow struct {
 	ID                    string
+	PartnerID             string
 	Slug                  string
 	DisplayName           string
 	Status                DshStoreStatus
@@ -55,6 +56,13 @@ type DshStoreRow struct {
 	PartnerReadiness      string
 	CatalogApprovalStatus string
 	MarketingVisibility   string
+	AddressLine           string
+	CoverageSummary       string
+	OperatingHours        string
+	DeliveryReadiness     string
+	StorefrontPhotoRef    string
+	InteriorPhotoRef      string
+	SignagePhotoRef       string
 	Version               int
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
@@ -99,6 +107,40 @@ type DshStoreDetail struct {
 	DshStoreSummary
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
+}
+
+type FieldPartnerStoreDraft struct {
+	StoreID               string `json:"storeId"`
+	PartnerID             string `json:"partnerId"`
+	DisplayName           string `json:"displayName"`
+	CityCode              string `json:"cityCode"`
+	ServiceAreaCode       string `json:"serviceAreaCode"`
+	AddressLine           string `json:"addressLine"`
+	CoverageSummary       string `json:"coverageSummary"`
+	OperatingHours        string `json:"operatingHours"`
+	DeliveryReadiness     string `json:"deliveryReadiness"`
+	StorefrontPhotoRef    string `json:"storefrontPhotoRef"`
+	InteriorPhotoRef      string `json:"interiorPhotoRef"`
+	SignagePhotoRef       string `json:"signagePhotoRef"`
+	Status                string `json:"status"`
+	IsVisible             bool   `json:"isVisible"`
+	PartnerReadiness      string `json:"partnerReadiness"`
+	CatalogApprovalStatus string `json:"catalogApprovalStatus"`
+	MarketingVisibility   string `json:"marketingVisibility"`
+	Version               int    `json:"version"`
+}
+
+type FieldStoreDraftInput struct {
+	DisplayName        *string `json:"displayName"`
+	CityCode           *string `json:"cityCode"`
+	ServiceAreaCode    *string `json:"serviceAreaCode"`
+	AddressLine        *string `json:"addressLine"`
+	CoverageSummary    *string `json:"coverageSummary"`
+	OperatingHours     *string `json:"operatingHours"`
+	DeliveryReadiness  *string `json:"deliveryReadiness"`
+	StorefrontPhotoRef *string `json:"storefrontPhotoRef"`
+	InteriorPhotoRef   *string `json:"interiorPhotoRef"`
+	SignagePhotoRef    *string `json:"signagePhotoRef"`
 }
 
 type Pagination struct {
@@ -156,5 +198,18 @@ func RowToDetail(row DshStoreRow) DshStoreDetail {
 		DshStoreSummary: RowToSummary(row),
 		CreatedAt:       row.CreatedAt.UTC().Format(time.RFC3339Nano),
 		UpdatedAt:       row.UpdatedAt.UTC().Format(time.RFC3339Nano),
+	}
+}
+
+func RowToFieldPartnerStoreDraft(row DshStoreRow) FieldPartnerStoreDraft {
+	return FieldPartnerStoreDraft{
+		StoreID: row.ID, PartnerID: row.PartnerID,
+		DisplayName: row.DisplayName, CityCode: row.CityCode, ServiceAreaCode: row.ServiceAreaCode,
+		AddressLine: row.AddressLine, CoverageSummary: row.CoverageSummary,
+		OperatingHours: row.OperatingHours, DeliveryReadiness: row.DeliveryReadiness,
+		StorefrontPhotoRef: row.StorefrontPhotoRef, InteriorPhotoRef: row.InteriorPhotoRef, SignagePhotoRef: row.SignagePhotoRef,
+		Status: string(row.Status), IsVisible: row.IsVisible,
+		PartnerReadiness: row.PartnerReadiness, CatalogApprovalStatus: row.CatalogApprovalStatus,
+		MarketingVisibility: row.MarketingVisibility, Version: row.Version,
 	}
 }

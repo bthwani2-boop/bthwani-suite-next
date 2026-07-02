@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 CREATE TABLE IF NOT EXISTS dsh_stores (
   id                   text        PRIMARY KEY,
   slug                 text        NOT NULL UNIQUE,
@@ -71,3 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_dsh_stores_status
 
 CREATE INDEX IF NOT EXISTS idx_dsh_stores_is_visible
   ON dsh_stores(is_visible);
+
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS latitude numeric(10,7);
+ALTER TABLE dsh_stores ADD COLUMN IF NOT EXISTS longitude numeric(10,7);
+

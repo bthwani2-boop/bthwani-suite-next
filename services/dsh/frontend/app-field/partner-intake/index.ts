@@ -1,1 +1,0 @@
-export { PartnerIntakeScreen } from "./PartnerIntakeScreen";

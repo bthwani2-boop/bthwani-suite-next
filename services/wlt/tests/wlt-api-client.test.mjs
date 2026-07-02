@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(__dirname, "../clients/generated/wlt-api.ts"), "utf-8");
 
 describe("generated WLT API client coverage", () => {
-  test("includes WLT-000 base operations", () => {
+  test("includes WLT Foundation base operations", () => {
     assert.match(source, /getWltHealth/);
     assert.match(source, /getWltReadiness/);
     assert.match(source, /getWltPaymentStatusRef/);
@@ -21,7 +21,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltPaymentSessionResponse/);
   });
 
-  test("includes WLT-001 payment capture operations", () => {
+  test("includes WLT Payment Sessions payment capture operations", () => {
     assert.match(source, /authorizeWltPaymentSession/);
     assert.match(source, /captureWltPaymentSession/);
     assert.match(source, /expireWltPaymentSession/);
@@ -33,7 +33,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltCodCollectResponse/);
   });
 
-  test("includes WLT-002 refund operations", () => {
+  test("includes WLT Refund Status refund operations", () => {
     assert.match(source, /createWltRefund/);
     assert.match(source, /getWltRefund/);
     assert.match(source, /listWltRefunds/);
@@ -47,7 +47,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltRejectRefundRequest/);
   });
 
-  test("includes WLT-003 settlement operations", () => {
+  test("includes WLT Settlement Status settlement operations", () => {
     assert.match(source, /createWltSettlement/);
     assert.match(source, /getWltSettlement/);
     assert.match(source, /listWltSettlements/);
@@ -61,7 +61,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltSettlementSummaryResponse/);
   });
 
-  test("includes WLT-004 COD commission operations", () => {
+  test("includes WLT Commission COD commission operations", () => {
     assert.match(source, /createWltCodRecord/);
     assert.match(source, /getWltCodRecord/);
     assert.match(source, /listWltCodRecords/);
@@ -79,7 +79,7 @@ describe("generated WLT API client coverage", () => {
     assert.match(source, /WltCommissionsListResponse/);
   });
 
-  test("includes WLT-005 ledger audit operations", () => {
+  test("includes WLT Ledger ledger audit operations", () => {
     assert.match(source, /appendWltLedgerEntry/);
     assert.match(source, /getWltLedgerEntry/);
     assert.match(source, /listWltLedgerEntries/);

@@ -21,7 +21,7 @@ Every cleanup or extraction target receives one decision:
 - REJECT_DEMO_PREVIEW
 - REJECT_DUPLICATE
 - REJECT_BROKEN
-- OUT_OF_SCOPE_FOR_THIS_SLICE
+- OUT_OF_SCOPE_FOR_THIS_JOURNEY
 
 ## Runtime forbidden
 

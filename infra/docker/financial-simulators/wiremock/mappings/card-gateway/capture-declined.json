@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/capture-declined"
+  },
+  "response": {
+    "status": 402,
+    "jsonBody": {
+      "code": "CAPTURE_DECLINED",
+      "message": "Card capture declined"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

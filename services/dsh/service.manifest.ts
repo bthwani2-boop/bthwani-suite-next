@@ -6,7 +6,7 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  stage: "DSH-001_TO_DSH-010_RUNTIME_VERIFIED_DSH-011_TO_DSH-014_NEED_CONTRACT_EVIDENCE DSH-002_RUNTIME_VERIFIED",
+  runtimeState: "RUNTIME_VERIFIED",
   closureState: "RUNTIME_VERIFIED",
   activationScope: "stores-home-discovery-catalog-cart-checkout-wlt-handoff-orders-dispatch-field-readiness-support-analytics",
   contract: "contracts/dsh.openapi.yaml",
@@ -16,12 +16,12 @@ export const dshServiceManifest = {
   runtime: DSH_RUNTIME_MAP,
   currentTruth: {
     contractOperations: [
-      // DSH-001 Store Discovery
+      // Store Discovery Journey
       "getDshHealth",
       "getDshReadiness",
       "listDshStores",
       "getDshStore",
-      // DSH-002 Home Discovery
+      // Home Discovery Journey
       "getDshHomeDiscovery",
       "listOperatorHomeDiscoveryContent",
       "createOperatorHomeDiscoveryContent",
@@ -42,19 +42,19 @@ export const dshServiceManifest = {
       "listOperatorCatalogSubmissions",
       "decideOperatorCatalogSubmission",
       "listOperatorCatalogAudit",
-      // DSH-004 Cart & Serviceability
+      // Cart & Serviceability Journey
       "getDshClientCart",
       "upsertDshCartItem",
       "removeDshCartItem",
       "clearDshCart",
       "checkDshCartServiceability",
       "listOperatorCarts",
-      // DSH-005 Checkout Intent & WLT Handoff
+      // Checkout & WLT Handoff Journey
       "createDshCheckoutIntent",
       "getDshCheckoutIntent",
       "cancelDshCheckoutIntent",
       "listOperatorCheckoutIntents",
-      // DSH-006 Orders
+      // Orders Journey
       "createDshOrder",
       "listDshClientOrders",
       "getDshClientOrder",
@@ -64,7 +64,7 @@ export const dshServiceManifest = {
       "markDshOrderPreparing",
       "markDshOrderReadyForPickup",
       "listDshOperatorOrders",
-      // DSH-007 Dispatch
+      // Dispatch Journey
       "listDshDispatchAssignments",
       "createDshAssignment",
       "listDshCaptainAssignments",
@@ -73,7 +73,7 @@ export const dshServiceManifest = {
       "updateDshDeliveryStatus",
       "submitDshPoD",
       "getDshClientOrderTracking",
-      // DSH-008 Field readiness
+      // Field readiness Journey
       "createDshFieldVisit",
       "listDshFieldVisits",
       "completeDshFieldVisit",
@@ -83,7 +83,7 @@ export const dshServiceManifest = {
       "listDshOperatorEscalations",
       "updateDshOperatorEscalation",
       "getDshPartnerOnboardingStatus",
-      // DSH-009 Support
+      // Support Journey
       "createDshSupportTicket",
       "listDshMyTickets",
       "getDshSupportTicket",
@@ -94,13 +94,34 @@ export const dshServiceManifest = {
       "createDshIncident",
       "listDshIncidents",
       "updateDshIncident",
-      // DSH-010 Analytics / finance visibility
+      // Analytics & Reporting Journey
       "getDshPlatformKpis",
       "getDshOrderAnalytics",
       "getDshDeliveryAnalytics",
       "getDshSupportAnalytics",
       "getDshStoreAnalytics",
       "getDshPartnerPerformance",
+      // Partner Onboarding & Store Publication Journey
+      "listDshPartners",
+      "createDshPartner",
+      "getDshPartner",
+      "transitionDshPartner",
+      "getDshPartnerReadiness",
+      "listDshPartnerDocuments",
+      "addDshPartnerDocument",
+      "reviewDshPartnerDocument",
+      "listDshPartnerStores",
+      "linkDshPartnerStore",
+      "listDshPartnerAuditEvents",
+      "listDshPartnerFieldVisits",
+      "getDshPartnerActivationStatus",
+      "getDshPartnerSelfReadiness",
+      "createFieldPartnerDraft",
+      "getFieldPartnerDraft",
+      "updateFieldPartnerDraft",
+      "uploadFieldPartnerDocument",
+      "createFieldPartnerVisit",
+      "submitFieldPartnerDraft",
     ],
     backendRuntimeReady: true,
     generatedClientReady: true,
@@ -132,6 +153,10 @@ export const dshServiceManifest = {
       "useClientTrackingController",
       "useOperatorAnalyticsDashboardController",
       "usePartnerPerformanceController",
+      // Partner Onboarding & Store Publication Journey
+      "usePartnerOnboardingController",
+      "usePartnerAdminController",
+      "usePartnerSelfController",
     ],
     primarySurfaces: [
       "app-client",
@@ -143,11 +168,11 @@ export const dshServiceManifest = {
     requiredStoreRoleSurfaces: ["app-partner", "app-field", "app-captain"],
     incompleteExperienceSurfaces: [],
     crossSurfaceDependencyMap:
-      "machine-readable/dsh-wlt/dsh_001_cross_surface_dependency_map.json",
+      "services/dsh/frontend/shared/runtime/dsh-cross-surface-closure-map.ts",
   },
-  nextSlice: {
-    id: "DSH-011",
-    name: "DSH-011 Notifications & Actor Communication",
+  nextOperationalJourney: {
+    id: "notifications",
+    name: "Notifications & Actor Communication",
     closureState: "NEEDS_CONTRACT_EVIDENCE",
   },
   boundaries: {

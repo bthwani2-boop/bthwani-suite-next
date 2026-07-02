@@ -5,24 +5,24 @@ import { Text } from "../Text";
 export type HeaderProps = {
   title: string;
   subtitle?: string;
-  leading?: ReactNode;
   actions?: ReactNode;
 };
 
-export function Header({ title, subtitle, leading, actions }: HeaderProps) {
+export function Header({ title, subtitle, actions }: HeaderProps) {
   return (
     <Inline
       width="100%"
       minHeight={64}
       justifyContent="space-between"
       paddingVertical="$3"
+      paddingHorizontal="$4"
       borderBottomWidth={1}
       borderBottomColor="$borderColor"
+      flexDirection="row-reverse"
     >
-      {leading}
-      <Block flex={1} gap="$1">
-        <Text role="titleMd">{title}</Text>
-        {subtitle ? <Text role="bodySm" tone="secondary">{subtitle}</Text> : null}
+      <Block flex={1} gap="$1" style={{ alignItems: "flex-end" }}>
+        <Text role="titleMd" style={{ textAlign: "right" }}>{title}</Text>
+        {subtitle ? <Text role="bodySm" tone="secondary" style={{ textAlign: "right" }}>{subtitle}</Text> : null}
       </Block>
       {actions}
     </Inline>

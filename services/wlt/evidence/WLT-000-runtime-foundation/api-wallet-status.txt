@@ -1,1 +1,0 @@
-{"reference":{"id":"wlt-wr-0001","actorId":"partner-dev-0001","actorType":"partner","status":"active","currency":"YER","updatedAt":"2026-06-22T02:57:19.67972Z"}}

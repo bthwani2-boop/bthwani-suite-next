@@ -20,12 +20,15 @@ Agent files may be updated only when the change:
 
 ## Required after update
 
+For normal agent/governance text updates, run only:
+
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-git --no-pager status --short
-git --no-pager diff --stat
-git --no-pager diff --name-status
 git --no-pager diff --check
 ```
 
-Run `.agents/skills/bthwani-agent-skill-integrity/SKILL.md` checks when agent structure changes.
+Run skill catalog or structure checks only when:
+
+* skill folders are added/removed/renamed
+* adapter routing changes structurally
+* catalog membership changes
+* agent integrity is explicitly requested

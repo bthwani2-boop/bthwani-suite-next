@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/common/timeout"
+  },
+  "response": {
+    "status": 504,
+    "fixedDelayMilliseconds": 200,
+    "jsonBody": {
+      "code": "PROVIDER_TIMEOUT",
+      "message": "Provider timeout"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    "node_modules/**",
+    ".pnpm-store/**",
+    ".next/**",
+    ".expo/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "graphify-out/**",
+    ".yagni-out/**",
+    ".nx/**",
+    ".cache/**",
+    ".gocache*/**",
+    ".gomodcache*/**",
+    "tools/registry/runs/**"
+  ],
+  "ignoreFiles": [
+    "**/*.generated.ts",
+    "**/*.generated.tsx",
+    "**/*.gen.ts",
+    "**/__generated__/**"
+  ]
+}

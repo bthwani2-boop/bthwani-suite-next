@@ -1,12 +1,3 @@
-# WLT Docker Evidence
+# WLT Docker Evidence Directory
 
-Store WLT Docker evidence here only after a WLT runtime slice activates.
-
-Expected future evidence:
-
-- docker compose ps
-- migration output
-- seed output
-- /health output
-- /ready output
-- financial smoke output
+This directory holds Docker runtime execution evidence and logs for the WLT service.

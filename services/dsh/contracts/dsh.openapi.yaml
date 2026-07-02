@@ -3,15 +3,10 @@ info:
   title: BThwani DSH Service API
   version: 0.5.0
   description: >
-    Delivery and shopping hub service contract. DSH-001 store discovery and governance
-    (RUNTIME_VERIFIED). DSH-002 home discovery (RUNTIME_VERIFIED). DSH-003 catalog
-    management (RUNTIME_VERIFIED). DSH-004 cart and serviceability (RUNTIME_VERIFIED).
-    DSH-005 checkout intent and WLT handoff, DSH-006 order fulfillment, DSH-007
-    dispatch and captain delivery — backend handlers registered, frontend surface UI
-    not yet approved (NOT_APPROVED_YET). DSH-008 field verification and store quality
-    assurance (RUNTIME_VERIFIED). DSH-009 support incidents and escalation room
-    (RUNTIME_VERIFIED). DSH-010 platform analytics and operational reporting —
-    backend implementation NOT_APPROVED_YET, handlers inactive.
+    Delivery and shopping hub service contract. Core capabilities include Store Discovery,
+    Home Discovery, Catalog Management, Cart & Serviceability, Checkout & WLT Handoff,
+    Order Fulfillment, Dispatch & Captain Delivery, Partner Onboarding & Store Publication,
+    Support, and Analytics.
     WLT handoff uses reference fields only; no financial mutation inside DSH.
 
 x-bthwani-owner: services/dsh
@@ -768,7 +763,7 @@ paths:
       responses:
         "200": { description: Catalog audit timeline. }
 
-  # ─── DSH-004: Cart & Serviceability Quote ────────────────────────────────
+  # ─── Cart & Serviceability Quote ────────────────────────────────
   # Runtime handlers registered in server.go. Client must be authenticated.
   # Financial amounts are NEVER computed by DSH — priceReference is a label
   # from the catalog. All wallet/payment truth is WLT-owned.
@@ -891,7 +886,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # ─── DSH-005: Checkout Intent & WLT Handoff ──────────────────────────────
+  # ─── Checkout Intent & WLT Handoff ──────────────────────────────
   # Implemented. DSH creates intent records only; payment truth is WLT-owned.
   # wltPaymentSessionId is an opaque WLT-owned payment-session reference.
   # ──────────────────────────────────────────────────────────────────────────
@@ -981,7 +976,7 @@ paths:
               schema: { $ref: "#/components/schemas/DshOperatorCheckoutIntentsResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
-  # ─── DSH-006: Order Fulfillment & Partner Acceptance ────────────────────────
+  # ─── Order Fulfillment & Partner Acceptance ────────────────────────
   /dsh/client/orders:
     post:
       operationId: createDshOrder
@@ -1323,7 +1318,7 @@ paths:
   /dsh/client/orders/{orderId}/tracking:
     get:
       operationId: getDshClientOrderTracking
-      summary: Client reads live delivery tracking for their own order.
+      summary: Client reads order delivery status updates for their own order. Does not expose captain coordinates or movement.
       tags: [DshDispatch]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -1340,7 +1335,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-008: Field Verification & Store Quality Assurance ──────────────────
+  # ── Field Verification & Store Quality Assurance ──────────────────
 
   /dsh/field/stores/{storeId}/visits:
     post:
@@ -1533,7 +1528,7 @@ paths:
               schema: { $ref: "#/components/schemas/DshOnboardingStatusResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
-  # ── DSH-009: Support, Incidents & Escalation Room ──────────────────────────
+  # ── Support, Incidents & Escalation Room ──────────────────────────
 
   /dsh/support/tickets:
     post:
@@ -1749,7 +1744,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-010: Platform Analytics & Operational Reporting ────────────────────
+  # ── Platform Analytics & Operational Reporting ────────────────────
   /dsh/operator/analytics/platform:
     get:
       operationId: getDshPlatformKpis
@@ -1871,7 +1866,7 @@ paths:
       responses:
         "501": { description: Contract-only; signature and payment truth remain WLT-owned. }
 
-  # ── DSH-011: Notifications ─────────────────────────────────────────────────
+  # ── Notifications ─────────────────────────────────────────────────
   /dsh/notifications:
     get:
       operationId: listDshNotifications
@@ -1982,7 +1977,7 @@ paths:
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
-  # ── DSH-012: Marketing ─────────────────────────────────────────────────────
+  # ── Marketing ─────────────────────────────────────────────────────
   /dsh/operator/marketing/campaigns:
     get:
       operationId: listDshCampaigns
@@ -2217,7 +2212,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-013: Platform Policies ────────────────────────────────────────────
+  # ── Platform Policies ────────────────────────────────────────────
   /dsh/operator/platform/zones:
     get:
       operationId: listDshZones
@@ -2380,7 +2375,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ── DSH-014: Administration ────────────────────────────────────────────────
+  # ── Administration ────────────────────────────────────────────────
   /dsh/operator/admin/roles:
     get:
       operationId: listDshAdminRoles
@@ -2457,7 +2452,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ─── DSH-015: Partner Store Activation ──────────────────────────────────────
+  # ─── Partner Onboarding & Store Publication ─────────────────────────
 
   /dsh/operator/partners:
     get:
@@ -2484,7 +2479,7 @@ paths:
           description: Partners list.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnersListResponse" }
+              schema: { $ref: "#/components/schemas/DshPartnerListResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
@@ -2551,7 +2546,7 @@ paths:
           description: Partner after transition.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartner" }
+              schema: { $ref: "#/components/schemas/DshPartnerTransitionResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -2654,7 +2649,7 @@ paths:
           description: Document after review.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerDocument" }
+              schema: { $ref: "#/components/schemas/DshPartnerDocumentReviewResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -2726,6 +2721,33 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/operator/partners/{partnerId}/field-visits:
+    get:
+      operationId: listDshPartnerFieldVisits
+      summary: List field visits recorded for a partner.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner field visits.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [visits]
+                properties:
+                  visits:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerFieldVisit" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/partner/activation/status:
     get:
       operationId: getDshPartnerActivationStatus
@@ -2738,7 +2760,7 @@ paths:
           description: Partner activation status.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartner" }
+              schema: { $ref: "#/components/schemas/DshPartnerActivationStatus" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2758,9 +2780,35 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /dsh/field/partner-intake:
+  /dsh/field/partners:
+    get:
+      operationId: listFieldPartnerDrafts
+      summary: List partner drafts created by the calling field actor.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Field partner drafts list, scoped to the calling field actor.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/drafts:
     post:
-      operationId: createDshPartnerIntake
+      operationId: createFieldPartnerDraft
       summary: Field agent creates a new partner intake draft.
       tags: [DshPartnerActivation]
       security:
@@ -2772,13 +2820,332 @@ paths:
             schema: { $ref: "#/components/schemas/DshCreatePartnerRequest" }
       responses:
         "201":
-          description: Partner intake draft created.
+          description: Partner draft created.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshPartner" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/field/partners/{partnerId}:
+    get:
+      operationId: getFieldPartnerDraft
+      summary: Field agent gets partner draft details.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner details.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateFieldPartnerDraft
+      summary: Field agent updates partner draft details.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdatePartnerRequest" }
+      responses:
+        "200":
+          description: Updated partner draft.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartner" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/partners/{partnerId}/readiness:
+    get:
+      operationId: getFieldPartnerReadiness
+      summary: Field agent reads the activation readiness of a partner draft it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner readiness.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/partners/{partnerId}/store:
+    get:
+      operationId: getFieldPartnerStore
+      summary: Field agent reads the first store draft linked to a partner it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner's draft store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [storeId, store]
+                properties:
+                  storeId: { type: string }
+                  store: { $ref: "#/components/schemas/DshFieldPartnerStoreDraft" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateFieldPartnerStore
+      summary: Field agent updates first-store draft data without publishing it to clients.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateFieldPartnerStoreDraftRequest" }
+      responses:
+        "200":
+          description: Store draft updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [storeId, store, audit]
+                properties:
+                  storeId: { type: string }
+                  store: { $ref: "#/components/schemas/DshFieldPartnerStoreDraft" }
+                  audit: { type: object }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/{partnerId}/documents:
+    get:
+      operationId: listFieldPartnerDocuments
+      summary: Field agent lists documents uploaded for a partner draft it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documents]
+                properties:
+                  documents:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerDocument" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: uploadFieldPartnerDocument
+      summary: Field agent uploads a document for partner onboarding.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshAddPartnerDocumentRequest" }
+      responses:
+        "201":
+          description: Document uploaded.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerDocument" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/media/uploads:
+    post:
+      operationId: uploadFieldMedia
+      summary: Field agent uploads a binary document/photo, receiving a mediaRef to attach via uploadFieldPartnerDocument.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [partnerId, file]
+              properties:
+                partnerId: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Media uploaded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mediaRef]
+                properties:
+                  mediaRef: { type: string }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/media/{mediaRef}:
+    get:
+      operationId: getMedia
+      summary: Stream back a previously uploaded document/photo for review.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: mediaRef
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Media stream.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/field/partners/{partnerId}/visits:
+    post:
+      operationId: createFieldPartnerVisit
+      summary: Field agent records a partner-level onboarding visit.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreatePartnerFieldVisitRequest" }
+      responses:
+        "201":
+          description: Partner field visit recorded.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerFieldVisit" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/field/partners/{partnerId}/field-visits:
+    get:
+      operationId: listFieldPartnerFieldVisits
+      summary: Field agent lists field visits recorded for a partner draft it owns.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner field visits.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [visits]
+                properties:
+                  visits:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerFieldVisit" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/{partnerId}/submit:
+    post:
+      operationId: submitFieldPartnerDraft
+      summary: Field agent submits partner draft for review.
+      tags: [DshPartnerActivation]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        "200":
+          description: Partner submitted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  partner: { $ref: "#/components/schemas/DshPartner" }
+                  event: { $ref: "#/components/schemas/DshPartnerAuditEvent" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Invalid transition.
 
   /dsh/operator/admin/partners:
     get:
@@ -3129,6 +3496,71 @@ components:
             version:
               type: integer
               minimum: 1
+
+    DshFieldPartnerStoreDraft:
+      type: object
+      required:
+        - storeId
+        - partnerId
+        - displayName
+        - cityCode
+        - serviceAreaCode
+        - addressLine
+        - coverageSummary
+        - operatingHours
+        - deliveryReadiness
+        - storefrontPhotoRef
+        - interiorPhotoRef
+        - signagePhotoRef
+        - status
+        - isVisible
+        - partnerReadiness
+        - catalogApprovalStatus
+        - marketingVisibility
+        - version
+      properties:
+        storeId: { type: string }
+        partnerId: { type: string }
+        displayName: { type: string }
+        cityCode: { type: string }
+        serviceAreaCode: { type: string }
+        addressLine: { type: string }
+        coverageSummary: { type: string }
+        operatingHours: { type: string }
+        deliveryReadiness: { type: string }
+        storefrontPhotoRef: { type: string }
+        interiorPhotoRef: { type: string }
+        signagePhotoRef: { type: string }
+        status:
+          $ref: "#/components/schemas/DshStoreStatus"
+        isVisible: { type: boolean }
+        partnerReadiness:
+          type: string
+          enum: [pending, ready, blocked]
+        catalogApprovalStatus:
+          type: string
+          enum: [draft, submitted, approved, rejected]
+        marketingVisibility:
+          type: string
+          enum: [hidden, visible]
+        version:
+          type: integer
+          minimum: 1
+
+    DshUpdateFieldPartnerStoreDraftRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName: { type: string }
+        cityCode: { type: string }
+        serviceAreaCode: { type: string }
+        addressLine: { type: string }
+        coverageSummary: { type: string }
+        operatingHours: { type: string }
+        deliveryReadiness: { type: string }
+        storefrontPhotoRef: { type: string }
+        interiorPhotoRef: { type: string }
+        signagePhotoRef: { type: string }
 
     DshPagination:
       type: object
@@ -3674,7 +4106,7 @@ components:
           type: string
           format: date-time
 
-    # ─── DSH-004: Cart schemas ────────────────────────────────────────────────
+    # ─── Cart schemas ────────────────────────────────────────────────
 
     DshCartItem:
       type: object
@@ -3768,7 +4200,7 @@ components:
           enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
         reason: { type: string }
 
-    # ─── DSH-005: Checkout Intent schemas ────────────────────────────────────
+    # ─── Checkout Intent schemas ────────────────────────────────────
 
     DshCheckoutIntent:
       type: object
@@ -3827,7 +4259,7 @@ components:
           items:
             $ref: "#/components/schemas/DshCheckoutIntent"
 
-    # ─── DSH-006: Order schemas ──────────────────────────────────────────────
+    # ─── Order schemas ──────────────────────────────────────────────
     DshOrderStatus:
       type: string
       enum: [pending, store_accepted, preparing, ready_for_pickup, driver_assigned, driver_arrived_store, picked_up, arrived_customer, delivered, cancelled]
@@ -3903,7 +4335,7 @@ components:
           type: string
           description: Mandatory rejection reason from partner.
 
-    # ─── DSH-007: Dispatch schemas ───────────────────────────────────────────
+    # ─── Dispatch schemas ───────────────────────────────────────────
     DshAssignmentStatus:
       type: string
       enum: [offered, accepted, declined, completed]
@@ -3991,7 +4423,7 @@ components:
         note:
           type: string
 
-    # ── DSH-008: Field Readiness ──────────────────────────────────────────────
+    # ── Field Readiness ──────────────────────────────────────────────
 
     DshVisitType:
       type: string
@@ -4154,7 +4586,7 @@ components:
           type: string
           enum: [pending, complete, escalation_required]
 
-    # ── DSH-009: Support ──────────────────────────────────────────────────────
+    # ── Support ──────────────────────────────────────────────────────
 
     DshTicketStatus:
       type: string
@@ -4316,7 +4748,7 @@ components:
         status: { $ref: "#/components/schemas/DshIncidentStatus" }
         postmortemUrl: { type: string }
 
-    # ── DSH-010: Analytics Schemas ─────────────────────────────────────────
+    # ── Analytics Schemas ─────────────────────────────────────────
     DshPlatformKpisResponse:
       type: object
       required: [totalOrders, deliveredOrders, cancelledOrders, activeStores, openTickets, fieldVisitsCompleted, openEscalations, openIncidents, period, generatedAt]
@@ -4415,7 +4847,7 @@ components:
         Contains opaque WLT references only. No amount, ledger, refund, settlement,
         or signature verification logic belongs to DSH.
 
-    # ── DSH-011: Notification Schemas ─────────────────────────────────────────
+    # ── Notification Schemas ─────────────────────────────────────────
     DshNotification:
       type: object
       required: [id, actorId, actorType, topic, title, body, actionUrl, isRead, createdAt]
@@ -4508,7 +4940,7 @@ components:
         isEnabled: { type: boolean }
         description: { type: string }
 
-    # ── DSH-012: Marketing Schemas ─────────────────────────────────────────────
+    # ── Marketing Schemas ─────────────────────────────────────────────
     DshCampaign:
       type: object
       required: [id, name, status, zoneId, startDate, endDate, contentRef, createdAt, updatedAt]
@@ -4603,24 +5035,24 @@ components:
         status: { type: string }
         expiresAt: { type: string, format: date-time }
 
-    # ─── DSH-015: Partner Store Activation schemas ────────────────────────────
+    # ─── Partner Onboarding & Store Publication schemas ──────────────
 
     DshPartner:
       type: object
-      required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, onboardingStatus, version, createdAt, updatedAt]
+      required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
       properties:
-        id: { type: string, format: uuid }
+        id: { type: string }
         legalNameAr: { type: string }
         legalNameEn: { type: string }
         displayName: { type: string }
-        legalIdentityType: { type: string, enum: [national_id, commercial_registration, other] }
+        legalIdentityType: { type: string, enum: [commercial_register, national_id, freelancer_certificate] }
         legalIdentityNumber: { type: string }
         ownerName: { type: string }
         primaryPhone: { type: string }
         secondaryPhone: { type: string }
         email: { type: string }
-        category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
-        onboardingStatus:
+        category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, default] }
+        activationStatus:
           type: string
           enum:
             - draft
@@ -4657,6 +5089,21 @@ components:
           items: { $ref: "#/components/schemas/DshPartner" }
         total: { type: integer }
 
+    DshPartnerListResponse:
+      type: object
+      required: [partners, pagination]
+      properties:
+        partners:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartner" }
+        pagination:
+          type: object
+          required: [total, limit, offset]
+          properties:
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+
     DshCreatePartnerRequest:
       type: object
       required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category]
@@ -4677,69 +5124,126 @@ components:
 
     DshPartnerTransitionRequest:
       type: object
-      required: [targetStatus]
+      required: [toStatus]
       properties:
-        targetStatus: { type: string }
+        toStatus: { type: string }
         reason: { type: string }
         actorId: { type: string }
-        actorSurface: { type: string, enum: [app-field, app-partner, control-panel, system] }
+        actorSurface: { type: string, enum: [app-field, app-partner, app-captain, control-panel, system] }
         correlationId: { type: string }
         version: { type: integer }
 
+    DshPartnerTransitionResponse:
+      type: object
+      required: [partner, event]
+      properties:
+        partner: { $ref: "#/components/schemas/DshPartner" }
+        event: { $ref: "#/components/schemas/DshPartnerAuditEvent" }
+
+    DshPartnerActivationStatus:
+      type: object
+      required: [id, displayName, legalNameAr, category, activationStatus, primaryPhone, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        legalNameAr: { type: string }
+        category: { type: string }
+        activationStatus: { type: string }
+        primaryPhone: { type: string }
+        email: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
     DshPartnerReadiness:
       type: object
-      required: [partnerId, status, documentsDone, catalogDone, deliveryDone, partnerActive, clientVisible]
+      required: [partnerId, canActivate, canActivatePartner, canPublishStoreToClient, checklist]
       properties:
         partnerId: { type: string }
-        status: { type: string }
-        documentsDone: { type: boolean }
-        catalogDone: { type: boolean }
-        deliveryDone: { type: boolean }
-        partnerActive: { type: boolean }
-        clientVisible: { type: boolean }
-        blockerSummary: { type: string }
+        canActivate: { type: boolean }
+        canActivatePartner: { type: boolean }
+        canPublishStoreToClient: { type: boolean }
+        blockedReason: { type: string }
+        partnerActivationBlockedReason: { type: string }
+        storePublicationBlockedReason: { type: string }
+        checklist:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartnerReadinessItem" }
+
+    DshPartnerReadinessItem:
+      type: object
+      required: [id, label, satisfied]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        satisfied: { type: boolean }
+        blockedReason: { type: string }
 
     DshPartnerDocument:
       type: object
-      required: [id, partnerId, docType, status, mediaRef, createdAt, updatedAt]
+      required: [id, partnerId, documentType, documentStatus, uploadedByActorId, mediaRef, version, createdAt, updatedAt]
       properties:
-        id: { type: string, format: uuid }
+        id: { type: string }
         partnerId: { type: string }
-        docType: { type: string, enum: [national_id, commercial_registration, lease_contract, health_certificate, other] }
-        status: { type: string, enum: [uploaded, verified, rejected, replacement_requested] }
+        documentType:
+          type: string
+          enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+        documentStatus:
+          type: string
+          enum: [pending, under_review, approved, rejected]
+        uploadedByActorId: { type: string }
         mediaRef: { type: string }
         notes: { type: string }
-        reviewedBy: { type: string }
-        reviewedAt: { type: [string, "null"], format: date-time }
+        rejectionReason: { type: string }
+        version: { type: integer }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
     DshPartnerDocumentsListResponse:
       type: object
-      required: [documents, total]
+      required: [documents]
       properties:
         documents:
           type: array
           items: { $ref: "#/components/schemas/DshPartnerDocument" }
-        total: { type: integer }
 
     DshAddPartnerDocumentRequest:
       type: object
-      required: [docType, mediaRef]
+      required: [documentType, mediaRef]
       properties:
-        docType: { type: string, enum: [national_id, commercial_registration, lease_contract, health_certificate, other] }
+        documentType:
+          type: string
+          enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
         mediaRef: { type: string, minLength: 1 }
         notes: { type: string }
 
     DshReviewPartnerDocumentRequest:
       type: object
-      required: [status, reviewedBy]
+      required: [decision]
       properties:
-        status: { type: string, enum: [verified, rejected, replacement_requested] }
-        notes: { type: string }
-        reviewedBy: { type: string, minLength: 1 }
+        decision: { type: string, enum: [approved, rejected, needs_resubmit] }
+        reason: { type: string }
 
-    DshPartnerStore:
+    DshPartnerDocumentReview:
+      type: object
+      required: [id, documentId, partnerId, reviewedByActorId, decision, reason, correlationId, createdAt]
+      properties:
+        id: { type: string }
+        documentId: { type: string }
+        partnerId: { type: string }
+        reviewedByActorId: { type: string }
+        decision: { type: string, enum: [approved, rejected, needs_resubmit] }
+        reason: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DshPartnerDocumentReviewResponse:
+      type: object
+      required: [document, review]
+      properties:
+        document: { $ref: "#/components/schemas/DshPartnerDocument" }
+        review: { $ref: "#/components/schemas/DshPartnerDocumentReview" }
+
+    DshPartnerLinkedStore:
       type: object
       required: [id, partnerId, slug, displayName, status, isVisible, cityCode, createdAt]
       properties:
@@ -4758,7 +5262,7 @@ components:
       properties:
         stores:
           type: array
-          items: { $ref: "#/components/schemas/DshPartnerStore" }
+          items: { $ref: "#/components/schemas/DshPartnerLinkedStore" }
         total: { type: integer }
 
     DshLinkPartnerStoreRequest:
@@ -4789,6 +5293,47 @@ components:
           type: array
           items: { $ref: "#/components/schemas/DshPartnerAuditEvent" }
         total: { type: integer }
+
+    DshUpdatePartnerRequest:
+      type: object
+      properties:
+        displayName: { type: string }
+        ownerName: { type: string }
+        primaryPhone: { type: string }
+        secondaryPhone: { type: string }
+        email: { type: string }
+        notes: { type: string }
+
+    DshPartnerFieldVisit:
+      type: object
+      required: [id, partnerId, storeId, fieldActorId, visitStatus, visitNotes, evidenceMediaRefs, version, createdAt]
+      properties:
+        id: { type: string }
+        partnerId: { type: string }
+        storeId: { type: string }
+        fieldActorId: { type: string }
+        visitStatus: { type: string, enum: [draft, in_progress, submitted, escalated] }
+        visitNotes: { type: string }
+        locationLatitude: { type: [number, "null"] }
+        locationLongitude: { type: [number, "null"] }
+        evidenceMediaRefs:
+          type: array
+          items: { type: string }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        submittedAt: { type: [string, "null"], format: date-time }
+
+    DshCreatePartnerFieldVisitRequest:
+      type: object
+      required: [storeId, visitNotes]
+      properties:
+        storeId: { type: string }
+        visitNotes: { type: string }
+        locationLatitude: { type: number }
+        locationLongitude: { type: number }
+        evidenceMediaRefs:
+          type: array
+          items: { type: string }
 
     DshMarketingPromo:
       type: object
@@ -4839,7 +5384,7 @@ components:
         status: { type: string }
         endDate: { type: string, format: date }
 
-    # ── DSH-013: Platform Policies Schemas ────────────────────────────────────
+    # ── Platform Policies Schemas ────────────────────────────────────
     DshZone:
       type: object
       required: [id, name, status, polygon, cityCode, serviceAreaCode, createdAt, updatedAt]
@@ -4940,7 +5485,7 @@ components:
         activeOrders: { type: integer }
         capacityPct: { type: number }
 
-    # ── DSH-014: Administration Schemas ───────────────────────────────────────
+    # ── Administration Schemas ───────────────────────────────────────
     DshAdminRole:
       type: object
       required: [id, name, permissions, createdAt]

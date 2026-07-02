@@ -1,6 +1,6 @@
 "use client";
 
-import { AdministrationScreen } from "@dsh-cp/administration";
+import { AdministrationDashboardScreen } from "@dsh-cp/administration";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
@@ -28,7 +28,7 @@ export default function AdministrationPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<AdministrationScreen />}
+      main={<AdministrationDashboardScreen />}
     />
   );
 }

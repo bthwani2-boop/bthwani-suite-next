@@ -7,7 +7,7 @@ Graphify is a project context and relationship tool.
 - file ownership is unclear
 - import/export impact is unclear
 - cross-service or cross-surface linkage is unclear
-- a slice touches many directories
+- a journey touches many directories
 - a donor extraction needs relationship comparison
 - the user asks for graph-based analysis
 

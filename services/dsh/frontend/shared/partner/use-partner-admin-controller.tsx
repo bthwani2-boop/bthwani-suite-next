@@ -45,12 +45,13 @@ export function usePartnerAdminController(authKind: string) {
     if (!isAuth) return;
     setListState({ kind: "loading" });
     try {
-      const { partners, total } = await fetchPartners({
+      const res = await fetchPartners({
         ...(f.status ? { status: f.status } : {}),
-        ...(f.category ? { category: f.category } : {}),
         limit: PAGE_SIZE,
         offset: p * PAGE_SIZE,
       });
+      const partners = res.partners;
+      const total = res.pagination.total;
       if (partners.length === 0) {
         setListState({ kind: "empty" });
       } else {
@@ -92,10 +93,11 @@ export function usePartnerAdminController(authKind: string) {
     }
   }, [filters, page, loadList]);
 
-  const transition = useCallback(async (partnerId: string, input: DshPartnerTransitionInput) => {
+  const transition = useCallback(async (partnerId: string, input: DshPartnerTransitionInput, version?: number) => {
     setMutationState({ kind: "loading" });
     try {
-      const partner = await transitionPartner(partnerId, input);
+      const res = await transitionPartner(partnerId, input, version);
+      const partner = res.partner;
       setMutationState({ kind: "success", partner });
       setDetailState({ kind: "success", partner });
       void loadList(filters, page);
@@ -158,10 +160,10 @@ export function usePartnerDocumentsController(partnerId: string, authKind: strin
     if (!isAuth || !partnerId) return;
     setState({ kind: "loading" });
     try {
-      const { documents, total } = await fetchPartnerDocuments(partnerId);
+      const { documents } = await fetchPartnerDocuments(partnerId);
       setState(documents.length === 0
         ? { kind: "empty" }
-        : { kind: "success", documents, total });
+        : { kind: "success", documents, total: documents.length });
     } catch (err) {
       setState({ kind: "error", message: resolveErrorMessage(err) });
     }
@@ -263,10 +265,10 @@ export function usePartnerDetailController(partnerId: string, authKind: string) 
 
   useEffect(() => { void load(); }, [load]);
 
-  const transition = useCallback(async (input: DshPartnerTransitionInput) => {
+  const transition = useCallback(async (input: DshPartnerTransitionInput, version?: number) => {
     setMutationState({ kind: "loading" });
     try {
-      await transitionPartner(partnerId, input);
+      await transitionPartner(partnerId, input, version);
       setMutationState({ kind: "idle" });
       void load();
     } catch (err) {

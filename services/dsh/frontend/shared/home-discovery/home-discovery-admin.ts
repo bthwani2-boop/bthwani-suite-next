@@ -1,5 +1,4 @@
 import {
-  configureIdentitySession,
   getIdentityAccessToken,
 } from "@bthwani/core-identity";
 import {
@@ -12,7 +11,6 @@ import {
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 
 const client = createDshHomeDiscoveryClient(resolveDshApiBaseUrl());
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 export type HomeDiscoveryAdminState =
   | { readonly kind: "loading" }
@@ -84,14 +82,3 @@ export type {
   DshHomeAdminContentItem,
   DshHomeAdminKind,
 };
-
-function resolveIdentityApiBaseUrl(): string {
-  if (typeof process !== "undefined") {
-    const env = process.env as Record<string, string | undefined>;
-    const configured =
-      env["NEXT_PUBLIC_IDENTITY_API_BASE_URL"] ??
-      env["EXPO_PUBLIC_IDENTITY_API_BASE_URL"];
-    if (configured && configured.trim().length > 0) return configured.trim();
-  }
-  return "http://localhost:58082";
-}

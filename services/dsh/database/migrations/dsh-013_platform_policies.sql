@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-013: Platform Policies & Service Area Management
 
 CREATE TABLE IF NOT EXISTS dsh_platform_zones (

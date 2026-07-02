@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/authorize-declined"
+  },
+  "response": {
+    "status": 402,
+    "jsonBody": {
+      "code": "CARD_DECLINED",
+      "message": "Card authorization declined"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

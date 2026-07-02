@@ -22,4 +22,4 @@ if ($profileJson.state -ne "RESERVED_NOT_ACTIVE") {
   exit 0
 }
 
-throw "$Profile runtime profile is RESERVED_NOT_ACTIVE. Do not activate before its slice gate."
+throw "$Profile runtime profile is RESERVED_NOT_ACTIVE. Do not activate before its journey gate."

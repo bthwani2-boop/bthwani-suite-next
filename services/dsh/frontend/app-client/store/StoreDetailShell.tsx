@@ -15,6 +15,7 @@ import { StoreDetailHeroSection } from './StoreDetailHeroSection';
 import { StoreDetailInfoCard } from './StoreDetailInfoCard';
 import { StoreDetailCarousel } from './StoreDetailCarousel';
 import { StoreDetailCategoryRail } from './StoreDetailCategoryRail';
+import { StoreMeasurementSheet, getProductMeasurementOptions } from './StoreMeasurementSheet';
 
 // Donor-exact card metrics for parallax snap
 const CARD_HEIGHT = 126;
@@ -27,7 +28,9 @@ type Props = Readonly<{
   products: readonly CatalogProduct[];
   favoriteIds: ReadonlySet<string>;
   onToggleFavorite: (id: string) => void;
+  onAddToCart: (product: CatalogProduct, quantity: number, mode: string) => void;
   onBack?: (() => void) | undefined;
+  onGoToCart?: (() => void) | undefined;
 }>;
 
 export function StoreDetailShell({
@@ -36,11 +39,19 @@ export function StoreDetailShell({
   products,
   favoriteIds,
   onToggleFavorite,
+  onAddToCart,
   onBack,
+  onGoToCart,
 }: Props) {
   const isRTL = I18nManager.isRTL;
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [selectedMode, setSelectedMode] = useState('bthwani_delivery');
+
+  // Measurement Sheet State (Donor Replica)
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [isAddedToCart, setIsAddedToCart] = useState<boolean>(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -99,6 +110,25 @@ export function StoreDetailShell({
     [store, selectedMode, onBack, scrollY, isRTL, bannerItems, categories, selectedCategoryId, favoriteIds, changeCategory],
   );
 
+  const handleOpenMeasurement = useCallback((item: CatalogProduct) => {
+    setSelectedProduct(item);
+    const category = categories.find((c) => c.id === item.categoryId)?.name ?? 'عام';
+    const { options } = getProductMeasurementOptions(item.name, category);
+    setSelectedOption(options[0] ?? null);
+    setQuantity(1);
+    setIsAddedToCart(false);
+  }, [categories]);
+
+  const handleAddToCartConfirm = useCallback(() => {
+    if (!selectedProduct) return;
+    const finalPriceReference = selectedOption ? `${selectedOption} × ${selectedProduct.priceReference || '0'}` : selectedProduct.priceReference;
+    onAddToCart({
+      ...selectedProduct,
+      priceReference: finalPriceReference,
+    }, quantity, selectedMode);
+    setIsAddedToCart(true);
+  }, [selectedProduct, selectedOption, quantity, onAddToCart, selectedMode]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: CatalogProduct; index: number }) => {
       const inputRange = [
@@ -136,13 +166,13 @@ export function StoreDetailShell({
             price={{ value: parseFloat(item.priceReference || '0'), currency: 'د.ي' }}
             isFavorited={favoriteIds.has(item.id)}
             onFavorite={() => onToggleFavorite(item.id)}
-            onAdd={() => {}}
+            onAdd={() => handleOpenMeasurement(item)}
             onImagePress={() => {}}
           />
         </Animated.View>
       );
     },
-    [categories, favoriteIds, onToggleFavorite, scrollY],
+    [categories, favoriteIds, onToggleFavorite, scrollY, handleOpenMeasurement],
   );
 
   const emptyComponent = (
@@ -152,6 +182,10 @@ export function StoreDetailShell({
       <Text style={styles.emptyFeedText}>جرّب اختيار قسم آخر من القائمة أعلاه</Text>
     </View>
   );
+
+  const categoryLabel = selectedProduct
+    ? (categories.find((c) => c.id === selectedProduct.categoryId)?.name ?? 'عام')
+    : 'عام';
 
   return (
     <View style={styles.screen}>
@@ -174,6 +208,22 @@ export function StoreDetailShell({
         maxToRenderPerBatch={6}
         windowSize={7}
         removeClippedSubviews={Platform.OS !== 'web'}
+      />
+
+      <StoreMeasurementSheet
+        product={selectedProduct}
+        categoryLabel={categoryLabel}
+        selectedOption={selectedOption}
+        setSelectedOption={setSelectedOption}
+        quantity={quantity}
+        setQuantity={setQuantity}
+        isAddedToCart={isAddedToCart}
+        onAddToCart={handleAddToCartConfirm}
+        onGoToCart={() => {
+          setSelectedProduct(null);
+          onGoToCart?.();
+        }}
+        onClose={() => setSelectedProduct(null)}
       />
     </View>
   );

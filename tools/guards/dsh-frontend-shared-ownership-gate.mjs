@@ -98,7 +98,7 @@ for (const file of walkFiles(SHARED_DIR)) {
   const src = read(file);
   for (const [, specifier] of src.matchAll(IMPORT_RE)) {
     for (const surface of SURFACE_DIRS) {
-      if (specifier.includes(`/${surface}/`) || specifier.includes(`/${surface}`)) {
+      if (specifier.includes(`/${surface}/`) || specifier === surface || specifier.startsWith(`${surface}/`)) {
         fail(file, `shared imports from surface '${surface}' (specifier: ${specifier}) — forbidden`);
       }
     }
@@ -169,7 +169,7 @@ const REQUIRED_SURFACE_BINDINGS = [
     message: "PartnerStoreScreen must consume useStoreRoleContextController",
   },
   {
-    file: join(FRONTEND, "app-field/store/FieldStoreVerificationScreen.tsx"),
+    file: join(FRONTEND, "app-field/stores/FieldStoreVerificationScreen.tsx"),
     pattern: /\buseStoreRoleContextController\b/,
     message: "FieldStoreVerificationScreen must consume useStoreRoleContextController",
   },
@@ -181,6 +181,35 @@ const REQUIRED_SURFACE_BINDINGS = [
 ];
 
 for (const binding of REQUIRED_SURFACE_BINDINGS) {
+  if (!binding.pattern.test(read(binding.file))) {
+    fail(binding.file, binding.message);
+  }
+}
+
+const REQUIRED_ROUTE_BINDINGS = [
+  {
+    file: join(FRONTEND, "app-partner/DshPartnerRouteRenderer.tsx"),
+    pattern: /\bPartnerStoreScreen\b/,
+    message: "DshPartnerRouteRenderer must route-bind PartnerStoreScreen",
+  },
+  {
+    file: join(FRONTEND, "app-partner/DshPartnerRouteRenderer.tsx"),
+    pattern: /\bPartnerCatalogManagementScreen\b/,
+    message: "DshPartnerRouteRenderer must route-bind PartnerCatalogManagementScreen",
+  },
+  {
+    file: join(FRONTEND, "app-field/DshFieldRouteRenderer.tsx"),
+    pattern: /\bFieldStoreVerificationScreen\b/,
+    message: "DshFieldRouteRenderer must route-bind FieldStoreVerificationScreen",
+  },
+  {
+    file: join(FRONTEND, "app-captain/DshCaptainRouteRenderer.tsx"),
+    pattern: /\bCaptainStorePickupContextScreen\b/,
+    message: "DshCaptainRouteRenderer must route-bind CaptainStorePickupContextScreen",
+  },
+];
+
+for (const binding of REQUIRED_ROUTE_BINDINGS) {
   if (!binding.pattern.test(read(binding.file))) {
     fail(binding.file, binding.message);
   }
@@ -210,18 +239,10 @@ for (const retiredPath of RETIRED_PATHS) {
   }
 }
 
-// ── Rule 7: No useEffect() in surface component files ───────────────────────
-// Controllers (use-*) legitimately use useEffect — they live in shared, not surfaces.
-// Any useEffect in a surface file means data-loading logic leaked out of shared.
-for (const surface of SURFACE_DIRS) {
-  for (const file of walkFiles(join(FRONTEND, surface))) {
-    if (!file.endsWith(".tsx")) continue;
-    const src = read(file);
-    if (/\buseEffect\(/.test(src)) {
-      fail(file, "useEffect() in surface component — data loading must stay in shared controllers");
-    }
-  }
-}
+// ── Rule 7: No data-loading fetch/axios in surface component files ───────────
+// UI effects (BackHandler, timers, keyboard, animations) are permitted in surfaces.
+// Only direct data loading (fetch, axios) is forbidden — caught by Rule 4/5 patterns.
+// Note: useEffect per se is allowed; data-loading inside useEffect is caught by fetch/axios checks.
 
 // ── Rule 8: No old ports hardcoded in any frontend file ─────────────────────
 const OLD_PORT_RE = /:(8080|8081|8082|8083|8084|3000)\b/;

@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/telecom/recharges/provider-down"
+  },
+  "response": {
+    "status": 503,
+    "jsonBody": {
+      "code": "PROVIDER_DOWN",
+      "message": "Telecom provider is unavailable"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

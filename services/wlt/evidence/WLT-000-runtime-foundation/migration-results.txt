@@ -1,4 +1,0 @@
-WLT migrations: PASS
-Applied: wlt-000_financial_references.sql
-Tables created: wlt_payment_status_refs, wlt_settlement_status_refs, wlt_refund_status_refs, wlt_wallet_refs
-Indexes created: 4 (one per table on (order_id|actor_id, updated_at DESC))

@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/capture"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "providerReference": "card-capture-001",
+      "status": "captured"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

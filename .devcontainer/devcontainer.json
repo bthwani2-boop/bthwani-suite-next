@@ -1,0 +1,59 @@
+{
+  "name": "bthwani-suite-next",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24.17.0"
+    },
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/powershell:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
+  },
+  "forwardPorts": [
+    58080,
+    58082,
+    58083,
+    13000,
+    18101,
+    18102,
+    18103,
+    18104,
+    8025,
+    58090
+  ],
+  "portsAttributes": {
+    "58080": { "label": "dsh-api" },
+    "58082": { "label": "identity-api" },
+    "58083": { "label": "wlt-api" },
+    "13000": { "label": "control-panel" },
+    "18101": { "label": "app-client" },
+    "18102": { "label": "app-partner" },
+    "18103": { "label": "app-captain" },
+    "18104": { "label": "app-field" },
+    "8025": { "label": "mailpit-ui" },
+    "58090": { "label": "wiremock-financial-provider" }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "golang.go",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-github-actions"
+      ]
+    }
+  }
+}

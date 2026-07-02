@@ -112,7 +112,7 @@ for (const [profile, file, container, hostPort] of profiles) {
   }
 
   const allowedActive = profile === "dsh" || profile === "identity";
-  // identity uses ACTIVE_DSH001_PREREQUISITE to signal it's active as a DSH-001 auth prerequisite
+  // identity uses ACTIVE_DSH001_PREREQUISITE to signal it's active as a Store Discovery auth prerequisite
   const isActive = json.state === "ACTIVE" || (profile === "identity" && json.state === "ACTIVE_DSH001_PREREQUISITE");
 
   if (isActive && !allowedActive) {

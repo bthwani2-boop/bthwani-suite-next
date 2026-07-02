@@ -5,7 +5,7 @@ import {
   type IdentityClientError,
 } from "./identity-client.ts";
 
-type ActorRole = "partner" | "captain" | "field" | "operator";
+type ActorRole = "client" | "partner" | "captain" | "field" | "operator";
 
 export type IdentitySessionState =
   | { readonly kind: "unconfigured" }
@@ -140,7 +140,7 @@ function emit(): void {
 export function devBypassLogin(role: ActorRole): void {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const surface = (role === "operator" ? "control-panel" : `app-${role}`) as ActorIdentity["surfaceAccess"] extends Record<string, boolean> ? string : never;
-  const scope = role === "operator" ? "all" : (role === "partner" ? "own" : "assigned");
+  const scope = role === "operator" ? "all" : (role === "client" || role === "partner" ? "own" : "assigned");
   const subject = `${role}-local-001`;
   const fakeIdentity: ActorIdentity = {
     subject,

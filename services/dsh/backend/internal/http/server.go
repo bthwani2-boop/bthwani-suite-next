@@ -7,12 +7,12 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/health"
 	"dsh-api/internal/homediscovery"
-	"dsh-api/internal/partner"
+	"dsh-api/internal/media"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
 
-func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *http.ServeMux {
+func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaClient *media.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
@@ -21,7 +21,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
-	protected := newProtectedStoreServer(db, identityClient, wltClient)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaClient)
+	mux.HandleFunc("POST /dsh/field/media/uploads", protected.handleFieldMediaUpload)
+	mux.HandleFunc("GET /dsh/media/{mediaRef...}", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
 	mux.HandleFunc("GET /dsh/operator/stores", protected.handleOperatorStores)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.handleOperatorStoreDetail)
@@ -48,19 +50,19 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/catalog/submissions", protected.handleCatalogSubmissions)
 	mux.HandleFunc("POST /dsh/operator/catalog/{storeId}/decision", protected.handleCatalogDecision)
 	mux.HandleFunc("GET /dsh/operator/catalog/{storeId}/audit", protected.handleCatalogAudit)
-	// DSH-004: Cart & Serviceability
+	// Cart & Serviceability
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart/items/{itemId}", protected.handleRemoveCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart", protected.handleClearCart)
 	mux.HandleFunc("POST /dsh/client/cart/serviceability", protected.handleCartServiceability)
 	mux.HandleFunc("GET /dsh/operator/carts", protected.handleOperatorCarts)
-	// DSH-005: Checkout Intent & WLT Handoff
+	// Checkout Intent & WLT Handoff
 	mux.HandleFunc("POST /dsh/client/checkout-intents", protected.handleCreateCheckoutIntent)
 	mux.HandleFunc("GET /dsh/client/checkout-intents/{intentId}", protected.handleGetCheckoutIntent)
 	mux.HandleFunc("POST /dsh/client/checkout-intents/{intentId}/cancel", protected.handleCancelCheckoutIntent)
 	mux.HandleFunc("GET /dsh/operator/checkout-intents", protected.handleOperatorCheckoutIntents)
-	// DSH-006: Order Fulfillment & Partner Acceptance
+	// Order Fulfillment & Partner Acceptance
 	mux.HandleFunc("POST /dsh/client/orders", protected.handleCreateOrder)
 	mux.HandleFunc("GET /dsh/client/orders", protected.handleListClientOrders)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}", protected.handleGetClientOrder)
@@ -70,7 +72,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparing", protected.handleMarkPreparing)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/ready", protected.handleMarkReadyForPickup)
 	mux.HandleFunc("GET /dsh/operator/orders", protected.handleListOperatorOrders)
-	// DSH-007: Dispatch & Captain Delivery Lifecycle
+	// Dispatch & Captain Delivery Lifecycle
 	mux.HandleFunc("POST /dsh/operator/dispatch/assignments", protected.handleCreateDispatchAssignment)
 	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.handleListOperatorDispatchAssignments)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments", protected.handleListCaptainDispatchAssignments)
@@ -80,7 +82,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/pod", protected.handleSubmitDispatchPoD)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
 
-	// DSH-008: Field Verification & Store Quality Assurance
+	// Field Verification & Store Quality Assurance
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateFieldVisit)
 	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)
 	mux.HandleFunc("POST /dsh/field/visits/{visitId}/complete", protected.handleCompleteFieldVisit)
@@ -91,7 +93,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.handleUpdateEscalation)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/onboarding-status", protected.handlePartnerOnboardingStatus)
 
-	// DSH-009: Support, Incidents & Escalation Room
+	// Support, Incidents & Escalation Room
 	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateSupportTicket)
 	mux.HandleFunc("GET /dsh/support/tickets", protected.handleListMyTickets)
 	mux.HandleFunc("GET /dsh/support/tickets/{ticketId}", protected.handleGetTicket)
@@ -103,7 +105,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/incidents", protected.handleListIncidents)
 	mux.HandleFunc("PATCH /dsh/operator/incidents/{incidentId}", protected.handleUpdateIncident)
 
-	// DSH-010: Platform Analytics & Operational Reporting
+	// Platform Analytics & Operational Reporting
 	mux.HandleFunc("GET /dsh/operator/analytics/platform", protected.handlePlatformKpis)
 	mux.HandleFunc("GET /dsh/operator/analytics/orders", protected.handleOrderAnalytics)
 	mux.HandleFunc("GET /dsh/operator/analytics/delivery", protected.handleDeliveryAnalytics)
@@ -111,7 +113,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/analytics/stores", protected.handleStoreAnalytics)
 	mux.HandleFunc("GET /dsh/partner/analytics/performance", protected.handlePartnerPerformance)
 
-	// DSH-011: Notifications & Actor Communication
+	// Notifications & Actor Communication
 	mux.HandleFunc("GET /dsh/notifications", protected.handleListNotifications)
 	mux.HandleFunc("POST /dsh/notifications/{notificationId}/read", protected.handleMarkNotificationRead)
 	mux.HandleFunc("POST /dsh/notifications/read-all", protected.handleMarkAllNotificationsRead)
@@ -119,7 +121,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("GET /dsh/operator/notifications/config", protected.handleListPlatformNotificationConfig)
 	mux.HandleFunc("PUT /dsh/operator/notifications/config", protected.handleUpsertPlatformNotificationConfig)
 
-	// DSH-012: Marketing Command Deck
+	// Marketing Command Deck
 	mux.HandleFunc("GET /dsh/operator/marketing/campaigns", protected.handleListCampaigns)
 	mux.HandleFunc("POST /dsh/operator/marketing/campaigns", protected.handleCreateCampaign)
 	mux.HandleFunc("GET /dsh/operator/marketing/campaigns/{campaignId}", protected.handleGetCampaign)
@@ -133,7 +135,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("POST /dsh/operator/marketing/promos", protected.handleCreatePromo)
 	mux.HandleFunc("PATCH /dsh/operator/marketing/promos/{promoId}", protected.handleUpdatePromo)
 
-	// DSH-013: Platform Policies & Service Area Management
+	// Platform Policies & Service Area Management
 	mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
 	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
 	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
@@ -143,25 +145,40 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client) *
 	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleUpsertCapacityConfig)
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", protected.handleGetZoneServiceability)
 
-	// DSH-015: Partner Store Activation
-	mux.HandleFunc("GET /dsh/operator/partners", partner.HandleListPartners(db))
-	mux.HandleFunc("POST /dsh/operator/partners", partner.HandleCreatePartner(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", partner.HandleGetPartner(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", partner.HandleTransitionPartner(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", partner.HandleListPartnerDocuments(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", partner.HandleAddDocument(db))
-	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", partner.HandleReviewDocument(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", partner.HandleListPartnerStores(db))
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", partner.HandleLinkStore(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", partner.HandleGetReadiness(db))
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", partner.HandleListPartnerEvents(db))
-	// Partner self-view (actor=partner)
+	// Partner Onboarding & Store Publication
+	// Operator namespace
+	mux.HandleFunc("GET /dsh/operator/partners", protected.handleListPartners)
+	mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", protected.handleGetPartner)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", protected.handleActivationTransition)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", protected.handleGetPartnerReadiness)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", protected.handleListPartnerDocuments)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", protected.handleAddPartnerDocument)
+	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", protected.handleReviewPartnerDocument)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", protected.handleListPartnerStores)
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", protected.handleLinkPartnerStore)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", protected.handleListPartnerFieldVisits)
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", protected.handleListPartnerAudit)
+
+	// Field namespace
+	mux.HandleFunc("GET /dsh/field/partners", protected.handleFieldListPartnerDrafts)
+	mux.HandleFunc("POST /dsh/field/partners/drafts", protected.handleFieldCreatePartnerDraft)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", protected.handleFieldGetPartnerDraft)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/readiness", protected.handleFieldGetPartnerReadiness)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/documents", protected.handleFieldListPartnerDocuments)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/field-visits", protected.handleFieldListPartnerFieldVisits)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.handleFieldUpdatePartnerDraft)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", protected.handleFieldUploadPartnerDocument)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleFieldCreatePartnerVisit)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleFieldSubmitPartnerDraft)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/store", protected.handleFieldGetPartnerStore)
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/store", protected.handleFieldUpdatePartnerStore)
+
+	// Partner self namespace
 	mux.HandleFunc("GET /dsh/partner/activation/status", protected.handlePartnerActivationStatus)
 	mux.HandleFunc("GET /dsh/partner/activation/readiness", protected.handlePartnerActivationReadiness)
-	// Field actor partner intake
-	mux.HandleFunc("POST /dsh/field/partner-intake", partner.HandleCreatePartner(db))
 
-	// DSH-014: Administration, Roles & Activation
+	// Administration, Roles & Activation
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)
 	mux.HandleFunc("POST /dsh/operator/admin/roles", protected.handleCreateRole)
 	mux.HandleFunc("GET /dsh/operator/admin/staff", protected.handleListStaff)
@@ -196,7 +213,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if localCorsOrigins[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-Correlation-ID")
 			w.Header().Set("Vary", "Origin")
 		}

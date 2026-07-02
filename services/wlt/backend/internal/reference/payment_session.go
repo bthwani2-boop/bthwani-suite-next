@@ -10,15 +10,18 @@ import (
 )
 
 type PaymentSession struct {
-	ID                string `json:"id"`
-	CheckoutIntentID  string `json:"checkoutIntentId"`
-	ClientID          string `json:"clientId"`
-	StoreID           string `json:"storeId"`
-	PaymentMethod     string `json:"paymentMethod"`
-	Status            string `json:"status"`
-	ProviderReference string `json:"providerReference"`
-	CreatedAt         string `json:"createdAt"`
-	UpdatedAt         string `json:"updatedAt"`
+	ID                string  `json:"id"`
+	CheckoutIntentID  string  `json:"checkoutIntentId"`
+	ClientID          string  `json:"clientId"`
+	StoreID           string  `json:"storeId"`
+	PaymentMethod     string  `json:"paymentMethod"`
+	Status            string  `json:"status"`
+	ProviderReference string  `json:"providerReference"`
+	AmountMinorUnits  int64   `json:"amountMinorUnits"`
+	Currency          string  `json:"currency"`
+	CapturedAt        *string `json:"capturedAt"`
+	CreatedAt         string  `json:"createdAt"`
+	UpdatedAt         string  `json:"updatedAt"`
 }
 
 type CreatePaymentSessionInput struct {
@@ -48,7 +51,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		ON CONFLICT (checkout_intent_id) DO UPDATE
 		  SET updated_at = NOW()
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
-		          status, provider_reference, created_at, updated_at`
+		          status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at`
 
 	row := db.QueryRow(q, input.CheckoutIntentID, input.ClientID, input.StoreID, input.PaymentMethod)
 	return scanPaymentSession(row)
@@ -60,7 +63,7 @@ func GetPaymentSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	}
 	const q = `
 		SELECT id, checkout_intent_id, client_id, store_id, payment_method,
-		       status, provider_reference, created_at, updated_at
+		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
 		FROM wlt_payment_sessions
 		WHERE id = $1`
 	row := db.QueryRow(q, sessionID)
@@ -111,6 +114,9 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		&session.PaymentMethod,
 		&session.Status,
 		&session.ProviderReference,
+		&session.AmountMinorUnits,
+		&session.Currency,
+		&session.CapturedAt,
 		&session.CreatedAt,
 		&session.UpdatedAt,
 	)

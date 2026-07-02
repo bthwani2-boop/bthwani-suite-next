@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/electricity/payments"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "providerReference": "elec-pay-001",
+      "status": "paid"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

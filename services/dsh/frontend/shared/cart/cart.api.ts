@@ -1,4 +1,4 @@
-import { configureIdentitySession, getIdentityAccessToken } from "@bthwani/core-identity";
+import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type {
   DshCart,
@@ -8,7 +8,6 @@ import type {
 } from "./cart.types";
 
 const baseUrl = resolveDshApiBaseUrl();
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 type RequestOptions = {
   readonly method?: "GET" | "POST" | "DELETE";
@@ -79,10 +78,12 @@ export async function clearCart(cartId?: string, storeId?: string): Promise<void
 export async function checkServiceability(
   storeId: string,
   serviceAreaCode: string,
+  latitude?: number,
+  longitude?: number,
 ): Promise<DshServiceabilityResult> {
   return request<DshServiceabilityResult>("/dsh/client/cart/serviceability", {
     method: "POST",
-    body: { storeId, serviceAreaCode },
+    body: { storeId, serviceAreaCode, latitude, longitude },
   });
 }
 
@@ -120,15 +121,4 @@ export function classifyCartError(error: unknown): { kind: "permission_denied" |
 
 function corrId(prefix: string): string {
   return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
-}
-
-function resolveIdentityApiBaseUrl(): string {
-  if (typeof process !== "undefined") {
-    const env = process.env as Record<string, string | undefined>;
-    const configured =
-      env["NEXT_PUBLIC_IDENTITY_API_BASE_URL"] ??
-      env["EXPO_PUBLIC_IDENTITY_API_BASE_URL"];
-    if (configured && configured.trim().length > 0) return configured.trim();
-  }
-  return "http://localhost:58081";
 }

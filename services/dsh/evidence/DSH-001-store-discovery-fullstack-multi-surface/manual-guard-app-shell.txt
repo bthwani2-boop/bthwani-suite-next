@@ -1,5 +1,0 @@
-
-> bthwani-suite-next@0.0.0 guard:app-shell-control-panel C:\bthwani-suite-next
-> node tools/guards/app-shell-control-panel-contract-gate.mjs
-
-app-shell-control-panel-contract-gate: PASS

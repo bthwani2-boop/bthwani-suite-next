@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-007: Dispatch & Captain Delivery Lifecycle
 -- DSH owns assignment and delivery lifecycle state only.
 -- WLT remains the owner of captain earnings, COD, settlement, refund, and ledger truth.

@@ -1,6 +1,7 @@
 "use client";
 
-import { PartnerListScreen } from "@dsh-cp/partners";
+import { Suspense } from "react";
+import { PartnersReviewQueueScreen } from "@dsh-cp/partners";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
@@ -31,10 +32,11 @@ export default function DshPartnersPage() {
         />
       }
       main={
-        <PartnerListScreen
-          onSelectPartner={(partnerId) => router.push(`/dsh/partners/${partnerId}`)}
-          onCreatePartner={() => router.push("/dsh/partners/new")}
-        />
+        <Suspense fallback={<div>جاري تحميل الشركاء...</div>}>
+          <PartnersReviewQueueScreen
+            onOpenPartner={(partnerId) => router.push(`/dsh/partners/${partnerId}`)}
+          />
+        </Suspense>
       }
     />
   );

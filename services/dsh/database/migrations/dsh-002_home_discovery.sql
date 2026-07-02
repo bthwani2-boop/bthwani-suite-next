@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-002: Home Discovery
 -- Creates home_banners, home_promos, dsh_categories tables
 

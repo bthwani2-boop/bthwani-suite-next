@@ -1,21 +1,26 @@
-// DSH-015: Partner Store Activation — shared brain public barrel.
+// Partner Onboarding & Store Publication — shared brain public barrel.
 // Surfaces import ONLY from this file, never from internal subpaths.
 
-export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem } from "./partner-activation.model";
+export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem, DshPartnerDecisionCommand, DshPartnerDecisionCommandId } from "./partner-activation.model";
 export {
   DSH_PARTNER_ACTIVATION_STATES,
+  DSH_PARTNER_DECISION_COMMANDS,
   getDshPartnerActivationStateMetadata,
+  getDshPartnerDecisionCommands,
   isDshPartnerClientVisible,
   isDshPartnerActivationComplete,
+  getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
+  formatDshPartnerAuditEventLabel,
   getDshPartnerReadinessChecklist,
 } from "./partner-activation.model";
 
 export type {
-  DshPartner, DshPartnerDocument, DshPartnerReadiness,
-  DshPartnerAuditEvent, DshPartnerStore,
-  DshCreatePartnerInput, DshPartnerTransitionInput,
-  DshAddDocumentInput, DshReviewDocumentInput,
+  DshPartner, DshPartnerSummary, DshPartnerDocument, DshPartnerFieldVisit, DshPartnerReadiness,
+  DshPartnerAuditEvent, DshPartnerLinkedStore, DshFieldPartnerStoreDraft, DshFieldPartnerStoreDraftInput,
+  DshCreatePartnerInput, DshUpdatePartnerRequest, DshPartnerTransitionInput,
+  DshAddDocumentInput, DshReviewDocumentInput, DshCreatePartnerFieldVisitRequest,
+  DshPartnerListResponse,
 } from "./partner.types";
 
 export type {
@@ -38,5 +43,25 @@ export {
 } from "./use-partner-admin-controller";
 
 export { usePartnerSelfController } from "./use-partner-self-controller";
+export { useFieldPartnerProgressController } from "./use-field-partner-progress-controller";
+export type { FieldPartnerProgressState } from "./use-field-partner-progress-controller";
+export * from "./partner-registry";
+export * from "./use-partners-controller";
 
-export { submitFieldPartnerIntake } from "./partner.api";
+export {
+  fieldListDrafts,
+  fieldCreateDraft,
+  fieldGetPartner,
+  fieldUpdatePartner,
+  fieldUploadDocument,
+  fieldCreateVisit,
+  fieldSubmitPartner,
+  fetchListFieldVisits,
+  fieldGetReadiness,
+  fieldListDocuments,
+  fieldListFieldVisits,
+  fieldGetPartnerStore,
+  fieldUpdatePartnerStore,
+} from "./partner.api";
+export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
+export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";

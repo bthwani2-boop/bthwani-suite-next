@@ -162,7 +162,7 @@ export function CaptainStorePickupContextScreen() {
           <Text role="titleSm">تعليمات الكابتن</Text>
           <Text tone="secondary">{captain.pickupInstruction}</Text>
           <Text role="caption" tone="muted">
-            هذه الشاشة لا تعيّن طلبًا ولا تؤكد استلامًا. دورة المهمة الكاملة تتبع DSH-007.
+            هذه الشاشة لا تعيّن طلبًا ولا تؤكد استلامًا. دورة المهمة الكاملة تتبع Dispatch & Captain Delivery.
           </Text>
         </View>
       </Card>

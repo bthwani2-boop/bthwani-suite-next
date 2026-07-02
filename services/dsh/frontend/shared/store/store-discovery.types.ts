@@ -1,4 +1,18 @@
 import type { paths } from "../../../clients/generated/dsh-api";
+import type {
+  CaptainPickupReadinessRequest,
+  FieldStoreVerificationRequest,
+  OperatorStoreGovernanceRequest,
+  PartnerStoreSettingsRequest,
+} from "../../../clients/store-discovery-client";
+
+export type { OperatorStoreGovernanceRequest };
+
+export type StoreRoleAction =
+  | { readonly kind: "partner"; readonly storeId: string; readonly input: PartnerStoreSettingsRequest }
+  | { readonly kind: "field"; readonly storeId: string; readonly input: FieldStoreVerificationRequest }
+  | { readonly kind: "captain"; readonly storeId: string; readonly input: CaptainPickupReadinessRequest }
+  | { readonly kind: "operator"; readonly storeId: string; readonly input: OperatorStoreGovernanceRequest };
 
 export type DshStoreSummaryDto =
   paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"]["stores"][number];

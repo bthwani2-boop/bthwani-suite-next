@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-014: Administration, Roles & Activation
 
 CREATE TABLE IF NOT EXISTS dsh_admin_roles (

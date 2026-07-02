@@ -1,4 +1,4 @@
-// Canonical partner activation state model for DSH-015.
+// Canonical partner onboarding and store publication state model.
 // Adapted from donor dsh-partner-activation.model.ts — architectural boundaries enforced.
 //
 // System rules (enforced here, never in surfaces):
@@ -53,6 +53,27 @@ export type DshPartnerActivationStateMetadata = {
   readonly blockedReason: string;
   readonly auditRequired: boolean;
   readonly allowedNextStatuses: ReadonlyArray<DshPartnerActivationStatus>;
+};
+
+export type DshPartnerDecisionCommandId =
+  | 'preliminary_accept'
+  | 'request_missing_documents'
+  | 'schedule_field_visit'
+  | 'reject_partner'
+  | 'approve_documents'
+  | 'start_ops_review'
+  | 'approve_ops'
+  | 'activate_partner'
+  | 'show_store_to_client'
+  | 'hide_store_from_client'
+  | 'deactivate_partner';
+
+export type DshPartnerDecisionCommand = {
+  readonly id: DshPartnerDecisionCommandId;
+  readonly label: string;
+  readonly description: string;
+  readonly targetStatus: DshPartnerActivationStatus;
+  readonly reasonRequired: boolean;
 };
 
 export const DSH_PARTNER_ACTIVATION_STATES: ReadonlyArray<DshPartnerActivationStateMetadata> = [
@@ -234,12 +255,118 @@ export function getDshPartnerActivationStateMetadata(
   ) as DshPartnerActivationStateMetadata;
 }
 
+export const DSH_PARTNER_DECISION_COMMANDS: ReadonlyArray<DshPartnerDecisionCommand> = [
+  {
+    id: 'preliminary_accept',
+    label: 'قبول مبدئي',
+    description: 'نقل الملف من الاستلام إلى مسار الزيارة أو المراجعة التالية.',
+    targetStatus: 'documents_uploaded',
+    reasonRequired: false,
+  },
+  {
+    id: 'request_missing_documents',
+    label: 'طلب نواقص',
+    description: 'إرجاع الملف للشريك لاستكمال الوثائق المطلوبة.',
+    targetStatus: 'documents_missing',
+    reasonRequired: true,
+  },
+  {
+    id: 'schedule_field_visit',
+    label: 'جدولة زيارة',
+    description: 'طلب زيارة ميدانية قبل متابعة الاعتماد.',
+    targetStatus: 'field_visit_scheduled',
+    reasonRequired: false,
+  },
+  {
+    id: 'reject_partner',
+    label: 'رفض',
+    description: 'رفض الملف في مراجعة العمليات مع سبب إلزامي.',
+    targetStatus: 'ops_rejected',
+    reasonRequired: true,
+  },
+  {
+    id: 'approve_documents',
+    label: 'اعتماد الوثائق',
+    description: 'تأكيد اكتمال الوثائق والانتقال للجاهزية التالية.',
+    targetStatus: 'documents_verified',
+    reasonRequired: false,
+  },
+  {
+    id: 'start_ops_review',
+    label: 'بدء مراجعة العمليات',
+    description: 'رفع الملف إلى المراجعة التشغيلية النهائية.',
+    targetStatus: 'ops_review',
+    reasonRequired: false,
+  },
+  {
+    id: 'approve_ops',
+    label: 'اعتماد العمليات',
+    description: 'اعتماد الملف تشغيليًا قبل تفعيل الشريك.',
+    targetStatus: 'ops_approved',
+    reasonRequired: false,
+  },
+  {
+    id: 'activate_partner',
+    label: 'تفعيل الشريك',
+    description: 'تفعيل الشريك دون إظهاره للعميل قبل اكتمال بوابات المتجر.',
+    targetStatus: 'partner_active',
+    reasonRequired: false,
+  },
+  {
+    id: 'show_store_to_client',
+    label: 'إظهار المتجر للعميل',
+    description: 'إتاحة المتجر للعميل بعد اكتمال بوابات الظهور.',
+    targetStatus: 'client_visible',
+    reasonRequired: false,
+  },
+  {
+    id: 'hide_store_from_client',
+    label: 'إخفاء المتجر عن العميل',
+    description: 'إخفاء المتجر مع بقاء الشريك نشطًا.',
+    targetStatus: 'client_hidden',
+    reasonRequired: true,
+  },
+  {
+    id: 'deactivate_partner',
+    label: 'تعطيل الشريك',
+    description: 'إيقاف الشريك وإخفاء متاجره عن العميل.',
+    targetStatus: 'partner_deactivated',
+    reasonRequired: true,
+  },
+];
+
+export function getDshPartnerDecisionCommands(
+  status: DshPartnerActivationStatus,
+): ReadonlyArray<DshPartnerDecisionCommand> {
+  const meta = getDshPartnerActivationStateMetadata(status);
+  const allowed = new Set(meta.allowedNextStatuses);
+  return DSH_PARTNER_DECISION_COMMANDS.filter((command) => allowed.has(command.targetStatus));
+}
+
 export function isDshPartnerClientVisible(status: DshPartnerActivationStatus): boolean {
   return status === 'client_visible';
 }
 
 export function isDshPartnerActivationComplete(status: DshPartnerActivationStatus): boolean {
   return status === 'client_visible' || status === 'partner_active';
+}
+
+export function getDshPartnerActivationProgress(status: DshPartnerActivationStatus): number {
+  switch (status) {
+    case 'submitted':             return 70;
+    case 'ops_approved':          return 100;
+    case 'ops_rejected':          return 40;
+    case 'field_visit_scheduled': return 50;
+    case 'field_visit_completed': return 60;
+    case 'documents_missing':     return 40;
+    case 'documents_uploaded':    return 65;
+    case 'documents_verified':    return 80;
+    case 'catalog_ready':         return 85;
+    case 'ops_review':            return 90;
+    case 'partner_active':        return 100;
+    case 'client_visible':        return 100;
+    default:                       return 20;
+  }
 }
 
 export function getDshPartnerActivationStatusLabel(status: DshPartnerActivationStatus): string {
@@ -264,6 +391,30 @@ export function getDshPartnerActivationStatusLabel(status: DshPartnerActivationS
     client_hidden:            'مخفي من العملاء',
   };
   return labels[status] ?? status;
+}
+
+const AUDIT_EVENT_TAG_LABELS: Record<string, string> = {
+  document_uploaded: 'وثيقة مرفوعة',
+  document_reviewed: 'مراجعة وثيقة',
+  field_visit_submitted: 'زيارة ميدانية مسجّلة',
+  store_linked: 'ربط متجر',
+};
+
+/**
+ * Formats a partner audit event's from/to status pair for display. Handles
+ * both real activation-status transitions and the non-transition audit tags
+ * recorded for document upload/review, field visits, and store linking
+ * (encoded as `tag` or `tag:detail`, since they share the same audit table).
+ */
+export function formatDshPartnerAuditEventLabel(fromStatus: string, toStatus: string): string {
+  const [tag = '', detail] = toStatus.split(':');
+  const tagLabel = AUDIT_EVENT_TAG_LABELS[tag];
+  if (tagLabel) {
+    return detail ? `${tagLabel} — ${detail}` : tagLabel;
+  }
+  const fromLabel = fromStatus ? getDshPartnerActivationStatusLabel(fromStatus as DshPartnerActivationStatus) : '';
+  const toLabel = getDshPartnerActivationStatusLabel(toStatus as DshPartnerActivationStatus);
+  return fromLabel ? `${fromLabel} → ${toLabel}` : toLabel;
 }
 
 export function getDshPartnerReadinessChecklist(
@@ -292,4 +443,52 @@ export function getDshPartnerReadinessChecklist(
     { id: 'delivery',     label: 'أوضاع التوصيل مهيأة',          satisfied: delDone,    blockedReason: delDone   ? undefined : 'يجب تحديد طريقة توصيل واحدة على الأقل' },
     { id: 'active',       label: 'الشريك نشط (اعتماد العمليات)', satisfied: activeDone, blockedReason: activeDone ? undefined : 'بانتظار اعتماد العمليات النهائي وتفعيل الشريك' },
   ] as const;
+}
+
+export type DshPartnerVisibilityBadge = 'active' | 'closed' | 'busy' | 'out-of-zone' | 'hidden-pending-approval' | 'catalog-not-ready';
+
+export function getDshPartnerVisibilityBadge(
+  status: DshPartnerActivationStatus,
+  storeOpen: boolean,
+  busy = false,
+  inZone = true,
+): DshPartnerVisibilityBadge {
+  if (status === 'client_visible' || status === 'partner_active') {
+    if (!inZone) return 'out-of-zone';
+    if (!storeOpen) return 'closed';
+    if (busy) return 'busy';
+    return 'active';
+  }
+  if (
+    status === 'catalog_not_ready' ||
+    status === 'delivery_modes_not_ready' ||
+    status === 'catalog_ready' ||
+    status === 'delivery_modes_ready'
+  ) {
+    return 'catalog-not-ready';
+  }
+  return 'hidden-pending-approval';
+}
+
+export function getDshPartnerVisibilityBadgeLabel(badge: DshPartnerVisibilityBadge): string {
+  switch (badge) {
+    case 'active':                   return 'مفتوح';
+    case 'closed':                   return 'مغلق الآن';
+    case 'busy':                     return 'مشغول';
+    case 'out-of-zone':              return 'خارج نطاق التوصيل';
+    case 'hidden-pending-approval':  return 'ليس شريكًا معتمدًا';
+    case 'catalog-not-ready':        return 'الكتالوج غير جاهز';
+  }
+}
+
+export function getDshPartnerVisibilityBadgeTone(
+  badge: DshPartnerVisibilityBadge,
+): 'success' | 'warning' | 'danger' | 'muted' {
+  switch (badge) {
+    case 'active':      return 'success';
+    case 'closed':      return 'warning';
+    case 'busy':        return 'warning';
+    case 'out-of-zone': return 'danger';
+    default:            return 'muted';
+  }
 }

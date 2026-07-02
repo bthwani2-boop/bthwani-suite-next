@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS wlt_ledger_entries (
   reference_id        text NOT NULL DEFAULT '',
   reference_type      text NOT NULL DEFAULT '',
   amount_minor_units  bigint NOT NULL DEFAULT 0,
-  currency            text NOT NULL DEFAULT 'SAR',
+  currency            text NOT NULL DEFAULT 'YER',
   debit_credit        text NOT NULL DEFAULT 'debit',
   balance_after       bigint NOT NULL DEFAULT 0,
   description         text NOT NULL DEFAULT '',

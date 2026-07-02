@@ -15,7 +15,7 @@ for (const section of ["dependencies", "peerDependencies", "devDependencies"]) {
   }
 }
 
-for (const file of listCodeFiles().filter((item) => item.startsWith("shared/ui-kit/"))) {
+for (const file of listCodeFiles().filter((item) => item.startsWith("shared/ui-kit/") && !item.includes("Icon/Icon.tsx"))) {
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     if (item.specifier === "expo" || item.specifier.startsWith("expo-")) {

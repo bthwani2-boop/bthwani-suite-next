@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/electricity/bills/not-found"
+  },
+  "response": {
+    "status": 404,
+    "jsonBody": {
+      "code": "BILL_NOT_FOUND",
+      "message": "Electricity bill was not found"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

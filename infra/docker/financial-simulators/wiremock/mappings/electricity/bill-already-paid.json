@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/financial/electricity/bills/already-paid"
+  },
+  "response": {
+    "status": 409,
+    "jsonBody": {
+      "code": "BILL_ALREADY_PAID",
+      "message": "Bill is already paid"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

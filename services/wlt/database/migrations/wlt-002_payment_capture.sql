@@ -10,5 +10,5 @@ ALTER TABLE wlt_payment_sessions
 
 ALTER TABLE wlt_payment_sessions
   ADD COLUMN IF NOT EXISTS amount_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'SAR',
+  ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'YER',
   ADD COLUMN IF NOT EXISTS captured_at timestamptz;

@@ -19,14 +19,14 @@ export const DSH_RUNTIME_MAP = [
     capabilityId: "dsh.system.readiness",
     contractOperations: ["getDshHealth", "getDshReadiness"],
     backendImplemented: true,
-    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
+    runtimeEvidence: "services/dsh/evidence/Store Discovery-store-discovery-fullstack-multi-surface",
     state: "verified",
   },
   {
     capabilityId: "dsh.store.discovery",
     contractOperations: ["listDshStores", "getDshStore"],
     backendImplemented: true,
-    runtimeEvidence: "services/dsh/evidence/DSH-001-store-discovery-fullstack-multi-surface",
+    runtimeEvidence: "services/dsh/evidence/Store Discovery-store-discovery-fullstack-multi-surface",
     state: "verified",
   },
   {
@@ -37,7 +37,7 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-002-client-home-discovery",
+    runtimeEvidence: "services/dsh/evidence/Home Discovery-client-home-discovery",
   },
   {
     capabilityId: "dsh.client.catalog",
@@ -47,9 +47,9 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-003-catalog-fullstack",
+    runtimeEvidence: "services/dsh/evidence/Catalog Management-catalog-fullstack",
   },
-  // ── DSH-004: Cart & Serviceability ─────────────────────────────────────
+  // ── Cart & Serviceability ───────────────────────────────────────────────
   {
     capabilityId: "dsh.client.cart",
     backendImplemented: true,
@@ -60,9 +60,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-004-cart-serviceability",
+    runtimeEvidence: "services/dsh/evidence/Cart & Serviceability-cart-serviceability",
   },
-  // ── DSH-005: Checkout Intent & WLT Handoff ──────────────────────────────
+  // ── Checkout Intent & WLT Handoff ───────────────────────────────────────
   {
     capabilityId: "dsh.client.checkout",
     backendImplemented: true,
@@ -73,9 +73,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-005-checkout-intent",
+    runtimeEvidence: "services/dsh/evidence/Checkout & WLT Handoff-checkout-intent",
   },
-  // ── DSH-006: Order Fulfillment & Partner Acceptance ─────────────────────
+  // ── Order Fulfillment & Partner Acceptance ──────────────────────────────
   {
     capabilityId: "dsh.client.orders",
     backendImplemented: true,
@@ -86,9 +86,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-006-order-fulfillment",
+    runtimeEvidence: "services/dsh/evidence/Order Fulfillment-order-fulfillment",
   },
-  // ── DSH-007: Dispatch & Captain Delivery ────────────────────────────────
+  // ── Dispatch & Captain Delivery ─────────────────────────────────────────
   {
     capabilityId: "dsh.client.dispatch",
     backendImplemented: true,
@@ -99,9 +99,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-007-dispatch-delivery-lifecycle",
+    runtimeEvidence: "services/dsh/evidence/Dispatch & Captain Delivery-dispatch-delivery-lifecycle",
   },
-  // ── DSH-008: Field Verification & Store Quality Assurance ────────────────
+  // ── Field Verification & Store Quality Assurance ────────────────────────
   {
     capabilityId: "dsh.field.readiness",
     backendImplemented: true,
@@ -112,9 +112,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-008-field-readiness",
+    runtimeEvidence: "services/dsh/evidence/Field Verification-field-readiness",
   },
-  // ── DSH-009: Support, Incidents & Escalation Room ────────────────────────
+  // ── Support, Incidents & Escalation Room ─────────────────────────────────
   {
     capabilityId: "dsh.support.hub",
     backendImplemented: true,
@@ -125,9 +125,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-009-support-incidents",
+    runtimeEvidence: "services/dsh/evidence/Support-support-incidents",
   },
-  // ── DSH-010: Platform Analytics & Operational Reporting ──────────────────
+  // ── Platform Analytics & Operational Reporting ──────────────────────────
   {
     capabilityId: "dsh.operator.analytics",
     backendImplemented: true,
@@ -138,6 +138,71 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/DSH-010-analytics-finance-visibility",
+    runtimeEvidence: "services/dsh/evidence/Analytics-analytics-finance-visibility",
+  },
+  // ── Notifications & Actor Communication ──────────────────────────────────
+  {
+    capabilityId: "dsh.notifications",
+    backendImplemented: true,
+    sharedBrainReady: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+  },
+  // ── Marketing Command Deck ───────────────────────────────────────────────
+  {
+    capabilityId: "dsh.marketing",
+    backendImplemented: true,
+    sharedBrainReady: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+  },
+  // ── Platform Policies & Service Area Management ──────────────────────────
+  {
+    capabilityId: "dsh.policies",
+    backendImplemented: true,
+    sharedBrainReady: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+  },
+  // ── Administration, Roles & Activation ──────────────────────────────────
+  {
+    capabilityId: "dsh.admin",
+    backendImplemented: true,
+    sharedBrainReady: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+  },
+  // ── Partner Store Activation ──────────────────────────────────────────────
+  {
+    capabilityId: "dsh.partner.activation",
+    backendImplemented: true,
+    sharedBrainReady: true,
+    runtimeBound: true,
+    screensReady: true,
+    databaseReady: true,
+    generatedClientReady: true,
+    surfaceBindingApproved: true,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-015-runtime-smoke.txt",
   },
 ] as const satisfies readonly DshRuntimeBinding[];

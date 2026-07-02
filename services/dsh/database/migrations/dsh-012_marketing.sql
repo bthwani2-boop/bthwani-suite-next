@@ -1,3 +1,4 @@
+-- LEGACY_FILENAME_ONLY — not a slice reference
 -- DSH-012: Marketing Command Deck
 
 CREATE TABLE IF NOT EXISTS dsh_marketing_campaigns (

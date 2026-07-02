@@ -9,14 +9,64 @@ export const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), 
 const EXCLUDED_DIRS = new Set([
   ".git",
   "node_modules",
+  ".pnpm-store",
   ".next",
   ".expo",
+  ".turbo",
+  ".nx",
+  ".cache",
   "dist",
   "build",
+  "out",
   "coverage",
+  "tmp",
+  "temp",
+  "logs",
+  "graphify-out",
+  "evidence",
+  "screenshots",
+  "recordings",
+  "visual-evidence",
+  "generated",
+  "__generated__",
   "android",
   "ios"
 ]);
+
+const EXCLUDED_EXTENSIONS = new Set([
+  "png", "jpg", "jpeg", "gif", "webp", "svg", "ico",
+  "mp4", "mov", "avi", "pdf",
+  "zip", "7z", "rar", "tar", "gz",
+  "map", "log", "har", "sqlite", "db", "db-shm", "db-wal",
+  "tsbuildinfo", "apk", "aab", "ipa"
+]);
+
+export function isExcluded(relPath, isDir, name) {
+  if (isDir) {
+    if (EXCLUDED_DIRS.has(name)) return true;
+  }
+
+  if (relPath.startsWith("tools/registry/runs")) {
+    const parts = relPath.split("/");
+    if (parts[0] === "tools" && parts[1] === "registry" && parts[2] === "runs") {
+      return true;
+    }
+  }
+
+  if (!isDir) {
+    const ext = path.extname(name).toLowerCase();
+    const cleanExt = ext.startsWith(".") ? ext.slice(1) : ext;
+    if (EXCLUDED_EXTENSIONS.has(cleanExt)) return true;
+
+    if (name.endsWith(".min.js")) return true;
+
+    // Lockfiles except when dependency tasks allow them
+    const isLockfile = name === "pnpm-lock.yaml" || name === "package-lock.json" || name === "yarn.lock";
+    if (isLockfile && !process.env.KEEP_LOCKFILES_FOR_DEP_TASKS) return true;
+  }
+
+  return false;
+}
 
 const TEXT_EXTENSIONS = new Set([
   ".js",
@@ -49,12 +99,10 @@ export function isInside(filePath, prefix) {
 
 export function listFiles(dir = repoRoot, files = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (EXCLUDED_DIRS.has(entry.name)) continue;
-
     const full = path.join(dir, entry.name);
     const rel = toPosix(path.relative(repoRoot, full));
 
-    if (rel.startsWith("tools/registry/runs/")) continue;
+    if (isExcluded(rel, entry.isDirectory(), entry.name)) continue;
 
     if (entry.isDirectory()) {
       listFiles(full, files);

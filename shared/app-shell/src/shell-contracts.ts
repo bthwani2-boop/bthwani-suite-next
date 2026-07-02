@@ -32,5 +32,5 @@ export const APP_SHELL_FORBIDDEN_RESPONSIBILITIES = [
 export const APP_SHELL_BOUNDARY_CONTRACT = {
   allowed: APP_SHELL_ALLOWED_RESPONSIBILITIES,
   forbidden: APP_SHELL_FORBIDDEN_RESPONSIBILITIES,
-  rule: "shared/app-shell is contracts-only in Phase 9A. Runtime shell files are reserved until an active slice proves the need.",
+  rule: "shared/app-shell is contracts-only in Phase 9A. Runtime shell files are reserved until an active journey proves the need.",
 } as const;

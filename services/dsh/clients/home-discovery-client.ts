@@ -1,5 +1,5 @@
 /**
- * DSH-002 Home Discovery Client
+ * Home Discovery Home Discovery Client
  * Typed client for GET /dsh/home-discovery
  * Uses fetch with timeout — DB-backed runtime data only.
  */

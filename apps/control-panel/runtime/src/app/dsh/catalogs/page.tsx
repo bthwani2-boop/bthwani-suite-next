@@ -1,12 +1,13 @@
 "use client";
 
-import { CatalogApprovalScreen } from "@dsh-cp/catalogs/CatalogApprovalScreen";
+import { CatalogDashboardScreen } from "@dsh-cp/catalogs/CatalogDashboardScreen";
 import {
   ControlPanelNavigation,
   ControlPanelShell,
   ControlPanelTopBar,
   useDshNavigation,
 } from "../../../shell";
+
 
 export default function DshCatalogsPage() {
   const { items, handleSectionPress } = useDshNavigation();
@@ -23,7 +24,7 @@ export default function DshCatalogsPage() {
           onSectionPress={handleSectionPress}
         />
       }
-      main={<CatalogApprovalScreen />}
+      main={<CatalogDashboardScreen />}
     />
   );
 }

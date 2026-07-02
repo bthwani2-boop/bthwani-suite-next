@@ -43,6 +43,7 @@ func TestDevBypassIdentityMatchesLocalActorScopeIDs(t *testing.T) {
 		surface string
 		scope   string
 	}{
+		{role: "client", subject: "client-local-001", surface: "app-client", scope: "own"},
 		{role: "partner", subject: "partner-local-001", surface: "app-partner", scope: "own"},
 		{role: "field", subject: "field-local-001", surface: "app-field", scope: "assigned"},
 		{role: "captain", subject: "captain-local-001", surface: "app-captain", scope: "assigned"},
@@ -66,7 +67,7 @@ func TestDevBypassIdentityMatchesLocalActorScopeIDs(t *testing.T) {
 }
 
 func TestDevBypassIdentityRejectsUnknownRole(t *testing.T) {
-	if _, err := resolveDevBypassIdentity("dev-bypass-client-123", time.Now()); err != ErrUnauthenticated {
+	if _, err := resolveDevBypassIdentity("dev-bypass-unknown-123", time.Now()); err != ErrUnauthenticated {
 		t.Fatalf("expected unauthenticated, got %v", err)
 	}
 }

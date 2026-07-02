@@ -12,6 +12,6 @@ Do not create services/dsh/backend/Dockerfile until all are true:
 - runtime does not use CORS wildcard
 - runtime does not use donor container names, donor ports, or donor volumes
 
-First allowed activation slice:
+First allowed activation journey:
 
-- DSH-001 Store Discovery
+- Store Discovery Store Discovery

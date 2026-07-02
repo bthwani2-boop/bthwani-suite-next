@@ -15,9 +15,9 @@ export type DshSurfaceDefinition = {
     | "none"
     | "upstream"
     | "downstream"
-    | "none-for-dsh-001";
+    | "none-for-store-discovery";
   readonly dependencyNotes?: readonly string[];
-  readonly firstExecutableSlices?: readonly string[];
+  readonly firstExecutableJourneys?: readonly string[];
 };
 
 export const DSH_SURFACE_MAP = [
@@ -33,20 +33,20 @@ export const DSH_SURFACE_MAP = [
     dependencyRole: "downstream",
     dependencyNotes: [
       "Partner manages own-store catalog; catalog readiness affects store publication eligibility.",
-      "DSH-001 owns store role context; DSH-003 owns catalog CRUD and submission workflow.",
+      "Store Discovery owns store role context; Catalog Management owns catalog CRUD and submission workflow.",
     ],
-    firstExecutableSlices: ["DSH-006", "DSH-008"],
+    firstExecutableJourneys: ["orders", "field-readiness"],
   },
   {
     surface: "app-captain",
     capabilityIds: ["dsh.store.discovery", "dsh.client.dispatch"],
     implementationState: "runtime-verified",
-    dependencyRole: "none-for-dsh-001",
+    dependencyRole: "none-for-store-discovery",
     dependencyNotes: [
       "Captain interaction starts with assignment, pickup, and delivery.",
-      "DSH-001 requires pickup-point readiness reporting; delivery lifecycle remains excluded.",
+      "Store Discovery requires pickup-point readiness reporting; delivery lifecycle remains excluded.",
     ],
-    firstExecutableSlices: ["DSH-007"],
+    firstExecutableJourneys: ["dispatch"],
   },
   {
     surface: "app-field",
@@ -55,9 +55,9 @@ export const DSH_SURFACE_MAP = [
     dependencyRole: "upstream",
     dependencyNotes: [
       "Field onboarding and visit evidence can qualify stores for approval.",
-      "DSH-001 requires assigned-store verification submission; broader field workflow remains excluded.",
+      "Store Discovery requires assigned-store verification submission; broader field workflow remains excluded.",
     ],
-    firstExecutableSlices: ["DSH-008"],
+    firstExecutableJourneys: ["field-readiness"],
   },
   {
     surface: "control-panel",

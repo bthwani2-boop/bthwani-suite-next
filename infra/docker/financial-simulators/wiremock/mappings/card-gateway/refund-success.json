@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/refund"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "providerReference": "card-refund-001",
+      "status": "refunded"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

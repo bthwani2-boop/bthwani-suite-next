@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,8 @@ import (
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/homediscovery"
+	"dsh-api/internal/media"
+	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -17,6 +20,7 @@ type protectedStoreServer struct {
 	db       *sql.DB
 	identity *auth.Client
 	wlt      *wlt.Client
+	media    *media.Client
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWriter, r *http.Request) {
@@ -87,8 +91,159 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
-func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client) *protectedStoreServer {
-	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient}
+func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaClient *media.Client) *protectedStoreServer {
+	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient, media: mediaClient}
+}
+
+func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
+	ctx := context.WithValue(r.Context(), "actor_id", actor.ID)
+	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
+	return r.WithContext(ctx)
+}
+
+func dshActorSurface(role string) string {
+	switch role {
+	case "operator":
+		return "control-panel"
+	case "partner":
+		return "app-partner"
+	case "field":
+		return "app-field"
+	case "captain":
+		return "app-captain"
+	case "system":
+		return "system"
+	default:
+		return "system"
+	}
+}
+
+func partnerRequestWithStore(r *http.Request, actor store.StoreActor, storeID string) *http.Request {
+	ctx := partnerRequestWithActor(r, actor).Context()
+	ctx = context.WithValue(ctx, "store_id", storeID)
+	return r.WithContext(ctx)
+}
+
+func (s *protectedStoreServer) servePartnerHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	handler http.HandlerFunc,
+	roles ...string,
+) {
+	actor, ok := s.requireActor(w, r, roles...)
+	if !ok {
+		return
+	}
+	handler(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) servePartnerSelfHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	handler http.HandlerFunc,
+) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	row, _, err := store.ResolveActorStore(r.Context(), s.db, actor)
+	if err != nil {
+		s.writeStoreError(w, err)
+		return
+	}
+	handler(w, partnerRequestWithStore(r, actor, row.ID))
+}
+
+func (s *protectedStoreServer) handleListPartners(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListPartners(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleCreatePartner(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleCreatePartner(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleGetPartner(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleGetPartner(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleActivationTransition(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleActivationTransition(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleGetReadiness(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListDocuments(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleAddPartnerDocument(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleAddDocument(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleReviewPartnerDocument(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleReviewDocument(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleListPartnerStores(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListPartnerStores(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleLinkPartnerStore(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleLinkPartnerStore(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListFieldVisits(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleListPartnerAudit(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListAudit(s.db), "operator")
+}
+
+func (s *protectedStoreServer) handleFieldListPartnerDrafts(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleListFieldPartnerDrafts(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldCreatePartnerDraft(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldCreateDraft(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldGetPartnerDraft(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldGetPartner(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldUpdatePartnerDraft(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldUpdatePartner(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldUploadPartnerDocument(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldUploadDocument(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldCreatePartnerVisit(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldCreateVisit(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldSubmitPartnerDraft(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldSubmitPartner(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldGetReadiness(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldListDocuments(s.db), "field")
+}
+
+func (s *protectedStoreServer) handleFieldListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerHandler(w, r, partner.HandleFieldListFieldVisits(s.db), "field")
+}
+
+func (s *protectedStoreServer) handlePartnerActivationReadiness(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerSelfHandler(w, r, partner.HandlePartnerMeReadiness(s.db))
 }
 
 func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http.Request) {

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS wlt_refunds (
   order_id            text NOT NULL,
   client_id           text NOT NULL,
   amount_minor_units  bigint NOT NULL DEFAULT 0,
-  currency            text NOT NULL DEFAULT 'SAR',
+  currency            text NOT NULL DEFAULT 'YER',
   reason              text NOT NULL DEFAULT '',
   status              text NOT NULL DEFAULT 'requested',
   resolved_at         timestamptz,
