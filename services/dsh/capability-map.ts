@@ -360,7 +360,7 @@ export const DSH_CAPABILITY_MAP = [
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },
-  // ── Partner Store Activation ───────────────────────────────────────────────
+  // ── Partner Onboarding & Store Publication ─────────────────────────────────
   {
     id: "dsh.partner.activation",
     status: "runtime-verified",

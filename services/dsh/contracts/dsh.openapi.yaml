@@ -2452,7 +2452,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  # ─── Partner Store Activation ──────────────────────────────────────
+  # ─── Partner Onboarding & Store Publication ─────────────────────────
 
   /dsh/operator/partners:
     get:
@@ -5035,7 +5035,7 @@ components:
         status: { type: string }
         expiresAt: { type: string, format: date-time }
 
-    # ─── Partner Store Activation schemas ────────────────────────────
+    # ─── Partner Onboarding & Store Publication schemas ──────────────
 
     DshPartner:
       type: object
