@@ -69,6 +69,14 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 		StatusClientVisible,
 	}
 	for _, next := range chain {
+		if next == StatusClientVisible {
+			// Mirrors the operator "partner-readiness" governance action
+			// (internal/store/governance.go) that must run before a store
+			// can pass the client_visible publication gate.
+			if _, err := db.Exec(`UPDATE dsh_stores SET partner_readiness = 'ready', version = version + 1, updated_at = NOW() WHERE id = $1`, "store-1002"); err != nil {
+				t.Fatalf("failed to mark store partner_readiness ready: %v", err)
+			}
+		}
 		p, _, err = TransitionStatus(db, p.ID, TransitionInput{
 			ToStatus:     next,
 			Reason:       "db integration lifecycle",

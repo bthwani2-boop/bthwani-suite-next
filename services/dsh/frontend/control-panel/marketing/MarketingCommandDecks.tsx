@@ -19,6 +19,7 @@ import {
   useGrowthController,
   useLoyaltyController,
   useVisibilityGatesController,
+  useCatalogReviewController,
   useCampaignsController,
 } from "../../shared/marketing";
 import type {
@@ -28,6 +29,28 @@ import type {
   CampaignRecord,
 } from "../../shared/marketing";
 import type { PartnerOfferRecord } from "../../shared/partner/dsh-partner-offer-types";
+
+// Shown on every command deck whose controller has no backend persistence yet
+// (isBackedByApi === false). Mutating actions in that deck are disabled rather
+// than silently succeeding against local-only state.
+function NotBackedNotice({ reason }: { reason: string }) {
+  return (
+    <div
+      role="status"
+      style={{
+        background: "#FEF3C7",
+        border: "1px solid #F59E0B",
+        color: "#92400E",
+        borderRadius: "0.5rem",
+        padding: "0.625rem 0.875rem",
+        fontSize: "0.8rem",
+        marginBottom: "1rem",
+      }}
+    >
+      ⚠️ {reason}
+    </div>
+  );
+}
 
 // 1. Ticker Command Deck
 export function TickerCommandDeck() {
@@ -67,6 +90,8 @@ export function TickerCommandDeck() {
           <CpButton onClick={() => controller.select(null)}>إضافة شريط جديد</CpButton>
         </div>
 
+        {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
+
         {controller.items.length === 0 ? (
           <CpEmptyTableMessage>لا يوجد أشرطة إعلانية مسجلة حالياً.</CpEmptyTableMessage>
         ) : (
@@ -99,17 +124,17 @@ export function TickerCommandDeck() {
                   </CpTableCell>
                   <CpTableCell>{item.impressions} مشاهدة / {item.clicks} نقرة</CpTableCell>
                   <CpTableCell>
-                    <CpButton onClick={() => controller.togglePinned(item.id)} style={{ padding: "0.2rem 0.5rem" }}>
+                    <CpButton onClick={() => controller.togglePinned(item.id)} disabled={!controller.isBackedByApi} style={{ padding: "0.2rem 0.5rem" }}>
                       {item.pinned ? "📌 مثبت" : "ثبت"}
                     </CpButton>
                   </CpTableCell>
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
                       <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
-                      <CpButton onClick={() => controller.toggleStatus(item.id)}>
+                      <CpButton onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
                         {item.status === "published" ? "تعطيل" : "تنشيط"}
                       </CpButton>
-                      <CpButton onClick={() => controller.remove(item.id)} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
+                      <CpButton onClick={() => controller.remove(item.id)} disabled={!controller.isBackedByApi} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -195,7 +220,7 @@ export function TickerCommandDeck() {
             />
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <CpButton onClick={handleSave} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
+              <CpButton onClick={handleSave} disabled={!controller.isBackedByApi} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
               <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
             </div>
           </div>
@@ -233,6 +258,8 @@ export function VideoStudioCommandDeck() {
           <CpButton onClick={() => controller.select(null)}>إضافة فيديو ترويجي</CpButton>
         </div>
 
+        {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
+
         {controller.items.length === 0 ? (
           <CpEmptyTableMessage>لا يوجد فيديوهات مسجلة حالياً.</CpEmptyTableMessage>
         ) : (
@@ -267,10 +294,10 @@ export function VideoStudioCommandDeck() {
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
                       <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
-                      <CpButton onClick={() => controller.toggleStatus(item.id)}>
+                      <CpButton onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
                         {item.status === "published" ? "إيقاف" : "تنشيط"}
                       </CpButton>
-                      <CpButton onClick={() => controller.remove(item.id)} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
+                      <CpButton onClick={() => controller.remove(item.id)} disabled={!controller.isBackedByApi} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -353,7 +380,7 @@ export function VideoStudioCommandDeck() {
             />
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <CpButton onClick={handleSave} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ الفيديو</CpButton>
+              <CpButton onClick={handleSave} disabled={!controller.isBackedByApi} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ الفيديو</CpButton>
               <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
             </div>
           </div>
@@ -484,6 +511,8 @@ export function PartnerOffersCommandDeck() {
           <CpButton onClick={() => controller.select(null)}>إضافة عرض جديد</CpButton>
         </div>
 
+        {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
+
         {controller.items.length === 0 ? (
           <CpEmptyTableMessage>لا توجد عروض مسجلة حالياً.</CpEmptyTableMessage>
         ) : (
@@ -518,10 +547,10 @@ export function PartnerOffersCommandDeck() {
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
                       <CpButton onClick={() => controller.select(o)}>تعديل</CpButton>
-                      <CpButton onClick={() => controller.toggleStatus(o.id)}>
+                      <CpButton onClick={() => controller.toggleStatus(o.id)} disabled={!controller.isBackedByApi}>
                         {o.status === "published" ? "إيقاف" : "اعتماد وتفعيل"}
                       </CpButton>
-                      <CpButton onClick={() => controller.remove(o.id)} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
+                      <CpButton onClick={() => controller.remove(o.id)} disabled={!controller.isBackedByApi} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -593,7 +622,7 @@ export function PartnerOffersCommandDeck() {
             />
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <CpButton onClick={handleSave} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
+              <CpButton onClick={handleSave} disabled={!controller.isBackedByApi} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
               <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
             </div>
           </div>
@@ -611,14 +640,16 @@ export function BenefitsSubscriptionsCommandDeck() {
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.5rem" }} dir="rtl">
       <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>إدارة برنامج الولاء ونظام الاشتراكات</h3>
 
+      {!loyalty.isBackedByApi && <NotBackedNotice reason={loyalty.persistenceDisabledReason} />}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
         <div style={{ background: colorRoles.surfaceBase, border: "1px solid colorRoles.surfaceBase", borderRadius: "0.75rem", padding: "1.25rem" }}>
           <h4 style={{ margin: "0 0 1rem", fontWeight: 700 }}>مضاعف نقاط الولاء (Points Multiplier)</h4>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <span style={{ fontSize: "0.85rem" }}>المضاعف الحالي:</span>
             <strong style={{ fontSize: "1.25rem", color: opsTheme.brand }}>{loyalty.pointMultiplier}x</strong>
-            <CpButton onClick={() => loyalty.updateMultiplier(1.5)}>1.5x</CpButton>
-            <CpButton onClick={() => loyalty.updateMultiplier(2.0)}>2.0x (مضاعف عطلة)</CpButton>
+            <CpButton onClick={() => loyalty.updateMultiplier(1.5)} disabled={!loyalty.isBackedByApi}>1.5x</CpButton>
+            <CpButton onClick={() => loyalty.updateMultiplier(2.0)} disabled={!loyalty.isBackedByApi}>2.0x (مضاعف عطلة)</CpButton>
           </div>
           <p style={{ fontSize: "0.75rem", opacity: 0.6, marginTop: "0.5rem" }}>المضاعف يتحكم في سرعة اكتساب النقاط للكباتن والعملاء على الطلبات المؤهلة.</p>
         </div>
@@ -630,7 +661,7 @@ export function BenefitsSubscriptionsCommandDeck() {
               <div key={tier.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid colorRoles.surfaceBase", paddingBottom: "0.5rem" }}>
                 <span style={{ fontWeight: 600 }}>{tier.name}</span>
                 <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>الحد الأدنى للنقاط: {tier.minimumPoints} نقطة</span>
-                <CpButton onClick={() => loyalty.updateTierPoints(tier.name, tier.minimumPoints + 100)} style={{ padding: "0.2rem 0.5rem" }}>+100</CpButton>
+                <CpButton onClick={() => loyalty.updateTierPoints(tier.name, tier.minimumPoints + 100)} disabled={!loyalty.isBackedByApi} style={{ padding: "0.2rem 0.5rem" }}>+100</CpButton>
               </div>
             ))}
           </div>
@@ -668,6 +699,8 @@ export function GrowthCommandDeck() {
           <CpButton onClick={() => controller.select(null)}>إضافة مبادرة نمو</CpButton>
         </div>
 
+        {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
+
         {controller.items.length === 0 ? (
           <CpEmptyTableMessage>لا توجد مبادرات نمو مسجلة حالياً.</CpEmptyTableMessage>
         ) : (
@@ -696,10 +729,10 @@ export function GrowthCommandDeck() {
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
                       <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
-                      <CpButton onClick={() => controller.toggleStatus(item.id)}>
+                      <CpButton onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
                         {item.status === "published" ? "تعطيل" : "تنشيط"}
                       </CpButton>
-                      <CpButton onClick={() => controller.remove(item.id)} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
+                      <CpButton onClick={() => controller.remove(item.id)} disabled={!controller.isBackedByApi} style={{ background: opsTheme.dangerSurface, color: opsTheme.danger }}>حذف</CpButton>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -764,7 +797,7 @@ export function GrowthCommandDeck() {
             />
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <CpButton onClick={handleSave} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
+              <CpButton onClick={handleSave} disabled={!controller.isBackedByApi} style={{ background: opsTheme.brand, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
               <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
             </div>
           </div>
@@ -780,6 +813,7 @@ export function SignalsMeasurementCommandDeck() {
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
       <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>بوابة قياس إشارات ورضا العملاء والشركاء</h3>
+      {!gates.isBackedByApi && <NotBackedNotice reason={gates.persistenceDisabledReason} />}
       <div style={{ background: opsTheme.surfaceInset, padding: "1rem", borderRadius: "0.5rem" }}>
         <p style={{ margin: 0, fontSize: "0.813rem" }}>إشارات الرضا الفورية مبنية على رضا العملاء بعد استلام طلباتهم ومتابعة كفاءة التوصيل التشغيلية.</p>
       </div>
@@ -819,36 +853,34 @@ export function SignalsMeasurementCommandDeck() {
 
 // 8. Image & Product Review Command Deck
 export function ImageProductReviewCommandDeck() {
-  const [items, setItems] = useState([
-    { id: "item-1", name: "برجر كلاسيك لحم", hasBadImage: true, reason: "إضاءة ضعيفة وصورة مهتزة" },
-    { id: "item-2", name: "عصير برتقال طبيعي طازج", hasBadImage: false, reason: "" },
-    { id: "item-3", name: "بيتزا مارغريتا إيطالية", hasBadImage: true, reason: "خلفية الصورة غير ملائمة" },
-  ]);
-
-  const handleApproveImage = (id: string) => {
-    setItems(items.map((item) => (item.id === id ? { ...item, hasBadImage: false } : item)));
-  };
+  const controller = useCatalogReviewController();
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
       <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>مراجعة جودة صور المنتجات والكتالوج</h3>
       <p style={{ margin: 0, fontSize: "0.813rem", color: opsTheme.textMuted }}>تدقيق صور الكتالوج وإلزام الشركاء بمعايير ووضوح الصور ودقتها قبل النشر للعملاء:</p>
 
-      <div style={{ display: "grid", gap: "0.75rem" }}>
-        {items.map((item) => (
-          <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
-            <div>
-              <strong>{item.name}</strong>
-              <div style={{ fontSize: "0.8rem", color: item.hasBadImage ? opsTheme.danger : opsTheme.success }}>
-                {item.hasBadImage ? `مرفوضة بسبب: ${item.reason}` : "مقبولة ومستوفاة شروط الجودة"}
+      {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
+
+      {controller.items.length === 0 ? (
+        <CpEmptyTableMessage>لا توجد صور بانتظار المراجعة حالياً.</CpEmptyTableMessage>
+      ) : (
+        <div style={{ display: "grid", gap: "0.75rem" }}>
+          {controller.items.map((item) => (
+            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
+              <div>
+                <strong>{item.name}</strong>
+                <div style={{ fontSize: "0.8rem", color: item.hasBadImage ? opsTheme.danger : opsTheme.success }}>
+                  {item.hasBadImage ? `مرفوضة بسبب: ${item.reason}` : "مقبولة ومستوفاة شروط الجودة"}
+                </div>
               </div>
+              {item.hasBadImage && (
+                <CpButton onClick={() => controller.approveImage(item.id)} disabled={!controller.isBackedByApi}>تجاوز وقبول الصورة</CpButton>
+              )}
             </div>
-            {item.hasBadImage && (
-              <CpButton onClick={() => handleApproveImage(item.id)}>تجاوز وقبول الصورة</CpButton>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
