@@ -97,7 +97,7 @@ for (const file of files) {
       continue;
     }
     
-    const isMigrationOrEvidence = /\/evidence\/|\/migrations\/|\/seeds\/|dsh-\d{3}_|\bDSH-\d{3}-|brach-validation-final-closure/.test(file);
+    const isMigrationOrEvidence = /\/evidence\/|\/migrations\/|\/seeds\/|dsh-\d{3}_|\bDSH-\d{3}-/.test(file);
     if (isMigrationOrEvidence) {
       continue;
     }

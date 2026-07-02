@@ -347,8 +347,10 @@ export function isDshPartnerClientVisible(status: DshPartnerActivationStatus): b
   return status === 'client_visible';
 }
 
+// Aligned with backend ComputeReadiness partnerActiveDone: client_hidden is an
+// activated partner whose store is withheld from clients — activation itself is complete.
 export function isDshPartnerActivationComplete(status: DshPartnerActivationStatus): boolean {
-  return status === 'client_visible' || status === 'partner_active';
+  return status === 'client_visible' || status === 'partner_active' || status === 'client_hidden';
 }
 
 export function getDshPartnerActivationProgress(status: DshPartnerActivationStatus): number {

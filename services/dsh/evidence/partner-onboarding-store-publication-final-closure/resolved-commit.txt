@@ -1,0 +1,10 @@
+REF: begin
+RESOLVED_COMMIT_SHA: 7ff5fc9b1bd1e9fa3ab46ed3cba7b990b1021dd3
+REMOTE_BEGIN: 7ff5fc9b1bd1e9fa3ab46ed3cba7b990b1021dd3
+REMOTE_MASTER: 7ff5fc9b1bd1e9fa3ab46ed3cba7b990b1021dd3
+RESOLUTION_COMMAND: git fetch origin begin master --prune; git checkout begin; git reset --hard origin/begin; git rev-parse HEAD origin/begin origin/master
+RESOLVED_FROM: branch (origin/begin)
+DATE: 2026-07-02
+NOTE: All closure work in this evidence folder was executed on the working tree of this
+resolved commit. The final commit SHA containing the closure changes is recorded in
+verification-output.md after the final gate.

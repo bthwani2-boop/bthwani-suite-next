@@ -1,0 +1,570 @@
+===== pnpm run runtime:down =====
+
+> bthwani-suite-next@0.0.0 runtime:down C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh,media
+
+=== runtime:down
+ Container bthwani-dsh-api-runtime Stopping 
+ Container bthwani-minio-runtime Stopping 
+ Container bthwani-dsh-api-runtime Stopped 
+ Container bthwani-dsh-api-runtime Removing 
+ Container bthwani-minio-runtime Stopped 
+ Container bthwani-minio-runtime Removing 
+ Container bthwani-dsh-api-runtime Removed 
+ Container bthwani-identity-api-runtime Stopping 
+ Container bthwani-minio-runtime Removed 
+ Container bthwani-identity-api-runtime Stopped 
+ Container bthwani-identity-api-runtime Removing 
+ Container bthwani-identity-api-runtime Removed 
+ Container bthwani-postgres-runtime Stopping 
+ Container bthwani-postgres-runtime Stopped 
+ Container bthwani-postgres-runtime Removing 
+ Container bthwani-postgres-runtime Removed 
+ Container bthwani-wiremock-financial-provider-runtime Stopping 
+ Container bthwani-mailpit-runtime Stopping 
+ Container bthwani-mailpit-runtime Stopped 
+ Container bthwani-mailpit-runtime Removing 
+ Container bthwani-mailpit-runtime Removed 
+ Container bthwani-wiremock-financial-provider-runtime Stopped 
+ Container bthwani-wiremock-financial-provider-runtime Removing 
+ Container bthwani-wiremock-financial-provider-runtime Removed 
+ Network bthwani-runtime Removing 
+ Network bthwani-runtime Resource is still in use 
+EXIT[pnpm run runtime:down]=0
+===== pnpm run runtime:up =====
+
+> bthwani-suite-next@0.0.0 runtime:up C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media
+
+=== runtime:up (profiles: identity,dsh,media)
+ Container bthwani-minio-runtime Creating 
+ Container bthwani-postgres-runtime Creating 
+ Container bthwani-minio-runtime Created 
+ Container bthwani-postgres-runtime Created 
+ Container bthwani-identity-api-runtime Creating 
+ Container bthwani-identity-api-runtime Created 
+ Container bthwani-dsh-api-runtime Creating 
+ Container bthwani-dsh-api-runtime Created 
+ Container bthwani-minio-runtime Starting 
+ Container bthwani-postgres-runtime Starting 
+ Container bthwani-minio-runtime Started 
+ Container bthwani-postgres-runtime Started 
+ Container bthwani-postgres-runtime Waiting 
+ Container bthwani-postgres-runtime Healthy 
+ Container bthwani-identity-api-runtime Starting 
+ Container bthwani-identity-api-runtime Started 
+ Container bthwani-postgres-runtime Waiting 
+ Container bthwani-identity-api-runtime Waiting 
+ Container bthwani-postgres-runtime Healthy 
+ Container bthwani-identity-api-runtime Healthy 
+ Container bthwani-dsh-api-runtime Starting 
+ Container bthwani-dsh-api-runtime Started 
+Containers started.
+EXIT[pnpm run runtime:up]=0
+===== pnpm run runtime:migrate =====
+
+> bthwani-suite-next@0.0.0 runtime:migrate C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action migrate -Profiles dsh
+
+=== runtime:migrate
+Waiting for Postgres (1/30)...
+ ?column? 
+----------
+        1
+(1 row)
+
+ ?column? 
+----------
+        1
+(1 row)
+
+Postgres: healthy
+
+--- Applying DSH migrations ---
+  Applying: dsh-001_store_discovery.sql
+NOTICE:  relation "dsh_stores" already exists, skipping
+CREATE TABLE
+NOTICE:  column "category" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "delivery_modes" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "is_free_delivery" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "distance_km" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "follower_count" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "has_pro_badge" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "has_coupon_badge" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "points_multiplier" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "is_popular" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "idx_dsh_stores_city_code" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_stores_service_area_code" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_stores_status" already exists, skipping
+NOTICE:  relation "idx_dsh_stores_is_visible" already exists, skipping
+CREATE INDEX
+NOTICE:  column "latitude" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  column "longitude" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+  dsh-001_store_discovery.sql: PASS
+  Applying: dsh-001b_store_governance.sql
+NOTICE:  column "version" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  relation "dsh_store_actor_scopes" already exists, skipping
+NOTICE:  relation "dsh_store_field_verifications" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_store_pickup_readiness_reports" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_store_action_audit" already exists, skipping
+NOTICE:  relation "dsh_store_idempotency" already exists, skipping
+NOTICE:  relation "dsh_store_actor_scopes_lookup_idx" already exists, skipping
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "dsh_store_field_verifications_store_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "dsh_store_pickup_readiness_store_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "dsh_store_action_audit_store_idx" already exists, skipping
+  dsh-001b_store_governance.sql: PASS
+  Applying: dsh-002_home_discovery.sql
+CREATE TABLE
+NOTICE:  relation "dsh_home_banners" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_home_promos" already exists, skipping
+NOTICE:  relation "dsh_categories" already exists, skipping
+NOTICE:  relation "dsh_home_content_audit" already exists, skipping
+CREATE TABLE
+NOTICE:  column "category_id" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  relation "idx_dsh_home_banners_active" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_home_promos_active" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_categories_active" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_home_content_audit_lookup" already exists, skipping
+  dsh-002_home_discovery.sql: PASS
+  Applying: dsh-002b_storefront_catalog.sql
+NOTICE:  column "partner_readiness" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "catalog_approval_status" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "marketing_visibility" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_catalog_categories" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_catalog_products" already exists, skipping
+NOTICE:  relation "dsh_catalog_media" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_catalog_revisions" already exists, skipping
+NOTICE:  relation "dsh_catalog_audit" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "idx_dsh_catalog_categories_store" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_catalog_products_store" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_catalog_media_store" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_catalog_revisions_store" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_catalog_audit_store" already exists, skipping
+  dsh-002b_storefront_catalog.sql: PASS
+  Applying: dsh-004_cart.sql
+NOTICE:  relation "dsh_carts" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_cart_items" already exists, skipping
+CREATE TABLE
+CREATE INDEX
+NOTICE:  relation "idx_dsh_carts_client_id" already exists, skipping
+NOTICE:  relation "idx_dsh_carts_store_id" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_carts_state" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_cart_items_cart" already exists, skipping
+  dsh-004_cart.sql: PASS
+  Applying: dsh-005_checkout_intent.sql
+CREATE TABLE
+NOTICE:  relation "dsh_checkout_intents" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_checkout_intents_client_id" already exists, skipping
+NOTICE:  relation "idx_dsh_checkout_intents_cart_id" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_checkout_intents_state" already exists, skipping
+NOTICE:  relation "idx_dsh_checkout_intents_store_id" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+  dsh-005_checkout_intent.sql: PASS
+  Applying: dsh-006_orders.sql
+NOTICE:  relation "dsh_orders" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_order_items" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_order_status_events" already exists, skipping
+NOTICE:  relation "idx_dsh_orders_store_id" already exists, skipping
+NOTICE:  relation "idx_dsh_orders_client_id" already exists, skipping
+NOTICE:  relation "idx_dsh_orders_status" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_orders_checkout_intent" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_order_items_order_id" already exists, skipping
+NOTICE:  relation "idx_dsh_order_status_events_order" already exists, skipping
+CREATE INDEX
+  dsh-006_orders.sql: PASS
+  Applying: dsh-007_dispatch.sql
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_assignments" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_deliveries" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_assignments_active_order" already exists, skipping
+NOTICE:  relation "idx_dsh_assignments_captain_status" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_deliveries_order" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_deliveries_captain_status" already exists, skipping
+  dsh-007_dispatch.sql: PASS
+  Applying: dsh-008_field_onboarding.sql
+CREATE TABLE
+NOTICE:  relation "dsh_field_visits" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_readiness_checks" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_readiness_escalations" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_field_visits_store_id" already exists, skipping
+NOTICE:  relation "idx_dsh_field_visits_agent_id" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_readiness_checks_visit_check" already exists, skipping
+NOTICE:  relation "idx_dsh_readiness_checks_visit_id" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_readiness_checks_store_id" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_escalations_store_id" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_escalations_status" already exists, skipping
+CREATE INDEX
+  dsh-008_field_onboarding.sql: PASS
+  Applying: dsh-009_support.sql
+NOTICE:  relation "dsh_support_tickets" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_support_messages" already exists, skipping
+NOTICE:  relation "dsh_incidents" already exists, skipping
+NOTICE:  relation "idx_dsh_support_tickets_reporter" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_support_tickets_status" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_support_tickets_store_id" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_support_messages_ticket_id" already exists, skipping
+NOTICE:  relation "idx_dsh_incidents_status" already exists, skipping
+NOTICE:  relation "idx_dsh_incidents_severity" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+  dsh-009_support.sql: PASS
+  Applying: dsh-011_notifications.sql
+CREATE TABLE
+NOTICE:  relation "dsh_notifications" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_notifications_actor" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_notifications_unread" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_notification_preferences" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_platform_notification_config" already exists, skipping
+  dsh-011_notifications.sql: PASS
+  Applying: dsh-012_marketing.sql
+NOTICE:  relation "dsh_marketing_campaigns" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "dsh_marketing_banners" already exists, skipping
+NOTICE:  relation "idx_dsh_banners_active" already exists, skipping
+CREATE INDEX
+CREATE TABLE
+NOTICE:  relation "dsh_marketing_promos" already exists, skipping
+  dsh-012_marketing.sql: PASS
+  Applying: dsh-013_platform_policies.sql
+NOTICE:  relation "dsh_platform_zones" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "idx_dsh_zones_city" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_zones_active" already exists, skipping
+NOTICE:  relation "dsh_platform_sla_rules" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_platform_capacity" already exists, skipping
+CREATE TABLE
+  dsh-013_platform_policies.sql: PASS
+  Applying: dsh-014_administration.sql
+CREATE TABLE
+NOTICE:  relation "dsh_admin_roles" already exists, skipping
+NOTICE:  relation "dsh_admin_staff_assignments" already exists, skipping
+CREATE TABLE
+CREATE INDEX
+NOTICE:  relation "idx_dsh_admin_staff_actor" already exists, skipping
+NOTICE:  relation "dsh_admin_partner_activations" already exists, skipping
+CREATE TABLE
+CREATE INDEX
+NOTICE:  relation "idx_dsh_admin_partner_status" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_admin_captain_credentials" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_admin_audit" already exists, skipping
+NOTICE:  relation "idx_dsh_admin_audit_actor" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_admin_audit_time" already exists, skipping
+  dsh-014_administration.sql: PASS
+  Applying: dsh-015_partner_lifecycle.sql
+NOTICE:  relation "dsh_partners" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "idx_dsh_partners_activation_status" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partners_created_at" already exists, skipping
+NOTICE:  column "partner_id" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+NOTICE:  relation "idx_dsh_stores_partner_id" already exists, skipping
+CREATE INDEX
+CREATE TABLE
+NOTICE:  relation "dsh_partner_documents" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partner_documents_partner_id" already exists, skipping
+NOTICE:  relation "idx_dsh_partner_documents_status" already exists, skipping
+CREATE INDEX
+CREATE TABLE
+NOTICE:  relation "dsh_partner_document_reviews" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partner_doc_reviews_document_id" already exists, skipping
+NOTICE:  relation "idx_dsh_partner_doc_reviews_partner_id" already exists, skipping
+CREATE INDEX
+CREATE TABLE
+NOTICE:  relation "dsh_partner_field_visits" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partner_field_visits_partner_id" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partner_field_visits_actor_id" already exists, skipping
+NOTICE:  relation "idx_dsh_partner_field_visits_status" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "dsh_partner_activation_events" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "idx_dsh_partner_activation_events_partner_id" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partner_activation_events_created_at" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "dsh_partner_store_visibility_events" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "idx_dsh_partner_store_vis_events_partner_id" already exists, skipping
+NOTICE:  relation "idx_dsh_partner_store_vis_events_store_id" already exists, skipping
+  dsh-015_partner_lifecycle.sql: PASS
+  Applying: dsh-016_field_partner_store_draft.sql
+NOTICE:  column "address_line" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "coverage_summary" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "operating_hours" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "delivery_readiness" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "storefront_photo_ref" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "interior_photo_ref" of relation "dsh_stores" already exists, skipping
+NOTICE:  column "signage_photo_ref" of relation "dsh_stores" already exists, skipping
+ALTER TABLE
+CREATE INDEX
+NOTICE:  relation "idx_dsh_stores_partner_draft_lookup" already exists, skipping
+  dsh-016_field_partner_store_draft.sql: PASS
+Migration: PASS
+
+--- Applying identity migrations ---
+  Applying: identity-001_sessions.sql
+CREATE TABLE
+NOTICE:  relation "identity_actors" already exists, skipping
+NOTICE:  relation "identity_sessions" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "identity_sessions_actor_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "identity_sessions_access_expiry_idx" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+NOTICE:  relation "identity_sessions_refresh_expiry_idx" already exists, skipping
+Identity migration: PASS
+EXIT[pnpm run runtime:migrate]=0
+===== pnpm run runtime:seed =====
+
+> bthwani-suite-next@0.0.0 runtime:seed C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action seed -Profiles dsh
+
+=== runtime:seed
+Waiting for Postgres (1/30)...
+ ?column? 
+----------
+        1
+(1 row)
+
+ ?column? 
+----------
+        1
+(1 row)
+
+Postgres: healthy
+Waiting for Identity API (1/20)...
+Identity API: healthy
+
+--- Identity API smoke ---
+Identity API smoke: PASS
+
+--- Applying DSH local seeds ---
+  Seeding: dsh-001_store_discovery.local.sql
+INSERT 0 6
+  dsh-001_store_discovery.local.sql: PASS
+  Seeding: dsh-001b_store_governance.local.sql
+INSERT 0 4
+  dsh-001b_store_governance.local.sql: PASS
+  Seeding: dsh-002_home_discovery.local.sql
+INSERT 0 2
+INSERT 0 2
+INSERT 0 5
+UPDATE 1
+UPDATE 8
+UPDATE 1
+UPDATE 1
+UPDATE 0
+  dsh-002_home_discovery.local.sql: PASS
+  Seeding: dsh-002_storefront_catalog.sql
+UPDATE 5
+UPDATE 1
+INSERT 0 5
+INSERT 0 6
+INSERT 0 5
+  dsh-002_storefront_catalog.sql: PASS
+  Seeding: dsh-015_partner_lifecycle.local.sql
+INSERT 0 1
+UPDATE 1
+INSERT 0 2
+INSERT 0 0
+INSERT 0 1
+INSERT 0 0
+  dsh-015_partner_lifecycle.local.sql: PASS
+Seed: PASS
+EXIT[pnpm run runtime:seed]=0
+===== pnpm run runtime:status =====
+
+> bthwani-suite-next@0.0.0 runtime:status C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles dsh,media
+
+=== runtime:status
+NAME                           IMAGE                                      COMMAND                  SERVICE        CREATED              STATUS                        PORTS
+bthwani-dsh-api-runtime        bthwani-runtime-dsh-api                    "/app/dsh-api"           dsh-api        About a minute ago   Up 50 seconds (healthy)       0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-identity-api-runtime   bthwani-runtime-identity-api               "/identity-api"          identity-api   About a minute ago   Up About a minute (healthy)   0.0.0.0:58082->8082/tcp, [::]:58082->8082/tcp
+bthwani-minio-runtime          minio/minio:RELEASE.2024-11-07T00-52-20Z   "/usr/bin/docker-ent…"   minio          About a minute ago   Up About a minute             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
+bthwani-postgres-runtime       postgres:16-alpine                         "docker-entrypoint.s…"   postgres       About a minute ago   Up About a minute (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-wlt-api-runtime        bthwani-runtime-wlt-api                    "/app/wlt-api"           wlt-api        47 hours ago         Up 10 hours (healthy)         0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp
+
+--- docker ps ---
+NAMES                          IMAGE                                      STATUS                        PORTS
+bthwani-dsh-api-runtime        bthwani-runtime-dsh-api                    Up 51 seconds (healthy)       0.0.0.0:58080->8080/tcp, [::]:58080->8080/tcp
+bthwani-identity-api-runtime   bthwani-runtime-identity-api               Up About a minute (healthy)   0.0.0.0:58082->8082/tcp, [::]:58082->8082/tcp
+bthwani-postgres-runtime       postgres:16-alpine                         Up About a minute (healthy)   0.0.0.0:55432->5432/tcp, [::]:55432->5432/tcp
+bthwani-minio-runtime          minio/minio:RELEASE.2024-11-07T00-52-20Z   Up About a minute             0.0.0.0:59000->9000/tcp, [::]:59000->9000/tcp, 0.0.0.0:59001->9001/tcp, [::]:59001->9001/tcp
+bthwani-wlt-api-runtime        bthwani-runtime-wlt-api                    Up 10 hours (healthy)         0.0.0.0:58083->8083/tcp, [::]:58083->8083/tcp
+EXIT[pnpm run runtime:status]=0
+===== pnpm run runtime:smoke =====
+
+> bthwani-suite-next@0.0.0 runtime:smoke C:\bthwani-suite-next
+> pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action smoke -Profiles dsh,media
+
+=== runtime:smoke (profiles: identity,dsh,media)
+Waiting for Postgres (1/30)...
+ ?column? 
+----------
+        1
+(1 row)
+
+ ?column? 
+----------
+        1
+(1 row)
+
+Postgres: healthy
+
+--- Applying identity migrations ---
+  Applying: identity-001_sessions.sql
+CREATE TABLE
+CREATE TABLE
+NOTICE:  relation "identity_actors" already exists, skipping
+NOTICE:  relation "identity_sessions" already exists, skipping
+NOTICE:  relation "identity_sessions_actor_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "identity_sessions_access_expiry_idx" already exists, skipping
+CREATE INDEX
+NOTICE:  relation "identity_sessions_refresh_expiry_idx" already exists, skipping
+CREATE INDEX
+Identity migration: PASS
+Waiting for Identity API (1/20)...
+Identity API: healthy
+
+--- Identity API smoke ---
+Identity API smoke: PASS
+
+--- Starting DSH API after identity readiness ---
+ Container bthwani-postgres-runtime Running 
+ Container bthwani-identity-api-runtime Running 
+ Container bthwani-dsh-api-runtime Running 
+ Container bthwani-postgres-runtime Waiting 
+ Container bthwani-postgres-runtime Healthy 
+ Container bthwani-postgres-runtime Waiting 
+ Container bthwani-identity-api-runtime Waiting 
+ Container bthwani-identity-api-runtime Healthy 
+ Container bthwani-postgres-runtime Healthy 
+Waiting for DSH API (1/20)...
+DSH API: healthy
+
+--- DSH API smoke ---
+  /dsh/health: {"service":"dsh","status":"healthy","checkedAt":"2026-07-02T02:39:29.766962462Z"}
+  /dsh/readiness: {"service":"dsh","status":"ready","dependencies":{"postgres":"ready"},"checkedAt":"2026-07-02T02:39:29.821396083Z"}
+  /dsh/stores: returned 5 stores
+  /dsh/stores/store-1001: أسواق حدة المركزية
+  Partner Onboarding & Store Publication partner lifecycle smoke: PASS
+  Checkout & WLT Handoff checkout handoff smoke skipped because wlt profile is not active.
+  /dsh/home-discovery: banners=2 promos=2 categories=5 filters=5 stores=5
+DSH API smoke: PASS
+
+--- MinIO smoke ---
+  /minio/health/live attempt 1/15
+  /minio/health/live: PASS
+  /minio/health/ready: PASS
+MinIO smoke: PASS
+smoke: PASS
+EXIT[pnpm run runtime:smoke]=0

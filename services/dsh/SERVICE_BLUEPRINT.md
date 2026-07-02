@@ -257,8 +257,8 @@ Runtime evidence is expected under capability-specific DSH evidence folders, inc
 - `services/dsh/evidence/Field Verification-field-readiness`
 - `services/dsh/evidence/Support-support-incidents`
 - `services/dsh/evidence/Analytics-analytics-finance-visibility`
-- `services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt`
-- `services/dsh/evidence/brach-validation-final-closure/dsh-015-runtime-smoke.txt`
+- `services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt`
+- `services/dsh/evidence/partner-onboarding-store-publication-final-closure/verification-output.md`
 
 ## Canonical Checks
 
@@ -274,7 +274,7 @@ pnpm run guard:no-broken-imports
 pnpm run guard:no-direct-fetch-in-screen
 pnpm run guard:no-financial-mutation-outside-wlt
 pnpm run guard:no-direct-financial-provider-access-outside-wlt
-pnpm run guard:no-legacy-journey-labels
+pnpm run guard:no-legacy-slice-labels
 pnpm run typecheck
 pnpm run build
 ```
@@ -283,5 +283,5 @@ pnpm run build
 
 - This file is documentation. The executable truth remains the contract, runtime map, service manifest, generated clients, backend handlers, database migrations, surfaces, and passing guard/runtime evidence.
 - Any future mismatch between this file and executable code must be treated as documentation drift and corrected immediately.
-- Evidence checklist verification SHA: 9b9ef50311f328a362c9fb1b02806ca887d89887
+- Evidence checklist verification SHA: 7ff5fc9b1bd1e9fa3ab46ed3cba7b990b1021dd3
 

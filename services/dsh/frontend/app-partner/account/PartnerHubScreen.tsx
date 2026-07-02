@@ -59,7 +59,6 @@ import {
 } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner_wlt_dsh_partner_ui_copy.facade';
 import type { DshPartnerRecord as DshCanonicalStoreCard } from '../../shared/partner/partner.types';
 import { mapPublishStageToPartnerActivationStatus, resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client-visibility.model';
-import { dshPromotionCandidates, type DshPromotionCandidate } from '../../shared/partner/partner.workflow';
 import { WltDshPartnerBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner.facade';
 import type { DshPartnerHubSurfaceProps, PartnerHubSection } from '../dsh-partner.types';
 import { getDshControlPanelGovernanceEntry, resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-control-panel-governance.map';
@@ -72,6 +71,7 @@ import {
   getDshPartnerActivationStateMetadata,
   getDshPartnerActivationStatusLabel,
   isDshPartnerActivationComplete,
+  isDshPartnerClientVisible,
 } from '../../shared/partner/partner-activation.model';
 import { usePartnerSelfController } from '../../shared/partner/use-partner-self-controller';
 import { useIdentitySession } from '@bthwani/core-identity';
@@ -323,202 +323,6 @@ const sectionCopy: Record<Exclude<PartnerHubSection, 'hub'>, { title: string; de
   },
 };
 
-type PromotionIntentState = 'ready' | 'empty' | 'pending' | 'blocked';
-
-function resolvePromotionIntentStateMeta(state: PromotionIntentState) {
-  if (state === 'pending') {
-    return {
-      stateId: 'empty' as const,
-      title: 'طلب الترويج قيد المراجعة',
-      description: 'النية الترويجية مسجلة محليًا وتنتظر مواءمة التسويق أو الشريك.',
-      actionLabel: 'تحديث النية',
-    };
-  }
-
-  if (state === 'blocked') {
-    return {
-      stateId: 'blockingError' as const,
-      title: 'لا يمكن إعداد النية الآن',
-      description: 'العنصر المختار غير جاهز للترويج أو يحتاج معالجة قبل الإرسال.',
-      actionLabel: 'مراجعة الجاهزية',
-    };
-  }
-
-  if (state === 'empty') {
-    return {
-      stateId: 'empty' as const,
-      title: 'لا توجد عناصر قابلة للترويج',
-      description: 'أضف منتجًا أو متجرًا مناسبًا ثم أعد فتح المسار الترويجي.',
-      actionLabel: 'اختيار عنصر',
-    };
-  }
-
-  return {
-    stateId: 'loading' as const,
-    title: 'مسار الترويج قيد التحضير',
-    description: 'نجهز مساحة الشريك لالتقاط نية الترويج قبل تسليمها للتسويق.',
-    actionLabel: 'فتح المسار',
-  };
-}
-
-function PromotionCandidateRow({
-  item,
-  selected,
-  onPress,
-}: {
-  item: DshPromotionCandidate;
-  selected: boolean;
-  onPress: () => void;
-}) {
-
-  const { direction } = useDirection();
-  const tone = item.eligibility === 'eligible' ? 'success' : item.eligibility === 'review' ? 'warning' : 'danger';
-
-  const statusLabel =
-    item.status === 'draft' ? 'مسودة' :
-    item.status === 'partner-review' ? 'قيد الإرسال' :
-    item.status === 'marketing-ready' ? 'معتمد ومؤهل' :
-    'مرفوض';
-
-  const statusTone =
-    item.status === 'marketing-ready' ? 'success' :
-    item.status === 'partner-review' ? 'warning' :
-    item.status === 'marketing-rejected' ? 'danger' :
-    'default';
-
-  return (
-    <Pressable onPress={onPress}>
-      <Box
-        padding={3}
-        gap={2}
-        background={selected ? 'surfaceRaised' : 'surface'}
-        radiusToken="md"
-        elevationToken={selected ? 'raised' : 'flat'}
-        border={false}
-        style={{
-          borderStartWidth: 4,
-          borderStartColor: selected ? theme.brand : 'transparent',
-        }}
-      >
-        <Box gap={1}>
-          <Text role="bodyStrong" align="start">{item.title}</Text>
-          <Text role="bodySm" tone="muted" align="start">{item.subtitle}</Text>
-        </Box>
-
-        <Box gap={1}>
-          <Text role="caption" tone="muted" align="start">{item.availability}</Text>
-          <Text role="caption" tone="muted" align="start">{item.offerHint}</Text>
-        </Box>
-
-        <Box layoutDirection="row" style={{ flexWrap: 'wrap' }} gap={2}>
-          <Chip label={item.kind === 'product' ? 'منتج' : 'متجر'} selected />
-          <Chip label={item.eligibility === 'eligible' ? 'مؤهل' : item.eligibility === 'review' ? 'تحت المراجعة' : 'محجوب'} />
-          <Chip label={statusLabel} />
-        </Box>
-
-        <Button label={selected ? 'العنصر مفتوح' : 'اختيار العنصر'} tone={selected ? 'secondary' : 'ghost'} fullWidth={false} onPress={onPress} />
-      </Box>
-    </Pressable>
-  );
-}
-
-function PromotionIntentPanel({
-  storeName,
-  branchLabel,
-  activeZoneLabel,
-  todayHoursLabel,
-}: {
-  storeName: string;
-  branchLabel: string;
-  activeZoneLabel: string;
-  todayHoursLabel: string;
-}) {
-  const { direction } = useDirection();
-  const [selectedId, setSelectedId] = React.useState<string>(dshPromotionCandidates[0]?.id ?? '');
-  const [offerTitle, setOfferTitle] = React.useState('عرض نهاية الأسبوع');
-  const [offerNote, setOfferNote] = React.useState('خصم قصير على المنتجات الأعلى طلبًا مع إبراز واضح.');
-  const [actionMessage, setActionMessage] = React.useState('النية الترويجية محلية حتى يتم تسليمها للتسويق.');
-
-  const selectedItem = dshPromotionCandidates.find((item) => item.id === selectedId) ?? dshPromotionCandidates[0];
-
-  const statusLabel =
-    selectedItem?.status === 'draft' ? 'مسودة' :
-    selectedItem?.status === 'partner-review' ? 'قيد الإرسال' :
-    selectedItem?.status === 'marketing-ready' ? 'معتمد ومؤهل' :
-    'مرفوض';
-  const statusTone =
-    selectedItem?.status === 'marketing-ready' ? 'success' :
-    selectedItem?.status === 'partner-review' ? 'warning' :
-    selectedItem?.status === 'marketing-rejected' ? 'danger' :
-    'default';
-
-  return (
-    <Box gap={4}>
-      <Box gap={3} paddingY={2}>
-        <Text role="label" tone="muted">نية الترويج من الشريك</Text>
-        <Text role="titleSm">اختر منتجًا أو متجرًا قابلًا للترويج ثم جهّز الطلب للتسويق</Text>
-        <Text role="bodySm" tone="muted">
-          هذه الشاشة تلتقط نية الترويج فقط: اختيار العنصر، وصف العرض، وتحديد حالة الإرسال.
-        </Text>
-
-        <Box layoutDirection="row" style={{ flexWrap: 'wrap' }} gap={2}>
-          <Chip label={storeName} />
-          <Chip label={branchLabel} />
-          <Chip label={activeZoneLabel} />
-          <Chip label={todayHoursLabel} />
-        </Box>
-      </Box>
-
-      <Divider />
-
-      <Box gap={3} paddingY={2}>
-        <Text role="titleSm">العناصر القابلة للترويج</Text>
-        <Box gap={2}>
-          {dshPromotionCandidates.map((item) => (
-            <PromotionCandidateRow key={item.id} item={item} selected={item.id === selectedItem?.id} onPress={() => setSelectedId(item.id)} />
-          ))}
-        </Box>
-      </Box>
-
-      <Divider />
-
-      <Box gap={3} paddingY={2}>
-        <Text role="titleSm">تفاصيل نية الترويج</Text>
-        <KeyValueList
-          dense
-          items={[
-            { label: 'العنصر المختار', value: selectedItem?.title ?? 'غير محدد' },
-            { label: 'النوع', value: selectedItem?.kind === 'store' ? 'متجر' : 'منتج', tone: 'brand' },
-            { label: 'الأهلية', value: selectedItem?.eligibility === 'eligible' ? 'مؤهل' : selectedItem?.eligibility === 'review' ? 'تحت المراجعة' : 'محجوب', tone: selectedItem?.eligibility === 'eligible' ? 'success' : selectedItem?.eligibility === 'review' ? 'warning' : 'danger' },
-            { label: 'الحالة', value: statusLabel, tone: statusTone },
-          ]}
-        />
-
-        <Box gap={2}>
-          <TextField label="عنوان العرض" value={offerTitle} onChangeText={setOfferTitle} placeholder="عنوان العرض" />
-          <TextField label="ملاحظات النية" value={offerNote} onChangeText={setOfferNote} placeholder="وصف مختصر للعرض أو سبب الترويج" multiline />
-        </Box>
-
-        <Box padding={3} gap={2} style={{ backgroundColor: colorPalette.line + '11', borderRadius: radius.sm2 }}>
-          <Text role="bodyStrong">آخر رسالة</Text>
-          <Text role="bodySm" tone="muted">{actionMessage}</Text>
-        </Box>
-
-        <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap' }}>
-          <Button label="تأكيد نية الترويج" tone="primary" fullWidth={false} onPress={() => setActionMessage(`تم إرسال النية: ${offerTitle}`)} />
-          <Button label="طلب إبراز في الرئيسية" tone="secondary" fullWidth={false} onPress={() => setActionMessage(`طلب إبراز: ${selectedItem?.title ?? 'غير محدد'}`)} />
-          <Button label="تمييز المنتج" tone="ghost" fullWidth={false} onPress={() => setActionMessage(`تم وضع العنصر ضمن قائمة الترويج: ${selectedItem?.title ?? 'غير محدد'}`)} />
-        </Box>
-      </Box>
-
-      <MobileStickyPrimaryAction
-        label="إرسال طلب الترويج"
-        helperText="النية الترويجية محلية وتذهب للمراجعة فور إرسالها."
-        onPress={() => setActionMessage(`تم إرسال النية: ${offerTitle}`)}
-      />
-    </Box>
-  );
-}
 
 function SummaryCell({ label, value, tone = 'default' }: Omit<SummaryItem, 'id'>) {
 
@@ -946,7 +750,6 @@ function OperationsPanel({
   const teamMembers = runtimePartnerTeamMembers;
   const coverageZones = runtimePartnerCoverageZones;
   const [selectedModeId, setSelectedModeId] = React.useState<PartnerOperationalMode['id'] | ''>('pickup');
-  const [modeOverrides, setModeOverrides] = React.useState<Partial<Record<PartnerOperationalMode['id'], boolean>>>({});
   const [teamPanelOpen, setTeamPanelOpen] = React.useState(false);
   const [coveragePanelOpen, setCoveragePanelOpen] = React.useState(false);
   const [selectedMemberId, setSelectedMemberId] = React.useState<string>(teamMembers.find((member) => member.role === 'supervisor')?.id ?? teamMembers[0]?.id ?? '');
@@ -958,9 +761,9 @@ function OperationsPanel({
     () =>
       defaultOperationalModes.map((mode) => ({
         ...mode,
-        enabled: modeOverrides[mode.id] ?? resolveServiceModeEnabled(serviceModes, mode.id, mode.enabled),
+        enabled: resolveServiceModeEnabled(serviceModes, mode.id, mode.enabled),
       })),
-    [modeOverrides, serviceModes],
+    [serviceModes],
   );
 
   const activeModesCount = resolvedModes.filter((mode) => mode.enabled).length;
@@ -1100,19 +903,10 @@ function OperationsPanel({
                     <Text role="caption" tone="muted" align="start">
                       حالة الوضع: {mode.enabled ? 'نشط ويستقبل الطلبات' : 'موقف مؤقتًا'}.
                     </Text>
-                    <Box layoutDirection="row" style={{ gap: spacing[2] }}>
-                      <Button
-                        label={mode.enabled ? 'إيقاف الوضع' : 'تفعيل الوضع'}
-                        tone="secondary"
-                        size="sm"
-                        fullWidth={false}
-                        onPress={() => {
-                          setModeOverrides((current) => ({
-                            ...current,
-                            [mode.id]: !mode.enabled,
-                          }));
-                        }}
-                      />
+                    <Box layoutDirection="row" style={{ gap: spacing[2], alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Text role="caption" tone="muted" align="start">
+                        تفعيل وإيقاف أوضاع الخدمة يُدار من لوحة التحكم ضمن بوابات النشر.
+                      </Text>
                       {mode.id === 'partner_delivery' && onOpenStoreCourierSetup ? (
                         <Button
                           label="إعداد موصل المتجر"
@@ -1547,21 +1341,19 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
           <Text role="bodyStrong" tone="action">توصية ذكية</Text>
         </View>
         <Text role="bodySm" align="start">{d.smartRecommendation}</Text>
-        <Button
-          label="فعّل العرض"
-          tone="primary"
-          fullWidth={false}
-          onPress={() => {/* promotion intent — UI only, no backend */}}
-        />
       </Box>
 
-      {/* Promotion intent panel below */}
-      <PromotionIntentPanel
-        storeName={storeName}
-        branchLabel="اليرموك · الرياض"
-        activeZoneLabel="اليرموك"
-        todayHoursLabel="09:00 - 23:00"
-      />
+      {/* Promotion and marketing decisions are operator-owned (control-panel marketing
+          section over runtime APIs). No local promotion action is exposed here. */}
+      <Box padding={3} gap={2} background="surfaceRaised" radiusToken="md" border={false}>
+        <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
+          <Icon name="megaphone-outline" size={18} tone="muted" />
+          <Text role="bodyStrong" tone="muted">الترويج والعروض</Text>
+        </View>
+        <Text role="bodySm" tone="muted" align="start">
+          تُدار الحملات والعروض الترويجية من فريق التسويق عبر لوحة التحكم. لا توجد إجراءات ترويج محلية من تطبيق الشريك.
+        </Text>
+      </Box>
     </Box>
   );
 }
@@ -1634,6 +1426,15 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const resolvedActivationStatus = selfStatusState.kind === 'success'
     ? selfStatusState.partner.activationStatus
     : mapPublishStageToPartnerActivationStatus(activeCanonicalStore?.publishStage);
+  // Publication gate split (shared model owns the decision, this surface renders it):
+  // partner_active/client_hidden = internally active, NOT client-facing yet.
+  // client_visible = full operational surfaces tied to client exposure.
+  const isClientVisibleStage = isDshPartnerClientVisible(resolvedActivationStatus);
+  const isInternalActiveOnly =
+    identity.state.kind === 'authenticated' &&
+    selfStatusState.kind === 'success' &&
+    isDshPartnerActivationComplete(resolvedActivationStatus) &&
+    !isClientVisibleStage;
   const _storeMediaId = activeCanonicalStore?.id ?? canonicalStoreId;
   const resolvedActiveZoneLabel = activeCanonicalStore?.zoneLabel ?? activeZoneLabel;
 
@@ -1828,6 +1629,18 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     }
 
     if (activeSection === 'analytics') {
+      // Growth/marketing surfaces imply client exposure — locked until client_visible.
+      if (isInternalActiveOnly) {
+        return (
+          <HubSectionShell title={sectionCopy.analytics.title} description={sectionCopy.analytics.description} icon={sectionCopy.analytics.icon} onBack={() => updateSection('hub')}>
+            <StateView
+              tone="warning"
+              title="التحليلات والتسويق غير متاحة قبل الظهور للعملاء"
+              description="الشريك نشط داخليًا، المتجر غير ظاهر للعملاء حتى اكتمال بوابات النشر. تُفتح مؤشرات النمو والتسويق بعد تفعيل الظهور من لوحة التحكم."
+            />
+          </HubSectionShell>
+        );
+      }
       return (
         <HubSectionShell title={sectionCopy.analytics.title} description={sectionCopy.analytics.description} icon={sectionCopy.analytics.icon} onBack={() => updateSection('hub')}>
           <AnalyticsInsightsPanel storeName={resolvedStoreName} />
@@ -2318,6 +2131,23 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
         </Box>
 
         <Box padding={4} gap={4}>
+          {isInternalActiveOnly ? (
+            <Surface
+              style={{
+                padding: spacing[3],
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: theme.warning,
+              }}
+            >
+              <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
+                <Icon name="eye-off-outline" size={18} tone="warning" />
+                <Text role="bodyStrong" tone="warning" style={{ flex: 1, textAlign: direction === 'rtl' ? 'right' : 'left' }}>
+                  الشريك نشط داخليًا، المتجر غير ظاهر للعملاء حتى اكتمال بوابات النشر
+                </Text>
+              </View>
+            </Surface>
+          ) : null}
           {/* 1) Wallet Balance Block */}
           <Box gap={2} paddingY={2}>
             <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center' }}>
