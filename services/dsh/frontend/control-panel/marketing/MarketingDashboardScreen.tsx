@@ -1,6 +1,6 @@
 "use client";
 import { colorRoles } from '@bthwani/ui-kit';
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   CpButton,
   CpFilterBar,
@@ -23,8 +23,8 @@ import {
   GOVERNANCE_BRIDGES,
   PARTNER_GATE_CARDS,
   PRODUCT_GATE_CARDS,
-  DELIVERY_SIGNAL_CARDS,
-  buildMarketingKpiMetrics,
+  useMarketingKpiMetricsController,
+  useMarketingDeliverySignalsController,
   type MarketingMainTabId,
   type MarketingSectionTabId,
 } from "../../shared/marketing";
@@ -115,12 +115,8 @@ export function MarketingDashboardScreen() {
 
   const [mainTab, setMainTab] = useState<MarketingMainTabId>("visibility-gates");
   const [sectionTab, setSectionTab] = useState<MarketingSectionTabId>("eligibility");
-  // PENDING_GOVERNANCE_API: no governance API exists for gate bypass — this only flips local
-  // component state (see PARTNER_GATE_CARDS/PRODUCT_GATE_CARDS render below, which
-  // now labels the result "تجاوز محلي فقط" instead of falsely claiming success).
-  const [bypassedGates, setBypassedGates] = useState<Set<string>>(new Set());
-
-  const metrics = useMemo(() => buildMarketingKpiMetrics(), []);
+  const { metrics } = useMarketingKpiMetricsController();
+  const deliverySignals = useMarketingDeliverySignalsController();
 
   // ── Auth gate ────────────────────────────────────────────────────────────
   if (identity.state.kind !== "authenticated") {
@@ -164,10 +160,10 @@ export function MarketingDashboardScreen() {
 
           {/* ── KPI Strip ─────────────────────────────────────────────── */}
           <CpKpiStrip>
-            <CpKpiCard label="بوابات الشركاء"    value={metrics.partnerGatesActive} />
-            <CpKpiCard label="منتجات محجوبة"    value={metrics.blockedProductsActive} />
-            <CpKpiCard label="ظهور تجاري"       value={`${metrics.commercialVisibilityBlocked} محجوب حالياً`} />
-            <CpKpiCard label="إشارات غير مقروءة" value={`${metrics.unreadSignalsCount} (${metrics.promoCandidatesCount} مرشحين ترويج)`} />
+            <CpKpiCard label="متاجر نشطة"      value={metrics.activeStoresRatio} />
+            <CpKpiCard label="طلبات مكتملة"    value={metrics.deliveredOrders.toLocaleString("ar")} />
+            <CpKpiCard label="تذاكر مفتوحة"    value={metrics.openTickets.toLocaleString("ar")} />
+            <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
           </CpKpiStrip>
           {!metrics.isBackedByApi && (
             <p role="status" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: opsTheme.warning, opacity: 0.85 }}>
@@ -330,7 +326,7 @@ export function MarketingDashboardScreen() {
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {PARTNER_GATE_CARDS.map((card) => {
-                  const isBypassed = bypassedGates.has(card.id);
+                  const isBypassed = false;
                   return (
                     <div
                       key={card.id}
@@ -357,7 +353,7 @@ export function MarketingDashboardScreen() {
                             fontSize: "0.72rem",
                           }}
                         >
-                          {isBypassed ? "تجاوز محلي فقط — لم يُنفَّذ فعلياً" : card.statusTag}
+                          {card.statusTag}
                         </span>
                       </div>
 
@@ -375,21 +371,19 @@ export function MarketingDashboardScreen() {
                         <CpButton style={{ fontSize: "0.75rem", padding: "0.35rem 0.85rem" }}>
                           {card.primaryActionLabel}
                         </CpButton>
-                        {!isBypassed && (
-                          <CpButton
-                            onClick={() => setBypassedGates((prev) => new Set([...prev, card.id]))}
-                            style={{
-                              fontSize: "0.75rem",
-                              padding: "0.35rem 0.85rem",
-                              background: colorRoles.surfaceBase,
-                              color: `var(--status-success-strong, ${colorRoles.brandStructure})`,
-                              border: `1px solid ${colorRoles.surfaceBase}`,
-                              borderRadius: "0.5rem",
-                            }}
-                          >
-                            تجاوز البوابة
-                          </CpButton>
-                        )}
+                        <CpButton
+                          disabled
+                          style={{
+                            fontSize: "0.75rem",
+                            padding: "0.35rem 0.85rem",
+                            background: colorRoles.surfaceBase,
+                            color: `var(--status-success-strong, ${colorRoles.brandStructure})`,
+                            border: `1px solid ${colorRoles.surfaceBase}`,
+                            borderRadius: "0.5rem",
+                          }}
+                        >
+                          التجاوز غير مفعّل
+                        </CpButton>
                       </div>
                     </div>
                   );
@@ -404,7 +398,7 @@ export function MarketingDashboardScreen() {
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {PRODUCT_GATE_CARDS.map((card) => {
-                  const isBypassed = bypassedGates.has(card.id);
+                  const isBypassed = false;
                   return (
                     <div
                       key={card.id}
@@ -431,7 +425,7 @@ export function MarketingDashboardScreen() {
                             fontSize: "0.72rem",
                           }}
                         >
-                          {isBypassed ? "تجاوز محلي فقط — لم يُنفَّذ فعلياً" : card.statusTag}
+                          {card.statusTag}
                         </span>
                       </div>
 
@@ -445,21 +439,19 @@ export function MarketingDashboardScreen() {
                         <CpButton style={{ fontSize: "0.75rem", padding: "0.35rem 0.85rem" }}>
                           {card.primaryActionLabel}
                         </CpButton>
-                        {!isBypassed && (
-                          <CpButton
-                            onClick={() => setBypassedGates((prev) => new Set([...prev, card.id]))}
-                            style={{
-                              fontSize: "0.75rem",
-                              padding: "0.35rem 0.85rem",
-                              background: colorRoles.surfaceBase,
-                              color: `var(--status-success-strong, ${colorRoles.brandStructure})`,
-                              border: `1px solid ${colorRoles.surfaceBase}`,
-                              borderRadius: "0.5rem",
-                            }}
-                          >
-                            تجاوز الموانع
-                          </CpButton>
-                        )}
+                        <CpButton
+                          disabled
+                          style={{
+                            fontSize: "0.75rem",
+                            padding: "0.35rem 0.85rem",
+                            background: colorRoles.surfaceBase,
+                            color: `var(--status-success-strong, ${colorRoles.brandStructure})`,
+                            border: `1px solid ${colorRoles.surfaceBase}`,
+                            borderRadius: "0.5rem",
+                          }}
+                        >
+                          التجاوز غير مفعّل
+                        </CpButton>
                       </div>
                     </div>
                   );
@@ -484,16 +476,16 @@ export function MarketingDashboardScreen() {
               </h4>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-                  <span style={{ opacity: 0.7 }}>بوابات الشركاء:</span>
-                  <strong style={{ color: opsTheme.brand }}>{metrics.partnerGatesActive} مسارات نشطة</strong>
+                  <span style={{ opacity: 0.7 }}>المتاجر النشطة:</span>
+                  <strong style={{ color: opsTheme.brand }}>{metrics.activeStoresRatio}</strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-                  <span style={{ opacity: 0.7 }}>منتجات محجوبة:</span>
-                  <strong>{metrics.blockedProductsActive} موانع نشطة</strong>
+                  <span style={{ opacity: 0.7 }}>طلبات مكتملة:</span>
+                  <strong>{metrics.deliveredOrders.toLocaleString("ar")}</strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-                  <span style={{ opacity: 0.7 }}>ظهور تجاري:</span>
-                  <strong style={{ color: `var(--status-success-strong, ${colorRoles.brandStructure})` }}>{metrics.commercialVisibilityBlocked} محجوب حالياً</strong>
+                  <span style={{ opacity: 0.7 }}>تصعيدات مفتوحة:</span>
+                  <strong style={{ color: `var(--status-success-strong, ${colorRoles.brandStructure})` }}>{metrics.openEscalations.toLocaleString("ar")}</strong>
                 </div>
               </div>
             </div>
@@ -510,8 +502,16 @@ export function MarketingDashboardScreen() {
               <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.9rem", fontWeight: 700 }}>
                 إشارات التسليم إلى التسويق
               </h4>
+              {deliverySignals.errorMessage && (
+                <p role="status" style={{ margin: "0 0 0.75rem", fontSize: "0.75rem", color: opsTheme.warning, opacity: 0.85 }}>
+                  {deliverySignals.errorMessage}
+                </p>
+              )}
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {DELIVERY_SIGNAL_CARDS.map((signal) => (
+                {deliverySignals.items.length === 0 && !deliverySignals.errorMessage && (
+                  <CpEmptyTableMessage>لا توجد إشارات دعم تشغيلية حالياً.</CpEmptyTableMessage>
+                )}
+                {deliverySignals.items.map((signal) => (
                   <div
                     key={signal.id}
                     style={{

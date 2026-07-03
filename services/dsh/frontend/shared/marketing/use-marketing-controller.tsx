@@ -3,7 +3,21 @@ import {
   fetchCampaigns, createCampaign, updateCampaign, archiveCampaign,
   fetchTickers, createTicker, updateTicker, deleteTicker,
 } from "./marketing.api";
+import type { MarketingTickerWritePayload } from "./marketing.api";
+import {
+  fetchDeliveryAnalytics,
+  fetchOrderAnalytics,
+  fetchPlatformKpis,
+  fetchStoreAnalytics,
+  fetchSupportAnalytics,
+} from "../analytics/analytics.api";
 import type { DshCampaign, DshMarketingState } from "./marketing.types";
+import {
+  buildDeliverySignalCards,
+  buildMarketingKpiMetrics,
+  type DeliverySignalCardViewModel,
+  type MarketingKpiMetrics,
+} from "./marketing-registry";
 import type {
   MarketingNewsTickerItem,
   MarketingNewsTickerAudience,
@@ -200,7 +214,7 @@ export function useTickersController(authKind: string) {
     setDraft(item === null ? createMarketingTickerDraft() : { ...item });
   }, []);
 
-  const toWritePayload = (input: MarketingNewsTickerItem) => ({
+  const toWritePayload = (input: MarketingNewsTickerItem): MarketingTickerWritePayload & { message: string } => ({
     message: input.message,
     kind: input.kind,
     status: input.status,
@@ -211,10 +225,10 @@ export function useTickersController(authKind: string) {
     pinned: input.pinned,
     actionType: input.actionType,
     actionTarget: input.actionTarget,
-    openHour: input.openHour,
-    closeHour: input.closeHour,
-    cooldownMinutes: input.cooldownMinutes,
-    repeatGapMinutes: input.repeatGapMinutes,
+    ...(input.openHour !== undefined ? { openHour: input.openHour } : {}),
+    ...(input.closeHour !== undefined ? { closeHour: input.closeHour } : {}),
+    ...(input.cooldownMinutes !== undefined ? { cooldownMinutes: input.cooldownMinutes } : {}),
+    ...(input.repeatGapMinutes !== undefined ? { repeatGapMinutes: input.repeatGapMinutes } : {}),
   });
 
   const save = useCallback(async (input: MarketingNewsTickerItem) => {
@@ -288,33 +302,17 @@ export function useVideosController(authKind: string) {
   }, []);
 
   const save = useCallback((input: MarketingVideoRecord) => {
-    const normalized = { ...input };
-    if (normalized.id.startsWith("vid-temp-")) {
-      normalized.id = `vid-${Date.now()}`;
-    }
-    setItems(prev => {
-      const idx = prev.findIndex(v => v.id === normalized.id);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = normalized;
-        return next;
-      }
-      return [...prev, normalized];
-    });
+    void input;
     select(null);
   }, [select]);
 
   const remove = useCallback((id: string) => {
-    setItems(prev => prev.filter(v => v.id !== id));
-    if (selected?.id === id) select(null);
-  }, [selected, select]);
+    void id;
+    select(null);
+  }, [select]);
 
   const toggleStatus = useCallback((id: string) => {
-    setItems(prev => prev.map(v => {
-      if (v.id !== id) return v;
-      const nextStatus: MarketingVideoStatus = v.status === "published" ? "paused" : "published";
-      return { ...v, status: nextStatus };
-    }));
+    void id;
   }, []);
 
   // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for videos yet.
@@ -322,7 +320,7 @@ export function useVideosController(authKind: string) {
     items, selected, draft, setDraft, select, save, remove, toggleStatus,
     reload: () => {},
     isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لاستوديو الفيديو حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لاستوديو الفيديو حتى الآن — أوامر التعديل غير مفعّلة.",
   };
 }
 
@@ -337,44 +335,28 @@ export function usePartnerOffersController(authKind: string) {
   }, []);
 
   const save = useCallback((input: PartnerOfferRecord) => {
-    const normalized = { ...input };
-    if (normalized.id.startsWith("off-temp-")) {
-      normalized.id = `off-${Date.now()}`;
-    }
-    setItems(prev => {
-      const idx = prev.findIndex(o => o.id === normalized.id);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = normalized;
-        return next;
-      }
-      return [...prev, normalized];
-    });
+    void input;
     select(null);
   }, [select]);
 
   const remove = useCallback((id: string) => {
-    setItems(prev => prev.filter(o => o.id !== id));
-    if (selected?.id === id) select(null);
-  }, [selected, select]);
+    void id;
+    select(null);
+  }, [select]);
 
   const toggleStatus = useCallback((id: string) => {
-    setItems(prev => prev.map(o => {
-      if (o.id !== id) return o;
-      const nextStatus: PartnerOfferStatus = o.status === "published" ? "paused" : "published";
-      return { ...o, status: nextStatus };
-    }));
+    void id;
   }, []);
 
   // FIX_REQUIRED: no dsh_partner_offers backend table/handler exists yet — see
   // marketing_partner_offer_matrix.md. Partner-side submission already correctly
   // targets a review queue (not self-publish); the operator review side here is
-  // still local-state only.
+  // still fail-closed until a backend-backed review lifecycle exists.
   return {
     items, selected, draft, setDraft, select, save, remove, toggleStatus,
     reload: () => {},
     isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعروض الشركاء حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعروض الشركاء حتى الآن — أوامر التعديل غير مفعّلة.",
   };
 }
 
@@ -389,33 +371,17 @@ export function useGrowthController(authKind: string) {
   }, []);
 
   const save = useCallback((input: MarketingGrowthRecord) => {
-    const normalized = { ...input };
-    if (normalized.id.startsWith("grow-temp-")) {
-      normalized.id = `grow-${Date.now()}`;
-    }
-    setItems(prev => {
-      const idx = prev.findIndex(g => g.id === normalized.id);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = normalized;
-        return next;
-      }
-      return [...prev, normalized];
-    });
+    void input;
     select(null);
   }, [select]);
 
   const remove = useCallback((id: string) => {
-    setItems(prev => prev.filter(g => g.id !== id));
-    if (selected?.id === id) select(null);
-  }, [selected, select]);
+    void id;
+    select(null);
+  }, [select]);
 
   const toggleStatus = useCallback((id: string) => {
-    setItems(prev => prev.map(g => {
-      if (g.id !== id) return g;
-      const nextStatus: MarketingGrowthStatus = g.status === "published" ? "paused" : "published";
-      return { ...g, status: nextStatus };
-    }));
+    void id;
   }, []);
 
   // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for growth items yet.
@@ -423,50 +389,76 @@ export function useGrowthController(authKind: string) {
     items, selected, draft, setDraft, select, save, remove, toggleStatus,
     reload: () => {},
     isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعناصر النمو حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعناصر النمو حتى الآن — أوامر التعديل غير مفعّلة.",
   };
 }
 
 export function useLoyaltyController() {
-  const [pointMultiplier, setPointMultiplier] = useState(1.5);
-  const [tiers, setTiers] = useState([
-    { name: "برونزي", minimumPoints: 0, multiplier: 1.0 },
-    { name: "فضي", minimumPoints: 500, multiplier: 1.2 },
-    { name: "ذهبي", minimumPoints: 1500, multiplier: 1.5 },
-  ]);
+  const pointMultiplier = 0;
+  const tiers: ReadonlyArray<{ readonly name: string; readonly minimumPoints: number; readonly multiplier: number }> = [];
 
   const updateMultiplier = useCallback((val: number) => {
-    setPointMultiplier(val);
+    void val;
   }, []);
 
   const updateTierPoints = useCallback((name: string, points: number) => {
-    setTiers(prev => prev.map(t => t.name === name ? { ...t, minimumPoints: points } : t));
+    void name;
+    void points;
   }, []);
 
-  // FIX_REQUIRED: no dsh_marketing_* / loyalty backend table exists — this whole
-  // controller is a local-state simulation with hardcoded default tiers.
+  // FIX_REQUIRED: no dsh_marketing_* / loyalty backend table exists.
   return {
     pointMultiplier, tiers, updateMultiplier, updateTierPoints,
     isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لبرنامج الولاء حتى الآن — القيم هنا افتراضية ومحلية ولا تُحفظ.",
+    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لبرنامج الولاء حتى الآن — أوامر التعديل غير مفعّلة.",
   };
 }
 
 export type OperationalMetrics = {
-  readonly averageRating: string;
-  readonly ratedOrdersCount: string;
-  readonly onTimeDeliveryRate: string;
-  readonly delayedOrdersCount: string;
+  readonly completedOrdersRate: string;
+  readonly totalOrders: string;
+  readonly deliveryCompletionRate: string;
+  readonly declinedAssignments: string;
 };
 
 export function useVisibilityGatesController() {
   const [bypassedGates, setBypassedGates] = useState<Set<string>>(new Set());
-  const metrics = useMemo<OperationalMetrics>(() => ({
-    averageRating: "4.85★",
-    ratedOrdersCount: "2,450 طلب",
-    onTimeDeliveryRate: "94.2%",
-    delayedOrdersCount: "2 طلب",
-  }), []);
+  const [metrics, setMetrics] = useState<OperationalMetrics>({
+    completedOrdersRate: "0%",
+    totalOrders: "0 طلب",
+    deliveryCompletionRate: "0%",
+    declinedAssignments: "0 رفض",
+  });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [orders, delivery] = await Promise.all([
+        fetchOrderAnalytics("today"),
+        fetchDeliveryAnalytics("today"),
+      ]);
+      const deliveredOrders = orders.byStatus.find(item => item.status === "delivered")?.count ?? 0;
+      const completedOrdersRate = orders.totalOrders > 0
+        ? `${Math.round((deliveredOrders / orders.totalOrders) * 100)}%`
+        : "0%";
+      const deliveryCompletionRate = delivery.acceptedAssignments > 0
+        ? `${Math.round((delivery.completedAssignments / delivery.acceptedAssignments) * 100)}%`
+        : "0%";
+      setMetrics({
+        completedOrdersRate,
+        totalOrders: `${orders.totalOrders.toLocaleString("ar")} طلب`,
+        deliveryCompletionRate,
+        declinedAssignments: `${delivery.declinedAssignments.toLocaleString("ar")} رفض`,
+      });
+      setErrorMessage(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const toggleBypass = useCallback((gateId: string) => {
     setBypassedGates(prev => {
@@ -477,14 +469,65 @@ export function useVisibilityGatesController() {
     });
   }, []);
 
-  // FIX_REQUIRED: `metrics` are hardcoded placeholder numbers, not runtime data
-  // (no delivery/rating backend query is wired here). toggleBypass is a local-only
-  // UI toggle and does not call any governance API.
   return {
     bypassedGates, toggleBypass, metrics,
-    isBackedByApi: false,
-    persistenceDisabledReason: "المقاييس هنا ثابتة (placeholder) وبوابة التجاوز محلية فقط — لا يوجد تكامل خلفي حتى الآن.",
+    reload: load,
+    errorMessage,
+    isBackedByApi: true as const,
   };
+}
+
+export function useMarketingKpiMetricsController() {
+  const [metrics, setMetrics] = useState<MarketingKpiMetrics>(() => buildMarketingKpiMetrics());
+
+  const load = useCallback(async () => {
+    try {
+      const [platform, stores] = await Promise.all([
+        fetchPlatformKpis("today"),
+        fetchStoreAnalytics(),
+      ]);
+      setMetrics({
+        activeStoresRatio: `${stores.activeStores.toLocaleString("ar")}/${stores.totalStores.toLocaleString("ar")}`,
+        deliveredOrders: platform.deliveredOrders,
+        openTickets: platform.openTickets,
+        openEscalations: platform.openEscalations,
+        isBackedByApi: true,
+      });
+    } catch (err) {
+      setMetrics({
+        ...buildMarketingKpiMetrics(),
+        disclosureReason: resolveMsg(err),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { metrics, reload: load };
+}
+
+export function useMarketingDeliverySignalsController() {
+  const [items, setItems] = useState<readonly DeliverySignalCardViewModel[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const support = await fetchSupportAnalytics("today");
+      setItems(buildDeliverySignalCards(support));
+      setErrorMessage(null);
+    } catch (err) {
+      setItems([]);
+      setErrorMessage(resolveMsg(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { items, reload: load, errorMessage };
 }
 
 export type CatalogReviewItem = {
@@ -506,11 +549,11 @@ export function useCatalogReviewController() {
   }, [load]);
 
   const approveImage = useCallback((id: string) => {
-    setItems(prev => prev.map(item => item.id === id ? { ...item, hasBadImage: false } : item));
+    void id;
   }, []);
 
   // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for image/product
-  // review yet; load() always resolves to an empty list and approveImage is local-only.
+  // review yet; load() always resolves to an empty list and approveImage is fail-closed.
   return {
     items, approveImage, reload: load,
     isBackedByApi: false,

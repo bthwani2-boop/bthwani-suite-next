@@ -1,4 +1,5 @@
 import { colorRoles } from '@bthwani/ui-kit';
+import type { DshSupportAnalytics } from "../analytics/analytics.types";
 /**
  * marketing-registry.ts
  *
@@ -59,29 +60,22 @@ export const MARKETING_SECTION_TABS: readonly MarketingSectionTabMeta[] = [
 // ─── KPIs Builder ──────────────────────────────────────────────────────────────
 
 export type MarketingKpiMetrics = {
-  readonly partnerGatesActive: string; // e.g. "3/1"
-  readonly blockedProductsActive: string; // e.g. "3/2"
-  readonly commercialVisibilityBlocked: number;
-  readonly unreadSignalsCount: number;
-  readonly promoCandidatesCount: number;
-  readonly isBackedByApi: false;
-  readonly disclosureReason: string;
+  readonly activeStoresRatio: string;
+  readonly deliveredOrders: number;
+  readonly openTickets: number;
+  readonly openEscalations: number;
+  readonly isBackedByApi: boolean;
+  readonly disclosureReason?: string;
 };
 
-// FIX_REQUIRED: no rollup endpoint exists yet for these cross-entity KPIs
-// (partner gate counts, blocked-product counts, unread signal/promo-candidate
-// counts). Values below are static placeholders, not a live query — flagged
-// via isBackedByApi/disclosureReason so the header cannot be mistaken for
-// runtime truth (see zero_defect_closure_matrix in the marketing evidence dir).
 export function buildMarketingKpiMetrics(): MarketingKpiMetrics {
   return {
-    partnerGatesActive: "3/1",
-    blockedProductsActive: "3/2",
-    commercialVisibilityBlocked: 0,
-    unreadSignalsCount: 4,
-    promoCandidatesCount: 2,
+    activeStoresRatio: "0/0",
+    deliveredOrders: 0,
+    openTickets: 0,
+    openEscalations: 0,
     isBackedByApi: false,
-    disclosureReason: "مؤشرات ثابتة (placeholder) — لا يوجد تكامل خلفي مجمّع لهذه الأرقام حتى الآن.",
+    disclosureReason: "تعذر تحميل مؤشرات التسويق التشغيلية من تحليلات DSH.",
   };
 }
 
@@ -191,32 +185,14 @@ export type DeliverySignalCardViewModel = {
   readonly isApproved: boolean;
 };
 
-export const DELIVERY_SIGNAL_CARDS: readonly DeliverySignalCardViewModel[] = [
-  {
-    id: "img-blurry",
-    title: "المحتوى يحتاج تعديل تسويقي — صورة المنتج غير واضحة",
-    statusLabel: "المحتوى يحتاج تعديل تسويقي",
-    source: "cp/marketing/media-review",
-    intakeId: "intake-4",
-    timeAgo: "منذ 21 ساعة",
-    isApproved: false,
-  },
-  {
-    id: "pizza-approved",
-    title: "تم اعتماد المحتوى تسويقياً — صورة بيتزا مارغريتا — شريك مطعم",
-    statusLabel: "تم اعتماد المحتوى تسويقياً",
-    source: "cp/marketing/media-review",
-    intakeId: "mr-003",
-    timeAgo: "منذ 7 ساعة",
-    isApproved: true,
-  },
-  {
-    id: "salad-blurry",
-    title: "المحتوى يحتاج تعديل تسويقي — صورة سلطة يونانية — دقة منخفضة",
-    statusLabel: "المحتوى يحتاج تعديل تسويقي",
-    source: "cp/marketing/media-review",
-    intakeId: "intake-5",
-    timeAgo: "منذ 24 ساعة",
-    isApproved: false,
-  },
-] as const;
+export function buildDeliverySignalCards(analytics: DshSupportAnalytics): readonly DeliverySignalCardViewModel[] {
+  return analytics.byCategory.map((item) => ({
+    id: `support-${item.category}`,
+    title: `إشارة دعم تشغيلية: ${item.category}`,
+    statusLabel: `${item.count.toLocaleString("ar")} تذكرة`,
+    source: "dsh/operator/analytics/support",
+    intakeId: item.category,
+    timeAgo: analytics.generatedAt,
+    isApproved: item.count === 0,
+  }));
+}

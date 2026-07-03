@@ -32,7 +32,7 @@ import type { PartnerOfferRecord } from "../../shared/partner/dsh-partner-offer-
 
 // Shown on every command deck whose controller has no backend persistence yet
 // (isBackedByApi === false). Mutating actions in that deck are disabled rather
-// than silently succeeding against local-only state.
+// than silently succeeding without a runtime-backed API.
 function NotBackedNotice({ reason }: { reason: string }) {
   return (
     <div
@@ -255,7 +255,7 @@ export function VideoStudioCommandDeck() {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>استوديو الفيديو ومحتوى الكباتن والشركاء</h3>
-          <CpButton onClick={() => controller.select(null)}>إضافة فيديو ترويجي</CpButton>
+          <CpButton onClick={() => controller.select(null)} disabled={!controller.isBackedByApi}>إضافة فيديو ترويجي</CpButton>
         </div>
 
         {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
@@ -293,7 +293,7 @@ export function VideoStudioCommandDeck() {
                   <CpTableCell>{item.impressions} مشاهدة / {item.clicks} نقرة</CpTableCell>
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
+                      <CpButton onClick={() => controller.select(item)} disabled={!controller.isBackedByApi}>تعديل</CpButton>
                       <CpButton onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
                         {item.status === "published" ? "إيقاف" : "تنشيط"}
                       </CpButton>
@@ -508,7 +508,7 @@ export function PartnerOffersCommandDeck() {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>عروض الشركاء وتجاوزات الهوامش الترويجية</h3>
-          <CpButton onClick={() => controller.select(null)}>إضافة عرض جديد</CpButton>
+          <CpButton onClick={() => controller.select(null)} disabled={!controller.isBackedByApi}>إضافة عرض جديد</CpButton>
         </div>
 
         {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
@@ -546,7 +546,7 @@ export function PartnerOffersCommandDeck() {
                   </CpTableCell>
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      <CpButton onClick={() => controller.select(o)}>تعديل</CpButton>
+                      <CpButton onClick={() => controller.select(o)} disabled={!controller.isBackedByApi}>تعديل</CpButton>
                       <CpButton onClick={() => controller.toggleStatus(o.id)} disabled={!controller.isBackedByApi}>
                         {o.status === "published" ? "إيقاف" : "اعتماد وتفعيل"}
                       </CpButton>
@@ -696,7 +696,7 @@ export function GrowthCommandDeck() {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>تحليلات النمو الرقمي وإحالات الأصدقاء (Growth)</h3>
-          <CpButton onClick={() => controller.select(null)}>إضافة مبادرة نمو</CpButton>
+          <CpButton onClick={() => controller.select(null)} disabled={!controller.isBackedByApi}>إضافة مبادرة نمو</CpButton>
         </div>
 
         {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
@@ -728,7 +728,7 @@ export function GrowthCommandDeck() {
                   <CpTableCell>{item.status === "published" ? "نشطة" : "مسودة"}</CpTableCell>
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
+                      <CpButton onClick={() => controller.select(item)} disabled={!controller.isBackedByApi}>تعديل</CpButton>
                       <CpButton onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
                         {item.status === "published" ? "تعطيل" : "تنشيط"}
                       </CpButton>
@@ -813,22 +813,22 @@ export function SignalsMeasurementCommandDeck() {
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
       <h3 style={{ margin: 0, color: opsTheme.brand, fontSize: "1.15rem" }}>بوابة قياس إشارات ورضا العملاء والشركاء</h3>
-      {!gates.isBackedByApi && <NotBackedNotice reason={gates.persistenceDisabledReason} />}
+      {gates.errorMessage && <NotBackedNotice reason={gates.errorMessage} />}
       <div style={{ background: opsTheme.surfaceInset, padding: "1rem", borderRadius: "0.5rem" }}>
-        <p style={{ margin: 0, fontSize: "0.813rem" }}>إشارات الرضا الفورية مبنية على رضا العملاء بعد استلام طلباتهم ومتابعة كفاءة التوصيل التشغيلية.</p>
+        <p style={{ margin: 0, fontSize: "0.813rem" }}>إشارات القياس الفورية مبنية على تحليلات الطلبات والتوصيل التشغيلية في DSH.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
         <div style={{ padding: "1rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
-          <h4 style={{ margin: "0 0 0.5rem", color: opsTheme.text }}>مؤشرات رضا العملاء الفورية</h4>
+          <h4 style={{ margin: "0 0 0.5rem", color: opsTheme.text }}>مؤشرات الطلبات الفورية</h4>
           <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
             <div>
-              <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>متوسط التقييم العام:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.success }}>{gates.metrics.averageRating}</div>
+              <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>نسبة الطلبات المكتملة:</span>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.success }}>{gates.metrics.completedOrdersRate}</div>
             </div>
             <div>
-              <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>الطلبات المقيمة:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{gates.metrics.ratedOrdersCount}</div>
+              <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>إجمالي الطلبات:</span>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{gates.metrics.totalOrders}</div>
             </div>
           </div>
         </div>
@@ -838,11 +838,11 @@ export function SignalsMeasurementCommandDeck() {
           <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
             <div>
               <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>نسبة الالتزام بالوقت:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.brand }}>{gates.metrics.onTimeDeliveryRate}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.brand }}>{gates.metrics.deliveryCompletionRate}</div>
             </div>
             <div>
-              <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>الطلبات المتأخرة حالياً:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.danger }}>{gates.metrics.delayedOrdersCount}</div>
+              <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>طلبات التوصيل المرفوضة:</span>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.danger }}>{gates.metrics.declinedAssignments}</div>
             </div>
           </div>
         </div>
