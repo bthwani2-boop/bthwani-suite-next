@@ -154,10 +154,16 @@ export const DSH_RUNTIME_MAP = [
     runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
-  // FIX_REQUIRED: campaign "archive" is a hard DB delete, no target/visibility-gate
-  // enforcement, no audit trail (5 of 8 planned tables missing), 7 of 10 control-panel
-  // command decks are local-state-only fakes, zero backend test coverage.
-  // See services/dsh/evidence/marketing-command-deck-final-closure/ for full findings.
+  // FIX_REQUIRED: as of commit e69fa48, campaign archive/banner delete are soft
+  // (not hard DB deletes), target/visibility-gate enforcement and an audit
+  // trail exist (dsh_marketing_audit_events/visibility_gates/target_bindings/
+  // impressions/clicks — migration dsh-017), and 4 DB integration tests cover
+  // archive/delete/promo-transitions/target-gate. Remaining gap: 7 of 11
+  // control-panel command decks (ticker/video/partner-offers/loyalty/growth/
+  // signals-measurement/image-review) have no backend table/handler — disclosed
+  // as isBackedByApi:false with disabled mutating actions, not silently faked.
+  // No runtime evidence yet proves app-client visibility filtering or
+  // app-partner scoping. See services/dsh/evidence/marketing-command-deck-final-closure/.
   {
     capabilityId: "dsh.marketing",
     backendImplemented: true,

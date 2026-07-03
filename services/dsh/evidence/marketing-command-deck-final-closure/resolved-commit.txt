@@ -1,1 +1,26 @@
-ffefae77656dbc3308313ad6d1bd483cb903b737
+resolved_commit_sha: 5d0d7d022c588f020f5bd7edbb3378684133d29a
+source_ref: begin
+base_ref: master
+journey: Marketing Command Deck
+capability_id: dsh.marketing
+resolved_at: 2026-07-03
+previous_resolved_commit_sha: ffefae77656dbc3308313ad6d1bd483cb903b737
+note: >-
+  Superseded stale SHA. ffefae7 predates a second marketing-scoped commit,
+  e69fa48d35515527e786918301534fe7a465bb21 ("fix(dsh): close critical
+  Marketing Command Deck gaps and partner readiness gate leak"), which is an
+  ancestor of the current begin HEAD (5d0d7d0). e69fa48 fixed the hard-DELETE
+  campaign archive (now soft archive), fixed banner delete (now soft delete),
+  added dsh_marketing_audit_events / visibility_gates / target_bindings /
+  impressions / clicks tables (migration dsh-017), added real target
+  visibility-gate checks, fixed the partner_readiness gate leak in
+  CanPublishStoreToClient, and marked all still-local-only marketing
+  controllers (ticker/video/partner-offers/loyalty/growth/visibility-gate
+  metrics/catalog review) as isBackedByApi:false with a disabled-reason shown
+  in the UI. No marketing-scoped commit exists between e69fa48 and 5d0d7d0
+  (git log --oneline e69fa48..5d0d7d0 -- services/dsh/frontend/shared/marketing
+  services/dsh/frontend/control-panel/marketing services/dsh/backend/internal/marketing
+  services/dsh/capability-map.ts services/dsh/runtime-map.ts -> empty). Several
+  claims in capability-map.ts / runtime-map.ts inline comments (hard DB delete,
+  zero backend test coverage) describe the PRE-e69fa48 state and are stale as
+  of this evidence pass — corrected in the same change as this file.

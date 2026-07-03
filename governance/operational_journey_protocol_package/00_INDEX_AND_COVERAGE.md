@@ -1,25 +1,25 @@
 # 00 — فهرس الحزمة ومصفوفة عدم إسقاط البنود
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v1  
-**File count:** 11 Markdown files (10 protocol files + 1 execution amendment) + 1 trace file  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified` (see also `LEGACY_SOURCE_TRACE.md`)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
-**Compared source v1 upload:** `Pasted text.txt`  
-**Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_<REF>.md`  
-**Package version:** `v3-modular-11files-strict-amended`  
-**Date:** `2026-07-01`
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File count:** 12 Markdown files (10 protocol files + 2 execution amendments) + 1 trace file
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** `tools/plan/command_operational_journey_unified` (see also `LEGACY_SOURCE_TRACE.md`)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
+**Compared source v1 upload:** `Pasted text.txt`
+**Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_<REF>.md`
+**Package version:** `v3-modular-12files-strict-amended`
+**Date:** `2026-07-03`
 
 ---
 
 ## 0) قرار التقسيم
 
 تم تقسيم البروتوكول إلى 10 ملفات، مع الحفاظ على قاعدة أن الحزمة وحدة واحدة.
-أضيف ملف تعديل إلزامي حادي عشر (`10_EXECUTION_PLAN_NO_SKIP_GATE.md`) يسد فجوة القفز أثناء كتابة أوامر/خطط التنفيذ ويضيف طبقة Docker/Hosting/Runtime مستقلة، بالإضافة إلى `LEGACY_SOURCE_TRACE.md` لتتبع مصادر ما قبل الحزمة.  
+أضيف ملف تعديل إلزامي حادي عشر (`10_EXECUTION_PLAN_NO_SKIP_GATE.md`) يسد فجوة القفز أثناء كتابة أوامر/خطط التنفيذ ويضيف طبقة Docker/Hosting/Runtime مستقلة. كما أضيف ملف تعديل إلزامي ثاني عشر (`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`) لتقييد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface، بالإضافة إلى `LEGACY_SOURCE_TRACE.md` لتتبع مصادر ما قبل الحزمة.
 لا يجوز استخدام ملف منفرد لإعلان `PASS` أو `IMPLEMENTATION_PASS` أو `MERGE_READY`.
 
-أي وكيل يستخدم هذه الحزمة يجب أن يبدأ من هذا الملف، ثم يفتح الملفات ذات العلاقة حسب النطاق، **بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` قبل كتابة أي أمر تنفيذ أو خطة تنفيذ**.
+أي وكيل يستخدم هذه الحزمة يجب أن يبدأ من هذا الملف، ثم يفتح الملفات ذات العلاقة حسب النطاق، **بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` ثم `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` قبل كتابة أي أمر تنفيذ أو خطة تنفيذ أو بدء implementation_or_closure**.
 
 ---
 
@@ -38,6 +38,7 @@
 | `08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md` | implementation rules، Antigravity command، final report schema. |
 | `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | acceptance rule، quick command، closing rule. |
 | `10_EXECUTION_PLAN_NO_SKIP_GATE.md` | Amendment: Execution Plan No-Skip Gate، docker_hosting_runtime_matrix، guards محصودة من `command_old_new`. |
+| `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` | Amendment: إلزامي يقيّد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface. |
 | `LEGACY_SOURCE_TRACE.md` | تتبع مصادر ما قبل الحزمة (`command_old_new`, `command_operational_journey_unified`) وشروط الحذف اللاحقة. |
 
 ---
@@ -48,13 +49,13 @@
 coverage_result:
   source_v1_headings_checked: 58
   source_v2_h2_sections_checked: 31
-  package_files_count: 11
+  package_files_count: 12
   missing_v2_h2_sections: 0
   unmapped_v1_headings_detected: 0
   duplicate_governing_sources_created: false
   split_method: semantic_domain_split_with_traceability_matrix
-  amendment_added: 10_EXECUTION_PLAN_NO_SKIP_GATE.md
-  amendment_reason: no_skip_gate_for_execution_plans + docker_hosting_runtime_matrix + old_new_guards_harvest
+  amendment_added: 10_EXECUTION_PLAN_NO_SKIP_GATE.md + 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md
+  amendment_reason: no_skip_gate_for_execution_plans + docker_hosting_runtime_matrix + old_new_guards_harvest + code_first_fix_first_multi_surface_coverage
   decision: COVERAGE_PASS_BY_SECTION_AND_KEY_CONCEPT_CHECK
 ```
 
@@ -228,7 +229,8 @@ coverage_result:
 6. اقرأ 08 عند التنفيذ أو عند إنتاج أمر Antigravity أو تقرير نهائي.
 7. اقرأ 09 قبل إعلان أي قبول أو قبل استخدام الأمر المختصر.
 8. اقرأ 10 إلزاميًا قبل كتابة أي أمر تنفيذ أو خطة تنفيذ أو تشخيص أو تحليل، ولإكمال docker_hosting_runtime_matrix.
-9. راجع LEGACY_SOURCE_TRACE.md قبل أي قرار حذف أو أرشفة لملفات ما قبل الحزمة.
+9. اقرأ 11 إلزاميًا لتقييد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface قبل كتابة أمر تنفيذ أو خطة تنفيذ أو بدء implementation_or_closure.
+10. راجع LEGACY_SOURCE_TRACE.md قبل أي قرار حذف أو أرشفة لملفات ما قبل الحزمة.
 ```
 
 ---
@@ -239,7 +241,7 @@ coverage_result:
 
 ```yaml
 change_control_for_protocol_package:
-  current_file_count: 11
+  current_file_count: 12
   update_all_impacted_files: required
   update_v1_v2_coverage_mapping: required
   update_manifest: required
@@ -330,4 +332,20 @@ package_changelog:
       قاعدة عدم زيادة عدد ملفات الحزمة في 00#7 و10#35.
     file_count_change: false
     deleted_content: none
+  - date: 2026-07-03
+    change: >-
+      إضافة 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md لتقييد التنفيذ
+      بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface.
+      تم تحديث 00 لزيادة عدد الملفات إلى 12، وتعديل 10 و07 و08 و09 ليتماشى مع
+      الوضع الجديد وتقليل الأدلة المطلوبة والاكتفاء بـ Compact Closure Ledger.
+    impacted_files:
+      - 00_INDEX_AND_COVERAGE.md
+      - 07_VERIFICATION_RUNTIME_CI_PR.md
+      - 08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md
+      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
+      - 10_EXECUTION_PLAN_NO_SKIP_GATE.md
+    reason: توجيه الحزمة لتكون Code-First / Fix-First وتقليل الأدلة الزائدة (Minimal Evidence) مع ضمان تغطية الأسطح (No Forgotten Surface).
+    file_count_change: true
+    deleted_content: none
+
 ```
