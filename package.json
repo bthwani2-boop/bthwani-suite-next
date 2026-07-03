@@ -119,7 +119,6 @@
     "dependency-cruiser": "17.4.3",
     "eslint": "9.39.1",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
-    "graphify": "1.0.0",
     "jscpd": "5.0.10",
     "knip": "6.17.1",
     "madge": "8.0.0",
