@@ -8,7 +8,7 @@
 **Amendment date:** `2026-07-01`
 **Scope:** يسد فجوة السماح بالقفز/التجاهل أثناء كتابة أمر التنفيذ وخطة التنفيذ والتشخيص والتحليل والتنفيذ، ويضيف Docker/hosting/runtime كطبقة إلزامية لا يجوز إسقاطها، ويحمل guards/أوامر تحقق كانت موجودة فقط في `command_old_new` ولم تُنقل بقوة كافية إلى `07`.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة الآن من 11 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها هذا الملف.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة الآن من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` وهذا الملف.
 
 ---
 
@@ -81,6 +81,13 @@ dead_code_and_duplication_matrix مكتملة
 file_decision_matrix مكتملة لكل ملف مرتبط
 evidence_matrix مكتملة لكل طبقة داخل النطاق
 ```
+
+### قاعدة التبسيط والمخارج المبكرة:
+1. **المخرجات التفصيلية والتقارير الطويلة لا تُطلب كاملة في كل تنفيذ**: عند عدم وجود فشل أو خطر عالٍ، يمكن للوكيل استخدام سجل الإغلاق المختصر `Compact Closure Ledger` (المعرّف في الملف 11) كبديل للمصفوفات التفصيلية الطويلة.
+2. **تبقى المصفوفات والتقارير التفصيلية إلزامية فقط عند**:
+   فشل تحقق، تعارض ملكية، تغيير database/API/migration، موضوع مالي WLT/DSH، حذف/نقل/دمج ملفات، multi-surface runtime، أو خطر عالٍ.
+3. **منع المخارج المبكرة**: حالات `FIX_REQUIRED` و`BLOCKED_NEEDS_EVIDENCE` ليست مخارج مبكرة في `implementation_or_closure`؛ يجب على الوكيل السعي دائمًا لتصحيح الكود وتنفيذ الحلول بدلاً من مجرد التقرير السريع بوجود عوائق.
+
 
 ---
 
@@ -199,7 +206,7 @@ git reset --hard origin/brach-validation
 
 ```yaml
 change_control_for_protocol_package_v2:
-  package_file_count: 11
+  package_file_count: 12
   amendment_file: 10_EXECUTION_PLAN_NO_SKIP_GATE.md
   amendment_reason: سد فجوة القفز أثناء كتابة الأوامر/الخطط + غياب طبقة Docker/hosting مستقلة + عدم حصاد guards من command_old_new
   update_all_impacted_files: required

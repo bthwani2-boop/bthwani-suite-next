@@ -8,7 +8,7 @@
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** معيار القبول النهائي، نسخة الاستخدام السريع، وقاعدة الخاتمة.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 28) معيار القبول النهائي
@@ -50,6 +50,10 @@
 لا نشر Store للعميل من app-field
 كل endpoint يعرض Stores للعميل يطبق نفس visibility gates
 كل رحلة onboarding تحدد Partner-owned truths وStore-owned truths قبل التنفيذ
+لا قبول إذا لم توجد affected_surface_inventory معرّفة ومثبتة لكل تطبيق/سطح/صفحة/شاشة/route/قسم لوحة تحكم/feature محتمل التأثر
+لا قبول إذا تم إنتاج أدلة وملفات evidence كثيرة مكررة بدلاً من إصلاح وتصحيح الكود الحي
+لا قبول إذا بقي أي تطبيق أو شاشة أو صفحة أو route أو قسم لوحة تحكم (control-panel section) أو feature داخل نطاق الـ Feature/Topic دون فحص كامل وتوصيل وإثبات
+قرار IMPLEMENTATION_PASS يتطلب تعديلاً كودياً حياً وتحققاً كودياً أو تشغيلياً مختصراً وحاسماً، ويُمنع إعلانه بناءً على كتابة تقارير أو أدلة نظرية فقط دون كود حي
 ```
 
 إذا فشل بند واحد داخل النطاق:

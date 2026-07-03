@@ -19,16 +19,13 @@ import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   MARKETING_MAIN_TABS,
-  MARKETING_SUB_TABS,
   MARKETING_SECTION_TABS,
   GOVERNANCE_BRIDGES,
   PARTNER_GATE_CARDS,
   PRODUCT_GATE_CARDS,
   DELIVERY_SIGNAL_CARDS,
   buildMarketingKpiMetrics,
-  getMarketingSubTabsForMain,
   type MarketingMainTabId,
-  type MarketingSubTabId,
   type MarketingSectionTabId,
 } from "../../shared/marketing";
 import {
@@ -81,39 +78,6 @@ function MainTabButton({
   );
 }
 
-// ─── Tab button (pill style) ────────────────────────────────────────────────
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "0.5rem 1rem",
-        background: active ? colorRoles.brandAction : "transparent",
-        color: active ? colorRoles.surfaceBase : "currentColor",
-        border: active ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
-        borderRadius: "0.5rem",
-        fontWeight: active ? 700 : 500,
-        fontSize: "0.813rem",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        transition: "all 0.15s",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 // ─── Section Tab button ──────────────────────────────────────────────────────
 
 function SectionTabButton({
@@ -150,11 +114,12 @@ export function MarketingDashboardScreen() {
   const identity = useIdentitySession();
 
   const [mainTab, setMainTab] = useState<MarketingMainTabId>("visibility-gates");
-  const [subTab, setSubTab] = useState<MarketingSubTabId>("review-queue");
   const [sectionTab, setSectionTab] = useState<MarketingSectionTabId>("eligibility");
+  // PENDING_GOVERNANCE_API: no governance API exists for gate bypass — this only flips local
+  // component state (see PARTNER_GATE_CARDS/PRODUCT_GATE_CARDS render below, which
+  // now labels the result "تجاوز محلي فقط" instead of falsely claiming success).
   const [bypassedGates, setBypassedGates] = useState<Set<string>>(new Set());
 
-  const subTabs = getMarketingSubTabsForMain(mainTab);
   const metrics = useMemo(() => buildMarketingKpiMetrics(), []);
 
   // ── Auth gate ────────────────────────────────────────────────────────────
@@ -204,6 +169,11 @@ export function MarketingDashboardScreen() {
             <CpKpiCard label="ظهور تجاري"       value={`${metrics.commercialVisibilityBlocked} محجوب حالياً`} />
             <CpKpiCard label="إشارات غير مقروءة" value={`${metrics.unreadSignalsCount} (${metrics.promoCandidatesCount} مرشحين ترويج)`} />
           </CpKpiStrip>
+          {!metrics.isBackedByApi && (
+            <p role="status" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: opsTheme.warning, opacity: 0.85 }}>
+              ⚠️ {metrics.disclosureReason}
+            </p>
+          )}
         </CpPageHeader>
       }
     >
@@ -223,31 +193,12 @@ export function MarketingDashboardScreen() {
           <MainTabButton
             key={t.id}
             active={mainTab === t.id}
-            onClick={() => {
-              setMainTab(t.id);
-              const subs = getMarketingSubTabsForMain(t.id);
-              if (subs.length > 0) setSubTab(subs[0]!.id);
-            }}
+            onClick={() => setMainTab(t.id)}
           >
             {t.label}
           </MainTabButton>
         ))}
       </nav>
-
-      {/* ── Sub-Tabs (Pills) ──────────────────────────────────────────── */}
-      {subTabs.length > 0 && (
-        <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 1rem", flexWrap: "wrap" }}>
-          {subTabs.map((tab) => (
-            <TabButton
-              key={tab.id}
-              active={subTab === tab.id}
-              onClick={() => setSubTab(tab.id)}
-            >
-              {tab.label}
-            </TabButton>
-          ))}
-        </div>
-      )}
 
       {/* ── Main Dashboard Layout ─────────────────────────────────────── */}
       {mainTab === "visibility-gates" && (
@@ -406,7 +357,7 @@ export function MarketingDashboardScreen() {
                             fontSize: "0.72rem",
                           }}
                         >
-                          {isBypassed ? "تم التجاوز بنجاح" : card.statusTag}
+                          {isBypassed ? "تجاوز محلي فقط — لم يُنفَّذ فعلياً" : card.statusTag}
                         </span>
                       </div>
 
@@ -480,7 +431,7 @@ export function MarketingDashboardScreen() {
                             fontSize: "0.72rem",
                           }}
                         >
-                          {isBypassed ? "تم التجاوز بنجاح" : card.statusTag}
+                          {isBypassed ? "تجاوز محلي فقط — لم يُنفَّذ فعلياً" : card.statusTag}
                         </span>
                       </div>
 

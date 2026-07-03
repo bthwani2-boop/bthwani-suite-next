@@ -203,7 +203,11 @@ export function PromotionsScreen({
     setOffers((prev) => [...prev, newOffer]);
     setForm(INITIAL_FORM);
     setActiveTab('pending');
-    setStatusMessage('تم إرسال العرض للمراجعة التسويقية.');
+    // PENDING_BACKEND: no dsh_partner_offers backend exists yet (see
+    // marketing_partner_offer_matrix.md). This only stores the draft in local
+    // component state — it is not sent anywhere and will not survive a reload.
+    // The message must not claim a real submission happened.
+    setStatusMessage('تم حفظ العرض محليًا فقط. ميزة الإرسال الفعلي لمراجعة التسويق غير مفعّلة بعد على هذا السطح.');
   };
 
   const openOfferForm = (offer?: PartnerOfferRecord) => {

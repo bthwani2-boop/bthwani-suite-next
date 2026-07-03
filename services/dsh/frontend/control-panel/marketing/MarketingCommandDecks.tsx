@@ -824,11 +824,11 @@ export function SignalsMeasurementCommandDeck() {
           <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
             <div>
               <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>متوسط التقييم العام:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.success }}>4.85★</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.success }}>{gates.metrics.averageRating}</div>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>الطلبات المقيمة:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>2,450 طلب</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{gates.metrics.ratedOrdersCount}</div>
             </div>
           </div>
         </div>
@@ -838,11 +838,11 @@ export function SignalsMeasurementCommandDeck() {
           <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
             <div>
               <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>نسبة الالتزام بالوقت:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.brand }}>94.2%</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.brand }}>{gates.metrics.onTimeDeliveryRate}</div>
             </div>
             <div>
               <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>الطلبات المتأخرة حالياً:</span>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.danger }}>2 طلب</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, color: opsTheme.danger }}>{gates.metrics.delayedOrdersCount}</div>
             </div>
           </div>
         </div>

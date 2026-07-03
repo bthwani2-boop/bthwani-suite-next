@@ -8,12 +8,15 @@
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** أوامر الفحص الكودية، runtime evidence، CI rules، وPR/merge review.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 19) أوامر فحص كودية مستهدفة
 
-شغّل فقط ما ينطبق فعليًا على الرحلة. لا تعتبر أي فحص ناجحًا إلا بمخرج واضح.
+### قاعدة التحقق للمسارات المتأثرة فقط (Affected-Only Verification)
+1. **الفحوصات الثقيلة مرجعية وليست إلزامية دائمًا**: يبدأ التحقق من المسارات المتأثرة (`affected paths`) والـ guards الخاصة بالنطاق فقط.
+2. **شروط تشغيل الفحوصات الكاملة (full-suite)**: لا تشغّل الـ full-suite الكامل (مثل typecheck، test، build الشاملة) إلا إذا تغيّر shared brain أو API أو database أو migration أو runtime، أو فشل الـ affected check، أو كانت المنطقة multi-surface عالية الخطورة.
+3. **استخدام قائمة الأوامر**: لا تشغّل كل شيء دائمًا. استخدم قائمة الأوامر التالية كمرجع، وشغّل فقط ما ينطبق منها بدليل تأثّر واضح ومثبت. لا تعتبر أي فحص ناجحًا إلا بمخرج واضح.
 
 ```powershell
 Set-Location -LiteralPath "<REPO_LOCAL>"

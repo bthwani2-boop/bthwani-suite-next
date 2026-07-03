@@ -40,25 +40,6 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "signals-measurement",    label: "الإشارات والقياس" },
 ] as const;
 
-// ─── Sub-Tab Registry ─────────────────────────────────────────────────────────
-
-export type MarketingSubTabId = "review-queue" | "video-review";
-
-export type MarketingSubTabMeta = {
-  readonly id: MarketingSubTabId;
-  readonly label: string;
-  readonly parentTab: MarketingMainTabId;
-};
-
-export const MARKETING_SUB_TABS: readonly MarketingSubTabMeta[] = [
-  { id: "review-queue", label: "صف المراجعة", parentTab: "visibility-gates" },
-  { id: "video-review",  label: "مراجعة الفيديو", parentTab: "visibility-gates" },
-] as const;
-
-export function getMarketingSubTabsForMain(mainTab: MarketingMainTabId): readonly MarketingSubTabMeta[] {
-  return MARKETING_SUB_TABS.filter((t) => t.parentTab === mainTab);
-}
-
 // ─── Section Tab Registry ─────────────────────────────────────────────────────
 
 export type MarketingSectionTabId = "eligibility" | "suppression" | "auditing" | "segments";
@@ -83,8 +64,15 @@ export type MarketingKpiMetrics = {
   readonly commercialVisibilityBlocked: number;
   readonly unreadSignalsCount: number;
   readonly promoCandidatesCount: number;
+  readonly isBackedByApi: false;
+  readonly disclosureReason: string;
 };
 
+// FIX_REQUIRED: no rollup endpoint exists yet for these cross-entity KPIs
+// (partner gate counts, blocked-product counts, unread signal/promo-candidate
+// counts). Values below are static placeholders, not a live query — flagged
+// via isBackedByApi/disclosureReason so the header cannot be mistaken for
+// runtime truth (see zero_defect_closure_matrix in the marketing evidence dir).
 export function buildMarketingKpiMetrics(): MarketingKpiMetrics {
   return {
     partnerGatesActive: "3/1",
@@ -92,6 +80,8 @@ export function buildMarketingKpiMetrics(): MarketingKpiMetrics {
     commercialVisibilityBlocked: 0,
     unreadSignalsCount: 4,
     promoCandidatesCount: 2,
+    isBackedByApi: false,
+    disclosureReason: "مؤشرات ثابتة (placeholder) — لا يوجد تكامل خلفي مجمّع لهذه الأرقام حتى الآن.",
   };
 }
 

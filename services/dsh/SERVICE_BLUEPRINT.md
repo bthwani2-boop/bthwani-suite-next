@@ -274,7 +274,7 @@ pnpm run guard:no-broken-imports
 pnpm run guard:no-direct-fetch-in-screen
 pnpm run guard:no-financial-mutation-outside-wlt
 pnpm run guard:no-direct-financial-provider-access-outside-wlt
-pnpm run guard:no-legacy-slice-labels
+pnpm run guard:no-legacy-slice-labels <!-- no-legacy-slice-labels-ignore -->
 pnpm run typecheck
 pnpm run build
 ```
