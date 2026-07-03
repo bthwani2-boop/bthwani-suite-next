@@ -2,6 +2,7 @@ package marketing
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"strconv"
 	"testing"
@@ -86,80 +87,57 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	assertAuditEventExists(t, db, "campaign", c.ID, "archive")
 }
 
-func TestMarketingBannerSoftDeleteDBIntegration(t *testing.T) {
+func TestMarketingTickerLifecycleDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 
-	b, err := CreateBanner(db, CreateBannerInput{
-		Title:         "Banner DB Smoke " + suffix,
-		ImageURL:      "https://example.test/banner.png",
+	tk, err := CreateTicker(db, CreateTickerInput{
+		Message:       "Ticker DB Smoke " + suffix,
 		CreatedBy:     "operator-local-001",
 		CorrelationID: "corr-" + suffix,
 	})
 	if err != nil {
-		t.Fatalf("CreateBanner: %v", err)
+		t.Fatalf("CreateTicker: %v", err)
+	}
+	if tk.Status != "draft" || tk.Kind != "news" || tk.Audience != "all" {
+		t.Fatalf("unexpected defaults: status=%q kind=%q audience=%q", tk.Status, tk.Kind, tk.Audience)
 	}
 
-	if err := DeleteBanner(db, b.ID, "operator-local-001", "corr-"+suffix); err != nil {
-		t.Fatalf("DeleteBanner: %v", err)
-	}
-
-	// A soft-deleted banner must not appear in ListBanners...
-	list, err := ListBanners(db)
+	published := "published"
+	tk2, err := UpdateTicker(db, tk.ID, UpdateTickerInput{Status: &published, ActorID: "operator-local-001"})
 	if err != nil {
-		t.Fatalf("ListBanners: %v", err)
+		t.Fatalf("UpdateTicker publish: %v", err)
+	}
+	if tk2.Status != "published" {
+		t.Fatalf("expected published, got %q", tk2.Status)
+	}
+
+	backToDraft := "draft"
+	if _, err := UpdateTicker(db, tk.ID, UpdateTickerInput{Status: &backToDraft, ActorID: "operator-local-001"}); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("expected ErrInvalidTransition for published->draft, got %v", err)
+	}
+
+	badHour := 24
+	if _, err := UpdateTicker(db, tk.ID, UpdateTickerInput{OpenHour: &badHour, ActorID: "operator-local-001"}); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid for openHour=24, got %v", err)
+	}
+
+	if err := DeleteTicker(db, tk.ID, "operator-local-001", "corr-"+suffix); err != nil {
+		t.Fatalf("DeleteTicker: %v", err)
+	}
+	list, err := ListTickers(db)
+	if err != nil {
+		t.Fatalf("ListTickers: %v", err)
 	}
 	for _, item := range list {
-		if item.ID == b.ID {
-			t.Fatalf("soft-deleted banner %s should not appear in ListBanners", b.ID)
+		if item.ID == tk.ID {
+			t.Fatal("soft-deleted ticker must not appear in list")
 		}
 	}
 
-	// ...but the row itself must still physically exist (soft delete, not hard delete).
-	var deletedAt sql.NullTime
-	if err := db.QueryRow(`SELECT deleted_at FROM dsh_marketing_banners WHERE id=$1`, b.ID).Scan(&deletedAt); err != nil {
-		t.Fatalf("banner row must still exist after soft delete: %v", err)
-	}
-	if !deletedAt.Valid {
-		t.Fatal("expected deleted_at to be set after DeleteBanner")
-	}
-
-	assertAuditEventExists(t, db, "banner", b.ID, "create")
-	assertAuditEventExists(t, db, "banner", b.ID, "delete")
-}
-
-func TestMarketingPromoLifecycleTransitionsDBIntegration(t *testing.T) {
-	db := openRequiredDB(t)
-	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-
-	p, err := CreatePromo(db, CreatePromoInput{
-		Code:          "SMOKE-" + suffix,
-		CreatedBy:     "operator-local-001",
-		CorrelationID: "corr-" + suffix,
-	})
-	if err != nil {
-		t.Fatalf("CreatePromo: %v", err)
-	}
-	if p.Status != "active" {
-		t.Fatalf("expected active status, got %q", p.Status)
-	}
-
-	// active -> expired is legal.
-	expired, err := UpdatePromo(db, p.ID, UpdatePromoInput{Status: "expired", ActorID: "operator-local-001", CorrelationID: "corr-" + suffix})
-	if err != nil {
-		t.Fatalf("UpdatePromo active->expired: %v", err)
-	}
-	if expired.Status != "expired" {
-		t.Fatalf("expected expired status, got %q", expired.Status)
-	}
-
-	// expired -> active is illegal (expired is terminal).
-	if _, err := UpdatePromo(db, p.ID, UpdatePromoInput{Status: "active", ActorID: "operator-local-001", CorrelationID: "corr-" + suffix}); err != ErrInvalidTransition {
-		t.Fatalf("expected ErrInvalidTransition for expired->active, got %v", err)
-	}
-
-	assertAuditEventExists(t, db, "promo", p.ID, "create")
-	assertAuditEventExists(t, db, "promo", p.ID, "update")
+	assertAuditEventExists(t, db, "ticker", tk.ID, "create")
+	assertAuditEventExists(t, db, "ticker", tk.ID, "update")
+	assertAuditEventExists(t, db, "ticker", tk.ID, "delete")
 }
 
 func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {

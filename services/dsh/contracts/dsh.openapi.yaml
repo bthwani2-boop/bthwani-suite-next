@@ -2086,24 +2086,24 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /dsh/operator/marketing/banners:
+  /dsh/operator/marketing/tickers:
     get:
-      operationId: listDshMarketingBanners
-      summary: List marketing banners (excludes soft-deleted rows).
+      operationId: listDshMarketingTickers
+      summary: List marketing news tickers (excludes soft-deleted rows).
       tags: [DshMarketing]
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Banners list.
+          description: Tickers.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshMarketingBannersListResponse" }
+              schema: { $ref: "#/components/schemas/DshMarketingTickersListResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
-      operationId: createDshMarketingBanner
-      summary: Create a marketing banner.
+      operationId: createDshMarketingTicker
+      summary: Create a marketing news ticker.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
@@ -2111,26 +2111,26 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DshCreateMarketingBannerRequest" }
+            schema: { $ref: "#/components/schemas/DshCreateMarketingTickerRequest" }
       responses:
         "201":
-          description: Banner created.
+          description: Ticker created.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshMarketingBannerResponse" }
+              schema: { $ref: "#/components/schemas/DshMarketingTickerResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /dsh/operator/marketing/banners/{bannerId}:
+  /dsh/operator/marketing/tickers/{tickerId}:
     patch:
-      operationId: updateDshMarketingBanner
-      summary: Update a marketing banner.
+      operationId: updateDshMarketingTicker
+      summary: Update a marketing news ticker. Status lifecycle is governed (draft -> published|paused, published <-> paused, never back to draft); illegal transitions return 409.
       tags: [DshMarketing]
       security:
         - bearerAuth: []
       parameters:
-        - name: bannerId
+        - name: tickerId
           in: path
           required: true
           schema: { type: string }
@@ -2138,31 +2138,32 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DshUpdateMarketingBannerRequest" }
+            schema: { $ref: "#/components/schemas/DshUpdateMarketingTickerRequest" }
       responses:
         "200":
-          description: Banner updated.
+          description: Ticker updated.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshMarketingBannerResponse" }
+              schema: { $ref: "#/components/schemas/DshMarketingTickerResponse" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
     delete:
-      operationId: deleteDshMarketingBanner
-      summary: Delete a marketing banner (soft delete — deleted_at recorded; the row is never physically removed since it may have already been client-visible).
+      operationId: deleteDshMarketingTicker
+      summary: Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history).
       tags: [DshMarketing]
       security:
         - bearerAuth: []
       parameters:
-        - name: bannerId
+        - name: tickerId
           in: path
           required: true
           schema: { type: string }
       responses:
         "200":
-          description: Banner deleted.
+          description: Ticker deleted.
           content:
             application/json:
               schema:
@@ -2173,71 +2174,6 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-
-  /dsh/operator/marketing/promos:
-    get:
-      operationId: listDshMarketingPromos
-      summary: List marketing promos.
-      tags: [DshMarketing]
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Promos list.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/DshMarketingPromosListResponse" }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    post:
-      operationId: createDshMarketingPromo
-      summary: Create a marketing promo.
-      tags: [DshMarketing]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCreateMarketingPromoRequest" }
-      responses:
-        "201":
-          description: Promo created.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/DshMarketingPromoResponse" }
-        "400": { $ref: "#/components/responses/InvalidRequest" }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /dsh/operator/marketing/promos/{promoId}:
-    patch:
-      operationId: updateDshMarketingPromo
-      summary: Update a marketing promo. Status transitions are governed by a lifecycle state machine (expired/cancelled are terminal); illegal transitions return 409.
-      tags: [DshMarketing]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: promoId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshUpdateMarketingPromoRequest" }
-      responses:
-        "200":
-          description: Promo updated.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/DshMarketingPromoResponse" }
-        "400": { $ref: "#/components/responses/InvalidRequest" }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
 
   # ── Platform Policies ────────────────────────────────────────────
   /dsh/operator/platform/zones:
@@ -5027,63 +4963,6 @@ components:
         targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
         targetId: { type: string }
 
-    DshMarketingBanner:
-      type: object
-      required: [id, title, position, isActive, audience, placement, createdBy, createdAt, updatedAt]
-      properties:
-        id: { type: string }
-        title: { type: string }
-        imageUrl: { type: string }
-        actionUrl: { type: string }
-        position: { type: integer }
-        isActive: { type: boolean }
-        targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
-        targetId: { type: string }
-        audience: { type: string }
-        placement: { type: string }
-        createdBy: { type: string }
-        deletedAt: { type: [string, "null"], format: date-time }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
-    DshMarketingBannersListResponse:
-      type: object
-      required: [banners]
-      properties:
-        banners:
-          type: array
-          items: { $ref: "#/components/schemas/DshMarketingBanner" }
-
-    DshMarketingBannerResponse:
-      type: object
-      required: [banner]
-      properties:
-        banner: { $ref: "#/components/schemas/DshMarketingBanner" }
-
-    DshCreateMarketingBannerRequest:
-      type: object
-      required: [title]
-      properties:
-        title: { type: string, minLength: 1 }
-        imageUrl: { type: string }
-        actionUrl: { type: string }
-        position: { type: integer }
-        targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
-        targetId: { type: string }
-        audience: { type: string }
-        placement: { type: string }
-
-    DshUpdateMarketingBannerRequest:
-      type: object
-      properties:
-        title: { type: string }
-        imageUrl: { type: string }
-        isActive: { type: boolean }
-        targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
-        targetId: { type: string }
-
-    # ─── Partner Onboarding & Store Publication schemas ──────────────
-
     DshPartner:
       type: object
       required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerName, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
@@ -5382,55 +5261,81 @@ components:
           type: array
           items: { type: string }
 
-    DshMarketingPromo:
+    DshMarketingTicker:
       type: object
-      required: [id, code, status, audience, createdBy, createdAt, updatedAt]
+      required: [id, message, kind, status, source, audience, deliveryMode, priority, pinned, actionType, actionTarget, clicks, impressions, createdBy, createdAt, updatedAt]
       properties:
         id: { type: string }
-        code: { type: string }
-        description: { type: string }
-        status: { type: string, enum: [active, paused, expired, cancelled] }
-        expiresAt: { type: string }
-        targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
-        targetId: { type: string }
-        audience: { type: string }
-        placement: { type: string }
+        message: { type: string }
+        kind: { type: string, enum: [alert, news, promo] }
+        status: { type: string, enum: [draft, published, paused] }
+        source: { type: string, enum: [system, ops, partner] }
+        audience: { type: string, enum: [all, client, partner, captain] }
+        deliveryMode: { type: string, enum: [scroll, toast, overlay] }
+        priority: { type: string, enum: [low, normal, high, critical] }
+        pinned: { type: boolean }
+        actionType: { type: string }
+        actionTarget: { type: string }
+        clicks: { type: integer, minimum: 0 }
+        impressions: { type: integer, minimum: 0 }
+        openHour: { type: integer, minimum: 0, maximum: 23 }
+        closeHour: { type: integer, minimum: 0, maximum: 23 }
+        cooldownMinutes: { type: integer, minimum: 0 }
+        repeatGapMinutes: { type: integer, minimum: 0 }
         createdBy: { type: string }
-        archivedAt: { type: [string, "null"], format: date-time }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        createdAt: { type: string }
+        updatedAt: { type: string }
 
-    DshMarketingPromosListResponse:
+    DshMarketingTickersListResponse:
       type: object
-      required: [promos]
+      required: [tickers]
       properties:
-        promos:
+        tickers:
           type: array
-          items: { $ref: "#/components/schemas/DshMarketingPromo" }
+          items: { $ref: "#/components/schemas/DshMarketingTicker" }
 
-    DshMarketingPromoResponse:
+    DshMarketingTickerResponse:
       type: object
-      required: [promo]
+      required: [ticker]
       properties:
-        promo: { $ref: "#/components/schemas/DshMarketingPromo" }
+        ticker: { $ref: "#/components/schemas/DshMarketingTicker" }
 
-    DshCreateMarketingPromoRequest:
+    DshCreateMarketingTickerRequest:
       type: object
-      required: [code]
+      required: [message]
       properties:
-        code: { type: string, minLength: 1 }
-        description: { type: string }
-        expiresAt: { type: string }
-        targetType: { $ref: "#/components/schemas/DshMarketingTargetType" }
-        targetId: { type: string }
-        audience: { type: string }
-        placement: { type: string }
+        message: { type: string, minLength: 1 }
+        kind: { type: string, enum: [alert, news, promo] }
+        status: { type: string, enum: [draft, published, paused] }
+        source: { type: string, enum: [system, ops, partner] }
+        audience: { type: string, enum: [all, client, partner, captain] }
+        deliveryMode: { type: string, enum: [scroll, toast, overlay] }
+        priority: { type: string, enum: [low, normal, high, critical] }
+        pinned: { type: boolean }
+        actionType: { type: string }
+        actionTarget: { type: string }
+        openHour: { type: integer, minimum: 0, maximum: 23 }
+        closeHour: { type: integer, minimum: 0, maximum: 23 }
+        cooldownMinutes: { type: integer, minimum: 0 }
+        repeatGapMinutes: { type: integer, minimum: 0 }
 
-    DshUpdateMarketingPromoRequest:
+    DshUpdateMarketingTickerRequest:
       type: object
       properties:
-        status: { type: string, enum: [active, paused, expired, cancelled] }
-        endDate: { type: string, format: date }
+        message: { type: string, minLength: 1 }
+        kind: { type: string, enum: [alert, news, promo] }
+        status: { type: string, enum: [draft, published, paused] }
+        source: { type: string, enum: [system, ops, partner] }
+        audience: { type: string, enum: [all, client, partner, captain] }
+        deliveryMode: { type: string, enum: [scroll, toast, overlay] }
+        priority: { type: string, enum: [low, normal, high, critical] }
+        pinned: { type: boolean }
+        actionType: { type: string }
+        actionTarget: { type: string }
+        openHour: { type: integer, minimum: 0, maximum: 23 }
+        closeHour: { type: integer, minimum: 0, maximum: 23 }
+        cooldownMinutes: { type: integer, minimum: 0 }
+        repeatGapMinutes: { type: integer, minimum: 0 }
 
     # ── Platform Policies Schemas ────────────────────────────────────
     DshZone:

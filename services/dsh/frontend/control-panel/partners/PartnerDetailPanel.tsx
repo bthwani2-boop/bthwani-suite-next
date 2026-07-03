@@ -185,12 +185,12 @@ export function PartnerDetailPanel({
                   style={{ width: "100%", padding: "0.5rem", borderRadius: "0.375rem", border: `1px solid var(--dsh-card-border)`, fontSize: "0.875rem", fontFamily: "var(--font-arabic)" }}
                 />
                 {reasonIsMissing && (
-                  <div style={{ color: "var(--status-danger, #b42318)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>
+                  <div style={{ color: `var(--status-danger, ${colorRoles.brandAction})`, fontSize: "0.8125rem", marginTop: "0.375rem" }}>
                     السبب مطلوب لهذا القرار.
                   </div>
                 )}
                 {readinessBlocked && (
-                  <div style={{ color: "var(--status-danger, #b42318)", fontSize: "0.8125rem", marginTop: "0.375rem" }}>
+                  <div style={{ color: `var(--status-danger, ${colorRoles.brandAction})`, fontSize: "0.8125rem", marginTop: "0.375rem" }}>
                     لا يمكن تنفيذ القرار قبل اكتمال الجاهزية: {readiness?.blockedReason ?? "بوابات الجاهزية غير مكتملة"}.
                   </div>
                 )}

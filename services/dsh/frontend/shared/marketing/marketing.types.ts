@@ -19,39 +19,6 @@ export type DshCampaign = {
   readonly updatedAt: string;
 };
 
-export type DshBanner = {
-  readonly id: string;
-  readonly title: string;
-  readonly imageUrl: string;
-  readonly actionUrl: string;
-  readonly position: number;
-  readonly isActive: boolean;
-  readonly targetType?: DshMarketingTargetType;
-  readonly targetId?: string;
-  readonly audience: string;
-  readonly placement: string;
-  readonly createdBy: string;
-  readonly deletedAt?: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type DshPromo = {
-  readonly id: string;
-  readonly code: string;
-  readonly description: string;
-  readonly status: string;
-  readonly expiresAt: string;
-  readonly targetType?: DshMarketingTargetType;
-  readonly targetId?: string;
-  readonly audience: string;
-  readonly placement?: string;
-  readonly createdBy: string;
-  readonly archivedAt?: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
 export type DshMarketingState<T> =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }

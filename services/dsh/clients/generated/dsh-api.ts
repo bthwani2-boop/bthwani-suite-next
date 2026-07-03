@@ -1380,25 +1380,25 @@ export interface paths {
         patch: operations["updateDshCampaign"];
         trace?: never;
     };
-    "/dsh/operator/marketing/banners": {
+    "/dsh/operator/marketing/tickers": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List marketing banners (excludes soft-deleted rows). */
-        get: operations["listDshMarketingBanners"];
+        /** List marketing news tickers (excludes soft-deleted rows). */
+        get: operations["listDshMarketingTickers"];
         put?: never;
-        /** Create a marketing banner. */
-        post: operations["createDshMarketingBanner"];
+        /** Create a marketing news ticker. */
+        post: operations["createDshMarketingTicker"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/dsh/operator/marketing/banners/{bannerId}": {
+    "/dsh/operator/marketing/tickers/{tickerId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1408,47 +1408,12 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a marketing banner (soft delete — deleted_at recorded; the row is never physically removed since it may have already been client-visible). */
-        delete: operations["deleteDshMarketingBanner"];
+        /** Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history). */
+        delete: operations["deleteDshMarketingTicker"];
         options?: never;
         head?: never;
-        /** Update a marketing banner. */
-        patch: operations["updateDshMarketingBanner"];
-        trace?: never;
-    };
-    "/dsh/operator/marketing/promos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List marketing promos. */
-        get: operations["listDshMarketingPromos"];
-        put?: never;
-        /** Create a marketing promo. */
-        post: operations["createDshMarketingPromo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/operator/marketing/promos/{promoId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update a marketing promo. Status transitions are governed by a lifecycle state machine (expired/cancelled are terminal); illegal transitions return 409. */
-        patch: operations["updateDshMarketingPromo"];
+        /** Update a marketing news ticker. Status lifecycle is governed (draft -> published|paused, published <-> paused, never back to draft); illegal transitions return 409. */
+        patch: operations["updateDshMarketingTicker"];
         trace?: never;
     };
     "/dsh/operator/platform/zones": {
@@ -3011,48 +2976,6 @@ export interface components {
             targetType?: components["schemas"]["DshMarketingTargetType"];
             targetId?: string;
         };
-        DshMarketingBanner: {
-            id: string;
-            title: string;
-            imageUrl?: string;
-            actionUrl?: string;
-            position: number;
-            isActive: boolean;
-            targetType?: components["schemas"]["DshMarketingTargetType"];
-            targetId?: string;
-            audience: string;
-            placement: string;
-            createdBy: string;
-            /** Format: date-time */
-            deletedAt?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        DshMarketingBannersListResponse: {
-            banners: components["schemas"]["DshMarketingBanner"][];
-        };
-        DshMarketingBannerResponse: {
-            banner: components["schemas"]["DshMarketingBanner"];
-        };
-        DshCreateMarketingBannerRequest: {
-            title: string;
-            imageUrl?: string;
-            actionUrl?: string;
-            position?: number;
-            targetType?: components["schemas"]["DshMarketingTargetType"];
-            targetId?: string;
-            audience?: string;
-            placement?: string;
-        };
-        DshUpdateMarketingBannerRequest: {
-            title?: string;
-            imageUrl?: string;
-            isActive?: boolean;
-            targetType?: components["schemas"]["DshMarketingTargetType"];
-            targetId?: string;
-        };
         DshPartner: {
             id: string;
             legalNameAr: string;
@@ -3263,45 +3186,83 @@ export interface components {
             locationLongitude?: number;
             evidenceMediaRefs?: string[];
         };
-        DshMarketingPromo: {
+        DshMarketingTicker: {
             id: string;
-            code: string;
-            description?: string;
+            message: string;
             /** @enum {string} */
-            status: "active" | "paused" | "expired" | "cancelled";
-            expiresAt?: string;
-            targetType?: components["schemas"]["DshMarketingTargetType"];
-            targetId?: string;
-            audience: string;
-            placement?: string;
+            kind: "alert" | "news" | "promo";
+            /** @enum {string} */
+            status: "draft" | "published" | "paused";
+            /** @enum {string} */
+            source: "system" | "ops" | "partner";
+            /** @enum {string} */
+            audience: "all" | "client" | "partner" | "captain";
+            /** @enum {string} */
+            deliveryMode: "scroll" | "toast" | "overlay";
+            /** @enum {string} */
+            priority: "low" | "normal" | "high" | "critical";
+            pinned: boolean;
+            actionType: string;
+            actionTarget: string;
+            clicks: number;
+            impressions: number;
+            openHour?: number;
+            closeHour?: number;
+            cooldownMinutes?: number;
+            repeatGapMinutes?: number;
             createdBy: string;
-            /** Format: date-time */
-            archivedAt?: string | null;
-            /** Format: date-time */
             createdAt: string;
-            /** Format: date-time */
             updatedAt: string;
         };
-        DshMarketingPromosListResponse: {
-            promos: components["schemas"]["DshMarketingPromo"][];
+        DshMarketingTickersListResponse: {
+            tickers: components["schemas"]["DshMarketingTicker"][];
         };
-        DshMarketingPromoResponse: {
-            promo: components["schemas"]["DshMarketingPromo"];
+        DshMarketingTickerResponse: {
+            ticker: components["schemas"]["DshMarketingTicker"];
         };
-        DshCreateMarketingPromoRequest: {
-            code: string;
-            description?: string;
-            expiresAt?: string;
-            targetType?: components["schemas"]["DshMarketingTargetType"];
-            targetId?: string;
-            audience?: string;
-            placement?: string;
-        };
-        DshUpdateMarketingPromoRequest: {
+        DshCreateMarketingTickerRequest: {
+            message: string;
             /** @enum {string} */
-            status?: "active" | "paused" | "expired" | "cancelled";
-            /** Format: date */
-            endDate?: string;
+            kind?: "alert" | "news" | "promo";
+            /** @enum {string} */
+            status?: "draft" | "published" | "paused";
+            /** @enum {string} */
+            source?: "system" | "ops" | "partner";
+            /** @enum {string} */
+            audience?: "all" | "client" | "partner" | "captain";
+            /** @enum {string} */
+            deliveryMode?: "scroll" | "toast" | "overlay";
+            /** @enum {string} */
+            priority?: "low" | "normal" | "high" | "critical";
+            pinned?: boolean;
+            actionType?: string;
+            actionTarget?: string;
+            openHour?: number;
+            closeHour?: number;
+            cooldownMinutes?: number;
+            repeatGapMinutes?: number;
+        };
+        DshUpdateMarketingTickerRequest: {
+            message?: string;
+            /** @enum {string} */
+            kind?: "alert" | "news" | "promo";
+            /** @enum {string} */
+            status?: "draft" | "published" | "paused";
+            /** @enum {string} */
+            source?: "system" | "ops" | "partner";
+            /** @enum {string} */
+            audience?: "all" | "client" | "partner" | "captain";
+            /** @enum {string} */
+            deliveryMode?: "scroll" | "toast" | "overlay";
+            /** @enum {string} */
+            priority?: "low" | "normal" | "high" | "critical";
+            pinned?: boolean;
+            actionType?: string;
+            actionTarget?: string;
+            openHour?: number;
+            closeHour?: number;
+            cooldownMinutes?: number;
+            repeatGapMinutes?: number;
         };
         DshZone: {
             id: string;
@@ -6018,7 +5979,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    listDshMarketingBanners: {
+    listDshMarketingTickers: {
         parameters: {
             query?: never;
             header?: never;
@@ -6027,20 +5988,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Banners list. */
+            /** @description Tickers. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshMarketingBannersListResponse"];
+                    "application/json": components["schemas"]["DshMarketingTickersListResponse"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
     };
-    createDshMarketingBanner: {
+    createDshMarketingTicker: {
         parameters: {
             query?: never;
             header?: never;
@@ -6049,17 +6010,17 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshCreateMarketingBannerRequest"];
+                "application/json": components["schemas"]["DshCreateMarketingTickerRequest"];
             };
         };
         responses: {
-            /** @description Banner created. */
+            /** @description Ticker created. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshMarketingBannerResponse"];
+                    "application/json": components["schemas"]["DshMarketingTickerResponse"];
                 };
             };
             400: components["responses"]["InvalidRequest"];
@@ -6067,18 +6028,18 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
-    deleteDshMarketingBanner: {
+    deleteDshMarketingTicker: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                bannerId: string;
+                tickerId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Banner deleted. */
+            /** @description Ticker deleted. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6094,107 +6055,28 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    updateDshMarketingBanner: {
+    updateDshMarketingTicker: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                bannerId: string;
+                tickerId: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpdateMarketingBannerRequest"];
+                "application/json": components["schemas"]["DshUpdateMarketingTickerRequest"];
             };
         };
         responses: {
-            /** @description Banner updated. */
+            /** @description Ticker updated. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshMarketingBannerResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listDshMarketingPromos: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Promos list. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshMarketingPromosListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    createDshMarketingPromo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshCreateMarketingPromoRequest"];
-            };
-        };
-        responses: {
-            /** @description Promo created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshMarketingPromoResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    updateDshMarketingPromo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                promoId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshUpdateMarketingPromoRequest"];
-            };
-        };
-        responses: {
-            /** @description Promo updated. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshMarketingPromoResponse"];
+                    "application/json": components["schemas"]["DshMarketingTickerResponse"];
                 };
             };
             400: components["responses"]["InvalidRequest"];
