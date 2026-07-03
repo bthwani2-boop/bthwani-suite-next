@@ -535,13 +535,20 @@ function Invoke-DshSmoke {
   $submitted = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
   if ($submitted.partner.activationStatus -ne "submitted") { throw "Partner Onboarding & Store Publication submit did not reach submitted" }
 
+  $partnerStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Headers $operatorHeaders -TimeoutSec 10
+  if ($partnerStores.total -lt 1) { throw "Partner Onboarding & Store Publication partner has no auto-created store" }
+
+  $smokeStoreId = @($partnerStores.stores)[0].id
+  if ([string]::IsNullOrWhiteSpace($smokeStoreId)) { throw "Partner Onboarding & Store Publication auto-created store id is empty" }
+
   $visitBody = @{
-    storeId = "store-1002"
+    storeId = $smokeStoreId
     visitNotes = "field visit for Partner Onboarding & Store Publication smoke"
     locationLatitude = 15.3229
     locationLongitude = 44.2075
     evidenceMediaRefs = @("media_visit_smoke_front.jpg")
   } | ConvertTo-Json
+
   $visit = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
   if ($visit.visitStatus -ne "submitted") { throw "Partner Onboarding & Store Publication field visit was not submitted" }
 
@@ -576,19 +583,55 @@ function Invoke-DshSmoke {
   $review = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $operatorHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
   if ($review.document.documentStatus -ne "approved") { throw "Partner Onboarding & Store Publication document review did not approve document" }
 
-  $linkBody = @{ storeId = "store-1002" } | ConvertTo-Json
-  $linkedStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $linkBody -TimeoutSec 10
-  if ($linkedStores.total -lt 1) { throw "Partner Onboarding & Store Publication partner store link returned no stores" }
-
-  foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "partner_active", "client_visible")) {
+  foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "partner_active")) {
     Invoke-PartnerTransition $partnerDraft.id $toStatus | Out-Null
   }
+
+  function Invoke-SmokeStoreGovernance([string] $StoreId, [string] $Action, [string] $Value) {
+    $detail = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$StoreId" -Headers $operatorHeaders -TimeoutSec 10
+
+    if (-not $detail.store.version) {
+      throw "Partner Onboarding & Store Publication could not read store version for $StoreId"
+    }
+
+    $headers = @{}
+    foreach ($key in $operatorHeaders.Keys) {
+      $headers[$key] = $operatorHeaders[$key]
+    }
+
+    $headers["X-Correlation-ID"] = "smoke-store-governance-$Action-$([guid]::NewGuid())"
+    $headers["Idempotency-Key"]  = "smoke-$StoreId-$Action-$([guid]::NewGuid())"
+
+    $body = @{
+      expectedVersion = [int]$detail.store.version
+      action = $Action
+      value = $Value
+      reason = "Partner Onboarding & Store Publication runtime smoke: $Action => $Value"
+    } | ConvertTo-Json
+
+    $result = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$StoreId/governance" -Method Post -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 10
+
+    if (-not $result.store) {
+      throw "Partner Onboarding & Store Publication governance failed for $Action => $Value"
+    }
+
+    return $result.store
+  }
+
+  Invoke-SmokeStoreGovernance $smokeStoreId "lifecycle" "active" | Out-Null
+  Invoke-SmokeStoreGovernance $smokeStoreId "visibility" "visible" | Out-Null
+  Invoke-SmokeStoreGovernance $smokeStoreId "serviceability" "serviceable" | Out-Null
+  Invoke-SmokeStoreGovernance $smokeStoreId "partner-readiness" "ready" | Out-Null
+  Invoke-SmokeStoreGovernance $smokeStoreId "catalog-approval" "approved" | Out-Null
+  Invoke-SmokeStoreGovernance $smokeStoreId "marketing-visibility" "visible" | Out-Null
+
+  Invoke-PartnerTransition $partnerDraft.id "client_visible" | Out-Null
   $readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
   if ($readiness.partnerId -ne $partnerDraft.id) { throw "Partner Onboarding & Store Publication readiness response did not match partner" }
   $audit = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/audit" -Headers $operatorHeaders -TimeoutSec 10
   if ($audit.events.Count -lt 7) { throw "Partner Onboarding & Store Publication audit did not include the full transition chain" }
   if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "Partner Onboarding & Store Publication audit final status is not client_visible" }
-  $linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1002" -Headers $operatorHeaders -TimeoutSec 10
+  $linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$smokeStoreId" -Headers $operatorHeaders -TimeoutSec 10
   if ($linkedStore.store.partnerReadiness -ne "ready") { throw "Partner Onboarding & Store Publication linked store partner_readiness is not ready" }
 
   $partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status" -Headers $partnerHeaders -TimeoutSec 10
@@ -680,7 +723,7 @@ elseif ($Action -eq "reset") {
   docker info | Out-Null
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) down -v --remove-orphans
   Write-Host "Volumes removed. Restarting..."
-  
+
   # Start database first to avoid API health checks deadlocking on missing tables
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
   Wait-ForPostgres
