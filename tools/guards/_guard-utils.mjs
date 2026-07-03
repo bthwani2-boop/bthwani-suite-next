@@ -8,6 +8,7 @@ export const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), 
 
 const EXCLUDED_DIRS = new Set([
   ".git",
+  ".diagnostics",
   "node_modules",
   ".pnpm-store",
   ".next",

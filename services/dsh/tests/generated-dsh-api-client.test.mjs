@@ -45,11 +45,22 @@ describe("generated DSH API client coverage", () => {
     assert.match(source, /DshNotificationsListResponse/);
   });
 
-  test("includes Marketing marketing operations and schemas", () => {
+  test("includes Marketing campaign operations and schemas", () => {
     assert.match(source, /listDshCampaigns/);
     assert.match(source, /createDshCampaign/);
-    assert.match(source, /listDshMarketingBanners/);
     assert.match(source, /DshCampaignsListResponse/);
+    assert.match(source, /listDshMarketingTickers/);
+    assert.match(source, /createDshMarketingTicker/);
+    assert.match(source, /updateDshMarketingTicker/);
+    assert.match(source, /deleteDshMarketingTicker/);
+    assert.match(source, /DshMarketingTickersListResponse/);
+  });
+
+  test("retired marketing banners/promos operations stay retired (SSOT: dsh.home-discovery)", () => {
+    assert.doesNotMatch(source, /listDshMarketingBanners/);
+    assert.doesNotMatch(source, /listDshMarketingPromos/);
+    assert.doesNotMatch(source, /DshMarketingBanner/);
+    assert.doesNotMatch(source, /DshMarketingPromo/);
   });
 
   test("includes Platform Policies platform policy operations and schemas", () => {

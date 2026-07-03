@@ -142,178 +142,129 @@ func (s *protectedStoreServer) handleDeleteCampaign(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"archived": true})
 }
 
-// GET /dsh/operator/marketing/banners
-func (s *protectedStoreServer) handleListBanners(w http.ResponseWriter, r *http.Request) {
+// GET /dsh/operator/marketing/tickers
+func (s *protectedStoreServer) handleListTickers(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requireActor(w, r, "operator")
 	if !ok {
 		return
 	}
-	banners, err := marketing.ListBanners(s.db)
+	tickers, err := marketing.ListTickers(s.db)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list banners")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tickers")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"banners": banners})
+	store.SendJSON(w, http.StatusOK, map[string]any{"tickers": tickers})
 }
 
-// POST /dsh/operator/marketing/banners
-func (s *protectedStoreServer) handleCreateBanner(w http.ResponseWriter, r *http.Request) {
+// POST /dsh/operator/marketing/tickers
+func (s *protectedStoreServer) handleCreateTicker(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "operator")
 	if !ok {
 		return
 	}
 	var body struct {
-		Title      string `json:"title"`
-		ImageURL   string `json:"imageUrl"`
-		ActionURL  string `json:"actionUrl"`
-		Position   int    `json:"position"`
-		TargetType string `json:"targetType"`
-		TargetID   string `json:"targetId"`
-		Audience   string `json:"audience"`
-		Placement  string `json:"placement"`
+		Message          string `json:"message"`
+		Kind             string `json:"kind"`
+		Status           string `json:"status"`
+		Source           string `json:"source"`
+		Audience         string `json:"audience"`
+		DeliveryMode     string `json:"deliveryMode"`
+		Priority         string `json:"priority"`
+		Pinned           bool   `json:"pinned"`
+		ActionType       string `json:"actionType"`
+		ActionTarget     string `json:"actionTarget"`
+		OpenHour         *int   `json:"openHour"`
+		CloseHour        *int   `json:"closeHour"`
+		CooldownMinutes  *int   `json:"cooldownMinutes"`
+		RepeatGapMinutes *int   `json:"repeatGapMinutes"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	b, err := marketing.CreateBanner(s.db, marketing.CreateBannerInput{
-		Title:            body.Title,
-		ImageURL:         body.ImageURL,
-		ActionURL:        body.ActionURL,
-		Position:         body.Position,
-		TargetType:       body.TargetType,
-		TargetID:         body.TargetID,
+	t, err := marketing.CreateTicker(s.db, marketing.CreateTickerInput{
+		Message:          body.Message,
+		Kind:             body.Kind,
+		Status:           body.Status,
+		Source:           body.Source,
 		Audience:         body.Audience,
-		Placement:        body.Placement,
+		DeliveryMode:     body.DeliveryMode,
+		Priority:         body.Priority,
+		Pinned:           body.Pinned,
+		ActionType:       body.ActionType,
+		ActionTarget:     body.ActionTarget,
+		OpenHour:         body.OpenHour,
+		CloseHour:        body.CloseHour,
+		CooldownMinutes:  body.CooldownMinutes,
+		RepeatGapMinutes: body.RepeatGapMinutes,
 		CreatedBy:        actor.ID,
-		CreatedBySurface: "control-panel",
 		CorrelationID:    marketingCorrelationID(r),
 	})
 	if err != nil {
-		writeMarketingError(w, err, "banner not found")
+		writeMarketingError(w, err, "ticker not found")
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"banner": b})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"ticker": t})
 }
 
-// PATCH /dsh/operator/marketing/banners/{bannerId}
-func (s *protectedStoreServer) handleUpdateBanner(w http.ResponseWriter, r *http.Request) {
+// PATCH /dsh/operator/marketing/tickers/{tickerId}
+func (s *protectedStoreServer) handleUpdateTicker(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "operator")
 	if !ok {
 		return
 	}
-	id := r.PathValue("bannerId")
 	var body struct {
-		IsActive   bool   `json:"isActive"`
-		Title      string `json:"title"`
-		ImageURL   string `json:"imageUrl"`
-		TargetType string `json:"targetType"`
-		TargetID   string `json:"targetId"`
+		Message          *string `json:"message"`
+		Kind             *string `json:"kind"`
+		Status           *string `json:"status"`
+		Source           *string `json:"source"`
+		Audience         *string `json:"audience"`
+		DeliveryMode     *string `json:"deliveryMode"`
+		Priority         *string `json:"priority"`
+		Pinned           *bool   `json:"pinned"`
+		ActionType       *string `json:"actionType"`
+		ActionTarget     *string `json:"actionTarget"`
+		OpenHour         *int    `json:"openHour"`
+		CloseHour        *int    `json:"closeHour"`
+		CooldownMinutes  *int    `json:"cooldownMinutes"`
+		RepeatGapMinutes *int    `json:"repeatGapMinutes"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	b, err := marketing.UpdateBanner(s.db, id, marketing.UpdateBannerInput{
-		IsActive:      body.IsActive,
-		Title:         body.Title,
-		ImageURL:      body.ImageURL,
-		TargetType:    body.TargetType,
-		TargetID:      body.TargetID,
-		ActorID:       actor.ID,
-		CorrelationID: marketingCorrelationID(r),
+	t, err := marketing.UpdateTicker(s.db, r.PathValue("tickerId"), marketing.UpdateTickerInput{
+		Message:          body.Message,
+		Kind:             body.Kind,
+		Status:           body.Status,
+		Source:           body.Source,
+		Audience:         body.Audience,
+		DeliveryMode:     body.DeliveryMode,
+		Priority:         body.Priority,
+		Pinned:           body.Pinned,
+		ActionType:       body.ActionType,
+		ActionTarget:     body.ActionTarget,
+		OpenHour:         body.OpenHour,
+		CloseHour:        body.CloseHour,
+		CooldownMinutes:  body.CooldownMinutes,
+		RepeatGapMinutes: body.RepeatGapMinutes,
+		ActorID:          actor.ID,
+		CorrelationID:    marketingCorrelationID(r),
 	})
 	if err != nil {
-		writeMarketingError(w, err, "banner not found")
+		writeMarketingError(w, err, "ticker not found")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"banner": b})
+	store.SendJSON(w, http.StatusOK, map[string]any{"ticker": t})
 }
 
-// DELETE /dsh/operator/marketing/banners/{bannerId} — soft delete, not a hard delete.
-func (s *protectedStoreServer) handleDeleteBanner(w http.ResponseWriter, r *http.Request) {
+// DELETE /dsh/operator/marketing/tickers/{tickerId}
+func (s *protectedStoreServer) handleDeleteTicker(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "operator")
 	if !ok {
 		return
 	}
-	id := r.PathValue("bannerId")
-	if err := marketing.DeleteBanner(s.db, id, actor.ID, marketingCorrelationID(r)); err != nil {
-		writeMarketingError(w, err, "banner not found")
+	if err := marketing.DeleteTicker(s.db, r.PathValue("tickerId"), actor.ID, marketingCorrelationID(r)); err != nil {
+		writeMarketingError(w, err, "ticker not found")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"deleted": true})
-}
-
-// GET /dsh/operator/marketing/promos
-func (s *protectedStoreServer) handleListPromos(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
-	if !ok {
-		return
-	}
-	promos, err := marketing.ListPromos(s.db)
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list promos")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"promos": promos})
-}
-
-// POST /dsh/operator/marketing/promos
-func (s *protectedStoreServer) handleCreatePromo(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
-	if !ok {
-		return
-	}
-	var body struct {
-		Code        string `json:"code"`
-		Description string `json:"description"`
-		ExpiresAt   string `json:"expiresAt"`
-		TargetType  string `json:"targetType"`
-		TargetID    string `json:"targetId"`
-		Audience    string `json:"audience"`
-		Placement   string `json:"placement"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	p, err := marketing.CreatePromo(s.db, marketing.CreatePromoInput{
-		Code:             body.Code,
-		Description:      body.Description,
-		ExpiresAt:        body.ExpiresAt,
-		TargetType:       body.TargetType,
-		TargetID:         body.TargetID,
-		Audience:         body.Audience,
-		Placement:        body.Placement,
-		CreatedBy:        actor.ID,
-		CreatedBySurface: "control-panel",
-		CorrelationID:    marketingCorrelationID(r),
-	})
-	if err != nil {
-		writeMarketingError(w, err, "promo not found")
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"promo": p})
-}
-
-// PATCH /dsh/operator/marketing/promos/{promoId}
-func (s *protectedStoreServer) handleUpdatePromo(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
-	if !ok {
-		return
-	}
-	id := r.PathValue("promoId")
-	var body struct {
-		Status string `json:"status"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	p, err := marketing.UpdatePromo(s.db, id, marketing.UpdatePromoInput{
-		Status:        body.Status,
-		ActorID:       actor.ID,
-		CorrelationID: marketingCorrelationID(r),
-	})
-	if err != nil {
-		writeMarketingError(w, err, "promo not found")
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"promo": p})
 }

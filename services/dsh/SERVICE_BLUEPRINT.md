@@ -168,13 +168,10 @@ All DSH primary surfaces are active runtime surfaces:
 - `getDshCampaign`
 - `updateDshCampaign`
 - `archiveDshCampaign`
-- `listDshMarketingBanners`
-- `createDshMarketingBanner`
-- `updateDshMarketingBanner`
-- `deleteDshMarketingBanner`
-- `listDshMarketingPromos`
-- `createDshMarketingPromo`
-- `updateDshMarketingPromo`
+- `listDshMarketingTickers`
+- `createDshMarketingTicker`
+- `updateDshMarketingTicker`
+- `deleteDshMarketingTicker`
 
 ### Platform Policies and Service Area Management
 

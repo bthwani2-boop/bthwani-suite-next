@@ -12,16 +12,6 @@ func campaignJSON(c Campaign) []byte {
 	return b
 }
 
-func bannerJSON(b Banner) []byte {
-	out, _ := json.Marshal(b)
-	return out
-}
-
-func promoJSON(p Promo) []byte {
-	b, _ := json.Marshal(p)
-	return b
-}
-
 // WriteAuditEvent records a marketing mutation for the audit trail.
 // It is best-effort with respect to the caller's primary mutation: callers
 // should still return success to the client if the primary write succeeded,

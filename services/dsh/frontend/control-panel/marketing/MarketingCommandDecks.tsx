@@ -38,9 +38,9 @@ function NotBackedNotice({ reason }: { reason: string }) {
     <div
       role="status"
       style={{
-        background: "#FEF3C7",
-        border: "1px solid #F59E0B",
-        color: "#92400E",
+        background: opsTheme.warningSurface,
+        border: `1px solid var(--status-warning-border, ${colorRoles.surfaceBase})`,
+        color: `var(--status-warning-text, ${colorRoles.brandAction})`,
         borderRadius: "0.5rem",
         padding: "0.625rem 0.875rem",
         fontSize: "0.8rem",
@@ -90,7 +90,7 @@ export function TickerCommandDeck() {
           <CpButton onClick={() => controller.select(null)}>إضافة شريط جديد</CpButton>
         </div>
 
-        {!controller.isBackedByApi && <NotBackedNotice reason={controller.persistenceDisabledReason} />}
+        {controller.errorMessage && <NotBackedNotice reason={controller.errorMessage} />}
 
         {controller.items.length === 0 ? (
           <CpEmptyTableMessage>لا يوجد أشرطة إعلانية مسجلة حالياً.</CpEmptyTableMessage>

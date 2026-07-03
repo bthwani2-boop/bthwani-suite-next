@@ -96,7 +96,7 @@ export function DshPlatformHealthWorkspace() {
 // 3. Rollback & History Workspace
 export function DshPlatformRollbackWorkspace() {
   const [history, setHistory] = useState([
-    { id: "event-001", action: "تحديث متغير: dsh_checkout_timeout_ms", oldValue: "5000", newValue: "3000", operator: "سامي القحطاني", timestamp: "منذ ساعة واحدة", status: "نشط" },
+    { id: "event-001", action: "تحديث متغير: dsh_checkout_timeout_ms", oldValue: "5000", newValue: "4500", operator: "سامي القحطاني", timestamp: "منذ ساعة واحدة", status: "نشط" },
     { id: "event-002", action: "تفعيل Canary: dsh-new-checkout-flow", oldValue: "0%", newValue: "10%", operator: "خالد الحربي", timestamp: "منذ ساعتين", status: "نشط" },
   ]);
   const [result, setResult] = useState<string | null>(null);

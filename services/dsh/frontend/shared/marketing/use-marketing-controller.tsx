@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   fetchCampaigns, createCampaign, updateCampaign, archiveCampaign,
-  fetchBanners, createBanner, updateBanner, deleteBanner,
-  fetchPromos, createPromo, updatePromo,
+  fetchTickers, createTicker, updateTicker, deleteTicker,
 } from "./marketing.api";
-import type { DshCampaign, DshBanner, DshPromo, DshMarketingState } from "./marketing.types";
+import type { DshCampaign, DshMarketingState } from "./marketing.types";
 import type {
   MarketingNewsTickerItem,
   MarketingNewsTickerAudience,
@@ -179,56 +178,102 @@ export function useTickersController(authKind: string) {
   const [items, setItems] = useState<ReadonlyArray<MarketingNewsTickerItem>>([]);
   const [selected, setSelected] = useState<MarketingNewsTickerItem | null>(null);
   const [draft, setDraft] = useState<MarketingNewsTickerItem | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const { tickers } = await fetchTickers();
+      setItems(tickers);
+      setErrorMessage(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authKind !== "authenticated") { setItems([]); return; }
+    void load();
+  }, [authKind, load]);
 
   const select = useCallback((item: MarketingNewsTickerItem | null) => {
     setSelected(item);
     setDraft(item === null ? createMarketingTickerDraft() : { ...item });
   }, []);
 
-  const save = useCallback((input: MarketingNewsTickerItem) => {
-    const normalized = { ...input, updatedAt: new Date().toISOString() };
-    if (normalized.id.startsWith("ticker-temp-")) {
-      normalized.id = `ticker-${Date.now()}`;
-    }
-    setItems(prev => {
-      const idx = prev.findIndex(t => t.id === normalized.id);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = normalized;
-        return next;
+  const toWritePayload = (input: MarketingNewsTickerItem) => ({
+    message: input.message,
+    kind: input.kind,
+    status: input.status,
+    source: input.source,
+    audience: input.audience,
+    deliveryMode: input.deliveryMode,
+    priority: input.priority,
+    pinned: input.pinned,
+    actionType: input.actionType,
+    actionTarget: input.actionTarget,
+    openHour: input.openHour,
+    closeHour: input.closeHour,
+    cooldownMinutes: input.cooldownMinutes,
+    repeatGapMinutes: input.repeatGapMinutes,
+  });
+
+  const save = useCallback(async (input: MarketingNewsTickerItem) => {
+    try {
+      if (input.id.startsWith("ticker-temp-")) {
+        await createTicker(toWritePayload(input));
+      } else {
+        await updateTicker(input.id, toWritePayload(input));
       }
-      return [...prev, normalized];
-    });
-    select(null);
-  }, [select]);
+      setErrorMessage(null);
+      await load();
+      select(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [load, select]);
 
-  const remove = useCallback((id: string) => {
-    setItems(prev => prev.filter(t => t.id !== id));
-    if (selected?.id === id) select(null);
-  }, [selected, select]);
+  const remove = useCallback(async (id: string) => {
+    try {
+      await deleteTicker(id);
+      setErrorMessage(null);
+      await load();
+      if (selected?.id === id) select(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [load, selected, select]);
 
-  const toggleStatus = useCallback((id: string) => {
-    setItems(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      const nextStatus: MarketingNewsTickerStatus = t.status === "published" ? "paused" : "published";
-      return { ...t, status: nextStatus, updatedAt: new Date().toISOString() };
-    }));
-  }, []);
+  const toggleStatus = useCallback(async (id: string) => {
+    const current = items.find(t => t.id === id);
+    if (!current) return;
+    try {
+      await updateTicker(id, { status: current.status === "published" ? "paused" : "published" });
+      setErrorMessage(null);
+      await load();
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [items, load]);
 
-  const togglePinned = useCallback((id: string) => {
-    setItems(prev => prev.map(t => t.id === id ? { ...t, pinned: !t.pinned, updatedAt: new Date().toISOString() } : t));
-  }, []);
+  const togglePinned = useCallback(async (id: string) => {
+    const current = items.find(t => t.id === id);
+    if (!current) return;
+    try {
+      await updateTicker(id, { pinned: !current.pinned });
+      setErrorMessage(null);
+      await load();
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [items, load]);
 
   const plan = useMemo(() => buildMarketingTickerPlan("all", items), [items]);
 
-  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for tickers yet
-  // (only campaigns/banners/promos are API-backed — see marketing_partner_offer_matrix.md).
-  // save/remove/toggleStatus below mutate in-memory state only and DO NOT persist.
   return {
     items, selected, draft, setDraft, select, save, remove, toggleStatus, togglePinned, plan,
-    reload: () => {},
-    isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لشريط الأخبار حتى الآن — التعديلات هنا محلية ولا تُحفظ.",
+    reload: load,
+    errorMessage,
+    isBackedByApi: true as const,
   };
 }
 
@@ -500,60 +545,5 @@ export function useCampaignsController(authKind: string) {
       await updateCampaign(id, body); await load();
     },
     remove: async (id: string) => { await archiveCampaign(id); await load(); },
-  };
-}
-
-export function useBannersController(authKind: string) {
-  const [state, setState] = useState<DshMarketingState<DshBanner>>({ kind: "idle" });
-
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try {
-      const { banners } = await fetchBanners();
-      setState({ kind: "success", items: banners });
-    } catch (err) {
-      setState({ kind: "error", message: resolveMsg(err) });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authKind !== "authenticated") { setState({ kind: "idle" }); return; }
-    load();
-  }, [authKind, load]);
-
-  return {
-    state, reload: load,
-    create: async (body: { title: string; imageUrl?: string; position?: number }) => {
-      await createBanner(body); await load();
-    },
-    toggle: async (id: string, isActive: boolean) => { await updateBanner(id, { isActive }); await load(); },
-    remove: async (id: string) => { await deleteBanner(id); await load(); },
-  };
-}
-
-export function usePromosController(authKind: string) {
-  const [state, setState] = useState<DshMarketingState<DshPromo>>({ kind: "idle" });
-
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try {
-      const { promos } = await fetchPromos();
-      setState({ kind: "success", items: promos });
-    } catch (err) {
-      setState({ kind: "error", message: resolveMsg(err) });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authKind !== "authenticated") { setState({ kind: "idle" }); return; }
-    load();
-  }, [authKind, load]);
-
-  return {
-    state, reload: load,
-    create: async (body: { code: string; description?: string; expiresAt?: string }) => {
-      await createPromo(body); await load();
-    },
-    updateStatus: async (id: string, status: string) => { await updatePromo(id, { status }); await load(); },
   };
 }
