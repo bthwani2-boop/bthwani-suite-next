@@ -47,7 +47,7 @@ $results += [pscustomobject]@{ step = "graphify-code"; ok = (Run-Step "graphify-
 $results += [pscustomobject]@{ step = "contracts-lint"; ok = (Run-Step "contracts-lint" { pnpm run contracts:lint }) }
 $results += [pscustomobject]@{ step = "contracts-typecheck"; ok = (Run-Step "contracts-typecheck" { pnpm nx run contracts:typecheck }) }
 $results += [pscustomobject]@{ step = "dsh-typecheck"; ok = (Run-Step "dsh-typecheck" { pnpm nx run dsh:typecheck }) }
-$results += [pscustomobject]@{ step = "dsh-build"; ok = (Run-Step "dsh-build" { pnpm nx run dsh:build }) }
+$results += [pscustomobject]@{ step = "dsh-build"; ok = (Run-Step "dsh-build" { pnpm --dir services/dsh build }) }
 $results += [pscustomobject]@{ step = "dsh-test"; ok = (Run-Step "dsh-test" { pnpm nx run dsh:test }) }
 $results += [pscustomobject]@{ step = "dsh-go-test"; ok = (Run-Step "dsh-go-test" {
   $previousGoCache = $env:GOCACHE
@@ -63,6 +63,8 @@ $results += [pscustomobject]@{ step = "runtime-smoke"; ok = (Run-Step "runtime-s
     Write-Host "Running in GitHub Actions CI: skipping docker runtime-smoke in journey:gate (run by dedicated job instead)." -ForegroundColor Yellow
     $true
   } else {
+    pnpm run runtime:status
+    pnpm run runtime:migrate
     pnpm run runtime:smoke
   }
 }) }

@@ -307,9 +307,10 @@ export const DSH_CAPABILITY_MAP = [
   // Backend for campaigns/banners/promos is API-backed with soft archive/delete,
   // audit trail, target visibility-gate checks and 4 DB integration tests (see
   // marketing_db_test.go) as of commit e69fa48. Tickers are API-backed since
-  // migration dsh-019 (governed lifecycle + audit + soft delete). Remaining gap:
-  // 6 of 11 control-panel command decks (video/partner-offers/loyalty/growth/
-  // signals-measurement/image-review) have no backend table/handler — they are
+  // migration dsh-019 (governed lifecycle + audit + soft delete). Signals and
+  // header KPIs consume existing DSH analytics endpoints. Remaining gap:
+  // 5 of 11 control-panel command decks (video/partner-offers/loyalty/growth/
+  // image-review) have no backend table/handler — they are
   // explicitly disclosed as isBackedByApi:false with mutating actions disabled
   // in the UI, not silently faked. No runtime evidence yet proves app-client
   // visibility filtering or app-partner scoping for this capability.
@@ -341,8 +342,8 @@ export const DSH_CAPABILITY_MAP = [
       "deleteDshMarketingTicker",
     ],
     // Campaigns are exposed under /dsh/operator/... only — operator surface.
-    // Remaining gap: 6 of 11 control-panel command decks (video/partner-offers/
-    // loyalty/growth/signals-measurement/image-review) have no backend
+    // Remaining gap: 5 of 11 control-panel command decks (video/partner-offers/
+    // loyalty/growth/image-review) have no backend
     // table/handler; they are disclosed as isBackedByApi:false with mutating
     // actions disabled. That gap keeps this capability FIX_REQUIRED.
     surfaces: ["control-panel"],
