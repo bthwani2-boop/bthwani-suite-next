@@ -17,19 +17,20 @@
     "lint": "node ../../tools/guards/no-cp-primitives-in-ui-kit.mjs && node ../../tools/guards/no-domain-component-in-ui-kit.mjs && node ../../tools/guards/no-direct-tamagui-outside-ui-kit.mjs && node ../../tools/guards/no-ui-kit-deep-imports.mjs"
   },
   "devDependencies": {
-    "@types/react": "^19.2.17",
+    "@types/react": "19.2.17",
     "typescript": "~6.0.3",
-    "@expo/vector-icons": "^14.0.2"
+    "@expo/vector-icons": "14.0.2",
+    "@react-native/metro-config": "0.85.3"
   },
   "dependencies": {
     "@tamagui/config": "2.0.0-rc.41",
     "tamagui": "2.0.0-rc.41"
   },
   "peerDependencies": {
-    "react": ">=19 <20",
-    "react-dom": ">=19 <20",
-    "react-native": ">=0.81 <1",
-    "@expo/vector-icons": "*"
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "@expo/vector-icons": "14.0.2"
   },
   "peerDependenciesMeta": {
     "react-dom": {
