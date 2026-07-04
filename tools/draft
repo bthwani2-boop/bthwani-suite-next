@@ -1,0 +1,1614 @@
+
+
+سأتعامل مع starting كـ ref مباشر من GitHub Remote، وأفحص بنية المستودع والملفات المرتبطة فعليًا بـ DSH/WLT وأوامر التشغيل/الحوكمة، ثم أخرج قرارًا تنفيذيًا بالمشاكل ذات الأولوية وخطوات المعالجة. لن أعتبر أي شيء مغلقًا أو جاهزًا إلا إذا ظهر دليل من الكود أو CI أو مسار تشغيل قابل للتحقق.
+
+
+Looked for available tools
+
+Looked for available tools
+
+Looked for available tools
+
+
+Called tool
+أول نتيجة ثابتة: starting موجود كـ ref مباشر لأن package.json تم جلبه منه، رغم أن بحث الفروع لم يرجعه. الفرع متقدم عن master بـ 4 commits ويغيّر 80+ ملفًا؛ أغلب التغيير يمس DSH frontend/shared وWLT bridge وبعض اختبارات backend، وليس تنفيذًا تشغيليًا كاملاً.
+
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+ظهر خلل جذري في طبقة checkout/WLT: الواجهة تحتوي حالات blocked_payment_unavailable وout_of_area لكنها لا تُنتَج فعليًا من controller، وWLT failure يتحول إلى error عام. كذلك شاشة checkout لا تزال تحمل منطقًا تشغيليًا ومحاكاة داخل surface بدل shared/backend.
+
+
+
+Called tool
+
+Looked for available tools
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+Thought for 6m 41s
+القرار المهني
+الفرع starting غير جاهز للإغلاق، وغير جاهز للدمج، ولا يجوز اعتباره 100% أو runtime-verified. السبب ليس وجود أخطاء بسيطة فقط، بل وجود فجوات P0 في مسار DSH/WLT نفسه: لا يوجد CI على رأس هذا الفرع، مسار checkout/WLT غير ذري، الواجهة تنفذ منطقًا تشغيليًا داخل screen، وهناك تضارب في إعدادات WLT بين runtime والـ shared clients.
+
+الدليل الأول الحاسم: ملف CI لا يشغّل push على starting أصلًا، بل على master وbegin وbranch-validation فقط، ولا توجد أي workflow runs مرتبطة برأس starting الذي تم فحصه.
+
+أهم الأخطاء والفجوات
+P0 — لا يوجد دليل تشغيل/CI للفرع الحالي
+الجذر: الفرع starting خارج trigger الخاص بـ GitHub Actions، لذلك لا يوجد إثبات أن typecheck أو test أو build أو Go DB integration أو Docker runtime smoke مرّت على الحالة الحالية. الـ CI نفسه يحتوي Gates قوية، لكنه لا يعمل على هذا الفرع.
+
+الأثر: أي ادعاء بأن الفرع مغلق أو آمن أو جاهز هو غير مثبت.
+
+الإجراء الصحيح: إضافة starting مؤقتًا إلى workflow push، أو فتح PR من starting إلى master وتشغيل كل Jobs، ثم منع الدمج قبل نجاح: Node gates، DSH Go، DSH DB، WLT Go، WLT DB، Docker runtime smoke.
+
+P0 — مسار DSH checkout → WLT handoff غير ذري ويصنع تناقض بيانات
+في handleCreateCheckoutIntent يتم إنشاء جلسة WLT أولًا، ثم بعد نجاح WLT يتم إنشاء DSH checkout intent في قاعدة DSH. إذا نجحت WLT وفشل إدخال DSH، ستبقى جلسة WLT orphan بلا DSH intent مقابل.
+
+الجذر: لا توجد transaction عابرة للخدمتين، ولا outbox، ولا reconciliation، ولا idempotency key من DSH إلى WLT. عميل DSH للـ WLT يرسل فقط JSON عادي إلى /wlt/payment-sessions بدون Authorization، بدون correlation id، وبدون idempotency.
+
+الأثر: تضارب مالي/تشغيلي محتمل: WLT يملك payment session، بينما DSH لا يملك intent أو order مطابقًا.
+
+الإجراء الصحيح: إنشاء DSH intent أولًا بحالة payment_pending أو handoff_pending، ثم تنفيذ WLT handoff عبر outbox/idempotent command. يجب أن يرسل DSH إلى WLT: Idempotency-Key, X-Correlation-ID, service token، ومبلغ/عملة إن كانت WLT ستملك payment truth. ويجب أن يرفض WLT أي replay بنفس checkoutIntentId إذا اختلف clientId/storeId/paymentMethod.
+
+P0 — WLT endpoint يقبل إنشاء payment session بلا حماية كافية
+WLT يعرّف POST /wlt/payment-sessions مباشرة في router، والـ handler ينشئ session بعد decode فقط؛ لا يظهر auth middleware أو service-to-service authorization في هذا المسار.
+
+كما أن ON CONFLICT (checkout_intent_id) يعمل UPDATE updated_at فقط، ولا يتحقق أن إعادة الطلب بنفس checkoutIntentId تحمل نفس clientId/storeId/paymentMethod.
+
+الأثر: يمكن خلق أو إعادة استخدام مرجع دفع بحالة غير محكومة، ويمكن إخفاء mismatch خطير في retry أو إعادة إرسال.
+
+الإجراء الصحيح: جعل هذا endpoint service-only، وإضافة تحقق replay صارم، وتسجيل correlation/idempotency، وإرجاع 409 عند اختلاف بيانات نفس checkoutIntentId.
+
+P0 — الواجهة تعتبر وجود wltPaymentSessionId نجاحًا نهائيًا
+في shared checkout view-model، أي intent غير ملغي/منتهي ومعه wltPaymentSessionId يتحول مباشرة إلى success. لا يتم فحص حالة WLT مثل reference_created, authorized, captured, أو فشل الدفع.
+
+في DSH backend يتم إدخال checkout intent بحالة pending دائمًا، حتى بعد WLT handoff.
+
+الأثر: التطبيق قد يبدأ إنشاء order بعد مجرد إنشاء reference في WLT، وليس بعد قرار دفع واضح. هذا يخلط بين “مرجع دفع” و“نجاح دفع/جاهزية order”.
+
+الإجراء الصحيح: تعريف state machine صريح: intent_created → wlt_reference_created/payment_pending → payment_authorized/cod_reference_ready → order_created. لا يجب أن تنشئ الواجهة order بناءً على non-empty WLT ID فقط.
+
+P0 — CheckoutScreen يحتوي منطق تشغيل وسعر وOrder orchestration داخل UI surface
+الشاشة تعمل submit تلقائيًا عند mount، وتحوّل paymentMethod بـ as any، ثم عند نجاح checkout تقوم بإنشاء order من داخل الشاشة.
+
+الأخطر: الشاشة تحوّل priceReference النصي إلى رقم unitPrice داخل الواجهة. هذا يخالف قاعدة أن DSH لا يحسب الحقيقة المالية من priceReference، وأن السعر/الدفع يجب ألا يكون truth داخل UI.
+
+الأثر: surface UI أصبح يملك قرارًا تشغيليًا وماليًا، بينما البروتوكول يمنع ذلك صراحة؛ DSH UI-only surfaces ممنوع أن تملك business lifecycle logic أو raw API mapping أو financial truth.
+
+الإجراء الصحيح: نقل orchestration إلى shared controller/backend. الشاشة تعرض الحالة فقط. إنشاء order يجب أن يتم عبر backend بعد تحقق checkout intent وcart/store/client/payment policy، لا عبر parsing في React Native screen.
+
+P0 — ما زالت هناك محاكاة runtime داخل شاشة العميل
+داخل ActiveOrderTracker توجد حالة chat محلية، وعند إرسال رسالة يتم حقن رد captain وهمي بعد setTimeout.
+
+الأثر: هذا ليس runtime truth. يعطي انطباعًا أن chat/driver communication موجودة بينما هي غير مربوطة بخدمة حقيقية.
+
+الإجراء الصحيح: إزالة الرد الوهمي. إما ربطها بـ DSH support/chat endpoint حقيقي، أو تعطيل الميزة برسالة “غير متاحة حاليًا” حتى يتم تنفيذ backend/shared/controller لها.
+
+P1 — حالات checkout المعرفة في الواجهة لا يتم إنتاجها فعليًا
+الأنواع والحالات تحتوي blocked_payment_unavailable وout_of_area.
+
+لكن classifyCheckoutError لا يميز 503 أو WLT_HANDOFF_UNAVAILABLE، وresolveCheckoutSubmitError يحول كل غير permission/offline إلى error عام.
+
+الأثر: UI فيه حالات مصممة لكنها ميتة فعليًا؛ المستخدم لن يرى “WLT غير متاح” رغم أن backend يرجع 503 عند فشل WLT.
+
+الإجراء الصحيح: map 503 + code WLT_HANDOFF_UNAVAILABLE إلى checkoutBlockedPaymentUnavailableState(). وربط out-of-area بنتيجة serviceability فعلية قبل checkout.
+
+P1 — WLT frontend integration متضارب بين DSH وWLT
+في DSH shared، resolver الخاص بـ WLT يقرأ WLT_API_URL فقط ثم يرجع localhost:58083.
+
+لكن runtime scripts تضبط EXPO_PUBLIC_WLT_API_BASE_URL وNEXT_PUBLIC_WLT_API_BASE_URL.
+
+في المقابل، WLT shared resolver يقرأ NEXT_PUBLIC_WLT_API_BASE_URL وEXPO_PUBLIC_WLT_API_BASE_URL.
+
+الأثر: نفس النظام لديه مصدران مختلفان لعنوان WLT. هذا يسبب فشلًا في remote/dev/codespaces، وقد يعمل فقط بالصدفة على localhost.
+
+الإجراء الصحيح: توحيد resolver واحد للـ WLT base URL، واعتماد NEXT_PUBLIC_WLT_API_BASE_URL وEXPO_PUBLIC_WLT_API_BASE_URL للواجهة، وDSH_WLT_BASE_URL للـ backend فقط.
+
+P1 — CORS/header mismatch بين DSH finance client وWLT backend
+DSH finance-WLT link يستخدم createDshHttpClient للاتصال بـ WLT، وهذا يرسل Authorization وX-Correlation-ID.
+
+لكن WLT CORS يسمح فقط بـ Content-Type, Authorization ولا يسمح بـ X-Correlation-ID. كما أنه يقيد origin واحدًا فقط.
+
+الأثر: control-panel/browser calls إلى WLT ستفشل في preflight عند وجود X-Correlation-ID.
+
+الإجراء الصحيح: إما عدم استدعاء WLT مباشرة من المتصفح والاكتفاء بـ DSH backend proxy، أو تحديث WLT CORS للسماح بـ X-Correlation-ID, Idempotency-Key، والأصول المستخدمة فعليًا في runtime.
+
+P1 — OpenAPI generation موجود لكن shared clients يلتفون عليه يدويًا
+OpenAPI يعلن x-bthwani-client-generation: ENABLED، ويوجد ملف generated client.
+
+لكن shared APIs مثل cart/checkout/catalog تستخدم manual fetch wrappers مباشرة.
+
+البروتوكول يقول إن generated client هو الأصل عند وجود OpenAPI generation، وأي اختلاف بين OpenAPI وclient types هو FIX_REQUIRED.
+
+الأثر: لا يوجد ضمان قوي أن frontend shared clients تطابق contract. قد يتغير OpenAPI ولا تنكسر اليدويات إلا في runtime.
+
+الإجراء الصحيح: ربط manual adapters بأنواع generated operations، أو نقل الاستهلاك إلى generated client، وإضافة test يقارن endpoints المستخدمة في .api.ts مع OpenAPI paths.
+
+P1 — HTTP kernel غير موحد
+parseResponse يتعامل مع 204، لكن createDshFlexibleHttpClient وcreateDshRawHttpClient يرجعان response.json() مباشرة ولا يعالجان 204، وبعض الأخطاء تفقد body.
+
+الأثر: endpoints التي ترجع 204 قد تفشل في frontend رغم نجاحها. كما أن error mapping غير ثابت بين clients.
+
+الإجراء الصحيح: إنشاء requester واحد موحد: auth/public/mutation modes كخيارات، لا كدوال متفرقة، مع 204 handling، JSON-safe parsing، timeout classification، body-preserving errors.
+
+P1 — Home discovery contract لا يطابق handler بالكامل
+OpenAPI يعلن أن limit بين 1 و50، ويضع 400 لحالات invalid query.
+
+لكن handler إذا كان limit غير صالح أو خارج النطاق يتجاهله ويرجع default بدل 400. كما ينشئ context ثم لا يستخدمه في DB calls.
+
+الأثر: contract لا يطابق runtime. الاختبارات قد تمر بينما العميل يتوقع سلوكًا مختلفًا.
+
+الإجراء الصحيح: إرجاع 400 عند invalid limit، وتمرير context إلى repository queries.
+
+P2 — أخطاء تسمية وتكرار منطق WLT داخل DSH
+يوجد typo متكرر Capitain بدل Captain في WLT/DSH finance APIs.
+
+كما أن DSH finance-wlt-link يكرر mapping حالات COD/commission داخل DSH shared، رغم أن WLT-for-DSH shared brain هو مالك financial reference mappings حسب البروتوكول.
+
+الأثر: تشتت SSOT ومخاطر اختلاف display/status بين DSH وWLT.
+
+الإجراء الصحيح: نقل mapping إلى services/wlt/frontend/shared/dsh وتصديره لـ DSH، مع إبقاء DSH مستهلكًا read-only فقط.
+
+ما هو صحيح نسبيًا
+بوابات ظهور المتاجر للعميل ليست الفجوة الأساسية الحالية. listStores, getStoreByID, وListHomeStores تطبق شروطًا متقاربة: is_visible, active, serviceability, partner_readiness, catalog_approval_status, وmarketing_visibility.
+
+لكن يلزم تثبيت ذلك باختبارات negative لكل بوابة؛ البروتوكول يشترط أن كل endpoint يعرض Stores للعميل يطبق نفس visibility gates.
+
+فجوة الحوكمة نفسها
+ملفات البروتوكول ما زالت تحتوي placeholders مثل <REPO_REMOTE>, <REF>, <RESOLVED_COMMIT_SHA>، رغم أن المطلوب استخدامها كحزمة حاكمة على ref محدد.
+
+كما أن البروتوكول يقول إن coverage pass لا يعني implementation pass إلا بعد تطبيقه على الكود والruntime والCI. هذا مهم لأن الفرع الحالي لا يملك CI run.
+
+الإجراء الصحيح: تثبيت governance snapshot للفرع الحالي: repo/ref/sha، ثم ربط كل claim بنتيجة test/CI/runtime أو حذفه.
+
+ترتيب المعالجة الصحيح
+CI/Gate أولًا: أضف starting إلى CI أو افتح PR، وشغّل كل jobs. لا دمج ولا إعلان إغلاق قبل green.
+
+DSH/WLT checkout handoff: outbox/idempotency/service auth/correlation/replay validation/state machine.
+
+إزالة منطق checkout من UI: نقل order orchestration وprice mapping إلى backend/shared، وإزالة simulated chat.
+
+توحيد WLT integration: resolver واحد، CORS صحيح، HTTP helper موحد، وإلغاء direct browser WLT إن لم يكن مطلوبًا.
+
+OpenAPI/client alignment: shared clients typed من generated OpenAPI أو tests تمنع الانحراف.
+
+اختبارات الفشل الحقيقي: WLT down، DSH insert failure after WLT success، repeated checkoutIntentId mismatch، 503 UI state، 204 parsing، CORS preflight، visibility negative gates.
+
+الحكم النهائي
+الحالة الحالية: FAIL / NOT MERGE READY.
+
+ليست المشكلة أن الكود “ناقص قليلًا”، بل أن مسارًا ماليًا-تشغيليًا مركزيًا بين DSH وWLT ما زال غير محكوم ذريًا، والواجهة ما زالت تمتلك أجزاء من القرار التشغيلي، ولا يوجد دليل CI/runtime على رأس starting.
+
+
+
+Pasted text.txt
+Document
+GitHub
+ 
+قم با اعاده التحليل وفقا لهذا 
+C:\bthwani-suite-next\governance\operational_journey_protocol_package 
+C:\bthwani-suite-next\tools\comand
+
+
+
+Pasted text.txt
+Document
+
+Pasted text (2).txt
+Document
+GitHub
+
+ماذا عن C:\bthwani-suite-next\services\wlt هل كل مايتعلق ب dsh  وما يرتبط بها في wlt 
+واضح 
+
+
+GitHub
+ قم با اعاده التحليل وفقا لهذا  والتشخيص العميق وفقا للبرتوكول هنا C:\bthwani-suite-next\governance\operational_journey_protocol_package C:\bthwani-suite-next\tools\comand
+
+
+
+
+
+
+Called tool
+
+GitHub
+@GitHub قم با اعاده التحليل وفقا لهذا والتشخيص العميق وفقا للبرتوكول هنا C:\bthwani-suite-next\governance\operational_journey_protocol_package C:\bthwani-suite-next\tools\comand 
+
+تم استيعاب التوسيع: النطاق ليس سؤال WLT فقط، بل DSH كاملًا وكل ما يلمس WLT وفق البروتوكول. سأحسمها كـ analysis_only على starting، مع تصنيف أخطاء WLT/DSH كـ P0/P1/P2 وليس كتقدير عام.
+
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+
+
+Called tool
+Thought for 3m 11s
+الجواب الحاسم: لا. كل ما يتعلق بـ DSH داخل services/wlt ليس واضحًا ولا مغلقًا بالكامل. يوجد اتجاه صحيح في بعض الملفات، خصوصًا services/wlt/frontend/shared/dsh، لكنه غير كافٍ لإعلان أن حدود DSH/WLT واضحة؛ لأن الحدود متناقضة بين الـ contract، backend routes، database truth، runtime، وDSH shared consumers.
+
+الملفان المرفقان يعيدان طرح نفس التشخيص السابق، واستخدمتهما كسياق مقارنة فقط؛ الحسم أدناه مبني على GitHub Remote ref starting وليس على المحلي أو الذاكرة. 
+
+ 
+
+
+القرار المهني
+ref: starting
+resolved_commit_sha: 2513c2534ebde550e6ef7c8c0c14f38ad7ad8ee0
+task_mode: analysis_only
+scope:
+  - services/dsh
+  - services/wlt
+  - services/dsh/frontend/shared
+  - services/wlt/frontend/shared/dsh
+  - services/dsh/backend
+  - services/wlt/backend
+  - DSH/WLT contracts
+  - runtime bindings
+  - CI evidence
+decision: FAIL
+merge_status: DO_NOT_MERGE
+wlt_dsh_boundary_status: NOT_CLEAR_ENOUGH
+runtime_verified_claim_allowed: false
+implementation_pass_allowed: false
+سبب الحسم: البروتوكول يحدد أن services/wlt/frontend/shared/dsh هو عقل WLT المرتبط بـ DSH، وأن WLT هو مالك الحقيقة المالية الوحيد، بينما DSH مسموح له فقط بعرض references/status/metadata المالية للقراءة.
+
+1) ما هو الصحيح نسبيًا داخل services/wlt
+يوجد مجلد واضح باسم:
+
+services/wlt/frontend/shared/dsh
+وهذا المجلد يعلن نفسه كـ WLT-for-DSH shared boundary وطبقة قراءة مالية فقط. ملف index.ts يصدّر boundary types, reference states, view-models, contracts, finance hub, field commission, وcontrollers.
+
+كذلك توجد types للـ payment/session/refund/settlement/COD/commission/ledger، وفي رأس الملف تصريح واضح بأن هذه مراجع مالية للعرض فقط وأن DSH لا يجب أن يعدّلها.
+
+هذا جيد كبداية تنظيمية، لكنه لا يكفي؛ لأن الوضوح النظري مكسور في الربط الفعلي.
+
+2) الفجوات الكارثية في WLT المرتبط بـ DSH
+P0 — contract يقول إن DSH لا ينشئ payment session، لكن DSH backend ينشئها فعليًا
+في wlt-dsh-checkout-handoff.contract.ts توجد قاعدة:
+
+dshMayCreatePaymentSession: false
+وهذا يعني أن DSH لا يجب أن يخلق WLT payment session حسب هذا contract.
+
+لكن DSH backend في handleCreateCheckoutIntent يستدعي WLT مباشرة لإنشاء payment session قبل إنشاء checkout intent في DSH database.
+
+finding:
+  id: P0-WLT-DSH-CONTRACT-CONTRADICTION
+  path:
+    - services/wlt/frontend/shared/dsh/wlt-dsh-checkout-handoff.contract.ts
+    - services/dsh/backend/internal/http/checkout.go
+  problem: contract يمنع DSH من إنشاء WLT payment session، بينما backend ينفذ ذلك فعليًا.
+  root_cause: contract frontend/shared لا يطابق backend integration.
+  impact: حدود الملكية بين DSH وWLT غير حاسمة.
+  required_action:
+    - حسم القاعدة: هل DSH backend مسموح له بإرسال service command لإنشاء reference أم لا؟
+    - إن كان مسموحًا: غيّر contract إلى dshBackendMayRequestPaymentSessionReference مع منع UI/surface فقط.
+    - إن كان ممنوعًا: انقل إنشاء session إلى WLT-owned flow واستقبل DSH reference فقط.
+  priority: P0
+هذه ليست مشكلة تسمية؛ هذه فجوة ملكية.
+
+P0 — WLT backend يعرّض mutation routes رغم أن manifest يقول mutation غير جاهزة
+service.manifest.ts يعلن أن WLT يملك الحقيقة المالية، لكنه يقول أيضًا إن mutationRuntimeReady: false وmutationJourneysApproved: false.
+
+لكن WLT router يعرّض فعليًا POST routes للـ authorize/capture/expire/cod-collect/refunds/settlements/ledger entries.
+
+finding:
+  id: P0-WLT-MUTATION-ROUTES-EXPOSED-WHILE-MANIFEST-SAYS-NOT-READY
+  path:
+    - services/wlt/service.manifest.ts
+    - services/wlt/backend/internal/http/server.go
+  problem: manifest يقول financial mutations غير جاهزة، لكن backend routes موجودة ومفتوحة.
+  root_cause: governance/service manifest لا يطابق runtime router.
+  impact: يمكن استعمال مسارات مالية قبل اعتماد الرحلة أو اختبارها.
+  required_action:
+    - إما تعطيل routes غير المعتمدة خلف feature gate/service auth
+    - أو تحديث manifest فقط بعد tests/runtime/CI تثبت الجاهزية
+    - إضافة route-level tests تمنع تشغيل mutation غير معتمد
+  priority: P0
+P0 — WLT payment session endpoint بلا service auth/idempotency boundary واضح
+WLT router يعرّف:
+
+POST /wlt/payment-sessions
+GET /wlt/payment-sessions/{paymentSessionId}
+بدون ظهور middleware حماية في NewRouter.
+
+وفي HandleCreatePaymentSession يتم decode ثم CreatePaymentSession ثم إرجاع 201 مباشرة، بدون Authorization أو service token أو Idempotency-Key أو X-Correlation-ID.
+
+finding:
+  id: P0-WLT-PAYMENT-SESSION-ENDPOINT-NOT-SERVICE-BOUND
+  path:
+    - services/wlt/backend/internal/http/server.go
+    - services/wlt/backend/internal/reference/payment_session.go
+  problem: WLT endpoint المسؤول عن payment session reference ليس محميًا كـ service-to-service boundary.
+  root_cause: route مباشر بلا auth/idempotency/correlation enforcement.
+  impact: يمكن إنشاء أو إعادة استخدام session مالية مرجعية بلا حوكمة كافية.
+  required_action:
+    - إضافة service auth إلزامي
+    - إلزام Idempotency-Key و X-Correlation-ID
+    - رفض الطلبات التي لا تأتي من DSH service identity
+    - إضافة negative tests: missing auth, missing idempotency, replay mismatch
+  priority: P0
+P0 — ON CONFLICT في WLT يخفي replay mismatch
+CreatePaymentSession يعمل ON CONFLICT (checkout_intent_id) DO UPDATE SET updated_at = NOW() فقط، ثم يرجع الصف، بدون التأكد أن client_id, store_id, وpayment_method في إعادة الطلب هي نفسها.
+
+finding:
+  id: P0-WLT-IDEMPOTENCY-REPLAY-MISMATCH
+  path:
+    - services/wlt/backend/internal/reference/payment_session.go
+  problem: إعادة استخدام checkoutIntentId ببيانات مختلفة لا تُرفض.
+  root_cause: conflict handler لا يقارن payload الأصلي مع payload الجديد.
+  impact: session واحدة قد تُربط بعميل/متجر/طريقة دفع مختلفة منطقيًا.
+  required_action:
+    - عند conflict: اقرأ الصف الموجود
+    - قارن checkoutIntentId/clientId/storeId/paymentMethod/amount/currency
+    - إذا اختلفت البيانات: أرجع 409 IDEMPOTENCY_CONFLICT
+  priority: P0
+P0 — DSH → WLT handoff غير ذري ويصنع orphan WLT session
+DSH ينشئ intentID، ثم يطلب من WLT إنشاء session، وبعد نجاح WLT فقط ينشئ DSH checkout intent.
+
+هذا يعني: إذا نجح WLT وفشل checkout.CreateIntent في DSH، تبقى WLT session بلا DSH intent. CreateIntent نفسه يدخل checkout intent بحالة pending دائمًا، رغم وجود state باسم payment_pending.
+
+finding:
+  id: P0-DSH-WLT-HANDOFF-NON-ATOMIC
+  path:
+    - services/dsh/backend/internal/http/checkout.go
+    - services/dsh/backend/internal/checkout/checkout.go
+    - services/dsh/backend/internal/wlt/client.go
+    - services/wlt/backend/internal/reference/payment_session.go
+  problem: WLT session may exist without durable DSH checkout intent.
+  root_cause: WLT call happens before DSH persistence, with no outbox/retry/reconciliation/idempotency.
+  impact: ماليًا وتشغيليًا، يمكن أن يتباعد DSH وWLT.
+  required_action:
+    - persist DSH checkout intent أولًا بحالة handoff_pending/payment_pending
+    - outbox command إلى WLT
+    - idempotent WLT creation
+    - reconciliation job أو endpoint
+    - test لحالة WLT success + DSH insert failure
+  priority: P0
+P0 — WLT payment input لا يستقبل amount/currency عند إنشاء session
+WLT PaymentSession يحتوي AmountMinorUnits وCurrency.
+
+لكن CreatePaymentSessionInput لا يحتوي amount أو currency أصلًا.
+
+وDSH client يرسل فقط checkoutIntentId, clientId, storeId, paymentMethod.
+
+finding:
+  id: P0-WLT-PAYMENT-SESSION-MISSING-AMOUNT-CURRENCY-AT-HANDOFF
+  path:
+    - services/wlt/backend/internal/reference/payment_session.go
+    - services/dsh/backend/internal/wlt/client.go
+  problem: WLT creates payment session without explicit financial amount/currency from the checkout snapshot.
+  root_cause: handoff contract ناقص.
+  impact: WLT reference يبدأ بمبلغ افتراضي 0 وحقيقة مالية غير مربوطة بسلة/طلب DSH.
+  required_action:
+    - تحديد مصدر amount/currency الصحيح
+    - إن كانت WLT هي المالكة: DSH يرسل snapshot غير authoritative + WLT يتحقق
+    - إن كانت DSH لا يرسل مبلغًا: WLT يجب أن يجلب/يتحقق من source رسمي، لا default 0
+  priority: P0
+P0 — WLT shared/dsh فيه controller يعرض رصيد محفظة وهمي ويزيده محليًا
+useWltDshPaymentController يعرّف walletDisplayBalance محليًا بقيمة 15000، وrechargeWallet يزيده محليًا بـ 20000.
+
+كما يقرر تعطيل/تفعيل wallet/mixed بناءً على هذا الرصيد المحلي.
+
+finding:
+  id: P0-WLT-DSH-LOCAL-WALLET-BALANCE-TRUTH
+  path:
+    - services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx
+  problem: WLT-for-DSH shared يعرض رصيدًا ماليًا محليًا ويعدله محليًا.
+  root_cause: presentation controller يحتوي financial state وهمي بدل WLT runtime reference.
+  impact: DSH checkout UI قد يعرض قدرة دفع غير حقيقية.
+  required_action:
+    - حذف walletDisplayBalance الافتراضي
+    - حذف rechargeWallet المحلي
+    - جلب wallet eligibility/balance/reference من WLT read-only endpoint
+    - إن لم يوجد endpoint، الحالة يجب أن تكون blocked/unavailable لا fake ready
+  priority: P0
+هذه فجوة خطيرة لأنها داخل المسار الذي يفترض أن يكون “read-only financial reference”.
+
+P1 — payment method contract غير موحد بين UI وbackend
+WLT/DSH frontend controller يستخدم:
+
+"official-wallets"
+بينما backend في DSH/WLT يقبل:
+
+official_wallet
+في DSH backend PaymentMethod معرف كـ official_wallet.
+
+وفي WLT payment controller المفتاح هو official-wallets.
+
+وفوق ذلك CheckoutScreen يمرر paymentMethod as any، أي يتجاوز type safety.
+
+finding:
+  id: P1-PAYMENT-METHOD-NAMING-SPLIT
+  path:
+    - services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx
+    - services/dsh/backend/internal/checkout/checkout.go
+    - services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx
+  problem: official wallet payment method له أسماء مختلفة بين frontend/backend.
+  root_cause: عدم وجود enum واحد مولد/مشترك من contract.
+  impact: احتمالية إرسال value غير مدعوم وفشل checkout أو mapping خاطئ.
+  required_action:
+    - توحيد enum: official_wallet
+    - إزالة `as any`
+    - إضافة type-level mapping/test
+  priority: P1
+P1 — WLT-for-DSH HTTP helper read-only لكنه غير محكوم كـ runtime client
+wltFetchJson يعمل fetch(url) فقط، بدون auth headers، بدون correlation id، بدون timeout، وبدون parsing آمن لـ 204 أو error body.
+
+finding:
+  id: P1-WLT-DSH-HTTP-HELPER-UNDER-SPECIFIED
+  path:
+    - services/wlt/frontend/shared/dsh/wlt-dsh-http-request.ts
+  problem: WLT read-only client غير مكتمل كـ runtime-grade client.
+  root_cause: helper بسيط بدل HTTP kernel واضح.
+  impact: صعوبة تصنيف offline/blocked/auth/cors/invalid-json، وفقدان correlation.
+  required_action:
+    - إضافة timeout
+    - إضافة correlation id
+    - body-preserving errors
+    - safe JSON/204 handling
+    - auth mode واضح: public-read أو service-proxy أو browser-token
+  priority: P1
+P1 — WLT frontend reads endpoints مباشرة من browser بينما CORS محدود
+WLT CORS يسمح فقط بـ Content-Type, Authorization ولا يسمح بـ X-Correlation-ID أو Idempotency-Key، ويقيد origin واحدًا عند تفعيل authMode.
+
+في المقابل WLT shared/dsh يقرأ endpoints مثل /wlt/settlements, /wlt/ledger, /wlt/refunds, و/wlt/control-panel/reconciliation-close-status مباشرة من baseUrl.
+
+finding:
+  id: P1-WLT-BROWSER-DIRECT-READS-CORS-CONTRACT-GAP
+  path:
+    - services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.api.ts
+    - services/wlt/backend/internal/http/server.go
+  problem: frontend WLT-for-DSH يقرأ WLT مباشرة، لكن CORS/auth/header policy غير مثبتة لهذا الاستخدام.
+  root_cause: لم يُحسم هل DSH surfaces تقرأ WLT مباشرة أم عبر DSH backend proxy.
+  impact: قد تعمل محليًا وتفشل في runtime browser أو remote.
+  required_action:
+    - اختيار سياسة واحدة:
+      - DSH backend proxy فقط
+      - أو WLT browser-read endpoints مع CORS/auth/correlation واضح
+  priority: P1
+P1 — DSH finance-wlt-link يكرر جزءًا من WLT boundary بدل الاستهلاك النظيف
+services/dsh/frontend/shared/finance-wlt-link/index.ts يعلن أن finance-wlt-link هو SSOT داخل DSH، ثم يقول إن WLT-side authority هو services/wlt/frontend/shared/dsh.
+
+لكن DSH يحتوي أيضًا bridge contracts وpayment-session client مستقل داخل finance-wlt-link. أحد هذه الملفات يستخدم endpoint مختلفًا /payment/sessions بدل endpoint الحقيقي في WLT router /wlt/payment-sessions.
+
+finding:
+  id: P1-DSH-WLT-BRIDGE-DUPLICATED-AND-ENDPOINT-DRIFT
+  path:
+    - services/dsh/frontend/shared/finance-wlt-link/index.ts
+    - services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-payment-session.client.ts
+    - services/wlt/backend/internal/http/server.go
+  problem: DSH bridge يملك client/contract قديم أو غير مطابق لمسارات WLT الحالية.
+  root_cause: أكثر من مصدر لعلاقة DSH/WLT.
+  impact: endpoint drift، confusion، واختبارات قد تغطي مسارًا غير مستخدم.
+  required_action:
+    - إزالة/تقاعد client القديم أو تحديثه للمسار الحقيقي
+    - جعل WLT shared/dsh هو source للـ financial reference mapping
+    - DSH shared يملك فقط controller binding/read-only composition
+  priority: P1
+P1 — WLT package/typecheck لا يغطي كل WLT surfaces
+@bthwani/wlt package يوجه main وtypes إلى frontend/shared/dsh/index.ts.
+
+وtsconfig.json في WLT لا يتضمن إلا service.manifest.ts, frontend/shared/dsh/**/*.ts(x), وcontracts/**/*.ts.
+
+finding:
+  id: P1-WLT-TYPECHECK-COVERAGE-NARROW
+  path:
+    - services/wlt/package.json
+    - services/wlt/tsconfig.json
+  problem: WLT frontend typecheck يثبت shared/dsh فقط، ولا يثبت كل WLT UI surfaces المذكورة في البروتوكول إذا كانت موجودة.
+  root_cause: package current scope narrow حول DSH shared.
+  impact: لا يمكن الادعاء بأن كل ما يرتبط بـ WLT UI surfaces مغلق.
+  required_action:
+    - إما توثيق أن WLT UI surfaces غير موجودة/خارج النطاق بدليل
+    - أو توسيع tsconfig/tests لتغطية surfaces الفعلية
+  priority: P1
+P1 — WLT backend tests لا تغطي payment session creation boundary
+البحث عن ملفات _test.go تحت services/wlt/backend أظهر اختبارات provider فقط، مثل payment_provider_test.go، وليس اختبارًا لـ reference/payment_session.go.
+
+اختبار provider يثبت forwarding للـ correlation/idempotency نحو provider عند authorize/capture، لكنه لا يثبت أن إنشاء payment session من DSH محمي أو idempotent.
+
+finding:
+  id: P1-WLT-PAYMENT-SESSION-CREATION-TESTS-MISSING
+  path:
+    - services/wlt/backend/internal/reference/payment_session.go
+    - services/wlt/backend/internal/reference/*_test.go
+  problem: لا يوجد test مثبت لمسار إنشاء payment session المرجعي.
+  root_cause: الاختبارات الحالية تركز على provider authorize/capture لا handoff creation.
+  impact: auth/idempotency/replay/correlation gaps لا تنكشف.
+  required_action:
+    - add payment_session_test.go
+    - cover create success, missing auth, missing idempotency, replay same payload, replay mismatch, invalid method
+  priority: P1
+3) أخطاء DSH التي تمنع وضوح WLT boundary
+P0 — DSH checkout view-model يعتبر وجود WLT session نجاحًا
+resolveCheckoutIntentDisplayState يحول أي intent فيه wltPaymentSessionId إلى checkoutSuccessState.
+
+هذا خطأ لأن WLT session قد تكون reference_created, pending_provider, failed, expired, authorized, أو captured. وجود ID ليس نجاحًا ماليًا.
+
+finding:
+  id: P0-DSH-CHECKOUT-WLT-ID-EQUALS-SUCCESS
+  path:
+    - services/dsh/frontend/shared/checkout/checkout.view-model.ts
+  problem: WLT paymentSessionId يعامل كنجاح checkout.
+  root_cause: DSH shared لا يقرأ WLT payment session status قبل تقرير success.
+  impact: order creation قد يبدأ بعد reference فقط، لا بعد حالة دفع صحيحة.
+  required_action:
+    - success لا يكون بناءً على non-empty id
+    - أضف states: wlt_reference_created, payment_pending, authorized/cod_ready, failed/expired
+    - اربطها بـ WLT reference read model
+  priority: P0
+P0 — CheckoutScreen ينشئ order ويفك السعر داخل UI surface
+الشاشة ترسل checkout تلقائيًا عند mount.
+
+بعد نجاح checkout، الشاشة تبني order items وتحوّل priceReference النصي إلى رقم unitPrice.
+
+finding:
+  id: P0-CHECKOUT-SCREEN-OWNS-ORDER-AND-PRICE-LOGIC
+  path:
+    - services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx
+  problem: UI surface يملك order orchestration وprice parsing.
+  root_cause: business lifecycle لم يُنقل إلى DSH shared/backend.
+  impact: مخالفة مباشرة لقاعدة DSH UI-only surfaces، وخطر مالي/تشغيلي.
+  required_action:
+    - إنشاء order من backend بعد تحقق checkout/cart/payment policy
+    - إزالة price parsing من UI
+    - screen يعرض state فقط
+  priority: P0
+البروتوكول يمنع صراحة fetch/adapters/state machines/business lifecycle/financial truth داخل DSH UI surfaces.
+
+P0 — Chat/communication داخل checkout ما زال simulated runtime truth
+داخل ActiveOrderTracker توجد رسائل جاهزة توحي بأن المراسلة الفورية مربوطة بالطلب، ثم يتم حقن رد captain وهمي بـ setTimeout.
+
+finding:
+  id: P0-CHECKOUT-ACTIVE-ORDER-SIMULATED-CHAT
+  path:
+    - services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx
+  problem: runtime surface يعرض chat/captain communication غير حقيقي.
+  root_cause: donor/demo behavior بقي داخل live customer flow.
+  impact: ادعاء وظيفة تشغيلية غير موجودة.
+  required_action:
+    - إزالة simulated captain response
+    - ربط chat/support endpoint حقيقي
+    - أو تعطيل الميزة بحالة unavailable
+  priority: P0
+4) CI / evidence gap
+CI لا يعمل على push إلى starting; فقط master, begin, وbranch-validation.
+
+ولا توجد workflow runs على رأس starting الحالي.
+
+finding:
+  id: P0-NO-CI-EVIDENCE-FOR-STARTING
+  path:
+    - .github/workflows/ci.yml
+  problem: لا يوجد CI مثبت على commit الحالي.
+  root_cause: starting خارج push triggers ولا توجد workflow run على SHA.
+  impact: يمنع MERGE_READY وruntime-verified و100%.
+  required_action:
+    - أضف starting مؤقتًا إلى CI أو افتح PR إلى master
+    - شغل Node gates, WLT Go, DSH Go, DB jobs, Docker runtime smoke
+  priority: P0
+5) جواب سؤالك المباشر: هل WLT المرتبط بـ DSH واضح؟
+الواضح
+clear_parts:
+  - services/wlt/frontend/shared/dsh موجود كمسار سيادي WLT-for-DSH.
+  - types/status/view-model/reference APIs موجودة مبدئيًا.
+  - manifest يعلن أن WLT يملك financial truth.
+  - DSH/WLT boundary نظريًا مكتوب في البروتوكول.
+غير الواضح / المكسور
+unclear_or_broken_parts:
+  - contract يقول dshMayCreatePaymentSession=false بينما DSH backend ينشئ WLT session.
+  - WLT exposes financial mutation routes رغم أن manifest يقول mutations غير جاهزة.
+  - WLT payment session creation غير محمي auth/idempotency.
+  - WLT replay conflict لا يتحقق من اختلاف payload.
+  - WLT handoff لا يحمل amount/currency.
+  - WLT shared/dsh يملك fake wallet balance/recharge state.
+  - DSH يعتبر WLT session id نجاحًا.
+  - DSH UI ينشئ order ويفسر السعر.
+  - DSH/WLT bridge duplicated وفيه endpoint drift.
+  - CI غير موجود على رأس starting.
+الحكم: WLT-for-DSH موجود كهيكل، لكنه ليس واضحًا بما يكفي كحد تشغيلي آمن.
+
+6) ترتيب المعالجة الصحيح
+Slice 0 — CI / Evidence Gate
+أولًا، لا تعلن إغلاقًا ولا 100% قبل تشغيل CI على starting.
+
+الإجراء:
+
+Add starting to CI trigger OR open PR starting -> master.
+Run all existing jobs.
+Slice 1 — WLT/DSH checkout handoff boundary
+هذا أعلى خطر.
+
+الإصلاح المطلوب:
+
+DSH persists intent first -> outbox/idempotent WLT command -> WLT validates service auth/idempotency/payload replay -> DSH updates state from WLT reference.
+Slice 2 — WLT mutation route governance
+إما:
+
+disable unapproved mutation routes
+أو:
+
+make manifest honest + add tests/runtime evidence.
+Slice 3 — WLT-for-DSH frontend shared cleanup
+الإصلاح:
+
+remove fake walletDisplayBalance/rechargeWallet
+unify payment method enum
+make read-only reference controller fetch real WLT eligibility/status
+Slice 4 — DSH checkout UI cleanup
+الإصلاح:
+
+remove order creation from CheckoutScreen
+remove price parsing
+remove simulated chat/captain response
+screen renders shared/backend states only
+Slice 5 — DSH/WLT bridge consolidation
+الإصلاح:
+
+retire stale DSH WLT payment-session client or align it with /wlt/payment-sessions
+make WLT shared/dsh own financial mappings
+make DSH shared consume read-only bindings only
+الحكم النهائي
+FAIL / DO_NOT_MERGE
+ولا: services/wlt ليس مغلقًا أو واضحًا بالكامل فيما يخص DSH.
+
+المشكلة ليست نقص ملف واحد؛ المشكلة أن الحد المالي التشغيلي بين DSH وWLT غير محسوم: contract يقول شيئًا، backend يفعل شيئًا آخر، manifest يعلن عدم جاهزية mutations بينما routes موجودة، وfrontend/shared يعرض financial-like state وهمي. هذا يمنع أي ادعاء بـ IMPLEMENTATION_PASS أو runtime-verified أو 100%.
+
+
+GitHub
+ عظيم الان انتقل لتحديد كل الفجوات والاخطاء ونقاط الضعف وكل شيء يجب معالجته فورا 
+في والمرتبط بخدمة dsh وما يرتبط بها ب wlt 
+لكل شيء من الالف الى الياء وبشكل عام ودقيق ومفصل 
+
+سأحوّل النتيجة الآن إلى سجل فجوات شامل قابل للتنفيذ: P0/P1/P2، مع ربط كل فجوة بالمسار والسبب والأثر والإصلاح. لن أتعامل مع WLT وحده؛ سأغطي DSH كاملًا وما يلمسه في WLT.
+
+
+
+Called tool
+ظهرت فجوة إضافية داخل DSH نفسه: إنشاء الطلب يقبل unitPrice القادم من الواجهة ويخزنه، بدل إعادة اشتقاق السعر من backend/catalog/cart. هذا يجعل الخلل المالي ليس في WLT فقط بل في DSH order boundary أيضًا.
+
+
+
+Called tool
+
+
+Called tool
+Thought for 1m 22s
+الحسم المهني: الفرع starting ما زال يحتوي فجوات P0/P1 في DSH وما يرتبط به بـ WLT، ولا يجوز اعتباره جاهزًا أو مغلقًا أو runtime-verified. المرفقات السابقة تؤكد نفس الاتجاه، لكنها ليست مصدر الحسم؛ مصدر الحسم هنا هو GitHub Remote على ref starting. 
+
+ 
+
+
+القرار النهائي
+ref: starting
+resolved_commit_sha: 2513c2534ebde550e6ef7c8c0c14f38ad7ad8ee0
+scope:
+  - services/dsh
+  - services/wlt
+  - services/dsh/backend
+  - services/wlt/backend
+  - services/dsh/frontend/shared
+  - services/wlt/frontend/shared/dsh
+  - DSH UI surfaces
+  - WLT-for-DSH financial boundary
+  - OpenAPI/contracts
+  - database migrations
+  - runtime bindings
+  - tests/guards/CI
+result: FAIL
+merge_status: DO_NOT_MERGE
+implementation_pass_allowed: false
+runtime_verified_claim_allowed: false
+السبب المركزي: البروتوكول يجعل services/dsh/frontend/shared عقل DSH، ويمنع DSH UI surfaces من امتلاك business lifecycle أو financial truth أو raw API mapping، كما يجعل services/wlt/frontend/shared/dsh عقل WLT المرتبط بـ DSH، ويجعل WLT المالك الوحيد للحقيقة المالية.
+
+P0 — يجب معالجتها فورًا
+1) لا يوجد CI مثبت على رأس starting
+ملف CI لا يشغّل push على starting؛ يشغّل فقط على master, begin, وbranch-validation. ولا توجد workflow runs مرتبطة برأس الفرع الحالي.
+
+problem: لا يوجد دليل عملي أن الفرع ينجح في typecheck/test/build/DB/runtime smoke.
+impact: يمنع MERGE_READY وruntime-verified و100%.
+fix:
+  - إضافة starting مؤقتًا إلى CI أو فتح PR starting -> master
+  - تشغيل node-gates, dsh-go, dsh-go-db, wlt-go, wlt-go-db, docker-runtime-smoke
+priority: P0
+2) DSH/WLT checkout handoff غير ذري
+في handleCreateCheckoutIntent يتم إنشاء WLT payment session أولًا، ثم إنشاء DSH checkout intent لاحقًا. إذا نجح WLT وفشل إدخال DSH، ينتج WLT session orphan بلا checkout intent مطابق.
+
+paths:
+  - services/dsh/backend/internal/http/checkout.go
+  - services/dsh/backend/internal/checkout/checkout.go
+  - services/dsh/backend/internal/wlt/client.go
+  - services/wlt/backend/internal/reference/payment_session.go
+problem: WLT session يمكن أن توجد بدون DSH intent durable.
+root_cause: لا outbox، لا idempotency، لا reconciliation، ولا persistence-first.
+impact: تضارب مالي/تشغيلي بين DSH وWLT.
+fix:
+  - إنشاء DSH intent أولًا بحالة handoff_pending أو payment_pending
+  - إصدار outbox command إلى WLT
+  - جعل WLT create idempotent ومحمية
+  - إضافة reconciliation test لحالة WLT success + DSH insert failure
+priority: P0
+3) contract يقول إن DSH لا ينشئ payment session، لكن DSH backend يفعل ذلك
+wlt-dsh-checkout-handoff.contract.ts يصرّح dshMayCreatePaymentSession: false. لكن DSH backend يستدعي s.wlt.CreatePaymentSession.
+
+problem: تضارب صريح بين contract وruntime behavior.
+impact: حدود DSH/WLT غير حاسمة.
+fix:
+  - إن كان المقصود منع UI فقط، غيّر contract إلى dshBackendMayRequestPaymentSessionReference
+  - إن كان DSH ممنوعًا تمامًا، انقل إنشاء session إلى WLT-owned flow
+priority: P0
+4) WLT payment session endpoint غير محمي كـ service boundary
+WLT يعرّف POST /wlt/payment-sessions مباشرة، والـ handler ينشئ session بعد decode فقط. لا يظهر service auth، ولا إلزام Idempotency-Key، ولا X-Correlation-ID.
+
+problem: endpoint مالي مرجعي قابل للاستدعاء بدون service-to-service guard واضح.
+impact: يمكن إنشاء payment reference بلا هوية خدمة أو تتبع أو idempotency.
+fix:
+  - service auth إلزامي
+  - Idempotency-Key إلزامي
+  - X-Correlation-ID إلزامي
+  - negative tests للطلبات الناقصة أو غير المصرح بها
+priority: P0
+5) WLT replay/idempotency ناقص ويخفي اختلاف البيانات
+ON CONFLICT (checkout_intent_id) يعمل فقط UPDATE updated_at = NOW() ولا يقارن client_id, store_id, أو payment_method.
+
+problem: نفس checkoutIntentId يمكن إعادة إرساله ببيانات مختلفة دون 409.
+impact: session مالية واحدة قد ترتبط منطقيًا بعميل/متجر/طريقة دفع مختلفة.
+fix:
+  - عند conflict اقرأ الصف الموجود
+  - قارن payload الأصلي بالجديد
+  - أرجع 409 IDEMPOTENCY_CONFLICT عند أي mismatch
+priority: P0
+6) WLT payment session ينشأ بدون amount/currency في handoff
+WLT PaymentSession يحتوي amountMinorUnits وcurrency، لكن CreatePaymentSessionInput لا يستقبل أي مبلغ أو عملة. وDSH client لا يرسل إلا checkoutIntentId/clientId/storeId/paymentMethod.
+
+problem: payment session يبدأ بحقيقة مالية ناقصة أو default 0.
+impact: WLT reference غير مرتبط بسعر checkout/cart الحقيقي.
+fix:
+  - تحديد source رسمي للمبلغ
+  - إرسال amountMinorUnits/currency كـ snapshot غير authoritative من DSH أو جعل WLT يتحقق من مصدر موثوق
+  - منع إنشاء session بمبلغ 0 إلا إذا كان مقصودًا ومثبتًا
+priority: P0
+7) DSH order creation يقبل السعر من الواجهة
+handleCreateOrder يستقبل unitPrice من request body، ثم orders.CreateOrder يخزنه في dsh_order_items.
+
+problem: UI يستطيع إرسال unitPrice، وDSH يخزنه.
+impact: السعر يمكن أن يأتي من client surface بدل backend/cart/catalog truth.
+fix:
+  - لا تقبل unitPrice من العميل
+  - أنشئ order من checkoutIntent/cart snapshot الموجود في backend
+  - احفظ price_snapshot من مصدر backend فقط
+  - أضف test يرسل unitPrice مزورًا ويجب رفضه أو تجاهله
+priority: P0
+8) CheckoutScreen يفك السعر ويصنع order داخل UI
+الشاشة ترسل checkout عند mount، ثم بعد success تبني order items وتحوّل priceReference النصي إلى unitPrice.
+
+problem: app-client surface يملك lifecycle orchestration وprice parsing.
+impact: مخالفة مباشرة للبروتوكول؛ UI صار يقرر order/price بدل shared/backend.
+fix:
+  - نقل order orchestration إلى backend أو DSH shared controller
+  - إزالة price parsing من React Native screen
+  - screen يعرض الحالة فقط
+priority: P0
+9) DSH يعتبر وجود WLT session ID نجاحًا
+resolveCheckoutIntentDisplayState يحول أي intent لديه wltPaymentSessionId إلى checkoutSuccessState.
+
+problem: non-empty WLT ID يعامل كنجاح.
+impact: reference_created أو pending_provider قد تتحول إلى نجاح UI.
+fix:
+  - success يجب أن يعتمد على WLT status لا على وجود id
+  - أضف states: reference_created, payment_pending, authorized, cod_ready, failed, expired
+  - اربط DSH checkout state بـ WLT read-only reference status
+priority: P0
+10) WLT-for-DSH payment controller يحتوي رصيد محفظة وهمي
+useWltDshPaymentController يبدأ walletDisplayBalance بـ 15000، وrechargeWallet يزيده محليًا، ثم يبني eligibility بناءً عليه.
+
+problem: WLT shared/dsh يعرض financial-like state محليًا.
+impact: UI قد يعرض قدرة دفع غير حقيقية.
+fix:
+  - حذف walletDisplayBalance الافتراضي
+  - حذف rechargeWallet المحلي
+  - جلب balance/eligibility من WLT read-only endpoint أو إظهار blocked/unavailable
+priority: P0
+11) WLT mutation routes موجودة رغم أن manifest يقول mutations غير جاهزة
+service.manifest.ts يقول mutationRuntimeReady: false وmutationJourneysApproved: false. لكن WLT router يعرّف routes مثل authorize/capture/refunds/settlements/ledger entries.
+
+problem: manifest لا يطابق runtime router.
+impact: مسارات مالية قد تكون مكشوفة قبل اعتمادها.
+fix:
+  - تعطيل mutation routes غير المعتمدة خلف feature gate/service auth
+  - أو تحديث manifest فقط بعد tests/runtime evidence
+priority: P0
+12) simulated chat/runtime truth داخل checkout
+داخل ActiveOrderTracker توجد رسائل جاهزة توحي أن المراسلة موحدة ومربوطة، ثم يتم حقن رد captain وهمي بـ setTimeout.
+
+problem: وظيفة تشغيلية غير حقيقية داخل شاشة عميل فعلية.
+impact: تضليل runtime capability.
+fix:
+  - إزالة simulated response
+  - ربط chat/support endpoint حقيقي
+  - أو عرض unavailable state
+priority: P0
+P1 — فجوات عالية يجب إغلاقها بعد P0 مباشرة
+13) payment method enum غير موحد
+DSH/WLT backend يستخدم official_wallet، بينما WLT frontend controller يستخدم official-wallets. وCheckoutScreen يستخدم paymentMethod as any.
+
+fix:
+  - enum موحد: official_wallet
+  - إزالة as any
+  - type mapping test بين frontend/backend/OpenAPI
+priority: P1
+14) DSH/WLT bridge duplicated وفيه endpoint drift
+داخل DSH يوجد payment-session client قديم يشير إلى /payment/sessions، بينما WLT router الحقيقي يستخدم /wlt/payment-sessions.
+
+problem: مصدران لعلاقة DSH/WLT ومسارات غير متطابقة.
+fix:
+  - حذف/تقاعد client القديم أو تحديثه
+  - جعل WLT shared/dsh يملك financial mappings
+  - DSH shared يستهلك read-only bindings فقط
+priority: P1
+15) WLT read-only HTTP helper غير runtime-grade
+wltFetchJson يعمل fetch(url) فقط، بلا timeout، بلا auth/correlation، بلا safe JSON/204 handling.
+
+fix:
+  - timeout
+  - correlation id
+  - body-preserving errors
+  - safe JSON parsing
+  - explicit auth mode: public-read / browser-token / backend-proxy
+priority: P1
+16) browser direct WLT reads غير محسومة
+loadWltDshFinanceRuntimeReadModel يقرأ WLT مباشرة من browser/shared client، بينما CORS في WLT محدود ويقبل headers محددة فقط.
+
+problem: لم يُحسم هل DSH يقرأ WLT مباشرة أم عبر DSH backend proxy.
+fix:
+  - سياسة واحدة:
+    - DSH backend proxy فقط
+    - أو WLT browser-read endpoints مع CORS/auth/correlation رسمي
+priority: P1
+17) OpenAPI generation مفعّل لكن shared clients يدوية
+OpenAPI يعلن x-bthwani-client-generation: ENABLED، لكنه توجد manual API wrappers كثيرة داخل DSH shared. البحث أظهر fetch في ملفات shared متعددة مثل checkout/cart/orders/catalog/support وغيرها.
+
+problem: لا يوجد ضمان أن shared clients تطابق OpenAPI.
+fix:
+  - ربط manual adapters بأنواع generated client
+  - أو استخدام generated client مباشرة
+  - contract/client alignment test
+priority: P1
+18) DSH TypeScript coverage ناقص للأسطح
+services/dsh/tsconfig.json يشمل frontend/shared وfrontend/app-captain فقط، ولا يشمل app-client, app-partner, app-field, أو control-panel.
+
+problem: typecheck على services/dsh لا يثبت كل DSH surfaces.
+impact: لا يمكن ادعاء full-stack multi-surface coverage.
+fix:
+  - إضافة tsconfig لكل surface أو توسيع coverage
+  - CI يجب يشغل typecheck لكل app runtime/surface
+priority: P1
+19) WLT TypeScript coverage narrow
+services/wlt/tsconfig.json يغطي فقط frontend/shared/dsh وcontracts، وليس أي WLT UI surfaces إن كانت موجودة.
+
+problem: WLT coverage يثبت WLT-for-DSH shared فقط، لا كل WLT surfaces.
+fix:
+  - إثبات عدم وجود/عدم تأثر WLT surfaces
+  - أو إدخالها في typecheck/tests
+priority: P1
+20) DSH order lifecycle وDB status بحاجة توحيد
+dsh-006_orders.sql يبدأ status check محدودًا حتى cancelled فقط، ثم dsh-007_dispatch.sql يوسع status lifecycle. هذا مقبول كمigration chain، لكنه يتطلب tests تثبت تطبيق المigrations بالترتيب وأن schema النهائي يطابق backend statuses.
+
+problem: lifecycle موزع عبر migrations ويحتاج schema-final proof.
+fix:
+  - DB migration integration test
+  - assert final status set يطابق orders.go وdispatch.go
+priority: P1
+21) Dispatch لا يربط إغلاق التسليم بأي WLT COD/commission settlement event
+DSH dispatch يملك assignment/delivery/status فقط، وmigrations تقول إن WLT يملك captain earnings/COD/settlement/refund/ledger. لكن عند SubmitPoD يتم تغيير order إلى delivered دون أي WLT reference/outbox للـ COD/commission settlement.
+
+problem: delivery completion لا يطلق WLT financial reference/update.
+impact: COD/commission/settlement قد لا تبدأ بعد التسليم.
+fix:
+  - DSH emits delivery_completed event/outbox
+  - WLT consumes event ويملك COD/commission/settlement truth
+  - add integration test delivered -> WLT reference visible
+priority: P1
+22) Partner order listing لا يثبت ملكية الشريك للمتجر
+handleListPartnerOrders يطلب actor role partner، ثم يأخذ storeId من query ويستدعي ListPartnerOrders، ولا يظهر تحقق أن هذا partner يملك هذا store في handler المعروض.
+
+problem: partner يمكنه نظريًا طلب orders لأي storeId إذا لم تكن الملكية مفروضة داخل طبقة أخرى.
+fix:
+  - تحقق ownership: partner_id -> store_id
+  - negative test: partner A cannot read store B orders
+priority: P1
+23) Order creation لا يتحقق من حالة checkout/WLT قبل إنشاء order
+handleCreateOrder يأخذ checkoutIntentId من الواجهة وينشئ order، وorders.CreateOrder يحفظ order مباشرة. لا يظهر تحقق أن checkout intent يخص العميل، أو أن حالته صحيحة، أو أن WLT status جاهز.
+
+problem: order يمكن أن يُنشأ من checkoutIntentId بدون payment/reference state proof.
+fix:
+  - backend creates order from checkout intent only بعد state transition مسموح
+  - check clientId/storeId/cart/payment status
+  - unique order per checkoutIntentId
+priority: P1
+24) اختبارات DSH backend لا تغطي checkout/orders/dispatch/WLT handoff بوضوح
+نتائج البحث عن tests داخل services/dsh/backend/internal أظهرت tests لمجالات store/server/partner/catalog/marketing/homediscovery، ولم تُظهر checkout/orders/dispatch/WLT client tests ضمن النتائج.
+
+missing_tests:
+  - checkout handoff
+  - WLT unavailable
+  - WLT success + DSH failure
+  - order create from invalid checkout
+  - forged unitPrice rejection
+  - partner ownership guard
+  - dispatch delivered -> WLT event
+priority: P1
+25) WLT payment-session creation tests مفقودة
+البحث عن WLT backend tests أظهر provider tests فقط، وليس reference/payment_session_test.go.
+
+missing_tests:
+  - create payment session success
+  - missing service auth
+  - missing idempotency key
+  - same replay accepted
+  - mismatch replay rejected
+  - invalid payment method
+priority: P1
+P2 — تنظيف وتوحيد بعد إغلاق P0/P1
+26) أسماء وتعليقات legacy تسبب ضجيجًا
+migrations تحمل تعليقات مثل LEGACY_FILENAME_ONLY — not a slice reference. هذا ليس كسرًا وحده، لكنه ضجيج داخل مسار حاكم ويحتاج سياسة: إما إبقاؤه موثقًا أو تنظيفه بعد ثبات migrations.
+
+fix:
+  - لا تغيّر migrations القديمة إذا كانت مطبقة
+  - أضف migration جديدة للتصحيح بدل تعديل التاريخ
+  - انقل الشرح إلى docs إذا لزم
+priority: P2
+27) generated facade داخل DSH finance-wlt-link يوحي بتوليد/نسخ قديم
+يوجد ملف باسم طويل wlt_frontend_dsh_app_partner_wlt_dsh_partner_ui_copy.facade.ts داخل DSH finance-wlt-link، ويقول إن مصدر الحقيقة للعمولات في WLT shared/dsh، لكنه يحتوي helper لحساب commission label.
+
+problem: naming/generated/copy يوحي بتسرب أو كود مرحلي.
+fix:
+  - نقل label utilities إلى WLT shared/dsh أو حذفها إذا غير مستخدمة
+  - إعادة تسمية الملف إلى اسم domain واضح
+priority: P2
+28) DSH/WLT finance labels وstatus mappings موزعة
+DSH finance boundary يبني labels مثل "معاينة فقط" و"مزامنة حية"، بينما WLT shared/dsh يملك mappings أخرى.
+
+problem: financial display truth split بين DSH وWLT.
+fix:
+  - WLT shared/dsh يملك financial labels/status mappings
+  - DSH shared يملك فقط composition والسياسات الخاصة بالعرض
+priority: P2
+ترتيب التنفيذ الصحيح
+المرحلة 0 — إثبات الفرع
+1. CI على starting أو PR إلى master.
+2. لا merge ولا 100% قبل green.
+المرحلة 1 — DSH/WLT handoff
+1. DSH checkout intent persists first.
+2. Outbox/idempotent WLT command.
+3. WLT service auth + idempotency + replay validation.
+4. WLT amount/currency contract.
+5. Reconciliation tests.
+المرحلة 2 — order/payment correctness
+1. منع unitPrice من client.
+2. إنشاء order من backend checkout/cart snapshot.
+3. success لا يعتمد على wltPaymentSessionId فقط.
+4. unique order per checkoutIntent.
+المرحلة 3 — UI cleanup
+1. إزالة order orchestration من CheckoutScreen.
+2. إزالة price parsing.
+3. إزالة simulated chat.
+4. screen renders shared states only.
+المرحلة 4 — WLT boundary cleanup
+1. تعطيل mutation routes غير المعتمدة أو إثباتها.
+2. إزالة fake wallet balance.
+3. توحيد payment enum.
+4. توحيد WLT read/proxy/CORS policy.
+المرحلة 5 — coverage
+1. typecheck لكل DSH surfaces.
+2. typecheck لكل WLT impacted surfaces.
+3. tests checkout/orders/dispatch/WLT creation.
+4. OpenAPI/generated client alignment.
+الحكم المختصر
+FAIL / DO_NOT_MERGE
+أخطر الجذور ليست UI فقط ولا WLT فقط؛ الجذر هو أن DSH/WLT financial-operational boundary غير محكوم بالكامل: handoff غير ذري، WLT endpoint غير محمي بما يكفي، DSH يقبل السعر من الواجهة، order ينشأ قبل إثبات مالي واضح، وUI ما زالت تحمل منطقًا تشغيليًا ومحاكاة.
+
+
+GitHub
+ ايضاء حدد الية التصحيح والمعالجة الفورية والصحيحة فورا 
+
+
+بحيث  نحدد ماهي الفجوه والخطاء  وكيف يجب تصحيحه ومعالجته 
+
+
+بدقة رقمية كاملة 100%**،
+مع التزام صارم بـ **صفر أخطاء، صفر تناقض، صفر تكرار، صفر فجوات، صفر ضجيج وصفر ضعف او نقص في المنطق والتشغيل ، صفر تشتت، صفر فشل، وصفر عيوب**. 
+
+ بحيث نضمن **الأدق والأقوى والأفضل والأنسب** دون أي ضعف أو نقص، وبمنهجية **حقيقية، منطقية، وتقنية** محقَّقة بالكامل **100%**
+
+
+سأقدّمها كخطة تصحيح تنفيذية لا كتقرير جديد: لكل فجوة يوجد “الإصلاح الصحيح”، “المسارات”، “اختبار القبول”، و“بوابة عدم الرجوع”. هذا لا يعني أن الحالة أصبحت 100%؛ الـ 100% لا يثبت إلا بعد تنفيذ الأوامر ونجاح المخرجات.
+
+
+GitHub
+
+يجب معالجة كل التناقضات 100%
+
+Thought for 27s
+نعم. كل التناقضات يجب أن تُعالج 100%، لكن لا يجوز إعلان 100% إلا بعد تنفيذ التصحيح ونجاح الفحوصات. حاليًا النتيجة المهنية هي: خطة معالجة إلزامية، وليست إعلان جاهزية.
+
+القاعدة الحاكمة: أي تناقض بين contract / backend / database / shared / UI / runtime / CI = FIX_REQUIRED ولا يُسمح بتركه كتفسير أو ملاحظة.
+
+القرار التنفيذي
+target_ref: starting
+resolved_commit_sha: 2513c2534ebde550e6ef7c8c0c14f38ad7ad8ee0
+scope:
+  - services/dsh
+  - services/wlt
+  - services/dsh/backend
+  - services/wlt/backend
+  - services/dsh/frontend/shared
+  - services/wlt/frontend/shared/dsh
+  - services/dsh/frontend/app-client
+  - services/dsh/contracts
+  - services/wlt/contracts
+  - database migrations
+  - runtime scripts
+  - tests
+  - CI
+required_result: ZERO_CONTRADICTION_AFTER_VERIFICATION
+current_status: FAIL_UNTIL_FIXED
+merge_status: DO_NOT_MERGE
+آلية التصحيح الفورية
+المرحلة 0 — تثبيت قاعدة القياس قبل أي تعديل
+الفجوة: لا يوجد CI على رأس starting، ولا توجد workflow runs على commit الحالي. ملف CI لا يشغّل starting ضمن push branches.
+
+التصحيح:
+
+change:
+  - add starting to .github/workflows/ci.yml push branches
+  - or open PR starting -> master and require CI
+files:
+  - .github/workflows/ci.yml
+acceptance:
+  - workflow run exists for 2513c2534ebde550e6ef7c8c0c14f38ad7ad8ee0 or newer fixed commit
+  - all jobs pass
+blocking_rule:
+  - no MERGE_READY without CI green
+أمر التحقق المحلي قبل CI:
+
+Set-Location -LiteralPath "C:\bthwani-suite-next"
+git fetch origin
+git checkout -B starting origin/starting
+git status --short
+pnpm install --frozen-lockfile
+pnpm run contracts:lint
+pnpm run foundation:gate
+pnpm run journey:gate
+pnpm run typecheck
+pnpm run test
+pnpm run build
+المرحلة 1 — إزالة تناقض عقد DSH/WLT
+التناقض 1: contract يمنع DSH من إنشاء payment session، لكن backend يفعل ذلك
+المكان:
+
+services/wlt/frontend/shared/dsh/wlt-dsh-checkout-handoff.contract.ts
+services/dsh/backend/internal/http/checkout.go
+wlt-dsh-checkout-handoff.contract.ts يحتوي dshMayCreatePaymentSession: false.
+لكن DSH backend يستدعي WLT لإنشاء session داخل handleCreateCheckoutIntent.
+
+التصحيح الصحيح:
+
+لا تجعل النص غامضًا. يجب فصل المنع إلى مستويين:
+
+new_contract_truth:
+  dsh_ui_may_create_payment_session: false
+  dsh_frontend_shared_may_create_payment_session: false
+  dsh_backend_may_request_wlt_payment_session_reference: true
+  wlt_owns_payment_session_truth: true
+  wlt_owns_payment_status_truth: true
+  dsh_may_store_wlt_reference_read_only: true
+التغيير المطلوب:
+
+files_to_fix:
+  - services/wlt/frontend/shared/dsh/wlt-dsh-checkout-handoff.contract.ts
+  - services/dsh/backend/internal/wlt/client.go
+  - services/dsh/backend/internal/http/checkout.go
+required_result:
+  - لا يوجد contract يقول إن DSH كله ممنوع بينما backend يستخدمه
+  - المنع يكون على UI/frontend فقط
+  - backend request يكون service command محكوم
+acceptance_test:
+  - test يثبت أن UI لا يملك createPaymentSession
+  - test يثبت أن DSH backend يرسل command محمي إلى WLT
+المرحلة 2 — جعل DSH/WLT handoff ذريًا ومنضبطًا
+التناقض 2: WLT session تُنشأ قبل DSH checkout intent
+المكان:
+
+services/dsh/backend/internal/http/checkout.go
+services/dsh/backend/internal/checkout/checkout.go
+services/wlt/backend/internal/reference/payment_session.go
+حاليًا DSH ينشئ WLT session قبل إدخال checkout intent.
+
+التصحيح الصحيح:
+
+new_flow:
+  step_1: DSH creates checkout intent first
+  step_2: DSH stores state = handoff_pending or payment_pending
+  step_3: DSH writes outbox event/request for WLT
+  step_4: DSH calls WLT using idempotency key and service auth
+  step_5: WLT creates/returns payment session reference
+  step_6: DSH updates checkout intent with wltPaymentSessionId
+  step_7: UI shows payment_pending/reference_created until WLT status proves next state
+قاعدة ممنوعة:
+
+forbidden:
+  - calling WLT before DSH intent persistence
+  - treating WLT session id as payment success
+  - creating order from UI after session id only
+التغييرات المطلوبة:
+
+files_to_fix:
+  - services/dsh/backend/internal/checkout/checkout.go
+  - services/dsh/backend/internal/http/checkout.go
+  - services/dsh/backend/internal/wlt/client.go
+  - services/dsh/database/migrations/new_dsh_checkout_outbox.sql
+  - services/wlt/backend/internal/reference/payment_session.go
+tests_required:
+  - DSH creates intent first
+  - WLT unavailable leaves intent payment_pending/handoff_failed, not orphan
+  - WLT success updates intent with reference
+  - DSH DB failure cannot leave untracked WLT session
+  - retry same checkoutIntentId returns same WLT session
+المرحلة 3 — حماية WLT endpoint
+التناقض 3: WLT endpoint مالي مرجعي بلا service auth/idempotency
+WLT router يعرّف POST /wlt/payment-sessions مباشرة.
+والـ handler ينشئ session بعد decode فقط.
+
+التصحيح الصحيح:
+
+required_headers:
+  Authorization: Bearer <service-token>
+  X-Correlation-ID: required
+  Idempotency-Key: required
+  X-Service-Caller: dsh
+السلوك الصحيح:
+
+wlt_payment_session_create_policy:
+  missing_service_auth: 401
+  wrong_service: 403
+  missing_idempotency_key: 400
+  missing_correlation_id: 400
+  same_checkoutIntentId_same_payload: 200_or_201_same_session
+  same_checkoutIntentId_different_payload: 409_IDEMPOTENCY_CONFLICT
+الملفات:
+
+files_to_fix:
+  - services/wlt/backend/internal/http/server.go
+  - services/wlt/backend/internal/reference/payment_session.go
+  - services/wlt/backend/internal/shared/service_auth.go
+  - services/wlt/backend/internal/reference/payment_session_test.go
+المرحلة 4 — منع replay mismatch في WLT
+التناقض 4: ON CONFLICT يخفي اختلاف payload
+ON CONFLICT (checkout_intent_id) يحدّث updated_at فقط ولا يقارن البيانات.
+
+التصحيح الصحيح:
+
+on_conflict_behavior:
+  read_existing_by_checkout_intent_id: true
+  compare_fields:
+    - checkoutIntentId
+    - clientId
+    - storeId
+    - paymentMethod
+    - amountMinorUnits
+    - currency
+  if_all_equal: return_existing_session
+  if_any_differs: return_409_IDEMPOTENCY_CONFLICT
+اختبار القبول:
+
+tests:
+  - create checkout_1 client_A store_A cod amount_1000 -> PASS
+  - retry same exact payload -> same session id
+  - retry checkout_1 client_B -> 409
+  - retry checkout_1 store_B -> 409
+  - retry checkout_1 wallet instead of cod -> 409
+  - retry checkout_1 amount changed -> 409
+المرحلة 5 — تصحيح amount/currency
+التناقض 5: WLT payment session يحتوي amount/currency لكن create input لا يستقبلها
+PaymentSession يحتوي AmountMinorUnits وCurrency.
+لكن CreatePaymentSessionInput لا يحتويهما.
+
+التصحيح الصحيح:
+
+new_create_payment_session_input:
+  checkoutIntentId: string
+  clientId: string
+  storeId: string
+  paymentMethod: cod | wallet | mixed | official_wallet
+  amountMinorUnits: integer
+  currency: string
+  cartSnapshotHash: string
+قاعدة مهمة:
+
+financial_truth_policy:
+  WLT owns final financial truth: true
+  DSH may send checkout/cart snapshot: true
+  UI may send amount/unitPrice: false
+المرحلة 6 — منع السعر من الواجهة نهائيًا
+التناقض 6: DSH order يقبل unitPrice من client UI
+handleCreateOrder يستقبل unitPrice من body.
+orders.CreateOrder يخزنه في dsh_order_items.
+
+التصحيح الصحيح:
+
+new_order_create_policy:
+  client_sends:
+    - checkoutIntentId
+  backend_derives:
+    - storeId
+    - clientId
+    - cartItems
+    - productName
+    - quantity
+    - unitPriceSnapshot
+    - totalSnapshot
+  forbidden_from_client:
+    - unitPrice
+    - productName as financial truth
+    - amount
+    - WLT payment status
+الملفات:
+
+files_to_fix:
+  - services/dsh/backend/internal/http/orders.go
+  - services/dsh/backend/internal/orders/orders.go
+  - services/dsh/frontend/shared/orders/orders.types.ts
+  - services/dsh/frontend/shared/orders/orders.api.ts
+  - services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx
+اختبار القبول:
+
+tests:
+  - client sends forged unitPrice = rejected or ignored
+  - order item price comes from backend snapshot only
+  - order cannot be created for checkout intent not owned by client
+  - order cannot be created before payment/reference state is valid
+المرحلة 7 — تصحيح checkout state machine
+التناقض 7: وجود WLT session ID = success
+checkout.view-model.ts يعتبر أي wltPaymentSessionId غير فارغ نجاحًا.
+
+التصحيح الصحيح:
+
+new_checkout_states:
+  - idle
+  - submitting
+  - intent_created
+  - wlt_handoff_pending
+  - wlt_reference_created
+  - payment_pending
+  - payment_authorized
+  - cod_ready
+  - order_creation_allowed
+  - failed
+  - expired
+  - cancelled
+قاعدة النجاح:
+
+success_rule:
+  old_wrong_rule: non_empty_wltPaymentSessionId
+  new_correct_rule:
+    - WLT status is authorized/captured OR
+    - COD status is cod_pending/cod_collected حسب سياسة COD
+    - checkout intent state permits order creation
+الملفات:
+
+files_to_fix:
+  - services/dsh/frontend/shared/checkout/checkout.states.ts
+  - services/dsh/frontend/shared/checkout/checkout.view-model.ts
+  - services/dsh/frontend/shared/checkout/checkout.controller-core.ts
+  - services/wlt/frontend/shared/dsh/wlt-dsh-reference.states.ts
+  - services/wlt/frontend/shared/dsh/wlt-dsh-reference.view-model.ts
+المرحلة 8 — تنظيف CheckoutScreen بالكامل
+التناقض 8: UI ينفذ lifecycle وorder creation وchat mock
+CheckoutScreen يرسل checkout عند mount، ثم ينشئ order من داخل الشاشة، ويفك السعر من priceReference.
+وفي ActiveOrderTracker يوجد simulated chat response بـ setTimeout.
+
+التصحيح الصحيح:
+
+CheckoutScreen_allowed:
+  - render state
+  - call shared controller action
+  - show loading/error/success
+  - navigate on verified success
+
+CheckoutScreen_forbidden:
+  - create order side effect
+  - parse priceReference
+  - setTimeout simulated captain response
+  - fake chat messages
+  - local financial/operational truth
+الإصلاح:
+
+files_to_fix:
+  - services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx
+  - services/dsh/frontend/shared/checkout/*
+  - services/dsh/frontend/shared/orders/*
+required_result:
+  - CheckoutScreen becomes thin renderer
+  - orchestration moves to shared/backend
+  - chat disabled or backed by real support/chat endpoint
+المرحلة 9 — إزالة fake WLT wallet state
+التناقض 9: WLT shared/dsh يعرض balance محلي
+useWltDshPaymentController يبدأ بـ walletDisplayBalance = 15000 ويزيده محليًا.
+
+التصحيح الصحيح:
+
+replace_fake_wallet_state_with:
+  - WLT read-only wallet eligibility endpoint
+  - WLT payment method availability endpoint
+  - blocked/unavailable state if endpoint missing
+الملفات:
+
+files_to_fix:
+  - services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx
+  - services/wlt/frontend/shared/dsh/wlt-dsh-payment-methods.api.ts
+  - services/wlt/backend/internal/reference/wallet_status.go
+المرحلة 10 — ضبط WLT mutation routes
+التناقض 10: manifest يقول mutation غير جاهزة لكن routes موجودة
+service.manifest.ts يقول mutationRuntimeReady: false.
+لكن router يعرّف authorize/capture/refunds/settlements/ledger mutation routes.
+
+التصحيح الصحيح:
+
+choose_one:
+  option_A_disable_unapproved_routes:
+    - keep manifest mutationRuntimeReady=false
+    - routes return 404/403/FEATURE_NOT_ENABLED unless feature flag enabled
+  option_B_make_routes_official:
+    - set manifest mutationRuntimeReady=true only after tests/runtime evidence
+    - add auth/idempotency/audit tests
+الأقوى والأقل مخاطرة الآن: option_A.
+
+المرحلة 11 — توحيد payment method enum
+التناقض 11: official-wallets مقابل official_wallet
+WLT frontend يستخدم official-wallets.
+DSH backend يستخدم official_wallet.
+وUI يتجاوز النوع بـ as any.
+
+التصحيح الصحيح:
+
+canonical_enum:
+  - cod
+  - wallet
+  - mixed
+  - official_wallet
+forbidden:
+  - official-wallets
+  - as any
+الملفات:
+
+files_to_fix:
+  - services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx
+  - services/dsh/frontend/shared/checkout/checkout.types.ts
+  - services/dsh/backend/internal/checkout/checkout.go
+  - services/wlt/backend/internal/reference/payment_session.go
+  - services/dsh/contracts/dsh.openapi.yaml
+المرحلة 12 — توحيد DSH/WLT bridge ومنع التكرار
+التناقض 12: DSH bridge يحتوي client قديم لمسار غير مطابق
+DSH bridge يشير إلى /payment/sessions، بينما WLT router الحقيقي يستخدم /wlt/payment-sessions.
+
+التصحيح الصحيح:
+
+policy:
+  WLT shared/dsh owns:
+    - financial reference mappings
+    - WLT read-only client types
+    - WLT reference states/view-models
+
+  DSH shared owns:
+    - DSH checkout/order controllers
+    - composition with WLT references
+    - no duplicated WLT endpoint client unless explicitly backend-only
+الإصلاح:
+
+files_to_retire_or_fix:
+  - services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-payment-session.client.ts
+  - services/dsh/frontend/shared/finance-wlt-link/wlt/generated/*
+required_result:
+  - no stale endpoint /payment/sessions
+  - no duplicate financial mappings outside WLT shared/dsh
+المرحلة 13 — تصحيح WLT/DSH HTTP policy
+التناقض 13: WLT browser reads غير محسومة
+loadWltDshFinanceRuntimeReadModel يقرأ WLT مباشرة من frontend.
+لكن WLT CORS يسمح headers محدودة.
+
+التصحيح الصحيح:
+
+اختر سياسة واحدة:
+
+recommended_policy: DSH_BACKEND_PROXY_FOR_WLT_READS
+why:
+  - أقل CORS تعقيدًا
+  - أفضل لحماية WLT
+  - أوضح لحدود DSH surfaces
+الإصلاح:
+
+new_flow:
+  DSH UI -> DSH backend -> WLT backend
+forbidden:
+  DSH UI -> WLT backend direct
+unless:
+  WLT route is explicitly public read-only and CORS/auth/correlation are defined
+المرحلة 14 — ربط OpenAPI/generated clients
+التناقض 14: OpenAPI generation مفعّل لكن clients يدوية
+OpenAPI يعلن x-bthwani-client-generation: ENABLED.
+لكن توجد manual wrappers كثيرة في DSH shared.
+
+التصحيح الصحيح:
+
+policy:
+  - generated client is source of contract types
+  - manual wrappers allowed only as thin adapters
+  - no handwritten response shape drift
+اختبار القبول:
+
+tests:
+  - each shared api.ts endpoint exists in OpenAPI
+  - each request/response type is generated or type-compatible
+  - no orphan endpoint string
+المرحلة 15 — تغطية typecheck لكل الأسطح
+التناقض 15: DSH typecheck لا يغطي كل الأسطح
+services/dsh/tsconfig.json يشمل shared وapp-captain فقط، ولا يشمل app-client/app-partner/app-field/control-panel.
+
+التصحيح الصحيح:
+
+required_surface_typechecks:
+  - services/dsh/frontend/app-client
+  - services/dsh/frontend/app-partner
+  - services/dsh/frontend/app-field
+  - services/dsh/frontend/app-captain
+  - services/dsh/frontend/control-panel
+  - services/dsh/frontend/shared
+الإصلاح:
+
+files_to_fix:
+  - services/dsh/tsconfig.json
+  - package.json scripts
+  - CI workflow
+المرحلة 16 — اختبارات القبول النهائية
+لا يحق إعلان 100% إلا بعد هذه المصفوفة:
+
+required_tests:
+  ci:
+    - GitHub Actions green on fixed commit
+  dsh_backend:
+    - checkout handoff success
+    - WLT unavailable
+    - WLT success + DSH failure recovery
+    - order cannot be created before valid checkout/payment state
+    - forged unitPrice rejected/ignored
+    - partner cannot read other store orders
+  wlt_backend:
+    - payment session create with service auth
+    - missing auth rejected
+    - missing idempotency rejected
+    - replay same payload returns same session
+    - replay mismatch returns 409
+    - mutation routes disabled or fully authenticated
+  frontend_shared:
+    - checkout state machine maps WLT statuses correctly
+    - WLT id alone does not equal success
+    - payment method enum canonical
+  surfaces:
+    - CheckoutScreen has no price parsing
+    - CheckoutScreen has no order creation side effect
+    - no simulated chat response
+  contracts:
+    - OpenAPI/generated client alignment
+    - no endpoint drift /payment/sessions vs /wlt/payment-sessions
+ترتيب التنفيذ الإجباري
+execution_order:
+  0: CI trigger / evidence gate
+  1: DSH/WLT contract truth correction
+  2: DSH checkout persistence-first handoff
+  3: WLT service auth + idempotency + replay validation
+  4: amount/currency checkout snapshot contract
+  5: backend-only order creation from checkout/cart truth
+  6: checkout state machine correction
+  7: CheckoutScreen cleanup
+  8: remove fake WLT wallet state
+  9: mutation route governance
+  10: DSH/WLT bridge consolidation
+  11: OpenAPI/generated client alignment
+  12: full affected verification
+معيار الإغلاق
+closure_gate:
+  no_contract_runtime_contradiction: PASS
+  no_financial_truth_in_ui: PASS
+  no_wlt_mutation_outside_wlt: PASS
+  no_unprotected_wlt_reference_creation: PASS
+  no_non_atomic_dsh_wlt_handoff: PASS
+  no_client_supplied_price_truth: PASS
+  no_wlt_id_equals_success_logic: PASS
+  no_fake_wallet_balance: PASS
+  no_simulated_runtime_chat: PASS
+  no_endpoint_drift: PASS
+  no_uncovered_surface_typecheck: PASS
+  ci_green_on_fixed_commit: PASS
+حتى تمر هذه البوابة، الحكم يبقى:
+
+FAIL / DO_NOT_MERGE
+هذه هي آلية التصحيح الصحيحة: تبدأ بإزالة التناقضات بين contract وruntime، ثم تجعل handoff ذريًا، ثم تمنع الحقيقة المالية من UI، ثم تثبت كل ذلك باختبارات وCI.
+
+GitHub
+ 
+
