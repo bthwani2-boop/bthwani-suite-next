@@ -1,62 +1,3 @@
-<#
-================================================================================
-📋 الأوامر البرمجية الديناميكية والجاهزة للنسخ واللصق اليدوي (PowerShell Copy-Paste)
-================================================================================
-
-هذه الكتل البرمجية تقوم بالانتقال التلقائي لمسار المشروع وتجلب الـ IP الفعلي للإنترنت/الراوتر تلقائياً:
-
---------------------------------------------------------------------------------
-1️⃣ تشغيل تطبيق العميل (app-client)
---------------------------------------------------------------------------------
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-client/runtime exec expo start --dev-client --host lan --port 18101 --android --clear
-
---------------------------------------------------------------------------------
-2️⃣ تشغيل تطبيق الشركاء (app-partner)
---------------------------------------------------------------------------------
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_DEV_STORE_ID = try { (Invoke-RestMethod "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 3 -ErrorAction SilentlyContinue).stores[0].id } catch { "store-1005" }
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-partner/runtime exec expo start --dev-client --host lan --port 18102 --android --clear
-
---------------------------------------------------------------------------------
-3️⃣ تشغيل تطبيق الكابتن والتوصيل (app-captain)
---------------------------------------------------------------------------------
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_DEV_STORE_ID = try { (Invoke-RestMethod "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 3 -ErrorAction SilentlyContinue).stores[0].id } catch { "store-1005" }
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-captain/runtime exec expo start --dev-client --host lan --port 18103 --android --clear
-
---------------------------------------------------------------------------------
-4️⃣ تشغيل تطبيق العمليات الميدانية (app-field)
---------------------------------------------------------------------------------
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_DEV_STORE_ID = try { (Invoke-RestMethod "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 3 -ErrorAction SilentlyContinue).stores[0].id } catch { "store-1005" }
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-field/runtime exec expo start --dev-client --host lan --port 18104 --android --clear
-
-================================================================================
-# ⚙️ كود التشغيل التلقائي عند استدعاء السكربت كأمر برمجي
-================================================================================
-#>
-
 param(
   [Parameter(Mandatory = $true)]
   [ValidateSet("client", "partner", "field", "captain")]
@@ -102,10 +43,8 @@ $Port = switch ($App) {
 }
 
 # 4. Print the exact command that is being run for copy-paste convenience
-Write-Host "`n========================================================" -ForegroundColor Gray
 Write-Host "👉 Active dynamic command running for app-$App:" -ForegroundColor Yellow
-Write-Host "========================================================" -ForegroundColor Gray
-Write-Host "Set-Location -LiteralPath 'C:\bthwani-suite-next' # ALLOW_LOCAL_PATH_EXAMPLE" -ForegroundColor White
+Write-Host "Set-Location -LiteralPath '$($PWD.Path)' # ALLOW_LOCAL_PATH_EXAMPLE" -ForegroundColor White
 Write-Host "`$env:REACT_NATIVE_PACKAGER_HOSTNAME = '$IP'" -ForegroundColor White
 Write-Host "`$env:EXPO_PUBLIC_DSH_API_BASE_URL = 'http://127.0.0.1:58080'" -ForegroundColor White
 Write-Host "`$env:NEXT_PUBLIC_DSH_API_BASE_URL = 'http://127.0.0.1:58080'" -ForegroundColor White
@@ -113,7 +52,6 @@ if ($App -ne "client") {
   Write-Host "`$env:EXPO_PUBLIC_DEV_STORE_ID = '$StoreId'" -ForegroundColor White
 }
 Write-Host "pnpm --dir apps/app-$App/runtime exec expo start --dev-client --host lan --port $Port --android --clear" -ForegroundColor White
-Write-Host "========================================================`n" -ForegroundColor Gray
 
 # 5. Apply adb reverse mapping automatically
 $AdbPath = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"

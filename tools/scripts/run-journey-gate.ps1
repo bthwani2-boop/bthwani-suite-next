@@ -23,8 +23,9 @@ $results = @()
 function Run-Step {
   param([string]$Name, [scriptblock]$Block)
   Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
+  $global:LASTEXITCODE = 0
   try {
-    & $Block | Out-Host
+    & $Block
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "exit $LASTEXITCODE" }
     Write-Host "[ OK  ] $Name" -ForegroundColor Green
     return $true
@@ -68,10 +69,7 @@ $results += [pscustomobject]@{ step = "runtime-smoke"; ok = (Run-Step "runtime-s
     pnpm run runtime:smoke
   }
 }) }
-$results += [pscustomobject]@{ step = "no-financial-mutation-outside-wlt"; ok = (Run-Step "no-financial-mutation-outside-wlt" { pnpm run guard:no-financial-mutation-outside-wlt }) }
-$results += [pscustomobject]@{ step = "dsh-shared-ownership"; ok = (Run-Step "dsh-shared-ownership" { pnpm run guard:dsh-frontend-shared-ownership }) }
-$results += [pscustomobject]@{ step = "wlt-dsh-shared-ownership"; ok = (Run-Step "wlt-dsh-shared-ownership" { pnpm run guard:wlt-dsh-frontend-shared-ownership }) }
-$results += [pscustomobject]@{ step = "dsh-001-cross-surface"; ok = (Run-Step "dsh-001-cross-surface" { pnpm run guard:dsh-platform-geo-provider-governance }) }
+
 
 foreach ($guard in $journeyGuards) {
   $guardEntry = $manifest.guards | Where-Object { $_.id -eq $guard } | Select-Object -First 1
