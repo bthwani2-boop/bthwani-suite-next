@@ -151,3 +151,55 @@ func TestNewClientTrimsTrailingSlash(t *testing.T) {
 		t.Fatalf("expected trailing slash to be trimmed, got %q", c.baseURL)
 	}
 }
+
+func TestNotifyDeliveryCompletedSendsServiceHeaders(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/wlt/cod-records" {
+			t.Fatalf("expected /wlt/cod-records, got %s", r.URL.Path)
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
+		}
+		var input NotifyDeliveryCompletedInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if input.OrderID != "order-1" || input.CheckoutIntentID != "intent-1" {
+			t.Fatalf("unexpected input: %+v", input)
+		}
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL)
+	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{
+		OrderID:          "order-1",
+		CaptainID:        "captain-1",
+		PartnerID:        "partner-1",
+		CheckoutIntentID: "intent-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNotifyDeliveryCompletedNotConfigured(t *testing.T) {
+	c := NewClient("")
+	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{})
+	if err == nil || !strings.Contains(err.Error(), "not configured") {
+		t.Fatalf("expected 'not configured' error, got: %v", err)
+	}
+}
+
+func TestNotifyDeliveryCompletedNonSuccessStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL)
+	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{OrderID: "order-1"})
+	if err == nil || !strings.Contains(err.Error(), "500") {
+		t.Fatalf("expected error mentioning status 500, got: %v", err)
+	}
+}

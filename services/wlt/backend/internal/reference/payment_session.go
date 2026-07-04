@@ -144,6 +144,14 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GetPaymentSessionByCheckoutIntent looks up the payment session WLT created
+// for a given DSH checkout intent. Used by other WLT packages (e.g. cod) that
+// need the authoritative amount/currency/payment-method for that checkout,
+// since WLT -- not the caller -- is the source of truth for those fields.
+func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
+	return getPaymentSessionByCheckoutIntent(db, checkoutIntentID)
+}
+
 func getPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
 	const q = `
 		SELECT id, checkout_intent_id, client_id, store_id, payment_method,

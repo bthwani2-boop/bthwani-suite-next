@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 const { PROVIDER_SECRET_POLICIES, PROVIDER_CREDENTIAL_VISIBILITY, isForbiddenInFrontend } = await import(
-  "../dist/frontend/shared/platform/platform-provider-secrets.policy.js"
+  "../dist/services/dsh/frontend/shared/platform/platform-provider-secrets.policy.js"
 );
 
 describe("provider-secret-visibility", () => {

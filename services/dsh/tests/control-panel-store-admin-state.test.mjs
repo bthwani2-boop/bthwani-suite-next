@@ -9,7 +9,7 @@ const {
   adminPermissionDeniedState,
   adminSuccessState,
   ADMIN_FILTERS_EMPTY,
-} = await import("../dist/frontend/shared/store/store-admin.view-model.js");
+} = await import("../dist/services/dsh/frontend/shared/store/store-admin.view-model.js");
 
 const makeRow = (overrides = {}) => ({
   id: "store-001",

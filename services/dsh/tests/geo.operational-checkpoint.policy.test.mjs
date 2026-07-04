@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 const { OPERATIONAL_CHECKPOINT_POLICY } = await import(
-  "../dist/frontend/shared/geo/geo.operational-checkpoint.types.js"
+  "../dist/services/dsh/frontend/shared/geo/geo.operational-checkpoint.types.js"
 );
 
 describe("geo.operational-checkpoint.policy", () => {

@@ -82,15 +82,13 @@ func (s *protectedStoreServer) handleGetClientOrder(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
 }
 
-// GET /dsh/partner/orders?storeId=...&status=...
+// GET /dsh/partner/orders?status=...
+// storeId is never taken from the request: it is resolved from the
+// authenticated partner actor, so a partner can never list another
+// partner's store orders by supplying an arbitrary storeId.
 func (s *protectedStoreServer) handleListPartnerOrders(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "partner")
+	_, storeID, ok := s.partnerStore(w, r)
 	if !ok {
-		return
-	}
-	storeID := r.URL.Query().Get("storeId")
-	if storeID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query param is required")
 		return
 	}
 	statusFilter := r.URL.Query().Get("status")

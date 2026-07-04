@@ -30,6 +30,8 @@ const (
 	StatePaymentPending   IntentState = "payment_pending"
 	StateConfirmed        IntentState = "confirmed"
 	StateCancelled        IntentState = "cancelled"
+	StatePaymentConfirmed IntentState = "payment_confirmed"
+	StatePaymentFailed    IntentState = "payment_failed"
 	StateExpired          IntentState = "expired"
 )
 
@@ -245,4 +247,79 @@ func scanIntentRow(rows *sql.Rows, i *Intent) error {
 		&i.WltPaymentSessionID, &i.DeliveryAddress, &i.Note,
 		&i.Version, &i.CreatedAt, &i.UpdatedAt,
 	)
+}
+
+// GetIntentForService loads a checkout intent by id without client scoping,
+// for use by trusted service-to-service callers (e.g. the WLT payment-event
+// webhook), which do not have an end-user identity to scope against.
+func GetIntentForService(db *sql.DB, intentID string) (*Intent, error) {
+	const q = `
+		SELECT id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		       state, payment_method, wlt_payment_session_id,
+		       delivery_address, note, version, created_at, updated_at
+		FROM dsh_checkout_intents
+		WHERE id = $1::uuid`
+	row := db.QueryRow(q, intentID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return intent, err
+}
+
+// ErrPaymentSessionMismatch indicates a WLT payment event referenced a
+// paymentSessionId that does not match the session attached to the intent.
+var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not match checkout intent")
+
+// ApplyWltPaymentEvent advances a checkout intent from payment_pending to a
+// terminal payment outcome reported by WLT (the sole owner of payment
+// authorization/capture truth). It is idempotent: replays of an event that
+// already reflects the intent's current state are a no-op success, so WLT
+// retries or out-of-order delivery cannot fail spuriously.
+func ApplyWltPaymentEvent(db *sql.DB, intentID, paymentSessionID, wltStatus string) (*Intent, error) {
+	if intentID == "" || paymentSessionID == "" || wltStatus == "" {
+		return nil, ErrInvalid
+	}
+
+	var targetState IntentState
+	switch wltStatus {
+	case "captured", "cod_collected":
+		targetState = StatePaymentConfirmed
+	case "failed", "expired":
+		targetState = StatePaymentFailed
+	case "authorized", "reference_created", "cod_pending":
+		// Intermediate WLT states are not yet a terminal DSH outcome; the
+		// intent stays in payment_pending until capture/failure/expiry.
+		return GetIntentForService(db, intentID)
+	default:
+		return nil, fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
+	}
+
+	current, err := GetIntentForService(db, intentID)
+	if err != nil {
+		return nil, err
+	}
+	if current.WltPaymentSessionID != paymentSessionID {
+		return nil, ErrPaymentSessionMismatch
+	}
+	if current.State == targetState {
+		return current, nil
+	}
+	if current.State != StatePaymentPending {
+		return nil, fmt.Errorf("%w: intent is not awaiting a payment outcome", ErrConflict)
+	}
+
+	const q = `
+		UPDATE dsh_checkout_intents
+		SET state = $1, version = version + 1, updated_at = NOW()
+		WHERE id = $2::uuid AND state = 'payment_pending'
+		RETURNING id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		          state, payment_method, wlt_payment_session_id,
+		          delivery_address, note, version, created_at, updated_at`
+	row := db.QueryRow(q, string(targetState), intentID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: intent state changed concurrently", ErrConflict)
+	}
+	return intent, err
 }

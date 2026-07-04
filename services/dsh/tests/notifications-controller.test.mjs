@@ -4,21 +4,21 @@ import { describe, it } from "node:test";
 describe("notifications states", () => {
   it("notifIdle returns kind=idle", async () => {
     const { notifIdle } = await import(
-      "../dist/frontend/shared/notifications/notifications.states.js"
+      "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
     assert.equal(notifIdle().kind, "idle");
   });
 
   it("notifLoading returns kind=loading", async () => {
     const { notifLoading } = await import(
-      "../dist/frontend/shared/notifications/notifications.states.js"
+      "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
     assert.equal(notifLoading().kind, "loading");
   });
 
   it("notifSuccess wraps notifications and unreadCount", async () => {
     const { notifSuccess } = await import(
-      "../dist/frontend/shared/notifications/notifications.states.js"
+      "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
     const n = [{
       id: "n1", actorId: "a1", actorType: "client", topic: "order",
@@ -34,7 +34,7 @@ describe("notifications states", () => {
 
   it("notifError carries message", async () => {
     const { notifError } = await import(
-      "../dist/frontend/shared/notifications/notifications.states.js"
+      "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
     const s = notifError("network error");
     assert.equal(s.kind, "error");
@@ -43,7 +43,7 @@ describe("notifications states", () => {
 
   it("configSuccess wraps configs", async () => {
     const { configSuccess } = await import(
-      "../dist/frontend/shared/notifications/notifications.states.js"
+      "../dist/services/dsh/frontend/shared/notifications/notifications.states.js"
     );
     const configs = [{
       id: "c1", topic: "order_update", actorTypes: ["client"],
@@ -59,14 +59,14 @@ describe("notifications states", () => {
 describe("finance-visibility states", () => {
   it("financeIdle returns kind=idle", async () => {
     const { financeIdle } = await import(
-      "../dist/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
+      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
     );
     assert.equal(financeIdle().kind, "idle");
   });
 
   it("financeSuccess wraps data", async () => {
     const { financeSuccess } = await import(
-      "../dist/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
+      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
     );
     const data = {
       orderId: "ord-1", paymentStatus: "captured", settlementStatus: "settled",
@@ -79,7 +79,7 @@ describe("finance-visibility states", () => {
 
   it("financeWltUnavailable returns kind=wlt_unavailable", async () => {
     const { financeWltUnavailable } = await import(
-      "../dist/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
+      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
     );
     assert.equal(financeWltUnavailable().kind, "wlt_unavailable");
   });
@@ -88,7 +88,7 @@ describe("finance-visibility states", () => {
 describe("finance-visibility view-model", () => {
   it("buildFinanceStatusLabel maps payment statuses", async () => {
     const { buildFinanceStatusLabel } = await import(
-      "../dist/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
+      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
     );
     assert.equal(buildFinanceStatusLabel("captured", "payment").badge, "success");
     assert.equal(buildFinanceStatusLabel("pending", "payment").badge, "warning");
@@ -98,7 +98,7 @@ describe("finance-visibility view-model", () => {
 
   it("buildFinanceStatusLabel maps settlement statuses", async () => {
     const { buildFinanceStatusLabel } = await import(
-      "../dist/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
+      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
     );
     assert.equal(buildFinanceStatusLabel("settled", "settlement").badge, "success");
     assert.equal(buildFinanceStatusLabel("on_hold", "settlement").badge, "warning");
@@ -107,7 +107,7 @@ describe("finance-visibility view-model", () => {
 
   it("buildPartnerFinanceSummaryViewModel composes refs", async () => {
     const { buildPartnerFinanceSummaryViewModel } = await import(
-      "../dist/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
+      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
     );
     const payment = { id: "p1", orderId: "ord-1", status: "captured", updatedAt: "2026-06-24T00:00:00Z" };
     const settlement = { id: "s1", orderId: "ord-1", status: "settled", updatedAt: "2026-06-24T00:00:00Z" };

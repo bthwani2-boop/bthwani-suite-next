@@ -7,9 +7,27 @@ import (
 	"fmt"
 	"net/http"
 
+	"wlt-api/internal/dshnotify"
 	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
+
+// dshNotifier reports terminal payment-session outcomes back to DSH so
+// non-COD checkout intents can leave payment_pending. It is nil until
+// ConfigureDshNotifier is called at startup; notifications are then a
+// best-effort side effect and never block or fail the WLT transition itself.
+var dshNotifier *dshnotify.Client
+
+func ConfigureDshNotifier(client *dshnotify.Client) {
+	dshNotifier = client
+}
+
+func notifyDsh(session *PaymentSession, status string) {
+	if dshNotifier == nil || session == nil {
+		return
+	}
+	dshNotifier.NotifyPaymentEvent(session.CheckoutIntentID, session.ID, status)
+}
 
 type PaymentSession struct {
 	ID                string  `json:"id"`
@@ -101,6 +119,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 	result, err := authorizeProvider(ctx, client, current, amountMinorUnits, currency, meta)
 	if err != nil {
 		_ = markSessionFailed(db, sessionID)
+		notifyDsh(current, "failed")
 		return nil, err
 	}
 	const q = `
@@ -140,6 +159,7 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 	result, err := captureProvider(ctx, client, current, meta)
 	if err != nil {
 		_ = markSessionFailed(db, sessionID)
+		notifyDsh(current, "failed")
 		return nil, err
 	}
 	const q = `
@@ -153,6 +173,9 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
+	}
+	if err == nil {
+		notifyDsh(s, "captured")
 	}
 	return s, err
 }
@@ -282,6 +305,9 @@ func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
+	}
+	if err == nil {
+		notifyDsh(s, "expired")
 	}
 	return s, err
 }

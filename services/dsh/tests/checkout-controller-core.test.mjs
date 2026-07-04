@@ -6,10 +6,10 @@ const {
   resolveCheckoutSubmitError,
   resolveCheckoutSubmitSuccess,
   resolveOperatorCheckoutLoadState,
-} = await import("../dist/frontend/shared/checkout/checkout.controller-core.js");
+} = await import("../dist/services/dsh/frontend/shared/checkout/checkout.controller-core.js");
 const {
   checkoutIntentHasWltSession,
-} = await import("../dist/frontend/shared/checkout/checkout.view-model.js");
+} = await import("../dist/services/dsh/frontend/shared/checkout/checkout.view-model.js");
 
 const intent = (overrides = {}) => ({
   id: "intent-1",
@@ -17,7 +17,7 @@ const intent = (overrides = {}) => ({
   cartId: "cart-1",
   storeId: "store-1",
   fulfillmentMode: "bthwani_delivery",
-  state: "pending",
+  state: "payment_pending",
   paymentMethod: "cod",
   wltPaymentSessionId: "",
   deliveryAddress: "",
@@ -48,5 +48,22 @@ describe("checkout controller core", () => {
     assert.equal(resolveCheckoutSubmitError({ kind: "offline" }).kind, "error");
     assert.equal(resolveOperatorCheckoutLoadState([]), "empty");
     assert.equal(resolveOperatorCheckoutLoadState([intent()]), "success");
+  });
+});
+
+describe("checkout controller core: non-COD payment confirmation", () => {
+  test("wallet/mixed/official_wallet intents stay payment_pending until WLT confirms", () => {
+    const walletIntent = intent({ paymentMethod: "wallet", wltPaymentSessionId: "wlt-1" });
+    assert.equal(resolveCheckoutSubmitSuccess(walletIntent).kind, "payment_pending");
+  });
+
+  test("payment_confirmed is success regardless of payment method", () => {
+    const confirmed = intent({ paymentMethod: "wallet", state: "payment_confirmed", wltPaymentSessionId: "wlt-1" });
+    assert.equal(resolveCheckoutSubmitSuccess(confirmed).kind, "success");
+  });
+
+  test("payment_failed is a blocked_payment_unavailable state", () => {
+    const failed = intent({ paymentMethod: "mixed", state: "payment_failed", wltPaymentSessionId: "wlt-1" });
+    assert.equal(resolveCheckoutSubmitSuccess(failed).kind, "blocked_payment_unavailable");
   });
 });

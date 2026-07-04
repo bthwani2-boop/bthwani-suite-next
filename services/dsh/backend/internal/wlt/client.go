@@ -98,3 +98,43 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	}
 	return &envelope.PaymentSession, nil
 }
+
+type NotifyDeliveryCompletedInput struct {
+	OrderID          string `json:"orderId"`
+	CaptainID        string `json:"captainId"`
+	PartnerID        string `json:"partnerId"`
+	CheckoutIntentID string `json:"checkoutIntentId"`
+}
+
+// NotifyDeliveryCompleted tells WLT a COD order has been delivered so it can
+// open its own COD collection record. WLT re-derives the amount from its own
+// payment session for the checkout intent; DSH never computes or forwards a
+// financial amount. Errors are the caller's to decide whether to retry.
+func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDeliveryCompletedInput) error {
+	if !c.Configured() {
+		return fmt.Errorf("WLT payment-session handoff is not configured")
+	}
+	body, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("encode WLT delivery-completed request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-records", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build WLT delivery-completed request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer dsh-service")
+	req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("X-Correlation-ID", input.OrderID)
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("call WLT delivery-completed: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("WLT delivery-completed returned HTTP %d", response.StatusCode)
+	}
+	return nil
+}

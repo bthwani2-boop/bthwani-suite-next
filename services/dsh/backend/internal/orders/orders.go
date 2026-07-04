@@ -79,8 +79,11 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		FROM dsh_checkout_intents
 		WHERE id = $1::uuid
 		  AND client_id = $2
-		  AND state = 'payment_pending'
-		  AND wlt_payment_session_id <> ''`,
+		  AND wlt_payment_session_id <> ''
+		  AND (
+		        (state = 'payment_pending' AND payment_method = 'cod')
+		        OR state = 'payment_confirmed'
+		      )`,
 		input.CheckoutIntentID, input.ClientID,
 	).Scan(&cartID, &storeID, &wltPaymentSessionID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -489,4 +492,39 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 		result = []Order{}
 	}
 	return result, rows.Err()
+}
+
+// DeliveryCompletionContext carries only the identifiers WLT needs to settle
+// a delivered order's COD collection: DSH never computes or forwards the
+// financial amount itself (WLT re-derives it from its own payment session).
+type DeliveryCompletionContext struct {
+	CheckoutIntentID string
+	PaymentMethod    string
+	PartnerID        string
+}
+
+// GetOrderDeliveryContext resolves the checkout intent, payment method, and
+// owning partner for an order, so the dispatch HTTP layer can decide whether
+// (and how) to notify WLT once a delivery is marked complete.
+func GetOrderDeliveryContext(db *sql.DB, orderID string) (*DeliveryCompletionContext, error) {
+	var ctx DeliveryCompletionContext
+	var partnerID sql.NullString
+	err := db.QueryRow(`
+		SELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id
+		FROM dsh_orders o
+		JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id
+		JOIN dsh_stores s ON s.id = o.store_id
+		WHERE o.id = $1::uuid`,
+		orderID,
+	).Scan(&ctx.CheckoutIntentID, &ctx.PaymentMethod, &partnerID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if partnerID.Valid {
+		ctx.PartnerID = partnerID.String
+	}
+	return &ctx, nil
 }

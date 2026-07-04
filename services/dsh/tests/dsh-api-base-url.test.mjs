@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 const { validateDshApiBaseUrl, resolveDshApiBaseUrl } = await import(
-  "../dist/frontend/shared/_kernel/dsh-api-base-url.js"
+  "../dist/services/dsh/frontend/shared/_kernel/dsh-api-base-url.js"
 );
 
 describe("validateDshApiBaseUrl — rejects old ports on localhost", () => {

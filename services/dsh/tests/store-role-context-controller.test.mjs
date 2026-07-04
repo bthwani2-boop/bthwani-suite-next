@@ -7,7 +7,7 @@ const {
   toStoreRoleExperience,
   toStoreRoleStatePresentation,
 } = await import(
-  "../dist/frontend/shared/store/store-role-context.controller-core.js"
+  "../dist/services/dsh/frontend/shared/store/store-role-context.controller-core.js"
 );
 
 const detail = {

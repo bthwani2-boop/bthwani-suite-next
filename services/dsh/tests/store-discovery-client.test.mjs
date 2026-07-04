@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-const { createDshStoreClient } = await import("../dist/clients/store-discovery-client.js");
+const { createDshStoreClient } = await import("../dist/services/dsh/clients/store-discovery-client.js");
 
 describe("createDshStoreClient", () => {
   test("factory returns an object with listStores and getStore", () => {

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 const {
   EMPTY_HOME_ADMIN_INPUT,
   classifyAdminError,
-} = await import("../dist/frontend/shared/home-discovery/home-discovery-admin.js");
+} = await import("../dist/services/dsh/frontend/shared/home-discovery/home-discovery-admin.js");
 
 describe("home discovery admin shared brain", () => {
   test("provides a production-shaped empty editor contract", () => {

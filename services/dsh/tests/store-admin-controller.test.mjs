@@ -10,7 +10,7 @@ const {
   nextStoreAdminOffset,
   previousStoreAdminOffset,
 } = await import(
-  "../dist/frontend/shared/store/store-admin.controller-core.js"
+  "../dist/services/dsh/frontend/shared/store/store-admin.controller-core.js"
 );
 const {
   adminEmptyState,
@@ -19,7 +19,7 @@ const {
   adminServiceUnavailableState,
   adminSuccessState,
 } = await import(
-  "../dist/frontend/shared/store/store-admin.view-model.js"
+  "../dist/services/dsh/frontend/shared/store/store-admin.view-model.js"
 );
 
 const row = (id, overrides = {}) => ({

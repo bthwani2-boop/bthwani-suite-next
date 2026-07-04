@@ -1,6 +1,9 @@
 package checkout
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestCreateIntentRejectsMissingRequiredFields(t *testing.T) {
 	cases := []struct {
@@ -45,5 +48,34 @@ func TestIntentStateConstants(t *testing.T) {
 	}
 	if len(states) != 6 {
 		t.Fatalf("expected 6 distinct intent states, got %d", len(states))
+	}
+}
+
+func TestApplyWltPaymentEventRejectsMissingFields(t *testing.T) {
+	if _, err := ApplyWltPaymentEvent(nil, "", "session-1", "captured"); err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for missing intentId, got %v", err)
+	}
+	if _, err := ApplyWltPaymentEvent(nil, "intent-1", "", "captured"); err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for missing paymentSessionId, got %v", err)
+	}
+	if _, err := ApplyWltPaymentEvent(nil, "intent-1", "session-1", ""); err != ErrInvalid {
+		t.Fatalf("expected ErrInvalid for missing status, got %v", err)
+	}
+}
+
+func TestApplyWltPaymentEventRejectsUnsupportedStatus(t *testing.T) {
+	_, err := ApplyWltPaymentEvent(nil, "intent-1", "session-1", "not-a-real-status")
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid for unsupported status, got %v", err)
+	}
+}
+
+func TestNewPaymentConfirmationStateConstants(t *testing.T) {
+	states := map[IntentState]bool{
+		StatePaymentConfirmed: true,
+		StatePaymentFailed:    true,
+	}
+	if len(states) != 2 {
+		t.Fatalf("expected 2 distinct new payment confirmation states, got %d", len(states))
 	}
 }

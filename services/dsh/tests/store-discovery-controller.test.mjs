@@ -7,7 +7,7 @@ const {
   toggleFavoriteIds,
   withStoreDiscoveryFilter,
 } = await import(
-  "../dist/frontend/shared/store/store-discovery.controller-core.js"
+  "../dist/services/dsh/frontend/shared/store/store-discovery.controller-core.js"
 );
 const {
   emptyState,
@@ -15,7 +15,7 @@ const {
   serviceUnavailableState,
   successState,
 } = await import(
-  "../dist/frontend/shared/store/store-discovery.states.js"
+  "../dist/services/dsh/frontend/shared/store/store-discovery.states.js"
 );
 
 const store = (id, distanceKm) => ({

@@ -12,7 +12,9 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"wlt-api/internal/dshnotify"
 	wltHttp "wlt-api/internal/http"
+	"wlt-api/internal/payment"
 )
 
 func main() {
@@ -27,6 +29,9 @@ func main() {
 	}
 
 	authMode := os.Getenv("WLT_AUTH_MODE")
+
+	dshBaseURL := os.Getenv("WLT_DSH_BASE_URL")
+	payment.ConfigureDshNotifier(dshnotify.NewClient(dshBaseURL))
 
 	log.Println("[wlt-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)

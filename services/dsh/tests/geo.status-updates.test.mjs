@@ -5,7 +5,7 @@ const {
   CUSTOMER_STATUS_MILESTONE_LABELS,
   toCustomerStatusMilestone,
   toCustomerStatusLabel,
-} = await import("../dist/frontend/shared/geo/geo.status-updates.js");
+} = await import("../dist/services/dsh/frontend/shared/geo/geo.status-updates.js");
 
 describe("geo.status-updates", () => {
   test("all milestone labels are defined", () => {

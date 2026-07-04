@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 const { CUSTOMER_GEO_VISIBILITY_POLICY, FORBIDDEN_CLIENT_GEO_SYMBOLS } = await import(
-  "../dist/frontend/shared/geo/geo.customer-visibility.policy.js"
+  "../dist/services/dsh/frontend/shared/geo/geo.customer-visibility.policy.js"
 );
 
 describe("geo.customer-visibility.policy", () => {

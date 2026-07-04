@@ -5,12 +5,12 @@ const {
   resolveCatalogActionError,
   resolveCatalogError,
   shouldLoadAuthenticatedCatalog,
-} = await import("../dist/frontend/shared/catalog/catalog.controller-core.js");
+} = await import("../dist/services/dsh/frontend/shared/catalog/catalog.controller-core.js");
 const {
   resolveCatalogSubmissionState,
   resolvePartnerCatalogState,
   resolvePublishedCatalogState,
-} = await import("../dist/frontend/shared/catalog/catalog.view-model.js");
+} = await import("../dist/services/dsh/frontend/shared/catalog/catalog.view-model.js");
 
 const catalog = (products = [], categories = []) => ({
   storeId: "store-1",

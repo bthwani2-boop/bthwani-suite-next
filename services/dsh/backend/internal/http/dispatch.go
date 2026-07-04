@@ -1,11 +1,16 @@
 package http
 
 import (
+	"context"
 	"errors"
+	"log"
 	"net/http"
+	"time"
 
 	"dsh-api/internal/dispatch"
+	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 // POST /dsh/operator/dispatch/assignments
@@ -110,7 +115,37 @@ func (s *protectedStoreServer) handleSubmitDispatchPoD(w http.ResponseWriter, r 
 		return
 	}
 	assignment, err := dispatch.SubmitPoD(s.db, r.PathValue("assignmentId"), actor.ID, body)
+	if err == nil {
+		s.notifyWltDeliveryCompleted(assignment.OrderID, assignment.CaptainID)
+	}
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
+}
+
+// notifyWltDeliveryCompleted tells WLT a COD order has been delivered so it
+// can open its own COD collection record. This is best-effort: WLT owns
+// financial settlement truth and can also be reconciled independently, so a
+// notification failure here must never fail the captain's PoD submission.
+func (s *protectedStoreServer) notifyWltDeliveryCompleted(orderID, captainID string) {
+	deliveryCtx, err := orders.GetOrderDeliveryContext(s.db, orderID)
+	if err != nil {
+		log.Printf("[dsh-api] failed to resolve delivery context for order %s: %v", orderID, err)
+		return
+	}
+	if deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.wlt.NotifyDeliveryCompleted(ctx, wlt.NotifyDeliveryCompletedInput{
+			OrderID:          orderID,
+			CaptainID:        captainID,
+			PartnerID:        deliveryCtx.PartnerID,
+			CheckoutIntentID: deliveryCtx.CheckoutIntentID,
+		}); err != nil {
+			log.Printf("[dsh-api] failed to notify WLT of delivery completion (order=%s): %v", orderID, err)
+		}
+	}()
 }
 
 // GET /dsh/client/orders/{orderId}/tracking

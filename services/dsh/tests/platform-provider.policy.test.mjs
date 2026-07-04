@@ -6,7 +6,7 @@ const {
   WLT_BOUNDARY_PROVIDER_KINDS,
   ALLOWED_PROVIDER_CONSUMER_SURFACES,
   FORBIDDEN_PROVIDER_CONSUMER_SURFACES,
-} = await import("../dist/frontend/shared/platform/platform-provider.policy.js");
+} = await import("../dist/services/dsh/frontend/shared/platform/platform-provider.policy.js");
 
 describe("platform-provider.policy", () => {
   test("provider mutation requires backend contract", () => {

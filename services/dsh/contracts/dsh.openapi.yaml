@@ -1036,10 +1036,6 @@ paths:
       tags: [DshOrders]
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: storeId
-          in: query
-          required: true
-          schema: { type: string }
         - name: status
           in: query
           required: false
@@ -1850,21 +1846,30 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshPartnerPerformanceResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
-
-  /dsh/integrations/wlt/payment-callbacks:
+  /dsh/internal/wlt/payment-session-events:
     post:
-      operationId: acceptWltPaymentCallbackEnvelope
-      summary: Future WLT-owned callback envelope; DSH consumes opaque final references only.
+      operationId: reportWltPaymentSessionEvent
+      summary: WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization.
       tags: [DshCheckout]
-      x-contract-state: CONTRACT_DRAFT
       x-bthwani-client-generation: DISABLED
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/WltPaymentCallbackEnvelope" }
       responses:
-        "501": { description: Contract-only; signature and payment truth remain WLT-owned. }
+        "200":
+          description: Checkout intent updated from the WLT payment-session outcome.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshCheckoutIntentResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { description: Only the WLT service may report payment-session events. }
+        "404": { description: Checkout intent not found. }
+        "409": { description: paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome. }
 
   # ── Notifications ─────────────────────────────────────────────────
   /dsh/notifications:
@@ -4890,15 +4895,17 @@ components:
 
     WltPaymentCallbackEnvelope:
       type: object
-      required: [paymentSessionId, paymentStatus, checkoutIntentId, occurredAt]
+      required: [checkoutIntentId, paymentSessionId, status]
       properties:
-        paymentSessionId: { type: string }
-        paymentStatus: { type: string }
         checkoutIntentId: { type: string }
-        occurredAt: { type: string, format: date-time }
+        paymentSessionId: { type: string }
+        status:
+          type: string
+          enum: [reference_created, cod_pending, authorized, captured, cod_collected, failed, expired]
       description: >
         Contains opaque WLT references only. No amount, ledger, refund, settlement,
-        or signature verification logic belongs to DSH.
+        or signature verification logic belongs to DSH. Fields are DisallowUnknownFields-strict
+        on the DSH side: this schema must always match services/dsh/backend/internal/http/wlt_events.go exactly.
 
     # ── Notification Schemas ─────────────────────────────────────────
     DshNotification:

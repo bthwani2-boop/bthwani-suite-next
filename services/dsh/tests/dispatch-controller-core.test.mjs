@@ -7,7 +7,7 @@ const {
   resolveDispatchLoadSuccess,
   resolvePoDValidation,
   resolveTrackingSuccess,
-} = await import("../dist/frontend/shared/dispatch/dispatch.controller-core.js");
+} = await import("../dist/services/dsh/frontend/shared/dispatch/dispatch.controller-core.js");
 
 const assignment = {
   id: "assignment-1",

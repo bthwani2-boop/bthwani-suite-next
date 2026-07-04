@@ -5,7 +5,7 @@ const {
   HOME_DISCOVERY_INITIAL_FILTER,
   loadHomeDiscovery,
 } = await import(
-  "../dist/frontend/shared/home-discovery/home-discovery.controller-core.js"
+  "../dist/services/dsh/frontend/shared/home-discovery/home-discovery.controller-core.js"
 );
 const {
   emptyState,
@@ -13,7 +13,7 @@ const {
   serviceUnavailableState,
   successState,
 } = await import(
-  "../dist/frontend/shared/home-discovery/home-discovery.states.js"
+  "../dist/services/dsh/frontend/shared/home-discovery/home-discovery.states.js"
 );
 
 const success = () =>

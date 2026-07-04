@@ -2,15 +2,15 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 const { PLATFORM_PROVIDER_REGISTRY } = await import(
-  "../dist/frontend/shared/platform/platform-provider.registry.js"
+  "../dist/services/dsh/frontend/shared/platform/platform-provider.registry.js"
 );
 
 const { WLT_BOUNDARY_PROVIDER_KINDS } = await import(
-  "../dist/frontend/shared/platform/platform-provider.policy.js"
+  "../dist/services/dsh/frontend/shared/platform/platform-provider.policy.js"
 );
 
 const { DSH_GEO_POLICY } = await import(
-  "../dist/frontend/shared/geo/geo.policy.js"
+  "../dist/services/dsh/frontend/shared/geo/geo.policy.js"
 );
 
 describe("wlt-boundary-provider", () => {

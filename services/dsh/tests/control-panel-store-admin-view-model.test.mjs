@@ -6,7 +6,7 @@ const {
   toAdminDetail,
   toAdminKpiSummary,
   applyAdminFilters,
-} = await import("../dist/frontend/shared/store/store-admin.view-model.js");
+} = await import("../dist/services/dsh/frontend/shared/store/store-admin.view-model.js");
 
 const makeDto = (overrides = {}) => ({
   id: "store-001",

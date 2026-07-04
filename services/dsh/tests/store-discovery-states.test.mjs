@@ -7,7 +7,7 @@ const {
   errorState,
   serviceUnavailableState,
   successState,
-} = await import("../dist/frontend/shared/store/store-discovery.states.js");
+} = await import("../dist/services/dsh/frontend/shared/store/store-discovery.states.js");
 
 describe("state constructors", () => {
   test("loadingState returns kind=loading", () => {
@@ -61,7 +61,7 @@ describe("store discovery API state classification", async () => {
   const {
     classifyStoreDiscoveryError,
     normalizeStoreListResponse,
-  } = await import("../dist/frontend/shared/store/store-discovery.api.js");
+  } = await import("../dist/services/dsh/frontend/shared/store/store-discovery.api.js");
 
   test("maps an empty first page to empty", () => {
     const state = normalizeStoreListResponse({

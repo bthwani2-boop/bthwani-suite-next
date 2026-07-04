@@ -3,9 +3,11 @@ package cod
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 )
 
@@ -37,9 +39,14 @@ type Commission struct {
 }
 
 type CreateCodRecordInput struct {
-	OrderID          string `json:"orderId"`
-	CaptainID        string `json:"captainId"`
-	PartnerID        string `json:"partnerId"`
+	OrderID   string `json:"orderId"`
+	CaptainID string `json:"captainId"`
+	PartnerID string `json:"partnerId"`
+	// CheckoutIntentID, when set, is the sole source of AmountMinorUnits/
+	// Currency: WLT looks up its own payment session for that checkout intent
+	// rather than trusting a caller-supplied amount. Any AmountMinorUnits/
+	// Currency passed alongside CheckoutIntentID is ignored.
+	CheckoutIntentID string `json:"checkoutIntentId"`
 	AmountMinorUnits int64  `json:"amountMinorUnits"`
 	Currency         string `json:"currency"`
 }
@@ -115,16 +122,50 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	if input.OrderID == "" || input.CaptainID == "" || input.PartnerID == "" {
 		return nil, fmt.Errorf("orderId, captainId, and partnerId are required")
 	}
+
+	existing, err := getCodRecordByOrder(db, input.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return existing, nil
+	}
+
+	amountMinorUnits := input.AmountMinorUnits
 	currency := input.Currency
+	if input.CheckoutIntentID != "" {
+		session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+		if err != nil {
+			return nil, err
+		}
+		if session == nil {
+			return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
+		}
+		if session.PaymentMethod != "cod" {
+			return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
+		}
+		amountMinorUnits = session.AmountMinorUnits
+		currency = session.Currency
+	}
 	if currency == "" {
 		currency = "YER"
 	}
+
 	const q = `
 		INSERT INTO wlt_cod_records (order_id, captain_id, partner_id, amount_minor_units, currency)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING ` + codCols
-	row := db.QueryRow(q, input.OrderID, input.CaptainID, input.PartnerID, input.AmountMinorUnits, currency)
+	row := db.QueryRow(q, input.OrderID, input.CaptainID, input.PartnerID, amountMinorUnits, currency)
 	return scanCodRecord(row)
+}
+
+func getCodRecordByOrder(db *sql.DB, orderID string) (*CodRecord, error) {
+	const q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE order_id = $1`
+	c, err := scanCodRecord(db.QueryRow(q, orderID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return c, err
 }
 
 func GetCodRecord(db *sql.DB, codRecordID string) (*CodRecord, error) {
@@ -253,8 +294,25 @@ func ListCommissions(db *sql.DB, orderID, captainID string) ([]*Commission, erro
 
 // HTTP handlers
 
+// requireDshServiceCaller enforces that only the DSH service -- never an
+// end-user actor -- may create COD/commission mutation records.
+func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header.Get("Authorization") == "" {
+		shared.SendError(w, http.StatusUnauthorized, "SERVICE_AUTH_REQUIRED", "service authorization is required")
+		return false
+	}
+	if r.Header.Get("X-Service-Caller") != "dsh" {
+		shared.SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "only DSH service may create COD/commission records")
+		return false
+	}
+	return true
+}
+
 func HandleCreateCodRecord(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireDshServiceCaller(w, r) {
+			return
+		}
 		var input CreateCodRecordInput
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 		if err := decoder.Decode(&input); err != nil {
@@ -332,6 +390,9 @@ func HandleRemitCod(db *sql.DB) http.HandlerFunc {
 
 func HandleCreateCommission(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireDshServiceCaller(w, r) {
+			return
+		}
 		var input CreateCommissionInput
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 		if err := decoder.Decode(&input); err != nil {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 // Import from compiled dist
 const { applyDiscoveryFilter, canViewHomeDiscovery } = await import(
-  "../dist/frontend/shared/home-discovery/home-discovery.policy.js"
+  "../dist/services/dsh/frontend/shared/home-discovery/home-discovery.policy.js"
 );
 
 const makeStore = (overrides = {}) => ({

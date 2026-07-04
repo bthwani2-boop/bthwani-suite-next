@@ -8,7 +8,7 @@ const {
   resolvePartnerOrderActionError,
   resolveRejectOrderValidation,
   shouldLoadPartnerOrders,
-} = await import("../dist/frontend/shared/orders/orders.controller-core.js");
+} = await import("../dist/services/dsh/frontend/shared/orders/orders.controller-core.js");
 
 const order = { id: "order-1" };
 

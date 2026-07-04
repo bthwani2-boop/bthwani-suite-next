@@ -587,9 +587,25 @@ paths:
   /wlt/cod-records:
     post:
       operationId: createWltCodRecord
-      summary: Create a COD record for an order.
+      summary: DSH-only. Opens a COD collection record for a delivered order.
+      description: >
+        Called by DSH once a COD order is delivered. WLT derives amountMinorUnits/
+        currency from its own payment session for the given checkoutIntentId rather
+        than trusting the caller. Idempotent on orderId: replays return the existing
+        record.
       tags:
         - WltCod
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
       requestBody:
         required: true
         content:
@@ -598,13 +614,20 @@ paths:
               $ref: "#/components/schemas/WltCreateCodRecordRequest"
       responses:
         "201":
-          description: COD record created.
+          description: COD record created (or already existed for this orderId).
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/WltCodRecordResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      operationId: listWltCodRecords
+      summary: List COD records by captainId or partnerId.
     get:
       operationId: listWltCodRecords
       summary: List COD records by captainId or partnerId.
@@ -704,9 +727,20 @@ paths:
   /wlt/commissions:
     post:
       operationId: createWltCommission
-      summary: Create a commission record.
+      summary: DSH-only. Create a commission record.
       tags:
         - WltCod
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
       requestBody:
         required: true
         content:
@@ -720,6 +754,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WltCommissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      operationId: listWltCommissions
+      summary: List commissions by orderId or captainId.
+      tags:
+        - WltCod
         "400":
           $ref: "#/components/responses/BadRequest"
     get:
@@ -1481,7 +1526,6 @@ components:
         - orderId
         - captainId
         - partnerId
-        - amountMinorUnits
       properties:
         orderId:
           type: string
@@ -1489,11 +1533,18 @@ components:
           type: string
         partnerId:
           type: string
+        checkoutIntentId:
+          type: string
+          description: >
+            When set, WLT derives amountMinorUnits/currency from its own payment
+            session for this checkout intent instead of trusting the caller;
+            amountMinorUnits/currency in the request are ignored in that case.
         amountMinorUnits:
           type: integer
           format: int64
         currency:
           type: string
+          default: YER
           default: YER
 
     WltCodRecordResponse:

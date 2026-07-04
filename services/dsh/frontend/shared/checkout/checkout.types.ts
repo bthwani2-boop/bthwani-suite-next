@@ -6,6 +6,8 @@ export type DshIntentState =
   | "payment_pending"
   | "confirmed"
   | "cancelled"
+  | "payment_confirmed"
+  | "payment_failed"
   | "expired";
 
 export type DshFulfillmentMode = "bthwani_delivery" | "partner_delivery" | "pickup";

@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 const { toCardViewModel, toDetailViewModel } = await import(
-  "../dist/frontend/shared/store/store-discovery.view-model.js"
+  "../dist/services/dsh/frontend/shared/store/store-discovery.view-model.js"
 );
 
 const makeDto = (overrides = {}) => ({
