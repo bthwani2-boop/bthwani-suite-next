@@ -185,6 +185,7 @@ const EXCLUDED_LEGACY_DIRS = new Set([
   "dist",
   "build",
   "out",
+  "workspace",
   "coverage",
   "tmp",
   "temp",
@@ -264,6 +265,114 @@ for (const file of legacyFiles) {
       line: lineNum,
       message: `forbidden legacy slice label or term found: "${match[0]}"`
     });
+  }
+}
+
+// 4. no-old-guards-in-runtime
+const oldGuards = [
+  "app-shell-control-panel-contract-gate",
+  "control-panel-design-gate",
+  "canonical-currency-yemen",
+  "canonical-host-ports",
+  "docker-runtime-profiles",
+  "dsh-cart-serviceability-gate",
+  "dsh-catalog-ownership-gate",
+  "dsh-frontend-shared-boundary-imports-gate",
+  "dsh-frontend-shared-ownership-gate",
+  "dsh-platform-geo-provider-governance-gate",
+  "dsh-service-activation",
+  "dsh-store-role-boundary-gate",
+  "guard-automated-execution-policy",
+  "guard-go-backend-runtime",
+  "guard-journey-operating-model",
+  "no-direct-fetch-in-screen",
+  "no-hardcoded-local-repo-root",
+  "no-legacy-slice-labels",
+  "no-memory-repo-in-journey-runtime",
+  "no-preview-demo-mock-runtime",
+  "performance-runtime-baseline",
+  "service-fullstack-linkage",
+  "unified-fullstack-brain-gate",
+  "wlt-dsh-frontend-shared-ownership-gate"
+];
+
+const EXCLUDED_CLEANUP_DIRS = new Set([
+  ".git",
+  "node_modules",
+  ".pnpm-store",
+  ".next",
+  ".expo",
+  ".turbo",
+  ".nx",
+  ".cache",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  "tmp",
+  "temp",
+  "logs",
+  "evidence",
+  "screenshots",
+  "recordings",
+  "visual-evidence",
+  "generated",
+  "__generated__",
+  ".diagnostics",
+  "graphify-out"
+]);
+
+function shouldScanForOldGuards(relPath, isDir, name) {
+  if (isDir) {
+    if (EXCLUDED_CLEANUP_DIRS.has(name)) return false;
+  }
+  if (relPath.startsWith("tools/registry/runs")) return false;
+  if (relPath.startsWith("docs/")) return false;
+  if (relPath.startsWith("governance/")) return false;
+  if (relPath.startsWith("graphify-out/")) return false;
+  if (relPath.includes("evidence/")) return false;
+  if (relPath === "tools/guards/cleanup-policy-gate.mjs") return false;
+  
+  if (!isDir) {
+    const ext = path.extname(name).toLowerCase();
+    const allowed = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".yaml", ".yml", ".json", ".ps1", ".sh"]);
+    if (!allowed.has(ext)) return false;
+  }
+  return true;
+}
+
+function walkCleanup(dir, files = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const rel = toPosix(path.relative(repoRoot, full));
+    if (!shouldScanForOldGuards(rel, entry.isDirectory(), entry.name)) continue;
+    if (entry.isDirectory()) {
+      walkCleanup(full, files);
+    } else {
+      files.push(rel);
+    }
+  }
+  return files;
+}
+
+const cleanupScanFiles = walkCleanup(repoRoot);
+for (const file of cleanupScanFiles) {
+  let content;
+  try {
+    content = fs.readFileSync(path.join(repoRoot, file), "utf8");
+  } catch {
+    continue;
+  }
+  
+  for (const oldGuard of oldGuards) {
+    if (content.includes(oldGuard)) {
+      const lineNum = lineNumber(content, content.indexOf(oldGuard));
+      violations.push({
+        file,
+        line: lineNum,
+        message: `FORBIDDEN: reference to deprecated guard name found: "${oldGuard}"`
+      });
+    }
   }
 }
 

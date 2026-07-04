@@ -262,16 +262,8 @@ Runtime evidence is expected under capability-specific DSH evidence folders, inc
 Use these checks before declaring DSH runtime closed after any change:
 
 ```powershell
-pnpm run runtime:status
-pnpm run runtime:smoke
-pnpm run guard:dsh-frontend-shared-ownership
-pnpm run guard:dsh-frontend-shared-boundary-imports
-pnpm run guard:no-preview-demo-mock-runtime
-pnpm run guard:no-broken-imports
-pnpm run guard:no-direct-fetch-in-screen
-pnpm run guard:no-financial-mutation-outside-wlt
-pnpm run guard:no-direct-financial-provider-access-outside-wlt
-pnpm run guard:no-legacy-slice-labels <!-- no-legacy-slice-labels-ignore -->
+pnpm run foundation:gate
+pnpm run journey:gate
 pnpm run typecheck
 pnpm run build
 ```

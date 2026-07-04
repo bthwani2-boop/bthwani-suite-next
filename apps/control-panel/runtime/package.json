@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dev": "next dev --port 13000",
     "build": "next build",
-    "lint": "node ../../../tools/guards/control-panel-design-gate.mjs"
+    "lint": "pnpm --dir ../../.. run guard:ui-kit-boundary"
   },
   "name": "@bthwani/control-panel",
   "private": true,
