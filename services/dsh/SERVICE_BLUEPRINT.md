@@ -29,7 +29,7 @@ The active runtime capabilities are:
 - Support, Incidents, and Escalation Room: verified.
 - Platform Analytics and Operational Reporting: verified.
 - Notifications and Actor Communication: verified.
-- Marketing Command Deck: blocked-runtime (code/contract complete; see capability-map.ts / runtime-map.ts "dsh.marketing").
+- Marketing Command Deck: verified.
 - Platform Policies and Service Area Management: verified.
 - Administration, Roles, and Activation: verified.
 - Partner Onboarding & Store Publication: verified.
