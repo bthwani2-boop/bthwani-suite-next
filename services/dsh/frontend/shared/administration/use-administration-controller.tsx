@@ -11,6 +11,20 @@ import type {
   DshCaptainCredential, DshAdminAuditEntry, DshAdminState,
 } from "./administration.types";
 
+export function useStaffController(authKind: string) {
+  const [state, setState] = useState<DshAdminState<DshStaffMember[]>>({ kind: "idle" });
+  const load = useCallback(async () => {
+    setState({ kind: "loading" });
+    try { setState({ kind: "success", data: (await fetchStaff()).staff }); }
+    catch (err) { setState({ kind: "error", message: msg(err) }); }
+  }, []);
+  useEffect(() => { if (authKind !== "authenticated") { setState({ kind: "idle" }); return; } load(); }, [authKind, load]);
+  return {
+    state, reload: load,
+    assignRole: async (staffId: string, roleId: string) => { await assignStaffRole(staffId, roleId); await load(); },
+  };
+}
+
 function msg(err: unknown): string {
   const e = err as { kind?: string; status?: number } | undefined;
   if (e?.status === 401) return "الجلسة منتهية";

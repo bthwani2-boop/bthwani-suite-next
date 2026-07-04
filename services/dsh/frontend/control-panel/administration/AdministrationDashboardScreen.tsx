@@ -22,14 +22,13 @@ import {
   ADMIN_STATUS_FOOTER,
   ADMIN_ROLES,
   ADMIN_PLATFORM_PERMISSIONS,
-  MOCK_ADMIN_USERS,
   ALL_DSH_ROLE_IDS,
   buildAdminKpiMetrics,
   type AdminRole,
-  type DshAdminUser,
   type AdminMainTabId,
 } from "../../shared/administration";
 import {
+  useStaffController,
   useCaptainCredentialController,
   useAdminAuditController,
 } from "../../shared/administration";
@@ -106,10 +105,12 @@ export function AdministrationDashboardScreen() {
   const [mainTab, setMainTab] = useState<AdminMainTabId>("overview");
 
   // Sub-controllers for real operational data
+  const { state: staffState } = useStaffController(identity.state.kind);
   const { state: captainState } = useCaptainCredentialController(identity.state.kind);
   const { state: auditState } = useAdminAuditController(identity.state.kind);
 
-  const metrics = useMemo(() => buildAdminKpiMetrics(), []);
+  const staffCount = staffState.kind === "success" ? staffState.data.length : 0;
+  const metrics = useMemo(() => buildAdminKpiMetrics(staffCount), [staffCount]);
 
   // Ã¢â€â‚¬Ã¢â€â‚¬ Auth gate Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   if (identity.state.kind !== "authenticated") {
@@ -230,41 +231,44 @@ export function AdministrationDashboardScreen() {
   const renderUsersPanel = () => {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-        {/* Mock Users List */}
+        {/* Staff & Role Assignments (Real Data) */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã™â€¦Ã™Ë† Ã˜Â§Ã™â€žÃ™â€ Ã˜Â¸Ã˜Â§Ã™â€¦ Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â´Ã˜Â±Ã™ÂÃ™Ë†Ã™â€ </h3>
-          <CpTable aria-label="Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã™â€¦Ã™Ë† Ã˜Â§Ã™â€žÃ™â€ Ã˜Â¸Ã˜Â§Ã™â€¦">
-            <thead>
-              <tr>
-                <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã™â€¦</CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â±Ã™Å Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€žÃ™Æ’Ã˜ÂªÃ˜Â±Ã™Ë†Ã™â€ Ã™Å </CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â¯Ã™Ë†Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â®Ã˜ÂµÃ˜Âµ</CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â©</CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜Â¢Ã˜Â®Ã˜Â± Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž</CpTableHeaderCell>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_ADMIN_USERS.map((user) => (
-                <tr key={user.id}>
-                  <CpTableCell><strong>{user.name}</strong></CpTableCell>
-                  <CpTableCell>{user.email}</CpTableCell>
-                  <CpTableCell>
-                    <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandStructure, fontSize: "0.75rem", padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontWeight: 600 }}>
-                      {getDshRoleArabicName(user.roleId)}
-                    </span>
-                  </CpTableCell>
-                  <CpTableCell>
-                    <span style={{ color: user.status === "active" ? colorRoles.brandStructure : user.status === "pending" ? colorRoles.brandAction : colorRoles.brandAction, fontSize: "0.75rem", fontWeight: 700 }}>
-                      {user.status === "active" ? "Ã™â€ Ã˜Â´Ã˜Â·" : user.status === "pending" ? "Ã™â€šÃ™Å Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹Ã˜Â©" : "Ã™â€¦Ã˜Â¹Ã™â€žÃ™â€š"}
-                    </span>
-                  </CpTableCell>
-                  <CpTableCell style={{ opacity: 0.65 }}>{user.lastAccess}</CpTableCell>
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>الموظفون وأدوارهم المخصصة (Real Data)</h3>
+          {staffState.kind === "loading" && <CpStatePanel role="status" title="جارٍ تحميل قائمة الموظفين..." />}
+          {staffState.kind === "error" && <CpStatePanel role="alert" title={staffState.message} />}
+          {staffState.kind === "success" && (
+            <CpTable aria-label="الموظفون">
+              <thead>
+                <tr>
+                  <CpTableHeaderCell>معرّف الموظف</CpTableHeaderCell>
+                  <CpTableHeaderCell>الدور المخصص</CpTableHeaderCell>
+                  <CpTableHeaderCell>أسنِد بواسطة</CpTableHeaderCell>
+                  <CpTableHeaderCell>تاريخ الإسناد</CpTableHeaderCell>
                 </tr>
-              ))}
-            </tbody>
-          </CpTable>
+              </thead>
+              <tbody>
+                {staffState.data.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>لا يوجد موظفون مسجّلون.</td>
+                  </tr>
+                ) : (
+                  staffState.data.map((member) => (
+                    <tr key={member.id}>
+                      <CpTableCell><code>{member.actorId}</code></CpTableCell>
+                      <CpTableCell>
+                        <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandStructure, fontSize: "0.75rem", padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontWeight: 600 }}>
+                          {member.roleName}
+                        </span>
+                      </CpTableCell>
+                      <CpTableCell>{member.assignedBy || "—"}</CpTableCell>
+                      <CpTableCell style={{ opacity: 0.65 }}>{member.assignedAt}</CpTableCell>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </CpTable>
+          )}
         </div>
-
         {/* Real Captain Credentials from controller */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
           <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã˜Â£Ã™Ë†Ã˜Â±Ã˜Â§Ã™â€š Ã˜Â§Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â§Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€šÃ˜Â¨Ã˜Â§Ã˜Â·Ã™â€ Ã˜Â© (Real Data)</h3>

@@ -15,7 +15,10 @@ import { mapOperationsDecisionToLifecycle } from '../../shared/orders';
 import { buildOperationsHref } from './operations.registry';
 import { getLiveOrderDecisions, updateLiveOrderDecision } from '../../shared/partner/partner.workflow';
 import { OpsOrderDetailPanel } from './OpsOrderDetailPanel';
-import { MOCK_PENDING_APPROVAL_ORDERS as PENDING_APPROVAL_ORDERS, opsTheme as theme } from '../../shared/operations';
+import type { DshOpsApprovalOrder } from '../../shared/operations';
+import { opsTheme as theme } from '../../shared/operations';
+
+const PENDING_APPROVAL_ORDERS: DshOpsApprovalOrder[] = [];
 import { getOperationsActorLabel } from './FulfillmentModeQueueSection';
 import type { DshFulfillmentOperationalMode } from './operations.types';
 import { DSH_FULFILLMENT_OPERATIONAL_MODE_META } from './operations.types';

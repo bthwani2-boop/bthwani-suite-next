@@ -3,7 +3,6 @@ package http
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 
@@ -167,5 +166,3 @@ func sendJSON(w http.ResponseWriter, status int, body any) {
 func sendError(w http.ResponseWriter, status int, code, message string) {
 	sendJSON(w, status, identity.ApiError{Code: code, Message: message})
 }
-
-var _ = errors.Is

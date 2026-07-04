@@ -12,7 +12,6 @@ import type { AnyOperationsWorkspaceId } from './operations.registry';
 import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from './operations.registry';
 import styles from '../shared/control-panel-surface.module.css';
 import { getDshSignalSummaries, getDshSignalEventLabel, getDshSignalEventTone } from '../../shared/marketing/dsh-signal-layer.model';
-import { MOCK_TOP_SUGGESTIONS as TOP_SUGGESTIONS, MOCK_QUICK_ACTIONS as QUICK_ACTIONS } from '../../shared/operations';
 
 export type CommandCenterScreenProps = { hubHref: string; subGroup?: string; };
 
@@ -82,20 +81,12 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
         <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
           <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>أعلى توصيات النظام الآن</h3>
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            {TOP_SUGGESTIONS.map((s) => (
-              <WebControlPanelRecommendation
-                key={s.id}
-                title={s.label}
-                reason={s.reason}
-                confidence={s.confidence}
-                auditTag={s.risk === 'critical' ? 'خطر حرج' : undefined}
-                primaryAction={{
-                  id: `action-${s.id}`,
-                  label: s.action,
-                  onAction: () => router.push(buildOperationsHref(s.workspace)),
-                }}
-              />
-            ))}
+            <WebControlPanelRecommendation
+              title="لا توجد توصيات نشطة"
+              reason="سيتم ربط توصيات النظام بـ API العمليات (dispatch/analytics)."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
           </div>
         </div>
 
@@ -103,21 +94,12 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
         <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
           <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>تدخل سريع مطلوب</h3>
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            {QUICK_ACTIONS.map((action) => (
-              <WebControlPanelDecisionRow
-                key={action.id}
-                entityId={action.id}
-                entityLabel={action.label}
-                sla={action.time}
-                status="مطلوب"
-                statusTone="warning"
-                primaryAction={{
-                  id: `go-${action.id}`,
-                  label: 'انتقل',
-                  onAction: () => router.push(buildOperationsHref(action.workspace)),
-                }}
-              />
-            ))}
+            <WebControlPanelRecommendation
+              title="لا توجد تدخلات عاجلة"
+              reason="سيتم ربط قائمة التدخل السريع بـ API العمليات (dispatch/analytics)."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
           </div>
         </div>
 
