@@ -32,6 +32,7 @@ func main() {
 	authMode := os.Getenv("DSH_AUTH_MODE")
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
 	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
+	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
 
 	log.Println("[dsh-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -50,7 +51,7 @@ func main() {
 
 	mediaClient := newMediaClientOrNil()
 
-	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wlt.NewClient(wltBaseURL), mediaClient)
+	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wlt.NewClient(wltBaseURL, wltServiceToken), mediaClient)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
 	server := &http.Server{

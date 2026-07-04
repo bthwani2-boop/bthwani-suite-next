@@ -31,7 +31,8 @@ func main() {
 	authMode := os.Getenv("WLT_AUTH_MODE")
 
 	dshBaseURL := os.Getenv("WLT_DSH_BASE_URL")
-	payment.ConfigureDshNotifier(dshnotify.NewClient(dshBaseURL))
+	dshServiceToken := os.Getenv("DSH_WLT_SERVICE_TOKEN")
+	payment.ConfigureDshNotifier(dshnotify.NewClient(dshBaseURL, dshServiceToken))
 
 	log.Println("[wlt-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -47,7 +48,8 @@ func main() {
 	}
 	log.Println("[wlt-api] database connected successfully")
 
-	router := wltHttp.NewRouter(db)
+	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
+	router := wltHttp.NewRouter(db, mutationsEnabled)
 	handler := wltHttp.CorsMiddleware(authMode, router)
 
 	server := &http.Server{

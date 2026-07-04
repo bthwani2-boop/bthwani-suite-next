@@ -15,7 +15,10 @@ const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
 
 const STATE_LABELS: Record<DshIntentState, string> = {
   pending: "قيد الانتظار",
+  wlt_handoff_failed: "فشل تحويل الدفع إلى WLT",
   payment_pending: "في انتظار الدفع",
+  payment_confirmed: "تم تأكيد الدفع",
+  payment_failed: "فشل الدفع",
   confirmed: "مؤكد",
   cancelled: "ملغي",
   expired: "منتهي",
@@ -23,7 +26,10 @@ const STATE_LABELS: Record<DshIntentState, string> = {
 
 const STATE_STYLES: Record<DshIntentState, { readonly background: string; readonly color: string }> = {
   pending: { background: "color-mix(in srgb, CanvasText 8%, transparent)", color: "CanvasText" },
+  wlt_handoff_failed: { background: "color-mix(in srgb, Mark 16%, transparent)", color: "CanvasText" },
   payment_pending: { background: "color-mix(in srgb, Highlight 16%, transparent)", color: "CanvasText" },
+  payment_confirmed: { background: "color-mix(in srgb, ActiveText 16%, transparent)", color: "CanvasText" },
+  payment_failed: { background: "color-mix(in srgb, Mark 16%, transparent)", color: "CanvasText" },
   confirmed: { background: "color-mix(in srgb, ActiveText 16%, transparent)", color: "CanvasText" },
   cancelled: { background: "color-mix(in srgb, Mark 16%, transparent)", color: "CanvasText" },
   expired: { background: "color-mix(in srgb, CanvasText 8%, transparent)", color: "CanvasText" },

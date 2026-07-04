@@ -18,14 +18,19 @@ import (
 )
 
 type Client struct {
-	baseURL string
-	http    *http.Client
+	baseURL      string
+	serviceToken string
+	http         *http.Client
 }
 
-func NewClient(baseURL string) *Client {
+// NewClient builds a client for calling DSH. serviceToken is the shared
+// secret DSH validates via DSH_WLT_SERVICE_TOKEN; it is sent as the bearer
+// token on every outbound request alongside X-Service-Caller: wlt.
+func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		http:    &http.Client{Timeout: 5 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
+		http:         &http.Client{Timeout: 5 * time.Second},
 	}
 }
 
@@ -63,7 +68,7 @@ func (c *Client) notify(ctx context.Context, checkoutIntentID, paymentSessionID,
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer wlt-service")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "wlt")
 	req.Header.Set("X-Correlation-ID", checkoutIntentID)
 

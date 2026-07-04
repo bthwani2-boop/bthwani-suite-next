@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React from "react";
 import { StyleSheet, View, Pressable, ScrollView, TextInput, TouchableOpacity } from "react-native";
 import {
   Badge,
@@ -19,8 +19,8 @@ import {
   KeyValueList,
   Box,
 } from "@bthwani/ui-kit";
-import { useCheckoutController } from "../../shared/checkout";
-import { useCreateOrderController, useClientOrderDetailController } from "../../shared/orders";
+import { useCheckoutToOrderFlow } from "../../shared/checkout";
+import { useClientOrderDetailController } from "../../shared/orders";
 import type { DshCart } from "../../shared/cart";
 import type { DshCreateIntentInput, DshPaymentMethod } from "../../shared/checkout";
 
@@ -34,80 +34,56 @@ type Props = {
 };
 
 export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentMethod, onSuccess, onCancel }: Props) {
-  const controller = useCheckoutController();
-  const createOrderController = useCreateOrderController();
-  const { direction, isRTL } = useDirection();
+  const input: DshCreateIntentInput = {
+    cartId: cart.id,
+    storeId: cart.storeId,
+    fulfillmentMode: cart.fulfillmentMode,
+    paymentMethod,
+    ...(deliveryAddress ? { deliveryAddress } : {}),
+    ...(note ? { note } : {}),
+  };
+  // CheckoutScreen renders flow state only: the checkout -> order-creation
+  // lifecycle itself lives in the shared useCheckoutToOrderFlow hook, never
+  // in this UI surface.
+  const { state: flow, cancel } = useCheckoutToOrderFlow(input);
 
-  useEffect(() => {
-    // Automatically submit order on mount (eliminates redundant intermediate confirmation screen)
-    const input: DshCreateIntentInput = {
-      cartId: cart.id,
-      storeId: cart.storeId,
-      fulfillmentMode: cart.fulfillmentMode,
-      paymentMethod,
-      ...(deliveryAddress ? { deliveryAddress } : {}),
-      ...(note ? { note } : {}),
-    };
-    void controller.submit(input);
-  }, [cart.id, cart.storeId, cart.fulfillmentMode, paymentMethod, deliveryAddress, note]);
-
-  // Order creation side effect (runs once the payment intent succeeds)
-  useEffect(() => {
-    if (
-      controller.state.kind === "success" &&
-      createOrderController.state.kind === "idle"
-    ) {
-      const { intent } = controller.state;
-
-      const orderInput = {
-        checkoutIntentId: intent.id,
-      };
-
-      void createOrderController.submit(orderInput);
-    }
-  }, [controller.state.kind, createOrderController.state.kind, cart, createOrderController.submit]);
-
-  if (controller.state.kind === "idle" || controller.state.kind === "confirming" || controller.state.kind === "loading") {
+  if (flow.kind === "loading") {
     return <LoadingState title="جاري معالجة نية الدفع وتأكيد الحجز..." />;
   }
 
-  if (controller.state.kind === "success") {
-    const { intent } = controller.state;
-
-    if (createOrderController.state.kind === "submitting") {
-      return <LoadingState title="تم تأكيد الدفع! جاري تسجيل الطلب النهائي..." />;
-    }
-
-    if (createOrderController.state.kind === "error") {
-      return (
-        <View style={styles.container}>
-          <TopBar title="فشل إنشاء الطلب" {...(onCancel ? { onBack: onCancel } : {})} />
-          <ScrollScreen>
-            <StateView
-              title="عذراً، فشل تسجيل الطلب"
-              description={createOrderController.state.message}
-              actionLabel="رجوع لتعديل السلة"
-              onActionPress={onCancel}
-            />
-          </ScrollScreen>
-        </View>
-      );
-    }
-
-    if (createOrderController.state.kind === "success") {
-      return (
-        <ActiveOrderTracker
-          orderId={createOrderController.state.order.id}
-          wltSessionId={intent.wltPaymentSessionId}
-          onSuccess={onSuccess}
-          fulfillmentMode={cart.fulfillmentMode}
-        />
-      );
-    }
+  if (flow.kind === "creating_order") {
+    return <LoadingState title="تم تأكيد الدفع! جاري تسجيل الطلب النهائي..." />;
   }
 
-  if (controller.state.kind === "payment_pending") {
-    const { intent } = controller.state;
+  if (flow.kind === "order_error") {
+    return (
+      <View style={styles.container}>
+        <TopBar title="فشل إنشاء الطلب" {...(onCancel ? { onBack: onCancel } : {})} />
+        <ScrollScreen>
+          <StateView
+            title="عذراً، فشل تسجيل الطلب"
+            description={flow.message}
+            actionLabel="رجوع لتعديل السلة"
+            onActionPress={onCancel}
+          />
+        </ScrollScreen>
+      </View>
+    );
+  }
+
+  if (flow.kind === "order_ready") {
+    return (
+      <ActiveOrderTracker
+        orderId={flow.orderId}
+        wltSessionId={flow.intent.wltPaymentSessionId}
+        onSuccess={onSuccess}
+        fulfillmentMode={cart.fulfillmentMode}
+      />
+    );
+  }
+
+  if (flow.kind === "payment_pending") {
+    const { intent } = flow;
     return (
       <View style={styles.container}>
         <TopBar title="في انتظار الدفع" {...(onCancel ? { onBack: onCancel } : {})} />
@@ -120,7 +96,7 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
           <Button
             tone="ghost"
             label="إلغاء نية الطلب"
-            onPress={() => void controller.cancel(intent.id)}
+            onPress={() => cancel(intent.id)}
             style={styles.cancelBtn}
           />
         </ScrollScreen>
@@ -128,7 +104,7 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
     );
   }
 
-  if (controller.state.kind === "blocked_payment_unavailable") {
+  if (flow.kind === "blocked_payment_unavailable") {
     return (
       <View style={styles.container}>
         <TopBar title="الدفع غير متاح" {...(onCancel ? { onBack: onCancel } : {})} />
@@ -145,7 +121,7 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
     );
   }
 
-  if (controller.state.kind === "out_of_area") {
+  if (flow.kind === "out_of_area") {
     return (
       <View style={styles.container}>
         <TopBar title="تأكيد التغطية" {...(onCancel ? { onBack: onCancel } : {})} />
@@ -162,14 +138,14 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
     );
   }
 
-  if (controller.state.kind === "error") {
+  if (flow.kind === "error") {
     return (
       <View style={styles.container}>
         <TopBar title="فشل الطلب" {...(onCancel ? { onBack: onCancel } : {})} />
         <ScrollScreen>
           <StateView
             title="عذراً، لم نتمكن من إكمال طلبك"
-            description={controller.state.message}
+            description={flow.message}
             actionLabel="رجوع لتعديل البيانات"
             onActionPress={onCancel}
           />

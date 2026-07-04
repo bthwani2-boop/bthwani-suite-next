@@ -2,18 +2,23 @@ package cart
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"math"
 	"time"
+
+	"dsh-api/internal/catalog"
 )
 
 var (
-	ErrNotFound    = errors.New("cart not found")
-	ErrConflict    = errors.New("cart version conflict")
-	ErrInvalid     = errors.New("invalid cart input")
-	ErrStoreGone   = errors.New("store no longer active")
-	ErrOutOfArea   = errors.New("store outside serviceable area")
+	ErrNotFound  = errors.New("cart not found")
+	ErrConflict  = errors.New("cart version conflict")
+	ErrInvalid   = errors.New("invalid cart input")
+	ErrStoreGone = errors.New("store no longer active")
+	ErrOutOfArea = errors.New("store outside serviceable area")
 )
 
 type FulfillmentMode string
@@ -25,15 +30,19 @@ const (
 )
 
 type CartItem struct {
-	ID             string    `json:"id"`
-	CartID         string    `json:"cartId"`
-	ProductID      string    `json:"productId"`
-	ProductName    string    `json:"productName"`
-	PriceReference string    `json:"priceReference"`
-	Quantity       int       `json:"quantity"`
-	Version        int       `json:"version"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
+	ID             string `json:"id"`
+	CartID         string `json:"cartId"`
+	ProductID      string `json:"productId"`
+	ProductName    string `json:"productName"`
+	PriceReference string `json:"priceReference"`
+	// UnitPrice is snapshotted from the catalog product at add-to-cart time,
+	// so a later catalog price change never retroactively changes an
+	// existing cart/order. It is never taken from client input.
+	UnitPrice float64   `json:"unitPrice"`
+	Quantity  int       `json:"quantity"`
+	Version   int       `json:"version"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type Cart struct {
@@ -56,10 +65,11 @@ type ServiceabilityResult struct {
 }
 
 type UpsertItemInput struct {
-	ProductID      string `json:"productId"`
-	ProductName    string `json:"productName"`
-	PriceReference string `json:"priceReference"`
-	Quantity       int    `json:"quantity"`
+	// ProductID is the only product identity taken from the caller: name,
+	// priceReference (display label), and unitPrice are always looked up
+	// server-side from the catalog product, never trusted from the client.
+	ProductID string `json:"productId"`
+	Quantity  int    `json:"quantity"`
 }
 
 func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode FulfillmentMode) (*Cart, error) {
@@ -108,23 +118,34 @@ func GetCart(ctx context.Context, db *sql.DB, clientID, storeID string) (*Cart, 
 	return &c, nil
 }
 
-func UpsertItem(ctx context.Context, db *sql.DB, cartID string, input UpsertItemInput) (*CartItem, error) {
-	if input.ProductID == "" || input.ProductName == "" || input.Quantity < 1 {
+func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input UpsertItemInput) (*CartItem, error) {
+	if input.ProductID == "" || input.Quantity < 1 {
+		return nil, ErrInvalid
+	}
+	product, err := catalog.GetProduct(ctx, db, storeID, input.ProductID)
+	if errors.Is(err, catalog.ErrNotFound) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !product.IsActive {
 		return nil, ErrInvalid
 	}
 	var item CartItem
-	err := db.QueryRowContext(ctx,
-		`INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, quantity)
-		 VALUES ($1, $2, $3, $4, $5)
+	err = db.QueryRowContext(ctx,
+		`INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, quantity)
+		 VALUES ($1, $2, $3, $4, $5, $6)
 		 ON CONFLICT (cart_id, product_id) DO UPDATE
 		   SET quantity        = EXCLUDED.quantity,
 		       product_name    = EXCLUDED.product_name,
 		       price_reference = EXCLUDED.price_reference,
+		       unit_price      = EXCLUDED.unit_price,
 		       version         = dsh_cart_items.version + 1,
 		       updated_at      = NOW()
-		 RETURNING id, cart_id, product_id, product_name, price_reference, quantity, version, created_at, updated_at`,
-		cartID, input.ProductID, input.ProductName, input.PriceReference, input.Quantity,
-	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.ProductName, &item.PriceReference, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+		 RETURNING id, cart_id, product_id, product_name, price_reference, unit_price, quantity, version, created_at, updated_at`,
+		cartID, product.ID, product.Name, product.PriceReference, product.UnitPrice, input.Quantity,
+	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +298,7 @@ func createCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode 
 
 func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, error) {
 	rows, err := db.QueryContext(ctx,
-		`SELECT id, cart_id, product_id, product_name, price_reference, quantity, version, created_at, updated_at
+		`SELECT id, cart_id, product_id, product_name, price_reference, unit_price, quantity, version, created_at, updated_at
 		 FROM dsh_cart_items WHERE cart_id = $1 ORDER BY created_at`,
 		cartID,
 	)
@@ -288,7 +309,7 @@ func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, erro
 	var items []CartItem
 	for rows.Next() {
 		var item CartItem
-		if err := rows.Scan(&item.ID, &item.CartID, &item.ProductID, &item.ProductName, &item.PriceReference, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.CartID, &item.ProductID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -297,4 +318,49 @@ func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, erro
 		items = []CartItem{}
 	}
 	return items, rows.Err()
+}
+
+// CartSnapshot is the priced total DSH computes from its own catalog price
+// snapshot at checkout handoff time. WLT receives this as the payment
+// session's authoritative amount; DSH never lets a client dictate it.
+type CartSnapshot struct {
+	AmountMinorUnits int64
+	Currency         string
+	SnapshotHash     string
+}
+
+// ErrCartItemMissingPrice indicates a cart item has no positive price
+// snapshot, so checkout cannot compute a real amount for WLT.
+var ErrCartItemMissingPrice = errors.New("cart item is missing a price snapshot")
+
+// ComputeCheckoutSnapshot sums the cart's priced items into a single minor-
+// units amount plus a stable hash of (productId, quantity, unitPrice) for
+// every item, so WLT can detect if the priced cart changes between a
+// checkout retry and the original handoff.
+func ComputeCheckoutSnapshot(ctx context.Context, db *sql.DB, cartID string) (*CartSnapshot, error) {
+	items, err := listItems(ctx, db, cartID)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("%w: cart has no items", ErrInvalid)
+	}
+
+	var totalMinorUnits int64
+	hasher := sha256.New()
+	hasher.Write([]byte(cartID))
+	for _, item := range items {
+		if item.UnitPrice <= 0 {
+			return nil, ErrCartItemMissingPrice
+		}
+		unitMinorUnits := int64(math.Round(item.UnitPrice * 100))
+		totalMinorUnits += unitMinorUnits * int64(item.Quantity)
+		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d", item.ProductID, item.Quantity, unitMinorUnits)))
+	}
+
+	return &CartSnapshot{
+		AmountMinorUnits: totalMinorUnits,
+		Currency:         "YER",
+		SnapshotHash:     hex.EncodeToString(hasher.Sum(nil)),
+	}, nil
 }

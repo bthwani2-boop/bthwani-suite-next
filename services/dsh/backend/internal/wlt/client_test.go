@@ -10,7 +10,7 @@ import (
 )
 
 func TestClientNotConfiguredRejectsWithoutNetworkCall(t *testing.T) {
-	c := NewClient("")
+	c := NewClient("", "")
 	if c.Configured() {
 		t.Fatalf("expected client with empty baseURL to be unconfigured")
 	}
@@ -31,8 +31,8 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		if r.URL.Path != "/wlt/payment-sessions" {
 			t.Fatalf("expected /wlt/payment-sessions, got %s", r.URL.Path)
 		}
-		if r.Header.Get("Authorization") == "" {
-			t.Fatalf("expected Authorization header")
+		if r.Header.Get("Authorization") != "Bearer test-service-token" {
+			t.Fatalf("expected Authorization=Bearer test-service-token, got %q", r.Header.Get("Authorization"))
 		}
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
@@ -65,7 +65,7 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL)
+	c := NewClient(server.URL, "test-service-token")
 	if !c.Configured() {
 		t.Fatalf("expected client to be configured")
 	}
@@ -95,7 +95,7 @@ func TestCreatePaymentSessionNonSuccessStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL)
+	c := NewClient(server.URL, "test-service-token")
 	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
 	if err == nil {
 		t.Fatalf("expected error for HTTP 500 response")
@@ -113,7 +113,7 @@ func TestCreatePaymentSessionMalformedBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL)
+	c := NewClient(server.URL, "test-service-token")
 	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
 	if err == nil {
 		t.Fatalf("expected error for malformed JSON response")
@@ -135,7 +135,7 @@ func TestCreatePaymentSessionMissingID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL)
+	c := NewClient(server.URL, "test-service-token")
 	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
 	if err == nil {
 		t.Fatalf("expected error when response is missing paymentSession.id")
@@ -146,7 +146,7 @@ func TestCreatePaymentSessionMissingID(t *testing.T) {
 }
 
 func TestNewClientTrimsTrailingSlash(t *testing.T) {
-	c := NewClient("https://wlt.internal/")
+	c := NewClient("https://wlt.internal/", "test-service-token")
 	if c.baseURL != "https://wlt.internal" {
 		t.Fatalf("expected trailing slash to be trimmed, got %q", c.baseURL)
 	}
@@ -171,7 +171,7 @@ func TestNotifyDeliveryCompletedSendsServiceHeaders(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL)
+	c := NewClient(server.URL, "test-service-token")
 	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{
 		OrderID:          "order-1",
 		CaptainID:        "captain-1",
@@ -184,7 +184,7 @@ func TestNotifyDeliveryCompletedSendsServiceHeaders(t *testing.T) {
 }
 
 func TestNotifyDeliveryCompletedNotConfigured(t *testing.T) {
-	c := NewClient("")
+	c := NewClient("", "")
 	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{})
 	if err == nil || !strings.Contains(err.Error(), "not configured") {
 		t.Fatalf("expected 'not configured' error, got: %v", err)
@@ -197,7 +197,7 @@ func TestNotifyDeliveryCompletedNonSuccessStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL)
+	c := NewClient(server.URL, "test-service-token")
 	err := c.NotifyDeliveryCompleted(context.Background(), NotifyDeliveryCompletedInput{OrderID: "order-1"})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)

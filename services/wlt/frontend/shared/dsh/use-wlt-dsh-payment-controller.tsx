@@ -18,21 +18,19 @@ export type PaymentDecisionOption = {
 export type WltDshPaymentController = {
   readonly paymentMethod: PaymentMethodKey;
   readonly setPaymentMethod: (method: PaymentMethodKey) => void;
-  readonly walletLinked: boolean;
-  readonly linkWallet: () => void;
-  readonly walletDisplayBalance: number;
-  readonly rechargeWallet: () => void;
   readonly paymentDecisionOptions: readonly PaymentDecisionOption[];
 };
 
-// Presentation-only selector state for DSH checkout UI; financial mutation remains owned by WLT runtime APIs.
+// Presentation-only selector state for DSH checkout UI. COD is the only
+// payment method with a real runtime path today (DSH creates a checkout
+// intent, WLT opens an opaque payment-session reference). wallet, mixed,
+// and official_wallet have no real WLT eligibility/balance/gateway endpoint
+// yet, so they are shown as unavailable rather than backed by fake local
+// state (no invented balance, no fake "link wallet"/"recharge" affordances,
+// no alert()-only external-gateway placeholder). Flip this once a real WLT
+// read-only eligibility endpoint exists for DSH to consume.
 export function useWltDshPaymentController(grandTotal: number): WltDshPaymentController {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
-  const [walletLinked, setWalletLinked] = useState(false);
-  const walletDisplayBalance = 0;
-
-  const linkWallet = () => setWalletLinked(true);
-  const rechargeWallet = () => undefined;
 
   const paymentDecisionOptions = useMemo<readonly PaymentDecisionOption[]>(() => {
     return [
@@ -51,75 +49,35 @@ export function useWltDshPaymentController(grandTotal: number): WltDshPaymentCon
         id: "wallet",
         title: "من رصيد المحفظة",
         description: "ادفع كامل الطلب من رصيد محفظتك الداخلي.",
-        disabled: !walletLinked || walletDisplayBalance < grandTotal,
-        statusLabel:
-          paymentMethod === "wallet"
-            ? "محدد"
-            : walletDisplayBalance >= grandTotal
-            ? "جاهز"
-            : "رصيد غير كافٍ",
-        statusTone:
-          paymentMethod === "wallet"
-            ? "action"
-            : walletDisplayBalance >= grandTotal
-            ? "success"
-            : "danger",
-        amountRows: [
-          { label: "رصيد المحفظة", value: `${walletDisplayBalance} د.ي`, tone: "brand" },
-          { label: "المطلوب خصمه", value: `${grandTotal} د.ي`, tone: "brand" },
-        ],
-        helperText:
-          walletDisplayBalance < grandTotal
-            ? `تحتاج لشحن ${grandTotal - walletDisplayBalance} د.ي إضافية.`
-            : undefined,
-        action: !walletLinked
-          ? { label: "ربط المحفظة", onPress: linkWallet }
-          : walletDisplayBalance < grandTotal
-          ? { label: "شحن الرصيد", onPress: rechargeWallet }
-          : undefined,
+        disabled: true,
+        statusLabel: "غير متاح حالياً",
+        statusTone: "info",
+        helperText: "سيُتاح الدفع من المحفظة عند ربط WLT بمصدر رصيد حقيقي.",
       },
       {
         id: "mixed",
         title: "محفظة + عند الاستلام",
         description: "استخدم رصيد المحفظة المتاح وادفع المتبقي نقدًا.",
-        disabled: !walletLinked || walletDisplayBalance <= 0 || walletDisplayBalance >= grandTotal,
-        statusLabel:
-          paymentMethod === "mixed"
-            ? "محدد"
-            : walletDisplayBalance > 0 && walletDisplayBalance < grandTotal
-            ? "جاهز"
-            : "غير متوفر",
-        statusTone: paymentMethod === "mixed" ? "action" : "info",
-        amountRows: [
-          { label: "من المحفظة", value: `${Math.min(walletDisplayBalance, grandTotal)} د.ي`, tone: "brand" },
-          { label: "عند الاستلام", value: `${Math.max(0, grandTotal - walletDisplayBalance)} د.ي`, tone: "brand" },
-        ],
+        disabled: true,
+        statusLabel: "غير متاح حالياً",
+        statusTone: "info",
+        helperText: "سيُتاح الدفع المختلط عند ربط WLT بمصدر رصيد حقيقي.",
       },
       {
         id: "official_wallet",
         title: "المحافظ الإلكترونية الرسمية",
         description: "الدفع عبر كاش، الكريمي، جوالي أو المحافظ الأخرى.",
-        statusLabel: "متاح",
+        disabled: true,
+        statusLabel: "غير متاح حالياً",
         statusTone: "info",
-        action: {
-          label: "اختيار محفظة",
-          onPress: () => {
-            if (typeof alert !== "undefined") {
-              alert("سيتم فتح بوابة الدفع الخارجية قريبًا.");
-            }
-          },
-        },
+        helperText: "سيُتاح الدفع عبر المحافظ الرسمية عند ربط بوابة WLT الحقيقية.",
       },
     ];
-  }, [paymentMethod, walletLinked, walletDisplayBalance, grandTotal]);
+  }, [paymentMethod, grandTotal]);
 
   return {
     paymentMethod,
     setPaymentMethod,
-    walletLinked,
-    linkWallet,
-    walletDisplayBalance,
-    rechargeWallet,
     paymentDecisionOptions,
   };
 }

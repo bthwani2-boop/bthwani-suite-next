@@ -7,7 +7,21 @@ import (
 	"testing"
 )
 
+const testDshServiceToken = "test-dsh-service-token"
+
+func TestHandleCreateCodRecordRejectsWhenTokenNotConfigured(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/wlt/cod-records", strings.NewReader(`{}`))
+	rec := httptest.NewRecorder()
+
+	HandleCreateCodRecord(nil).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 when WLT_DSH_SERVICE_TOKEN is unset, got %d", rec.Code)
+	}
+}
+
 func TestHandleCreateCodRecordRequiresServiceAuth(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", testDshServiceToken)
 	req := httptest.NewRequest(http.MethodPost, "/wlt/cod-records", strings.NewReader(`{}`))
 	rec := httptest.NewRecorder()
 
@@ -18,9 +32,24 @@ func TestHandleCreateCodRecordRequiresServiceAuth(t *testing.T) {
 	}
 }
 
-func TestHandleCreateCodRecordRequiresDshCaller(t *testing.T) {
+func TestHandleCreateCodRecordRejectsWrongToken(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", testDshServiceToken)
 	req := httptest.NewRequest(http.MethodPost, "/wlt/cod-records", strings.NewReader(`{}`))
-	req.Header.Set("Authorization", "Bearer dsh-service")
+	req.Header.Set("Authorization", "Bearer wrong-token")
+	req.Header.Set("X-Service-Caller", "dsh")
+	rec := httptest.NewRecorder()
+
+	HandleCreateCodRecord(nil).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for wrong token, got %d", rec.Code)
+	}
+}
+
+func TestHandleCreateCodRecordRequiresDshCaller(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", testDshServiceToken)
+	req := httptest.NewRequest(http.MethodPost, "/wlt/cod-records", strings.NewReader(`{}`))
+	req.Header.Set("Authorization", "Bearer "+testDshServiceToken)
 	req.Header.Set("X-Service-Caller", "partner")
 	rec := httptest.NewRecorder()
 
@@ -31,7 +60,19 @@ func TestHandleCreateCodRecordRequiresDshCaller(t *testing.T) {
 	}
 }
 
+func TestHandleCreateCommissionRejectsWhenTokenNotConfigured(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/wlt/commissions", strings.NewReader(`{}`))
+	rec := httptest.NewRecorder()
+
+	HandleCreateCommission(nil).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 when WLT_DSH_SERVICE_TOKEN is unset, got %d", rec.Code)
+	}
+}
+
 func TestHandleCreateCommissionRequiresServiceAuth(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", testDshServiceToken)
 	req := httptest.NewRequest(http.MethodPost, "/wlt/commissions", strings.NewReader(`{}`))
 	rec := httptest.NewRecorder()
 
@@ -43,8 +84,9 @@ func TestHandleCreateCommissionRequiresServiceAuth(t *testing.T) {
 }
 
 func TestHandleCreateCommissionRequiresDshCaller(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", testDshServiceToken)
 	req := httptest.NewRequest(http.MethodPost, "/wlt/commissions", strings.NewReader(`{}`))
-	req.Header.Set("Authorization", "Bearer dsh-service")
+	req.Header.Set("Authorization", "Bearer "+testDshServiceToken)
 	req.Header.Set("X-Service-Caller", "partner")
 	rec := httptest.NewRecorder()
 

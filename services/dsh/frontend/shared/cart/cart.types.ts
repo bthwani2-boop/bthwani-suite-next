@@ -6,6 +6,8 @@ export type DshCartItem = {
   readonly productId: string;
   readonly productName: string;
   readonly priceReference: string;
+  /** Snapshotted server-side from the catalog product at add-to-cart time. */
+  readonly unitPrice: number;
   readonly quantity: number;
   readonly version: number;
   readonly createdAt: string;

@@ -297,15 +297,7 @@ func ListCommissions(db *sql.DB, orderID, captainID string) ([]*Commission, erro
 // requireDshServiceCaller enforces that only the DSH service -- never an
 // end-user actor -- may create COD/commission mutation records.
 func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
-	if r.Header.Get("Authorization") == "" {
-		shared.SendError(w, http.StatusUnauthorized, "SERVICE_AUTH_REQUIRED", "service authorization is required")
-		return false
-	}
-	if r.Header.Get("X-Service-Caller") != "dsh" {
-		shared.SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "only DSH service may create COD/commission records")
-		return false
-	}
-	return true
+	return shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh")
 }
 
 func HandleCreateCodRecord(db *sql.DB) http.HandlerFunc {

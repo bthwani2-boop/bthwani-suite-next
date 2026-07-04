@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
@@ -28,6 +29,20 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 	if body.CartID == "" || body.StoreID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId and storeId are required")
+		return
+	}
+
+	snapshot, err := cart.ComputeCheckoutSnapshot(r.Context(), s.db, body.CartID)
+	if errors.Is(err, cart.ErrCartItemMissingPrice) {
+		store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
+		return
+	}
+	if errors.Is(err, cart.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute cart snapshot")
 		return
 	}
 
@@ -60,6 +75,9 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		ClientID:         actor.ID,
 		StoreID:          intent.StoreID,
 		PaymentMethod:    string(intent.PaymentMethod),
+		AmountMinorUnits: snapshot.AmountMinorUnits,
+		Currency:         snapshot.Currency,
+		CartSnapshotHash: snapshot.SnapshotHash,
 		CorrelationID:    r.Header.Get("X-Correlation-ID"),
 		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})

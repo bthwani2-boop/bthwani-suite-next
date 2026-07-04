@@ -36,6 +36,7 @@ type Product struct {
 	Description    string    `json:"description"`
 	SKU            string    `json:"sku"`
 	PriceReference string    `json:"priceReference"`
+	UnitPrice      float64   `json:"unitPrice"`
 	IsActive       bool      `json:"isActive"`
 	Version        int       `json:"version"`
 	Media          []Media   `json:"media"`
@@ -70,6 +71,7 @@ type ProductInput struct {
 	Description     string  `json:"description"`
 	SKU             string  `json:"sku"`
 	PriceReference  string  `json:"priceReference"`
+	UnitPrice       float64 `json:"unitPrice"`
 	IsActive        bool    `json:"isActive"`
 	ExpectedVersion int     `json:"expectedVersion"`
 }
@@ -153,7 +155,7 @@ func ListCategories(ctx context.Context, db *sql.DB, storeID string, activeOnly 
 }
 
 func ListProducts(ctx context.Context, db *sql.DB, storeID string, activeOnly bool) ([]Product, error) {
-	query := `SELECT id,store_id,category_id,name,description,sku,price_reference,is_active,version,created_at,updated_at
+	query := `SELECT id,store_id,category_id,name,description,sku,price_reference,unit_price,is_active,version,created_at,updated_at
 		FROM dsh_catalog_products WHERE store_id=$1`
 	if activeOnly {
 		query += " AND is_active=true"
@@ -167,7 +169,7 @@ func ListProducts(ctx context.Context, db *sql.DB, storeID string, activeOnly bo
 	items := []Product{}
 	for rows.Next() {
 		var item Product
-		if err := rows.Scan(&item.ID, &item.StoreID, &item.CategoryID, &item.Name, &item.Description, &item.SKU, &item.PriceReference, &item.IsActive, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.StoreID, &item.CategoryID, &item.Name, &item.Description, &item.SKU, &item.PriceReference, &item.UnitPrice, &item.IsActive, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		media, err := listMedia(ctx, db, storeID, item.ID, activeOnly)
@@ -227,23 +229,26 @@ func UpsertProduct(ctx context.Context, db *sql.DB, actorID, actorRole, storeID,
 	if strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.SKU) == "" || strings.TrimSpace(input.PriceReference) == "" {
 		return Product{}, ErrInvalid
 	}
+	if input.UnitPrice <= 0 {
+		return Product{}, fmt.Errorf("%w: unitPrice must be greater than 0", ErrInvalid)
+	}
 	if productID == "" {
 		productID = entityID("product")
 		_, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_products
-			(id,store_id,category_id,name,description,sku,price_reference,is_active)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+			(id,store_id,category_id,name,description,sku,price_reference,unit_price,is_active)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 			productID, storeID, input.CategoryID, strings.TrimSpace(input.Name), strings.TrimSpace(input.Description),
-			strings.TrimSpace(input.SKU), strings.TrimSpace(input.PriceReference), input.IsActive)
+			strings.TrimSpace(input.SKU), strings.TrimSpace(input.PriceReference), input.UnitPrice, input.IsActive)
 		if err != nil {
 			return Product{}, err
 		}
 	} else {
 		result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_products SET
-			category_id=$1,name=$2,description=$3,sku=$4,price_reference=$5,is_active=$6,
+			category_id=$1,name=$2,description=$3,sku=$4,price_reference=$5,unit_price=$6,is_active=$7,
 			version=version+1,updated_at=now()
-			WHERE id=$7 AND store_id=$8 AND version=$9`,
+			WHERE id=$8 AND store_id=$9 AND version=$10`,
 			input.CategoryID, strings.TrimSpace(input.Name), strings.TrimSpace(input.Description),
-			strings.TrimSpace(input.SKU), strings.TrimSpace(input.PriceReference), input.IsActive,
+			strings.TrimSpace(input.SKU), strings.TrimSpace(input.PriceReference), input.UnitPrice, input.IsActive,
 			productID, storeID, input.ExpectedVersion)
 		if err != nil {
 			return Product{}, err
@@ -453,11 +458,18 @@ func getCategory(ctx context.Context, db *sql.DB, storeID, id string) (Category,
 	return item, err
 }
 
+// GetProduct looks up a catalog product by store and id. Used by other DSH
+// packages (e.g. cart) that need the authoritative name/price snapshot for a
+// product, since the catalog -- not the caller -- is the source of truth.
+func GetProduct(ctx context.Context, db *sql.DB, storeID, id string) (Product, error) {
+	return getProduct(ctx, db, storeID, id)
+}
+
 func getProduct(ctx context.Context, db *sql.DB, storeID, id string) (Product, error) {
 	var item Product
-	err := db.QueryRowContext(ctx, `SELECT id,store_id,category_id,name,description,sku,price_reference,is_active,version,created_at,updated_at
+	err := db.QueryRowContext(ctx, `SELECT id,store_id,category_id,name,description,sku,price_reference,unit_price,is_active,version,created_at,updated_at
 		FROM dsh_catalog_products WHERE store_id=$1 AND id=$2`, storeID, id).
-		Scan(&item.ID, &item.StoreID, &item.CategoryID, &item.Name, &item.Description, &item.SKU, &item.PriceReference, &item.IsActive, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+		Scan(&item.ID, &item.StoreID, &item.CategoryID, &item.Name, &item.Description, &item.SKU, &item.PriceReference, &item.UnitPrice, &item.IsActive, &item.Version, &item.CreatedAt, &item.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return item, ErrNotFound
 	}

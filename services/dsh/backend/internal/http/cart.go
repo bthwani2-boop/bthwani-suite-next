@@ -67,8 +67,6 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		StoreID         string `json:"storeId"`
 		FulfillmentMode string `json:"fulfillmentMode"`
 		ProductID       string `json:"productId"`
-		ProductName     string `json:"productName"`
-		PriceReference  string `json:"priceReference"`
 		Quantity        int    `json:"quantity"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
@@ -87,11 +85,9 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve cart")
 		return
 	}
-	item, err := cart.UpsertItem(r.Context(), s.db, c.ID, cart.UpsertItemInput{
-		ProductID:      body.ProductID,
-		ProductName:    body.ProductName,
-		PriceReference: body.PriceReference,
-		Quantity:       body.Quantity,
+	item, err := cart.UpsertItem(r.Context(), s.db, body.StoreID, c.ID, cart.UpsertItemInput{
+		ProductID: body.ProductID,
+		Quantity:  body.Quantity,
 	})
 	if errors.Is(err, cart.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart item")

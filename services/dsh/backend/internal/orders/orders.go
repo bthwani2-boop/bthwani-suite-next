@@ -94,7 +94,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	}
 
 	rows, err := tx.Query(`
-		SELECT product_id, product_name, quantity
+		SELECT product_id, product_name, unit_price, quantity
 		FROM dsh_cart_items
 		WHERE cart_id = $1::uuid
 		ORDER BY created_at`, cartID)
@@ -106,10 +106,12 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	var items []CreateOrderItemInput
 	for rows.Next() {
 		var item CreateOrderItemInput
-		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.Quantity); err != nil {
+		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.UnitPrice, &item.Quantity); err != nil {
 			return nil, err
 		}
-		item.UnitPrice = 0
+		if item.UnitPrice <= 0 {
+			return nil, fmt.Errorf("%w: cart item is missing a price snapshot", ErrInvalid)
+		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {

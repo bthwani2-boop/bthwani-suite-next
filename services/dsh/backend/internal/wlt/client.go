@@ -11,8 +11,9 @@ import (
 )
 
 type Client struct {
-	baseURL string
-	http    *http.Client
+	baseURL      string
+	serviceToken string
+	http         *http.Client
 }
 
 type CreatePaymentSessionInput struct {
@@ -41,10 +42,14 @@ type PaymentSession struct {
 	UpdatedAt         string `json:"updatedAt"`
 }
 
-func NewClient(baseURL string) *Client {
+// NewClient builds a client for calling WLT. serviceToken is the shared
+// secret WLT validates via WLT_DSH_SERVICE_TOKEN; it is sent as the bearer
+// token on every outbound request alongside X-Service-Caller: dsh.
+func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		http:    &http.Client{Timeout: 10 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
+		http:         &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -66,7 +71,7 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer dsh-service")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 	if input.CorrelationID != "" {
 		req.Header.Set("X-Correlation-ID", input.CorrelationID)
@@ -124,7 +129,7 @@ func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDelive
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer dsh-service")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 	req.Header.Set("X-Correlation-ID", input.OrderID)
 

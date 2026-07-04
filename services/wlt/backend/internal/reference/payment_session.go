@@ -54,8 +54,8 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	default:
 		return nil, fmt.Errorf("unsupported paymentMethod: %s", input.PaymentMethod)
 	}
-	if input.AmountMinorUnits < 0 {
-		return nil, fmt.Errorf("amountMinorUnits must be non-negative")
+	if input.AmountMinorUnits <= 0 {
+		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")
 	}
 
 	existing, err := getPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
@@ -166,15 +166,7 @@ func getPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*Pa
 }
 
 func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
-	if r.Header.Get("Authorization") == "" {
-		shared.SendError(w, http.StatusUnauthorized, "SERVICE_AUTH_REQUIRED", "service authorization is required")
-		return false
-	}
-	if r.Header.Get("X-Service-Caller") != "dsh" {
-		shared.SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "only DSH service may create payment sessions")
-		return false
-	}
-	return true
+	return shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh")
 }
 
 func HandleGetPaymentSession(db *sql.DB) http.HandlerFunc {

@@ -765,8 +765,10 @@ paths:
 
   # ─── Cart & Serviceability Quote ────────────────────────────────
   # Runtime handlers registered in server.go. Client must be authenticated.
-  # Financial amounts are NEVER computed by DSH — priceReference is a label
-  # from the catalog. All wallet/payment truth is WLT-owned.
+  # DSH catalog now owns a real numeric unitPrice per product (see dsh-022
+  # migration): checkout derives the cart total from this, never from the
+  # client. priceReference remains a display-only label. Payment execution,
+  # capture, settlement, refund, and ledger truth remain WLT-owned.
   # ──────────────────────────────────────────────────────────────────────────
 
   /dsh/client/cart:
@@ -3852,7 +3854,7 @@ components:
 
     DshCatalogProduct:
       type: object
-      required: [id, storeId, name, description, sku, priceReference, isActive, version, media, createdAt, updatedAt]
+      required: [id, storeId, name, description, sku, priceReference, unitPrice, isActive, version, media, createdAt, updatedAt]
       properties:
         id: { type: string }
         storeId: { type: string }
@@ -3862,7 +3864,16 @@ components:
         sku: { type: string }
         priceReference:
           type: string
-          description: Opaque WLT-owned price reference; DSH does not calculate monetary truth.
+          description: Display label only. The real commercial price is unitPrice.
+        unitPrice:
+          type: number
+          format: double
+          minimum: 0
+          description: >
+            The real numeric commercial price DSH catalog sells this product at
+            (major currency units, e.g. YER). Sole source of the cart/checkout
+            total handed off to WLT. WLT remains the sole owner of payment
+            authorization/capture/settlement/refund/ledger truth.
         isActive: { type: boolean }
         version: { type: integer, minimum: 1 }
         media:
@@ -3897,13 +3908,14 @@ components:
     DshCatalogProductInput:
       type: object
       additionalProperties: false
-      required: [name, description, sku, priceReference, isActive, expectedVersion]
+      required: [name, description, sku, priceReference, unitPrice, isActive, expectedVersion]
       properties:
         categoryId: { type: ["string", "null"] }
         name: { type: string, minLength: 1 }
         description: { type: string }
         sku: { type: string, minLength: 1 }
         priceReference: { type: string, minLength: 1 }
+        unitPrice: { type: number, format: double, exclusiveMinimum: 0 }
         isActive: { type: boolean }
         expectedVersion: { type: integer, minimum: 0 }
 
@@ -4182,13 +4194,14 @@ components:
 
     DshCartItem:
       type: object
-      required: [id, cartId, productId, productName, priceReference, quantity, version, createdAt, updatedAt]
+      required: [id, cartId, productId, productName, priceReference, unitPrice, quantity, version, createdAt, updatedAt]
       properties:
         id: { type: string }
         cartId: { type: string }
         productId: { type: string }
-        productName: { type: string }
-        priceReference: { type: string, description: "Display label from catalog — not a computed financial amount." }
+        productName: { type: string, description: "Snapshotted server-side from the catalog product at add-to-cart time." }
+        priceReference: { type: string, description: "Display label snapshotted from catalog — not a computed financial amount." }
+        unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog product's unitPrice at add-to-cart time." }
         quantity: { type: integer, minimum: 1 }
         version: { type: integer }
         createdAt: { type: string, format: date-time }
@@ -4227,15 +4240,14 @@ components:
 
     DshUpsertCartItemRequest:
       type: object
-      required: [storeId, productId, productName, quantity]
+      additionalProperties: false
+      required: [storeId, productId, quantity]
       properties:
         storeId: { type: string }
         fulfillmentMode:
           type: string
           enum: [bthwani_delivery, partner_delivery, pickup]
         productId: { type: string }
-        productName: { type: string }
-        priceReference: { type: string }
         quantity: { type: integer, minimum: 1 }
 
     DshUpsertCartItemResponse:

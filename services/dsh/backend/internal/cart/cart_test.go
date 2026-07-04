@@ -22,37 +22,33 @@ func TestCalculateDistanceKMKnownPair(t *testing.T) {
 }
 
 func TestUpsertItemRejectsMissingProductID(t *testing.T) {
-	_, err := UpsertItem(context.Background(), nil, "cart-1", UpsertItemInput{
-		ProductName: "Widget",
-		Quantity:    1,
+	_, err := UpsertItem(context.Background(), nil, "store-1", "cart-1", UpsertItemInput{
+		Quantity: 1,
 	})
 	if err != ErrInvalid {
 		t.Fatalf("expected ErrInvalid for missing productId, got %v", err)
 	}
 }
 
-func TestUpsertItemRejectsMissingProductName(t *testing.T) {
-	_, err := UpsertItem(context.Background(), nil, "cart-1", UpsertItemInput{
-		ProductID: "prod-1",
-		Quantity:  1,
-	})
-	if err != ErrInvalid {
-		t.Fatalf("expected ErrInvalid for missing productName, got %v", err)
-	}
-}
-
 func TestUpsertItemRejectsNonPositiveQuantity(t *testing.T) {
 	cases := []int{0, -1, -100}
 	for _, qty := range cases {
-		_, err := UpsertItem(context.Background(), nil, "cart-1", UpsertItemInput{
-			ProductID:   "prod-1",
-			ProductName: "Widget",
-			Quantity:    qty,
+		_, err := UpsertItem(context.Background(), nil, "store-1", "cart-1", UpsertItemInput{
+			ProductID: "prod-1",
+			Quantity:  qty,
 		})
 		if err != ErrInvalid {
 			t.Fatalf("expected ErrInvalid for quantity=%d, got %v", qty, err)
 		}
 	}
+}
+
+// Product name, price label, and unit price are never taken from the
+// client: UpsertItemInput only carries productId + quantity, and the
+// authoritative snapshot is looked up server-side from the catalog.
+func TestUpsertItemInputHasNoClientSuppliedPricingFields(t *testing.T) {
+	input := UpsertItemInput{ProductID: "prod-1", Quantity: 1}
+	_ = input
 }
 
 func TestFulfillmentModeConstants(t *testing.T) {

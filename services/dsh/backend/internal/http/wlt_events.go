@@ -64,13 +64,5 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 // requireWltServiceCaller enforces that only the WLT service — never an
 // end-user actor — may report payment-session outcomes back to DSH.
 func requireWltServiceCaller(w http.ResponseWriter, r *http.Request) bool {
-	if r.Header.Get("Authorization") == "" {
-		store.SendError(w, http.StatusUnauthorized, "SERVICE_AUTH_REQUIRED", "service authorization is required")
-		return false
-	}
-	if r.Header.Get("X-Service-Caller") != "wlt" {
-		store.SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "only WLT service may report payment-session events")
-		return false
-	}
-	return true
+	return store.RequireServiceCaller(w, r, "DSH_WLT_SERVICE_TOKEN", "wlt")
 }
