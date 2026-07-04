@@ -1,26 +1,8 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
 import type { DshRole, DshStaffMember, DshPartnerActivation, DshCaptainCredential, DshAdminAuditEntry } from "./administration.types";
 
-const base = resolveDshApiBaseUrl();
-let c = 0;
-const corrId = () => `adm-${Date.now()}-${++c}`;
-
-async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  const res = await fetch(new URL(path, base), {
-    ...init,
-    headers: {
-      Accept: "application/json", "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, "X-Correlation-ID": corrId(),
-      ...(init.headers ?? {}),
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw { kind: "http", status: res.status };
-  return res.json() as Promise<T>;
-}
+const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "adm");
 
 export const fetchRoles = () => req<{ roles: DshRole[] }>("/dsh/operator/admin/roles");
 export const createRole = (body: { name: string; description?: string }) =>

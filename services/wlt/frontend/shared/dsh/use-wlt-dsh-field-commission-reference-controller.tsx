@@ -2,7 +2,7 @@ import { useEffect, useReducer } from "react";
 import type { WltFieldCommissionState } from "./wlt-dsh-field-commission.states";
 import type { WltDshFieldCommissionReference } from "./wlt-dsh-field-commission.types";
 import { getWltApiBaseUrl } from "./wlt-dsh-api-base-url";
-import type { WltReferenceApiResult } from "./wlt-dsh-reference.api";
+import { wltFetchJson, type WltReferenceApiResult } from "./wlt-dsh-http-request";
 
 type Action =
   | { type: "LOADING" }
@@ -27,18 +27,10 @@ export async function fetchWltFieldCommissionRef(
   baseUrl: string,
   partnerId: string,
 ): Promise<WltReferenceApiResult<WltDshFieldCommissionReference>> {
-  try {
-    const res = await fetch(
-      `${baseUrl}/wlt/references/field-commission?partnerId=${encodeURIComponent(partnerId)}`,
-    );
-    if (!res.ok) {
-      return { ok: false, message: `HTTP ${res.status}` };
-    }
-    const body = await res.json();
-    return { ok: true, data: body.reference as WltDshFieldCommissionReference };
-  } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "network error" };
-  }
+  return wltFetchJson<WltDshFieldCommissionReference>(
+    `${baseUrl}/wlt/references/field-commission?partnerId=${encodeURIComponent(partnerId)}`,
+    (body) => body.reference as WltDshFieldCommissionReference,
+  );
 }
 
 export type WltFieldCommissionController = {

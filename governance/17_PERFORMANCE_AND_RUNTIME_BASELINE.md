@@ -53,7 +53,6 @@ These targets are measured and validated under load testing, not simply stated v
 
 This document is accepted only when:
 - The performance and runtime baseline policies are registered as canonical.
-- The `guard-manifest.json` registers the verification guard for these performance baselines.
-- `machine-readable/architecture-map.json#performance_runtime_baseline` records the structured policy, targets, measurement status, and active operation contracts.
-- `tools/guards/performance-runtime-baseline.mjs` validates that canonical JSON contract without depending on a retired CSV export.
+- The `guard-manifest.json` registers the active verification guards.
+- Codebase performance and runtime rules are verified by the active gates.
 - Policy validation and measured load performance remain separate: without a recorded load-test run, `measurement_status` must remain `NOT_MEASURED` and must not be reported as performance PASS.

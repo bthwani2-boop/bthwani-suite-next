@@ -362,11 +362,11 @@ No new real-service `SERVICE_BLUEPRINT.md` may be created.
 ### Guard commands
 
 ```bash
-node tools/guards/guard-journey-operating-model.mjs
-node tools/guards/guard-journey-operating-model.mjs
+pnpm run foundation:gate
+pnpm run journey:gate
 ```
 
-Both must exit 0 before any journey execution begins.
+Both must exit 0 to verify the codebase integrity.
 
 ### Evidence requirements for V3 closure
 

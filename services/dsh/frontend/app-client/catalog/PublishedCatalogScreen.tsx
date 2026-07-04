@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Image, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LoadingState, ScrollScreen, StateView, Text, colorRoles, alpha } from "@bthwani/ui-kit";
+import { LoadingState, ScrollScreen, StateView, Text, colorRoles } from "@bthwani/ui-kit";
 import {
   BannerCarousel,
   type BannerCarouselItem,
@@ -18,6 +18,8 @@ import {
   ShareIcon,
 } from "../shared/ui";
 import { usePublishedCatalogController } from "../../shared/catalog";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { useCartController } from "../../shared/cart";
 import { useStoreDetailController } from "../../shared/store";
 import type { CatalogCategory, CatalogProduct } from "../../shared/catalog/catalog.types";
 
@@ -30,6 +32,17 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
   const storeCtrl = useStoreDetailController(storeId);
   const catalogCtrl = usePublishedCatalogController(storeId);
   const insets = useSafeAreaInsets();
+  const identity = useIdentitySession();
+  const authKind = identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated";
+  const cartCtrl = useCartController(storeId, authKind);
+
+  useEffect(() => {
+    if (cartCtrl.action === "success") {
+      Alert.alert("السلة", "تمت الإضافة إلى السلة بنجاح.");
+    } else if (cartCtrl.action === "error") {
+      Alert.alert("تعذر الإضافة", "حدث خطأ أثناء إضافة المنتج إلى السلة. حاول مرة أخرى.");
+    }
+  }, [cartCtrl.action]);
 
   const [selectedServiceMode, setSelectedServiceMode] = useState<string>("delivery");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
@@ -191,7 +204,6 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
                 label={isStoreOpen ? "مفتوح الآن" : "مغلق الآن"}
                 type={isStoreOpen ? "success" : "danger"}
               />
-              <StatusBadge label="+967-1-444333" type="brand" />
             </View>
 
             {/* Service Delivery Modes */}
@@ -218,25 +230,6 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
             </View>
           </View>
 
-          {/* Opening hours & store summary Single Box */}
-          <View style={styles.infoBox}>
-            <View style={styles.infoRow}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.infoIcon}>🕒</Text>
-              </View>
-              <Text role="bodySm" tone="secondary" style={styles.infoText}>
-                أوقات العمل: 08:00 - 23:00
-              </Text>
-            </View>
-            <View style={[styles.infoRow, { borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle, paddingTop: 10, marginTop: 10 }]}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.infoIcon}>🛍️</Text>
-              </View>
-              <Text role="bodySm" tone="secondary" style={styles.infoText}>
-                ملخص المتجر: أكثر من ١,٢٠٠ من المواد الغذائية الطازجة والاحتياجات اليومية
-              </Text>
-            </View>
-          </View>
 
           {/* Promotions Banner Carousel */}
           {bannerCarouselItems.length > 0 ? (
@@ -290,7 +283,18 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
                     stockStatus={p.stockStatus}
                     isFavorited={isFav}
                     onFavorite={() => storeCtrl.toggleFavorite(p.id)}
-                    onAdd={() => Alert.alert("السلة", `تمت إضافة ${p.name} بنجاح.`)}
+                    onAdd={() => {
+                      if (authKind !== "authenticated") {
+                        Alert.alert("تسجيل الدخول مطلوب", "يرجى تسجيل الدخول لإضافة المنتجات إلى السلة.");
+                        return;
+                      }
+                      void cartCtrl.addItem({
+                        productId: p.id,
+                        productName: p.name,
+                        quantity: 1,
+                        ...(p.priceReference ? { priceReference: p.priceReference } : {}),
+                      });
+                    }}
                     onImagePress={() => Alert.alert("معاينة", p.name)}
                   />
                 );
@@ -395,39 +399,6 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
-  },
-  infoBox: {
-    backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    gap: 10,
-  },
-  infoRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  infoText: {
-    flex: 1,
-    textAlign: "right",
-    fontSize: 12,
-    color: colorRoles.textSecondary,
-  },
-  iconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: alpha(colorRoles.brandStructure, 0.06),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoIcon: {
-    fontSize: 13,
   },
   carouselSection: {
     marginTop: 16,

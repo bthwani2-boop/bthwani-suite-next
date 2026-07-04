@@ -1,45 +1,14 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
 import type { DshOrder, DshCreateOrderInput, DshRejectOrderInput } from "./orders.types";
 
-const baseUrl = resolveDshApiBaseUrl();
-
-type RequestOptions = {
-  readonly method?: "GET" | "POST" | "PATCH" | "DELETE";
-  readonly body?: unknown;
-  readonly token?: string;
-};
+const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
 
 function withOptionalToken(
-  options: Omit<RequestOptions, "token">,
+  options: Omit<DshRequestOptions, "token">,
   token?: string,
-): RequestOptions {
+): DshRequestOptions {
   return token === undefined ? options : { ...options, token };
-}
-
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = options.token ?? getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  let response: Response;
-  try {
-    response = await fetch(new URL(path, baseUrl), {
-      method: options.method ?? "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-Correlation-ID": corrId("order"),
-        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-      },
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-      signal: AbortSignal.timeout(10000),
-    });
-  } catch (error) {
-    throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
-  }
-  if (!response.ok) {
-    throw { kind: "http", status: response.status, body: await response.text().catch(() => "") };
-  }
-  return response.json() as Promise<T>;
 }
 
 export async function createOrder(input: DshCreateOrderInput): Promise<DshOrder> {
@@ -130,8 +99,4 @@ export function classifyOrderError(error: unknown): {
   }
   if (typed.kind === "network") return { kind: "offline" };
   return { kind: "error", message: "تعذر تنفيذ عملية الطلب." };
-}
-
-function corrId(prefix: string): string {
-  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 }

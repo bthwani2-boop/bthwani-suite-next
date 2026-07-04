@@ -1,6 +1,6 @@
 import type { WltDshSettlementReference, WltDshSettlementSummary } from "./wlt-dsh-boundary.types";
 import { getWltApiBaseUrl } from "./wlt-dsh-api-base-url";
-import type { WltReferenceApiResult } from "./wlt-dsh-reference.api";
+import { wltFetchJson, type WltReferenceApiResult } from "./wlt-dsh-http-request";
 
 export async function fetchWltSettlementsByPartner(
   partnerId: string,
@@ -9,18 +9,10 @@ export async function fetchWltSettlementsByPartner(
   if (!baseUrl) {
     return { ok: false, message: "WLT API base URL is not configured" };
   }
-  try {
-    const res = await fetch(
-      `${baseUrl}/wlt/settlements?partnerId=${encodeURIComponent(partnerId)}`,
-    );
-    if (!res.ok) {
-      return { ok: false, message: `HTTP ${res.status}` };
-    }
-    const body = await res.json();
-    return { ok: true, data: body.settlements as WltDshSettlementReference[] };
-  } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "network error" };
-  }
+  return wltFetchJson<WltDshSettlementReference[]>(
+    `${baseUrl}/wlt/settlements?partnerId=${encodeURIComponent(partnerId)}`,
+    (body) => body.settlements as WltDshSettlementReference[],
+  );
 }
 
 export async function fetchWltSettlementSummary(
@@ -30,16 +22,8 @@ export async function fetchWltSettlementSummary(
   if (!baseUrl) {
     return { ok: false, message: "WLT API base URL is not configured" };
   }
-  try {
-    const res = await fetch(
-      `${baseUrl}/wlt/settlements/summary?partnerId=${encodeURIComponent(partnerId)}`,
-    );
-    if (!res.ok) {
-      return { ok: false, message: `HTTP ${res.status}` };
-    }
-    const body = await res.json();
-    return { ok: true, data: body.summary as WltDshSettlementSummary };
-  } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "network error" };
-  }
+  return wltFetchJson<WltDshSettlementSummary>(
+    `${baseUrl}/wlt/settlements/summary?partnerId=${encodeURIComponent(partnerId)}`,
+    (body) => body.summary as WltDshSettlementSummary,
+  );
 }

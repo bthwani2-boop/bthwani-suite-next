@@ -1,5 +1,5 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
 import type {
   CatalogCategory,
   CatalogMedia,
@@ -15,51 +15,8 @@ import { resolveCatalogError, resolveCatalogSubmissionError } from "./catalog.co
 import { resolveCatalogSubmissionState, resolvePartnerCatalogState, resolvePublishedCatalogState } from "./catalog.view-model";
 
 const baseUrl = resolveDshApiBaseUrl();
-
-type RequestOptions = {
-  readonly method?: "GET" | "POST" | "PATCH" | "DELETE";
-  readonly body?: unknown;
-};
-
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  let response: Response;
-  try {
-    response = await fetch(new URL(path, baseUrl), {
-      method: options.method ?? "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-Correlation-ID": requestId("catalog-corr"),
-        ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
-      },
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-      signal: AbortSignal.timeout(10000),
-    });
-  } catch (error) {
-    throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
-  }
-  if (!response.ok) {
-    throw { kind: "http", status: response.status, body: await response.text().catch(() => "") };
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-}
-
-async function publicRequest<T>(path: string): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(new URL(path, baseUrl), {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
-    });
-  } catch (error) {
-    throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
-  }
-  if (!response.ok) throw { kind: "http", status: response.status };
-  return response.json() as Promise<T>;
-}
+const { request } = createDshHttpClient(baseUrl, "catalog-corr");
+const { request: publicRequest } = createDshPublicHttpClient(baseUrl);
 
 export async function fetchPublishedCatalog(storeId: string): Promise<CatalogState> {
   try {
@@ -233,8 +190,4 @@ export async function decideCatalog(input: {
 
 export function classifyCatalogError(error: unknown): CatalogState {
   return resolveCatalogError(error);
-}
-
-function requestId(prefix: string): string {
-  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 }

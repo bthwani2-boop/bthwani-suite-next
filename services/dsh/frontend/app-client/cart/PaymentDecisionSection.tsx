@@ -9,7 +9,7 @@ import {
   colorRoles,
   radius,
 } from "@bthwani/ui-kit";
-import type { PaymentDecisionOption, PaymentMethodKey } from "../../shared/dsh/use-wlt-dsh-payment-controller";
+import type { PaymentDecisionOption, PaymentMethodKey } from "../../shared/finance-wlt-link";
 
 type Props = {
   readonly paymentMethod: PaymentMethodKey;

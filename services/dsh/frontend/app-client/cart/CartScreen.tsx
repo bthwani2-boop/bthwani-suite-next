@@ -21,8 +21,8 @@ import {
 } from "@bthwani/ui-kit";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshCartItem } from "../../shared/cart";
-import { useWltDshPaymentController } from "../../../../wlt/frontend/shared/dsh";
-import { PaymentDecisionSection } from "../../../../wlt/frontend/app-client/payment/PaymentDecisionSection";
+import { useWltDshPaymentController } from "../../shared/finance-wlt-link";
+import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
   readonly storeId: string;

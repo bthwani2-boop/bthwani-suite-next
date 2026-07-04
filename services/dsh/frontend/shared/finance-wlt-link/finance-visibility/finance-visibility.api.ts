@@ -1,47 +1,25 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
+import { resolveWltApiBaseUrl } from "../../_kernel/wlt-api-base-url";
+import { createDshHttpClient } from "../../_kernel/dsh-http-request";
 import type {
   WltPaymentStatusRef,
   WltSettlementStatusRef,
   WltRefundStatusRef,
 } from "./finance-visibility.types";
 
-const wltBaseUrl = (() => {
-  if (typeof process !== "undefined" && process.env?.WLT_API_URL) {
-    return process.env.WLT_API_URL.replace(/\/$/, "");
-  }
-  return "http://localhost:58083";
-})();
-
-let corrCounter = 0;
-function corrId() {
-  return `finance-${Date.now()}-${++corrCounter}`;
-}
+const { request: wltRequest } = createDshHttpClient(resolveWltApiBaseUrl(), "finance");
+const { request: dshRequest } = createDshHttpClient(resolveDshApiBaseUrl(), "finance");
 
 async function wltGet<T>(path: string): Promise<T> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  let response: Response;
   try {
-    response = await fetch(new URL(path, wltBaseUrl), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-Correlation-ID": corrId(),
-      },
-      signal: AbortSignal.timeout(10000),
-    });
+    return await wltRequest<T>(path);
   } catch (error) {
-    throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
+    const typed = error as { kind?: string; status?: number };
+    if (typed.kind === "http" && (typed.status === 503 || typed.status === 502)) {
+      throw { kind: "wlt_unavailable" };
+    }
+    throw error;
   }
-  if (response.status === 503 || response.status === 502) {
-    throw { kind: "wlt_unavailable" };
-  }
-  if (!response.ok) {
-    throw { kind: "http", status: response.status, body: await response.text().catch(() => "") };
-  }
-  return response.json() as Promise<T>;
 }
 
 export async function fetchWltPaymentStatus(orderId: string): Promise<WltPaymentStatusRef> {
@@ -57,13 +35,5 @@ export async function fetchWltRefundStatus(orderId: string): Promise<WltRefundSt
 }
 
 export async function fetchAnalyticsPlatformKpis(period = "today"): Promise<unknown> {
-  const dshBase = resolveDshApiBaseUrl();
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  const response = await fetch(new URL(`/dsh/operator/analytics/platform?period=${period}`, dshBase), {
-    headers: { Authorization: `Bearer ${token}`, "X-Correlation-ID": corrId() },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw { kind: "http", status: response.status };
-  return response.json();
+  return dshRequest<unknown>(`/dsh/operator/analytics/platform?period=${period}`);
 }

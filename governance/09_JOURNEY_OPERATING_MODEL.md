@@ -6,9 +6,13 @@ Status: CANONICAL
 
 Build the new repository by production-shaped operational journeys and capability flows.
 
+The definitive list of operational journeys and capability flows must be derived and built directly from the codebase (such as actual application flows, router paths, backend services, and test suites) rather than being statically defined here.
+
 An operational journey may include governance link, blueprint, domain, database, OpenAPI, backend, generated client, frontend, Docker/runtime, tests, visual evidence, and evidence pack.
 
-## Order
+## Illustrative Journey Order (Examples)
+
+The following sequence serves as illustrative examples of the journey order and capability flows. This is not a strict or exhaustive list of all allowed journeys, but a reference baseline to guide implementation:
 
 1. FOUNDATION-001 — mini governance closure
 2. FOUNDATION-002 — core identity contract

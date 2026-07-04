@@ -13,7 +13,7 @@ import {
   Icon,
   Header,
 } from '@bthwani/ui-kit';
-import { useWltDshFieldCommissionReferenceController, toFieldCommissionViewModel } from '../../../../wlt/frontend/shared/dsh/index';
+import { useWltDshFieldCommissionReferenceController, toFieldCommissionViewModel } from '../../shared/finance-wlt-link';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { usePartnerAdminController } from '../../shared/partner';
 

@@ -216,7 +216,6 @@ function ActiveOrderTracker({
   const [proximityState, setProximityState] = useState<"enroute" | "near_customer" | "at_door" | "bell_rang">("enroute");
   const [bellRang, setBellRang] = useState(false);
   const [customerBellRung, setCustomerBellRung] = useState(false);
-  const [simulatedStatus, setSimulatedStatus] = useState<string | null>(null);
 
   const handleRingCaptainBell = () => {
     setCustomerBellRung(true);
@@ -264,91 +263,18 @@ function ActiveOrderTracker({
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Determine current active order status (either live from backend or simulated)
+  // Determine current active order status from the real backend only.
   const order = detailController.state.kind === "success" ? detailController.state.order : null;
-  const status: string = simulatedStatus || (order ? order.status : "pending");
+  const status: string = order ? order.status : "pending";
   const isPickup = fulfillmentMode === "pickup";
 
-  // Smart Autoplay Journey Simulator (transitions stages every 8 seconds automatically for testing)
+
+  // Derive tracking presentation state from the real backend order status only (no simulated/auto-timed transitions).
   useEffect(() => {
-    const stages = ["preparing", "picked_up", "near_customer", "at_door", "bell_rang", "delivered"];
-    let currentStageIndex = 0;
-
-    const interval = setInterval(() => {
-      // If the real order is delivered or cancelled, stop simulation
-      if (order && (order.status === "delivered" || order.status === "cancelled")) {
-        clearInterval(interval);
-        return;
-      }
-
-      if (currentStageIndex < stages.length - 1) {
-        currentStageIndex++;
-        const nextStage = stages[currentStageIndex];
-
-        if (nextStage === "preparing") {
-          setSimulatedStatus("preparing");
-          setProximityState("enroute");
-          setBellRang(false);
-        } else if (nextStage === "picked_up") {
-          setSimulatedStatus("picked_up");
-          setProximityState("enroute");
-          setBellRang(false);
-        } else if (nextStage === "near_customer") {
-          setSimulatedStatus("picked_up");
-          setProximityState("near_customer");
-          setBellRang(false);
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              id: `sys-near-${Date.now()}`,
-              sender: "نظام المتابعة",
-              text: "📍 الكابتن يقترب من موقعك الحالي (على بعد 1.2 كم).",
-              time: "الآن",
-              side: "center",
-            },
-          ]);
-        } else if (nextStage === "at_door") {
-          setSimulatedStatus("picked_up");
-          setProximityState("at_door");
-          setBellRang(false);
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              id: `sys-door-${Date.now()}`,
-              sender: "نظام المتابعة",
-              text: "🏠 وصل الكابتن عند الباب ويستعد لتسليم الطلب.",
-              time: "الآن",
-              side: "center",
-            },
-          ]);
-        } else if (nextStage === "bell_rang") {
-          setSimulatedStatus("arrived_customer");
-          setProximityState("bell_rang");
-          setBellRang(true);
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              id: `sys-bell-${Date.now()}`,
-              sender: "تنبيه الجرس",
-              text: "🔔 قام أحمد الكابتن بقرع جرس الوصول لتنبيهك بالاستلام دون كشف رقم هاتفك حفاظاً على الخصوصية.",
-              time: "الآن",
-              side: "center",
-            },
-          ]);
-        } else if (nextStage === "delivered") {
-          setSimulatedStatus("delivered");
-        }
-      } else {
-        clearInterval(interval);
-      }
-    }, 8000); // 8 seconds per stage transition
-
-    return () => clearInterval(interval);
-  }, [order]);
-
-  // Handle real backend updates for arrived_customer status
-  useEffect(() => {
-    if (order && order.status === "arrived_customer") {
+    if (!order) return;
+    if (order.status === "picked_up") {
+      setProximityState("enroute");
+    } else if (order.status === "arrived_customer") {
       setProximityState("bell_rang");
       setBellRang(true);
       setChatMessages((prev) => {
@@ -364,6 +290,8 @@ function ActiveOrderTracker({
           },
         ];
       });
+    } else if (order.status === "delivered") {
+      setProximityState("bell_rang");
     }
   }, [order]);
 

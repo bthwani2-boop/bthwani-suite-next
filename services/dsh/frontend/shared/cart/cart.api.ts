@@ -1,5 +1,5 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCart,
   DshCartItem,
@@ -7,38 +7,7 @@ import type {
   DshServiceabilityResult,
 } from "./cart.types";
 
-const baseUrl = resolveDshApiBaseUrl();
-
-type RequestOptions = {
-  readonly method?: "GET" | "POST" | "DELETE";
-  readonly body?: unknown;
-};
-
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  let response: Response;
-  try {
-    response = await fetch(new URL(path, baseUrl), {
-      method: options.method ?? "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-Correlation-ID": corrId("cart"),
-        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-      },
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-      signal: AbortSignal.timeout(10000),
-    });
-  } catch (error) {
-    throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
-  }
-  if (!response.ok) {
-    throw { kind: "http", status: response.status, body: await response.text().catch(() => "") };
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-}
+const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "cart");
 
 export async function fetchCart(storeId: string): Promise<DshCart | null> {
   const data = await request<{ cart: DshCart | null }>(
@@ -88,23 +57,8 @@ export async function checkServiceability(
 }
 
 export async function fetchOperatorCarts(state?: string): Promise<readonly DshCart[]> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
   const params = state ? `?state=${encodeURIComponent(state)}` : "";
-  let response: Response;
-  try {
-    response = await fetch(new URL(`/dsh/operator/carts${params}`, baseUrl), {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-  } catch (error) {
-    throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
-  }
-  if (!response.ok) throw { kind: "http", status: response.status };
-  const data = (await response.json()) as { carts: DshCart[] };
+  const data = await request<{ carts: DshCart[] }>(`/dsh/operator/carts${params}`);
   return data.carts ?? [];
 }
 
@@ -117,8 +71,4 @@ export function classifyCartError(error: unknown): { kind: "permission_denied" |
     return { kind: "offline" };
   }
   return { kind: "error", message: "تعذر تنفيذ عملية السلة." };
-}
-
-function corrId(prefix: string): string {
-  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 }

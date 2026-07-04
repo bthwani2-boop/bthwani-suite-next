@@ -400,19 +400,11 @@ Blocked endpoints (minimum — all at `status = BLOCKED_NEEDS_API_CONTRACT`):
 ## Guard Commands
 
 ```bash
-# V2 validation
-node tools/guards/guard-journey-operating-model.mjs
-
-# V3 validation
-node tools/guards/guard-journey-operating-model.mjs
-
-# Set evidence root
-$env:BTH_EVIDENCE_ROOT = "tools/registry/runs/<SESSION_ID>"
-node tools/guards/guard-journey-operating-model.mjs
-node tools/guards/guard-journey-operating-model.mjs
+pnpm run foundation:gate
+pnpm run journey:gate
 ```
 
-Both must exit 0 before any journey execution begins.
+Both must exit 0 to verify the codebase integrity.
 
 ---
 

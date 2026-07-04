@@ -1,28 +1,8 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
 import type { DshCampaign, MarketingNewsTickerItem } from "./marketing.types";
 
-const baseUrl = resolveDshApiBaseUrl();
-let c = 0;
-const corrId = () => `mkt-${Date.now()}-${++c}`;
-
-async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  const res = await fetch(new URL(path, baseUrl), {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      "X-Correlation-ID": corrId(),
-      ...(init.headers ?? {}),
-    },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw { kind: "http", status: res.status };
-  return res.json() as Promise<T>;
-}
+const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
 
 type MarketingTargetFields = {
   targetType?: string;
