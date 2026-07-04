@@ -8,13 +8,13 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "pnpm run typecheck && cd backend && go build ./...",
     "test": "cd backend && go test ./...",
-    "lint": "node ../../tools/guards/wlt-dsh-frontend-shared-ownership-gate.mjs && node ../../tools/guards/no-financial-mutation-outside-wlt.mjs"
+    "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary"
   },
   "dependencies": {
     "react": "19.2.3"
   },
   "devDependencies": {
-    "@types/node": "22.16.0",
+    "@types/node": "24.10.1",
     "@types/react": "19.2.17",
     "typescript": "~6.0.3"
   }

@@ -1,19 +1,23 @@
-# 07 — الفحوصات، Runtime Evidence، CI، ومراجعة PR
+﻿# 07 — الفحوصات، Runtime Evidence، CI، ومراجعة PR
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `07/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** أوامر الفحص الكودية، runtime evidence، CI rules، وPR/merge review.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 19) أوامر فحص كودية مستهدفة
 
-شغّل فقط ما ينطبق فعليًا على الرحلة. لا تعتبر أي فحص ناجحًا إلا بمخرج واضح.
+### Affected-Only Verification
+* يبدأ التحقق من مسارات الكود المتأثرة (affected paths) والـ guards الخاصة بالنطاق فقط.
+* لا يتم تشغيل الفحوصات الكاملة (full-suite) إلا إذا تغير الـ shared brain أو الـ API/database/migration/runtime، أو إذا فشل فحص المسارات المتأثرة (affected check)، أو كانت المنطقة (multi-surface) عالية الخطورة.
+* الفحوصات العامة المذكورة في هذا الملف هي فحوصات مرجعية تُستدعى حسب التأثر وليست إلزامية دائمًا في كل عملية إغلاق.
+
 
 ```powershell
 Set-Location -LiteralPath "<REPO_LOCAL>"
@@ -67,25 +71,20 @@ Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts
 
 ```powershell
 pnpm run foundation:gate
-pnpm run graphify
+pnpm run journey:gate
 pnpm run typecheck
 pnpm run lint
 pnpm run test
 pnpm run build
-pnpm run nx:projects
-pnpm run affected:typecheck
-pnpm run affected:lint
-pnpm run affected:test
-pnpm run affected:build
-pnpm run guard:unified-fullstack-brain
-pnpm run guard:dsh-frontend-shared-ownership
-pnpm run guard:wlt-dsh-frontend-shared-ownership
-pnpm run guard:dsh-frontend-shared-boundary-imports
-pnpm run guard:no-financial-mutation-outside-wlt
-pnpm run guard:no-direct-fetch-in-screen
-pnpm run guard:no-preview-demo-mock-runtime
-pnpm run guard:no-broken-imports
 ```
+
+الحراس المكوّنة للبوابتين (لا تُشغّل مباشرة — تعمل عبر البوابات):
+
+```text
+foundation:gate  = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
+journey:gate     = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
+```
+
 
 إذا كان الأمر غير موجود في `package.json` أو workspace:
 

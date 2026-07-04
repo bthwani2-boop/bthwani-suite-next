@@ -1,10 +1,10 @@
-# 05 — مصفوفات backend/database/API/SSOT/visibility/auth/risk
+﻿# 05 — مصفوفات backend/database/API/SSOT/visibility/auth/risk
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `05/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** مصفوفات طبقات الباك إند، قاعدة البيانات، API client، SSOT، الظهور، الصلاحيات، والاختبار المستند إلى المخاطر.
 

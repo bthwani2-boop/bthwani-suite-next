@@ -116,6 +116,7 @@ function defineBthwaniExpoApp(appKey) {
   return {
     name: app.name,
     slug: app.slug,
+    entryPoint: "./index.js",
     owner: manifest.global.owner,
 
     platforms: ["ios", "android"],

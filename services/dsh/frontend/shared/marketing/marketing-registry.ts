@@ -1,4 +1,5 @@
 import { colorRoles } from '@bthwani/ui-kit';
+import type { DshSupportAnalytics } from "../analytics/analytics.types";
 /**
  * marketing-registry.ts
  *
@@ -13,12 +14,8 @@ export type MarketingMainTabId =
   | "smart-bar"
   | "banners-carousel"
   | "homepage-promos"
-  | "video-studio"
   | "campaigns"
   | "partner-offers"
-  | "image-product-review"
-  | "benefits-subscriptions"
-  | "growth"
   | "signals-measurement";
 
 export type MarketingMainTabMeta = {
@@ -31,33 +28,10 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "smart-bar",              label: "الشريط الذكي" },
   { id: "banners-carousel",       label: "البنرات والكاروسيل" },
   { id: "homepage-promos",        label: "بروموهات الرئيسية" },
-  { id: "video-studio",           label: "استوديو الفيديو" },
   { id: "campaigns",              label: "الحملات" },
   { id: "partner-offers",         label: "عروض الشركاء" },
-  { id: "image-product-review",   label: "مراجعة الصور والمنتجات" },
-  { id: "benefits-subscriptions", label: "المزايا والاشتراك" },
-  { id: "growth",                 label: "النمو" },
   { id: "signals-measurement",    label: "الإشارات والقياس" },
 ] as const;
-
-// ─── Sub-Tab Registry ─────────────────────────────────────────────────────────
-
-export type MarketingSubTabId = "review-queue" | "video-review";
-
-export type MarketingSubTabMeta = {
-  readonly id: MarketingSubTabId;
-  readonly label: string;
-  readonly parentTab: MarketingMainTabId;
-};
-
-export const MARKETING_SUB_TABS: readonly MarketingSubTabMeta[] = [
-  { id: "review-queue", label: "صف المراجعة", parentTab: "visibility-gates" },
-  { id: "video-review",  label: "مراجعة الفيديو", parentTab: "visibility-gates" },
-] as const;
-
-export function getMarketingSubTabsForMain(mainTab: MarketingMainTabId): readonly MarketingSubTabMeta[] {
-  return MARKETING_SUB_TABS.filter((t) => t.parentTab === mainTab);
-}
 
 // ─── Section Tab Registry ─────────────────────────────────────────────────────
 
@@ -78,20 +52,22 @@ export const MARKETING_SECTION_TABS: readonly MarketingSectionTabMeta[] = [
 // ─── KPIs Builder ──────────────────────────────────────────────────────────────
 
 export type MarketingKpiMetrics = {
-  readonly partnerGatesActive: string; // e.g. "3/1"
-  readonly blockedProductsActive: string; // e.g. "3/2"
-  readonly commercialVisibilityBlocked: number;
-  readonly unreadSignalsCount: number;
-  readonly promoCandidatesCount: number;
+  readonly activeStoresRatio: string;
+  readonly deliveredOrders: number;
+  readonly openTickets: number;
+  readonly openEscalations: number;
+  readonly isBackedByApi: boolean;
+  readonly disclosureReason?: string;
 };
 
 export function buildMarketingKpiMetrics(): MarketingKpiMetrics {
   return {
-    partnerGatesActive: "3/1",
-    blockedProductsActive: "3/2",
-    commercialVisibilityBlocked: 0,
-    unreadSignalsCount: 4,
-    promoCandidatesCount: 2,
+    activeStoresRatio: "0/0",
+    deliveredOrders: 0,
+    openTickets: 0,
+    openEscalations: 0,
+    isBackedByApi: false,
+    disclosureReason: "تعذر تحميل مؤشرات التسويق التشغيلية من تحليلات DSH.",
   };
 }
 
@@ -201,32 +177,14 @@ export type DeliverySignalCardViewModel = {
   readonly isApproved: boolean;
 };
 
-export const DELIVERY_SIGNAL_CARDS: readonly DeliverySignalCardViewModel[] = [
-  {
-    id: "img-blurry",
-    title: "المحتوى يحتاج تعديل تسويقي — صورة المنتج غير واضحة",
-    statusLabel: "المحتوى يحتاج تعديل تسويقي",
-    source: "cp/marketing/media-review",
-    intakeId: "intake-4",
-    timeAgo: "منذ 21 ساعة",
-    isApproved: false,
-  },
-  {
-    id: "pizza-approved",
-    title: "تم اعتماد المحتوى تسويقياً — صورة بيتزا مارغريتا — شريك مطعم",
-    statusLabel: "تم اعتماد المحتوى تسويقياً",
-    source: "cp/marketing/media-review",
-    intakeId: "mr-003",
-    timeAgo: "منذ 7 ساعة",
-    isApproved: true,
-  },
-  {
-    id: "salad-blurry",
-    title: "المحتوى يحتاج تعديل تسويقي — صورة سلطة يونانية — دقة منخفضة",
-    statusLabel: "المحتوى يحتاج تعديل تسويقي",
-    source: "cp/marketing/media-review",
-    intakeId: "intake-5",
-    timeAgo: "منذ 24 ساعة",
-    isApproved: false,
-  },
-] as const;
+export function buildDeliverySignalCards(analytics: DshSupportAnalytics): readonly DeliverySignalCardViewModel[] {
+  return analytics.byCategory.map((item) => ({
+    id: `support-${item.category}`,
+    title: `إشارة دعم تشغيلية: ${item.category}`,
+    statusLabel: `${item.count.toLocaleString("ar")} تذكرة`,
+    source: "dsh/operator/analytics/support",
+    intakeId: item.category,
+    timeAgo: analytics.generatedAt,
+    isApproved: item.count === 0,
+  }));
+}

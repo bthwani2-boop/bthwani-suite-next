@@ -24,8 +24,8 @@ export function usePlatformAuditStateHook() {
   const addAuditEvent = (event: Omit<AuditEvent, 'id' | 'timestamp'>) => {
     const newEvent: AuditEvent = {
       ...event,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: 'الآن',
+      id: `audit-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`,
+      timestamp: new Date().toISOString(),
     };
     setAuditEvents((prev) => [newEvent, ...prev]);
   };
@@ -69,3 +69,5 @@ export function usePlatformAuditState() {
   if (!ctx) throw new Error('Missing PlatformAuditProvider');
   return ctx;
 }
+
+

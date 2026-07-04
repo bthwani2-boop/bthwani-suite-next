@@ -1,3 +1,7 @@
+export type DshMarketingTargetType =
+  | "home" | "stores" | "store" | "category" | "subcategory"
+  | "product" | "offer" | "campaign" | "search" | "custom";
+
 export type DshCampaign = {
   readonly id: string;
   readonly title: string;
@@ -5,30 +9,12 @@ export type DshCampaign = {
   readonly status: string;
   readonly startDate: string;
   readonly endDate: string;
+  readonly targetType?: DshMarketingTargetType;
+  readonly targetId?: string;
+  readonly audience: string;
+  readonly placement?: string;
   readonly createdBy: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type DshBanner = {
-  readonly id: string;
-  readonly title: string;
-  readonly imageUrl: string;
-  readonly actionUrl: string;
-  readonly position: number;
-  readonly isActive: boolean;
-  readonly createdBy: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type DshPromo = {
-  readonly id: string;
-  readonly code: string;
-  readonly description: string;
-  readonly status: string;
-  readonly expiresAt: string;
-  readonly createdBy: string;
+  readonly archivedAt?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 };

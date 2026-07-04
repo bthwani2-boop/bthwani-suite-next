@@ -151,9 +151,24 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
+  // Campaigns, tickers, and partner-offers are all API-backed with governed
+  // lifecycles, audit trail (dsh_marketing_audit_events), target
+  // visibility-gate checks, and soft archive/delete -- no hard DB deletes.
+  // video-studio, growth, loyalty/benefits-subscriptions and
+  // image-product-review were removed from the active deck rather than
+  // shipped disabled (no backend, and for loyalty/image-review, the wrong
+  // owner -- WLT and catalogs respectively). app-client has no marketing
+  // exposure by design: home banners/promos are owned by
+  // dsh.client.home-discovery, not this capability. app-partner scoping is
+  // enforced server-side via store.ResolveActorStore (a partner can only
+  // see/submit offers for their own resolved store).
+  // Runtime deployment evidence: migration dsh-020 applied, dsh-api image
+  // rebuilt/restarted, both new routes verified reachable (401, not 404) --
+  // see services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt.
+  // Sibling services (wlt-api, identity-api) confirmed unaffected.
   {
     capabilityId: "dsh.marketing",
     backendImplemented: true,
@@ -164,7 +179,7 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt",
   },
   // ── Platform Policies & Service Area Management ──────────────────────────
   {
@@ -177,7 +192,7 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Administration, Roles & Activation ──────────────────────────────────
   {
@@ -190,9 +205,9 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
-  // ── Partner Store Activation ──────────────────────────────────────────────
+  // ── Partner Onboarding & Store Publication ──────────────────────────────────────────────
   {
     capabilityId: "dsh.partner.activation",
     backendImplemented: true,
@@ -203,6 +218,6 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/brach-validation-final-closure/dsh-015-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
 ] as const satisfies readonly DshRuntimeBinding[];

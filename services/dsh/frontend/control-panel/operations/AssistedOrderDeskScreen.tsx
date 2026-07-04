@@ -132,12 +132,10 @@ type AssistedOrderPlaybook = {
   severity: 'danger' | 'warning' | 'neutral' | 'success';
 };
 
-import { MOCK_ASSISTED_DESKS } from '../../shared/operations';
-
 export function AssistedOrderDeskScreen({ hubHref: _hubHref, subGroup: _subGroup }: AssistedOrderDeskScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [desks, setDesks] = React.useState<AssistedOrderDesk[]>(() => [...MOCK_ASSISTED_DESKS]);
+  const [desks, setDesks] = React.useState<AssistedOrderDesk[]>([]);
   // null = no selection = full width queue
   const [selectedDeskId, setSelectedDeskId] = React.useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = React.useState<string | null>(null);

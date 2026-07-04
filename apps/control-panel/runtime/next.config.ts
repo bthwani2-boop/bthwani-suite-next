@@ -19,9 +19,7 @@ const nextConfig: NextConfig = {
       // Note: Turbopack on Windows does not support absolute paths in resolveAlias,
       // so we use a relative path from the project root (next.config.ts location).
       "@expo/vector-icons/Ionicons": "./stubs/ionicons-stub.js",
-    },
-    // @ts-expect-error -- resolveConditions not yet in installed @types/next TurbopackOptions
-    resolveConditions: ["browser"],
+    },
   },
   webpack: (config) => {
     config.resolve.alias = {

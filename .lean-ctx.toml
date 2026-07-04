@@ -5,7 +5,7 @@ shell_activation = "agents-only"
 rules_injection = "dedicated"
 cache_policy = "safe"
 response_verbosity = "headers_only"
-tool_profile = "standard"
+tool_profile = "power"
 
 enable_wakeup_ctx = true
 auto_capture = true

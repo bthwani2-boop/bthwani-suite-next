@@ -1,7 +1,8 @@
 "use client";
+import { colorRoles } from '@bthwani/ui-kit';
 
 import React, { useState } from "react";
-import { opsTheme } from "../../shared/operations";
+
 import { CpButton, CpTextInput, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 
 // 1. Client Profile Workspace (Customer360)
@@ -25,7 +26,7 @@ export function ClientProfileWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>ملف العميل الشامل (Customer 360)</h3>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>ملف العميل الشامل (Customer 360)</h3>
       <div style={{ display: "flex", gap: "0.5rem" }}>
         <CpTextInput value={clientId} onChange={setClientId} placeholder="أدخل معرف العميل أو رقم الهاتف..." aria-label="البحث عن عميل" />
         <CpButton onClick={handleSearch}>بحث عن العميل</CpButton>
@@ -33,7 +34,7 @@ export function ClientProfileWorkspace() {
 
       {profile ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginTop: "1rem" }}>
-          <div style={{ padding: "1rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
+          <div style={{ padding: "1rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.5rem", background: "white" }}>
             <h4 style={{ margin: "0 0 0.75rem" }}>البيانات الأساسية</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.875rem" }}>
               <div>الاسم: <strong>{profile.name}</strong></div>
@@ -43,17 +44,17 @@ export function ClientProfileWorkspace() {
             </div>
           </div>
 
-          <div style={{ padding: "1rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
+          <div style={{ padding: "1rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.5rem", background: "white" }}>
             <h4 style={{ margin: "0 0 0.75rem" }}>النشاط والتقييم</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.875rem" }}>
               <div>عدد الطلبات المكتملة: <strong>{profile.orderCount} طلب</strong></div>
-              <div>حالة الحساب: <strong style={{ color: opsTheme.success }}>{profile.status}</strong></div>
-              <div>ملاحظات الدعم: <span style={{ color: opsTheme.textMuted }}>{profile.notes}</span></div>
+              <div>حالة الحساب: <strong style={{ color: colorRoles.brandStructure }}>{profile.status}</strong></div>
+              <div>ملاحظات الدعم: <span style={{ color: colorRoles.brandStructure }}>{profile.notes}</span></div>
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ padding: "3rem", textAlign: "center", border: `2px dashed ${opsTheme.line}`, borderRadius: "0.5rem", color: opsTheme.textMuted }}>
+        <div style={{ padding: "3rem", textAlign: "center", border: `2px dashed ${colorRoles.surfaceBase}`, borderRadius: "0.5rem", color: colorRoles.brandStructure }}>
           يرجى إدخال معرف العميل لبدء عرض البيانات الشاملة.
         </div>
       )}
@@ -78,10 +79,10 @@ export function CallReceptionWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>مركز استقبال وتسجيل المكالمات اليدوية</h3>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>مركز استقبال وتسجيل المكالمات اليدوية</h3>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-        <div style={{ background: opsTheme.surfaceInset, padding: "1rem", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ background: colorRoles.surfaceBase, padding: "1rem", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <h4 style={{ margin: "0 0 0.5rem" }}>تسجيل تذكرة اتصال واردة</h4>
           <CpTextInput value={callerName} onChange={setCallerName} placeholder="اسم المتصل" aria-label="اسم المتصل" />
           <CpTextInput value={callerPhone} onChange={setCallerPhone} placeholder="رقم الهاتف" aria-label="رقم الهاتف" />
@@ -92,18 +93,18 @@ export function CallReceptionWorkspace() {
         <div>
           <h4 style={{ margin: "0 0 0.5rem" }}>المكالمات المسجلة حديثاً</h4>
           {tickets.length === 0 ? (
-            <div style={{ padding: "2rem", textAlign: "center", border: `1px dashed ${opsTheme.line}`, borderRadius: "0.5rem", color: opsTheme.textMuted, fontSize: "0.8rem" }}>
+            <div style={{ padding: "2rem", textAlign: "center", border: `1px dashed ${colorRoles.surfaceBase}`, borderRadius: "0.5rem", color: colorRoles.brandStructure, fontSize: "0.8rem" }}>
               لا توجد اتصالات مسجلة في هذه الجلسة.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {tickets.map(t => (
-                <div key={t.id} style={{ padding: "0.75rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
+                <div key={t.id} style={{ padding: "0.75rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.5rem", background: "white" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <strong>{t.name} ({t.phone})</strong>
-                    <span style={{ color: opsTheme.brand, fontSize: "0.8rem" }}>{t.status}</span>
+                    <span style={{ color: colorRoles.brandAction, fontSize: "0.8rem" }}>{t.status}</span>
                   </div>
-                  <div style={{ fontSize: "0.8rem", color: opsTheme.textMuted, marginTop: "0.25rem" }}>{t.notes}</div>
+                  <div style={{ fontSize: "0.8rem", color: colorRoles.brandStructure, marginTop: "0.25rem" }}>{t.notes}</div>
                 </div>
               ))}
             </div>
@@ -123,8 +124,8 @@ export function ComplianceRiskWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>مركز حوكمة الالتزام وإدارة المخاطر التشغيلية</h3>
-      <p style={{ margin: 0, fontSize: "0.813rem", color: opsTheme.textMuted }}>مراقبة الحوادث المتكررة، وسلوكيات الشركاء والكباتن لضمان جودة المنظومة:</p>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>مركز حوكمة الالتزام وإدارة المخاطر التشغيلية</h3>
+      <p style={{ margin: 0, fontSize: "0.813rem", color: colorRoles.brandStructure }}>مراقبة الحوادث المتكررة، وسلوكيات الشركاء والكباتن لضمان جودة المنظومة:</p>
 
       <CpTable>
         <thead>
@@ -141,7 +142,7 @@ export function ComplianceRiskWorkspace() {
               <CpTableCell>{inc.partner}</CpTableCell>
               <CpTableCell>{inc.issue}</CpTableCell>
               <CpTableCell>
-                <span style={{ color: inc.riskScore === "مرتفع" ? opsTheme.danger : opsTheme.warning, fontWeight: 700 }}>{inc.riskScore}</span>
+                <span style={{ color: inc.riskScore === "مرتفع" ? colorRoles.brandAction : colorRoles.brandAction, fontWeight: 700 }}>{inc.riskScore}</span>
               </CpTableCell>
               <CpTableCell>{inc.status}</CpTableCell>
             </tr>
@@ -169,9 +170,9 @@ export function MessagesWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>بوابة المحادثات المباشرة وغرف العمليات</h3>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>بوابة المحادثات المباشرة وغرف العمليات</h3>
 
-      <div style={{ display: "flex", gap: "0.25rem", borderBottom: `1px solid ${opsTheme.line}`, paddingBottom: "0.5rem" }}>
+      <div style={{ display: "flex", gap: "0.25rem", borderBottom: `1px solid ${colorRoles.surfaceBase}`, paddingBottom: "0.5rem" }}>
         {(["client", "partner", "captain"] as const).map((tab) => (
           <button
             key={tab}
@@ -179,9 +180,9 @@ export function MessagesWorkspace() {
             style={{
               padding: "6px 12px",
               border: "none",
-              borderBottom: activeSubTab === tab ? `2px solid ${opsTheme.brand}` : "2px solid transparent",
+              borderBottom: activeSubTab === tab ? `2px solid ${colorRoles.brandAction}` : "2px solid transparent",
               background: "none",
-              color: activeSubTab === tab ? opsTheme.brand : opsTheme.textMuted,
+              color: activeSubTab === tab ? colorRoles.brandAction : colorRoles.brandStructure,
               fontWeight: activeSubTab === tab ? 700 : 500,
               fontSize: "13px",
               cursor: "pointer",
@@ -192,13 +193,13 @@ export function MessagesWorkspace() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem", background: opsTheme.surfaceInset, padding: "1rem", borderRadius: "0.5rem", minHeight: "18rem", maxHeight: "25rem", overflowY: "auto" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1rem", background: colorRoles.surfaceBase, padding: "1rem", borderRadius: "0.5rem", minHeight: "18rem", maxHeight: "25rem", overflowY: "auto" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {chatLog.map(msg => (
-            <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: msg.sender === "دعم العمليات" ? "flex-end" : "flex-start", maxWidth: "70%", background: msg.sender === "دعم العمليات" ? opsTheme.brandSurface : "white", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${opsTheme.line}` }}>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: msg.sender === "دعم العمليات" ? opsTheme.brand : opsTheme.text }}>{msg.sender}</div>
+            <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignSelf: msg.sender === "دعم العمليات" ? "flex-end" : "flex-start", maxWidth: "70%", background: msg.sender === "دعم العمليات" ? colorRoles.surfaceBase : "white", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${colorRoles.surfaceBase}` }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: msg.sender === "دعم العمليات" ? colorRoles.brandAction : colorRoles.brandStructure }}>{msg.sender}</div>
               <div style={{ fontSize: "13px", marginTop: "0.25rem" }}>{msg.text}</div>
-              <div style={{ fontSize: "9px", color: opsTheme.textMuted, alignSelf: "flex-end", marginTop: "0.25rem" }}>{msg.timestamp}</div>
+              <div style={{ fontSize: "9px", color: colorRoles.brandStructure, alignSelf: "flex-end", marginTop: "0.25rem" }}>{msg.timestamp}</div>
             </div>
           ))}
         </div>

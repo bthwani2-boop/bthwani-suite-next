@@ -9,24 +9,12 @@ import {
   WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import { Box } from '@bthwani/ui-kit';
+import { useIdentitySession } from '@bthwani/core-identity';
 import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
-import { MOCK_PARTNER_STORES } from '../../shared/operations';
+import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
 
 export type PartnerStoresScreenProps = { hubHref: string; subGroup?: string; };
-
-// Minimal API response shape from GET /stores (DiscoveryStore in dsh.openapi.yaml)
-type ApiDiscoveryStore = {
-  id: string;
-  name: string;
-  address: string;
-  status_label: string;
-  status_tone: 'open' | 'closed';
-  delivery_label: string;
-  service_label: string;
-  has_offer: boolean;
-  publish_stage: string;
-};
 
 type CpStoreRow = {
   id: string;
@@ -48,25 +36,26 @@ type CpStoreRow = {
   statusTone: 'success' | 'warning' | 'danger' | 'neutral';
 };
 
-function mapApiStoreToCpRow(s: ApiDiscoveryStore): CpStoreRow {
+function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
+  const isOpenNow = row.isOpen && row.status === 'active';
   return {
-    id: s.id,
-    name: s.name,
-    branch: s.address,
-    status: s.status_tone === 'open' ? 'مفتوح' : 'مغلق',
-    deliveryMode: 'bthwani_delivery',
+    id: row.id,
+    name: row.displayName,
+    branch: row.cityCode,
+    status: isOpenNow ? 'مفتوح' : row.status === 'temporarily_closed' ? 'موقف مؤقتاً' : 'مغلق',
+    deliveryMode: row.deliveryModes.includes('delivery') ? 'bthwani_delivery' : 'partner_delivery',
     prepTime: '—',
     readyOrders: 0,
-    issue: '',
+    issue: row.isServiceable ? '' : 'خارج نطاق الخدمة الحالي',
     suggestion: {
-      label: 'راجع بوابات الرؤية',
-      reason: `${s.service_label} — ${s.delivery_label}`,
+      label: row.catalogApprovalStatus === 'submitted' ? 'راجع اعتماد الكتالوج' : 'راجع بوابات الرؤية',
+      reason: `${row.categoryLabel} — كتالوج: ${row.catalogApprovalStatus} — تسويق: ${row.marketingVisibility}`,
       confidence: 'high',
       action: 'عرض التفاصيل',
       secondary: null,
-      auditRequired: false,
+      auditRequired: row.catalogApprovalStatus === 'submitted',
     },
-    statusTone: s.status_tone === 'open' ? 'success' : 'neutral',
+    statusTone: isOpenNow ? 'success' : row.status === 'temporarily_closed' ? 'danger' : 'neutral',
   };
 }
 
@@ -74,141 +63,44 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlStoreId = searchParams.get('orderId') ?? null;
-  const [selectedStoreId, setSelectedStoreId] = React.useState<string | null>(null);
-  const [storesSource, setStoresSource] = React.useState<'loading' | 'api' | 'api-error' | 'offline'>('loading');
-  const [retryCount, setRetryCount] = React.useState(0);
-  const retry = React.useCallback(() => setRetryCount((n) => n + 1), []);
+  const identity = useIdentitySession();
+  const c = useStoreAdminController(identity.state.kind);
 
-  const [rows, setRows] = React.useState<Array<CpStoreRow & { customStatus: string | null; customStatusTone: 'warning' | 'success' | 'danger' | 'neutral' | null }>>([]);
-
-  // Fetch mock stores from the shared operations brain.
-  React.useEffect(() => {
-    setRows(MOCK_PARTNER_STORES.map((store) => ({
-      ...mapApiStoreToCpRow(store),
-      customStatus: null,
-      customStatusTone: null,
-    })));
-    setStoresSource('api');
-  }, [retryCount]);
+  const rows = React.useMemo(() => c.visibleRows.map(mapAdminRowToCpRow), [c.visibleRows]);
 
   React.useEffect(() => {
     if (urlStoreId && rows.some((s) => s.id === urlStoreId)) {
-      setSelectedStoreId(urlStoreId);
+      c.selectStore(urlStoreId);
     }
-  }, [urlStoreId]);
+  }, [urlStoreId, rows]);
 
-  const activeStore = rows.find((s) => s.id === selectedStoreId);
-  const [actionStatus, setActionStatus] = React.useState<'idle' | 'pending' | 'success'>('idle');
-  const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
+  const activeStore = rows.find((s) => s.id === c.selectedStoreId);
+  const activeDetail = c.detailState?.kind === 'success' ? c.detailState.detail : null;
 
-  // Catalog approval gate — wires PATCH /stores/{id}/catalog-approval
-  const [catalogGateStatus, setCatalogGateStatus] = React.useState<
-    'idle' | 'loading' | 'approved' | 'rejected' | 'error'
-  >('idle');
-  const [catalogGateFeedback, setCatalogGateFeedback] = React.useState<string | null>(null);
-
-  const handleCatalogApproval = React.useCallback(
-    async (storeId: string, approve: boolean) => {
-      setCatalogGateStatus('loading');
-      setTimeout(() => {
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === storeId
-              ? {
-                  ...r,
-                  customStatus: approve ? 'مفتوح (معتمد)' : 'مغلق (مرفوض الكتالوج)',
-                  customStatusTone: approve ? 'success' : 'danger',
-                }
-              : r,
-          ),
-        );
-        setCatalogGateStatus(approve ? 'approved' : 'rejected');
-        setCatalogGateFeedback(`Catalog approved: ${approve}`);
-      }, 500);
+  const handleGovern = React.useCallback(
+    (action: 'lifecycle' | 'catalog-approval' | 'marketing-visibility', value: string, reason: string) => {
+      if (!c.selectedStoreId || !activeDetail) return;
+      void c.govern(c.selectedStoreId, {
+        expectedVersion: activeDetail.version,
+        action,
+        value,
+        reason,
+      });
     },
-    [],
+    [c, activeDetail],
   );
-
-  // Marketing visibility gate — wires PATCH /stores/{id}/marketing-visibility
-  const [marketingGateStatus, setMarketingGateStatus] = React.useState<
-    'idle' | 'loading' | 'active' | 'inactive' | 'error'
-  >('idle');
-  const [marketingGateFeedback, setMarketingGateFeedback] = React.useState<string | null>(null);
-
-  const handleMarketingVisibility = React.useCallback(
-    async (storeId: string, activate: boolean) => {
-      setMarketingGateStatus('loading');
-      setTimeout(() => {
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === storeId
-              ? {
-                  ...r,
-                  customStatus: activate ? 'نشط تسويقياً' : 'مخفي تسويقياً',
-                  customStatusTone: activate ? 'success' : 'warning',
-                }
-              : r,
-          ),
-        );
-        setMarketingGateStatus(activate ? 'active' : 'inactive');
-        setMarketingGateFeedback(`Marketing visibility: ${activate}`);
-      }, 500);
-    },
-    [],
-  );
-
-  const handleTriggerAction = React.useCallback(async (storeId: string, actionLabel: string) => {
-    setActionStatus('pending');
-    setActionFeedback(null);
-
-    if (actionLabel === 'تواصل' || actionLabel === 'تواصل مع المتجر') {
-      setActionStatus('success');
-      setActionFeedback('تم بدء تواصل الدعم الفوري مع إدارة المتجر.');
-      setTimeout(() => {
-        setActionStatus('idle');
-        setActionFeedback(null);
-      }, 1500);
-      return;
-    }
-
-    setTimeout(() => {
-      const isPause = actionLabel === 'إيقاف مؤقت' || actionLabel === 'إيقاف استقبال';
-      const newStatus = isPause ? 'موقف مؤقتاً' : 'مفتوح';
-      const newStatusTone = (isPause ? 'danger' : 'success') as 'danger' | 'success';
-
-      setRows((prevRows) =>
-        prevRows.map((r) =>
-          r.id === storeId
-            ? { ...r, customStatus: newStatus, customStatusTone: newStatusTone }
-            : r
-        )
-      );
-      setActionStatus('success');
-      setActionFeedback(
-        isPause
-          ? 'تم إيقاف استقبال الطلبات مؤقتاً.'
-          : 'تم تنشيط استقبال الطلبات.',
-      );
-      setTimeout(() => {
-        setActionStatus('idle');
-        setActionFeedback(null);
-        setSelectedStoreId(null);
-        router.push(buildOperationsHref('partner-stores'));
-      }, 1200);
-    }, 500);
-  }, [router]);
 
   // Inspector component
   let inspectorContent: React.ReactNode = null;
-  if (selectedStoreId && activeStore) {
-    const isSuspended = activeStore.customStatus === 'موقف مؤقتاً';
-    const resolvedStatus = activeStore.customStatus || activeStore.status;
+  if (c.selectedStoreId && activeStore) {
+    const isSuspended = activeStore.status === 'موقف مؤقتاً';
+    const isSubmitting = c.actionState.kind === 'submitting';
 
     inspectorContent = (
       <WebControlPanelInspectorShell
         title={`مراجعة حالة المتجر — ${activeStore.name}`}
         onClose={() => {
-          setSelectedStoreId(null);
+          c.selectStore(null);
           router.push(buildOperationsHref('partner-stores'));
         }}
       >
@@ -230,7 +122,7 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
               <strong>طريقة التوصيل:</strong> {activeStore.deliveryMode === 'partner_delivery' ? 'توصيل المتجر' : 'توصيل بثواني'}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--bthwani-control-panel-text)' }}>
-              <strong>حالة استقبال الطلبات:</strong> <span style={{ fontWeight: 700, color: resolvedStatus === 'مفتوح' || resolvedStatus === 'مستقر' ? 'var(--bthwani-control-panel-success)' : 'var(--bthwani-control-panel-danger)' }}>{resolvedStatus}</span>
+              <strong>حالة استقبال الطلبات:</strong> <span style={{ fontWeight: 700, color: activeStore.status === 'مفتوح' ? 'var(--bthwani-control-panel-success)' : 'var(--bthwani-control-panel-danger)' }}>{activeStore.status}</span>
             </div>
           </div>
 
@@ -284,38 +176,29 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
           </div>
 
           {/* Action Feedback Alerts */}
-          {actionFeedback && (
+          {c.actionState.kind === 'error' && (
+            <div style={{ background: 'var(--bthwani-control-panel-danger)', color: 'var(--bthwani-text-inverse)', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
+              {c.actionState.message}
+            </div>
+          )}
+          {c.actionState.kind === 'conflict' && (
+            <div style={{ background: 'var(--bthwani-control-panel-warning)', color: 'var(--bthwani-text-inverse)', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
+              {c.actionState.message}
+            </div>
+          )}
+          {c.actionState.kind === 'success' && (
             <div style={{ background: 'var(--bthwani-control-panel-brand-surface)', border: '1px solid var(--bthwani-control-panel-brand)', color: 'var(--bthwani-control-panel-brand)', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
-              {actionFeedback}
+              تم تطبيق إجراء الحوكمة بنجاح.
             </div>
           )}
 
-          {/* Action CTAs */}
+          {/* Action CTAs — lifecycle (pause/resume order receiving) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
-            <button
-              type="button"
-              disabled={actionStatus !== 'idle'}
-              onClick={() => handleTriggerAction(activeStore.id, 'تواصل مع المتجر')}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: 'var(--bthwani-control-panel-surface)',
-                color: 'var(--bthwani-control-panel-text)',
-                border: '1px solid var(--bthwani-control-panel-border)',
-                borderRadius: '8px',
-                cursor: actionStatus !== 'idle' ? 'not-allowed' : 'pointer',
-                fontWeight: 700,
-                fontSize: '12px',
-              }}
-            >
-              {actionStatus === 'pending' ? 'جاري الاتصال...' : 'تواصل وتنبيه المتجر'}
-            </button>
-
             {isSuspended ? (
               <button
                 type="button"
-                disabled={actionStatus !== 'idle'}
-                onClick={() => handleTriggerAction(activeStore.id, 'تحديث الجاهزية')}
+                disabled={isSubmitting || !activeDetail}
+                onClick={() => handleGovern('lifecycle', 'active', 'تنشيط استقبال الطلبات من لوحة العمليات')}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -323,18 +206,18 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
                   color: 'var(--bthwani-text-inverse)',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: actionStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                  cursor: isSubmitting || !activeDetail ? 'not-allowed' : 'pointer',
                   fontWeight: 700,
                   fontSize: '12px',
                 }}
               >
-                {actionStatus === 'pending' ? 'جاري التنشيط...' : 'تنشيط وإلغاء الإيقاف'}
+                {isSubmitting ? 'جاري التنشيط...' : 'تنشيط وإلغاء الإيقاف'}
               </button>
             ) : (
               <button
                 type="button"
-                disabled={actionStatus !== 'idle'}
-                onClick={() => handleTriggerAction(activeStore.id, 'إيقاف مؤقت')}
+                disabled={isSubmitting || !activeDetail}
+                onClick={() => handleGovern('lifecycle', 'temporarily_closed', 'إيقاف مؤقت لاستقبال الطلبات من لوحة العمليات')}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -342,68 +225,58 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
                   color: 'var(--bthwani-text-inverse)',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: actionStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                  cursor: isSubmitting || !activeDetail ? 'not-allowed' : 'pointer',
                   fontWeight: 700,
                   fontSize: '12px',
                 }}
               >
-                {actionStatus === 'pending' ? 'جاري الإيقاف...' : 'إيقاف مؤقت استقبال الطلبات'}
+                {isSubmitting ? 'جاري الإيقاف...' : 'إيقاف مؤقت استقبال الطلبات'}
               </button>
             )}
           </div>
 
-          {/* Catalog Approval Gate — PATCH /stores/{id}/catalog-approval */}
+          {/* Catalog Approval Gate — POST /dsh/operator/stores/{id}/governance (action=catalog-approval) */}
           <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--bthwani-control-panel-text)' }}>⚙️ اعتماد الكتالوج</div>
-            {catalogGateFeedback && (
-              <div style={{ fontSize: '11px', fontWeight: 700, color: catalogGateStatus === 'error' ? 'var(--bthwani-control-panel-danger)' : catalogGateStatus === 'approved' ? 'var(--bthwani-control-panel-success)' : 'var(--bthwani-control-panel-warning)' }}>
-                {catalogGateFeedback}
-              </div>
-            )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="button"
-                disabled={catalogGateStatus === 'loading'}
-                onClick={() => handleCatalogApproval(activeStore.id, true)}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-success)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: catalogGateStatus === 'loading' ? 'not-allowed' : 'pointer' }}
+                disabled={isSubmitting || !activeDetail}
+                onClick={() => handleGovern('catalog-approval', 'approved', 'اعتماد الكتالوج من لوحة العمليات')}
+                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-success)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: isSubmitting || !activeDetail ? 'not-allowed' : 'pointer' }}
               >
-                {catalogGateStatus === 'loading' ? 'جارٍ...' : 'اعتماد الكتالوج'}
+                {isSubmitting ? 'جارٍ...' : 'اعتماد الكتالوج'}
               </button>
               <button
                 type="button"
-                disabled={catalogGateStatus === 'loading'}
-                onClick={() => handleCatalogApproval(activeStore.id, false)}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-danger)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: catalogGateStatus === 'loading' ? 'not-allowed' : 'pointer' }}
+                disabled={isSubmitting || !activeDetail}
+                onClick={() => handleGovern('catalog-approval', 'rejected', 'رفض الكتالوج من لوحة العمليات')}
+                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-danger)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: isSubmitting || !activeDetail ? 'not-allowed' : 'pointer' }}
               >
-                {catalogGateStatus === 'loading' ? 'جارٍ...' : 'رفض الكتالوج'}
+                {isSubmitting ? 'جارٍ...' : 'رفض الكتالوج'}
               </button>
             </div>
           </div>
 
-          {/* Marketing Visibility Gate — PATCH /stores/{id}/marketing-visibility */}
+          {/* Marketing Visibility Gate — POST /dsh/operator/stores/{id}/governance (action=marketing-visibility) */}
           <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--bthwani-control-panel-text)' }}>📢 الظهور التسويقي</div>
-            {marketingGateFeedback && (
-              <div style={{ fontSize: '11px', fontWeight: 700, color: marketingGateStatus === 'error' ? 'var(--bthwani-control-panel-danger)' : marketingGateStatus === 'active' ? 'var(--bthwani-control-panel-success)' : 'var(--bthwani-control-panel-warning)' }}>
-                {marketingGateFeedback}
-              </div>
-            )}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="button"
-                disabled={marketingGateStatus === 'loading'}
-                onClick={() => handleMarketingVisibility(activeStore.id, true)}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-success)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: marketingGateStatus === 'loading' ? 'not-allowed' : 'pointer' }}
+                disabled={isSubmitting || !activeDetail}
+                onClick={() => handleGovern('marketing-visibility', 'visible', 'تنشيط الظهور التسويقي من لوحة العمليات')}
+                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-success)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: isSubmitting || !activeDetail ? 'not-allowed' : 'pointer' }}
               >
-                {marketingGateStatus === 'loading' ? 'جارٍ...' : 'تنشيط التسويق'}
+                {isSubmitting ? 'جارٍ...' : 'تنشيط التسويق'}
               </button>
               <button
                 type="button"
-                disabled={marketingGateStatus === 'loading'}
-                onClick={() => handleMarketingVisibility(activeStore.id, false)}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-warning)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: marketingGateStatus === 'loading' ? 'not-allowed' : 'pointer' }}
+                disabled={isSubmitting || !activeDetail}
+                onClick={() => handleGovern('marketing-visibility', 'hidden', 'إيقاف الظهور التسويقي من لوحة العمليات')}
+                style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 700, background: 'var(--bthwani-control-panel-warning)', color: 'var(--bthwani-text-inverse)', border: 'none', borderRadius: '6px', cursor: isSubmitting || !activeDetail ? 'not-allowed' : 'pointer' }}
               >
-                {marketingGateStatus === 'loading' ? 'جارٍ...' : 'إيقاف التسويق'}
+                {isSubmitting ? 'جارٍ...' : 'إيقاف التسويق'}
               </button>
             </div>
           </div>
@@ -417,81 +290,67 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
     <Box gap={3}>
       <div className={styles.surfaceSectionHeader}>
         <h2 className={styles.surfaceSectionTitle}>المتاجر والشركاء</h2>
-        {storesSource === 'api' && (
-          <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-success)', fontWeight: 700 }}>
-            ● مصدر حي — GET /stores
-          </span>
-        )}
-        {storesSource === 'api-error' && (
+        {c.isNonSuccess && identity.state.kind === 'authenticated' && (
           <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-warning)', fontWeight: 700 }}>
-            ⚠ API غير متاح — بيانات معاينة
+            ⚠ تعذر تحميل بيانات المتاجر من API
           </span>
         )}
-        {storesSource === 'loading' && (
+        {identity.state.kind === 'authenticated' && !c.isNonSuccess && (
+          <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-success)', fontWeight: 700 }}>
+            ● مصدر حي — GET /dsh/operator/stores
+          </span>
+        )}
+        {identity.state.kind !== 'authenticated' && (
           <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>
-            جارٍ التحميل من API...
+            يتطلب تسجيل دخول مشغل
           </span>
         )}
       </div>
 
       <WebControlPanelKpiStrip
         items={[
-          { id: 'open', label: 'مفتوحة الآن', value: String(rows.filter(r => (r.customStatus ?? r.status) === 'مفتوح').length), tone: 'success' },
-          { id: 'closed', label: 'مغلقة', value: String(rows.filter(r => (r.customStatus ?? r.status) === 'مغلق').length), tone: 'neutral' },
-          { id: 'surged', label: 'متاجر مضغوطة', value: String(rows.filter(r => r.customStatus === 'مضغوط' || (r.status === 'مضغوط' && !r.customStatus)).length), tone: 'warning' },
-          { id: 'delay', label: 'تأخير التجهيز', value: String(rows.filter(r => r.customStatus === 'تأخير' || (r.status === 'تأخير' && !r.customStatus)).length), tone: 'danger' },
-          { id: 'suspended', label: 'موقوفة مؤقتاً', value: String(rows.filter(r => r.customStatus === 'موقف مؤقتاً').length), tone: 'danger' },
+          { id: 'open', label: 'مفتوحة الآن', value: String(rows.filter(r => r.status === 'مفتوح').length), tone: 'success' },
+          { id: 'closed', label: 'مغلقة', value: String(rows.filter(r => r.status === 'مغلق').length), tone: 'neutral' },
+          { id: 'suspended', label: 'موقوفة مؤقتاً', value: String(rows.filter(r => r.status === 'موقف مؤقتاً').length), tone: 'danger' },
+          { id: 'total', label: 'إجمالي المتاجر', value: String(c.total), tone: 'neutral' },
         ]}
       />
 
       <div className={styles.surfaceInnerLayout}>
         <Box gap={2}>
-          {rows.map((store) => {
-            const resolvedStatus = store.customStatus || store.status;
-            const resolvedStatusTone = store.customStatusTone || store.statusTone;
-            const isSuspended = resolvedStatus === 'موقف مؤقتاً';
-
-            const primaryLabel = isSuspended ? 'تنشيط استقبال' : store.suggestion.action;
-            const secondaryLabel = store.suggestion.secondary || 'عرض التفاصيل';
-
-            return (
-              <WebControlPanelDecisionRow
-                key={store.id}
-                entityId={store.id}
-                entityLabel={`${store.name} — فرع: ${store.branch}`}
-                status={resolvedStatus}
-                statusTone={resolvedStatusTone}
-                risk={resolvedStatusTone === 'danger' ? 'danger' : resolvedStatusTone === 'warning' ? 'warning' : 'neutral'}
-                recommendation={store.suggestion.label}
-                reason={store.suggestion.reason}
-                sla={`التجهيز: ${store.prepTime} | جاهزة: ${store.readyOrders} | ${store.deliveryMode === 'partner_delivery' ? 'توصيل المتجر' : 'توصيل بثواني'}`}
-                onInspect={() => {
-                  setSelectedStoreId(store.id);
+          {rows.map((store) => (
+            <WebControlPanelDecisionRow
+              key={store.id}
+              entityId={store.id}
+              entityLabel={`${store.name} — ${store.branch}`}
+              status={store.status}
+              statusTone={store.statusTone}
+              risk={store.statusTone === 'danger' ? 'danger' : store.statusTone === 'warning' ? 'warning' : 'neutral'}
+              recommendation={store.suggestion.label}
+              reason={store.suggestion.reason}
+              sla={`التجهيز: ${store.prepTime} | جاهزة: ${store.readyOrders} | ${store.deliveryMode === 'partner_delivery' ? 'توصيل المتجر' : 'توصيل بثواني'}`}
+              onInspect={() => {
+                c.selectStore(store.id);
+                router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
+              }}
+              primaryAction={{
+                id: `${store.id}-primary`,
+                label: store.suggestion.action,
+                onAction: () => {
+                  c.selectStore(store.id);
                   router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
-                }}
-                primaryAction={{
-                  id: `${store.id}-primary`,
-                  label: primaryLabel,
-                  onAction: () => {
-                    if (primaryLabel === 'توجيه كباتن') {
-                      router.push(buildOperationsHref('dispatch-assignment'));
-                    } else {
-                      setSelectedStoreId(store.id);
-                      router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
-                    }
-                  },
-                }}
-                secondaryAction={{
-                  id: `${store.id}-secondary`,
-                  label: secondaryLabel,
-                  onAction: () => {
-                    setSelectedStoreId(store.id);
-                    router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
-                  },
-                }}
-              />
-            );
-          })}
+                },
+              }}
+              secondaryAction={{
+                id: `${store.id}-secondary`,
+                label: store.suggestion.secondary || 'عرض التفاصيل',
+                onAction: () => {
+                  c.selectStore(store.id);
+                  router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
+                },
+              }}
+            />
+          ))}
         </Box>
 
         <Box gap={4}>

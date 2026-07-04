@@ -6,5 +6,4 @@ export * from './operations-registry';
 export * from './use-operations-controller';
 export * from './operations.flow-meta';
 export * from './geo-heatmap.helpers';
-export * from './operations.mock';
 export * from './theme';

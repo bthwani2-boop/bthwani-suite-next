@@ -227,13 +227,14 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		var storeStatus string
 		var storeIsVisible bool
 		var storeServiceability string
+		var storePartnerReadiness string
 		var storeCatalogApproval string
 		var storeMarketingVisibility string
 
 		err = tx.QueryRow(`
-			SELECT id, status, is_visible, serviceability_status, catalog_approval_status, marketing_visibility
+			SELECT id, status, is_visible, serviceability_status, partner_readiness, catalog_approval_status, marketing_visibility
 			FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID,
-		).Scan(&storeID, &storeStatus, &storeIsVisible, &storeServiceability, &storeCatalogApproval, &storeMarketingVisibility)
+		).Scan(&storeID, &storeStatus, &storeIsVisible, &storeServiceability, &storePartnerReadiness, &storeCatalogApproval, &storeMarketingVisibility)
 		if errors.Is(err, sql.ErrNoRows) {
 			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
 		}
@@ -244,6 +245,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		if storeStatus != "active" ||
 			!storeIsVisible ||
 			(storeServiceability != "serviceable" && storeServiceability != "limited") ||
+			storePartnerReadiness != "ready" ||
 			storeCatalogApproval != "approved" ||
 			storeMarketingVisibility != "visible" {
 			return Partner{}, ActivationEvent{}, ErrStorePublicationGatesFailed

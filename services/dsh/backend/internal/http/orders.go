@@ -254,6 +254,47 @@ func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, map[string]any{"orders": marshalOrders(list)})
 }
 
+// POST /dsh/operator/orders/{orderId}/cancel
+func (s *protectedStoreServer) handleOperatorCancelOrder(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	orderID := r.PathValue("orderId")
+	if orderID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
+		return
+	}
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	if body.Reason == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cancellation reason is required")
+		return
+	}
+	order, err := orders.CancelOrderByOperator(s.db, orderID, actor.ID, body.Reason)
+	if errors.Is(err, orders.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if errors.Is(err, orders.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
+		return
+	}
+	if errors.Is(err, orders.ErrConflict) {
+		store.SendError(w, http.StatusConflict, "CONFLICT", "order cannot be cancelled in current state")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel order")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
+}
+
 func marshalOrder(o *orders.Order) map[string]any {
 	items := make([]map[string]any, len(o.Items))
 	for i, it := range o.Items {

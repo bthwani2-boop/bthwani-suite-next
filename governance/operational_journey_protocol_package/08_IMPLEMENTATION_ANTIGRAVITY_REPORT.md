@@ -1,14 +1,14 @@
-# 08 — تنفيذ الإصلاح، Antigravity، والتقرير النهائي
+﻿# 08 — تنفيذ الإصلاح، Antigravity، والتقرير النهائي
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `08/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** قواعد التنفيذ في الكود الحي، معيار إخراج أوامر Antigravity، والتقرير النهائي الإلزامي.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 23) قواعد تنفيذ الإصلاح في الكود الحي
@@ -31,6 +31,9 @@ Tests/guards/evidence
 قواعد التنفيذ:
 
 ```text
+* قاعدة Code First: الأولوية دائمًا للكود الحي: تعديل، تصحيح، تنظيف، تنظيم، نقل، دمج، حذف، إضافة، ثم تحقق مختصر وحاسم. ممنوع تحويل التنفيذ إلى كتابة أدلة وتقارير طويلة.
+* قاعدة No report instead of fix: أي نقص مثبت داخل النطاق لا يترك كـ TODO أو blocker أو مجرد تقرير، بل يتحول فورًا إلى تعديل كود حي.
+* الدليل النهائي المختصر: يجب أن يكون الدليل حاسمًا ومختصرًا (Minimal Sufficient Evidence) كدليل حاسم واحد (مثل diff أو مخرج أمر أو نتيجة اختبار)، ولا يجوز إنشاء ملفات أدلة (evidence files) كثيرة ومكررة.
 لا تعتمد على mock/demo/preview كحقيقة تشغيلية.
 لا تنشئ نظام تصميم موازٍ.
 استخدم @bthwani/ui-kit و @bthwani/app-shell حيث يلزم.
@@ -38,7 +41,7 @@ Tests/guards/evidence
 لا تنقل ملفًا أو تحذفه قبل إثبات علاقاته.
 لا تعدل المانح.
 لا تغيّر API أو migration أو route بلا فحص أثر.
-لا تترك نقصًا مثبتًا كتعليق أو TODO داخل النطاق.
+لا تترك نقصًا مثبتًا كتعليق أو TODO داخل النطاق، بل يجب إصلاحه في الكود الحي.
 ```
 
 حالات الواجهة المطلوب تغطيتها عند العلاقة:

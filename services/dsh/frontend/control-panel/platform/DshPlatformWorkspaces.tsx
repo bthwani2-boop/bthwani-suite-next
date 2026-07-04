@@ -1,7 +1,8 @@
 "use client";
+import { colorRoles } from '@bthwani/ui-kit';
 
 import React, { useState } from "react";
-import { opsTheme } from "../../shared/operations";
+
 import { CpButton, CpTextInput, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 
 // 1. Canary / Rollout Flag Workspace
@@ -18,8 +19,8 @@ export function DshPlatformCanaryWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>لوحة إدارة الإطلاق التدريجي (Canary Flags)</h3>
-      <p style={{ margin: 0, fontSize: "0.813rem", color: opsTheme.textMuted }}>إدارة وتدرج نسب الإطلاق وتوجيه زيارات المستخدمين للخدمات المحدثة لتقليل المخاطر:</p>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>لوحة إدارة الإطلاق التدريجي (Canary Flags)</h3>
+      <p style={{ margin: 0, fontSize: "0.813rem", color: colorRoles.brandStructure }}>إدارة وتدرج نسب الإطلاق وتوجيه زيارات المستخدمين للخدمات المحدثة لتقليل المخاطر:</p>
 
       <CpTable>
         <thead>
@@ -38,14 +39,14 @@ export function DshPlatformCanaryWorkspace() {
               <CpTableCell>{flag.scope}</CpTableCell>
               <CpTableCell>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <div style={{ width: "5rem", height: "0.5rem", background: opsTheme.surfaceInset, borderRadius: "0.25rem", overflow: "hidden" }}>
-                    <div style={{ width: `${flag.percentage}%`, height: "100%", background: opsTheme.brand }} />
+                  <div style={{ width: "5rem", height: "0.5rem", background: colorRoles.surfaceBase, borderRadius: "0.25rem", overflow: "hidden" }}>
+                    <div style={{ width: `${flag.percentage}%`, height: "100%", background: colorRoles.brandAction }} />
                   </div>
                   <span>{flag.percentage}%</span>
                 </div>
               </CpTableCell>
               <CpTableCell>
-                <span style={{ color: flag.status === "مكتمل" ? opsTheme.success : flag.status === "نشط" ? opsTheme.brand : opsTheme.textMuted }}>{flag.status}</span>
+                <span style={{ color: flag.status === "مكتمل" ? colorRoles.brandStructure : flag.status === "نشط" ? colorRoles.brandAction : colorRoles.brandStructure }}>{flag.status}</span>
               </CpTableCell>
               <CpTableCell>
                 {flag.percentage < 100 && (
@@ -71,17 +72,17 @@ export function DshPlatformHealthWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>مركز مراقبة أداء وصحة الخدمات</h3>
-      <p style={{ margin: 0, fontSize: "0.813rem", color: opsTheme.textMuted }}>أداء المعالجة، واستهلاك الذاكرة، وزمن الاستجابة للخدمات السيادية:</p>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>مركز مراقبة أداء وصحة الخدمات</h3>
+      <p style={{ margin: 0, fontSize: "0.813rem", color: colorRoles.brandStructure }}>أداء المعالجة، واستهلاك الذاكرة، وزمن الاستجابة للخدمات السيادية:</p>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
         {services.map(srv => (
-          <div key={srv.name} style={{ padding: "1rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.5rem", background: "white" }}>
+          <div key={srv.name} style={{ padding: "1rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.5rem", background: "white" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
               <strong>{srv.name}</strong>
-              <span style={{ color: opsTheme.success }}>{srv.status}</span>
+              <span style={{ color: colorRoles.brandStructure }}>{srv.status}</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.8rem", color: opsTheme.textMuted }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.8rem", color: colorRoles.brandStructure }}>
               <div>زمن الاستجابة: {srv.responseTime}</div>
               <div>استهلاك المعالج: {srv.cpu}</div>
               <div>استهلاك الذاكرة: {srv.memory}</div>
@@ -96,7 +97,7 @@ export function DshPlatformHealthWorkspace() {
 // 3. Rollback & History Workspace
 export function DshPlatformRollbackWorkspace() {
   const [history, setHistory] = useState([
-    { id: "event-001", action: "تحديث متغير: dsh_checkout_timeout_ms", oldValue: "5000", newValue: "3000", operator: "سامي القحطاني", timestamp: "منذ ساعة واحدة", status: "نشط" },
+    { id: "event-001", action: "تحديث متغير: dsh_checkout_timeout_ms", oldValue: "5000", newValue: "4500", operator: "سامي القحطاني", timestamp: "منذ ساعة واحدة", status: "نشط" },
     { id: "event-002", action: "تفعيل Canary: dsh-new-checkout-flow", oldValue: "0%", newValue: "10%", operator: "خالد الحربي", timestamp: "منذ ساعتين", status: "نشط" },
   ]);
   const [result, setResult] = useState<string | null>(null);
@@ -108,8 +109,8 @@ export function DshPlatformRollbackWorkspace() {
 
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>سجل التعديلات وإجراءات التراجع السريع (Rollback)</h3>
-      {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>سجل التعديلات وإجراءات التراجع السريع (Rollback)</h3>
+      {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
 
       <CpTable>
         <thead>
@@ -134,7 +135,7 @@ export function DshPlatformRollbackWorkspace() {
                 {ev.status !== "تم التراجع" ? (
                   <CpButton onClick={() => handleRollback(ev.id)}>تراجع سريع</CpButton>
                 ) : (
-                  <span style={{ color: opsTheme.textMuted }}>تم التراجع</span>
+                  <span style={{ color: colorRoles.brandStructure }}>تم التراجع</span>
                 )}
               </CpTableCell>
             </tr>
@@ -149,19 +150,19 @@ export function DshPlatformRollbackWorkspace() {
 export function DshPlatformOverviewWorkspace() {
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.5rem" }} dir="rtl">
-      <h3 style={{ margin: 0, color: opsTheme.brand }}>نظرة عامة على البنية السيادية للمنصة</h3>
+      <h3 style={{ margin: 0, color: colorRoles.brandAction }}>نظرة عامة على البنية السيادية للمنصة</h3>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-        <div style={{ padding: "1.25rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.75rem", background: "white" }}>
+        <div style={{ padding: "1.25rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.75rem", background: "white" }}>
           <h4 style={{ margin: "0 0 0.5rem" }}>توزيع النشر والطبقات</h4>
-          <p style={{ margin: 0, fontSize: "0.813rem", color: opsTheme.textMuted, lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: "0.813rem", color: colorRoles.brandStructure, lineHeight: 1.6 }}>
             تعمل منصة DSH كحلقة الوصل الكبرى لإدارة عمليات الكباتن، العملاء، والشركاء مع ربط مالي مؤمن بالكامل عبر جسر WLT الاستراتيجي.
           </p>
         </div>
 
-        <div style={{ padding: "1.25rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.75rem", background: "white" }}>
+        <div style={{ padding: "1.25rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.75rem", background: "white" }}>
           <h4 style={{ margin: "0 0 0.5rem" }}>تحديثات الاستقرار التشغيلي</h4>
-          <p style={{ margin: 0, fontSize: "0.813rem", color: opsTheme.textMuted, lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: "0.813rem", color: colorRoles.brandStructure, lineHeight: 1.6 }}>
             تم تعزيز تصفير الأخطاء بتضمين حواجز أمان سيادية تمنع حدوث تسريبات في الحسابات المالية أو بوابات الدفع أثناء عمليات التحديث.
           </p>
         </div>

@@ -11,8 +11,14 @@ import {
   WebControlPanelStatusTag,
 } from '@bthwani/ui-kit/web';
 import { fetchDshRuntimeOrders, type DshRuntimeOrderRow } from '../../shared/operations/dsh-operational-runtime-adapter';
-import { getDshOrderRuntimeBaseUrl } from '../../shared';
 import { EXCEPTION_TICKET_MAP } from '../../shared/orders';
+import {
+  ESCALATION_CATEGORY_LABELS,
+  ESCALATION_SEVERITY_LABELS,
+  fetchOperatorEscalations,
+  updateEscalation,
+  type DshReadinessEscalation,
+} from '../../shared/field-readiness';
 import { Box, KeyValueList } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
@@ -35,6 +41,31 @@ type SelectedItem =
   | { type: 'rescue'; id: string }
   | { type: 'playbook'; id: string }
   | null;
+
+type ExceptionsStateItem = {
+  id: string;
+  type: string;
+  lifecycleState: string;
+  affectedSurface: string;
+  ownerQueue: string;
+  severity: string;
+  currentOwner: string;
+  startTime: string;
+  lastAction: string;
+  suggestedAction: string;
+  resolutionPath: string;
+  routeHint: string;
+  evidenceNeeded: boolean;
+  onDemandDetailPolicy: string;
+  note: string;
+  statusTone: string;
+  customOwner: string;
+  customQueue: string;
+  customSlaState: 'نشط' | 'مصعّد' | 'محلول';
+  customNote: string;
+  customStatusTone: 'warning' | 'danger' | 'best' | 'brand';
+  realId?: string;
+};
 
 const WORKSPACE_FILTERS: ReadonlyArray<{ id: WorkspaceFilterId; label: string }> = [
   { id: 'all', label: 'الكل' },
@@ -86,6 +117,39 @@ const POLICY_LABELS: Record<string, string> = {
   'finance-preview-only': 'مالي للقراءة فقط',
 };
 
+function mapReadinessEscalationToException(item: DshReadinessEscalation): ExceptionsStateItem {
+  const isResolved = item.status === 'resolved';
+  const isEscalated = item.status === 'acknowledged' || item.status === 'escalated_further';
+  const categoryLabel = ESCALATION_CATEGORY_LABELS[item.category] ?? item.category;
+  const severityLabel = ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity;
+  const note = item.resolutionNote ? `${item.description} | ${item.resolutionNote}` : item.description;
+
+  return {
+    id: item.id,
+    type: categoryLabel,
+    lifecycleState: item.status,
+    affectedSurface: 'app-field',
+    ownerQueue: 'partner-stores',
+    severity: severityLabel,
+    currentOwner: isResolved ? item.resolvedBy ?? 'إدارة الشركاء' : 'إدارة الشركاء',
+    startTime: new Date(item.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+    lastAction: isResolved ? 'محلول' : isEscalated ? 'قيد المراجعة' : 'مفتوح',
+    suggestedAction: isResolved ? 'مراجعة الإغلاق' : 'مراجعة جاهزية المتجر ومعالجة التصعيد',
+    resolutionPath: isResolved ? 'تفاصيل' : 'حل',
+    routeHint: buildOperationsHref('partner-stores', { orderId: item.storeId }),
+    evidenceNeeded: item.status !== 'resolved',
+    onDemandDetailPolicy: 'detail-on-open',
+    note,
+    statusTone: isResolved ? 'best' : item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'warning',
+    customOwner: isResolved ? item.resolvedBy ?? 'إدارة الشركاء' : 'إدارة الشركاء',
+    customQueue: 'partner-stores',
+    customSlaState: isResolved ? 'محلول' : isEscalated ? 'مصعّد' : 'نشط',
+    customNote: note,
+    customStatusTone: isResolved ? 'best' : item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'warning',
+    realId: item.id,
+  };
+}
+
 function byWorkspacePriority(a: DshFlowRegistryEntry, b: DshFlowRegistryEntry) {
   const aHidden = a.hiddenCompat === true || a.visibility === 'hidden-compat' ? 1 : 0;
   const bHidden = b.hiddenCompat === true || b.visibility === 'hidden-compat' ? 1 : 0;
@@ -119,84 +183,21 @@ export function ExceptionsEscalationsScreen({
     'audit-support-sla': { label: 'تدقيق الدعم والالتزام (SLA Audit)', owner: 'الدعم الفني' },
   };
 
-  const ISSUE_TYPE_LABELS: Record<string, string> = {
-    delayed_delivery: 'تأخير في التوصيل',
-    wrong_items: 'أصناف خاطئة',
-    missing_items: 'أصناف مفقودة',
-    payment_issue: 'مشكلة دفع',
-    other: 'مشكلة أخرى',
-  };
-  const ACTOR_SURFACE_MAP: Record<string, string> = {
-    client: 'app-client',
-    partner: 'app-partner',
-  };
-
-type ExceptionsStateItem = {
-  id: string;
-  type: string;
-  lifecycleState: string;
-  affectedSurface: string;
-  ownerQueue: string;
-  severity: string;
-  currentOwner: string;
-  startTime: string;
-  lastAction: string;
-  suggestedAction: string;
-  resolutionPath: string;
-  routeHint: string;
-  evidenceNeeded: boolean;
-  onDemandDetailPolicy: string;
-  note: string;
-  statusTone: string;
-  customOwner: string;
-  customQueue: string;
-  customSlaState: 'نشط' | 'مصعّد' | 'محلول';
-  customNote: string;
-  customStatusTone: 'warning' | 'danger' | 'best' | 'brand';
-  realId?: string;
-};
-
   const [exceptions, setExceptions] = React.useState<ExceptionsStateItem[]>(() => []);
-
-  // Fetch real support escalations from backend and prepend them to the list.
+  // Fetch real readiness escalations from the shared DSH client.
   React.useEffect(() => {
-    const baseUrl = getDshOrderRuntimeBaseUrl();
-    if (!baseUrl) return;
     let cancelled = false;
-    globalThis['fetch'](`${baseUrl.replace(/\/$/, '')}/support/escalations?status=open&limit=50`, {
-      headers: { Accept: 'application/json' },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: { tickets?: { id: string; order_id: string; actor: string; issue_type: string; description: string; status: string; created_at: string }[] } | null) => {
-        if (cancelled || !data?.tickets?.length) return;
-        const realItems = data.tickets.map((t) => ({
-          id: t.id,
-          type: ISSUE_TYPE_LABELS[t.issue_type] ?? t.issue_type,
-          lifecycleState: t.status,
-          affectedSurface: ACTOR_SURFACE_MAP[t.actor] ?? t.actor,
-          ownerQueue: 'customer-support',
-          severity: 'متوسط',
-          currentOwner: 'فريق الدعم',
-          startTime: new Date(t.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-          lastAction: t.status === 'open' ? 'مفتوح' : 'قيد المعالجة',
-          suggestedAction: 'مراجعة ومعالجة',
-          resolutionPath: 'حل',
-          routeHint: `/operations?orderId=${t.order_id}`,
-          evidenceNeeded: true,
-          onDemandDetailPolicy: 'detail-on-open',
-          note: t.description,
-          statusTone: 'warning',
-          customOwner: 'فريق الدعم',
-          customQueue: 'customer-support',
-          customSlaState: 'نشط' as const,
-          customNote: t.description,
-          customStatusTone: 'warning' as const,
-          realId: t.id,
-        }));
+    fetchOperatorEscalations('open')
+      .then((items) => {
+        if (cancelled) return;
+        const realItems = items.map(mapReadinessEscalationToException);
         setExceptions((prev) => [...realItems, ...prev.filter((e) => !e.realId)]);
-        setKpis((prev) => ({ ...prev, open: prev.open + realItems.length }));
+        setKpis((prev) => ({ ...prev, open: realItems.length }));
       })
-      .catch(() => { /* API unavailable — preview data remains */ });
+      .catch(() => {
+        if (cancelled) return;
+        setActionFeedback('تعذر تحميل تصعيدات الجاهزية من DSH Runtime.');
+      });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -210,7 +211,7 @@ type ExceptionsStateItem = {
   }));
 
   const [activeForm, setActiveForm] = React.useState<null | 'escalate' | 'resolve'>(null);
-  const [actionStatus, setActionStatus] = React.useState<'idle' | 'pending' | 'success'>('idle');
+  const [actionStatus, setActionStatus] = React.useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
   const retry = React.useCallback(() => setRetryCount((n) => n + 1), []);
@@ -277,19 +278,15 @@ type ExceptionsStateItem = {
 
     const exc = exceptions.find((e) => e.id === id);
     if (exc?.realId) {
-      const baseUrl = getDshOrderRuntimeBaseUrl();
-      if (baseUrl) {
-        globalThis['fetch'](`${baseUrl.replace(/\/$/, '')}/support/escalations/${exc.realId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ status: 'in-review' }),
-        })
-          .then((r) => { if (!r.ok) { throw new Error('api error'); } return r.json(); })
-          .then(() => applyEscalateLocally())
-          .catch(() => applyEscalateLocally());
-      } else {
-        applyEscalateLocally();
-      }
+      updateEscalation(exc.realId, {
+        status: 'acknowledged',
+        resolutionNote: noteText.trim() || 'تمت مراجعة التصعيد وتحويله للمالك التشغيلي.',
+      })
+        .then(() => applyEscalateLocally())
+        .catch(() => {
+          setActionStatus('error');
+          setActionFeedback('تعذر حفظ التصعيد في DSH Runtime. لم يتم تطبيق نجاح محلي بديل.');
+        });
     } else {
       applyEscalateLocally();
     }
@@ -318,19 +315,15 @@ type ExceptionsStateItem = {
 
     const exc = exceptions.find((e) => e.id === id);
     if (exc?.realId) {
-      const baseUrl = getDshOrderRuntimeBaseUrl();
-      if (baseUrl) {
-        globalThis['fetch'](`${baseUrl.replace(/\/$/, '')}/support/escalations/${exc.realId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ status: 'resolved' }),
-        })
-          .then((r) => { if (!r.ok) { throw new Error('api error'); } return r.json(); })
-          .then(() => applyResolveLocally())
-          .catch(() => applyResolveLocally());
-      } else {
-        applyResolveLocally();
-      }
+      updateEscalation(exc.realId, {
+        status: 'resolved',
+        resolutionNote: noteText.trim() || 'تم حل التصعيد من لوحة التحكم.',
+      })
+        .then(() => applyResolveLocally())
+        .catch(() => {
+          setActionStatus('error');
+          setActionFeedback('تعذر حفظ الحل في DSH Runtime. لم يتم تطبيق نجاح محلي بديل.');
+        });
     } else {
       applyResolveLocally();
     }
@@ -378,7 +371,7 @@ type ExceptionsStateItem = {
 
   const summaryKpi = [
     { id: 'runtime-exc', label: 'استثناءات Runtime', value: runtimeExcState.loaded ? String(runtimeExcState.orders.length) : '—', tone: 'danger' as const },
-    { id: 'open', label: 'مفتوحة (Preview)', value: String(kpis.open), tone: 'warning' as const },
+    { id: 'open', label: 'تصعيدات الجاهزية', value: String(kpis.open), tone: 'warning' as const },
     { id: 'resolve', label: 'حل', value: String(kpis.resolve), tone: 'neutral' as const },
     { id: 'source', label: 'مصدر البيانات', value: runtimeExcState.loaded ? 'DSH Runtime' : 'Preview', tone: runtimeExcState.loaded ? 'success' as const : 'warning' as const },
   ];
@@ -792,7 +785,7 @@ type ExceptionsStateItem = {
 
           {/* 1. Active Exceptions & Escalations Queue */}
           <WebControlPanelQueue
-            title={runtimeExcState.loaded ? 'الاستثناءات النشطة (Preview)' : 'الاستثناءات النشطة'}
+            title={runtimeExcState.loaded ? 'الاستثناءات النشطة من DSH' : 'الاستثناءات النشطة'}
             meta={`${exceptions.filter((e) => e.customSlaState !== 'محلول').length} استثناءات مفتوحة`}
           >
             {exceptions.map((exc) => {

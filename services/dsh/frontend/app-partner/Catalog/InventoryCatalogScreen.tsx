@@ -2,7 +2,7 @@
  * InventoryCatalogScreen — Partner Surface
  *
  * Runtime truth: GET /stores/{store_id}/products via dsh-product-api.client.ts.
- * Falls back to workflow store (in-session submitted products) when API unreachable.
+ * API unavailable means no runtime inventory list is rendered.
  *
  * Partner surface owns ONLY: stock, availability, preparationNote, internalNote, price override.
  * Catalog identity (name, category, publishStage) comes from the DSH backend — partners do not define it locally.
@@ -35,7 +35,7 @@ type DshCanonicalProductCard = {
   preparationNote?: string;
   internalNote?: string;
 };
-import { getDshProductRuntimeClient, getDshStoreVisibilityRuntimeClient } from '../../shared/runtime/ui-only-runtime-clients';
+import { getDshProductRuntimeClient } from '../../shared/runtime/ui-only-runtime-clients';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
 import {
   type DshCatalogDomainId,
@@ -49,8 +49,6 @@ import {
   DSH_OPERATIONAL_FACETS,
   isDshOperationalFacet,
 } from '../../shared/catalog';
-import type { DshStoreVisibilityTransportError } from '../../shared/partner/dsh-client-visibility.model';
-import type { PartnerReadinessStatus } from '../../shared/partner/dsh-client-visibility.model';
 
 import {
   BThwaniFilterRail,
@@ -250,28 +248,6 @@ function findDetailByLookupCode(barcode: string): InventoryCatalogItemDetail | u
   });
 }
 
-function mapCanonicalToListItem(product: DshCanonicalProductCard): InventoryCatalogListItem {
-  return {
-    id: product.id,
-    name: product.name,
-    categoryLabel: product.categoryLabel,
-    isPrivateStoreProduct: false,
-    isCatalogOwned: product.publishStage === 'catalog-adopted' || product.publishStage === 'client-visible',
-    catalogLinked: true,
-    mediaKey: product.mediaKey,
-    priceLabel: product.priceLabel,
-    stockCount: product.stockCount ?? 0,
-    available: product.isAvailable,
-    lowStock: typeof product.stockCount === 'number' ? product.stockCount <= 3 : false,
-    publishStage: product.publishStage,
-    reviewNeeded: product.publishStage !== 'client-visible',
-  };
-}
-
-const canonicalPreviewListItems: readonly InventoryCatalogListItem[] = [];
-
-const centralInventoryItems: readonly InventoryCatalogListItem[] = [];
-
 function mapApiStatusToPublishStage(approvalStatus: string): string {
   switch (approvalStatus) {
     case 'client_visible': return 'client-visible';
@@ -283,49 +259,6 @@ function mapApiStatusToPublishStage(approvalStatus: string): string {
     case 'needs_fix': return 'needs-fix';
     default: return approvalStatus;
   }
-}
-
-function dedupeItems(items: ReadonlyArray<InventoryCatalogListItem>) {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
-}
-
-function buildListItems(canonicalStoreId?: string): InventoryCatalogListItem[] {
-  const scopedCanonical = canonicalPreviewListItems.filter(
-    (item) => !canonicalStoreId || item.isCatalogOwned,
-  );
-
-  const partnerRecords = getPartnerQueueRecords();
-  const mappedRecords = partnerRecords
-    .filter((r) => r.entityType === 'product' || r.entityType === 'product-media')
-    .map((r) => {
-      const isPrivate = r.entityType !== 'product';
-      const catalogLinked = r.entityType === 'product';
-      return {
-        id: r.id,
-        name: r.title,
-        categoryLabel: translateEntityType(r.entityType),
-        isPrivateStoreProduct: isPrivate,
-        isCatalogOwned: r.stage === 'client-visible' || r.stage === 'catalog-adopted',
-        catalogLinked,
-        priceLabel: (r.metadata as any)?.priceLabel || '0.00 ر.ي',
-        stockCount: 0,
-        available: true,
-        lowStock: false,
-        publishStage: r.stage,
-        reviewNeeded: r.stage !== 'client-visible',
-      } satisfies InventoryCatalogListItem;
-    });
-
-  return dedupeItems([
-    ...centralInventoryItems,
-    ...mappedRecords,
-    ...scopedCanonical,
-  ]);
 }
 
 // ── Search state helper ───────────────────────────────────────────────
@@ -409,104 +342,21 @@ function getAvailableProductFacets(items: InventoryCatalogListItem[]): DshProduc
 }
 
 // ── Store Readiness Gate ──────────────────────────────────────────────
-// Wires PATCH /stores/{id}/partner-readiness to the partner surface.
-// Only rendered when canonicalStoreId is present.
-
-type ReadinessGateState =
-  | { kind: 'idle'; status: PartnerReadinessStatus }
-  | { kind: 'loading' }
-  | { kind: 'success'; clientVisible: boolean; status: PartnerReadinessStatus }
-  | { kind: 'error'; message: string };
-
-function StoreReadinessGate({ storeId }: { storeId: string }) {
+// Store readiness (partner_readiness) is a publication gate owned by control-panel
+// store governance. app-partner renders the gate status read-only and never mutates it.
+function StoreReadinessGate({ storeId: _storeId }: { storeId: string }) {
   const { direction } = useDirection();
-  const [gate, setGate] = React.useState<ReadinessGateState>({
-    kind: 'idle',
-    status: 'ready',
-  });
-
-  const retry = React.useCallback(() => setGate({ kind: 'idle', status: 'ready' }), []);
-
-  const handleToggle = React.useCallback(
-    async (nextStatus: PartnerReadinessStatus) => {
-      const client = getDshStoreVisibilityRuntimeClient();
-      if (!client) {
-        setGate({ kind: 'error', message: 'لم يُعثر على عنوان API — تحقق من EXPO_PUBLIC_DSH_API_BASE_URL.' });
-        return;
-      }
-      setGate({ kind: 'loading' });
-      try {
-
-        const res = await client.updatePartnerReadiness(storeId, nextStatus);
-        setGate({ kind: 'success', clientVisible: res.client_visible, status: res.partner_readiness_status });
-      } catch (err: unknown) {
-        const typedErr = err as Partial<DshStoreVisibilityTransportError>;
-        if (typedErr.kind === 'offline') {
-          setGate({ kind: 'error', message: 'لا يوجد اتصال بالشبكة.' });
-        } else if (typedErr.kind === 'http') {
-          setGate({ kind: 'error', message: `خطأ من الخادم (${(typedErr as { status: number }).status}).` });
-        } else {
-          setGate({ kind: 'error', message: 'حدث خطأ غير متوقع.' });
-        }
-      }
-    },
-    [storeId],
-  );
-
-  const currentStatus =
-    gate.kind === 'idle' || gate.kind === 'error'
-      ? gate.kind === 'idle' ? gate.status : 'ready'
-      : gate.kind === 'success' ? gate.status : 'ready';
-
-  const isReady = currentStatus === 'ready';
 
   return (
-    <Surface tone={isReady ? 'default' : 'warning'} padding={2} gap={2} border>
+    <Surface tone="default" padding={2} gap={2} border>
       <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', gap: spacing[2] }}>
         <Box style={{ flex: 1, gap: 2 }}>
           <Text role="bodyStrong" align={direction === 'rtl' ? 'end' : 'start'}>
             جاهزية المتجر للعميل
           </Text>
-          {gate.kind === 'success' ? (
-            <Text role="caption" tone={gate.clientVisible ? 'success' : 'warning'} align={direction === 'rtl' ? 'end' : 'start'}>
-              {gate.clientVisible ? 'المتجر ظاهر للعميل' : 'المتجر مخفي عن العميل'}
-              {' · client_visible: '}
-              {gate.clientVisible ? 'true' : 'false'}
-            </Text>
-          ) : gate.kind === 'error' ? (
-            <Box style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-              <Text role="caption" tone="danger" align={direction === 'rtl' ? 'end' : 'start'}>
-                {gate.message}
-              </Text>
-              <Button label="إعادة المحاولة" tone="secondary" size="sm" onPress={retry} />
-            </Box>
-          ) : gate.kind === 'loading' ? (
-            <Text role="caption" tone="muted" align={direction === 'rtl' ? 'end' : 'start'}>
-              جاري التحديث...
-            </Text>
-          ) : (
-            <Text role="caption" tone="muted" align={direction === 'rtl' ? 'end' : 'start'}>
-              {isReady ? 'الوضع الحالي: جاهز' : 'الوضع الحالي: موقوف'}
-            </Text>
-          )}
-        </Box>
-        <Box style={{ flexDirection: resolveRowDirection(direction), gap: 6 }}>
-          <Button
-            label="جاهز"
-            size="sm"
-            tone={isReady ? 'success' : 'secondary'}
-            fullWidth={false}
-            disabled={gate.kind === 'loading' || isReady}
-            onPress={() => handleToggle('ready')}
-          />
-          <Button
-            label="إيقاف مؤقت"
-            size="sm"
-            tone={!isReady ? 'warning' : 'secondary'}
-            fullWidth={false}
-            disabled={gate.kind === 'loading' || !isReady}
-            onPress={() => handleToggle('paused')}
-          />
+          <Text role="caption" tone="muted" align={direction === 'rtl' ? 'end' : 'start'}>
+            تُدار جاهزية الظهور للعميل من لوحة التحكم ضمن بوابات النشر — لا يملك تطبيق الشريك تفعيلها أو إيقافها.
+          </Text>
         </Box>
       </Box>
     </Surface>
@@ -1191,9 +1041,7 @@ function InventoryCatalogContent({
   const [query, setQuery] = React.useState('');
   const [filter, setFilter] = React.useState<ActiveHierarchyFilter>({});
   const [viewMode, setViewMode] = React.useState<ViewMode>('dense-list');
-  const [items, setItems] = React.useState<InventoryCatalogListItem[]>(() =>
-    buildListItems(canonicalStoreId),
-  );
+  const [items, setItems] = React.useState<InventoryCatalogListItem[]>([]);
 
   // Fetch live products from GET /stores/{store_id}/products
   React.useEffect(() => {
@@ -1202,7 +1050,7 @@ function InventoryCatalogContent({
     const apiClient = getDshProductRuntimeClient();
     apiClient.listProducts(canonicalStoreId, { limit: 100 })
       .then((resp) => {
-        if (cancelled || !resp.products.length) return;
+        if (cancelled) return;
         const liveItems = resp.products.map((p): InventoryCatalogListItem => ({
           id: p.id,
           name: p.name,
@@ -1219,7 +1067,11 @@ function InventoryCatalogContent({
         }));
         setItems(liveItems);
       })
-      .catch(() => { /* keep preview items on error */ });
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+        setToolMessage('تعذر تحميل كتالوج المنتجات من DSH Runtime.');
+      });
     return () => { cancelled = true; };
   }, [canonicalStoreId]);
 

@@ -38,10 +38,10 @@ export type AdminKpiMetrics = {
   readonly environmentMode: string;
 };
 
-export function buildAdminKpiMetrics(): AdminKpiMetrics {
+export function buildAdminKpiMetrics(usersCount: number): AdminKpiMetrics {
   return {
-    rolesCount: 6,
-    usersCount: 5,
+    rolesCount: ADMIN_ROLES.length,
+    usersCount,
     environmentMode: "وضع تجريبي (محاكاة)",
   };
 }
@@ -164,22 +164,6 @@ export const ADMIN_PLATFORM_PERMISSIONS = [
   { id: 'override-sla', name: 'تجاوز SLA', scope: 'operations', description: 'تعطيل أو استثناء شروط وقت التوصيل.' },
   { id: 'platform-vars-rollback', name: 'التراجع عن المتغيرات', scope: 'platform', description: 'التراجع الفوري لإصلاح الأعطال.' },
   { id: 'view-finance-readonly', name: 'عرض المالية', scope: 'finance', description: 'قراءة تقارير WLT بدون إمكانية التعديل.' }
-] as const;
-
-export type DshAdminUser = {
-  readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  readonly roleId: DshRoleId;
-  readonly status: "active" | "pending" | "suspended";
-  readonly lastAccess: string;
-};
-
-export const MOCK_ADMIN_USERS: readonly DshAdminUser[] = [
-  { id: 'usr-1', name: 'أحمد الشريف', email: 'ahmed@bthwani.sa', roleId: 'super-admin', status: 'active', lastAccess: 'منذ ساعتين' },
-  { id: 'usr-2', name: 'فاطمة القحطاني', email: 'fatima@bthwani.sa', roleId: 'platform-approver', status: 'active', lastAccess: 'منذ يوم' },
-  { id: 'usr-3', name: 'خالد النعماني', email: 'khaled@bthwani.sa', roleId: 'platform-operator', status: 'active', lastAccess: 'منذ 3 أيام' },
-  { id: 'usr-4', name: 'سارة العتيبي', email: 'sara@bthwani.sa', roleId: 'viewer', status: 'pending', lastAccess: 'لم يسجل دخول بعد' }
 ] as const;
 
 export const ALL_DSH_ROLE_IDS: readonly DshRoleId[] = [

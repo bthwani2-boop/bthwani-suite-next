@@ -70,12 +70,14 @@ Match effort to task nature. Never over-engineer or under-deliver.
 
 Default: smallest action, fastest response, precise output.
 
+
 <!-- lean-ctx -->
 ## lean-ctx
 
 lean-ctx is active — the MCP tools replace native equivalents.
 Full rules: LEAN-CTX.md (open on demand — do not auto-load).
 <!-- /lean-ctx -->
+
 
 
 
@@ -103,5 +105,5 @@ When an agent encounters a guard, governance file, or skill whose content is inc
 3. **Keep edits minimal (YAGNI)** using [bthwani-ponytail-yagni](.agents/skills/bthwani-ponytail-yagni/SKILL.md).
 4. **Perform targeted verification**:
    - Run `git --no-pager diff --check` for textual governance updates.
-   - Run the specific modified guard script (e.g. [guard-automated-execution-policy.mjs](tools/guards/guard-automated-execution-policy.mjs)) and verify it returns exit code 0.
+   - Run the specific modified guard script (e.g. `node tools/guards/cleanup-policy-gate.mjs`) and verify it returns exit code 0.
    - Run [bthwani-agent-skill-integrity](.agents/skills/bthwani-agent-skill-integrity/SKILL.md) if skills or catalog records were modified.

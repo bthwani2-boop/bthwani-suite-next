@@ -1,18 +1,16 @@
 "use client";
+import { colorRoles } from '@bthwani/ui-kit';
 
 import React, { useState } from "react";
-import { opsTheme } from "../../shared/operations";
+
 import { usePlatformVarsModel } from "../../shared/platform/platform-vars.model";
 import { VarsDomainId } from "../../shared/platform/platform-vars.view-model";
+import { usePlatformAuditStateHook } from "../../shared/platform/platform-audit-state";
 import { CpButton, CpTextInput, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 
 export function DshPlatformVarsWorkspace() {
   const [activeDomain, setActiveDomain] = useState<VarsDomainId>("dsh");
-  const [auditEvents, setAuditEvents] = useState<any[]>([]);
-
-  const addAuditEvent = (event: any) => {
-    setAuditEvents((prev) => [...prev, { ...event, id: `audit-${Date.now()}`, timestamp: new Date().toISOString() }]);
-  };
+  const { addAuditEvent } = usePlatformAuditStateHook();
 
   const model = usePlatformVarsModel({
     activeDomain,
@@ -26,15 +24,15 @@ export function DshPlatformVarsWorkspace() {
         gridTemplateColumns: "22rem 1fr",
         gap: "1.5rem",
         padding: "1rem",
-        background: opsTheme.surface,
+        background: colorRoles.surfaceBase,
         borderRadius: "0.75rem",
-        border: `1px solid ${opsTheme.line}`,
+        border: `1px solid ${colorRoles.surfaceBase}`,
       }}
       dir="rtl"
     >
       {/* Right Column: Variable list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", borderLeft: `1px solid ${opsTheme.line}`, paddingLeft: "1rem" }}>
-        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: opsTheme.brand }}>مجالات المتغيرات</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", borderLeft: `1px solid ${colorRoles.surfaceBase}`, paddingLeft: "1rem" }}>
+        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: colorRoles.brandAction }}>مجالات المتغيرات</h3>
         <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
           {(["dsh", "wlt", "provider", "design"] as const).map((dom) => (
             <button
@@ -45,9 +43,9 @@ export function DshPlatformVarsWorkspace() {
                 borderRadius: "4px",
                 fontSize: "10px",
                 fontWeight: 700,
-                border: activeDomain === dom ? "none" : `1px solid ${opsTheme.line}`,
-                backgroundColor: activeDomain === dom ? opsTheme.brand : "transparent",
-                color: activeDomain === dom ? opsTheme.textInverse : opsTheme.textMuted,
+                border: activeDomain === dom ? "none" : `1px solid ${colorRoles.surfaceBase}`,
+                backgroundColor: activeDomain === dom ? colorRoles.brandAction : "transparent",
+                color: activeDomain === dom ? colorRoles.surfaceBase : colorRoles.brandStructure,
                 cursor: "pointer",
               }}
             >
@@ -66,8 +64,8 @@ export function DshPlatformVarsWorkspace() {
                 fontSize: "10px",
                 border: "none",
                 borderRadius: "3px",
-                background: model.activeScope === "all" ? opsTheme.brandSurface : "transparent",
-                color: model.activeScope === "all" ? opsTheme.brand : opsTheme.textMuted,
+                background: model.activeScope === "all" ? colorRoles.surfaceBase : "transparent",
+                color: model.activeScope === "all" ? colorRoles.brandAction : colorRoles.brandStructure,
                 cursor: "pointer",
               }}
             >
@@ -82,8 +80,8 @@ export function DshPlatformVarsWorkspace() {
                   fontSize: "10px",
                   border: "none",
                   borderRadius: "3px",
-                  background: model.activeScope === sc ? opsTheme.brandSurface : "transparent",
-                  color: model.activeScope === sc ? opsTheme.brand : opsTheme.textMuted,
+                  background: model.activeScope === sc ? colorRoles.surfaceBase : "transparent",
+                  color: model.activeScope === sc ? colorRoles.brandAction : colorRoles.brandStructure,
                   cursor: "pointer",
                 }}
               >
@@ -95,7 +93,7 @@ export function DshPlatformVarsWorkspace() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem", overflowY: "auto", maxHeight: "30rem" }}>
           {model.filteredRecords.length === 0 ? (
-            <div style={{ padding: "1rem", textAlign: "center", color: opsTheme.textMuted, fontSize: "0.8rem" }}>لا توجد متغيرات حالياً في هذا المجال.</div>
+            <div style={{ padding: "1rem", textAlign: "center", color: colorRoles.brandStructure, fontSize: "0.8rem" }}>لا توجد متغيرات حالياً في هذا المجال.</div>
           ) : (
             model.filteredRecords.map((rec) => (
               <div
@@ -104,17 +102,17 @@ export function DshPlatformVarsWorkspace() {
                 style={{
                   padding: "0.75rem",
                   borderRadius: "0.5rem",
-                  border: `1px solid ${model.selectedId === rec.id ? opsTheme.brand : opsTheme.line}`,
-                  background: model.selectedId === rec.id ? opsTheme.brandSurface : "white",
+                  border: `1px solid ${model.selectedId === rec.id ? colorRoles.brandAction : colorRoles.surfaceBase}`,
+                  background: model.selectedId === rec.id ? colorRoles.surfaceBase : "white",
                   cursor: "pointer",
                   transition: "all 0.15s",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong style={{ fontSize: "12px", color: opsTheme.text }}>{rec.label}</strong>
-                  <span style={{ fontSize: "9px", background: opsTheme.surfaceInset, padding: "1px 4px", borderRadius: "3px" }}>{rec.scope}</span>
+                  <strong style={{ fontSize: "12px", color: colorRoles.brandStructure }}>{rec.label}</strong>
+                  <span style={{ fontSize: "9px", background: colorRoles.surfaceBase, padding: "1px 4px", borderRadius: "3px" }}>{rec.scope}</span>
                 </div>
-                <div style={{ fontSize: "10px", color: opsTheme.textMuted, marginTop: "0.25rem" }}>
+                <div style={{ fontSize: "10px", color: colorRoles.brandStructure, marginTop: "0.25rem" }}>
                   القيمة: {rec.currentValue || "—"}
                 </div>
               </div>
@@ -127,18 +125,18 @@ export function DshPlatformVarsWorkspace() {
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {model.selectedVar ? (
           <>
-            <div style={{ borderBottom: `1px solid ${opsTheme.line}`, paddingBottom: "0.5rem" }}>
+            <div style={{ borderBottom: `1px solid ${colorRoles.surfaceBase}`, paddingBottom: "0.5rem" }}>
               <h4 style={{ margin: 0, fontSize: "1.1rem" }}>{model.selectedVar.label}</h4>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: opsTheme.textMuted }}>مفتاح الإعداد: {model.selectedVar.key}</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: colorRoles.brandStructure }}>مفتاح الإعداد: {model.selectedVar.key}</p>
             </div>
 
-            <div style={{ background: opsTheme.surfaceInset, padding: "1rem", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ background: colorRoles.surfaceBase, padding: "1rem", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>القيمة الحالية:</span>
                 <strong>{model.selectedVar.currentValue || "—"}</strong>
               </div>
               {model.selectedVar.proposedValue && (
-                <div style={{ display: "flex", justifyContent: "space-between", color: opsTheme.brand }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: colorRoles.brandAction }}>
                   <span>القيمة المقترحة بانتظار الاعتماد:</span>
                   <strong>{model.selectedVar.proposedValue}</strong>
                 </div>
@@ -157,8 +155,8 @@ export function DshPlatformVarsWorkspace() {
                         padding: "4px 8px",
                         borderRadius: "4px",
                         fontSize: "11px",
-                        border: model.editVal === pick ? `1px solid ${opsTheme.brand}` : `1px solid ${opsTheme.line}`,
-                        background: model.editVal === pick ? opsTheme.brandSurface : "white",
+                        border: model.editVal === pick ? `1px solid ${colorRoles.brandAction}` : `1px solid ${colorRoles.surfaceBase}`,
+                        background: model.editVal === pick ? colorRoles.surfaceBase : "white",
                         cursor: "pointer",
                       }}
                     >
@@ -171,10 +169,10 @@ export function DshPlatformVarsWorkspace() {
               )}
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <CpButton onClick={() => model.confirmSaveProposed(model.selectedVar!, model.editVal)} style={{ background: opsTheme.brand, color: opsTheme.textInverse, border: "none" }}>
+                <CpButton onClick={() => model.confirmSaveProposed(model.selectedVar!, model.editVal)} style={{ background: colorRoles.brandAction, color: colorRoles.surfaceBase, border: "none" }}>
                   حفظ الاقتراح
                 </CpButton>
-                <CpButton onClick={() => model.setEditVal(model.selectedVar?.proposedValue || "")} style={{ background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>
+                <CpButton onClick={() => model.setEditVal(model.selectedVar?.proposedValue || "")} style={{ background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>
                   إلغاء
                 </CpButton>
               </div>
@@ -184,16 +182,16 @@ export function DshPlatformVarsWorkspace() {
               <div style={{ marginTop: "1rem" }}>
                 <h5 style={{ margin: "0 0 0.5rem" }}>سيناريوهات وقواعد مرتبطة:</h5>
                 {model.linkedScenarios.map((sc) => (
-                  <div key={sc.id} style={{ padding: "0.5rem", border: `1px solid ${opsTheme.line}`, borderRadius: "0.25rem", fontSize: "11px", marginBottom: "0.25rem" }}>
+                  <div key={sc.id} style={{ padding: "0.5rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "0.25rem", fontSize: "11px", marginBottom: "0.25rem" }}>
                     <strong>{sc.title}</strong>
-                    <div style={{ color: opsTheme.textMuted }}>الأولوية: {sc.priority}</div>
+                    <div style={{ color: colorRoles.brandStructure }}>الأولوية: {sc.priority}</div>
                   </div>
                 ))}
               </div>
             )}
           </>
         ) : (
-          <div style={{ padding: "3rem", textAlign: "center", color: opsTheme.textMuted }}>اختر متغيراً من القائمة الجانبية لعرض وتعديل إعداداته.</div>
+          <div style={{ padding: "3rem", textAlign: "center", color: colorRoles.brandStructure }}>اختر متغيراً من القائمة الجانبية لعرض وتعديل إعداداته.</div>
         )}
       </div>
     </div>

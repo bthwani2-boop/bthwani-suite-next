@@ -1,7 +1,8 @@
 "use client";
+import { colorRoles } from '@bthwani/ui-kit';
 
 import React from "react";
-import { opsTheme } from "../../../shared/operations";
+
 
 export type CategoryControlRoomRowHandlers = {
   activeSubCategory: any | null;
@@ -157,7 +158,7 @@ export function CategoryControlRoom({
   };
 
   return (
-    <div style={{ backgroundColor: opsTheme.surface, display: "flex", flexDirection: "column", height: "100%", flexShrink: 0, minHeight: 0 }}>
+    <div style={{ backgroundColor: colorRoles.surfaceBase, display: "flex", flexDirection: "column", height: "100%", flexShrink: 0, minHeight: 0 }}>
       <button
         onClick={() => setCategoryControlOpen((v) => !v)}
         aria-label="تبديل وضع إدارة الفئات"
@@ -165,8 +166,8 @@ export function CategoryControlRoom({
           width: "100%",
           appearance: "none",
           border: "none",
-          backgroundColor: categoryControlOpen ? opsTheme.brandSurface : opsTheme.surfaceInset,
-          borderBottom: `1px solid ${opsTheme.line}`,
+          backgroundColor: categoryControlOpen ? colorRoles.surfaceBase : colorRoles.surfaceBase,
+          borderBottom: `1px solid ${colorRoles.surfaceBase}`,
           padding: "10px 14px",
           cursor: "pointer",
           display: "flex",
@@ -176,13 +177,13 @@ export function CategoryControlRoom({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 800, color: opsTheme.brand }}>🏷️ هيكل الفئات والتصنيفات</span>
-          <span style={{ fontSize: "9px", color: opsTheme.warning, fontWeight: 700 }}>• معاينة</span>
-          <span style={{ fontSize: "9px", color: opsTheme.textMuted }}>
+          <span style={{ fontSize: "11px", fontWeight: 800, color: colorRoles.brandAction }}>🏷️ هيكل الفئات والتصنيفات</span>
+          <span style={{ fontSize: "9px", color: colorRoles.brandAction, fontWeight: 700 }}>• معاينة</span>
+          <span style={{ fontSize: "9px", color: colorRoles.brandStructure }}>
             ({previewCategories.length} فئة • {hiddenCategoryIds.size > 0 ? `${hiddenCategoryIds.size} مخفي` : "نشط"})
           </span>
         </div>
-        <span style={{ fontSize: "9px", color: opsTheme.textMuted }}>{categoryControlOpen ? "▲" : "▼"}</span>
+        <span style={{ fontSize: "9px", color: colorRoles.brandStructure }}>{categoryControlOpen ? "▲" : "▼"}</span>
       </button>
 
       {categoryControlOpen && (
@@ -192,10 +193,10 @@ export function CategoryControlRoom({
               style={{
                 padding: "6px 10px",
                 borderRadius: "4px",
-                backgroundColor: opsTheme.dangerSurface,
-                border: `1px solid ${opsTheme.danger}`,
+                backgroundColor: colorRoles.surfaceBase,
+                border: `1px solid ${colorRoles.brandAction}`,
                 fontSize: "10px",
-                color: opsTheme.danger,
+                color: colorRoles.brandAction,
                 fontWeight: 700,
                 display: "flex",
                 justifyContent: "space-between",
@@ -205,7 +206,7 @@ export function CategoryControlRoom({
               <span>{catError}</span>
               <button
                 onClick={() => setCatError(null)}
-                style={{ appearance: "none", border: "none", background: "none", color: opsTheme.danger, cursor: "pointer", fontSize: "10px", fontWeight: 900 }}
+                style={{ appearance: "none", border: "none", background: "none", color: colorRoles.brandAction, cursor: "pointer", fontSize: "10px", fontWeight: 900 }}
               >
                 &times;
               </button>
@@ -222,21 +223,21 @@ export function CategoryControlRoom({
                 setFormSubtitle("");
                 setCatError(null);
               }}
-              style={{ padding: "4px 10px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: `1px solid ${opsTheme.brand}`, cursor: "pointer", backgroundColor: opsTheme.brandSurface, color: opsTheme.brand }}
+              style={{ padding: "4px 10px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: `1px solid ${colorRoles.brandAction}`, cursor: "pointer", backgroundColor: colorRoles.surfaceBase, color: colorRoles.brandAction }}
             >
               + فئة رئيسية
             </button>
             <button
               onClick={handleResetCategoryPreview}
-              style={{ padding: "4px 10px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: `1px solid ${opsTheme.danger}`, cursor: "pointer", backgroundColor: "transparent", color: opsTheme.danger }}
+              style={{ padding: "4px 10px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: `1px solid ${colorRoles.brandAction}`, cursor: "pointer", backgroundColor: "transparent", color: colorRoles.brandAction }}
             >
               ↺ إعادة ضبط المعاينة
             </button>
           </div>
 
           {addingMainCat && (
-            <div style={{ padding: "10px", borderRadius: "6px", backgroundColor: opsTheme.surfaceInset, border: `1px solid ${opsTheme.brand}`, display: "flex", flexDirection: "column", gap: "8px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 800, color: opsTheme.brand }}>إضافة فئة رئيسية جديدة</span>
+            <div style={{ padding: "10px", borderRadius: "6px", backgroundColor: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandAction}`, display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontSize: "10px", fontWeight: 800, color: colorRoles.brandAction }}>إضافة فئة رئيسية جديدة</span>
               <input
                 aria-label="اسم الفئة الرئيسية"
                 type="text"
@@ -244,7 +245,7 @@ export function CategoryControlRoom({
                 value={formLabel}
                 onChange={(e) => setFormLabel(e.target.value)}
                 autoFocus
-                style={{ padding: "6px 8px", borderRadius: "4px", fontSize: "11px", border: `1px solid ${opsTheme.line}`, backgroundColor: opsTheme.surface, color: opsTheme.text, outline: "none", textAlign: "right" }}
+                style={{ padding: "6px 8px", borderRadius: "4px", fontSize: "11px", border: `1px solid ${colorRoles.surfaceBase}`, backgroundColor: colorRoles.surfaceBase, color: colorRoles.brandStructure, outline: "none", textAlign: "right" }}
               />
               <input
                 aria-label="وصف الفئة الرئيسية"
@@ -252,12 +253,12 @@ export function CategoryControlRoom({
                 placeholder="وصف مختصر (اختياري)"
                 value={formSubtitle}
                 onChange={(e) => setFormSubtitle(e.target.value)}
-                style={{ padding: "6px 8px", borderRadius: "4px", fontSize: "11px", border: `1px solid ${opsTheme.line}`, backgroundColor: opsTheme.surface, color: opsTheme.text, outline: "none", textAlign: "right" }}
+                style={{ padding: "6px 8px", borderRadius: "4px", fontSize: "11px", border: `1px solid ${colorRoles.surfaceBase}`, backgroundColor: colorRoles.surfaceBase, color: colorRoles.brandStructure, outline: "none", textAlign: "right" }}
               />
               <div style={{ display: "flex", gap: "6px" }}>
                 <button
                   onClick={handleAddMainCategory}
-                  style={{ padding: "4px 12px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: "none", backgroundColor: opsTheme.brand, color: opsTheme.textInverse, cursor: "pointer" }}
+                  style={{ padding: "4px 12px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: "none", backgroundColor: colorRoles.brandAction, color: colorRoles.surfaceBase, cursor: "pointer" }}
                 >
                   تأكيد
                 </button>
@@ -268,7 +269,7 @@ export function CategoryControlRoom({
                     setFormSubtitle("");
                     setCatError(null);
                   }}
-                  style={{ padding: "4px 12px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: `1px solid ${opsTheme.line}`, backgroundColor: "transparent", color: opsTheme.textMuted, cursor: "pointer" }}
+                  style={{ padding: "4px 12px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, border: `1px solid ${colorRoles.surfaceBase}`, backgroundColor: "transparent", color: colorRoles.brandStructure, cursor: "pointer" }}
                 >
                   إلغاء
                 </button>
@@ -308,7 +309,7 @@ function CategoryControlRoomRow({
   const isAddingSub = handlers.addingSubUnder === cat.id;
 
   return (
-    <div style={{ padding: "0.5rem", borderBottom: `1px solid ${opsTheme.line}`, display: "flex", flexDirection: "column", gap: "0.5rem" }} dir="rtl">
+    <div style={{ padding: "0.5rem", borderBottom: `1px solid ${colorRoles.surfaceBase}`, display: "flex", flexDirection: "column", gap: "0.5rem" }} dir="rtl">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         {isEditing ? (
           <div style={{ display: "flex", gap: "0.5rem", flex: 1 }}>
@@ -316,56 +317,56 @@ function CategoryControlRoomRow({
               type="text"
               value={handlers.editLabel}
               onChange={(e) => handlers.setEditLabel(e.target.value)}
-              style={{ padding: "4px", borderRadius: "4px", border: `1px solid ${opsTheme.line}`, flex: 1, textAlign: "right" }}
+              style={{ padding: "4px", borderRadius: "4px", border: `1px solid ${colorRoles.surfaceBase}`, flex: 1, textAlign: "right" }}
             />
-            <button onClick={handlers.handleApplyCatEdit} style={{ padding: "4px 8px", backgroundColor: opsTheme.brand, color: opsTheme.textInverse, border: "none", borderRadius: "4px", cursor: "pointer" }}>حفظ</button>
-            <button onClick={() => handlers.setEditingEntry(null)} style={{ padding: "4px 8px", border: `1px solid ${opsTheme.line}`, backgroundColor: "transparent", color: opsTheme.textMuted, borderRadius: "4px", cursor: "pointer" }}>إلغاء</button>
+            <button onClick={handlers.handleApplyCatEdit} style={{ padding: "4px 8px", backgroundColor: colorRoles.brandAction, color: colorRoles.surfaceBase, border: "none", borderRadius: "4px", cursor: "pointer" }}>حفظ</button>
+            <button onClick={() => handlers.setEditingEntry(null)} style={{ padding: "4px 8px", border: `1px solid ${colorRoles.surfaceBase}`, backgroundColor: "transparent", color: colorRoles.brandStructure, borderRadius: "4px", cursor: "pointer" }}>إلغاء</button>
           </div>
         ) : (
           <>
             <button
               onClick={() => handlers.handleMainCategorySelect(isSelectedMain ? null : cat)}
-              style={{ background: "none", border: "none", fontWeight: isSelectedMain ? 700 : 500, color: opsTheme.text, cursor: "pointer", flex: 1, textAlign: "right" }}
+              style={{ background: "none", border: "none", fontWeight: isSelectedMain ? 700 : 500, color: colorRoles.brandStructure, cursor: "pointer", flex: 1, textAlign: "right" }}
             >
-              📂 {cat.name} {isHidden && <span style={{ color: opsTheme.danger, fontSize: "0.75rem" }}>(مخفي)</span>}
+              📂 {cat.name} {isHidden && <span style={{ color: colorRoles.brandAction, fontSize: "0.75rem" }}>(مخفي)</span>}
             </button>
             <div style={{ display: "flex", gap: "0.25rem" }}>
-              <button onClick={() => handlers.setAddingSubUnder(isAddingSub ? null : cat.id)} style={{ padding: "2px 6px", fontSize: "0.75rem", border: `1px solid ${opsTheme.line}`, borderRadius: "4px", cursor: "pointer", background: "none", color: opsTheme.textMuted }}>+ فرعي</button>
-              <button onClick={() => handlers.handleStartCatEdit("main", cat.id)} style={{ padding: "2px 6px", fontSize: "0.75rem", border: `1px solid ${opsTheme.line}`, borderRadius: "4px", cursor: "pointer", background: "none", color: opsTheme.textMuted }}>تعديل</button>
-              <button onClick={() => handlers.handleToggleCategoryHide(cat.id)} style={{ padding: "2px 6px", fontSize: "0.75rem", border: `1px solid ${opsTheme.line}`, borderRadius: "4px", cursor: "pointer", background: "none", color: opsTheme.textMuted }}>{isHidden ? "إظهار" : "إخفاء"}</button>
+              <button onClick={() => handlers.setAddingSubUnder(isAddingSub ? null : cat.id)} style={{ padding: "2px 6px", fontSize: "0.75rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "4px", cursor: "pointer", background: "none", color: colorRoles.brandStructure }}>+ فرعي</button>
+              <button onClick={() => handlers.handleStartCatEdit("main", cat.id)} style={{ padding: "2px 6px", fontSize: "0.75rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "4px", cursor: "pointer", background: "none", color: colorRoles.brandStructure }}>تعديل</button>
+              <button onClick={() => handlers.handleToggleCategoryHide(cat.id)} style={{ padding: "2px 6px", fontSize: "0.75rem", border: `1px solid ${colorRoles.surfaceBase}`, borderRadius: "4px", cursor: "pointer", background: "none", color: colorRoles.brandStructure }}>{isHidden ? "إظهار" : "إخفاء"}</button>
             </div>
           </>
         )}
       </div>
 
       {isAddingSub && (
-        <div style={{ padding: "0.5rem", background: opsTheme.surfaceInset, border: `1px solid ${opsTheme.brand}`, borderRadius: "4px", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ padding: "0.5rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandAction}`, borderRadius: "4px", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <input
             type="text"
             placeholder="اسم الفئة الفرعية..."
             value={handlers.formLabel}
             onChange={(e) => handlers.setFormLabel(e.target.value)}
-            style={{ padding: "4px", borderRadius: "4px", border: `1px solid ${opsTheme.line}`, textAlign: "right" }}
+            style={{ padding: "4px", borderRadius: "4px", border: `1px solid ${colorRoles.surfaceBase}`, textAlign: "right" }}
           />
           <div style={{ display: "flex", gap: "0.25rem" }}>
-            <button onClick={() => handlers.handleAddSubCategory(cat.id)} style={{ padding: "4px 8px", backgroundColor: opsTheme.brand, color: opsTheme.textInverse, border: "none", borderRadius: "4px", cursor: "pointer" }}>إضافة</button>
-            <button onClick={() => handlers.setAddingSubUnder(null)} style={{ padding: "4px 8px", border: `1px solid ${opsTheme.line}`, backgroundColor: "transparent", color: opsTheme.textMuted, borderRadius: "4px", cursor: "pointer" }}>إلغاء</button>
+            <button onClick={() => handlers.handleAddSubCategory(cat.id)} style={{ padding: "4px 8px", backgroundColor: colorRoles.brandAction, color: colorRoles.surfaceBase, border: "none", borderRadius: "4px", cursor: "pointer" }}>إضافة</button>
+            <button onClick={() => handlers.setAddingSubUnder(null)} style={{ padding: "4px 8px", border: `1px solid ${colorRoles.surfaceBase}`, backgroundColor: "transparent", color: colorRoles.brandStructure, borderRadius: "4px", cursor: "pointer" }}>إلغاء</button>
           </div>
         </div>
       )}
 
       {cat.subCategories && cat.subCategories.length > 0 && (
-        <div style={{ marginRight: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", borderRight: `1px dashed ${opsTheme.line}`, paddingRight: "0.5rem" }}>
+        <div style={{ marginRight: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem", borderRight: `1px dashed ${colorRoles.surfaceBase}`, paddingRight: "0.5rem" }}>
           {cat.subCategories.map((sub: any) => (
             <div key={sub.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.25rem 0" }}>
-              <span style={{ fontSize: "0.813rem", color: opsTheme.text }}>📄 {sub.name}</span>
+              <span style={{ fontSize: "0.813rem", color: colorRoles.brandStructure }}>📄 {sub.name}</span>
               <button
                 onClick={() => {
                   if (confirm("هل أنت متأكد من حذف هذه الفئة الفرعية؟")) {
                     handlers.handleDeleteNode("sub", cat.id, sub.id);
                   }
                 }}
-                style={{ padding: "1px 4px", fontSize: "0.7rem", color: opsTheme.danger, border: "none", background: "none", cursor: "pointer" }}
+                style={{ padding: "1px 4px", fontSize: "0.7rem", color: colorRoles.brandAction, border: "none", background: "none", cursor: "pointer" }}
               >
                 حذف
               </button>

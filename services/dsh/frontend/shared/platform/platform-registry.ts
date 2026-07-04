@@ -5,6 +5,9 @@
  * يحدد التبويبات والمؤشرات ونطاقات العمليات والتحقق.
  */
 
+import { PROVIDER_SECRET_POLICIES } from "./platform-provider-secrets.policy";
+import { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
+
 // ─── Main Tab Registry ────────────────────────────────────────────────────────
 
 export type PlatformMainTabId =
@@ -64,10 +67,10 @@ export type PlatformKpiMetrics = {
 
 export function buildPlatformKpiMetrics(): PlatformKpiMetrics {
   return {
-    policiesCount: 13,
-    providersCount: 7,
-    activeReleases: 3,
-    alertsCount: 2,
+    policiesCount: Object.keys(PROVIDER_SECRET_POLICIES).length,
+    providersCount: PLATFORM_PROVIDER_REGISTRY.length,
+    activeReleases: 0,
+    alertsCount: 0,
   };
 }
 

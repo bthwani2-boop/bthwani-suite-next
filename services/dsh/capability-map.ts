@@ -301,6 +301,29 @@ export const DSH_CAPABILITY_MAP = [
     closureState: "RUNTIME_VERIFIED",
   },
   // ── Marketing Command Deck ─────────────────────────────────────────────────
+  // Active decks are all API-backed: campaigns and tickers (soft
+  // archive/delete, audit trail, target visibility-gate checks, governed
+  // status lifecycles, DB integration tests in marketing_db_test.go), and
+  // partner-offers (dsh_partner_offers table, operator review lifecycle with
+  // required rejection reasons, partner self-submission scoped to the
+  // caller's own resolved store via store.ResolveActorStore). Signals and
+  // header KPIs consume existing DSH analytics endpoints with no hardcoded
+  // values. video-studio, growth, loyalty/benefits-subscriptions and
+  // image-product-review were removed from the active deck (not shipped
+  // disabled) because they had no backend and, for loyalty (WLT-owned
+  // financial truth) and image-review (catalog-owned), the wrong owner —
+  // see marketing-registry.ts / use-marketing-controller.tsx history.
+  // Marketing is operator-only: home banners/promos are owned by
+  // dsh.client.home-discovery (dsh_home_banners/dsh_home_promos), not this
+  // capability (migration dsh-018 retired the duplicate marketing banners/
+  // promos subsystem). app-partner has real behavior (offer submission via
+  // /dsh/partner/marketing/offers) -- the surfaces list reflects that.
+  // Runtime deployment evidence: migration dsh-020 applied to the runtime
+  // Postgres, dsh-api image rebuilt and restarted, and both new routes
+  // (/dsh/operator/marketing/partner-offers, /dsh/partner/marketing/offers)
+  // verified reachable (401, not 404) -- see
+  // services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt.
+  // Sibling services (wlt-api, identity-api) confirmed unaffected.
   {
     id: "dsh.marketing",
     status: "runtime-verified",
@@ -310,15 +333,17 @@ export const DSH_CAPABILITY_MAP = [
       "getDshCampaign",
       "updateDshCampaign",
       "archiveDshCampaign",
-      "listDshMarketingBanners",
-      "createDshMarketingBanner",
-      "updateDshMarketingBanner",
-      "deleteDshMarketingBanner",
-      "listDshMarketingPromos",
-      "createDshMarketingPromo",
-      "updateDshMarketingPromo",
+      "listDshMarketingTickers",
+      "createDshMarketingTicker",
+      "updateDshMarketingTicker",
+      "deleteDshMarketingTicker",
+      "listDshPartnerOffers",
+      "updateDshPartnerOffer",
+      "archiveDshPartnerOffer",
+      "listDshPartnerSelfOffers",
+      "submitDshPartnerSelfOffer",
     ],
-    surfaces: ["control-panel"],
+    surfaces: ["control-panel", "app-partner"],
     runtimeBound: true,
     closureState: "RUNTIME_VERIFIED",
   },

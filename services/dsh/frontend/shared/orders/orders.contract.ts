@@ -137,8 +137,7 @@ export type DshPlaceholderStatus =
   | 'ACCEPTED_PREVIEW_LABEL'
   | 'BLOCKED_BY_CONTRACT'
   | 'BLOCKED_BY_WLT'
-  | 'MUST_REPLACE_WITH_PREVIEW_UI'
-  | 'DEAD_PLACEHOLDER_REMOVE';
+  | 'MUST_REPLACE_WITH_PREVIEW_UI';
 
 export type DshLookupFieldId = 'phone' | 'orderId' | 'customerId' | 'ticketId';
 export type DshLookupInput = {
@@ -190,159 +189,6 @@ export type DshGlobalControlLink = DshRouteHintedAction & {
   readonly surfaceId: DshSurfaceId;
   readonly sectionId: DshControlPanelSectionId;
 };
-
-export type DshAssistedOrderIdentityStatus = DshVerificationStatus;
-export type DshAssistedOrderStage =
-  | 'identity-check'
-  | 'basket-rebuild'
-  | 'partner-confirmation'
-  | 'wlt-visibility'
-  | 'ready-to-submit';
-export type DshAssistedOrderCartItemStatus = 'active' | 'substitute' | 'unavailable';
-export type DshAssistedOrderCartItem = {
-  readonly sku: string;
-  readonly name: string;
-  readonly quantity: number;
-  readonly published: true;
-  readonly status: DshAssistedOrderCartItemStatus;
-  readonly note: string;
-};
-export type DshAssistedOrderDeliveryModeOption = {
-  readonly modeId: DshFulfillmentDeliveryMode;
-  readonly label: string;
-  readonly requiresDispatch: boolean;
-  readonly requiresCaptain: boolean;
-  readonly supportFallback: string;
-};
-
-export type DshAssistedOrder = {
-  readonly deskId: string;
-  readonly customerId: string;
-  readonly customerName: string;
-  readonly maskedPhone: string;
-  readonly source: 'manual_call_intake' | 'customer_360_followup';
-  readonly orderId?: string;
-  readonly ticketId?: string;
-  readonly identityStatus: DshAssistedOrderIdentityStatus;
-  readonly activeStage: DshAssistedOrderStage;
-  readonly basketSummary: string;
-  readonly auditFlags: readonly string[];
-  readonly allowedActions: readonly string[];
-  readonly forbiddenActions: readonly string[];
-  readonly wltBoundary: string;
-  readonly nextAction: string;
-  readonly crossSurfaceLinks: readonly DshGlobalControlLink[];
-  readonly lookupPanel: {
-    readonly inputs: readonly DshLookupInput[];
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly identityVerification: {
-    readonly verificationStatus: DshVerificationStatus;
-    readonly verificationSteps: readonly DshVerificationStep[];
-    readonly sensitiveFieldsLocked: readonly string[];
-    readonly forbiddenActionsBeforeVerification: readonly string[];
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly cartBuilderPreview: {
-    readonly publishedProductsOnly: true;
-    readonly items: readonly DshAssistedOrderCartItem[];
-    readonly addItemPreview: string;
-    readonly removeItemPreview: string;
-    readonly replaceItemPreview: string;
-    readonly substituteItemPreview: string;
-    readonly unavailableItemHandling: string;
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly deliveryModeSelector: {
-    readonly selectedMode: DshFulfillmentDeliveryMode;
-    readonly options: readonly DshAssistedOrderDeliveryModeOption[];
-    readonly selectedModeSummary: string;
-    readonly forbiddenLifecycleStates: readonly string[];
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly serviceabilitySummary: {
-    readonly zoneLabel: string;
-    readonly serviceabilityStatus: 'serviceable' | 'blocked';
-    readonly blockedReason?: string;
-    readonly fallbackAction: string;
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly wltReadOnlyHandoff: DshReadOnlyFinanceVisibility;
-  readonly auditReason: {
-    readonly reasonRequired: true;
-    readonly auditRequired: true;
-    readonly operatorNote: string;
-    readonly reasonLabel: string;
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly submitDraftPreview: {
-    readonly previewOnly: true;
-    readonly noBackendCall: true;
-    readonly noOrderCreationClaim: true;
-    readonly previewState: 'ready_for_preview' | 'blocked_by_identity' | 'blocked_by_serviceability';
-    readonly nextAction: string;
-    readonly signal: DshSignalRoute;
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-};
-
-function translateSignalPriority(priority: DshSignalPriority): string {
-  if (priority === 'urgent') return 'عاجل';
-  if (priority === 'important') return 'مهم';
-  return 'اعتيادي';
-}
-
-export function buildDshSignalRoute(signalKind: DshSignalEventKind): DshSignalRoute {
-  const route = getDshSignalActorRoute(signalKind);
-  return {
-    signalKind,
-    routeId: route?.routeId ?? 'cp/operations',
-    auditRequired: route?.auditRequired ?? false,
-    priority: route?.priority ?? 'normal',
-    priorityLabel: translateSignalPriority(route?.priority ?? 'normal'),
-  };
-}
-
-export function buildDshAssistedOrderLookupInputs(values: {
-  readonly phone: string;
-  readonly orderId?: string;
-  readonly customerId: string;
-  readonly ticketId?: string;
-}): readonly DshLookupInput[] {
-  return [
-    { key: 'phone', label: 'phone', value: values.phone, summaryFirst: true },
-    { key: 'orderId', label: 'orderId', value: values.orderId ?? '—', summaryFirst: true },
-    { key: 'customerId', label: 'customerId', value: values.customerId, summaryFirst: true },
-    { key: 'ticketId', label: 'ticketId', value: values.ticketId ?? '—', summaryFirst: true },
-  ] as const;
-}
-
-export function buildDshAssistedOrderDeliveryModeOptions(): readonly DshAssistedOrderDeliveryModeOption[] {
-  return DSH_DELIVERY_MODE_DEFINITIONS.map((definition) => ({
-    modeId: definition.modeId,
-    label: definition.label,
-    requiresDispatch: definition.requiresDispatch,
-    requiresCaptain: definition.requiresCaptain,
-    supportFallback: definition.supportFallback,
-  }));
-}
-
-export function buildDshAssistedOrderDeliveryModeSummary(modeId: DshFulfillmentDeliveryMode): {
-  readonly selectedMode: DshFulfillmentDeliveryMode;
-  readonly options: readonly DshAssistedOrderDeliveryModeOption[];
-  readonly selectedModeSummary: string;
-  readonly forbiddenLifecycleStates: readonly string[];
-  readonly previewClassification: DshPlaceholderStatus;
-} {
-  const mode = getDshDeliveryModeDefinition(modeId);
-  return {
-    selectedMode: modeId,
-    options: buildDshAssistedOrderDeliveryModeOptions(),
-    selectedModeSummary: `${mode.label} · ${mode.controlPanelDispatchBehavior}`,
-    forbiddenLifecycleStates: ['delivered', 'cancelled', 'refund_pending_wlt', 'settlement_ready_wlt'],
-    previewClassification: 'ACCEPTED_PREVIEW_LABEL',
-  };
-}
 
 export type DshOrderRescueSeverity = 'warning' | 'danger';
 export type DshOrderRescueReason =
@@ -566,7 +412,7 @@ export type DshHandoffWltImpact = {
   readonly isDebit: boolean;
   readonly isCredit: boolean;
   readonly dshReadOnly: true;
-  readonly contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY';
+  readonly contractState: 'DSH_WLT_READ_ONLY_REFERENCE';
 };
 
 export type DshOrderLifecycleHandoff = {
@@ -588,7 +434,7 @@ const NO_WLT_IMPACT: DshHandoffWltImpact = {
   isDebit: false,
   isCredit: false,
   dshReadOnly: true,
-  contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY',
+  contractState: 'DSH_WLT_READ_ONLY_REFERENCE',
 };
 
 export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] = [
@@ -603,7 +449,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-client', label: 'شاشة تأكيد الدفع تُعرض', uiStateHint: 'payment_pending', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
       { surfaceId: 'control-panel', label: 'لا إجراء — WLT يعالج', uiStateHint: 'monitoring', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'payment', displayLabel: 'بدء تحقق الدفع من WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'payment', displayLabel: 'بدء تحقق الدفع من WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     auditRequired: false,
   },
   {
@@ -617,7 +463,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-client', label: 'رسالة فشل الدفع + خيار إعادة المحاولة', uiStateHint: 'payment_failed', actionRequired: true, actionLabel: 'إعادة المحاولة أو تغيير الوسيلة', readOnly: false, applicableModes: [] },
       { surfaceId: 'control-panel', label: 'تنبيه payment_failed في Operations', uiStateHint: 'alert', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'payment', displayLabel: 'فشل الدفع — لا خصم نهائي', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'payment', displayLabel: 'فشل الدفع — لا خصم نهائي', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'payment_failed',
     auditRequired: true,
   },
@@ -634,7 +480,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'لا إسناد بعد', uiStateHint: 'not_applicable', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'الطلب يظهر في قائمة Operations للمراجعة', uiStateHint: 'operations_review', actionRequired: true, actionLabel: 'موافقة أو رفض الطلب', readOnly: false, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'payment', displayLabel: 'تأكيد الدفع — WLT احتجز المبلغ', isDebit: true, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'payment', displayLabel: 'تأكيد الدفع — WLT احتجز المبلغ', isDebit: true, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'order_created',
     auditRequired: false,
   },
@@ -667,7 +513,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-partner', label: 'سجل رفض الطلب يُعرض', uiStateHint: 'rejected_record', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
       { surfaceId: 'control-panel', label: 'تنبيه عاجل: partner_rejected — يجب إجراء rescue', uiStateHint: 'rescue_required', actionRequired: true, actionLabel: 'فتح Order Rescue', readOnly: false, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'partner_rejected_order',
     auditRequired: true,
   },
@@ -717,7 +563,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'شاشة التوصيل تُعرض — الخريطة + عنوان العميل', uiStateHint: 'pickup_dropoff', actionRequired: true, actionLabel: 'متابعة للتسليم', readOnly: false, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'مرحلة: "الكابتن في الطريق" في Operations', uiStateHint: 'live_tracking', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'cod_accrual', displayLabel: 'COD في حيازة الكابتن — ذمة معلقة لـ WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'cod_accrual', displayLabel: 'COD في حيازة الكابتن — ذمة معلقة لـ WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'picked_up',
     auditRequired: false,
   },
@@ -735,7 +581,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'control-panel', label: 'الطلب يُغلق في Operations + يُضاف لقائمة COD المستحقة', uiStateHint: 'closed_pending_settlement', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'wlt-finance', label: 'بدء احتساب تسوية الكابتن — COD + عمولة', uiStateHint: 'settlement_calculation', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'settlement_trigger', displayLabel: 'PoD أكّد التسليم — WLT يبدأ احتساب التسوية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'settlement_trigger', displayLabel: 'PoD أكّد التسليم — WLT يبدأ احتساب التسوية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'delivered',
     auditRequired: true,
   },
@@ -751,7 +597,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'شاشة الإبلاغ عن العائق — سبب + ملاحظة', uiStateHint: 'delivery_exception_report', actionRequired: true, actionLabel: 'إبلاغ عن سبب الفشل', readOnly: false, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'تنبيه عاجل: delivery_failed — Order Rescue مطلوب', uiStateHint: 'rescue_required', actionRequired: true, actionLabel: 'فتح Order Rescue', readOnly: false, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم حسب سياسة الإلغاء', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم حسب سياسة الإلغاء', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'delivery_failed',
     auditRequired: true,
   },
@@ -769,7 +615,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'control-panel', label: 'سجل الإلغاء + تتبع الاسترداد في Finance', uiStateHint: 'refund_monitoring', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
       { surfaceId: 'wlt-finance', label: 'قيد استرداد في دفتر الأستاذ', uiStateHint: 'refund_ledger_entry', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'refund', displayLabel: 'WLT يُعالج الاسترداد إلى وسيلة الدفع الأصلية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'refund', displayLabel: 'WLT يُعالج الاسترداد إلى وسيلة الدفع الأصلية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'refund_pending_wlt',
     auditRequired: true,
   },
