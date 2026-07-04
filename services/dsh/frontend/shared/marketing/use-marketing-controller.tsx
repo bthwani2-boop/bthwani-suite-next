@@ -499,8 +499,15 @@ export type OperationalMetrics = {
   readonly declinedAssignments: string;
 };
 
+// This hook powers SignalsMeasurementCommandDeck's live operational metrics.
+// It previously also exposed a client-only "gate bypass" toggle
+// (bypassedGates/toggleBypass) that had no backend binding and no UI ever
+// rendered it — a local-only governance override with zero enforcement
+// effect. Removed rather than wired up: real visibility-gate enforcement
+// already lives server-side in marketing.ValidateTarget /
+// WriteVisibilityGateCheck and is fail-closed by design; a client bypass
+// would only recreate the local-truth problem this slice closes.
 export function useVisibilityGatesController() {
-  const [bypassedGates, setBypassedGates] = useState<Set<string>>(new Set());
   const [metrics, setMetrics] = useState<OperationalMetrics>({
     completedOrdersRate: "0%",
     totalOrders: "0 طلب",
@@ -538,17 +545,8 @@ export function useVisibilityGatesController() {
     void load();
   }, [load]);
 
-  const toggleBypass = useCallback((gateId: string) => {
-    setBypassedGates(prev => {
-      const next = new Set(prev);
-      if (next.has(gateId)) next.delete(gateId);
-      else next.add(gateId);
-      return next;
-    });
-  }, []);
-
   return {
-    bypassedGates, toggleBypass, metrics,
+    metrics,
     reload: load,
     errorMessage,
     isBackedByApi: true as const,
