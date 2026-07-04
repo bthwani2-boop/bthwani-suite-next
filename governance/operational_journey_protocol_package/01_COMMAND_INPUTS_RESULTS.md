@@ -1,10 +1,10 @@
-# 01 — الأمر، القالب، النتائج المسموحة
+﻿# 01 — الأمر، القالب، النتائج المسموحة
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `01/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** الغرض الحاكم، قالب الاستخدام، الأمر المباشر، والنتائج الوحيدة المسموحة.
 

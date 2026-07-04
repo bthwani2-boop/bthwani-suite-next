@@ -4,7 +4,7 @@
 **File:** `10/10` (Amendment)
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
-**Source path:** `tools/plan/command_operational_journey_unified` + harvested from `tools/plan/command_old_new`
+**Source path:** governance/operational_journey_protocol_package (self-contained, tools/plan archived)
 **Amendment date:** `2026-07-01`
 **Scope:** يسد فجوة السماح بالقفز/التجاهل أثناء كتابة أمر التنفيذ وخطة التنفيذ والتشخيص والتحليل والتنفيذ، ويضيف Docker/hosting/runtime كطبقة إلزامية لا يجوز إسقاطها، ويحمل guards/أوامر تحقق كانت موجودة فقط في `command_old_new` ولم تُنقل بقوة كافية إلى `07`.
 
@@ -147,19 +147,17 @@ docker_hosting_runtime_matrix:
 
 ---
 
-## 33) Guards وأوامر تحقق محصودة من `command_old_new`
+## 33) أوامر تحقق محصودة — البوابات الموحدة الحالية
 
-الملف القديم `tools/plan/command_old_new` يحتوي guards وأوامر تحقق لم تكن ظاهرة بالقوة نفسها داخل `07_VERIFICATION_RUNTIME_CI_PR.md`. تُضاف هنا كطبقة تحقق إلزامية إضافية، ولا تُستخدم لحذف الملف القديم قبل الترحيل الكامل (انظر `LEGACY_SOURCE_TRACE.md`).
+البوابات التالية هي الأوامر التحقق الإلزامية الفعلية بعد توحيد الحراس:
 
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-
 git status --short
+git diff --check
 pnpm install --frozen-lockfile
 
-pnpm run guard:matrix:v3
-pnpm run guard:canonical-host-ports
-pnpm run slice:gate <!-- no-legacy-slice-labels-ignore -->
+pnpm run foundation:gate
+pnpm run journey:gate
 
 Push-Location "services\dsh\backend"
 go test ./...
@@ -170,35 +168,22 @@ Push-Location "core\identity\backend"
 go test ./...
 go build ./...
 Pop-Location
-
-git diff --check
-git status --short
 ```
 
 قواعد استخدام هذه الأوامر:
 
 ```text
-لا تُشغَّل core\identity\backend إلا إذا كانت داخل النطاق الفعلي للرحلة.
-guard:canonical-host-ports إلزامي كلما كانت الرحلة تشغيلية أو تمس Docker/ports.
-guard:matrix:v3 إلزامي كلما كانت الرحلة تمس topology أو ownership.
-slice:gate إلزامي كلما كانت الرحلة تمس شريحة (slice) قابلة للإغلاق. <!-- no-legacy-slice-labels-ignore -->
+foundation:gate إلزامي في كل رحلة بلا استثناء.
+journey:gate إلزامي في كل رحلة تمس surface أو shared أو WLT.
+Go backends تُشغَّل فقط إذا كانت داخل نطاق الرحلة الفعلي.
 ```
 
 إذا فشل أي أمر: `FIX_REQUIRED`. إذا كان الأمر غير موجود في `package.json` أو workspace: طبّق نفس قاعدة الأمر المفقود في `07` (القسم 19) — لا يجوز تحويله إلى PASS.
 
----
 
-## 34) بنود مرفوضة صراحة من `command_old_new` — لا تُنقل
 
-البنود التالية موجودة في النسخة القديمة وتخالف قواعد Human-Gated Git/GitHub Changes الحاكمة في `02_REMOTE_REF_SOURCE_GIT_GATES.md`، ولذلك **لا تُنقل** إلى هذه الحزمة ولا يجوز لأي وكيل تنفيذها:
 
-```text
-NEW_BRANCH: brach-validation
-NEW_BASE_BRANCH: master
-git reset --hard origin/brach-validation
-```
 
-سبب الرفض: فرع/reset ثابتان مكتوبان مسبقًا يتجاوزان REF Resolution Gate وHuman-Gated Git/GitHub Changes، وقد يؤديان لحذف تغييرات محلية غير مصرح بها.
 
 ---
 

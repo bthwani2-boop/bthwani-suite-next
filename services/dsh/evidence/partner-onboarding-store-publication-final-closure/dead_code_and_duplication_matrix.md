@@ -32,9 +32,9 @@ dead_code_and_duplication_matrix:
     - item: frontend isDshPartnerActivationComplete excluded client_hidden while backend partnerActiveDone included it
       action: contradiction resolved — frontend aligned with backend (client_hidden = activation complete, not client visible)
   stale_references_removed:
-    - services/dsh/runtime-map.ts + SERVICE_BLUEPRINT.md → brach-validation-final-closure evidence paths (dir does not exist) replaced with this evidence folder
+    - services/dsh/runtime-map.ts + SERVICE_BLUEPRINT.md → <BRANCH_NAME>-final-closure evidence paths (dir does not exist) replaced with this evidence folder
     - SERVICE_BLUEPRINT.md → non-existent script guard:no-legacy-journey-labels replaced with guard:no-legacy-slice-labels; stale checklist SHA 9b9ef503 replaced with resolved SHA
-    - tools/guards/no-legacy-slice-labels.mjs → brach-validation-final-closure exclusion token removed
+    - tools/guards/no-legacy-slice-labels.mjs → <BRANCH_NAME>-final-closure exclusion token removed
     - services/dsh/runtime-map.ts → legacy journey comment "Partner Store Activation" renamed to "Partner Onboarding & Store Publication"
   accepted_pre_existing_out_of_scope:
     - item: suppressed pre-existing TS errors in app-partner/app-field runtime typecheck (script tolerates via "|| echo 'Pre-existing TS errors ignored for validation'")

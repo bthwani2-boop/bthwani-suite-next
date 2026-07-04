@@ -24,10 +24,10 @@ file_decision_matrix:
     verification_command: rg -n "StoreReadinessGate" -A 5 services/dsh/frontend/app-partner/Catalog/InventoryCatalogScreen.tsx
   - path: services/dsh/runtime-map.ts
     decision: KEEP_ACTIVE (edited — evidence paths now point to existing folder; journey label corrected)
-    verification_command: rg -n "brach-validation|Partner Store Activation" services/dsh/runtime-map.ts (no hits)
+    verification_command: rg -n "<BRANCH_NAME>|Partner Store Activation" services/dsh/runtime-map.ts (no hits)
   - path: services/dsh/SERVICE_BLUEPRINT.md
     decision: KEEP_ACTIVE (edited — evidence locations, guard name, verification SHA corrected)
-    verification_command: rg -n "guard:no-legacy-journey-labels|brach-validation" services/dsh/SERVICE_BLUEPRINT.md (no hits)
+    verification_command: rg -n "guard:no-legacy-journey-labels|<BRANCH_NAME>" services/dsh/SERVICE_BLUEPRINT.md (no hits)
   - path: tools/guards/no-legacy-slice-labels.mjs
     decision: KEEP_ACTIVE (edited — stale exclusion token removed)
     verification_command: pnpm run guard:no-legacy-slice-labels

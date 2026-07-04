@@ -1,10 +1,10 @@
-# 07 — الفحوصات، Runtime Evidence، CI، ومراجعة PR
+﻿# 07 — الفحوصات، Runtime Evidence، CI، ومراجعة PR
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `07/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** أوامر الفحص الكودية، runtime evidence، CI rules، وPR/merge review.
 
@@ -71,25 +71,20 @@ Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts
 
 ```powershell
 pnpm run foundation:gate
-pnpm run graphify
+pnpm run journey:gate
 pnpm run typecheck
 pnpm run lint
 pnpm run test
 pnpm run build
-pnpm run nx:projects
-pnpm run affected:typecheck
-pnpm run affected:lint
-pnpm run affected:test
-pnpm run affected:build
-pnpm run guard:unified-fullstack-brain
-pnpm run guard:dsh-frontend-shared-ownership
-pnpm run guard:wlt-dsh-frontend-shared-ownership
-pnpm run guard:dsh-frontend-shared-boundary-imports
-pnpm run guard:no-financial-mutation-outside-wlt
-pnpm run guard:no-direct-fetch-in-screen
-pnpm run guard:no-preview-demo-mock-runtime
-pnpm run guard:no-broken-imports
 ```
+
+الحراس المكوّنة للبوابتين (لا تُشغّل مباشرة — تعمل عبر البوابات):
+
+```text
+foundation:gate  = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
+journey:gate     = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
+```
+
 
 إذا كان الأمر غير موجود في `package.json` أو workspace:
 
