@@ -22,7 +22,6 @@ import { TickerCommandDeck } from "./components/TickerCommandDeck";
 import { VideoStudioCommandDeck } from "./components/VideoStudioCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
-import { ImageProductReviewCommandDeck } from "./components/ImageProductReviewCommandDeck";
 import { GrowthCommandDeck } from "./components/GrowthCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
 
@@ -178,7 +177,6 @@ export function MarketingDashboardScreen() {
       {mainTab === "video-studio" && <VideoStudioCommandDeck />}
       {mainTab === "campaigns" && <CampaignsCommandDeck />}
       {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
-      {mainTab === "image-product-review" && <ImageProductReviewCommandDeck />}
       {mainTab === "growth" && <GrowthCommandDeck />}
       {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
     </DataTablePageFrame>
