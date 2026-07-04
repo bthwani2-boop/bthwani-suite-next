@@ -43,9 +43,7 @@ foreach ($path in @(
   ".agents/skills/bthwani-ponytail-yagni/SKILL.md",
   "tools/yagni/semgrep/bthwani-yagni.yml",
   "tools/yagni/ast-grep/sgconfig.yml",
-  "tools/scripts/run-go-deadcode.ps1",
-  "tools/scripts/run-yagni-diagnostics.ps1",
-  "tools/scripts/run-yagni-guard.ps1"
+  "tools/scripts/run-yagni-diagnostics.ps1"
 )) {
   if (Test-Path -LiteralPath $path) {
     Add-Result "file:$path" "PASS" $path
