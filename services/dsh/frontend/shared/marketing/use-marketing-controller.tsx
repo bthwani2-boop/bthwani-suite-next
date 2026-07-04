@@ -364,7 +364,7 @@ export type OperationalMetrics = {
 // effect. Removed rather than wired up: real visibility-gate enforcement
 // already lives server-side in marketing.ValidateTarget /
 // WriteVisibilityGateCheck and is fail-closed by design; a client bypass
-// would only recreate the local-truth problem this slice closes.
+// would only recreate the local-truth problem this journey closes.
 export function useVisibilityGatesController() {
   const [metrics, setMetrics] = useState<OperationalMetrics>({
     completedOrdersRate: "0%",

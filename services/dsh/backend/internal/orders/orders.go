@@ -278,6 +278,17 @@ func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
 	return order, nil
 }
 
+// CancelOrderByOperator lets an operator cancel an order that is stuck before
+// dispatch (pending store acceptance or accepted but not yet picked up), e.g.
+// when the store is unresponsive and the customer needs a resolution.
+func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
+	if reason == "" {
+		return nil, fmt.Errorf("%w: cancellation reason is required", ErrInvalid)
+	}
+	return transitionOrder(db, orderID, actorID, "operator",
+		[]OrderStatus{StatusPending, StatusStoreAccepted}, StatusCancelled, reason)
+}
+
 func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
 	return transitionOrder(db, orderID, actorID, "partner",
 		[]OrderStatus{StatusStoreAccepted}, StatusPreparing, "")

@@ -22,7 +22,7 @@ import {
 import { translateDshRuntimeBindingStatus } from '../../shared/runtime';
 import type { GeoHeatmapZone } from './geo-heatmap.helpers';
 
-import { MOCK_GEO_HEATMAP_ZONES as GEO_HEATMAP_ZONES } from '../../shared/operations';
+const GEO_HEATMAP_ZONES: GeoHeatmapZone[] = [];
 import styles from '../shared/control-panel-surface.module.css';
 import {
   buildRecommendation,
