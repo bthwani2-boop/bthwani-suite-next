@@ -16,6 +16,7 @@ import {
   getPartnerOfferVisibilityRecord,
 } from '../../shared/partner/marketing.visibility';
 import { getDshControlPanelGovernanceEntry } from '../../shared/runtime/dsh-control-panel-governance.map';
+import { usePartnerSelfOffersController } from '../../shared/marketing';
 
 type AnalyticsWorkspaceState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'no-analytics' | 'no-campaigns';
 type PromotionsTab = 'active' | 'pending' | 'rejected' | 'new';
@@ -39,16 +40,8 @@ const INITIAL_FORM: IntakeFormState = {
   title: '',
   offerType: 'discount',
   valueLabel: '',
-  eligibility: 'الكل',
+  eligibility: 'ALL',
 };
-
-function buildPartnerStoreId(storeName: string) {
-  return storeName
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\p{L}\p{N}-]/gu, '') || 'partner-store';
-}
 
 function translateStatus(status: PartnerOfferStatus): { label: string; tone: 'neutral' | 'warning' | 'action' | 'success' | 'danger' } {
   switch (status) {
@@ -84,7 +77,7 @@ function renderState(state: Exclude<AnalyticsWorkspaceState, 'ready'>) {
   if (state === 'offline') {
     return <Text role="bodySm" tone="muted">الشاشة غير متصلة الآن. أعد المحاولة لاحقًا.</Text>;
   }
-  return <Text role="bodySm" tone="muted">تعذر تحميل مسار العروض حاليًا.</Text>;
+  return <Text role="bodySm" tone="muted">تعذّر تحميل مسار العروض حاليًا.</Text>;
 }
 
 function PromotionRow({
@@ -149,21 +142,19 @@ export function PromotionsScreen({
   todayHoursLabel,
   state = 'ready',
 }: PromotionsScreenProps) {
-  const { theme } = useTheme();
   const marketingGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('marketing'), []);
   const catalogsGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('catalogs'), []);
   const partnersGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('partners'), []);
-  const [offers, setOffers] = React.useState<PartnerOfferRecord[]>([]);
+  const controller = usePartnerSelfOffersController('authenticated');
   const [activeTab, setActiveTab] = React.useState<PromotionsTab>('active');
   const [form, setForm] = React.useState<IntakeFormState>(INITIAL_FORM);
   const [statusMessage, setStatusMessage] = React.useState('');
-
 
   if (state !== 'ready') {
     return renderState(state);
   }
 
-  const offerRows = offers.map((offer) => {
+  const offerRows = controller.items.map((offer) => {
     const visibility = getPartnerOfferVisibilityRecord(offer, { targetSurface: 'partner-promotions' });
     const clientReady = !visibility.blockedReason && offer.status === 'published';
 
@@ -178,36 +169,29 @@ export function PromotionsScreen({
   const pendingOffers = offerRows.filter((row) => !row.clientReady && row.offer.status !== 'rejected' && row.offer.status !== 'archived');
   const rejectedOffers = offerRows.filter((row) => row.offer.status === 'rejected');
 
-  const handleSubmitOffer = () => {
+  const handleSubmitOffer = async () => {
     if (!form.title.trim() || !form.valueLabel.trim()) {
       setStatusMessage('املأ عنوان العرض وقيمته قبل الإرسال.');
       return;
     }
 
-    const newOffer: PartnerOfferRecord = {
-      id: `offer-${Date.now()}`,
+    const ok = await controller.submit({
       title: form.title.trim(),
       partnerName: storeName,
       storeLabel: storeName,
-      storeId: buildPartnerStoreId(storeName),
-      productId: '',
-      productLabel: '',
-      category: '',
       offerType: form.offerType,
-      status: 'inbound',
-      source: 'partner',
       valueLabel: form.valueLabel.trim(),
       eligibility: form.eligibility.trim() || 'الكل',
-      displayBadge: form.valueLabel.trim(),
-    };
-    setOffers((prev) => [...prev, newOffer]);
+    });
+
+    if (!ok) {
+      setStatusMessage(controller.errorMessage || 'تعذّر إرسال العرض، حاول مرة أخرى.');
+      return;
+    }
+
     setForm(INITIAL_FORM);
     setActiveTab('pending');
-    // PENDING_BACKEND: no dsh_partner_offers backend exists yet (see
-    // marketing_partner_offer_matrix.md). This only stores the draft in local
-    // component state — it is not sent anywhere and will not survive a reload.
-    // The message must not claim a real submission happened.
-    setStatusMessage('تم حفظ العرض محليًا فقط. ميزة الإرسال الفعلي لمراجعة التسويق غير مفعّلة بعد على هذا السطح.');
+    setStatusMessage('تم إرسال العرض لمسار مراجعة التسويق.');
   };
 
   const openOfferForm = (offer?: PartnerOfferRecord) => {
@@ -335,7 +319,7 @@ export function PromotionsScreen({
           placeholder="مثال: للطلبات فوق 50 ريال"
         />
         <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap' }}>
-          <Button label="إرسال للمراجعة" tone="brand" fullWidth={false} onPress={handleSubmitOffer} />
+          <Button label="إرسال للمراجعة" tone="brand" fullWidth={false} onPress={handleSubmitOffer} disabled={controller.submitting} />
           <Button
             label="إلغاء"
             tone="ghost"

@@ -3,7 +3,11 @@ import {
   fetchCampaigns, createCampaign, updateCampaign, archiveCampaign,
   fetchTickers, createTicker, updateTicker, deleteTicker,
 } from "./marketing.api";
-import type { MarketingTickerWritePayload } from "./marketing.api";
+import {
+  fetchPartnerOffers, updatePartnerOffer, archivePartnerOffer,
+  fetchPartnerSelfOffers, submitPartnerSelfOffer,
+} from "./marketing.api";
+import type { MarketingTickerWritePayload, PartnerOfferSubmitPayload } from "./marketing.api";
 import {
   fetchDeliveryAnalytics,
   fetchOrderAnalytics,
@@ -104,27 +108,6 @@ export function createVideoDraft(overrides: Partial<MarketingVideoRecord> = {}):
   };
 }
 
-export function createPartnerOfferDraft(overrides: Partial<PartnerOfferRecord> = {}): PartnerOfferRecord {
-  return {
-    id: `off-temp-${Date.now()}`,
-    partnerName: "",
-    storeId: "",
-    storeLabel: "",
-    productId: "",
-    productLabel: "",
-    category: "restaurants",
-    offerType: "discount",
-    status: "inbound",
-    source: "partner",
-    title: "",
-    valueLabel: "",
-    eligibility: "all",
-    version: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...overrides,
-  };
-}
 
 export function createGrowthDraft(overrides: Partial<MarketingGrowthRecord> = {}): MarketingGrowthRecord {
   return {
@@ -324,39 +307,134 @@ export function useVideosController(authKind: string) {
   };
 }
 
+// usePartnerOffersController drives the operator review queue: it can review,
+// approve, reject (with reason), and archive offers, but it never creates one
+// — offers only ever originate from a partner's own submission
+// (usePartnerSelfOffersController below).
 export function usePartnerOffersController(authKind: string) {
   const [items, setItems] = useState<ReadonlyArray<PartnerOfferRecord>>([]);
   const [selected, setSelected] = useState<PartnerOfferRecord | null>(null);
   const [draft, setDraft] = useState<PartnerOfferRecord | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const { offers } = await fetchPartnerOffers();
+      setItems(offers);
+      setErrorMessage(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authKind !== "authenticated") { setItems([]); return; }
+    void load();
+  }, [authKind, load]);
 
   const select = useCallback((item: PartnerOfferRecord | null) => {
     setSelected(item);
-    setDraft(item === null ? createPartnerOfferDraft() : { ...item });
+    setDraft(item === null ? null : { ...item });
   }, []);
 
-  const save = useCallback((input: PartnerOfferRecord) => {
-    void input;
-    select(null);
-  }, [select]);
+  const save = useCallback(async (input: PartnerOfferRecord) => {
+    try {
+      await updatePartnerOffer(input.id, {
+        status: input.status,
+        title: input.title,
+        valueLabel: input.valueLabel,
+        eligibility: input.eligibility,
+        rejectionReason: input.rejectionReason,
+        marginRiskNote: input.marginRiskNote,
+      });
+      setErrorMessage(null);
+      await load();
+      select(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [load, select]);
 
-  const remove = useCallback((id: string) => {
-    void id;
-    select(null);
-  }, [select]);
+  const remove = useCallback(async (id: string) => {
+    try {
+      await archivePartnerOffer(id);
+      setErrorMessage(null);
+      await load();
+      if (selected?.id === id) select(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [load, selected, select]);
 
-  const toggleStatus = useCallback((id: string) => {
-    void id;
-  }, []);
+  const toggleStatus = useCallback(async (id: string) => {
+    const current = items.find(o => o.id === id);
+    if (!current) return;
+    const nextStatus = current.status === "published" ? "paused"
+      : current.status === "review" ? "published"
+      : current.status === "inbound" ? "review"
+      : current.status;
+    if (nextStatus === current.status) return;
+    try {
+      await updatePartnerOffer(id, { status: nextStatus });
+      setErrorMessage(null);
+      await load();
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, [items, load]);
 
-  // FIX_REQUIRED: no dsh_partner_offers backend table/handler exists yet — see
-  // marketing_partner_offer_matrix.md. Partner-side submission already correctly
-  // targets a review queue (not self-publish); the operator review side here is
-  // still fail-closed until a backend-backed review lifecycle exists.
   return {
     items, selected, draft, setDraft, select, save, remove, toggleStatus,
-    reload: () => {},
-    isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعروض الشركاء حتى الآن — أوامر التعديل غير مفعّلة.",
+    reload: load,
+    errorMessage,
+    isBackedByApi: true as const,
+  };
+}
+
+// usePartnerSelfOffersController drives an authenticated partner's own offer
+// submissions (app-partner PromotionsScreen): list own offers, submit a new
+// one for review. Partners can never edit or archive after submission — that
+// belongs to the operator review queue above.
+export function usePartnerSelfOffersController(authKind: string) {
+  const [items, setItems] = useState<ReadonlyArray<PartnerOfferRecord>>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const { offers } = await fetchPartnerSelfOffers();
+      setItems(offers);
+      setErrorMessage(null);
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authKind !== "authenticated") { setItems([]); return; }
+    void load();
+  }, [authKind, load]);
+
+  const submit = useCallback(async (input: PartnerOfferSubmitPayload): Promise<boolean> => {
+    setSubmitting(true);
+    try {
+      await submitPartnerSelfOffer(input);
+      setErrorMessage(null);
+      await load();
+      return true;
+    } catch (err) {
+      setErrorMessage(resolveMsg(err));
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
+  }, [load]);
+
+  return {
+    items, submit, submitting,
+    reload: load,
+    errorMessage,
+    isBackedByApi: true as const,
   };
 }
 
