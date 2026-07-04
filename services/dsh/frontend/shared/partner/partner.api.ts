@@ -1,5 +1,5 @@
-import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshPartner,
   DshPartnerSummary,
@@ -20,6 +20,7 @@ import type {
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
+const httpClient = createDshHttpClient(baseUrl, "partner");
 
 /**
  * OpenAPI Operation Binding Matrix — contracts/dsh.openapi.yaml
@@ -64,25 +65,8 @@ const baseUrl = resolveDshApiBaseUrl();
  *   generated for these operations, so this isolated adapter carries transport until a
  *   generated request facade is stabilized. No business logic lives here.
  */
-type RequestOptions = { readonly method?: string; readonly body?: unknown };
-
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-  if (options.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-  }
-  const response = await fetch(new URL(path, baseUrl), {
-    method: options.method ?? "GET",
-    headers,
-    ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-  });
-  if (!response.ok) throw { kind: "http", status: response.status };
-  return response.json() as Promise<T>;
+function request<T>(path: string, options: { readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; readonly body?: unknown } = {}): Promise<T> {
+  return httpClient.request<T>(path, options);
 }
 
 // ── Operator: partner CRUD ────────────────────────────────────────────────────

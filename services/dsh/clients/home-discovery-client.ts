@@ -3,6 +3,7 @@
  * Typed client for GET /dsh/home-discovery
  * Uses fetch with timeout — DB-backed runtime data only.
  */
+import { createDshHttpClient } from '../frontend/shared/_kernel/dsh-http-request';
 
 export type DshHomeBanner = {
   id: string;
@@ -124,37 +125,14 @@ export interface DshHomeDiscoveryClient {
 }
 
 export function createDshHomeDiscoveryClient(baseUrl: string): DshHomeDiscoveryClient {
-  async function adminRequest<T>(
+  const httpClient = createDshHttpClient(baseUrl, 'home');
+  function adminRequest<T>(
     path: string,
     accessToken: string,
     method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
     body?: unknown,
   ): Promise<T> {
-    let response: Response;
-    try {
-      response = await fetch(new URL(path, baseUrl), {
-        method,
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-          'X-Correlation-ID': `home-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
-          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(10_000),
-      });
-    } catch (error) {
-      throw { kind: 'network', message: error instanceof Error ? error.message : 'network error' } satisfies DshHomeDiscoveryClientError;
-    }
-    if (!response.ok) {
-      throw {
-        kind: 'http',
-        status: response.status,
-        body: await response.json().catch(() => null),
-      } satisfies DshHomeDiscoveryClientError;
-    }
-    if (response.status === 204) return undefined as T;
-    return response.json() as Promise<T>;
+    return httpClient.request<T>(path, { method, body, token: accessToken });
   }
 
   return {

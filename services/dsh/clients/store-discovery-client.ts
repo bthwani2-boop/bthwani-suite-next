@@ -1,4 +1,5 @@
 import type { paths } from "./generated/dsh-api.js";
+import { createDshFlexibleHttpClient, type DshMutationAuth } from "../frontend/shared/_kernel/dsh-http-request";
 
 type ListDshStoresParams =
   paths["/dsh/stores"]["get"]["parameters"]["query"];
@@ -62,14 +63,11 @@ export type DshStoreClient = {
   getOperatorStore(storeId: string, accessToken: string): Promise<OperatorStoreDetailResponse>;
 };
 
-export type MutationAuth = {
-  readonly accessToken: string;
-  readonly idempotencyKey: string;
-  readonly correlationId: string;
-};
+export type MutationAuth = DshMutationAuth;
 
 export function createDshStoreClient(baseUrl: string): DshStoreClient {
-  async function request<T>(
+  const httpClient = createDshFlexibleHttpClient(baseUrl);
+  function request<T>(
     path: string,
     input?: {
       readonly method?: "GET" | "POST" | "PATCH";
@@ -79,45 +77,7 @@ export function createDshStoreClient(baseUrl: string): DshStoreClient {
       readonly body?: unknown;
     },
   ): Promise<T> {
-    const url = new URL(path, baseUrl);
-    if (input?.query) {
-      for (const [k, v] of Object.entries(input.query)) {
-        if (v !== undefined) url.searchParams.set(k, v);
-      }
-    }
-
-    let res: Response;
-    try {
-      res = await fetch(url.toString(), {
-        method: input?.method ?? "GET",
-        headers: {
-          Accept: "application/json",
-          "Cache-Control": "no-cache",
-          "Pragma": "no-cache",
-          ...(input?.body !== undefined ? { "Content-Type": "application/json" } : {}),
-          ...(input?.token !== undefined ? { Authorization: `Bearer ${input.token}` } : {}),
-          ...(input?.auth !== undefined
-            ? {
-                Authorization: `Bearer ${input.auth.accessToken}`,
-                "Idempotency-Key": input.auth.idempotencyKey,
-                "X-Correlation-ID": input.auth.correlationId,
-              }
-            : {}),
-        },
-        ...(input?.body !== undefined ? { body: JSON.stringify(input.body) } : {}),
-        signal: AbortSignal.timeout(10000),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "network error";
-      throw { kind: "network", message } satisfies DshStoreClientError;
-    }
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw { kind: "http", status: res.status, body } satisfies DshStoreClientError;
-    }
-
-    return res.json() as Promise<T>;
+    return httpClient.request<T>(path, input);
   }
 
   return {

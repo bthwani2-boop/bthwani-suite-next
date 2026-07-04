@@ -1,4 +1,5 @@
 import { getWltApiBaseUrl } from "./wlt-dsh-api-base-url";
+import { wltFetchJson } from "./wlt-dsh-http-request";
 import type { WltDshFinanceRuntimeResult } from "./wlt-dsh-finance-hub.types";
 
 export async function loadWltDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRuntimeResult> {
@@ -11,40 +12,41 @@ export async function loadWltDshFinanceRuntimeReadModel(): Promise<WltDshFinance
     };
   }
 
-  try {
-    const [overviewResp, ledgerResp, refundsResp, closeStatusResp] = await Promise.all([
-      fetch(`${baseUrl}/wlt/settlements`),
-      fetch(`${baseUrl}/wlt/ledger?limit=250`),
-      fetch(`${baseUrl}/wlt/refunds`),
-      fetch(`${baseUrl}/wlt/control-panel/reconciliation-close-status`),
-    ]);
+  const [overview, ledger, refunds, closeStatus] = await Promise.all([
+    wltFetchJson(`${baseUrl}/wlt/settlements`, (body) => body),
+    wltFetchJson(`${baseUrl}/wlt/ledger?limit=250`, (body) => body.entries ?? []),
+    wltFetchJson(`${baseUrl}/wlt/refunds`, (body) => body.refunds ?? []),
+    wltFetchJson(
+      `${baseUrl}/wlt/control-panel/reconciliation-close-status`,
+      (body) => body ?? { status: "open", businessDate: new Date().toISOString().split("T")[0] },
+    ),
+  ]);
 
-    if (!overviewResp.ok) throw new Error(`overview_err: HTTP ${overviewResp.status}`);
-    if (!ledgerResp.ok) throw new Error(`ledger_err: HTTP ${ledgerResp.status}`);
-    if (!refundsResp.ok) throw new Error(`refunds_err: HTTP ${refundsResp.status}`);
-    if (!closeStatusResp.ok) throw new Error(`close_status_err: HTTP ${closeStatusResp.status}`);
+  const failed = [
+    !overview.ok && "overview_err",
+    !ledger.ok && "ledger_err",
+    !refunds.ok && "refunds_err",
+    !closeStatus.ok && "close_status_err",
+  ].filter((v): v is string => v !== false);
 
-    const overview = await overviewResp.json();
-    const ledgerData = await ledgerResp.json();
-    const refundsData = await refundsResp.json();
-    const closeStatus = await closeStatusResp.json();
-
-    return {
-      state: "runtime",
-      data: {
-        baseUrl,
-        overview,
-        ledgerEntries: ledgerData.entries ?? [],
-        refunds: refundsData.refunds ?? [],
-        closeStatus: closeStatus ?? { status: "open", businessDate: new Date().toISOString().split("T")[0] },
-        fetchedAt: new Date().toISOString(),
-      },
-    };
-  } catch (error) {
+  if (!overview.ok || !ledger.ok || !refunds.ok || !closeStatus.ok) {
+    const firstMessage = [overview, ledger, refunds, closeStatus].find((r) => !r.ok)?.message;
     return {
       state: "blocked",
       baseUrl,
-      error: error instanceof Error ? error.message : "wlt_runtime_unavailable",
+      error: `${failed.join(", ")}: ${firstMessage ?? "wlt_runtime_unavailable"}`,
     };
   }
+
+  return {
+    state: "runtime",
+    data: {
+      baseUrl,
+      overview: overview.data,
+      ledgerEntries: ledger.data,
+      refunds: refunds.data,
+      closeStatus: closeStatus.data,
+      fetchedAt: new Date().toISOString(),
+    },
+  };
 }
