@@ -2,7 +2,7 @@
 # AGENTS.md is the authoritative instruction file.
 
 [project]
-root = "C:\\bthwani-suite-next"
+root = "."
 instructions = "AGENTS.md"
 
 [features]
