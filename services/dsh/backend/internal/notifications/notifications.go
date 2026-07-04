@@ -232,17 +232,39 @@ func (a *pqTextArray) Scan(src interface{}) error {
 
 func splitPgArray(s string) []string {
 	var result []string
-	var cur []byte
-	for i := 0; i < len(s); i++ {
-		if s[i] == ',' {
-			result = append(result, string(cur))
-			cur = cur[:0]
-		} else {
-			cur = append(cur, s[i])
+	var cur strings.Builder
+	inQuotes := false
+	escaped := false
+
+	flush := func() {
+		if cur.Len() == 0 {
+			return
 		}
+		result = append(result, cur.String())
+		cur.Reset()
 	}
-	if len(cur) > 0 {
-		result = append(result, string(cur))
+
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if escaped {
+			cur.WriteByte(ch)
+			escaped = false
+			continue
+		}
+		if ch == '\\' && inQuotes {
+			escaped = true
+			continue
+		}
+		if ch == '"' {
+			inQuotes = !inQuotes
+			continue
+		}
+		if ch == ',' && !inQuotes {
+			flush()
+			continue
+		}
+		cur.WriteByte(ch)
 	}
+	flush()
 	return result
 }
