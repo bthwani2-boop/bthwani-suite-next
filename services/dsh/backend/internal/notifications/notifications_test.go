@@ -10,7 +10,7 @@ func TestFormatPgTextArrayEmpty(t *testing.T) {
 		t.Fatalf("expected {} for nil list, got %q", got)
 	}
 	if got := formatPgTextArray([]string{}); got != "{}" {
-		t.Fatalf("expected {} for empty slice, got %q", got)
+		t.Fatalf("expected {} for empty list, got %q", got)
 	}
 }
 
@@ -45,14 +45,14 @@ func TestSplitPgArrayEmptyStringYieldsNoElements(t *testing.T) {
 	}
 }
 
-func TestPqTextArrayScanNilYieldsEmptySlice(t *testing.T) {
+func TestPqTextArrayScanNilYieldsEmptyList(t *testing.T) {
 	var out []string
 	scanner := pq_TextArray(&out)
 	if err := scanner.Scan(nil); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(out) != 0 {
-		t.Fatalf("expected empty slice for nil src, got %v", out)
+		t.Fatalf("expected empty list for nil src, got %v", out)
 	}
 }
 
@@ -63,7 +63,7 @@ func TestPqTextArrayScanEmptyPgArray(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(out) != 0 {
-		t.Fatalf("expected empty slice for {}, got %v", out)
+		t.Fatalf("expected empty list for {}, got %v", out)
 	}
 }
 
