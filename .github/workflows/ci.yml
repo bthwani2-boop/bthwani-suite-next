@@ -7,7 +7,8 @@ on:
   push:
     branches:
       - master
-      - brach-validation
+      - begin
+      - branch-validation
   workflow_dispatch:
     inputs:
       reason:

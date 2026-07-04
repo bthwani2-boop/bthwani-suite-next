@@ -56,7 +56,7 @@ const baseUrl = resolveDshApiBaseUrl();
  *
  * api_client_policy: manual shared adapter (Option B).
  * - All functions live in the DSH shared brain only; screens must never fetch directly
- *   (proof: guard:no-direct-fetch-in-screen).
+ *   (policy: surface code must never call fetch/axios directly; use shared adapters only).
  * - Every function is bound to one OpenAPI operationId above; any drift between this
  *   table and contracts/dsh.openapi.yaml is a defect.
  * - Reason the generated facade is not used yet: the generated openapi-typescript client

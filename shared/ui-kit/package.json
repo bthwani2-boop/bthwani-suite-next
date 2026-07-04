@@ -14,7 +14,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:contracts": "tsc --noEmit -p tsconfig.contracts.json",
-    "lint": "node ../../tools/guards/no-cp-primitives-in-ui-kit.mjs && node ../../tools/guards/no-domain-component-in-ui-kit.mjs && node ../../tools/guards/no-direct-tamagui-outside-ui-kit.mjs && node ../../tools/guards/no-ui-kit-deep-imports.mjs"
+    "lint": "pnpm --dir ../.. run guard:ui-kit-boundary"
   },
   "devDependencies": {
     "@types/react": "19.2.17",
