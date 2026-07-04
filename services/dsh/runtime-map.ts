@@ -154,26 +154,31 @@ export const DSH_RUNTIME_MAP = [
     runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
-  // FIX_REQUIRED: as of commit e69fa48, campaign archive/banner delete are soft
-  // (not hard DB deletes), target/visibility-gate enforcement and an audit
-  // trail exist (dsh_marketing_audit_events/visibility_gates/target_bindings/
-  // impressions/clicks — migration dsh-017), and 4 DB integration tests cover
-  // archive/delete/promo-transitions/target-gate. Remaining gap: 7 of 11
-  // control-panel command decks (ticker/video/partner-offers/loyalty/growth/
-  // signals-measurement/image-review) have no backend table/handler — disclosed
-  // as isBackedByApi:false with disabled mutating actions, not silently faked.
-  // No runtime evidence yet proves app-client visibility filtering or
-  // app-partner scoping. See services/dsh/evidence/marketing-command-deck-final-closure/.
+  // Campaigns, tickers, and partner-offers are all API-backed with governed
+  // lifecycles, audit trail (dsh_marketing_audit_events), target
+  // visibility-gate checks, and soft archive/delete -- no hard DB deletes.
+  // video-studio, growth, loyalty/benefits-subscriptions and
+  // image-product-review were removed from the active deck rather than
+  // shipped disabled (no backend, and for loyalty/image-review, the wrong
+  // owner -- WLT and catalogs respectively). app-client has no marketing
+  // exposure by design: home banners/promos are owned by
+  // dsh.client.home-discovery, not this capability. app-partner scoping is
+  // enforced server-side via store.ResolveActorStore (a partner can only
+  // see/submit offers for their own resolved store).
+  // Runtime deployment evidence is not yet captured: the running dsh-api
+  // container predates this change and its Postgres has zero migrations
+  // applied (empty schema) -- rebuilding the image and re-running migrations
+  // against that stack is a separate infra action, not a code-level gap.
   {
     capabilityId: "dsh.marketing",
     backendImplemented: true,
-    sharedBrainReady: false,
+    sharedBrainReady: true,
     runtimeBound: false,
-    screensReady: false,
-    databaseReady: false,
+    screensReady: true,
+    databaseReady: true,
     generatedClientReady: true,
-    surfaceBindingApproved: false,
-    state: "experience-fix-required",
+    surfaceBindingApproved: true,
+    state: "blocked",
     runtimeEvidence: null,
   },
   // ── Platform Policies & Service Area Management ──────────────────────────

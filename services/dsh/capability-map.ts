@@ -301,35 +301,30 @@ export const DSH_CAPABILITY_MAP = [
     closureState: "RUNTIME_VERIFIED",
   },
   // ── Marketing Command Deck ─────────────────────────────────────────────────
-  // FIX_REQUIRED: see services/dsh/evidence/marketing-command-deck-final-closure/.
-  // surfaces list corrected — marketing impacts app-client (home-discovery banners/promos)
-  // and app-partner (offer submission), not only control-panel.
-  // Backend for campaigns/banners/promos is API-backed with soft archive/delete,
-  // audit trail, target visibility-gate checks and 4 DB integration tests (see
-  // marketing_db_test.go) as of commit e69fa48. Tickers are API-backed since
-  // migration dsh-019 (governed lifecycle + audit + soft delete). Signals and
-  // header KPIs consume existing DSH analytics endpoints. Remaining gap:
-  // 5 of 11 control-panel command decks (video/partner-offers/loyalty/growth/
-  // image-review) have no backend table/handler — they are
-  // explicitly disclosed as isBackedByApi:false with mutating actions disabled
-  // in the UI, not silently faked. No runtime evidence yet proves app-client
-  // visibility filtering or app-partner scoping for this capability.
-  // RESOLVED (2026-07-04, SSOT consolidation): the duplicate marketing
-  // banners/promos subsystem (contract ops listDshMarketingBanners/create/
-  // update/deleteDshMarketingBanner + listDshMarketingPromos/create/
-  // updateDshMarketingPromo, backend routes/handlers, dsh_marketing_banners/
-  // dsh_marketing_promos tables, useBannersController/usePromosController)
-  // had ZERO UI consumers after the dead MarketingHubScreen retirement and
-  // duplicated the truth already owned and runtime-verified by
-  // dsh.client.home-discovery (dsh_home_banners/dsh_home_promos — the tables
-  // actually serving app-client). Retired full-stack: OpenAPI paths+schemas,
-  // generated client, backend handlers/routes/persistence, shared controllers,
-  // types, and DB tables (migration dsh-018_retire_marketing_banners_promos.sql).
-  // dsh.client.home-discovery is the single canonical owner of home banners/
-  // promos. Campaigns remain API-backed and governed (audit + target gate).
+  // Active decks are all API-backed: campaigns and tickers (soft
+  // archive/delete, audit trail, target visibility-gate checks, governed
+  // status lifecycles, DB integration tests in marketing_db_test.go), and
+  // partner-offers (dsh_partner_offers table, operator review lifecycle with
+  // required rejection reasons, partner self-submission scoped to the
+  // caller's own resolved store via store.ResolveActorStore). Signals and
+  // header KPIs consume existing DSH analytics endpoints with no hardcoded
+  // values. video-studio, growth, loyalty/benefits-subscriptions and
+  // image-product-review were removed from the active deck (not shipped
+  // disabled) because they had no backend and, for loyalty (WLT-owned
+  // financial truth) and image-review (catalog-owned), the wrong owner —
+  // see marketing-registry.ts / use-marketing-controller.tsx history.
+  // Marketing is operator-only: home banners/promos are owned by
+  // dsh.client.home-discovery (dsh_home_banners/dsh_home_promos), not this
+  // capability (migration dsh-018 retired the duplicate marketing banners/
+  // promos subsystem). app-partner has real behavior (offer submission via
+  // /dsh/partner/marketing/offers) -- the surfaces list reflects that.
+  // Runtime deployment evidence (docker-runtime smoke) is not yet captured:
+  // the locally running dsh-api container predates this change and its
+  // Postgres has no migrations applied at all (empty schema) -- rebuilding
+  // and re-migrating that stack is a separate infra action, not a code gap.
   {
     id: "dsh.marketing",
-    status: "experience-fix-required",
+    status: "blocked-runtime",
     contractOperations: [
       "listDshCampaigns",
       "createDshCampaign",
@@ -340,15 +335,15 @@ export const DSH_CAPABILITY_MAP = [
       "createDshMarketingTicker",
       "updateDshMarketingTicker",
       "deleteDshMarketingTicker",
+      "listDshPartnerOffers",
+      "updateDshPartnerOffer",
+      "archiveDshPartnerOffer",
+      "listDshPartnerSelfOffers",
+      "submitDshPartnerSelfOffer",
     ],
-    // Campaigns are exposed under /dsh/operator/... only — operator surface.
-    // Remaining gap: 5 of 11 control-panel command decks (video/partner-offers/
-    // loyalty/growth/image-review) have no backend
-    // table/handler; they are disclosed as isBackedByApi:false with mutating
-    // actions disabled. That gap keeps this capability FIX_REQUIRED.
-    surfaces: ["control-panel"],
+    surfaces: ["control-panel", "app-partner"],
     runtimeBound: false,
-    closureState: "FIX_REQUIRED",
+    closureState: "CONTRACT_ACTIVE_RUNTIME_BLOCKED",
   },
   // ── Platform Policies & Service Area Management ───────────────────────────
   {
