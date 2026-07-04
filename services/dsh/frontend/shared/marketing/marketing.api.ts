@@ -56,3 +56,39 @@ export const updateTicker = (id: string, body: MarketingTickerWritePayload) =>
 // Delete is a soft delete (deletedAt recorded server-side).
 export const deleteTicker = (id: string) =>
   req<{ deleted: boolean }>(`/dsh/operator/marketing/tickers/${id}`, { method: "DELETE" });
+
+export type PartnerOfferWritePayload = {
+  status?: string;
+  title?: string;
+  valueLabel?: string;
+  eligibility?: string;
+  activeFromDate?: string;
+  activeToDate?: string;
+  rejectionReason?: string | undefined;
+  marginRiskNote?: string | undefined;
+};
+
+export type PartnerOfferSubmitPayload = {
+  title: string;
+  partnerName?: string;
+  storeLabel?: string;
+  productId?: string;
+  productLabel?: string;
+  category?: string;
+  offerType?: string;
+  valueLabel: string;
+  eligibility?: string;
+};
+
+export const fetchPartnerOffers = () =>
+  req<{ offers: import("../partner/dsh-partner-offer-types").PartnerOfferRecord[] }>("/dsh/operator/marketing/partner-offers");
+export const updatePartnerOffer = (id: string, body: PartnerOfferWritePayload) =>
+  req<{ offer: import("../partner/dsh-partner-offer-types").PartnerOfferRecord }>(`/dsh/operator/marketing/partner-offers/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+// Archive is a soft archive (archived_at set) — the row is never physically deleted.
+export const archivePartnerOffer = (id: string) =>
+  req<{ archived: boolean }>(`/dsh/operator/marketing/partner-offers/${id}`, { method: "DELETE" });
+
+export const fetchPartnerSelfOffers = () =>
+  req<{ offers: import("../partner/dsh-partner-offer-types").PartnerOfferRecord[] }>("/dsh/partner/marketing/offers");
+export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload) =>
+  req<{ offer: import("../partner/dsh-partner-offer-types").PartnerOfferRecord }>("/dsh/partner/marketing/offers", { method: "POST", body: JSON.stringify(body) });
