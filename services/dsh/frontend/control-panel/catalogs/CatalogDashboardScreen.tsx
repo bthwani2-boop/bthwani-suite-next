@@ -35,7 +35,7 @@ import {
   type CatalogScopeId,
   type CatalogSmartFilterId,
 } from "../../shared/catalog";
-import { opsTheme } from "../../shared/operations";
+
 import { CatalogWorkspaceRouter } from "./drawers/CatalogWorkspaceDrawers";
 import type { CatalogWorkspaceState } from "./drawers/CatalogWorkspaceDrawers";
 
@@ -45,10 +45,10 @@ type StatusTone = "warning" | "success" | "danger" | "neutral";
 
 function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
   const toneColors: Record<StatusTone, { bg: string; color: string }> = {
-    warning: { bg: opsTheme.warningSurface, color: 'var(--status-warning-text, colorRoles.brandAction)' },
-    success: { bg: opsTheme.successSurface, color: 'var(--status-success-strong, colorRoles.brandStructure)' },
-    danger:  { bg: opsTheme.dangerSurface, color: 'var(--status-danger-strong, colorRoles.brandAction)' },
-    neutral: { bg: 'var(--surface-muted, colorRoles.surfaceBase)', color: opsTheme.textMuted },
+    warning: { bg: colorRoles.surfaceBase, color: 'var(--status-warning-text, colorRoles.brandAction)' },
+    success: { bg: colorRoles.surfaceBase, color: 'var(--status-success-strong, colorRoles.brandStructure)' },
+    danger:  { bg: colorRoles.surfaceBase, color: 'var(--status-danger-strong, colorRoles.brandAction)' },
+    neutral: { bg: 'var(--surface-muted, colorRoles.surfaceBase)', color: colorRoles.brandStructure },
   };
   const { bg, color } = toneColors[tone];
   return (
@@ -235,7 +235,7 @@ export function CatalogDashboardScreen() {
           </CpButton>
         </div>
         {identity.state.kind === "error" && (
-          <p role="alert" style={{ color: opsTheme.danger, textAlign: "right" }}>
+          <p role="alert" style={{ color: colorRoles.brandAction, textAlign: "right" }}>
             {identity.state.message}
           </p>
         )}
