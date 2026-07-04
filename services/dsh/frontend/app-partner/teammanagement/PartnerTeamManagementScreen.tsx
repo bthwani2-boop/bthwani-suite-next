@@ -37,86 +37,13 @@ export type PartnerTeamMember = {
 export type PartnerTeamManagementScreenProps = {
   readonly storeName: string;
   readonly branchLabel: string;
+  readonly members?: readonly PartnerTeamMember[];
+  readonly onInviteMember?: (identity: string) => void;
+  readonly onMemberAction?: (memberId: string, actionLabel: string) => void;
   readonly onBack?: () => void;
 };
 
-const demoTeamMembers: readonly PartnerTeamMember[] = [
-  {
-    id: 'mem-1',
-    name: 'أحمد القحطاني',
-    role: 'owner',
-    roleLabel: 'المالك',
-    status: 'active',
-    statusLabel: 'نشط',
-    branchAssignment: 'كل الفروع',
-    permissionsSummary: 'صلاحيات كاملة تشمل الإدارة والمالية وإدارة الفروع والكتالوجات.',
-    deliveryAssignment: 'غير مسند',
-    inviteLifecycle: 'تفعيل مباشر عبر الهوية الوطنية',
-    operationalImpact: 'المالك الأساسي للحساب، لا يمكن حذفه أو تعديل صلاحياته إلا بواسطة الدعم.',
-    auditNote: 'تم التسجيل في 2026-01-10.',
-    inlineActionLabel: 'عرض الدور',
-  },
-  {
-    id: 'mem-2',
-    name: 'سارة الشمري',
-    role: 'supervisor',
-    roleLabel: 'مشرف تشغيلي',
-    status: 'active',
-    statusLabel: 'نشط',
-    branchAssignment: 'فرع الياسمين',
-    permissionsSummary: 'إدارة الطلبات، معالجة المرتجعات، وتعديل حالة توفر الكتالوج محلياً.',
-    deliveryAssignment: 'غير مسند',
-    inviteLifecycle: 'مقبول تلقائياً',
-    operationalImpact: 'يشرف على عمليات الفرع اليومية ومعالجة المشاكل والتجهيز.',
-    auditNote: 'تمت الترقية بواسطة المالك في 2026-03-15.',
-    inlineActionLabel: 'تعطيل',
-  },
-  {
-    id: 'mem-3',
-    name: 'خالد عمر',
-    role: 'staff',
-    roleLabel: 'عضو فريق العمل',
-    status: 'active',
-    statusLabel: 'نشط',
-    branchAssignment: 'فرع الياسمين',
-    permissionsSummary: 'قبول وتجهيز الطلبات وتحديث حالتها فقط.',
-    deliveryAssignment: 'غير مسند',
-    inviteLifecycle: 'مقبول تلقائياً',
-    operationalImpact: 'تجهيز الطلبات اليومية وتحديث حالة جاهزية العناصر.',
-    auditNote: 'تمت الإضافة بواسطة سارة في 2026-04-01.',
-    inlineActionLabel: 'عرض الدور',
-  },
-  {
-    id: 'mem-4',
-    name: 'محمد الدوسري',
-    role: 'courier',
-    roleLabel: 'موصل المتجر',
-    status: 'active',
-    statusLabel: 'نشط',
-    branchAssignment: 'فرع الياسمين',
-    permissionsSummary: 'توصيل الطلبات للعملاء وتأكيد الخروج والتسليم.',
-    deliveryAssignment: 'مسند للطلبات المحلية',
-    inviteLifecycle: 'مقبول تلقائياً',
-    operationalImpact: 'توصيل شحنات فرع الياسمين في النطاق المحدد.',
-    auditNote: 'تم تسجيل الموصل وتفعيل التطبيق في 2026-05-10.',
-    inlineActionLabel: 'عرض الدور',
-  },
-  {
-    id: 'mem-5',
-    name: 'ريناد الحربي',
-    role: 'staff',
-    roleLabel: 'عضو فريق العمل',
-    status: 'invited',
-    statusLabel: 'مدعو',
-    branchAssignment: 'فرع الملقا',
-    permissionsSummary: 'تجهيز الطلبات وتحديث حالتها.',
-    deliveryAssignment: 'غير مسند',
-    inviteLifecycle: 'بانتظار قبول الدعوة (تاريخ الإرسال: 2026-06-25)',
-    operationalImpact: 'لن يتمكن من الدخول للوحة العمليات حتى يتم قبول الدعوة.',
-    auditNote: 'أرسلت الدعوة بواسطة المالك.',
-    inlineActionLabel: 'إعادة إرسال الدعوة',
-  }
-];
+const EMPTY_TEAM_MEMBERS: readonly PartnerTeamMember[] = [];
 
 function resolveTeamStatusTone(status: PartnerTeamStatus): 'success' | 'warning' | 'info' | 'danger' {
   if (status === 'active') return 'success';
@@ -144,44 +71,35 @@ function resolveMemberActionLabel(member: PartnerTeamMember): string {
 export function PartnerTeamManagementScreen({
   storeName,
   branchLabel,
+  members = EMPTY_TEAM_MEMBERS,
+  onInviteMember,
+  onMemberAction,
   onBack,
 }: PartnerTeamManagementScreenProps) {
   const { direction } = useDirection();
   const { theme } = useTheme();
 
-  const [teamMembers, setTeamMembers] = React.useState<readonly PartnerTeamMember[]>(demoTeamMembers);
   const [selectedMemberId, setSelectedMemberId] = React.useState<string>('');
   const [inviteDraft, setInviteDraft] = React.useState('');
   const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
 
   const activeSupervisorCount = React.useMemo(() => {
-    return teamMembers.filter((m) => m.role === 'supervisor' && m.status === 'active').length;
-  }, [teamMembers]);
+    return members.filter((m) => m.role === 'supervisor' && m.status === 'active').length;
+  }, [members]);
 
   const handleAddMember = React.useCallback(() => {
     const trimmed = inviteDraft.trim();
     if (!trimmed) return;
 
-    const newMember: PartnerTeamMember = {
-      id: `mem-${Date.now()}`,
-      name: trimmed.includes('@') ? trimmed.split('@')[0] : trimmed,
-      role: 'staff',
-      roleLabel: 'عضو فريق العمل',
-      status: 'invited',
-      statusLabel: 'مدعو',
-      branchAssignment: branchLabel,
-      permissionsSummary: 'صلاحيات تجهيز الطلبات اليومية وتحديث حالة جاهزية العناصر.',
-      deliveryAssignment: 'غير مسند',
-      inviteLifecycle: `دعوة مرسلة حديثاً إلى: ${trimmed}`,
-      operationalImpact: 'قيد الانتظار لموافقة العضو والربط عبر البريد الإلكتروني.',
-      auditNote: `تمت الدعوة المحلية في ${new Date().toISOString().split('T')[0]}.`,
-      inlineActionLabel: 'إعادة إرسال الدعوة',
-    };
+    if (!onInviteMember) {
+      setActionFeedback('ربط دعوات الفريق غير متاح من runtime الحالي.');
+      return;
+    }
 
-    setTeamMembers((prev) => [...prev, newMember]);
-    setActionFeedback(`تم إرسال دعوة محلية بنجاح إلى: ${trimmed}`);
+    onInviteMember(trimmed);
+    setActionFeedback(`تم إرسال طلب دعوة العضو إلى runtime: ${trimmed}`);
     setInviteDraft('');
-  }, [inviteDraft, branchLabel]);
+  }, [inviteDraft, onInviteMember]);
 
   return (
     <ScrollView
@@ -208,7 +126,7 @@ export function PartnerTeamManagementScreen({
           <View style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2], alignItems: 'flex-start' }}>
             <Icon name="information-circle-outline" size={18} tone="info" style={{ marginTop: 2 }} />
             <Text role="bodySm" tone="info" align="start" style={{ flex: 1 }}>
-              الأدوار والدعوات هنا تجريبية ومحلية حتى يكتمل ربط مسار الصلاحيات المركزي لـ Control Panel (مهمة J-006).
+              الأدوار والدعوات تُعرض من runtime فقط، وتبقى إجراءات التعديل خلف مالك الصلاحيات المركزي.
             </Text>
           </View>
         </Card>
@@ -228,6 +146,7 @@ export function PartnerTeamManagementScreen({
             tone="brand"
             size="sm"
             fullWidth={false}
+            disabled={!onInviteMember}
             onPress={handleAddMember}
           />
           {actionFeedback && (
@@ -241,10 +160,17 @@ export function PartnerTeamManagementScreen({
 
         {/* Team Members List */}
         <View style={{ gap: spacing[3] }}>
-          <Text role="bodyStrong" align="start">أعضاء الفريق التشغيلي ({teamMembers.length})</Text>
+          <Text role="bodyStrong" align="start">أعضاء الفريق التشغيلي ({members.length})</Text>
 
+          {members.length === 0 ? (
+            <Card tone="neutral" padding={3}>
+              <Text role="bodySm" tone="muted" align="start">
+                لا توجد بيانات أعضاء runtime لهذا الفرع حالياً.
+              </Text>
+            </Card>
+          ) : (
           <View style={{ gap: spacing[2] }}>
-            {teamMembers.map((member) => {
+            {members.map((member) => {
               const isSelected = selectedMemberId === member.id;
               const roleTone = resolveTeamRoleTone(member.role);
               const statusTone = resolveTeamStatusTone(member.status);
@@ -317,7 +243,8 @@ export function PartnerTeamManagementScreen({
                           fullWidth={false}
                           disabled={isLastSupervisor}
                           onPress={() => {
-                            setActionFeedback(`تم تنفيذ الإجراء (${memberActionLabel}) على العضو: ${member.name}`);
+                            onMemberAction?.(member.id, memberActionLabel);
+                            setActionFeedback(`تم إرسال إجراء (${memberActionLabel}) إلى runtime للعضو: ${member.name}`);
                           }}
                         />
                         <Button
@@ -326,7 +253,8 @@ export function PartnerTeamManagementScreen({
                           size="sm"
                           fullWidth={false}
                           onPress={() => {
-                            setActionFeedback(`طلب سجل عمليات العضو: ${member.name}`);
+                            onMemberAction?.(member.id, member.status === 'invited' ? 'cancel-invite' : 'audit-log');
+                            setActionFeedback(`تم إرسال طلب إجراء للعضو: ${member.name}`);
                           }}
                         />
                       </View>
@@ -336,6 +264,7 @@ export function PartnerTeamManagementScreen({
               );
             })}
           </View>
+          )}
         </View>
       </View>
     </ScrollView>

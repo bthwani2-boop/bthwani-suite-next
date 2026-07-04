@@ -412,7 +412,7 @@ export type DshHandoffWltImpact = {
   readonly isDebit: boolean;
   readonly isCredit: boolean;
   readonly dshReadOnly: true;
-  readonly contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY';
+  readonly contractState: 'DSH_WLT_READ_ONLY_REFERENCE';
 };
 
 export type DshOrderLifecycleHandoff = {
@@ -434,7 +434,7 @@ const NO_WLT_IMPACT: DshHandoffWltImpact = {
   isDebit: false,
   isCredit: false,
   dshReadOnly: true,
-  contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY',
+  contractState: 'DSH_WLT_READ_ONLY_REFERENCE',
 };
 
 export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] = [
@@ -449,7 +449,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-client', label: 'شاشة تأكيد الدفع تُعرض', uiStateHint: 'payment_pending', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
       { surfaceId: 'control-panel', label: 'لا إجراء — WLT يعالج', uiStateHint: 'monitoring', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'payment', displayLabel: 'بدء تحقق الدفع من WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'payment', displayLabel: 'بدء تحقق الدفع من WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     auditRequired: false,
   },
   {
@@ -463,7 +463,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-client', label: 'رسالة فشل الدفع + خيار إعادة المحاولة', uiStateHint: 'payment_failed', actionRequired: true, actionLabel: 'إعادة المحاولة أو تغيير الوسيلة', readOnly: false, applicableModes: [] },
       { surfaceId: 'control-panel', label: 'تنبيه payment_failed في Operations', uiStateHint: 'alert', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'payment', displayLabel: 'فشل الدفع — لا خصم نهائي', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'payment', displayLabel: 'فشل الدفع — لا خصم نهائي', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'payment_failed',
     auditRequired: true,
   },
@@ -480,7 +480,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'لا إسناد بعد', uiStateHint: 'not_applicable', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'الطلب يظهر في قائمة Operations للمراجعة', uiStateHint: 'operations_review', actionRequired: true, actionLabel: 'موافقة أو رفض الطلب', readOnly: false, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'payment', displayLabel: 'تأكيد الدفع — WLT احتجز المبلغ', isDebit: true, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'payment', displayLabel: 'تأكيد الدفع — WLT احتجز المبلغ', isDebit: true, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'order_created',
     auditRequired: false,
   },
@@ -513,7 +513,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-partner', label: 'سجل رفض الطلب يُعرض', uiStateHint: 'rejected_record', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
       { surfaceId: 'control-panel', label: 'تنبيه عاجل: partner_rejected — يجب إجراء rescue', uiStateHint: 'rescue_required', actionRequired: true, actionLabel: 'فتح Order Rescue', readOnly: false, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'partner_rejected_order',
     auditRequired: true,
   },
@@ -563,7 +563,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'شاشة التوصيل تُعرض — الخريطة + عنوان العميل', uiStateHint: 'pickup_dropoff', actionRequired: true, actionLabel: 'متابعة للتسليم', readOnly: false, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'مرحلة: "الكابتن في الطريق" في Operations', uiStateHint: 'live_tracking', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'cod_accrual', displayLabel: 'COD في حيازة الكابتن — ذمة معلقة لـ WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'cod_accrual', displayLabel: 'COD في حيازة الكابتن — ذمة معلقة لـ WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'picked_up',
     auditRequired: false,
   },
@@ -581,7 +581,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'control-panel', label: 'الطلب يُغلق في Operations + يُضاف لقائمة COD المستحقة', uiStateHint: 'closed_pending_settlement', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'wlt-finance', label: 'بدء احتساب تسوية الكابتن — COD + عمولة', uiStateHint: 'settlement_calculation', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'settlement_trigger', displayLabel: 'PoD أكّد التسليم — WLT يبدأ احتساب التسوية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'settlement_trigger', displayLabel: 'PoD أكّد التسليم — WLT يبدأ احتساب التسوية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'delivered',
     auditRequired: true,
   },
@@ -597,7 +597,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'شاشة الإبلاغ عن العائق — سبب + ملاحظة', uiStateHint: 'delivery_exception_report', actionRequired: true, actionLabel: 'إبلاغ عن سبب الفشل', readOnly: false, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'تنبيه عاجل: delivery_failed — Order Rescue مطلوب', uiStateHint: 'rescue_required', actionRequired: true, actionLabel: 'فتح Order Rescue', readOnly: false, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم حسب سياسة الإلغاء', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'refund', displayLabel: 'استرداد محتمل — WLT يُقيّم حسب سياسة الإلغاء', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'delivery_failed',
     auditRequired: true,
   },
@@ -615,7 +615,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'control-panel', label: 'سجل الإلغاء + تتبع الاسترداد في Finance', uiStateHint: 'refund_monitoring', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
       { surfaceId: 'wlt-finance', label: 'قيد استرداد في دفتر الأستاذ', uiStateHint: 'refund_ledger_entry', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: [] },
     ],
-    wltImpact: { eventKind: 'refund', displayLabel: 'WLT يُعالج الاسترداد إلى وسيلة الدفع الأصلية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY' },
+    wltImpact: { eventKind: 'refund', displayLabel: 'WLT يُعالج الاسترداد إلى وسيلة الدفع الأصلية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'refund_pending_wlt',
     auditRequired: true,
   },

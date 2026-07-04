@@ -20,7 +20,7 @@ export function usePartnerOrdersRuntime(route: string) {
   const [state, setState] = React.useState<PartnerOrdersState>('loading');
 
   const orderLifecycleClient = React.useMemo(
-    () => createDshOrderLifecycleHttpClient(resolveDshOrderApiBaseUrl(), globalThis.fetch, { clientId: partnerClientId }),
+    () => createDshOrderLifecycleHttpClient(resolveDshOrderApiBaseUrl(), undefined, { clientId: partnerClientId }),
     [partnerClientId],
   );
 

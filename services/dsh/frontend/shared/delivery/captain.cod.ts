@@ -16,10 +16,10 @@ export type DshCaptainCodEntry = {
   readonly label: string;
   readonly actionRequired: boolean;
   readonly actionLabel: string;
-  /** WLT intent — display only. Actual COD settlement is WLT-owned: CONTRACT_SCAFFOLD_PREVIEW_ONLY */
+  /** WLT intent — display only. Actual COD settlement is WLT-owned. */
   readonly wltIntentLabel: string;
   readonly wltReadOnly: true;
-  readonly contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY';
+  readonly contractState: 'DSH_WLT_READ_ONLY_REFERENCE';
 };
 
 export const DSH_CAPTAIN_COD_STATE_META: Record<DshCaptainCodState, {
@@ -51,7 +51,7 @@ export function buildCaptainCodEntry(
     actionLabel: meta.actionLabel,
     wltIntentLabel: meta.wltIntentLabel,
     wltReadOnly: true,
-    contractState: 'CONTRACT_SCAFFOLD_PREVIEW_ONLY',
+    contractState: 'DSH_WLT_READ_ONLY_REFERENCE',
   };
 }
 

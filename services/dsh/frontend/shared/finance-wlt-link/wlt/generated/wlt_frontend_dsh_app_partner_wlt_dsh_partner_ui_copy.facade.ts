@@ -27,15 +27,7 @@ export function getWltDshPartnerCommissionLabel(rate: number | string | undefine
 }
 
 export function getWltDshPartnerOperationalModeCommission(
-  modeId: string,
-): number {
-  // TODO: bind to wlt/frontend/shared/dsh when commission API is live
-  const defaults: Record<string, number> = {
-    pickup:           0.05,
-    partner_delivery: 0.15,
-    bthwani_delivery: 0.20,
-    standard:         0.15,
-    express:          0.18,
-  };
-  return defaults[modeId] ?? 0.15;
+  _modeId: string,
+): undefined {
+  return undefined;
 }
