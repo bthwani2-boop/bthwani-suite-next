@@ -16,44 +16,25 @@ func (s *protectedStoreServer) handleCreateOrder(w http.ResponseWriter, r *http.
 	}
 	var body struct {
 		CheckoutIntentID string `json:"checkoutIntentId"`
-		StoreID          string `json:"storeId"`
-		Items            []struct {
-			ProductID   string  `json:"productId"`
-			ProductName string  `json:"productName"`
-			Quantity    int     `json:"quantity"`
-			UnitPrice   float64 `json:"unitPrice"`
-		} `json:"items"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.CheckoutIntentID == "" || body.StoreID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId and storeId are required")
+	if body.CheckoutIntentID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkoutIntentId is required")
 		return
-	}
-	if len(body.Items) == 0 {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "at least one item is required")
-		return
-	}
-
-	items := make([]orders.CreateOrderItemInput, len(body.Items))
-	for i, it := range body.Items {
-		items[i] = orders.CreateOrderItemInput{
-			ProductID:   it.ProductID,
-			ProductName: it.ProductName,
-			Quantity:    it.Quantity,
-			UnitPrice:   it.UnitPrice,
-		}
 	}
 
 	order, err := orders.CreateOrder(s.db, orders.CreateOrderInput{
 		CheckoutIntentID: body.CheckoutIntentID,
-		StoreID:          body.StoreID,
 		ClientID:         actor.ID,
-		Items:            items,
 	})
 	if errors.Is(err, orders.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if errors.Is(err, orders.ErrConflict) {
+		store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
 		return
 	}
 	if err != nil {

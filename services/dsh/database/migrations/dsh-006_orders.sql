@@ -48,5 +48,6 @@ CREATE INDEX IF NOT EXISTS idx_dsh_orders_store_id           ON dsh_orders(store
 CREATE INDEX IF NOT EXISTS idx_dsh_orders_client_id          ON dsh_orders(client_id);
 CREATE INDEX IF NOT EXISTS idx_dsh_orders_status             ON dsh_orders(status);
 CREATE INDEX IF NOT EXISTS idx_dsh_orders_checkout_intent    ON dsh_orders(checkout_intent_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_orders_checkout_intent_unique ON dsh_orders(checkout_intent_id);
 CREATE INDEX IF NOT EXISTS idx_dsh_order_items_order_id      ON dsh_order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_dsh_order_status_events_order ON dsh_order_status_events(order_id);

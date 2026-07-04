@@ -4282,7 +4282,7 @@ components:
           enum: [bthwani_delivery, partner_delivery, pickup]
         state:
           type: string
-          enum: [pending, payment_pending, confirmed, cancelled, expired]
+          enum: [pending, wlt_handoff_failed, payment_pending, confirmed, cancelled, expired]
         paymentMethod:
           type: string
           enum: [cod, wallet, mixed, official_wallet]
@@ -4376,23 +4376,9 @@ components:
 
     DshCreateOrderRequest:
       type: object
-      required: [checkoutIntentId, storeId, items]
+      required: [checkoutIntentId]
       properties:
         checkoutIntentId: { type: string }
-        storeId: { type: string }
-        items:
-          type: array
-          minItems: 1
-          items: { $ref: "#/components/schemas/DshCreateOrderItemInput" }
-
-    DshCreateOrderItemInput:
-      type: object
-      required: [productId, productName, quantity, unitPrice]
-      properties:
-        productId: { type: string }
-        productName: { type: string }
-        quantity: { type: integer, minimum: 1 }
-        unitPrice: { type: number, format: double, minimum: 0 }
 
     DshRejectOrderRequest:
       type: object

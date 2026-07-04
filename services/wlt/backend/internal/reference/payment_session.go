@@ -3,11 +3,14 @@ package reference
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"wlt-api/internal/shared"
 )
+
+var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
 
 type PaymentSession struct {
 	ID                string  `json:"id"`
@@ -29,6 +32,11 @@ type CreatePaymentSessionInput struct {
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
+	AmountMinorUnits int64  `json:"amountMinorUnits"`
+	Currency         string `json:"currency"`
+	CartSnapshotHash string `json:"cartSnapshotHash"`
+	IdempotencyKey   string `json:"-"`
+	CorrelationID    string `json:"-"`
 }
 
 func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*PaymentSession, error) {
@@ -38,22 +46,52 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if input.PaymentMethod == "" {
 		input.PaymentMethod = "cod"
 	}
+	if input.Currency == "" {
+		input.Currency = "YER"
+	}
 	switch input.PaymentMethod {
 	case "cod", "wallet", "mixed", "official_wallet":
 	default:
 		return nil, fmt.Errorf("unsupported paymentMethod: %s", input.PaymentMethod)
 	}
+	if input.AmountMinorUnits < 0 {
+		return nil, fmt.Errorf("amountMinorUnits must be non-negative")
+	}
+
+	existing, err := getPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		if existing.ClientID != input.ClientID ||
+			existing.StoreID != input.StoreID ||
+			existing.PaymentMethod != input.PaymentMethod ||
+			existing.AmountMinorUnits != input.AmountMinorUnits ||
+			existing.Currency != input.Currency {
+			return nil, ErrIdempotencyConflict
+		}
+		return existing, nil
+	}
 
 	const q = `
 		INSERT INTO wlt_payment_sessions
-			(checkout_intent_id, client_id, store_id, payment_method, status)
-		VALUES ($1, $2, $3, $4, 'reference_created')
-		ON CONFLICT (checkout_intent_id) DO UPDATE
-		  SET updated_at = NOW()
+			(checkout_intent_id, client_id, store_id, payment_method, status,
+			 amount_minor_units, currency, cart_snapshot_hash, idempotency_key, correlation_id)
+		VALUES ($1, $2, $3, $4, 'reference_created', $5, $6, $7, $8, $9)
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at`
 
-	row := db.QueryRow(q, input.CheckoutIntentID, input.ClientID, input.StoreID, input.PaymentMethod)
+	row := db.QueryRow(q,
+		input.CheckoutIntentID,
+		input.ClientID,
+		input.StoreID,
+		input.PaymentMethod,
+		input.AmountMinorUnits,
+		input.Currency,
+		input.CartSnapshotHash,
+		input.IdempotencyKey,
+		input.CorrelationID,
+	)
 	return scanPaymentSession(row)
 }
 
@@ -76,17 +114,59 @@ func GetPaymentSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 
 func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireDshServiceCaller(w, r) {
+			return
+		}
 		var input CreatePaymentSessionInput
 		if !decodeJSON(w, r, &input) {
 			return
 		}
+		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
+		input.CorrelationID = r.Header.Get("X-Correlation-ID")
+		if input.IdempotencyKey == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key is required")
+			return
+		}
+		if input.CorrelationID == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_CORRELATION_ID", "X-Correlation-ID is required")
+			return
+		}
 		session, err := CreatePaymentSession(db, input)
+		if errors.Is(err, ErrIdempotencyConflict) {
+			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "checkoutIntentId was already used with a different payload")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
 		shared.SendJSON(w, http.StatusCreated, map[string]any{"paymentSession": session})
 	}
+}
+
+func getPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
+	const q = `
+		SELECT id, checkout_intent_id, client_id, store_id, payment_method,
+		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
+		FROM wlt_payment_sessions
+		WHERE checkout_intent_id = $1`
+	session, err := scanPaymentSession(db.QueryRow(q, checkoutIntentID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return session, err
+}
+
+func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header.Get("Authorization") == "" {
+		shared.SendError(w, http.StatusUnauthorized, "SERVICE_AUTH_REQUIRED", "service authorization is required")
+		return false
+	}
+	if r.Header.Get("X-Service-Caller") != "dsh" {
+		shared.SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "only DSH service may create payment sessions")
+		return false
+	}
+	return true
 }
 
 func HandleGetPaymentSession(db *sql.DB) http.HandlerFunc {

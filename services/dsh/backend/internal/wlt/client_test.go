@@ -31,6 +31,18 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		if r.URL.Path != "/wlt/payment-sessions" {
 			t.Fatalf("expected /wlt/payment-sessions, got %s", r.URL.Path)
 		}
+		if r.Header.Get("Authorization") == "" {
+			t.Fatalf("expected Authorization header")
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
+		}
+		if r.Header.Get("X-Correlation-ID") != "corr-1" {
+			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
+		}
+		if r.Header.Get("Idempotency-Key") != "idem-1" {
+			t.Fatalf("expected Idempotency-Key=idem-1, got %q", r.Header.Get("Idempotency-Key"))
+		}
 		var input CreatePaymentSessionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("failed to decode request body: %v", err)
@@ -63,6 +75,8 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		ClientID:         "client-1",
 		StoreID:          "store-1",
 		PaymentMethod:    "wallet",
+		CorrelationID:    "corr-1",
+		IdempotencyKey:   "idem-1",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

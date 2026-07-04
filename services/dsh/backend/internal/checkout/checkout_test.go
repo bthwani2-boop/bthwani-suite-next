@@ -36,13 +36,14 @@ func TestPaymentMethodConstants(t *testing.T) {
 
 func TestIntentStateConstants(t *testing.T) {
 	states := map[IntentState]bool{
-		StatePending:        true,
-		StatePaymentPending: true,
-		StateConfirmed:      true,
-		StateCancelled:      true,
-		StateExpired:        true,
+		StatePending:          true,
+		StateWltHandoffFailed: true,
+		StatePaymentPending:   true,
+		StateConfirmed:        true,
+		StateCancelled:        true,
+		StateExpired:          true,
 	}
-	if len(states) != 5 {
-		t.Fatalf("expected 5 distinct intent states, got %d", len(states))
+	if len(states) != 6 {
+		t.Fatalf("expected 6 distinct intent states, got %d", len(states))
 	}
 }

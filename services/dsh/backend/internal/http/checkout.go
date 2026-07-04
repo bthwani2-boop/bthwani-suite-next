@@ -36,27 +36,15 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to allocate checkout intent")
 		return
 	}
-	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intentID,
-		ClientID:         actor.ID,
-		StoreID:          body.StoreID,
-		PaymentMethod:    body.PaymentMethod,
-	})
-	if err != nil {
-		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
-		return
-	}
-
 	intent, err := checkout.CreateIntent(s.db, checkout.CreateIntentInput{
-		ID:                  intentID,
-		ClientID:            actor.ID,
-		CartID:              body.CartID,
-		StoreID:             body.StoreID,
-		FulfillmentMode:     checkout.FulfillmentMode(body.FulfillmentMode),
-		PaymentMethod:       checkout.PaymentMethod(body.PaymentMethod),
-		WltPaymentSessionID: paymentSession.ID,
-		DeliveryAddress:     body.DeliveryAddress,
-		Note:                body.Note,
+		ID:              intentID,
+		ClientID:        actor.ID,
+		CartID:          body.CartID,
+		StoreID:         body.StoreID,
+		FulfillmentMode: checkout.FulfillmentMode(body.FulfillmentMode),
+		PaymentMethod:   checkout.PaymentMethod(body.PaymentMethod),
+		DeliveryAddress: body.DeliveryAddress,
+		Note:            body.Note,
 	})
 	if errors.Is(err, checkout.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -64,6 +52,43 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create checkout intent")
+		return
+	}
+
+	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
+		CheckoutIntentID: intent.ID,
+		ClientID:         actor.ID,
+		StoreID:          intent.StoreID,
+		PaymentMethod:    string(intent.PaymentMethod),
+		CorrelationID:    r.Header.Get("X-Correlation-ID"),
+		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+	})
+	if err != nil {
+		if failedIntent, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.ID); markErr == nil {
+			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"intent": marshalIntent(failedIntent),
+				"error": map[string]any{
+					"code":    "WLT_HANDOFF_UNAVAILABLE",
+					"message": "WLT payment-session handoff is unavailable",
+				},
+			})
+			return
+		}
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
+		return
+	}
+
+	intent, err = checkout.AttachWltPaymentSession(s.db, intent.ID, actor.ID, paymentSession.ID)
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	if errors.Is(err, checkout.ErrConflict) {
+		store.SendError(w, http.StatusConflict, "CONFLICT", "checkout intent is not ready for WLT handoff")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to attach WLT payment session")
 		return
 	}
 

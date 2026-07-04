@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS dsh_checkout_intents (
     fulfillment_mode        TEXT        NOT NULL DEFAULT 'bthwani_delivery'
                                         CHECK (fulfillment_mode IN ('bthwani_delivery', 'partner_delivery', 'pickup')),
     state                   TEXT        NOT NULL DEFAULT 'pending'
-                                        CHECK (state IN ('pending', 'payment_pending', 'confirmed', 'cancelled', 'expired')),
+                                        CHECK (state IN ('pending', 'wlt_handoff_failed', 'payment_pending', 'confirmed', 'cancelled', 'expired')),
     payment_method          TEXT        NOT NULL DEFAULT 'cod'
                                         CHECK (payment_method IN ('cod', 'wallet', 'mixed', 'official_wallet')),
     wlt_payment_session_id  TEXT        NOT NULL DEFAULT '',

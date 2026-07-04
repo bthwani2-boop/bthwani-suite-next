@@ -21,6 +21,7 @@ import {
 } from "@bthwani/ui-kit";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshCartItem } from "../../shared/cart";
+import type { DshPaymentMethod } from "../../shared/checkout";
 import { useWltDshPaymentController } from "../../shared/finance-wlt-link";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
@@ -28,7 +29,7 @@ type Props = {
   readonly storeId: string;
   readonly serviceAreaCode?: string;
   readonly authKind?: "authenticated" | "unauthenticated";
-  readonly onProceedToCheckout?: (cart: DshCart, deliveryAddress: string, note: string, paymentMethod: string) => void;
+  readonly onProceedToCheckout?: (cart: DshCart, deliveryAddress: string, note: string, paymentMethod: DshPaymentMethod) => void;
   readonly onBrowseCatalog?: () => void;
   readonly onBack?: () => void;
 };

@@ -52,9 +52,7 @@ type Order struct {
 
 type CreateOrderInput struct {
 	CheckoutIntentID string
-	StoreID          string
 	ClientID         string
-	Items            []CreateOrderItemInput
 }
 
 type CreateOrderItemInput struct {
@@ -65,11 +63,8 @@ type CreateOrderItemInput struct {
 }
 
 func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
-	if input.CheckoutIntentID == "" || input.StoreID == "" || input.ClientID == "" {
+	if input.CheckoutIntentID == "" || input.ClientID == "" {
 		return nil, ErrInvalid
-	}
-	if len(input.Items) == 0 {
-		return nil, fmt.Errorf("%w: at least one item required", ErrInvalid)
 	}
 
 	tx, err := db.Begin()
@@ -78,13 +73,56 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	}
 	defer tx.Rollback()
 
+	var cartID, storeID, wltPaymentSessionID string
+	err = tx.QueryRow(`
+		SELECT cart_id::text, store_id, wlt_payment_session_id
+		FROM dsh_checkout_intents
+		WHERE id = $1::uuid
+		  AND client_id = $2
+		  AND state = 'payment_pending'
+		  AND wlt_payment_session_id <> ''`,
+		input.CheckoutIntentID, input.ClientID,
+	).Scan(&cartID, &storeID, &wltPaymentSessionID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation", ErrConflict)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := tx.Query(`
+		SELECT product_id, product_name, quantity
+		FROM dsh_cart_items
+		WHERE cart_id = $1::uuid
+		ORDER BY created_at`, cartID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []CreateOrderItemInput
+	for rows.Next() {
+		var item CreateOrderItemInput
+		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.Quantity); err != nil {
+			return nil, err
+		}
+		item.UnitPrice = 0
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, fmt.Errorf("%w: checkout cart has no items", ErrInvalid)
+	}
+
 	var order Order
 	err = tx.QueryRow(`
 		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
 		VALUES ($1::uuid, $2, $3, $4, $5)
 		RETURNING id::text, checkout_intent_id::text, store_id, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, created_at, updated_at`,
-		input.CheckoutIntentID, input.StoreID, input.ClientID, string(StatusPending), "",
+		input.CheckoutIntentID, storeID, input.ClientID, string(StatusPending), wltPaymentSessionID,
 	).Scan(
 		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.ClientID,
 		&order.Status, &order.RejectionReason, &order.WltPaymentRefID,
@@ -94,7 +132,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		return nil, err
 	}
 
-	for _, item := range input.Items {
+	for _, item := range items {
 		var orderItem OrderItem
 		err = tx.QueryRow(`
 			INSERT INTO dsh_order_items (order_id, product_id, product_name, quantity, unit_price)
@@ -117,6 +155,23 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		order.ID, "system", "", string(StatusPending), "order created",
 	)
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err = tx.Exec(`
+		UPDATE dsh_checkout_intents
+		SET state = 'confirmed', version = version + 1, updated_at = NOW()
+		WHERE id = $1::uuid AND client_id = $2`,
+		input.CheckoutIntentID, input.ClientID,
+	); err != nil {
+		return nil, err
+	}
+
+	if _, err = tx.Exec(`
+		UPDATE dsh_carts
+		SET state = 'checked_out', version = version + 1, updated_at = NOW()
+		WHERE id = $1::uuid`, cartID,
+	); err != nil {
 		return nil, err
 	}
 

@@ -9,6 +9,7 @@ on:
       - master
       - begin
       - branch-validation
+      - starting
   workflow_dispatch:
     inputs:
       reason:

@@ -1,13 +1,14 @@
 import type { DshCheckoutIntent, DshCheckoutState } from "./checkout.types";
 import {
   checkoutConfirmingState,
+  checkoutBlockedPaymentUnavailableState,
   checkoutErrorState,
   checkoutIntentListLoadState,
   checkoutLoadingState,
 } from "./checkout.states";
 import { resolveCheckoutIntentDisplayState } from "./checkout.view-model";
 
-export type CheckoutErrorKind = "permission_denied" | "conflict" | "offline" | "error";
+export type CheckoutErrorKind = "permission_denied" | "conflict" | "offline" | "payment_unavailable" | "error";
 
 export function beginCheckoutSubmit(): DshCheckoutState {
   return checkoutConfirmingState();
@@ -31,6 +32,9 @@ export function resolveCheckoutSubmitError(classified: { readonly kind: Checkout
   }
   if (classified.kind === "offline") {
     return checkoutErrorState("لا يوجد اتصال بالإنترنت.");
+  }
+  if (classified.kind === "payment_unavailable") {
+    return checkoutBlockedPaymentUnavailableState();
   }
   return checkoutErrorState("تعذر إنشاء طلب الدفع.");
 }

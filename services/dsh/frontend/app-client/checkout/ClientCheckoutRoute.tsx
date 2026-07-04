@@ -6,6 +6,7 @@ import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { CartScreen } from "../cart";
 import { CheckoutScreen } from "./CheckoutScreen";
 import type { DshCart } from "../../shared/cart";
+import type { DshPaymentMethod } from "../../shared/checkout";
 
 type Props = {
   readonly storeId: string;
@@ -17,7 +18,7 @@ type Props = {
 
 export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrowseCatalog, onBack, onSuccess }: Props) {
   const identity = useIdentitySession();
-  const [checkoutData, setCheckoutData] = React.useState<{ cart: DshCart; deliveryAddress: string; note: string; paymentMethod: string } | null>(null);
+  const [checkoutData, setCheckoutData] = React.useState<{ cart: DshCart; deliveryAddress: string; note: string; paymentMethod: DshPaymentMethod } | null>(null);
 
   if (identity.state.kind !== "authenticated") {
     return (

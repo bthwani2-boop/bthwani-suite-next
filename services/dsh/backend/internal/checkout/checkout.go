@@ -25,11 +25,12 @@ const (
 type IntentState string
 
 const (
-	StatePending        IntentState = "pending"
-	StatePaymentPending IntentState = "payment_pending"
-	StateConfirmed      IntentState = "confirmed"
-	StateCancelled      IntentState = "cancelled"
-	StateExpired        IntentState = "expired"
+	StatePending          IntentState = "pending"
+	StateWltHandoffFailed IntentState = "wlt_handoff_failed"
+	StatePaymentPending   IntentState = "payment_pending"
+	StateConfirmed        IntentState = "confirmed"
+	StateCancelled        IntentState = "cancelled"
+	StateExpired          IntentState = "expired"
 )
 
 type FulfillmentMode string
@@ -104,6 +105,46 @@ func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
 	return scanIntent(row)
 }
 
+func AttachWltPaymentSession(db *sql.DB, intentID, clientID, paymentSessionID string) (*Intent, error) {
+	if intentID == "" || clientID == "" || paymentSessionID == "" {
+		return nil, ErrInvalid
+	}
+	const q = `
+		UPDATE dsh_checkout_intents
+		SET state = $1, wlt_payment_session_id = $2, version = version + 1, updated_at = NOW()
+		WHERE id = $3::uuid AND client_id = $4
+		  AND state IN ('pending', 'wlt_handoff_failed')
+		RETURNING id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		          state, payment_method, wlt_payment_session_id,
+		          delivery_address, note, version, created_at, updated_at`
+	row := db.QueryRow(q, string(StatePaymentPending), paymentSessionID, intentID, clientID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: intent not found or not handoff-ready", ErrConflict)
+	}
+	return intent, err
+}
+
+func MarkWltHandoffFailed(db *sql.DB, intentID, clientID string) (*Intent, error) {
+	if intentID == "" || clientID == "" {
+		return nil, ErrInvalid
+	}
+	const q = `
+		UPDATE dsh_checkout_intents
+		SET state = $1, version = version + 1, updated_at = NOW()
+		WHERE id = $2::uuid AND client_id = $3
+		  AND state IN ('pending', 'payment_pending')
+		RETURNING id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		          state, payment_method, wlt_payment_session_id,
+		          delivery_address, note, version, created_at, updated_at`
+	row := db.QueryRow(q, string(StateWltHandoffFailed), intentID, clientID)
+	intent, err := scanIntent(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: intent not found or not handoff-ready", ErrConflict)
+	}
+	return intent, err
+}
+
 func GetIntent(db *sql.DB, intentID, clientID string) (*Intent, error) {
 	const q = `
 		SELECT id, client_id, cart_id::text, store_id::text, fulfillment_mode,
@@ -124,7 +165,7 @@ func CancelIntent(db *sql.DB, intentID, clientID string) (*Intent, error) {
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
 		WHERE id = $2::uuid AND client_id = $3
-		  AND state IN ('pending', 'payment_pending')
+		  AND state IN ('pending', 'wlt_handoff_failed', 'payment_pending')
 		RETURNING id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`

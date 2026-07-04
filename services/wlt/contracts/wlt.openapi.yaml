@@ -154,6 +154,25 @@ paths:
       description: Creates an opaque payment-session reference only. No wallet debit, ledger posting, provider capture, refund, or settlement occurs here.
       tags:
         - WltPaymentSessions
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+        - name: X-Correlation-ID
+          in: header
+          required: true
+          schema: { type: string }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -169,6 +188,12 @@ paths:
                 $ref: "#/components/schemas/WltPaymentSessionResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /wlt/payment-sessions/{paymentSessionId}:
     get:
@@ -821,6 +846,24 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/WltApiError"
+    Unauthorized:
+      description: Service authorization is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WltApiError"
+    Forbidden:
+      description: Caller is not allowed to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WltApiError"
+    Conflict:
+      description: Request conflicts with an existing idempotent operation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/WltApiError"
     NotFound:
       description: Resource not found.
       content:
@@ -1057,6 +1100,8 @@ components:
         - checkoutIntentId
         - clientId
         - storeId
+        - amountMinorUnits
+        - currency
       properties:
         checkoutIntentId:
           type: string
@@ -1071,6 +1116,15 @@ components:
             - wallet
             - mixed
             - official_wallet
+        amountMinorUnits:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          default: YER
+        cartSnapshotHash:
+          type: string
 
     WltPaymentStatusRefResponse:
       type: object

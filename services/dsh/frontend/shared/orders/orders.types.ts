@@ -34,13 +34,6 @@ export type DshOrder = {
 
 export type DshCreateOrderInput = {
   readonly checkoutIntentId: string;
-  readonly storeId: string;
-  readonly items: readonly {
-    readonly productId: string;
-    readonly productName: string;
-    readonly quantity: number;
-    readonly unitPrice: number;
-  }[];
 };
 
 export type DshRejectOrderInput = {

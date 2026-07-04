@@ -22,13 +22,13 @@ import {
 import { useCheckoutController } from "../../shared/checkout";
 import { useCreateOrderController, useClientOrderDetailController } from "../../shared/orders";
 import type { DshCart } from "../../shared/cart";
-import type { DshCreateIntentInput } from "../../shared/checkout";
+import type { DshCreateIntentInput, DshPaymentMethod } from "../../shared/checkout";
 
 type Props = {
   readonly cart: DshCart;
   readonly deliveryAddress?: string | undefined;
   readonly note?: string | undefined;
-  readonly paymentMethod: string;
+  readonly paymentMethod: DshPaymentMethod;
   readonly onSuccess?: ((intentId: string) => void) | undefined;
   readonly onCancel?: (() => void) | undefined;
 };
@@ -44,7 +44,7 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
       cartId: cart.id,
       storeId: cart.storeId,
       fulfillmentMode: cart.fulfillmentMode,
-      paymentMethod: paymentMethod as any,
+      paymentMethod,
       ...(deliveryAddress ? { deliveryAddress } : {}),
       ...(note ? { note } : {}),
     };
@@ -59,21 +59,8 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
     ) {
       const { intent } = controller.state;
 
-      const orderItems = cart.items.map((item) => {
-        const priceStr = item.priceReference ? item.priceReference.replace(/[^\d.]/g, "") : "0";
-        const unitPrice = parseFloat(priceStr) || 0;
-        return {
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice,
-        };
-      });
-
       const orderInput = {
         checkoutIntentId: intent.id,
-        storeId: cart.storeId,
-        items: orderItems,
       };
 
       void createOrderController.submit(orderInput);
@@ -231,23 +218,16 @@ function ActiveOrderTracker({
     ]);
   };
 
-  // Chat thread states (replicating donor layout with full messages history scroll)
+  // Chat UI is local-only until a real DSH support/chat endpoint is connected.
   const [chatInputValue, setChatInputValue] = useState("");
   const [chatAttachments, setChatAttachments] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<Array<{ id: string; sender: string; text: string; time: string; side: "start" | "end" | "center" }>>([
     {
       id: "system-1",
       sender: "نظام المتابعة",
-      text: "تم ربط المراسلة الفورية الموحدة بالطلب الحالي بنجاح.",
+      text: "المراسلة المباشرة غير متاحة لهذا الطلب حتى يتم ربط قناة دعم تشغيلية حقيقية.",
       time: "الآن",
       side: "center"
-    },
-    {
-      id: "captain-1",
-      sender: fulfillmentMode === "pickup" ? "المتجر" : "الكابتن المكلف",
-      text: "أهلاً بك يا فندم، أنا متابع طلبك الآن. إذا احتجت صورة للمنتجات أو تسجيل صوتي يرجى إرساله هنا وسأجيبك فوراً.",
-      time: "الآن",
-      side: "start"
     }
   ]);
 
@@ -377,16 +357,13 @@ function ActiveOrderTracker({
     setChatInputValue("");
     setChatAttachments([]);
 
-    // Simulate captain response
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, {
-        id: `captain-${Date.now()}`,
-        sender: isPickup ? "المتجر" : "أحمد الكابتن",
-        text: "تمام يا فندم، أنا متابع تحديثات طلبك وسأقوم بالرد فور وصولي.",
-        time: "الآن",
-        side: "start" as const
-      }]);
-    }, 2000);
+    setChatMessages(prev => [...prev, {
+      id: `support-unavailable-${Date.now()}`,
+      sender: "نظام المتابعة",
+      text: "لم يتم إرسال الرسالة لأن قناة المحادثة التشغيلية غير مفعلة بعد.",
+      time: "الآن",
+      side: "center" as const
+    }]);
   };
 
   const toggleAttachment = (kind: string) => {

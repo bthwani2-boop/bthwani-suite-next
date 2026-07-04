@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 
-export type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official-wallets";
+export type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official_wallet";
 
 export type PaymentDecisionOption = {
   readonly id: PaymentMethodKey;
@@ -28,11 +28,11 @@ export type WltDshPaymentController = {
 // Presentation-only selector state for DSH checkout UI; financial mutation remains owned by WLT runtime APIs.
 export function useWltDshPaymentController(grandTotal: number): WltDshPaymentController {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
-  const [walletLinked, setWalletLinked] = useState(true);
-  const [walletDisplayBalance, setWalletDisplayBalance] = useState(15000);
+  const [walletLinked, setWalletLinked] = useState(false);
+  const walletDisplayBalance = 0;
 
   const linkWallet = () => setWalletLinked(true);
-  const rechargeWallet = () => setWalletDisplayBalance((prev) => prev + 20000);
+  const rechargeWallet = () => undefined;
 
   const paymentDecisionOptions = useMemo<readonly PaymentDecisionOption[]>(() => {
     return [
@@ -96,7 +96,7 @@ export function useWltDshPaymentController(grandTotal: number): WltDshPaymentCon
         ],
       },
       {
-        id: "official-wallets",
+        id: "official_wallet",
         title: "المحافظ الإلكترونية الرسمية",
         description: "الدفع عبر كاش، الكريمي، جوالي أو المحافظ الأخرى.",
         statusLabel: "متاح",

@@ -20,6 +20,11 @@ type CreatePaymentSessionInput struct {
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
+	AmountMinorUnits int64  `json:"amountMinorUnits"`
+	Currency         string `json:"currency"`
+	CartSnapshotHash string `json:"cartSnapshotHash"`
+	CorrelationID    string `json:"-"`
+	IdempotencyKey   string `json:"-"`
 }
 
 type PaymentSession struct {
@@ -30,6 +35,8 @@ type PaymentSession struct {
 	PaymentMethod     string `json:"paymentMethod"`
 	Status            string `json:"status"`
 	ProviderReference string `json:"providerReference"`
+	AmountMinorUnits  int64  `json:"amountMinorUnits"`
+	Currency          string `json:"currency"`
 	CreatedAt         string `json:"createdAt"`
 	UpdatedAt         string `json:"updatedAt"`
 }
@@ -59,6 +66,18 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer dsh-service")
+	req.Header.Set("X-Service-Caller", "dsh")
+	if input.CorrelationID != "" {
+		req.Header.Set("X-Correlation-ID", input.CorrelationID)
+	} else {
+		req.Header.Set("X-Correlation-ID", input.CheckoutIntentID)
+	}
+	if input.IdempotencyKey != "" {
+		req.Header.Set("Idempotency-Key", input.IdempotencyKey)
+	} else {
+		req.Header.Set("Idempotency-Key", "dsh-checkout-intent:"+input.CheckoutIntentID)
+	}
 
 	response, err := c.http.Do(req)
 	if err != nil {

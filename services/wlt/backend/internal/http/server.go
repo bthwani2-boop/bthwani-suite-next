@@ -82,7 +82,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller")
 			w.Header().Set("Vary", "Origin")
 		}
 

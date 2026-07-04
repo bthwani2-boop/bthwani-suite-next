@@ -39,13 +39,16 @@ export async function fetchOperatorCheckoutIntents(
 
 export function classifyCheckoutError(
   error: unknown,
-): { kind: "permission_denied" | "conflict" | "offline" | "error"; message?: string } {
+): { kind: "permission_denied" | "conflict" | "offline" | "payment_unavailable" | "error"; message?: string } {
   const typed = error as { kind?: string; status?: number; message?: string };
   if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
     return { kind: "permission_denied" };
   }
   if (typed.kind === "http" && typed.status === 409) {
     return { kind: "conflict" };
+  }
+  if (typed.kind === "http" && typed.status === 503) {
+    return { kind: "payment_unavailable" };
   }
   if (typed.kind === "network") {
     return { kind: "offline" };
