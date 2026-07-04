@@ -165,21 +165,21 @@ export const DSH_RUNTIME_MAP = [
   // dsh.client.home-discovery, not this capability. app-partner scoping is
   // enforced server-side via store.ResolveActorStore (a partner can only
   // see/submit offers for their own resolved store).
-  // Runtime deployment evidence is not yet captured: the running dsh-api
-  // container predates this change and its Postgres has zero migrations
-  // applied (empty schema) -- rebuilding the image and re-running migrations
-  // against that stack is a separate infra action, not a code-level gap.
+  // Runtime deployment evidence: migration dsh-020 applied, dsh-api image
+  // rebuilt/restarted, both new routes verified reachable (401, not 404) --
+  // see services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt.
+  // Sibling services (wlt-api, identity-api) confirmed unaffected.
   {
     capabilityId: "dsh.marketing",
     backendImplemented: true,
     sharedBrainReady: true,
-    runtimeBound: false,
+    runtimeBound: true,
     screensReady: true,
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "blocked",
-    runtimeEvidence: null,
+    state: "verified",
+    runtimeEvidence: "services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt",
   },
   // ── Platform Policies & Service Area Management ──────────────────────────
   {

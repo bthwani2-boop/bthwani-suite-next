@@ -318,13 +318,15 @@ export const DSH_CAPABILITY_MAP = [
   // capability (migration dsh-018 retired the duplicate marketing banners/
   // promos subsystem). app-partner has real behavior (offer submission via
   // /dsh/partner/marketing/offers) -- the surfaces list reflects that.
-  // Runtime deployment evidence (docker-runtime smoke) is not yet captured:
-  // the locally running dsh-api container predates this change and its
-  // Postgres has no migrations applied at all (empty schema) -- rebuilding
-  // and re-migrating that stack is a separate infra action, not a code gap.
+  // Runtime deployment evidence: migration dsh-020 applied to the runtime
+  // Postgres, dsh-api image rebuilt and restarted, and both new routes
+  // (/dsh/operator/marketing/partner-offers, /dsh/partner/marketing/offers)
+  // verified reachable (401, not 404) -- see
+  // services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt.
+  // Sibling services (wlt-api, identity-api) confirmed unaffected.
   {
     id: "dsh.marketing",
-    status: "blocked-runtime",
+    status: "runtime-verified",
     contractOperations: [
       "listDshCampaigns",
       "createDshCampaign",
@@ -342,8 +344,8 @@ export const DSH_CAPABILITY_MAP = [
       "submitDshPartnerSelfOffer",
     ],
     surfaces: ["control-panel", "app-partner"],
-    runtimeBound: false,
-    closureState: "CONTRACT_ACTIVE_RUNTIME_BLOCKED",
+    runtimeBound: true,
+    closureState: "RUNTIME_VERIFIED",
   },
   // ── Platform Policies & Service Area Management ───────────────────────────
   {
