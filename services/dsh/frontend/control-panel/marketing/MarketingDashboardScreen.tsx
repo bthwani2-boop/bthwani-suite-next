@@ -19,10 +19,8 @@ import {
 
 // Import split command decks
 import { TickerCommandDeck } from "./components/TickerCommandDeck";
-import { VideoStudioCommandDeck } from "./components/VideoStudioCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
-import { GrowthCommandDeck } from "./components/GrowthCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
 
 // Import split dashboard sections
@@ -174,10 +172,8 @@ export function MarketingDashboardScreen() {
       )}
 
       {/* ── Remaining Command Deck tabs ── */}
-      {mainTab === "video-studio" && <VideoStudioCommandDeck />}
       {mainTab === "campaigns" && <CampaignsCommandDeck />}
       {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
-      {mainTab === "growth" && <GrowthCommandDeck />}
       {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
     </DataTablePageFrame>
   );

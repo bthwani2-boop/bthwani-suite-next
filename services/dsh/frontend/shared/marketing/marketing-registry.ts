@@ -14,10 +14,8 @@ export type MarketingMainTabId =
   | "smart-bar"
   | "banners-carousel"
   | "homepage-promos"
-  | "video-studio"
   | "campaigns"
   | "partner-offers"
-  | "growth"
   | "signals-measurement";
 
 export type MarketingMainTabMeta = {
@@ -30,10 +28,8 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "smart-bar",              label: "الشريط الذكي" },
   { id: "banners-carousel",       label: "البنرات والكاروسيل" },
   { id: "homepage-promos",        label: "بروموهات الرئيسية" },
-  { id: "video-studio",           label: "استوديو الفيديو" },
   { id: "campaigns",              label: "الحملات" },
   { id: "partner-offers",         label: "عروض الشركاء" },
-  { id: "growth",                 label: "النمو" },
   { id: "signals-measurement",    label: "الإشارات والقياس" },
 ] as const;
 
