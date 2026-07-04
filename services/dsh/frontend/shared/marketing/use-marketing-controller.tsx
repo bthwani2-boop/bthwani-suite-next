@@ -35,17 +35,6 @@ import type {
   MarketingNewsTickerPreview,
   MarketingTickerPlanReason,
   MarketingTickerPlanEntry,
-  MarketingVideoRecord,
-  MarketingVideoStatus,
-  MarketingVideoAudience,
-  MarketingVideoSource,
-  MarketingVideoTargetType,
-  MarketingGrowthRecord,
-  MarketingGrowthStatus,
-  MarketingGrowthAudience,
-  MarketingGrowthSource,
-  MarketingGrowthFamily,
-  MarketingGrowthRouteTarget,
 } from "./marketing.types";
 import type { PartnerOfferRecord, PartnerOfferStatus } from "../partner/dsh-partner-offer-types";
 
@@ -82,52 +71,6 @@ export function createMarketingTickerDraft(overrides: Partial<MarketingNewsTicke
   };
 }
 
-export function createVideoDraft(overrides: Partial<MarketingVideoRecord> = {}): MarketingVideoRecord {
-  return {
-    id: `vid-temp-${Date.now()}`,
-    title: "",
-    subtitle: "",
-    status: "draft",
-    audience: "all",
-    source: "marketing",
-    videoUrl: "",
-    posterUrl: "",
-    durationSeconds: 30,
-    mute: true,
-    autoplay: false,
-    loop: true,
-    ctaLabel: "اطلب الآن",
-    highlight: "",
-    targetType: "home",
-    targetId: "",
-    order: 1,
-    impressions: 0,
-    clicks: 0,
-    reviewState: "none",
-    ...overrides,
-  };
-}
-
-
-export function createGrowthDraft(overrides: Partial<MarketingGrowthRecord> = {}): MarketingGrowthRecord {
-  return {
-    id: `grow-temp-${Date.now()}`,
-    title: "",
-    subtitle: "",
-    family: "campaign",
-    status: "draft",
-    audience: "all",
-    source: "marketing",
-    routeTarget: "home",
-    ctaLabel: "",
-    highlight: "",
-    metricValue: "",
-    accentColor: "brand",
-    impressions: 0,
-    clicks: 0,
-    ...overrides,
-  };
-}
 
 // --- News Ticker Evaluation Helpers ---
 
@@ -274,38 +217,6 @@ export function useTickersController(authKind: string) {
   };
 }
 
-export function useVideosController(authKind: string) {
-  const [items, setItems] = useState<ReadonlyArray<MarketingVideoRecord>>([]);
-  const [selected, setSelected] = useState<MarketingVideoRecord | null>(null);
-  const [draft, setDraft] = useState<MarketingVideoRecord | null>(null);
-
-  const select = useCallback((item: MarketingVideoRecord | null) => {
-    setSelected(item);
-    setDraft(item === null ? createVideoDraft() : { ...item });
-  }, []);
-
-  const save = useCallback((input: MarketingVideoRecord) => {
-    void input;
-    select(null);
-  }, [select]);
-
-  const remove = useCallback((id: string) => {
-    void id;
-    select(null);
-  }, [select]);
-
-  const toggleStatus = useCallback((id: string) => {
-    void id;
-  }, []);
-
-  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for videos yet.
-  return {
-    items, selected, draft, setDraft, select, save, remove, toggleStatus,
-    reload: () => {},
-    isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لاستوديو الفيديو حتى الآن — أوامر التعديل غير مفعّلة.",
-  };
-}
 
 // usePartnerOffersController drives the operator review queue: it can review,
 // approve, reject (with reason), and archive offers, but it never creates one
@@ -438,38 +349,6 @@ export function usePartnerSelfOffersController(authKind: string) {
   };
 }
 
-export function useGrowthController(authKind: string) {
-  const [items, setItems] = useState<ReadonlyArray<MarketingGrowthRecord>>([]);
-  const [selected, setSelected] = useState<MarketingGrowthRecord | null>(null);
-  const [draft, setDraft] = useState<MarketingGrowthRecord | null>(null);
-
-  const select = useCallback((item: MarketingGrowthRecord | null) => {
-    setSelected(item);
-    setDraft(item === null ? createGrowthDraft() : { ...item });
-  }, []);
-
-  const save = useCallback((input: MarketingGrowthRecord) => {
-    void input;
-    select(null);
-  }, [select]);
-
-  const remove = useCallback((id: string) => {
-    void id;
-    select(null);
-  }, [select]);
-
-  const toggleStatus = useCallback((id: string) => {
-    void id;
-  }, []);
-
-  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for growth items yet.
-  return {
-    items, selected, draft, setDraft, select, save, remove, toggleStatus,
-    reload: () => {},
-    isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لعناصر النمو حتى الآن — أوامر التعديل غير مفعّلة.",
-  };
-}
 
 export type OperationalMetrics = {
   readonly completedOrdersRate: string;
