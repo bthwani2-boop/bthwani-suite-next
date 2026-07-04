@@ -136,7 +136,7 @@ function mapReadinessEscalationToException(item: DshReadinessEscalation): Except
     lastAction: isResolved ? 'محلول' : isEscalated ? 'قيد المراجعة' : 'مفتوح',
     suggestedAction: isResolved ? 'مراجعة الإغلاق' : 'مراجعة جاهزية المتجر ومعالجة التصعيد',
     resolutionPath: isResolved ? 'تفاصيل' : 'حل',
-    routeHint: buildOperationsHref('partner-stores', { storeId: item.storeId }),
+    routeHint: buildOperationsHref('partner-stores', { orderId: item.storeId }),
     evidenceNeeded: item.status !== 'resolved',
     onDemandDetailPolicy: 'detail-on-open',
     note,

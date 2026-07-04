@@ -2149,6 +2149,30 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteDshMarketingTicker
+      summary: Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history).
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tickerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Ticker deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted]
+                properties:
+                  deleted: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /dsh/operator/marketing/partner-offers:
     get:
@@ -2254,30 +2278,6 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
-    delete:
-      operationId: deleteDshMarketingTicker
-      summary: Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history).
-      tags: [DshMarketing]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: tickerId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200":
-          description: Ticker deleted.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [deleted]
-                properties:
-                  deleted: { type: boolean }
-        "401": { $ref: "#/components/responses/Unauthenticated" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
 
   # ── Platform Policies ────────────────────────────────────────────
   /dsh/operator/platform/zones:
