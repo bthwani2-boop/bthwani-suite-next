@@ -18,7 +18,6 @@ export type MarketingMainTabId =
   | "campaigns"
   | "partner-offers"
   | "image-product-review"
-  | "benefits-subscriptions"
   | "growth"
   | "signals-measurement";
 
@@ -36,7 +35,6 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "campaigns",              label: "الحملات" },
   { id: "partner-offers",         label: "عروض الشركاء" },
   { id: "image-product-review",   label: "مراجعة الصور والمنتجات" },
-  { id: "benefits-subscriptions", label: "المزايا والاشتراك" },
   { id: "growth",                 label: "النمو" },
   { id: "signals-measurement",    label: "الإشارات والقياس" },
 ] as const;

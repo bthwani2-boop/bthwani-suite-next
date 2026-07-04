@@ -471,27 +471,6 @@ export function useGrowthController(authKind: string) {
   };
 }
 
-export function useLoyaltyController() {
-  const pointMultiplier = 0;
-  const tiers: ReadonlyArray<{ readonly name: string; readonly minimumPoints: number; readonly multiplier: number }> = [];
-
-  const updateMultiplier = useCallback((val: number) => {
-    void val;
-  }, []);
-
-  const updateTierPoints = useCallback((name: string, points: number) => {
-    void name;
-    void points;
-  }, []);
-
-  // FIX_REQUIRED: no dsh_marketing_* / loyalty backend table exists.
-  return {
-    pointMultiplier, tiers, updateMultiplier, updateTierPoints,
-    isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لبرنامج الولاء حتى الآن — أوامر التعديل غير مفعّلة.",
-  };
-}
-
 export type OperationalMetrics = {
   readonly completedOrdersRate: string;
   readonly totalOrders: string;
