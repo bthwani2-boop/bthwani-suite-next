@@ -19,18 +19,18 @@
   "devDependencies": {
     "@types/react": "19.2.17",
     "typescript": "~6.0.3",
-    "@expo/vector-icons": "14.0.2",
-    "@react-native/metro-config": "0.85.3"
+    "@expo/vector-icons": "15.1.1",
+    "@react-native/metro-config": "0.86.0"
   },
   "dependencies": {
-    "@tamagui/config": "2.0.0-rc.41",
-    "tamagui": "2.0.0-rc.41"
+    "@tamagui/config": "2.4.1",
+    "tamagui": "2.4.1"
   },
   "peerDependencies": {
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
-    "@expo/vector-icons": "14.0.2"
+    "@expo/vector-icons": "15.1.1"
   },
   "peerDependenciesMeta": {
     "react-dom": {
