@@ -29,7 +29,7 @@ The active runtime capabilities are:
 - Support, Incidents, and Escalation Room: verified.
 - Platform Analytics and Operational Reporting: verified.
 - Notifications and Actor Communication: verified.
-- Marketing Command Deck: experience-fix-required — see services/dsh/evidence/marketing-command-deck-final-closure/.
+- Marketing Command Deck: blocked-runtime (code/contract complete; see capability-map.ts / runtime-map.ts "dsh.marketing").
 - Platform Policies and Service Area Management: verified.
 - Administration, Roles, and Activation: verified.
 - Partner Onboarding & Store Publication: verified.
@@ -172,6 +172,11 @@ All DSH primary surfaces are active runtime surfaces:
 - `createDshMarketingTicker`
 - `updateDshMarketingTicker`
 - `deleteDshMarketingTicker`
+- `listDshPartnerOffers`
+- `updateDshPartnerOffer`
+- `archiveDshPartnerOffer`
+- `listDshPartnerSelfOffers`
+- `submitDshPartnerSelfOffer`
 
 ### Platform Policies and Service Area Management
 
