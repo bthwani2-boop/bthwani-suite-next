@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "lean-ctx": {
+      "command": "lean-ctx"
+    }
+  },
+  "note": "Example only. Do not commit settings.local.json or machine-specific paths."
+}

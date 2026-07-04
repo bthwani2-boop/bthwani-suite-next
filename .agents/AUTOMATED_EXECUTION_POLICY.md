@@ -47,7 +47,7 @@ When LeanCTX is active, the agent must prioritize `ctx_*` tools over their nativ
   * Semantic lookup → `ctx_semantic_search`
   * Call graph investigation → `ctx_callgraph`
 * **Invariants**:
-  * NEVER use native Read, Grep, Shell, or Glob commands when `ctx_*` equivalents are available.
+  * Do not use native Read, Grep, Shell, or Glob commands when `ctx_*` equivalents are available, working, and sufficient for the action.
   * If LeanCTX is unavailable or insufficient for a specific action, the agent must fall back to the smallest safe native equivalent and document the reason in the prompt response.
   * LeanCTX is the default layer for context gathering, diagnostics, and understanding, while automation scripts and guards are for execution and verification when necessary.
 

@@ -6,7 +6,12 @@
     ".agents/INDEX.md",
     ".agents/AUTHORITY_BOUNDARY.md"
   ],
-  "mcpServers": {},
+  "mcpServers": {
+    "lean-ctx": {
+      "command": "lean-ctx",
+      "trust": true
+    }
+  },
   "hooks": {
     "BeforeTool": [
       {

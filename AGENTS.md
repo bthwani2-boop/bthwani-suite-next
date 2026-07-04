@@ -74,7 +74,7 @@ Default: smallest action, fastest response, precise output.
 <!-- lean-ctx -->
 ## lean-ctx
 
-lean-ctx is active — the MCP tools replace native equivalents.
+lean-ctx policy is present. When LeanCTX is active and ctx_* tools are available, prefer ctx_* before native equivalents; otherwise use the smallest safe native equivalent and state why.
 Full rules: LEAN-CTX.md (open on demand — do not auto-load).
 <!-- /lean-ctx -->
 

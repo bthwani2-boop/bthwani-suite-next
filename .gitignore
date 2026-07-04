@@ -46,3 +46,4 @@ tools/registry/runs/
 *.log
 node-gates*.log
 *_HANDOFF.zip
+.claude/settings.local.json

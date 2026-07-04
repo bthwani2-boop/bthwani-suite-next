@@ -1,6 +1,6 @@
 {
   "package": "BTHWANI_NEXT_AGENTS_SKILLS_PACKAGE_20260619",
-  "target_root": "C:\\bthwani-suite-next",
+  "target_root": ".",
   "target_repo": "bthwani2-boop/bthwani-suite-next",
   "mode": "ZIP_PACKAGE + PATCH_HANDOFF + EVIDENCE_BUNDLE",
   "writes": "Only when APPLY_BTHWANI_NEXT_AGENTS.ps1 is run by the user locally.",

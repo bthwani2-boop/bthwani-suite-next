@@ -7,3 +7,7 @@ instructions = "AGENTS.md"
 
 [features]
 multi_agent = true
+
+[mcp_servers.lean-ctx]
+command = "lean-ctx"
+args = []

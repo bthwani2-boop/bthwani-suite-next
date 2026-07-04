@@ -2,9 +2,9 @@
 <!-- lean-ctx-rules -->
 <!-- version: 4 -->
 
-CRITICAL: ALWAYS use lean-ctx ctx_* tools instead of native equivalents. This is NOT optional.
+CRITICAL: Use lean-ctx ctx_* tools when LeanCTX is active and available. If LeanCTX is unavailable or insufficient, use the smallest safe native equivalent and state why.
 
-MUST actually CALL the ctx_* MCP tools, not just describe them: before reading, searching, or running a shell command, emit the matching ctx_* tool call (ctx_compose first, then ctx_read / ctx_search / ctx_shell).
+When LeanCTX is active, actually call the ctx_* MCP tools rather than merely describing them: before reading, searching, or running a shell command, emit the matching ctx_* tool call (ctx_compose first, then ctx_read / ctx_search / ctx_shell).
 
 MANDATORY MAPPING (4 core redirects first):
 • Read/cat -> ctx_read(path, mode)
@@ -13,7 +13,7 @@ MANDATORY MAPPING (4 core redirects first):
 • Glob/find -> ctx_glob(pattern)
 • ls/find -> ctx_tree(path, depth)
 
-NEVER use native Read/Grep/Shell/Glob when a ctx_* equivalent exists. SELF-CORRECT: the moment you reach for a native Read/Grep/Shell/Glob, stop and call the ctx_* tool instead.
+Prefer ctx_* tools over native Read/Grep/Shell/Glob when available. Fall back only when the ctx_* tool is unavailable, insufficient, or unsafe for the exact task.
 
 Tool selection by intent:
 • Understand code / find answers / before editing -> ctx_compose (call FIRST)
