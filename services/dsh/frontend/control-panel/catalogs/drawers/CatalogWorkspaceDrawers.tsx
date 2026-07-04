@@ -1,7 +1,7 @@
 "use client";
 import { colorRoles } from '@bthwani/ui-kit';
 import React, { useState } from "react";
-import { opsTheme } from "../../../shared/operations";
+
 import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
 
 // ─── TYPES & RESOLVERS ────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ export function CatalogWorkspaceRouter({
           maxWidth: "34rem",
           height: "100%",
           backgroundColor: "var(--surface-raised, colorRoles.surfaceBase)",
-          borderLeft: `1px solid ${opsTheme.line}`,
+          borderLeft: `1px solid ${colorRoles.surfaceBase}`,
           boxShadow: "-4px 0 24px rgba(0,0,0,0.15)",
           display: "flex",
           flexDirection: "column",
@@ -190,15 +190,15 @@ function DrawerHeader({ title, subtitle, onClose }: { title: string; subtitle: s
       dir="rtl"
       style={{
         padding: "1.25rem 1.5rem",
-        borderBottom: `1px solid ${opsTheme.line}`,
+        borderBottom: `1px solid ${colorRoles.surfaceBase}`,
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
       }}
     >
       <div style={{ textAlign: "right" }}>
-        <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: opsTheme.text }}>{title}</h2>
-        <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: opsTheme.textMuted }}>{subtitle}</p>
+        <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: colorRoles.brandStructure }}>{title}</h2>
+        <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: colorRoles.brandStructure }}>{subtitle}</p>
       </div>
       <button
         onClick={onClose}
@@ -207,7 +207,7 @@ function DrawerHeader({ title, subtitle, onClose }: { title: string; subtitle: s
           border: "none",
           fontSize: "1.5rem",
           cursor: "pointer",
-          color: opsTheme.textMuted,
+          color: colorRoles.brandStructure,
         }}
       >
         &times;
@@ -218,8 +218,8 @@ function DrawerHeader({ title, subtitle, onClose }: { title: string; subtitle: s
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", padding: "1rem", background: opsTheme.surfaceInset, borderRadius: "0.5rem" }}>
-      <h3 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 700, borderBottom: `1px solid ${opsTheme.line}`, paddingBottom: "0.25rem", color: opsTheme.brand }}>{title}</h3>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", padding: "1rem", background: colorRoles.surfaceBase, borderRadius: "0.5rem" }}>
+      <h3 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 700, borderBottom: `1px solid ${colorRoles.surfaceBase}`, paddingBottom: "0.25rem", color: colorRoles.brandAction }}>{title}</h3>
       {children}
     </div>
   );
@@ -228,8 +228,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function InfoRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.813rem" }}>
-      <span style={{ color: opsTheme.textMuted }}>{label}</span>
-      <strong style={{ color: color || opsTheme.text }}>{value}</strong>
+      <span style={{ color: colorRoles.brandStructure }}>{label}</span>
+      <strong style={{ color: color || colorRoles.brandStructure }}>{value}</strong>
     </div>
   );
 }
@@ -252,17 +252,17 @@ export function CatalogItemDetailWorkspace({ product, onClose, onProposal }: { p
     <>
       <DrawerHeader title={product.name} subtitle="تفاصيل عنصر الكتالوج" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="الهوية">
           <InfoRow label="الاسم" value={product.name} />
           <InfoRow label="SKU" value={product.sku || "—"} />
           <InfoRow label="الباركود" value={product.barcode || "—"} />
-          <InfoRow label="المرحلة" value={catalogApprovalStageLabel[product.approvalStage] || product.approvalStage} color={opsTheme.brand} />
+          <InfoRow label="المرحلة" value={catalogApprovalStageLabel[product.approvalStage] || product.approvalStage} color={colorRoles.brandAction} />
           <InfoRow label="السعر" value={`${product.priceReference || product.price || 0} ر.س`} />
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleRequestFix} style={{ flex: 1 }}>طلب تعديل</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
         </div>
       </div>
     </>
@@ -286,11 +286,11 @@ export function CatalogDuplicateResolutionWorkspace({ products, onClose, onPropo
     <>
       <DrawerHeader title="حل المنتجات المتكررة" subtitle="تحديد المنتجات المتشابهة ودمجها" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
-        <p style={{ fontSize: "0.813rem", color: opsTheme.textMuted }}>مقارنة ودمج العناصر المتشابهة لتجنب تكرار الكتالوج:</p>
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        <p style={{ fontSize: "0.813rem", color: colorRoles.brandStructure }}>مقارنة ودمج العناصر المتشابهة لتجنب تكرار الكتالوج:</p>
         <Section title="العناصر المتشابهة">
           {products.slice(0, 2).map((p, i) => (
-            <div key={p.id} style={{ padding: "0.5rem", borderBottom: i === 0 ? `1px solid ${opsTheme.line}` : "none", fontSize: "0.813rem" }}>
+            <div key={p.id} style={{ padding: "0.5rem", borderBottom: i === 0 ? `1px solid ${colorRoles.surfaceBase}` : "none", fontSize: "0.813rem" }}>
               <strong>{p.name}</strong>
               <div>SKU: {p.sku || "—"} | السعر: {p.price || 0} ر.س</div>
             </div>
@@ -298,7 +298,7 @@ export function CatalogDuplicateResolutionWorkspace({ products, onClose, onPropo
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleResolve} style={{ flex: 1 }}>دمج وحل التكرار</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
         </div>
       </div>
     </>
@@ -323,14 +323,14 @@ export function CatalogIdentityGovernanceWorkspace({ products, onClose, onPropos
     <>
       <DrawerHeader title="حوكمة الهوية والرموز" subtitle="تعديل وتدقيق الباركود وGTIN" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="تعديل باركود يدوي">
           <label style={{ fontSize: "0.813rem", fontWeight: 600 }}>الباركود الجديد (GTIN-13):</label>
           <CpTextInput value={barcode} onChange={setBarcode} placeholder="أدخل رقم الباركود..." aria-label="أدخل رقم الباركود" />
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleSave} style={{ flex: 1 }}>حفظ التغييرات</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إلغاء</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إلغاء</CpButton>
         </div>
       </div>
     </>
@@ -355,10 +355,10 @@ export function CatalogVisibilityPolicyWorkspace({ product, onClose, onProposal 
     <>
       <DrawerHeader title="سياسة رؤية المنتج" subtitle="بوابات الظهور والنشر للعملاء" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="الحالة الحالية">
           <InfoRow label="اسم المنتج" value={product.name} />
-          <InfoRow label="مرحلة الاعتماد الحالية" value={catalogApprovalStageLabel[product.approvalStage] || product.approvalStage} color={opsTheme.brand} />
+          <InfoRow label="مرحلة الاعتماد الحالية" value={catalogApprovalStageLabel[product.approvalStage] || product.approvalStage} color={colorRoles.brandAction} />
         </Section>
         <Section title="تغيير مرحلة النشر">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -367,7 +367,7 @@ export function CatalogVisibilityPolicyWorkspace({ product, onClose, onProposal 
             <CpButton onClick={() => handleUpdate("marketing-review")}>إرسال لمراجعة التسويق (marketing-review)</CpButton>
           </div>
         </Section>
-        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
       </div>
     </>
   );
@@ -390,7 +390,7 @@ export function CatalogPartnerHandoffWorkspace({ workspaceState, products, onClo
     <>
       <DrawerHeader title="تسليم الكتالوج من الشريك" subtitle="مراجعة المنتجات المستلمة من الشركاء" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="بيانات التسليم">
           <InfoRow label="معرف الشريك" value={workspaceState.partnerId || "partner-001"} />
           <InfoRow label="اسم الشريك" value={workspaceState.partnerLabel || "شريك افتراضي"} />
@@ -398,7 +398,7 @@ export function CatalogPartnerHandoffWorkspace({ workspaceState, products, onClo
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleApprove} style={{ flex: 1 }}>موافقة واعتماد التسليم</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
         </div>
       </div>
     </>
@@ -422,8 +422,8 @@ export function CatalogMediaGovernanceWorkspace({ products, onClose, onProposal 
     <>
       <DrawerHeader title="حوكمة الصور والوسائط" subtitle="مراجعة وتدقيق صور المنتجات ومطابقتها للشروط" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
-        <p style={{ fontSize: "0.813rem", color: opsTheme.textMuted }}>تأكد من أن جميع صور المنتجات ذات جودة عالية وخالية من الشعارات المائية المخالفة:</p>
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        <p style={{ fontSize: "0.813rem", color: colorRoles.brandStructure }}>تأكد من أن جميع صور المنتجات ذات جودة عالية وخالية من الشعارات المائية المخالفة:</p>
         <Section title="المنتجات المحددة للمراجعة">
           {products.slice(0, 3).map((p) => (
             <InfoRow key={p.id} label={p.name} value={mediaPolicyLabel[p.mediaPolicy] || "غير محدد"} />
@@ -431,7 +431,7 @@ export function CatalogMediaGovernanceWorkspace({ products, onClose, onProposal 
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleAudit} style={{ flex: 1 }}>اعتماد جودة الميديا</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إلغاء</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إلغاء</CpButton>
         </div>
       </div>
     </>
@@ -459,7 +459,7 @@ export function CatalogQuickEntryDraftWorkspace({ onClose, onProposal }: { onClo
     <>
       <DrawerHeader title="إدخال مسودة سريعة" subtitle="إضافة منتج جديد للكتالوج بسرعة" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="بيانات المنتج الجديد">
           <label style={{ fontSize: "0.813rem", fontWeight: 600 }}>اسم المنتج *</label>
           <CpTextInput value={name} onChange={setName} placeholder="مثال: حليب المراعي 1 لتر" aria-label="اسم المنتج" />
@@ -472,7 +472,7 @@ export function CatalogQuickEntryDraftWorkspace({ onClose, onProposal }: { onClo
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleCreate} disabled={!name.trim()} style={{ flex: 1 }}>إنشاء مسودة</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إلغاء</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إلغاء</CpButton>
         </div>
       </div>
     </>
@@ -498,14 +498,14 @@ export function CatalogTaxonomyGovernanceWorkspace({ onClose, onProposal }: { on
     <>
       <DrawerHeader title="إدارة هيكل الفئات" subtitle="تعديل وتوسيع شجرة الفئات والتصنيفات" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="إضافة فئة جديدة">
           <label style={{ fontSize: "0.813rem", fontWeight: 600 }}>اسم الفئة المقترحة *</label>
           <CpTextInput value={catName} onChange={setCatName} placeholder="مثال: المشروبات الغازية" aria-label="اسم الفئة" />
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleAdd} disabled={!catName.trim()} style={{ flex: 1 }}>اقتراح الفئة</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إلغاء</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إلغاء</CpButton>
         </div>
       </div>
     </>
@@ -530,8 +530,8 @@ export function CatalogBulkOperationsWorkspace({ selectedProductIds, onClose, on
     <>
       <DrawerHeader title="العمليات الجماعية" subtitle="تطبيق تعديلات على عناصر متعددة دفعة واحدة" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
-        <p style={{ fontSize: "0.813rem", color: opsTheme.textMuted }}>إجمالي المنتجات المحددة حالياً: {selectedProductIds.length}</p>
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        <p style={{ fontSize: "0.813rem", color: colorRoles.brandStructure }}>إجمالي المنتجات المحددة حالياً: {selectedProductIds.length}</p>
         <Section title="الخطوات السريعة المتاحة">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <CpButton onClick={() => handleBulkAction("تفعيل")} disabled={selectedProductIds.length === 0}>تفعيل جماعي</CpButton>
@@ -539,7 +539,7 @@ export function CatalogBulkOperationsWorkspace({ selectedProductIds, onClose, on
             <CpButton onClick={() => handleBulkAction("طلب صور")} disabled={selectedProductIds.length === 0}>طلب مراجعة الصور جماعياً</CpButton>
           </div>
         </Section>
-        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
       </div>
     </>
   );
@@ -551,24 +551,24 @@ export function CatalogAuditTrailWorkspace({ productId, onClose }: { productId?:
     <>
       <DrawerHeader title="سجل التغييرات والتدقيق" subtitle="مراقبة حوكمة المنتج وسوابق القرارات" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        <p style={{ fontSize: "0.813rem", color: opsTheme.textMuted }}>المنتج: {productId || "عام"}</p>
+        <p style={{ fontSize: "0.813rem", color: colorRoles.brandStructure }}>المنتج: {productId || "عام"}</p>
         <Section title="سجل الأحداث الأخيرة (محاكاة)">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.75rem" }}>
-            <div style={{ paddingBottom: "0.5rem", borderBottom: `1px dashed ${opsTheme.line}` }}>
+            <div style={{ paddingBottom: "0.5rem", borderBottom: `1px dashed ${colorRoles.surfaceBase}` }}>
               <div><strong>تعديل السعر المرجعي</strong> - بواسطة المشغل (operator)</div>
-              <span style={{ color: opsTheme.textMuted }}>منذ ساعتين · تذكرة #TKT-821</span>
+              <span style={{ color: colorRoles.brandStructure }}>منذ ساعتين · تذكرة #TKT-821</span>
             </div>
-            <div style={{ paddingBottom: "0.5rem", borderBottom: `1px dashed ${opsTheme.line}` }}>
+            <div style={{ paddingBottom: "0.5rem", borderBottom: `1px dashed ${colorRoles.surfaceBase}` }}>
               <div><strong>اعتماد سياسة الصور</strong> - تلقائي من النظام</div>
-              <span style={{ color: opsTheme.textMuted }}>منذ يوم واحد · سياسة مركزي</span>
+              <span style={{ color: colorRoles.brandStructure }}>منذ يوم واحد · سياسة مركزي</span>
             </div>
             <div>
               <div><strong>رفع مسودة المنتج</strong> - بواسطة شريك متجر النور</div>
-              <span style={{ color: opsTheme.textMuted }}>منذ 3 أيام · استيراد تلقائي</span>
+              <span style={{ color: colorRoles.brandStructure }}>منذ 3 أيام · استيراد تلقائي</span>
             </div>
           </div>
         </Section>
-        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
       </div>
     </>
   );
@@ -581,12 +581,12 @@ export function CatalogPublicationReadinessMatrix({ products, onClose }: { produ
       <DrawerHeader title="مصفوفة جاهزية النشر" subtitle="بوابات العبور والجودة قبل عرض المنتج للعميل" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
         <Section title="بوابات الجودة">
-          <InfoRow label="اعتماد الفئات" value="مكتمل (100%)" color={opsTheme.success} />
-          <InfoRow label="سلامة الباركود" value="مراجعة (92%)" color={opsTheme.warning} />
-          <InfoRow label="سياسة الصور" value="مكتمل (100%)" color={opsTheme.success} />
-          <InfoRow label="أنماط التوصيل" value="شغالة (100%)" color={opsTheme.success} />
+          <InfoRow label="اعتماد الفئات" value="مكتمل (100%)" color={colorRoles.brandStructure} />
+          <InfoRow label="سلامة الباركود" value="مراجعة (92%)" color={colorRoles.brandAction} />
+          <InfoRow label="سياسة الصور" value="مكتمل (100%)" color={colorRoles.brandStructure} />
+          <InfoRow label="أنماط التوصيل" value="شغالة (100%)" color={colorRoles.brandStructure} />
         </Section>
-        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+        <CpButton onClick={onClose} style={{ marginTop: "auto", background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
       </div>
     </>
   );
@@ -609,7 +609,7 @@ export function CatalogAdoptionQueueWorkspace({ products, onClose, onProposal }:
     <>
       <DrawerHeader title="طابور التبني النهائي" subtitle="اعتماد وتسجيل التبني لتفعيل الرؤية" onClose={onClose} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }} dir="rtl">
-        {result && <div style={{ padding: "0.75rem", background: opsTheme.successSurface, border: `1px solid ${opsTheme.success}`, color: opsTheme.success, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
+        {result && <div style={{ padding: "0.75rem", background: colorRoles.surfaceBase, border: `1px solid ${colorRoles.brandStructure}`, color: colorRoles.brandStructure, borderRadius: "0.5rem", fontSize: "0.813rem" }}>{result}</div>}
         <Section title="منتجات بانتظار التبني">
           {products.slice(0, 3).map((p) => (
             <InfoRow key={p.id} label={p.name} value={catalogApprovalStageLabel[p.approvalStage] || p.approvalStage} />
@@ -617,7 +617,7 @@ export function CatalogAdoptionQueueWorkspace({ products, onClose, onProposal }:
         </Section>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto" }}>
           <CpButton onClick={handleAdopt} style={{ flex: 1 }}>اعتماد وتبني العناصر</CpButton>
-          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${opsTheme.line}`, color: opsTheme.text }}>إغلاق</CpButton>
+          <CpButton onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>إغلاق</CpButton>
         </div>
       </div>
     </>
