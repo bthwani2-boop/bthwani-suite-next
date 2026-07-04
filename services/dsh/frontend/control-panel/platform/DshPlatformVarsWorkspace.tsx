@@ -5,15 +5,12 @@ import React, { useState } from "react";
 
 import { usePlatformVarsModel } from "../../shared/platform/platform-vars.model";
 import { VarsDomainId } from "../../shared/platform/platform-vars.view-model";
+import { usePlatformAuditStateHook } from "../../shared/platform/platform-audit-state";
 import { CpButton, CpTextInput, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 
 export function DshPlatformVarsWorkspace() {
   const [activeDomain, setActiveDomain] = useState<VarsDomainId>("dsh");
-  const [auditEvents, setAuditEvents] = useState<any[]>([]);
-
-  const addAuditEvent = (event: any) => {
-    setAuditEvents((prev) => [...prev, { ...event, id: `audit-${Date.now()}`, timestamp: new Date().toISOString() }]);
-  };
+  const { addAuditEvent } = usePlatformAuditStateHook();
 
   const model = usePlatformVarsModel({
     activeDomain,
