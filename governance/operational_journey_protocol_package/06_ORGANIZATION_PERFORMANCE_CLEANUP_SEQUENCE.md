@@ -1,10 +1,10 @@
-# 06 — التنظيم، الأداء، التنظيف، التجميع، والتسلسل
+﻿# 06 — التنظيم، الأداء، التنظيف، التجميع، والتسلسل
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `06/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** topic_file_organization/consolidation/journey_sequence matrices، تنظيم الملفات، الأداء، الحذف/النقل/الدمج، والمراجع الخارجية.
 

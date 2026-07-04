@@ -1,10 +1,10 @@
-# 04 — مصفوفات المشروع والأسطح ولوحة التحكم وسلسلة الربط
+﻿# 04 — مصفوفات المشروع والأسطح ولوحة التحكم وسلسلة الربط
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `04/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** مدخل matrices الإلزامية، project/surface/control-panel/binding matrices.
 

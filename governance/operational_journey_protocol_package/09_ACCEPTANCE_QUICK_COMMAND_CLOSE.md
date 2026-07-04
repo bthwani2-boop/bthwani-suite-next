@@ -1,10 +1,10 @@
-# 09 — القبول النهائي، الأمر المختصر، وقاعدة الخاتمة
+﻿# 09 — القبول النهائي، الأمر المختصر، وقاعدة الخاتمة
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `09/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** معيار القبول النهائي، نسخة الاستخدام السريع، وقاعدة الخاتمة.
 

@@ -1,10 +1,10 @@
-# 02 — بوابات GitHub Remote والمصدر والتحكم البشري
+﻿# 02 — بوابات GitHub Remote والمصدر والتحكم البشري
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `02/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** REF Resolution Gate، Human-Gated Git/GitHub، تعريف 100%، المصدر الحاكم، منع machine-readable، وبروتوكول القرار.
 

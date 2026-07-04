@@ -1,10 +1,10 @@
-# 03 — النطاق، الطوبولوجيا، الملكية، DSH/WLT، والمانح
+﻿# 03 — النطاق، الطوبولوجيا، الملكية، DSH/WLT، والمانح
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict  
 **File:** `03/09`  
 **Repository:** `<REPO_REMOTE>`  
 **Remote ref:** `<REF>`  
-**Source path:** `tools/plan/command_operational_journey_unified`  
+**Source path:** governance/operational_journey_protocol_package (self-contained)  
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
 **Scope:** تعريف الرحلة، المسارات السيادية، shared brains، حدود DSH/WLT، واستخدام المانح قراءة فقط.
 

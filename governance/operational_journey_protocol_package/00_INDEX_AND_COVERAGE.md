@@ -4,7 +4,7 @@
 **File count:** 12 Markdown files (10 protocol files + 2 execution amendments) + 1 trace file
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
-**Source path:** `tools/plan/command_operational_journey_unified` (see also `LEGACY_SOURCE_TRACE.md`)
+**Source path:** governance/operational_journey_protocol_package (self-contained) (see also `LEGACY_SOURCE_TRACE.md`)
 **GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Compared source v1 upload:** `Pasted text.txt`
 **Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_<REF>.md`
@@ -213,8 +213,8 @@ coverage_result:
 | `Antigravity` | `PASS` |
 | `MERGE_READY` | `PASS` |
 | `DO_NOT_MERGE` | `PASS` |
-| `no-direct-fetch` | `PASS` |
-| `no-preview-demo-mock-runtime` | `PASS` |
+| `foundation:gate` | `PASS` |
+| `journey:gate` | `PASS` |
 
 ---
 
