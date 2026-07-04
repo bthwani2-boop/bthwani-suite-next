@@ -1408,12 +1408,65 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history). */
-        delete: operations["deleteDshMarketingTicker"];
+        delete?: never;
         options?: never;
         head?: never;
         /** Update a marketing news ticker. Status lifecycle is governed (draft -> published|paused, published <-> paused, never back to draft); illegal transitions return 409. */
         patch: operations["updateDshMarketingTicker"];
+        trace?: never;
+    };
+    "/dsh/operator/marketing/partner-offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List partner marketing offers (operator review queue, excludes archived rows). */
+        get: operations["listDshPartnerOffers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/partner-offers/{offerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Archive a partner offer (soft archive — archived_at recorded; the row is never physically deleted). */
+        delete: operations["archiveDshPartnerOffer"];
+        options?: never;
+        head?: never;
+        /** Review a partner offer (advance lifecycle, edit fields). Rejecting requires rejectionReason; publishing runs the client-visibility gate. */
+        patch: operations["updateDshPartnerOffer"];
+        trace?: never;
+    };
+    "/dsh/partner/marketing/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the calling partner's own submitted offers, scoped to their resolved store. */
+        get: operations["listDshPartnerSelfOffers"];
+        put?: never;
+        /** Submit a new offer for review. The store binding is always the caller's own resolved store, never client-supplied. */
+        post: operations["submitDshPartnerSelfOffer"];
+        /** Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history). */
+        delete: operations["deleteDshMarketingTicker"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/dsh/operator/platform/zones": {
@@ -3263,6 +3316,63 @@ export interface components {
             closeHour?: number;
             cooldownMinutes?: number;
             repeatGapMinutes?: number;
+        };
+        DshPartnerOffer: {
+            id: string;
+            title: string;
+            partnerName: string;
+            storeId: string;
+            storeLabel: string;
+            productId: string;
+            productLabel: string;
+            category: string;
+            /** @enum {string} */
+            offerType: "discount" | "free-delivery" | "bundle" | "buy-x-get-y" | "coupon";
+            /** @enum {string} */
+            status: "inbound" | "review" | "marketing-ready" | "published" | "paused" | "rejected" | "archived";
+            /** @enum {string} */
+            source: "partner" | "control-panel";
+            valueLabel: string;
+            eligibility: string;
+            activeFromDate?: string;
+            activeToDate?: string;
+            rejectionReason?: string;
+            marginRiskNote?: string;
+            version: number;
+            linkedCampaignId?: string;
+            createdBy: string;
+            createdBySurface: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DshPartnerOffersListResponse: {
+            offers: components["schemas"]["DshPartnerOffer"][];
+        };
+        DshPartnerOfferResponse: {
+            offer: components["schemas"]["DshPartnerOffer"];
+        };
+        DshUpdatePartnerOfferRequest: {
+            /** @enum {string} */
+            status?: "inbound" | "review" | "marketing-ready" | "published" | "paused" | "rejected" | "archived";
+            title?: string;
+            valueLabel?: string;
+            eligibility?: string;
+            activeFromDate?: string;
+            activeToDate?: string;
+            rejectionReason?: string;
+            marginRiskNote?: string;
+        };
+        DshSubmitPartnerOfferRequest: {
+            title: string;
+            partnerName?: string;
+            storeLabel?: string;
+            productId?: string;
+            productLabel?: string;
+            category?: string;
+            /** @enum {string} */
+            offerType?: "discount" | "free-delivery" | "bundle" | "buy-x-get-y" | "coupon";
+            valueLabel: string;
+            eligibility?: string;
         };
         DshZone: {
             id: string;
@@ -6028,33 +6138,6 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
-    deleteDshMarketingTicker: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tickerId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ticker deleted. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        deleted: boolean;
-                    };
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
     updateDshMarketingTicker: {
         parameters: {
             query?: never;
@@ -6083,7 +6166,162 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerOffers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner offers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerOffersListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    archiveDshPartnerOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner offer archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        archived: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateDshPartnerOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdatePartnerOfferRequest"];
+            };
+        };
+        responses: {
+            /** @description Partner offer updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerOfferResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerSelfOffers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own partner offers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerOffersListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    submitDshPartnerSelfOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshSubmitPartnerOfferRequest"];
+            };
+        };
+        responses: {
+            /** @description Partner offer submitted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerOfferResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    deleteDshMarketingTicker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tickerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ticker deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        deleted: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listDshZones: {
