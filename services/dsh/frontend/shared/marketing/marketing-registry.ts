@@ -17,7 +17,6 @@ export type MarketingMainTabId =
   | "video-studio"
   | "campaigns"
   | "partner-offers"
-  | "image-product-review"
   | "growth"
   | "signals-measurement";
 
@@ -34,7 +33,6 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "video-studio",           label: "استوديو الفيديو" },
   { id: "campaigns",              label: "الحملات" },
   { id: "partner-offers",         label: "عروض الشركاء" },
-  { id: "image-product-review",   label: "مراجعة الصور والمنتجات" },
   { id: "growth",                 label: "النمو" },
   { id: "signals-measurement",    label: "الإشارات والقياس" },
 ] as const;

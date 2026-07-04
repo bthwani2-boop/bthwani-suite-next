@@ -585,36 +585,6 @@ export function useMarketingDeliverySignalsController() {
   return { items, reload: load, errorMessage };
 }
 
-export type CatalogReviewItem = {
-  readonly id: string;
-  readonly name: string;
-  readonly hasBadImage: boolean;
-  readonly reason: string;
-};
-
-export function useCatalogReviewController() {
-  const [items, setItems] = useState<ReadonlyArray<CatalogReviewItem>>([]);
-
-  const load = useCallback(() => {
-    setItems([]);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const approveImage = useCallback((id: string) => {
-    void id;
-  }, []);
-
-  // FIX_REQUIRED: no dsh_marketing_* backend table/handler exists for image/product
-  // review yet; load() always resolves to an empty list and approveImage is fail-closed.
-  return {
-    items, approveImage, reload: load,
-    isBackedByApi: false,
-    persistenceDisabledReason: "لا يوجد تكامل خلفي (backend) لمراجعة صور المنتجات حتى الآن.",
-  };
-}
 
 export function useCampaignsController(authKind: string) {
   const [state, setState] = useState<DshMarketingState<DshCampaign>>({ kind: "idle" });
