@@ -2149,6 +2149,110 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/marketing/partner-offers:
+    get:
+      operationId: listDshPartnerOffers
+      summary: List partner marketing offers (operator review queue, excludes archived rows).
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Partner offers.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerOffersListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/marketing/partner-offers/{offerId}:
+    patch:
+      operationId: updateDshPartnerOffer
+      summary: Review a partner offer (advance lifecycle, edit fields). Rejecting requires rejectionReason; publishing runs the client-visibility gate.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdatePartnerOfferRequest" }
+      responses:
+        "200":
+          description: Partner offer updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerOfferResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: archiveDshPartnerOffer
+      summary: Archive a partner offer (soft archive — archived_at recorded; the row is never physically deleted).
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Partner offer archived.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [archived]
+                properties:
+                  archived: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/marketing/offers:
+    get:
+      operationId: listDshPartnerSelfOffers
+      summary: List the calling partner's own submitted offers, scoped to their resolved store.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Own partner offers.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerOffersListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: submitDshPartnerSelfOffer
+      summary: Submit a new offer for review. The store binding is always the caller's own resolved store, never client-supplied.
+      tags: [DshMarketing]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshSubmitPartnerOfferRequest" }
+      responses:
+        "201":
+          description: Partner offer submitted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerOfferResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: deleteDshMarketingTicker
@@ -5337,6 +5441,74 @@ components:
         cooldownMinutes: { type: integer, minimum: 0 }
         repeatGapMinutes: { type: integer, minimum: 0 }
 
+
+    DshPartnerOffer:
+      type: object
+      required: [id, title, partnerName, storeId, storeLabel, productId, productLabel, category, offerType, status, source, valueLabel, eligibility, version, createdBy, createdBySurface, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        partnerName: { type: string }
+        storeId: { type: string }
+        storeLabel: { type: string }
+        productId: { type: string }
+        productLabel: { type: string }
+        category: { type: string }
+        offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+        status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected, archived] }
+        source: { type: string, enum: [partner, control-panel] }
+        valueLabel: { type: string }
+        eligibility: { type: string }
+        activeFromDate: { type: string }
+        activeToDate: { type: string }
+        rejectionReason: { type: string }
+        marginRiskNote: { type: string }
+        version: { type: integer }
+        linkedCampaignId: { type: string }
+        createdBy: { type: string }
+        createdBySurface: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    DshPartnerOffersListResponse:
+      type: object
+      required: [offers]
+      properties:
+        offers:
+          type: array
+          items: { $ref: "#/components/schemas/DshPartnerOffer" }
+
+    DshPartnerOfferResponse:
+      type: object
+      required: [offer]
+      properties:
+        offer: { $ref: "#/components/schemas/DshPartnerOffer" }
+
+    DshUpdatePartnerOfferRequest:
+      type: object
+      properties:
+        status: { type: string, enum: [inbound, review, marketing-ready, published, paused, rejected, archived] }
+        title: { type: string, minLength: 1 }
+        valueLabel: { type: string, minLength: 1 }
+        eligibility: { type: string }
+        activeFromDate: { type: string }
+        activeToDate: { type: string }
+        rejectionReason: { type: string }
+        marginRiskNote: { type: string }
+
+    DshSubmitPartnerOfferRequest:
+      type: object
+      required: [title, valueLabel]
+      properties:
+        title: { type: string, minLength: 1 }
+        partnerName: { type: string }
+        storeLabel: { type: string }
+        productId: { type: string }
+        productLabel: { type: string }
+        category: { type: string }
+        offerType: { type: string, enum: [discount, free-delivery, bundle, buy-x-get-y, coupon] }
+        valueLabel: { type: string, minLength: 1 }
+        eligibility: { type: string }
     # ── Platform Policies Schemas ────────────────────────────────────
     DshZone:
       type: object
