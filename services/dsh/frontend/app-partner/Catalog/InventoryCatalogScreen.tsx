@@ -2,7 +2,7 @@
  * InventoryCatalogScreen — Partner Surface
  *
  * Runtime truth: GET /stores/{store_id}/products via dsh-product-api.client.ts.
- * Falls back to workflow store (in-session submitted products) when API unreachable.
+ * API unavailable means no runtime inventory list is rendered.
  *
  * Partner surface owns ONLY: stock, availability, preparationNote, internalNote, price override.
  * Catalog identity (name, category, publishStage) comes from the DSH backend — partners do not define it locally.
@@ -248,28 +248,6 @@ function findDetailByLookupCode(barcode: string): InventoryCatalogItemDetail | u
   });
 }
 
-function mapCanonicalToListItem(product: DshCanonicalProductCard): InventoryCatalogListItem {
-  return {
-    id: product.id,
-    name: product.name,
-    categoryLabel: product.categoryLabel,
-    isPrivateStoreProduct: false,
-    isCatalogOwned: product.publishStage === 'catalog-adopted' || product.publishStage === 'client-visible',
-    catalogLinked: true,
-    mediaKey: product.mediaKey,
-    priceLabel: product.priceLabel,
-    stockCount: product.stockCount ?? 0,
-    available: product.isAvailable,
-    lowStock: typeof product.stockCount === 'number' ? product.stockCount <= 3 : false,
-    publishStage: product.publishStage,
-    reviewNeeded: product.publishStage !== 'client-visible',
-  };
-}
-
-const canonicalPreviewListItems: readonly InventoryCatalogListItem[] = [];
-
-const centralInventoryItems: readonly InventoryCatalogListItem[] = [];
-
 function mapApiStatusToPublishStage(approvalStatus: string): string {
   switch (approvalStatus) {
     case 'client_visible': return 'client-visible';
@@ -281,49 +259,6 @@ function mapApiStatusToPublishStage(approvalStatus: string): string {
     case 'needs_fix': return 'needs-fix';
     default: return approvalStatus;
   }
-}
-
-function dedupeItems(items: ReadonlyArray<InventoryCatalogListItem>) {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
-}
-
-function buildListItems(canonicalStoreId?: string): InventoryCatalogListItem[] {
-  const scopedCanonical = canonicalPreviewListItems.filter(
-    (item) => !canonicalStoreId || item.isCatalogOwned,
-  );
-
-  const partnerRecords = getPartnerQueueRecords();
-  const mappedRecords = partnerRecords
-    .filter((r) => r.entityType === 'product' || r.entityType === 'product-media')
-    .map((r) => {
-      const isPrivate = r.entityType !== 'product';
-      const catalogLinked = r.entityType === 'product';
-      return {
-        id: r.id,
-        name: r.title,
-        categoryLabel: translateEntityType(r.entityType),
-        isPrivateStoreProduct: isPrivate,
-        isCatalogOwned: r.stage === 'client-visible' || r.stage === 'catalog-adopted',
-        catalogLinked,
-        priceLabel: (r.metadata as any)?.priceLabel || '0.00 ر.ي',
-        stockCount: 0,
-        available: true,
-        lowStock: false,
-        publishStage: r.stage,
-        reviewNeeded: r.stage !== 'client-visible',
-      } satisfies InventoryCatalogListItem;
-    });
-
-  return dedupeItems([
-    ...centralInventoryItems,
-    ...mappedRecords,
-    ...scopedCanonical,
-  ]);
 }
 
 // ── Search state helper ───────────────────────────────────────────────
@@ -1106,9 +1041,7 @@ function InventoryCatalogContent({
   const [query, setQuery] = React.useState('');
   const [filter, setFilter] = React.useState<ActiveHierarchyFilter>({});
   const [viewMode, setViewMode] = React.useState<ViewMode>('dense-list');
-  const [items, setItems] = React.useState<InventoryCatalogListItem[]>(() =>
-    buildListItems(canonicalStoreId),
-  );
+  const [items, setItems] = React.useState<InventoryCatalogListItem[]>([]);
 
   // Fetch live products from GET /stores/{store_id}/products
   React.useEffect(() => {
@@ -1117,7 +1050,7 @@ function InventoryCatalogContent({
     const apiClient = getDshProductRuntimeClient();
     apiClient.listProducts(canonicalStoreId, { limit: 100 })
       .then((resp) => {
-        if (cancelled || !resp.products.length) return;
+        if (cancelled) return;
         const liveItems = resp.products.map((p): InventoryCatalogListItem => ({
           id: p.id,
           name: p.name,
@@ -1134,7 +1067,11 @@ function InventoryCatalogContent({
         }));
         setItems(liveItems);
       })
-      .catch(() => { /* keep preview items on error */ });
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+        setToolMessage('تعذر تحميل كتالوج المنتجات من DSH Runtime.');
+      });
     return () => { cancelled = true; };
   }, [canonicalStoreId]);
 

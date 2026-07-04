@@ -14,8 +14,7 @@ import type { DshOperationsDecisionKind, DshOrderLifecycleStatus } from '../../s
 import { mapOperationsDecisionToLifecycle } from '../../shared/orders';
 import { buildOperationsHref } from './operations.registry';
 import { getLiveOrderDecisions, updateLiveOrderDecision } from '../../shared/partner/partner.workflow';
-import { OpsOrderDetailPanel } from './OpsOrderDetailPanel';
-import type { DshOpsApprovalOrder } from '../../shared/operations';
+import { OpsOrderDetailPanel, type DshOpsApprovalOrder } from './OpsOrderDetailPanel';
 import { opsTheme as theme } from '../../shared/operations';
 
 const PENDING_APPROVAL_ORDERS: DshOpsApprovalOrder[] = [];
