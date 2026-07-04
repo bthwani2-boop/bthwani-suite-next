@@ -31,7 +31,7 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// TestComputeCheckoutSnapshotDBIntegration proves the real gap this slice
+// TestComputeCheckoutSnapshotDBIntegration proves the real gap this integration
 // closed: DSH now derives a non-zero, verifiable cart total from its own
 // catalog price snapshot, instead of handing WLT an amount of 0.
 func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
