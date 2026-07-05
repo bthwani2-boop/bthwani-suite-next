@@ -95,6 +95,13 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.handleUpdateEscalation)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/onboarding-status", protected.handlePartnerOnboardingStatus)
 
+	// Catalog approval queue (partner submission -> marketing review -> catalog adoption)
+	mux.HandleFunc("POST /dsh/catalog-approvals", protected.handleCreateCatalogApproval)
+	mux.HandleFunc("GET /dsh/catalog-approvals", protected.handleListCatalogApprovals)
+	mux.HandleFunc("GET /dsh/catalog-approvals/{recordId}", protected.handleGetCatalogApproval)
+	mux.HandleFunc("POST /dsh/catalog-approvals/{recordId}/transition", protected.handleTransitionCatalogApproval)
+	mux.HandleFunc("GET /dsh/partner/catalog-approvals", protected.handleListPartnerCatalogApprovals)
+
 	// Support, Incidents & Escalation Room
 	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateSupportTicket)
 	mux.HandleFunc("GET /dsh/support/tickets", protected.handleListMyTickets)

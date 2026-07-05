@@ -255,6 +255,9 @@ func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, err
 	if currency == "" {
 		currency = "YER"
 	}
+	if input.AmountMinorUnits <= 0 {
+		return nil, fmt.Errorf("amountMinorUnits must be a positive integer")
+	}
 	const q = `
 		INSERT INTO wlt_commissions
 			(order_id, captain_id, partner_id, commission_type, amount_minor_units, currency)
