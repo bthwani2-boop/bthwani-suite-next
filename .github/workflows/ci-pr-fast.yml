@@ -4,6 +4,13 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - implementing
+      - begin
+      - branch-validation
+      - starting
+      - front-backend
 
 permissions:
   contents: read

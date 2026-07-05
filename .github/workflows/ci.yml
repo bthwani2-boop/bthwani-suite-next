@@ -7,11 +7,6 @@ on:
   push:
     branches:
       - master
-      - begin
-      - branch-validation
-      - starting
-      - front-backend
-      - implementing
   workflow_dispatch:
     inputs:
       reason:
