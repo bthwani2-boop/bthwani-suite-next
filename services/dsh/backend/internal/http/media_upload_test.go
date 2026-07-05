@@ -129,6 +129,15 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1`, actorID)
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_media_references WHERE media_ref = $1`, mediaRefStr)
+	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID)
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_partners (id, legal_name_ar, legal_name_en, display_name, legal_identity_type, legal_identity_number, owner_name, primary_phone, email, category)
+		VALUES ($1, 'شريك تجريبي', 'Test Partner', 'Test Partner', 'commercial_register', '12345', 'Owner', '+967770000000', 'test@local.test', 'restaurant')`,
+		partnerID); err != nil {
+		t.Fatalf("failed to insert test partner: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
@@ -268,7 +277,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	s := &protectedStoreServer{
 		db:       db,
 		identity: authClient,
-		media:    nil, // Keep nil to avoid needing MinIO server, checking error progression
+		media:    &media.Client{}, // Dummy media client to bypass nil check
 	}
 
 	// Unknown mediaRef (not present in DB) -> returns 404 Not Found
