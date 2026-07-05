@@ -32,6 +32,7 @@ Set-Location -LiteralPath $RepoRoot
 
 $ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
 $FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simulators.yml"
+$ObservabilityComposeFile = Join-Path $RepoRoot "infra/docker/compose.observability.yml"
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 
 if (-not (Test-Path -LiteralPath $EnvFile)) {
@@ -58,7 +59,7 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("identity", "dsh", "media", "wlt", "financial-simulators", "mail", "cache")
+$AllowedProfiles = @("identity", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
@@ -82,6 +83,12 @@ function Get-ComposeBase {
       throw "Financial simulator compose file not found: $script:FinancialComposeFile"
     }
     $files += @("-f", $script:FinancialComposeFile)
+  }
+  if ($script:ProfileList -contains "observability") {
+    if (-not (Test-Path -LiteralPath $script:ObservabilityComposeFile)) {
+      throw "Observability compose file not found: $script:ObservabilityComposeFile"
+    }
+    $files += @("-f", $script:ObservabilityComposeFile)
   }
   return $files
 }
