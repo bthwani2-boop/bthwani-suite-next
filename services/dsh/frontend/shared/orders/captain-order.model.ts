@@ -5,6 +5,10 @@
 import React from 'react';
 
 export function useCaptainOrderModel() {
+  // The dispatch assignment id — the only id every accept/decline/pickup/
+  // deliver mutation targets. `activeOrderId` below is the underlying order
+  // id, for display only, derived from whichever assignment is active.
+  const [activeAssignmentId, setActiveAssignmentId] = React.useState('');
   const [activeOrderId, setActiveOrderId] = React.useState('');
   const [activeOrderExpanded, setActiveOrderExpanded] = React.useState(false);
 
@@ -13,6 +17,8 @@ export function useCaptainOrderModel() {
   }, []);
 
   return {
+    activeAssignmentId,
+    setActiveAssignmentId,
     activeOrderId,
     setActiveOrderId,
     activeOrderExpanded,

@@ -25,6 +25,7 @@ import { CaptainStorePickupContextScreen } from './store/CaptainStorePickupConte
 import { OfferDeclineSheet } from './orders/OfferDeclineSheet';
 import { CaptainSupportScreenRouter } from './account/CaptainSupportScreenRouter';
 import type { DshCaptainBellEvent } from '../shared/orders/orders.state-machine';
+import type { DshCaptainOrderBellItem } from '../shared/orders';
 import { ActorNotificationsPanel } from '../shared/notifications';
 
 type CaptainOrderDetailSummary = React.ComponentProps<typeof CaptainOrderDetailScreen>['summary'];
@@ -33,9 +34,11 @@ type PodScreenState = NonNullable<React.ComponentProps<typeof DshCaptainPoDSubmi
 
 export type DshCaptainRouteRendererProps = {
   route: DshCaptainRoute;
+  activeAssignmentId: string;
   activeOrderId: string;
   activeOrderDisplayId: string;
   activeSummary: CaptainOrderDetailSummary;
+  inboxItems: DshCaptainOrderBellItem[];
   inboxState: CaptainOrdersInboxScreenState;
   orderChatState: 'readOnly' | 'active';
   captainRuntimeId: string;
@@ -112,7 +115,7 @@ const routeHeaderMeta: Partial<Record<DshCaptainRoute, { title: string; subtitle
 export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
   const identity = useIdentitySession();
   const {
-    route, activeOrderId, activeOrderDisplayId, activeSummary, inboxState, orderChatState,
+    route, activeAssignmentId, activeOrderId, activeOrderDisplayId, activeSummary, inboxItems, inboxState, orderChatState,
     captainRuntimeId, captainPodRequired, captainCollectsCod, isStoreCourierMode,
     selectedSupportScreen, isPickupSheetVisible, isDeliverySheetVisible, isDeclineSheetVisible,
     declineOrderId, declineSheetState, pickupSheetState, captainPodState, captainPodPhotoUri,
@@ -143,14 +146,15 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       <DshEntryScreen
         state={captainEntryState}
         onOpenOffersPress={onGoToInbox}
-        onOpenExecutionPress={() => onOpenOrder(activeOrderId)}
-        onOpenProofCapturePress={() => onOpenOrder(activeOrderId)}
+        onOpenExecutionPress={() => onOpenOrder(activeAssignmentId)}
+        onOpenProofCapturePress={() => onOpenOrder(activeAssignmentId)}
       />
     );
 
     if (route === 'inbox') return (
       <CaptainOrdersInboxScreen
         state={inboxState}
+        items={inboxItems}
         onRetry={onRetryInbox}
         onOpenOrder={onOpenOrder}
         onOpenNextOrder={onOpenOrder}
@@ -202,7 +206,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
         />
         <Box layoutDirection="row" gap={2} style={{ flexDirection: 'row-reverse', flexWrap: 'wrap' }}>
           <Button label="فتح صندوق الطلبات" tone="secondary" fullWidth={false} onPress={onGoToInbox} />
-          <Button label="فتح الطلب النشط" fullWidth={false} onPress={() => onOpenOrder(activeOrderId)} />
+          <Button label="فتح الطلب النشط" fullWidth={false} onPress={() => onOpenOrder(activeAssignmentId)} />
         </Box>
       </Box>
     );

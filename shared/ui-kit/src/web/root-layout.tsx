@@ -1,3 +1,5 @@
+"use client";
+
 import { type ReactNode } from 'react';
 import { RootProviders, type RootProvidersProps } from '../providers';
 import { buildWebThemeStyleSheet, directionConfig, resolveDirectionFromLanguage, type ThemeMode } from '../foundation';

@@ -1,5 +1,10 @@
 Notifications & Actor Communication code evidence
 
+Repository:
+- repo: bthwani2-boop/bthwani-suite-next
+- ref: front-backend
+- resolved HEAD SHA at audit time: 74ae6878fbed08e8eabc472da6ea8fe5982d3544
+
 Scope:
 - Capability: dsh.notifications
 - Surfaces: app-client, control-panel, app-partner, app-field, app-captain
@@ -18,7 +23,15 @@ Implemented sources:
 - Generated client types: services/dsh/clients/generated/dsh-api.ts
 - Database migration: services/dsh/database/migrations/dsh-011_notifications.sql
 - Shared frontend controller: services/dsh/frontend/shared/notifications
+- Shared frontend panel: services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx
+- app-client binding: services/dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx
+- app-partner binding: services/dsh/frontend/app-partner/account/OperationScreens.tsx
+- app-captain binding: services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx
+- app-field binding: services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx
+- control-panel binding: services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx
 
 Closure note:
 - This artifact is code-based evidence only.
-- dsh.notifications must remain NEEDS_RUNTIME_EVIDENCE/FIX_REQUIRED until a dedicated runtime smoke proves the six notification routes are reachable in the runtime environment with expected auth behavior and not 404.
+- dsh.notifications remains NEEDS_RUNTIME_EVIDENCE/FIX_REQUIRED until a dedicated runtime smoke proves the six notification routes are reachable in the runtime environment with expected auth behavior and not 404, and proves dsh-011 plus the three notification tables in the runtime database.
+- Dedicated smoke command: pwsh -NoProfile -ExecutionPolicy Bypass -File services/dsh/evidence/notifications-actor-communication/run-notifications-runtime-smoke.ps1
+- Latest smoke result: HTTP routes passed with expected unauthenticated 401/not-404 behavior; DB proof remains missing because DSH_DATABASE_URL was not set and Docker inspection was blocked by the local lean-ctx shell allowlist.

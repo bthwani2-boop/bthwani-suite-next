@@ -334,9 +334,6 @@ jobs:
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
 
-      - name: WLT provider-through-WLT smoke
-        run: pnpm run runtime:wlt:provider:smoke
-
       - name: Docker compose ps
         if: always()
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
@@ -352,6 +349,59 @@ jobs:
           name: docker-logs-${{ github.run_id }}
           path: /tmp/docker-logs.txt
           retention-days: 7
+
+      - name: Docker compose down
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
+
+  # Not run on pull_request/push: it requires WLT_MUTATIONS_ENABLED=true, which
+  # is not an approved default (see services/wlt/service.manifest.ts
+  # mutationRuntimeReady/mutationJourneysApproved). Trigger manually only when
+  # the WLT payment-session mutation journey itself needs verification.
+  wlt-mutation-lab-smoke:
+    name: WLT mutation lab smoke (manual, unapproved mutations)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full runtime reset and smoke (mutations enabled)
+        shell: pwsh
+        env:
+          WLT_MUTATIONS_ENABLED: "true"
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+
+      - name: WireMock financial provider smoke
+        run: pnpm run runtime:wiremock:financial:smoke
+
+      - name: WLT provider-through-WLT smoke
+        run: pnpm run runtime:wlt:provider:smoke
+
+      - name: Docker compose ps
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
+
+      - name: Docker compose logs on failure
+        if: failure()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
 
       - name: Docker compose down
         if: always()

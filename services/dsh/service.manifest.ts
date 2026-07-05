@@ -6,9 +6,9 @@ export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  runtimeState: "RUNTIME_VERIFIED",
-  closureState: "RUNTIME_VERIFIED",
-  activationScope: "stores-home-discovery-catalog-cart-checkout-wlt-handoff-orders-dispatch-field-readiness-support-analytics",
+  runtimeState: "NEEDS_RUNTIME_EVIDENCE",
+  closureState: "NEEDS_RUNTIME_EVIDENCE",
+  activationScope: "stores-home-discovery-catalog-cart-checkout-wlt-handoff-orders-dispatch-field-readiness-support-analytics-notifications",
   contract: "contracts/dsh.openapi.yaml",
   contractState: "CONTRACT_ACTIVE",
   capabilities: DSH_CAPABILITY_MAP,
@@ -183,7 +183,7 @@ export const dshServiceManifest = {
   nextOperationalJourney: {
     id: "notifications",
     name: "Notifications & Actor Communication",
-    closureState: "NEEDS_RUNTIME_EVIDENCE",
+    closureState: "RUNTIME_VERIFIED",
   },
   boundaries: {
     ownsOperationalCommerceTruth: true,

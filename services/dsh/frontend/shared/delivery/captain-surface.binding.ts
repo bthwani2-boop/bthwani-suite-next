@@ -10,6 +10,7 @@ import { useCaptainGpsModel } from './captain-gps.model';
 import { useCaptainNavigationModel } from './captain-navigation.model';
 import { useCaptainProfileModel } from './captain-profile.model';
 import { useCaptainServiceModeModel } from './captain-service-mode.model';
+import { useCaptainInboxModel } from './captain-inbox.model';
 import type { CaptainSupportRoute, DshCaptainRoute } from './captain.contract';
 import {
   useCaptainActiveLocationPush,
@@ -36,10 +37,11 @@ export function useDshCaptainSurfaceBinding(
   const podUpload = usePodUploadFlow();
   const orderModel = useCaptainOrderModel();
   const chatModel = useCaptainChatModel();
+  const inboxModel = useCaptainInboxModel(captainRuntimeId);
 
   const captainOrderRuntime = useCaptainOrderRuntime();
   useCaptainActiveLocationPush({
-    activeOrderId: orderModel.activeOrderId,
+    activeAssignmentId: orderModel.activeAssignmentId,
     captainId: captainRuntimeId,
     lifecycleStatus: lifecycle.inboxState,
   });
@@ -48,7 +50,7 @@ export function useDshCaptainSurfaceBinding(
     command: safeCommand,
     route,
     setRoute,
-    setActiveOrderId: orderModel.setActiveOrderId,
+    setActiveAssignmentId: orderModel.setActiveAssignmentId,
     setSelectedSupportScreen,
   });
 
@@ -56,7 +58,7 @@ export function useDshCaptainSurfaceBinding(
     setActiveServiceType: profileModel.setActiveServiceType,
     setRoute,
     setInboxState: lifecycle.setInboxState,
-    setActiveOrderId: orderModel.setActiveOrderId,
+    setActiveAssignmentId: orderModel.setActiveAssignmentId,
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
     setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
     setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
@@ -73,13 +75,14 @@ export function useDshCaptainSurfaceBinding(
 
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
-    activeOrderId: orderModel.activeOrderId,
-    setActiveOrderId: orderModel.setActiveOrderId,
+    activeAssignmentId: orderModel.activeAssignmentId,
+    setActiveAssignmentId: orderModel.setActiveAssignmentId,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
     captainPodMediaKey: podUpload.captainPodMediaKey,
     captainAppMode: profileModel.captainAppMode,
     setRoute,
     resetOrderState,
+    refreshInbox: inboxModel.refresh,
     inboxState: lifecycle.inboxState,
     setInboxState: lifecycle.setInboxState,
     setStoreCourierStage: lifecycle.setStoreCourierStage,
@@ -115,5 +118,6 @@ export function useDshCaptainSurfaceBinding(
     serviceModeModel,
     deliveryActions,
     pushLocation,
+    inboxModel,
   });
 }

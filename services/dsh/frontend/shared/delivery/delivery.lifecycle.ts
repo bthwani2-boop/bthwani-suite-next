@@ -6,7 +6,7 @@ import React from 'react';
 import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 
 export function useDeliveryLifecycle() {
-  const [inboxState, setInboxState] = React.useState<'ready' | 'offer-accepting' | 'offer-accepted' | 'delivered' | 'error'>('ready');
+  const [inboxState, setInboxState] = React.useState<'ready' | 'loading' | 'empty' | 'offer-accepting' | 'offer-accepted' | 'delivered' | 'error'>('loading');
   const [activeOrderPhase, setActiveOrderPhase] = React.useState<ActiveOrderPhase>('pickup');
   const [storeCourierStage, setStoreCourierStage] = React.useState<StoreCourierStage>('ready_for_pickup');
   const [isPickupSheetVisible, setIsPickupSheetVisible] = React.useState(false);

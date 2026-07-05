@@ -895,6 +895,211 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/control-panel/finance/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side. */
+        get: operations["listDshControlPanelFinanceSettlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT settlement summary through the DSH finance proxy. */
+        get: operations["getDshControlPanelFinanceSettlementSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT refunds view through the DSH finance proxy. */
+        get: operations["listDshControlPanelFinanceRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds/{refundId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads one governed WLT refund through the DSH finance proxy. */
+        get: operations["getDshControlPanelFinanceRefund"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/ledger/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT ledger entries view through the DSH finance proxy. */
+        get: operations["listDshControlPanelFinanceLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/cod-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT COD records view through the DSH finance proxy. */
+        get: operations["listDshControlPanelFinanceCodRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operator reads the governed WLT commissions view through the DSH finance proxy. */
+        get: operations["listDshControlPanelFinanceCommissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/finance/cod-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Captain reads their own governed WLT COD liability records. The captain id always comes from the authenticated actor, never from the query. */
+        get: operations["listDshCaptainFinanceCodRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/catalog-approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List catalog approval records (partner submission review queue). */
+        get: operations["listDshCatalogApprovals"];
+        put?: never;
+        /** Create a catalog approval record. */
+        post: operations["createDshCatalogApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/catalog-approvals/{recordId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one catalog approval record. */
+        get: operations["getDshCatalogApproval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/catalog-approvals/{recordId}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transition a catalog approval record to a new stage. */
+        post: operations["transitionDshCatalogApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog-approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own catalog approval queue. */
+        get: operations["listDshPartnerCatalogApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/field/stores/{storeId}/visits": {
         parameters: {
             query?: never;
@@ -1240,7 +1445,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dsh/integrations/wlt/payment-callbacks": {
+    "/dsh/internal/wlt/payment-session-events": {
         parameters: {
             query?: never;
             header?: never;
@@ -1249,8 +1454,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Future WLT-owned callback envelope; DSH consumes opaque final references only. */
-        post: operations["acceptWltPaymentCallbackEnvelope"];
+        /** WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization. */
+        post: operations["reportWltPaymentSessionEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1408,7 +1613,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history). */
+        delete: operations["deleteDshMarketingTicker"];
         options?: never;
         head?: never;
         /** Update a marketing news ticker. Status lifecycle is governed (draft -> published|paused, published <-> paused, never back to draft); illegal transitions return 409. */
@@ -1462,8 +1668,7 @@ export interface paths {
         put?: never;
         /** Submit a new offer for review. The store binding is always the caller's own resolved store, never client-supplied. */
         post: operations["submitDshPartnerSelfOffer"];
-        /** Delete a marketing news ticker (soft delete — deleted_at recorded; the row keeps an auditable history). */
-        delete: operations["deleteDshMarketingTicker"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2295,8 +2500,13 @@ export interface components {
             name: string;
             description: string;
             sku: string;
-            /** @description Opaque WLT-owned price reference; DSH does not calculate monetary truth. */
+            /** @description Display label only. The real commercial price is unitPrice. */
             priceReference: string;
+            /**
+             * Format: double
+             * @description The real numeric commercial price DSH catalog sells this product at (major currency units, e.g. YER). Sole source of the cart/checkout total handed off to WLT. WLT remains the sole owner of payment authorization/capture/settlement/refund/ledger truth.
+             */
+            unitPrice: number;
             isActive: boolean;
             version: number;
             media: components["schemas"]["DshCatalogMedia"][];
@@ -2323,6 +2533,8 @@ export interface components {
             description: string;
             sku: string;
             priceReference: string;
+            /** Format: double */
+            unitPrice: number;
             isActive: boolean;
             expectedVersion: number;
         };
@@ -2439,9 +2651,15 @@ export interface components {
             id: string;
             cartId: string;
             productId: string;
+            /** @description Snapshotted server-side from the catalog product at add-to-cart time. */
             productName: string;
-            /** @description Display label from catalog — not a computed financial amount. */
+            /** @description Display label snapshotted from catalog — not a computed financial amount. */
             priceReference: string;
+            /**
+             * Format: double
+             * @description Snapshotted from the catalog product's unitPrice at add-to-cart time.
+             */
+            unitPrice: number;
             quantity: number;
             version: number;
             /** Format: date-time */
@@ -2473,8 +2691,6 @@ export interface components {
             /** @enum {string} */
             fulfillmentMode?: "bthwani_delivery" | "partner_delivery" | "pickup";
             productId: string;
-            productName: string;
-            priceReference?: string;
             quantity: number;
         };
         DshUpsertCartItemResponse: {
@@ -2502,7 +2718,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
             /** @enum {string} */
-            state: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+            state: "pending" | "wlt_handoff_failed" | "payment_pending" | "confirmed" | "cancelled" | "expired";
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
             /** @description Opaque WLT-owned payment-session reference. DSH never mutates financial truth. */
@@ -2564,15 +2780,6 @@ export interface components {
         };
         DshCreateOrderRequest: {
             checkoutIntentId: string;
-            storeId: string;
-            items: components["schemas"]["DshCreateOrderItemInput"][];
-        };
-        DshCreateOrderItemInput: {
-            productId: string;
-            productName: string;
-            quantity: number;
-            /** Format: double */
-            unitPrice: number;
         };
         DshRejectOrderRequest: {
             /** @description Mandatory rejection reason from partner. */
@@ -2917,13 +3124,12 @@ export interface components {
             /** Format: date-time */
             generatedAt: string;
         };
-        /** @description Contains opaque WLT references only. No amount, ledger, refund, settlement, or signature verification logic belongs to DSH. */
+        /** @description Contains opaque WLT references only. No amount, ledger, refund, settlement, or signature verification logic belongs to DSH. Fields are DisallowUnknownFields-strict on the DSH side: this schema must always match services/dsh/backend/internal/http/wlt_events.go exactly. */
         WltPaymentCallbackEnvelope: {
-            paymentSessionId: string;
-            paymentStatus: string;
             checkoutIntentId: string;
-            /** Format: date-time */
-            occurredAt: string;
+            paymentSessionId: string;
+            /** @enum {string} */
+            status: "reference_created" | "cod_pending" | "authorized" | "captured" | "cod_collected" | "failed" | "expired";
         };
         DshNotification: {
             id: string;
@@ -4824,8 +5030,7 @@ export interface operations {
     };
     listDshPartnerOrders: {
         parameters: {
-            query: {
-                storeId: string;
+            query?: {
                 status?: "pending" | "store_accepted" | "preparing" | "ready_for_pickup" | "cancelled";
             };
             header?: never;
@@ -5181,6 +5386,359 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listDshControlPanelFinanceSettlements: {
+        parameters: {
+            query?: {
+                partnerId?: string;
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT settlements view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshControlPanelFinanceSettlementSummary: {
+        parameters: {
+            query?: {
+                partnerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT settlement summary (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshControlPanelFinanceRefunds: {
+        parameters: {
+            query?: {
+                orderId?: string;
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT refunds view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshControlPanelFinanceRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refundId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT refund view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshControlPanelFinanceLedgerEntries: {
+        parameters: {
+            query?: {
+                actorId?: string;
+                actorType?: string;
+                orderId?: string;
+                entryType?: string;
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT ledger entries view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshControlPanelFinanceCodRecords: {
+        parameters: {
+            query?: {
+                captainId?: string;
+                orderId?: string;
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT COD records view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshControlPanelFinanceCommissions: {
+        parameters: {
+            query?: {
+                orderId?: string;
+                captainId?: string;
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT commissions view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshCaptainFinanceCodRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT COD records view for the authenticated captain (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshCatalogApprovals: {
+        parameters: {
+            query?: {
+                entityType?: string;
+                stage?: string;
+                source?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog approval records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    createDshCatalogApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Created catalog approval record. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshCatalogApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog approval record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    transitionDshCatalogApproval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated catalog approval record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerCatalogApprovals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner catalog approval queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     listDshFieldVisits: {
@@ -5795,7 +6353,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
-    acceptWltPaymentCallbackEnvelope: {
+    reportWltPaymentSessionEvent: {
         parameters: {
             query?: never;
             header?: never;
@@ -5808,8 +6366,33 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Contract-only; signature and payment truth remain WLT-owned. */
-            501: {
+            /** @description Checkout intent updated from the WLT payment-session outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Only the WLT service may report payment-session events. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Checkout intent not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6138,6 +6721,33 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    deleteDshMarketingTicker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tickerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ticker deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        deleted: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     updateDshMarketingTicker: {
         parameters: {
             query?: never;
@@ -6295,33 +6905,6 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-        };
-    };
-    deleteDshMarketingTicker: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tickerId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ticker deleted. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        deleted: boolean;
-                    };
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
         };
     };
     listDshZones: {

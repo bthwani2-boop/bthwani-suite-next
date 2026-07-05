@@ -19,7 +19,7 @@ export function DataTablePageFrame({ header, toolbar, filters, children, stateVi
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>{stateView ?? children}</div>
         {sidePanel != null && (
-          <aside style={{ width: "22rem", flexShrink: 0, borderInlineStart: "1px solid rgba(0,0,0,0.1)", overflowY: "auto" }}>
+          <aside style={{ width: "22rem", flexShrink: 0, borderInlineStart: "1px solid var(--card-border, currentColor)", overflowY: "auto" }}>
             {sidePanel}
           </aside>
         )}

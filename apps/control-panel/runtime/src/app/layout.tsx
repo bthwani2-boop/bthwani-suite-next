@@ -26,7 +26,7 @@ import {
   dshTextSecondary,
   dshTopbarBg,
   dshTopbarBorder,
-} from "../theme/dsh-colors";
+} from "../styles/dsh-colors";
 
 export const metadata: Metadata = {
   title: "لوحة التحكم — DSH",

@@ -40,7 +40,6 @@ import { DshCaptainMapLayer } from './orders/DshCaptainMapLayer';
 import { DshCaptainHomeOrderPanel } from './orders/DshCaptainHomeOrderPanel';
 import { DshCaptainRouteRenderer } from './DshCaptainRouteRenderer';
 import type { DshCaptainRoute, DshCaptainSurfaceProps } from './dsh-captain.types';
-import { EMPTY_CAPTAIN_ORDER_SUMMARY } from '../shared/delivery';
 import { useDshCaptainSurfaceModel } from './useDshCaptainSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared';
 import { useNotificationsController } from '../shared/notifications';
@@ -177,16 +176,18 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
 
   // ── Non-home routes → RouteRenderer handles ALL rendering ─────────────────
   if (ui.route !== 'home') {
-    const activeSummary = EMPTY_CAPTAIN_ORDER_SUMMARY as NonNullable<CaptainOrderDetailSummary>;
+    const activeSummary = derived.activeSummary as NonNullable<CaptainOrderDetailSummary>;
     const activeOrderDisplayId = derived.activeOrderDisplayId;
     const orderChatState = ui.inboxState === 'delivered' ? 'readOnly' : 'active';
 
     return (
       <DshCaptainRouteRenderer
         route={ui.route}
+        activeAssignmentId={ui.activeAssignmentId}
         activeOrderId={ui.activeOrderId}
         activeOrderDisplayId={activeOrderDisplayId}
         activeSummary={activeSummary}
+        inboxItems={ui.inboxItems}
         inboxState={ui.inboxState}
         orderChatState={orderChatState}
         captainRuntimeId={captainRuntimeId}
@@ -217,7 +218,7 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
         appearanceMode={appearanceMode}
         wltSummaryLabel={wltDshCaptainUiCopy.summaryLabel}
         onOpenOrder={actions.openOrderDetail}
-        onRetryInbox={() => actions.setInboxState('ready')}
+        onRetryInbox={actions.refreshInbox}
         onConfirmPickup={actions.confirmPickup}
         onConfirmDelivery={actions.confirmDelivery}
         onConfirmPodSubmission={actions.confirmPodSubmission}
@@ -246,7 +247,7 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
   }
 
   // ── Home screen (route === 'home') ─────────────────────────────────────────
-  const activeSummary = EMPTY_CAPTAIN_ORDER_SUMMARY as NonNullable<CaptainOrderDetailSummary>;
+  const activeSummary = derived.activeSummary as NonNullable<CaptainOrderDetailSummary>;
 
   const orderPanelNode = (
     <DshCaptainHomeOrderPanel

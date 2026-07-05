@@ -16,7 +16,7 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
-import { useNotificationsController } from '../../shared/notifications';
+import { ActorNotificationsPanel, useNotificationsController } from '../../shared/notifications';
 import { FieldPartnerCard } from './FieldPartnerCard';
 
 type DshFieldPartnersScreenProps = {
@@ -249,13 +249,7 @@ export function DshFieldPartnersScreen({
   const controller = useFieldPartnerDraftsController();
   const notifications = useNotificationsController(identity.state.kind);
   const unreadCount = notifications.state.kind === 'success' ? notifications.state.unreadCount : 0;
-  const handleNotificationsPress = React.useCallback(() => {
-    if (unreadCount > 0) {
-      void notifications.markAllRead();
-      return;
-    }
-    void notifications.reload();
-  }, [notifications, unreadCount]);
+  const [showNotifications, setShowNotifications] = React.useState(false);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showSearch, setShowSearch] = React.useState(false);
@@ -311,7 +305,7 @@ export function DshFieldPartnersScreen({
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
         <FieldTopBar
           onSearchPress={() => setShowSearch((v) => !v)}
-          onNotificationsPress={handleNotificationsPress}
+          onNotificationsPress={() => setShowNotifications(true)}
           onAccountPress={onOpenAccount}
           unreadCount={unreadCount}
         />
@@ -325,7 +319,7 @@ export function DshFieldPartnersScreen({
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
         <FieldTopBar
           onSearchPress={() => setShowSearch((v) => !v)}
-          onNotificationsPress={handleNotificationsPress}
+          onNotificationsPress={() => setShowNotifications(true)}
           onAccountPress={onOpenAccount}
           unreadCount={unreadCount}
         />
@@ -340,12 +334,37 @@ export function DshFieldPartnersScreen({
     );
   }
 
+  if (showNotifications) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+        <FieldTopBar
+          onSearchPress={() => setShowSearch((v) => !v)}
+          onNotificationsPress={() => setShowNotifications(true)}
+          onAccountPress={onOpenAccount}
+          unreadCount={unreadCount}
+        />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: spacing[4], paddingBottom: 128, gap: spacing[3] }}
+          showsVerticalScrollIndicator={false}
+        >
+          <ActorNotificationsPanel
+            authKind={identity.state.kind}
+            title="إشعارات المندوب الميداني"
+            emptyDescription="ستظهر هنا إشعارات الزيارات، ملفات الانضمام، والتواصل التشغيلي للمندوب الميداني."
+          />
+          <Button label="العودة إلى ملفات الانضمام" tone="secondary" onPress={() => setShowNotifications(false)} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       {/* Orange Top Bar */}
       <FieldTopBar
         onSearchPress={() => setShowSearch((v) => !v)}
-        onNotificationsPress={handleNotificationsPress}
+        onNotificationsPress={() => setShowNotifications(true)}
         onAccountPress={onOpenAccount}
         unreadCount={unreadCount}
       />

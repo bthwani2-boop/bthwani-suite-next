@@ -51,7 +51,11 @@ export type DshCaptainOrderMode =
 export type DshCaptainOrderStage = 'offer' | 'accepted' | 'pickup' | 'delivery' | 'proof' | 'closed';
 
 export type DshCaptainOrderBellItem = {
+  /** Dispatch assignment id — the id every accept/decline/pickup/deliver mutation targets. */
   id: DshCaptainOrderId;
+  /** The underlying order id, for display only; never used as a mutation target. */
+  orderId: DshCaptainOrderId;
+  kind: 'incoming-offer' | 'active';
   serviceType: DshCaptainOrderServiceType;
   readonly fulfillmentMode: 'bthwani_delivery';
   title: string;

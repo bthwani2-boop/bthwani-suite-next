@@ -30,6 +30,7 @@ import type { useCaptainOrderModel } from '../orders/captain-order.model';
 import type { useCaptainChatModel } from '../chat';
 import type { useCaptainNavigationModel } from './captain-navigation.model';
 import type { useCaptainServiceModeModel } from './captain-service-mode.model';
+import type { useCaptainInboxModel } from './captain-inbox.model';
 
 export type {
   ActiveOrderPhase,
@@ -59,6 +60,7 @@ export type DshCaptainSurfaceSharedProps = {
   serviceModeModel: ReturnType<typeof useCaptainServiceModeModel>;
   deliveryActions: ReturnType<typeof useCaptainDeliveryActions>;
   pushLocation: ReturnType<typeof useCaptainOrderRuntime>['pushLocation'];
+  inboxModel: ReturnType<typeof useCaptainInboxModel>;
 };
 
 export function useDshCaptainSurfaceModel({
@@ -76,12 +78,22 @@ export function useDshCaptainSurfaceModel({
   serviceModeModel,
   deliveryActions,
   pushLocation,
+  inboxModel,
 }: DshCaptainSurfaceSharedProps) {
+  const activeAssignment = inboxModel.findAssignment(orderModel.activeAssignmentId);
+
+  React.useEffect(() => {
+    lifecycle.setInboxState(inboxModel.fetchState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inboxModel.fetchState]);
+
   const state: DshCaptainSurfaceState = {
     activeServiceType: profileModel.activeServiceType,
     route,
     inboxState: lifecycle.inboxState,
-    activeOrderId: orderModel.activeOrderId,
+    activeAssignmentId: orderModel.activeAssignmentId,
+    activeOrderId: activeAssignment?.orderId ?? '',
+    inboxItems: inboxModel.items,
     selectedSupportScreen,
     isPickupSheetVisible: lifecycle.isPickupSheetVisible,
     isDeliverySheetVisible: lifecycle.isDeliverySheetVisible,
@@ -105,13 +117,13 @@ export function useDshCaptainSurfaceModel({
   const derivedCallbacks = React.useMemo(() => ({
     toggleAvailability: availabilityModel.toggleAvailability,
     goToInbox: navModel.goToInbox,
-    resetInboxState: () => lifecycle.setInboxState('ready'),
+    resetInboxState: () => inboxModel.refresh(),
     toggleOrderExpanded: orderModel.toggleOrderExpanded,
-  }), [availabilityModel.toggleAvailability, navModel.goToInbox, lifecycle, orderModel.toggleOrderExpanded]);
+  }), [availabilityModel.toggleAvailability, navModel.goToInbox, inboxModel.refresh, orderModel.toggleOrderExpanded]);
 
   const derived: DshCaptainSurfaceDerived = React.useMemo(
-    () => buildCaptainDerived(state, derivedCallbacks),
-    [state, derivedCallbacks],
+    () => buildCaptainDerived(state, derivedCallbacks, activeAssignment),
+    [state, derivedCallbacks, activeAssignment],
   );
 
   const actions = {
@@ -130,6 +142,7 @@ export function useDshCaptainSurfaceModel({
     // Inbox
     setInboxState: lifecycle.setInboxState,
     resetInboxState: () => lifecycle.setInboxState('ready' as const),
+    refreshInbox: inboxModel.refresh,
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
 
     // Availability

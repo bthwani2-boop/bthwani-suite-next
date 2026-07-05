@@ -40,14 +40,12 @@ export interface paths {
     };
     "/wlt/references/payment-status": {
         parameters: {
-            query?: {
-                orderId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Return payment status reference for a given order. */
+        /** Return payment status reference for a given orderId. Read-only display surface for DSH. */
         get: operations["getWltPaymentStatusRef"];
         put?: never;
         post?: never;
@@ -59,14 +57,12 @@ export interface paths {
     };
     "/wlt/references/settlement-status": {
         parameters: {
-            query?: {
-                orderId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Return settlement status reference for a given order. */
+        /** Return settlement status reference for a given orderId. Read-only display surface for DSH. */
         get: operations["getWltSettlementStatusRef"];
         put?: never;
         post?: never;
@@ -78,14 +74,12 @@ export interface paths {
     };
     "/wlt/references/refund-status": {
         parameters: {
-            query?: {
-                orderId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Return refund status reference for a given order. */
+        /** Return refund status reference for a given orderId. Read-only display surface for DSH. */
         get: operations["getWltRefundStatusRef"];
         put?: never;
         post?: never;
@@ -97,14 +91,12 @@ export interface paths {
     };
     "/wlt/references/wallet-status": {
         parameters: {
-            query?: {
-                clientId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Return wallet status reference for a given client. */
+        /** Return wallet status reference for a given actor. Read-only display surface for DSH. */
         get: operations["getWltWalletStatusRef"];
         put?: never;
         post?: never;
@@ -123,7 +115,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a new WLT payment session. */
+        /**
+         * Create a WLT-owned payment-session reference for DSH checkout handoff.
+         * @description Creates an opaque payment-session reference only. No wallet debit, ledger posting, provider capture, refund, or settlement occurs here.
+         */
         post: operations["createWltPaymentSessionReference"];
         delete?: never;
         options?: never;
@@ -135,12 +130,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                paymentSessionId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        /** Get a WLT payment session by ID. */
+        /** Read a WLT-owned payment-session reference. */
         get: operations["getWltPaymentSessionReference"];
         put?: never;
         post?: never;
@@ -154,14 +147,15 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                paymentSessionId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Authorize a WLT payment session. */
+        /**
+         * Authorize a payment session with an amount.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["authorizeWltPaymentSession"];
         delete?: never;
         options?: never;
@@ -173,14 +167,15 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                paymentSessionId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Capture a WLT payment session. */
+        /**
+         * Capture an authorized payment session.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["captureWltPaymentSession"];
         delete?: never;
         options?: never;
@@ -192,14 +187,15 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                paymentSessionId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Expire a WLT payment session. */
+        /**
+         * Expire a payment session.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["expireWltPaymentSession"];
         delete?: never;
         options?: never;
@@ -211,14 +207,15 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                paymentSessionId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Mark COD as collected for a WLT payment session. */
+        /**
+         * Mark a COD payment session as collected.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["markWltCodCollected"];
         delete?: never;
         options?: never;
@@ -228,18 +225,15 @@ export interface paths {
     };
     "/wlt/refunds": {
         parameters: {
-            query?: {
-                orderId?: string;
-                clientId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List WLT refunds by order or client. */
+        /** List refunds by orderId or clientId. */
         get: operations["listWltRefunds"];
         put?: never;
-        /** Create a new WLT refund. */
+        /** Create a refund for a captured payment session. */
         post: operations["createWltRefund"];
         delete?: never;
         options?: never;
@@ -251,12 +245,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                refundId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        /** Get a WLT refund by ID. */
+        /** Get a refund by ID. */
         get: operations["getWltRefund"];
         put?: never;
         post?: never;
@@ -270,14 +262,12 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                refundId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Approve a WLT refund. */
+        /** Approve a requested refund. */
         post: operations["approveWltRefund"];
         delete?: never;
         options?: never;
@@ -289,14 +279,12 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                refundId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Complete a WLT refund. */
+        /** Complete an approved refund. */
         post: operations["completeWltRefund"];
         delete?: never;
         options?: never;
@@ -308,14 +296,12 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                refundId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Reject a WLT refund. */
+        /** Reject a refund. */
         post: operations["rejectWltRefund"];
         delete?: never;
         options?: never;
@@ -325,18 +311,33 @@ export interface paths {
     };
     "/wlt/settlements": {
         parameters: {
-            query?: {
-                partnerId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List WLT settlements by partner. */
+        /** List settlements by partnerId. */
         get: operations["listWltSettlements"];
         put?: never;
-        /** Create a new WLT settlement. */
+        /** Create a partner settlement record. */
         post: operations["createWltSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get aggregated settlement summary for a partner over a period. */
+        get: operations["getWltSettlementSummary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -347,12 +348,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                settlementId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        /** Get a WLT settlement by ID. */
+        /** Get a settlement by ID. */
         get: operations["getWltSettlement"];
         put?: never;
         post?: never;
@@ -366,36 +365,13 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                settlementId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Post a WLT settlement. */
+        /** Post (settle) a pending settlement. */
         post: operations["postWltSettlement"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlements/summary": {
-        parameters: {
-            query?: {
-                partnerId?: string;
-                periodStart?: string;
-                periodEnd?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get settlement summary for a partner. */
-        get: operations["getWltSettlementSummary"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -404,18 +380,18 @@ export interface paths {
     };
     "/wlt/cod-records": {
         parameters: {
-            query?: {
-                captainId?: string;
-                partnerId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List WLT COD records by captain or partner. */
+        /** List COD records by captainId or partnerId. */
         get: operations["listWltCodRecords"];
         put?: never;
-        /** Create a new WLT COD record. */
+        /**
+         * DSH-only. Opens a COD collection record for a delivered order.
+         * @description Called by DSH once a COD order is delivered. WLT derives amountMinorUnits/ currency from its own payment session for the given checkoutIntentId rather than trusting the caller. Idempotent on orderId: replays return the existing record.
+         */
         post: operations["createWltCodRecord"];
         delete?: never;
         options?: never;
@@ -427,12 +403,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                codRecordId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        /** Get a WLT COD record by ID. */
+        /** Get a COD record by ID. */
         get: operations["getWltCodRecord"];
         put?: never;
         post?: never;
@@ -446,14 +420,12 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                codRecordId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Mark COD record as collected. */
+        /** Mark a COD record as collected. */
         post: operations["collectWltCod"];
         delete?: never;
         options?: never;
@@ -465,14 +437,12 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                codRecordId: string;
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Mark COD record as remitted. */
+        /** Mark a COD record as remitted. */
         post: operations["remitWltCod"];
         delete?: never;
         options?: never;
@@ -482,18 +452,15 @@ export interface paths {
     };
     "/wlt/commissions": {
         parameters: {
-            query?: {
-                orderId?: string;
-                captainId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List WLT commissions by order or captain. */
+        /** List commissions by orderId or captainId. */
         get: operations["listWltCommissions"];
         put?: never;
-        /** Create a new WLT commission. */
+        /** DSH-only. Create a commission record. */
         post: operations["createWltCommission"];
         delete?: never;
         options?: never;
@@ -503,22 +470,15 @@ export interface paths {
     };
     "/wlt/ledger/entries": {
         parameters: {
-            query?: {
-                actorId?: string;
-                actorType?: string;
-                orderId?: string;
-                entryType?: string;
-                limit?: number;
-                cursor?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List WLT ledger entries. */
+        /** List ledger entries with optional filters and cursor pagination. */
         get: operations["listWltLedgerEntries"];
         put?: never;
-        /** Append a WLT ledger entry. */
+        /** Append an immutable ledger entry. */
         post: operations["appendWltLedgerEntry"];
         delete?: never;
         options?: never;
@@ -530,12 +490,10 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                entryId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        /** Get a WLT ledger entry by ID. */
+        /** Get a ledger entry by ID. */
         get: operations["getWltLedgerEntry"];
         put?: never;
         post?: never;
@@ -546,256 +504,390 @@ export interface paths {
         trace?: never;
     };
 }
-
 export type webhooks = Record<string, never>;
-
 export interface components {
     schemas: {
         WltApiError: {
-            readonly code: string;
-            readonly message: string;
+            code: string;
+            message: string;
         };
         WltHealthResponse: {
-            readonly status: string;
+            /** @constant */
+            service: "wlt";
+            /** @enum {string} */
+            status: "healthy";
+            /** Format: date-time */
+            checkedAt: string;
         };
         WltReadinessResponse: {
-            readonly ready: boolean;
-            readonly checks: Record<string, string>;
+            /** @constant */
+            service: "wlt";
+            /** @enum {string} */
+            status: "ready" | "not_ready";
+            dependencies: {
+                [key: string]: "ready" | "degraded" | "down" | "not_configured";
+            };
+            /** Format: date-time */
+            checkedAt: string;
         };
         WltPaymentStatusRef: {
-            readonly orderId: string;
-            readonly status: string;
+            id: string;
+            orderId: string;
+            /** @enum {string} */
+            status: "pending" | "authorized" | "captured" | "failed" | "refunded" | "partially_refunded";
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltSettlementStatusRef: {
-            readonly orderId: string;
-            readonly status: string;
+            id: string;
+            orderId: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "settled" | "failed";
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltRefundStatusRef: {
-            readonly orderId: string;
-            readonly status: string;
+            id: string;
+            orderId: string;
+            /** @enum {string} */
+            status: "none" | "requested" | "approved" | "completed" | "rejected";
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltWalletStatusRef: {
-            readonly clientId: string;
-            readonly status: string;
+            id: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "field";
+            /** @enum {string} */
+            status: "active" | "suspended" | "frozen" | "closed";
+            currency: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltPaymentSession: {
-            readonly id: string;
-            readonly checkoutIntentId: string;
-            readonly clientId: string;
-            readonly storeId: string;
-            readonly paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
-            readonly status: string;
-            readonly providerReference: string;
-            readonly createdAt: string;
-            readonly updatedAt: string;
+            id: string;
+            checkoutIntentId: string;
+            clientId: string;
+            storeId: string;
+            /** @enum {string} */
+            paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
+            /** @enum {string} */
+            status: "reference_created" | "pending_provider" | "authorized" | "captured" | "cod_pending" | "cod_collected" | "failed" | "expired";
+            /** @description Empty unless a future WLT-owned provider integration attaches an external reference. */
+            providerReference: string;
+            /** Format: int64 */
+            amountMinorUnits?: number;
+            currency?: string;
+            /** Format: date-time */
+            capturedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltCreatePaymentSessionRequest: {
-            readonly checkoutIntentId: string;
-            readonly clientId: string;
-            readonly storeId: string;
-            readonly paymentMethod?: "cod" | "wallet" | "mixed" | "official_wallet";
+            checkoutIntentId: string;
+            clientId: string;
+            storeId: string;
+            /** @enum {string} */
+            paymentMethod?: "cod" | "wallet" | "mixed" | "official_wallet";
+            /** Format: int64 */
+            amountMinorUnits: number;
+            /** @default YER */
+            currency: string;
+            cartSnapshotHash?: string;
         };
         WltPaymentStatusRefResponse: {
-            readonly reference: components["schemas"]["WltPaymentStatusRef"];
+            reference: components["schemas"]["WltPaymentStatusRef"];
         };
         WltSettlementStatusRefResponse: {
-            readonly reference: components["schemas"]["WltSettlementStatusRef"];
+            reference: components["schemas"]["WltSettlementStatusRef"];
         };
         WltRefundStatusRefResponse: {
-            readonly reference: components["schemas"]["WltRefundStatusRef"];
+            reference: components["schemas"]["WltRefundStatusRef"];
         };
         WltWalletStatusRefResponse: {
-            readonly reference: components["schemas"]["WltWalletStatusRef"];
+            reference: components["schemas"]["WltWalletStatusRef"];
         };
         WltPaymentSessionResponse: {
-            readonly paymentSession: components["schemas"]["WltPaymentSession"];
+            paymentSession: components["schemas"]["WltPaymentSession"];
         };
         WltAuthorizePaymentSessionRequest: {
-            readonly amountMinorUnits: number;
-            readonly currency: string;
-        };
-        WltAuthorizePaymentSessionResponse: {
-            readonly paymentSession: components["schemas"]["WltPaymentSession"];
+            /**
+             * Format: int64
+             * @description Amount in minor units (e.g. 1000 = 10.00 YER)
+             */
+            amountMinorUnits: number;
+            /** @default YER */
+            currency: string;
         };
         WltCapturePaymentSessionResponse: {
-            readonly paymentSession: components["schemas"]["WltPaymentSession"];
-        };
-        WltExpirePaymentSessionResponse: {
-            readonly paymentSession: components["schemas"]["WltPaymentSession"];
-        };
-        WltCodCollectResponse: {
-            readonly paymentSession: components["schemas"]["WltPaymentSession"];
+            paymentSession: components["schemas"]["WltPaymentSession"];
         };
         WltRefund: {
-            readonly id: string;
-            readonly paymentSessionId: string;
-            readonly orderId: string;
-            readonly clientId: string;
-            readonly amountMinorUnits: number;
-            readonly currency: string;
-            readonly reason: string;
-            readonly status: string;
-            readonly resolvedAt: string | null;
-            readonly createdAt: string;
-            readonly updatedAt: string;
+            id: string;
+            paymentSessionId: string;
+            orderId: string;
+            clientId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            reason: string;
+            /** @enum {string} */
+            status: "requested" | "approved" | "processing" | "completed" | "rejected" | "reversed";
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltCreateRefundRequest: {
-            readonly paymentSessionId: string;
-            readonly orderId: string;
-            readonly clientId: string;
-            readonly amountMinorUnits?: number;
-            readonly currency?: string;
-            readonly reason?: string;
+            paymentSessionId: string;
+            orderId: string;
+            clientId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            /** @default YER */
+            currency: string;
+            reason?: string;
         };
         WltRefundResponse: {
-            readonly refund: components["schemas"]["WltRefund"];
+            refund: components["schemas"]["WltRefund"];
         };
-        WltRefundsListResponse: {
-            readonly refunds: components["schemas"]["WltRefund"][];
-        };
-        WltApproveRefundResponse: {
-            readonly refund: components["schemas"]["WltRefund"];
-        };
-        WltCompleteRefundResponse: {
-            readonly refund: components["schemas"]["WltRefund"];
-        };
-        WltRejectRefundRequest: {
-            readonly reason: string;
-        };
-        WltRejectRefundResponse: {
-            readonly refund: components["schemas"]["WltRefund"];
+        WltRefundListResponse: {
+            refunds: components["schemas"]["WltRefund"][];
         };
         WltSettlement: {
-            readonly id: string;
-            readonly partnerId: string;
-            readonly periodStart: string;
-            readonly periodEnd: string;
-            readonly grossAmount: number;
-            readonly platformFee: number;
-            readonly netAmount: number;
-            readonly currency: string;
-            readonly orderCount: number;
-            readonly status: string;
-            readonly settledAt: string | null;
-            readonly createdAt: string;
-            readonly updatedAt: string;
+            id: string;
+            partnerId: string;
+            /** Format: date */
+            periodStart: string;
+            /** Format: date */
+            periodEnd: string;
+            /** Format: int64 */
+            grossAmount: number;
+            /** Format: int64 */
+            platformFee: number;
+            /** Format: int64 */
+            netAmount: number;
+            currency: string;
+            orderCount: number;
+            /** @enum {string} */
+            status: "pending" | "processing" | "settled" | "failed" | "reversed";
+            /** Format: date-time */
+            settledAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltCreateSettlementRequest: {
-            readonly partnerId: string;
-            readonly periodStart: string;
-            readonly periodEnd: string;
-            readonly grossAmount: number;
-            readonly platformFee: number;
-            readonly netAmount: number;
-            readonly currency: string;
-            readonly orderCount: number;
+            partnerId: string;
+            /** Format: date */
+            periodStart: string;
+            /** Format: date */
+            periodEnd: string;
+            /** Format: int64 */
+            grossAmount: number;
+            /** Format: int64 */
+            platformFee: number;
+            /** Format: int64 */
+            netAmount: number;
+            /** @default YER */
+            currency: string;
+            /** @default 0 */
+            orderCount: number;
         };
         WltSettlementResponse: {
-            readonly settlement: components["schemas"]["WltSettlement"];
+            settlement: components["schemas"]["WltSettlement"];
         };
-        WltSettlementsListResponse: {
-            readonly settlements: components["schemas"]["WltSettlement"][];
+        WltSettlementListResponse: {
+            settlements: components["schemas"]["WltSettlement"][];
         };
         WltSettlementSummary: {
-            readonly partnerId: string;
-            readonly totalSettled: number;
-            readonly pendingAmount: number;
-            readonly currency: string;
-            readonly settlementCount: number;
+            partnerId: string;
+            /** Format: date */
+            periodStart?: string;
+            /** Format: date */
+            periodEnd?: string;
+            /** Format: int64 */
+            totalGross: number;
+            /** Format: int64 */
+            totalFee: number;
+            /** Format: int64 */
+            totalNet: number;
+            totalOrders: number;
+            settlementCount: number;
+            currency: string;
         };
         WltSettlementSummaryResponse: {
-            readonly summary: components["schemas"]["WltSettlementSummary"];
+            summary: components["schemas"]["WltSettlementSummary"];
         };
         WltCodRecord: {
-            readonly id: string;
-            readonly orderId: string;
-            readonly captainId: string;
-            readonly partnerId: string;
-            readonly amountMinorUnits: number;
-            readonly currency: string;
-            readonly status: string;
-            readonly collectedAt: string | null;
-            readonly remittedAt: string | null;
-            readonly createdAt: string;
-            readonly updatedAt: string;
+            id: string;
+            orderId: string;
+            captainId: string;
+            partnerId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            status: "pending_collection" | "collected" | "remitted" | "disputed" | "resolved";
+            /** Format: date-time */
+            collectedAt?: string | null;
+            /** Format: date-time */
+            remittedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         WltCreateCodRecordRequest: {
-            readonly orderId: string;
-            readonly captainId: string;
-            readonly partnerId: string;
-            readonly amountMinorUnits: number;
-            readonly currency?: string;
+            orderId: string;
+            captainId: string;
+            partnerId: string;
+            /** @description When set, WLT derives amountMinorUnits/currency from its own payment session for this checkout intent instead of trusting the caller; amountMinorUnits/currency in the request are ignored in that case. */
+            checkoutIntentId?: string;
+            /** Format: int64 */
+            amountMinorUnits?: number;
+            /** @default YER */
+            currency: string;
         };
         WltCodRecordResponse: {
-            readonly codRecord: components["schemas"]["WltCodRecord"];
+            codRecord: components["schemas"]["WltCodRecord"];
         };
-        WltCodRecordsListResponse: {
-            readonly codRecords: components["schemas"]["WltCodRecord"][];
+        WltCodRecordListResponse: {
+            codRecords: components["schemas"]["WltCodRecord"][];
         };
         WltCommission: {
-            readonly id: string;
-            readonly orderId: string;
-            readonly captainId: string;
-            readonly partnerId: string;
-            readonly commissionType: string;
-            readonly amountMinorUnits: number;
-            readonly currency: string;
-            readonly status: string;
-            readonly settledAt: string | null;
-            readonly createdAt: string;
+            id: string;
+            orderId: string;
+            captainId: string;
+            partnerId: string;
+            /** @enum {string} */
+            commissionType: "delivery_fee" | "platform_fee" | "cod_fee" | "partner_discount";
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            status: "pending" | "confirmed" | "settled" | "reversed";
+            /** Format: date-time */
+            settledAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         WltCreateCommissionRequest: {
-            readonly orderId: string;
-            readonly captainId: string;
-            readonly partnerId: string;
-            readonly commissionType: string;
-            readonly amountMinorUnits: number;
-            readonly currency?: string;
+            orderId: string;
+            captainId: string;
+            partnerId: string;
+            /**
+             * @default delivery_fee
+             * @enum {string}
+             */
+            commissionType: "delivery_fee" | "platform_fee" | "cod_fee" | "partner_discount";
+            /** Format: int64 */
+            amountMinorUnits: number;
+            /** @default YER */
+            currency: string;
         };
         WltCommissionResponse: {
-            readonly commission: components["schemas"]["WltCommission"];
+            commission: components["schemas"]["WltCommission"];
         };
-        WltCommissionsListResponse: {
-            readonly commissions: components["schemas"]["WltCommission"][];
+        WltCommissionListResponse: {
+            commissions: components["schemas"]["WltCommission"][];
         };
         WltLedgerEntry: {
-            readonly id: string;
-            readonly entryType: string;
-            readonly actorId: string;
-            readonly actorType: string;
-            readonly orderId: string | null;
-            readonly referenceId: string;
-            readonly referenceType: string;
-            readonly amountMinorUnits: number;
-            readonly currency: string;
-            readonly debitCredit: "debit" | "credit";
-            readonly balanceAfter: number;
-            readonly description: string;
-            readonly createdAt: string;
+            id: string;
+            entryType: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "system" | "platform";
+            orderId?: string | null;
+            referenceId: string;
+            referenceType: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            debitCredit: "debit" | "credit";
+            /** Format: int64 */
+            balanceAfter: number;
+            description: string;
+            /** Format: date-time */
+            createdAt: string;
         };
         WltCreateLedgerEntryRequest: {
-            readonly entryType: string;
-            readonly actorId: string;
-            readonly actorType: string;
-            readonly orderId?: string;
-            readonly referenceId?: string;
-            readonly referenceType?: string;
-            readonly amountMinorUnits: number;
-            readonly currency?: string;
-            readonly debitCredit: "debit" | "credit";
-            readonly balanceAfter: number;
-            readonly description?: string;
+            entryType: string;
+            actorId: string;
+            /**
+             * @default system
+             * @enum {string}
+             */
+            actorType: "client" | "partner" | "captain" | "system" | "platform";
+            orderId?: string | null;
+            referenceId?: string;
+            referenceType?: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            /** @default YER */
+            currency: string;
+            /** @enum {string} */
+            debitCredit: "debit" | "credit";
+            /** Format: int64 */
+            balanceAfter: number;
+            description?: string;
         };
         WltLedgerEntryResponse: {
-            readonly entry: components["schemas"]["WltLedgerEntry"];
+            ledgerEntry: components["schemas"]["WltLedgerEntry"];
         };
-        WltLedgerEntriesListResponse: {
-            readonly entries: components["schemas"]["WltLedgerEntry"][];
-            readonly nextCursor?: string;
+        WltLedgerEntryListResponse: {
+            ledgerEntries: components["schemas"]["WltLedgerEntry"][];
         };
     };
     responses: {
-        WltApiErrorResponse: {
+        /** @description Invalid request parameters. */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["WltApiError"];
+            };
+        };
+        /** @description Service authorization is missing or invalid. */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["WltApiError"];
+            };
+        };
+        /** @description Caller is not allowed to perform this operation. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["WltApiError"];
+            };
+        };
+        /** @description Request conflicts with an existing idempotent operation. */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["WltApiError"];
+            };
+        };
+        /** @description Resource not found. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
             content: {
                 "application/json": components["schemas"]["WltApiError"];
             };
@@ -806,8 +898,8 @@ export interface components {
     headers: never;
     pathItems: never;
 }
-
-export type operations = {
+export type $defs = Record<string, never>;
+export interface operations {
     getWltHealth: {
         parameters: {
             query?: never;
@@ -817,7 +909,11 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description WLT process is alive. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltHealthResponse"];
                 };
@@ -833,17 +929,28 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description WLT dependencies are ready. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltReadinessResponse"];
                 };
+            };
+            /** @description WLT is not ready. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
     getWltPaymentStatusRef: {
         parameters: {
-            query?: {
-                orderId?: string;
+            query: {
+                orderId: string;
             };
             header?: never;
             path?: never;
@@ -851,22 +958,23 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Payment status reference found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltPaymentStatusRefResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     getWltSettlementStatusRef: {
         parameters: {
-            query?: {
-                orderId?: string;
+            query: {
+                orderId: string;
             };
             header?: never;
             path?: never;
@@ -874,22 +982,23 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Settlement status reference found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltSettlementStatusRefResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     getWltRefundStatusRef: {
         parameters: {
-            query?: {
-                orderId?: string;
+            query: {
+                orderId: string;
             };
             header?: never;
             path?: never;
@@ -897,22 +1006,24 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Refund status reference found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltRefundStatusRefResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     getWltWalletStatusRef: {
         parameters: {
-            query?: {
-                clientId?: string;
+            query: {
+                actorId: string;
+                actorType: "client" | "partner" | "captain" | "field";
             };
             header?: never;
             path?: never;
@@ -920,22 +1031,28 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Wallet status reference found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltWalletStatusRefResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     createWltPaymentSessionReference: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+                "X-Correlation-ID": string;
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -945,16 +1062,19 @@ export type operations = {
             };
         };
         responses: {
+            /** @description Payment-session reference created. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltPaymentSessionResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     getWltPaymentSessionReference: {
@@ -968,16 +1088,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Payment-session reference. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltPaymentSessionResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     authorizeWltPaymentSession: {
@@ -995,21 +1116,18 @@ export type operations = {
             };
         };
         responses: {
+            /** @description Payment session authorized. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltAuthorizePaymentSessionResponse"];
+                    "application/json": components["schemas"]["WltPaymentSessionResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     captureWltPaymentSession: {
@@ -1023,21 +1141,18 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Payment session captured. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltCapturePaymentSessionResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     expireWltPaymentSession: {
@@ -1051,21 +1166,18 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Payment session expired. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltExpirePaymentSessionResponse"];
+                    "application/json": components["schemas"]["WltPaymentSessionResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     markWltCodCollected: {
@@ -1079,21 +1191,42 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description COD payment session marked as collected. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltCodCollectResponse"];
+                    "application/json": components["schemas"]["WltPaymentSessionResponse"];
                 };
             };
-            400: {
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWltRefunds: {
+        parameters: {
+            query?: {
+                orderId?: string;
+                clientId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of refunds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltApiError"];
+                    "application/json": components["schemas"]["WltRefundListResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
         };
     };
     createWltRefund: {
@@ -1109,16 +1242,16 @@ export type operations = {
             };
         };
         responses: {
+            /** @description Refund created. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltRefundResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
         };
     };
     getWltRefund: {
@@ -1132,35 +1265,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Refund found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltRefundResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-        };
-    };
-    listWltRefunds: {
-        parameters: {
-            query?: {
-                orderId?: string;
-                clientId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                content: {
-                    "application/json": components["schemas"]["WltRefundsListResponse"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     approveWltRefund: {
@@ -1174,21 +1289,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Refund approved. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltApproveRefundResponse"];
+                    "application/json": components["schemas"]["WltRefundResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     completeWltRefund: {
@@ -1202,21 +1313,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Refund completed. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltCompleteRefundResponse"];
+                    "application/json": components["schemas"]["WltRefundResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     rejectWltRefund: {
@@ -1228,27 +1335,42 @@ export type operations = {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WltRejectRefundRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
+            /** @description Refund rejected. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltRejectRefundResponse"];
+                    "application/json": components["schemas"]["WltRefundResponse"];
                 };
             };
-            400: {
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWltSettlements: {
+        parameters: {
+            query: {
+                partnerId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of settlements. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltApiError"];
+                    "application/json": components["schemas"]["WltSettlementListResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
         };
     };
     createWltSettlement: {
@@ -1264,16 +1386,41 @@ export type operations = {
             };
         };
         responses: {
+            /** @description Settlement created. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltSettlementResponse"];
                 };
             };
-            400: {
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    getWltSettlementSummary: {
+        parameters: {
+            query: {
+                partnerId: string;
+                periodStart?: string;
+                periodEnd?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settlement summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltApiError"];
+                    "application/json": components["schemas"]["WltSettlementSummaryResponse"];
                 };
             };
+            400: components["responses"]["BadRequest"];
         };
     };
     getWltSettlement: {
@@ -1287,34 +1434,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Settlement found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltSettlementResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-        };
-    };
-    listWltSettlements: {
-        parameters: {
-            query?: {
-                partnerId?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                content: {
-                    "application/json": components["schemas"]["WltSettlementsListResponse"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     postWltSettlement: {
@@ -1328,89 +1458,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Settlement posted. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltSettlementResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-        };
-    };
-    getWltSettlementSummary: {
-        parameters: {
-            query?: {
-                partnerId?: string;
-                periodStart?: string;
-                periodEnd?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                content: {
-                    "application/json": components["schemas"]["WltSettlementSummaryResponse"];
-                };
-            };
-        };
-    };
-    createWltCodRecord: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WltCreateCodRecordRequest"];
-            };
-        };
-        responses: {
-            201: {
-                content: {
-                    "application/json": components["schemas"]["WltCodRecordResponse"];
-                };
-            };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-        };
-    };
-    getWltCodRecord: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                codRecordId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                content: {
-                    "application/json": components["schemas"]["WltCodRecordResponse"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWltCodRecords: {
@@ -1425,11 +1483,70 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description List of COD records. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltCodRecordsListResponse"];
+                    "application/json": components["schemas"]["WltCodRecordListResponse"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    createWltCodRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCreateCodRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description COD record created (or already existed for this orderId). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCodRecordResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getWltCodRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                codRecordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description COD record found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCodRecordResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     collectWltCod: {
@@ -1443,21 +1560,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description COD record marked as collected. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltCodRecordResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     remitWltCod: {
@@ -1471,46 +1584,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description COD record marked as remitted. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltCodRecordResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
-        };
-    };
-    createWltCommission: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WltCreateCommissionRequest"];
-            };
-        };
-        responses: {
-            201: {
-                content: {
-                    "application/json": components["schemas"]["WltCommissionResponse"];
-                };
-            };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWltCommissions: {
@@ -1525,11 +1609,74 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description List of commissions. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": components["schemas"]["WltCommissionsListResponse"];
+                    "application/json": components["schemas"]["WltCommissionListResponse"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    createWltCommission: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCreateCommissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Commission created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCommissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listWltLedgerEntries: {
+        parameters: {
+            query?: {
+                actorId?: string;
+                actorType?: "client" | "partner" | "captain" | "system" | "platform";
+                orderId?: string;
+                entryType?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of ledger entries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltLedgerEntryListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
         };
     };
     appendWltLedgerEntry: {
@@ -1545,16 +1692,16 @@ export type operations = {
             };
         };
         responses: {
+            /** @description Ledger entry appended. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltLedgerEntryResponse"];
                 };
             };
-            400: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
         };
     };
     getWltLedgerEntry: {
@@ -1568,39 +1715,17 @@ export type operations = {
         };
         requestBody?: never;
         responses: {
+            /** @description Ledger entry found. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": components["schemas"]["WltLedgerEntryResponse"];
                 };
             };
-            404: {
-                content: {
-                    "application/json": components["schemas"]["WltApiError"];
-                };
-            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
         };
     };
-    listWltLedgerEntries: {
-        parameters: {
-            query?: {
-                actorId?: string;
-                actorType?: string;
-                orderId?: string;
-                entryType?: string;
-                limit?: number;
-                cursor?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                content: {
-                    "application/json": components["schemas"]["WltLedgerEntriesListResponse"];
-                };
-            };
-        };
-    };
-};
+}

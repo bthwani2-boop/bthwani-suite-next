@@ -18,7 +18,7 @@ export type DshCaptainLocationPush = {
 };
 
 export type DshCaptainActiveLocationPushConfig = {
-  readonly activeOrderId: string;
+  readonly activeAssignmentId: string;
   readonly captainId: string;
   readonly lifecycleStatus: string | undefined;
 };
@@ -102,7 +102,7 @@ export function useCaptainOrderRuntime() {
 }
 
 export function useCaptainActiveLocationPush({
-  activeOrderId,
+  activeAssignmentId,
   captainId,
   lifecycleStatus,
 }: DshCaptainActiveLocationPushConfig) {
@@ -114,7 +114,7 @@ export function useCaptainActiveLocationPush({
     // is disabled explicitly here instead of firing requests that fail.
     if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.locationPush) return undefined;
     if (!lifecycleStatus || !activeDeliveryStates.has(lifecycleStatus)) return undefined;
-    if (!activeOrderId || !captainId) return undefined;
+    if (!activeAssignmentId || !captainId) return undefined;
 
     let cancelled = false;
     let watchId: number | null = null;
@@ -122,7 +122,7 @@ export function useCaptainActiveLocationPush({
     const postLocation = (latitude: number, longitude: number) => {
       if (cancelled) return;
       captainOrderRuntime.pushLocation({
-        orderId: activeOrderId,
+        orderId: activeAssignmentId,
         captainId,
         latitude,
         longitude,
@@ -149,5 +149,5 @@ export function useCaptainActiveLocationPush({
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [activeOrderId, captainId, captainOrderRuntime, lifecycleStatus]);
+  }, [activeAssignmentId, captainId, captainOrderRuntime, lifecycleStatus]);
 }

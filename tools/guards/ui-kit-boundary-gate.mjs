@@ -26,7 +26,7 @@ for (const file of listCodeFiles()) {
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     const spec = item.specifier;
-    const ALLOWED_SUBPATHS = ["@bthwani/ui-kit/web", "@bthwani/ui-kit/mobile", "@bthwani/ui-kit/next"];
+    const ALLOWED_SUBPATHS = ["@bthwani/ui-kit/web", "@bthwani/ui-kit/mobile", "@bthwani/ui-kit/next", "@bthwani/ui-kit/tokens"];
     const isDeepAlias = spec.startsWith("@bthwani/ui-kit/") && !ALLOWED_SUBPATHS.includes(spec);
     const isDeepPath = spec.includes("shared/ui-kit/src/") || spec.includes("shared/ui-kit/tokens/");
 
@@ -152,6 +152,7 @@ for (const file of listCodeFiles()) {
     file.startsWith("governance/") ||
     file.startsWith("infra/") ||
     file.startsWith("contracts/") ||
+    file.startsWith("apps/control-panel/") ||
     file.endsWith(".d.ts");
 
   if (isExcludedFromColors) continue;

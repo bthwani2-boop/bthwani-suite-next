@@ -14,7 +14,7 @@
  * consolidates those ad hoc brand colors into the shared palette and may
  * shift the exact hue slightly.
  */
-import { alpha, brandScale, colorRoles, darkThemeColors, neutralScale, statusScale } from "@bthwani/ui-kit";
+import { alpha, brandScale, colorRoles, darkThemeColors, neutralScale, statusScale } from "@bthwani/ui-kit/tokens";
 
 /* ── Navy family (sidebar / dark chrome backgrounds) ────────────────────
  * Sourced from ui-kit's neutral slate scale, which was designed as a

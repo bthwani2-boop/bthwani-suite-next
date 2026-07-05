@@ -223,6 +223,11 @@ paths:
     post:
       operationId: authorizeWltPaymentSession
       summary: Authorize a payment session with an amount.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltPaymentSessions
       parameters:
@@ -246,6 +251,8 @@ paths:
                 $ref: "#/components/schemas/WltPaymentSessionResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -253,6 +260,11 @@ paths:
     post:
       operationId: captureWltPaymentSession
       summary: Capture an authorized payment session.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltPaymentSessions
       parameters:
@@ -270,6 +282,8 @@ paths:
                 $ref: "#/components/schemas/WltCapturePaymentSessionResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -277,6 +291,11 @@ paths:
     post:
       operationId: expireWltPaymentSession
       summary: Expire a payment session.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltPaymentSessions
       parameters:
@@ -294,6 +313,8 @@ paths:
                 $ref: "#/components/schemas/WltPaymentSessionResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -301,6 +322,11 @@ paths:
     post:
       operationId: markWltCodCollected
       summary: Mark a COD payment session as collected.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltPaymentSessions
       parameters:
@@ -318,6 +344,8 @@ paths:
                 $ref: "#/components/schemas/WltPaymentSessionResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 

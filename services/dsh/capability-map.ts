@@ -287,7 +287,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── Notifications & Actor Communication ───────────────────────────────────
   {
     id: "dsh.notifications",
-    status: "experience-fix-required",
+    status: "runtime-verified",
     contractOperations: [
       "listDshNotifications",
       "markDshNotificationRead",

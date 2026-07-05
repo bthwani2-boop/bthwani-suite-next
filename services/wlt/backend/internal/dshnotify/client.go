@@ -12,10 +12,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 )
+
+// ErrNotConfigured is returned by Notify when the client is missing the DSH
+// base URL or the shared service token, so callers (the outbox worker) can
+// distinguish a misconfiguration from a delivery failure rather than
+// silently treating an unsent notification as success.
+var ErrNotConfigured = errors.New("dshnotify: client is not configured (missing baseURL or serviceToken)")
 
 type Client struct {
 	baseURL      string
@@ -35,7 +42,7 @@ func NewClient(baseURL, serviceToken string) *Client {
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
 // Notify reports a terminal payment-session status for a checkout intent to
@@ -43,7 +50,7 @@ func (c *Client) Configured() bool {
 // error; this call does not retry or swallow failures itself.
 func (c *Client) Notify(ctx context.Context, checkoutIntentID, paymentSessionID, status string) error {
 	if !c.Configured() {
-		return nil
+		return ErrNotConfigured
 	}
 	body, err := json.Marshal(map[string]string{
 		"checkoutIntentId": checkoutIntentID,
