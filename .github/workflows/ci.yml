@@ -10,6 +10,7 @@ on:
       - begin
       - branch-validation
       - starting
+      - front-backend
   workflow_dispatch:
     inputs:
       reason:

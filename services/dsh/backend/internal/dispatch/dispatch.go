@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"dsh-api/internal/orders"
+	"dsh-api/internal/wltoutbox"
 )
 
 var (
@@ -229,10 +230,28 @@ func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Ass
 	if err != nil {
 		return nil, err
 	}
+	if err = enqueueWltDeliveryCompletedNotification(tx, current.OrderID, captainID); err != nil {
+		return nil, err
+	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	return GetCaptainAssignment(db, assignmentID, captainID)
+}
+
+// enqueueWltDeliveryCompletedNotification records a durable outbox event so
+// WLT eventually learns a COD order was delivered, even if WLT is unreachable
+// right now. It runs inside the same transaction that confirms the PoD, so
+// the delivery confirmation and the notification commit or roll back together.
+func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, orderID, captainID string) error {
+	deliveryCtx, err := orders.GetOrderDeliveryContext(tx, orderID)
+	if err != nil {
+		return fmt.Errorf("resolve delivery context for wlt outbox: %w", err)
+	}
+	if deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
+		return nil
+	}
+	return wltoutbox.Enqueue(tx, wltoutbox.EventTypeDeliveryCompleted, orderID, captainID, deliveryCtx.PartnerID, deliveryCtx.CheckoutIntentID)
 }
 
 func GetCaptainAssignment(db *sql.DB, assignmentID, captainID string) (*Assignment, error) {
