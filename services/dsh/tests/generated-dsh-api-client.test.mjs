@@ -2,78 +2,118 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
+import { parseOpenApiContract } from "../../../tools/guards/_openapi-utils.mjs";
+
 const source = fs.readFileSync(
   new URL("../clients/generated/dsh-api.ts", import.meta.url),
   "utf8",
 );
 
-describe("generated DSH API client coverage", () => {
-  test("includes Cart & Serviceability cart operations and schemas", () => {
-    assert.match(source, /"\/dsh\/client\/cart"/);
-    assert.match(source, /upsertDshCartItem/);
-    assert.match(source, /checkDshCartServiceability/);
-    assert.match(source, /DshCartResponse/);
+const operations = parseOpenApiContract("services/dsh/contracts/dsh.openapi.yaml");
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function pathEntryBlock(apiPath) {
+  const marker = `    ${JSON.stringify(apiPath)}: {`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `generated paths interface is missing ${apiPath}`);
+
+  const nextEntry = source.indexOf('\n    "/', start + marker.length);
+  const interfaceEnd = source.indexOf("\n}\nexport type webhooks", start);
+  const end = nextEntry === -1 ? interfaceEnd : nextEntry;
+  assert.notEqual(end, -1, `generated paths interface block is unterminated for ${apiPath}`);
+  return source.slice(start, end);
+}
+
+function operationEntryBlock(operationId) {
+  const marker = `    ${operationId}: {`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `generated operations interface is missing ${operationId}`);
+
+  const rest = source.slice(start + marker.length);
+  const nextOperation = rest.match(/\n    [A-Za-z_$][\w$]*: \{/);
+  const interfaceEnd = source.indexOf("\n}\n", start);
+  const end = nextOperation ? start + marker.length + nextOperation.index : interfaceEnd;
+  assert.notEqual(end, -1, `generated operations interface block is unterminated for ${operationId}`);
+  return source.slice(start, end);
+}
+
+function assertOperationBinding(operation) {
+  assert.ok(operation.operationId, `${operation.method} ${operation.path} is missing operationId`);
+  const block = pathEntryBlock(operation.path);
+  const method = operation.method.toLowerCase();
+  assert.match(
+    block,
+    new RegExp(`\\b${method}: operations\\["${escapeRegex(operation.operationId)}"\\]`),
+    `generated paths interface is missing ${method.toUpperCase()} ${operation.path} -> ${operation.operationId}`,
+  );
+  assert.match(
+    source,
+    new RegExp(`\\b${escapeRegex(operation.operationId)}:\\s*\\{`),
+    `generated operations interface is missing ${operation.operationId}`,
+  );
+}
+
+describe("generated DSH API client parity", () => {
+  test("binds every OpenAPI operation path and method to the generated operations interface", () => {
+    const seen = new Set();
+
+    for (const operation of operations) {
+      assertOperationBinding(operation);
+      assert.equal(
+        seen.has(operation.operationId),
+        false,
+        `duplicate operationId in DSH OpenAPI: ${operation.operationId}`,
+      );
+      seen.add(operation.operationId);
+    }
   });
 
-  test("includes Checkout & WLT Handoff checkout intent operations and schemas", () => {
-    assert.match(source, /"\/dsh\/client\/checkout-intents"/);
-    assert.match(source, /createDshCheckoutIntent/);
-    assert.match(source, /cancelDshCheckoutIntent/);
-    assert.match(source, /DshCheckoutIntentResponse/);
+  test("keeps OpenAPI path parameters represented in generated path params", () => {
+    for (const operation of operations) {
+      if (operation.pathParams.length === 0) continue;
+
+      const block = operationEntryBlock(operation.operationId);
+      for (const parameter of operation.pathParams) {
+        assert.equal(
+          parameter.wildcard,
+          false,
+          `OpenAPI path must not expose Go wildcard capture ${operation.path}`,
+        );
+        assert.match(
+          block,
+          new RegExp(`\\b${escapeRegex(parameter.name)}:\\s*`),
+          `generated path params are missing ${parameter.name} for ${operation.path}`,
+        );
+      }
+    }
   });
 
-  test("includes Order Fulfillment order operations and schemas", () => {
-    assert.match(source, /"\/dsh\/partner\/orders"/);
-    assert.match(source, /createDshOrder/);
-    assert.match(source, /acceptDshOrder/);
-    assert.match(source, /markDshOrderReadyForPickup/);
-    assert.match(source, /DshOrdersResponse/);
+  test("keeps media download as opaque query mediaRef and not wildcard path media", () => {
+    assert.match(source, /"\/dsh\/media": \{/);
+    assert.doesNotMatch(source, /"\/dsh\/media\/\{mediaRef\}"/);
+    assert.doesNotMatch(source, /"\/dsh\/media\/\{mediaRef\.\.\.\}"/);
+
+    const getMedia = operationEntryBlock("getMedia");
+    assert.match(getMedia, /\bquery:\s*\{/);
+    assert.match(getMedia, /\bmediaRef:\s*string;/);
+    assert.match(getMedia, /\bpath\?:\s*never;/);
   });
 
-  test("includes Dispatch & Captain Delivery dispatch operations and schemas", () => {
-    assert.match(source, /"\/dsh\/operator\/dispatch\/assignments"/);
-    assert.match(source, /createDshAssignment/);
-    assert.match(source, /updateDshDeliveryStatus/);
-    assert.match(source, /submitDshPoD/);
-    assert.match(source, /DshDispatchAssignmentResponse/);
+  test("keeps internal WLT callback guarded by required service headers", () => {
+    const callback = operationEntryBlock("reportWltPaymentSessionEvent");
+    assert.match(callback, /\bheader:\s*\{/);
+    assert.match(callback, /\bAuthorization:\s*string;/);
+    assert.match(callback, /"X-Service-Caller":\s*"wlt";/);
+    assert.match(callback, /\brequestBody:\s*\{/);
   });
 
-  test("includes Notifications notification operations and schemas", () => {
-    assert.match(source, /listDshNotifications/);
-    assert.match(source, /markDshNotificationRead/);
-    assert.match(source, /markAllDshNotificationsRead/);
-    assert.match(source, /DshNotificationsListResponse/);
-  });
-
-  test("includes Marketing campaign operations and schemas", () => {
-    assert.match(source, /listDshCampaigns/);
-    assert.match(source, /createDshCampaign/);
-    assert.match(source, /DshCampaignsListResponse/);
-    assert.match(source, /listDshMarketingTickers/);
-    assert.match(source, /createDshMarketingTicker/);
-    assert.match(source, /updateDshMarketingTicker/);
-    assert.match(source, /deleteDshMarketingTicker/);
-    assert.match(source, /DshMarketingTickersListResponse/);
-  });
-
-  test("retired marketing banners/promos operations stay retired (SSOT: dsh.home-discovery)", () => {
+  test("keeps retired marketing banners and promos out of the generated client", () => {
     assert.doesNotMatch(source, /listDshMarketingBanners/);
     assert.doesNotMatch(source, /listDshMarketingPromos/);
     assert.doesNotMatch(source, /DshMarketingBanner/);
     assert.doesNotMatch(source, /DshMarketingPromo/);
-  });
-
-  test("includes Platform Policies platform policy operations and schemas", () => {
-    assert.match(source, /listDshZones/);
-    assert.match(source, /getDshSlaRules/);
-    assert.match(source, /getDshCapacityConfig/);
-    assert.match(source, /DshZonesListResponse/);
-  });
-
-  test("includes Administration administration operations and schemas", () => {
-    assert.match(source, /listDshAdminRoles/);
-    assert.match(source, /listDshPartnerActivations/);
-    assert.match(source, /activateDshPartner/);
-    assert.match(source, /DshAdminAuditListResponse/);
   });
 });

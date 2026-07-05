@@ -2206,6 +2206,17 @@ paths:
       x-bthwani-client-generation: DISABLED
       security:
         - bearerAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [wlt]
       requestBody:
         required: true
         content:
@@ -3461,7 +3472,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /dsh/media/{mediaRef}:
+  /dsh/media:
     get:
       operationId: getMedia
       summary: Stream back a previously uploaded document/photo for review.
@@ -3470,9 +3481,9 @@ paths:
         - bearerAuth: []
       parameters:
         - name: mediaRef
-          in: path
+          in: query
           required: true
-          schema: { type: string }
+          schema: { type: string, minLength: 1 }
       responses:
         "200":
           description: Media stream.

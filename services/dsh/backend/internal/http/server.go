@@ -23,7 +23,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaClient)
 	mux.HandleFunc("POST /dsh/field/media/uploads", protected.handleFieldMediaUpload)
-	mux.HandleFunc("GET /dsh/media/{mediaRef...}", protected.handleMediaDownload)
+	mux.HandleFunc("GET /dsh/media", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
 	mux.HandleFunc("GET /dsh/operator/stores", protected.handleOperatorStores)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.handleOperatorStoreDetail)

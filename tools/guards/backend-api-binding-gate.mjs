@@ -1,220 +1,292 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, repoRoot } from "./_guard-utils.mjs";
+import { fail, lineNumber, repoRoot, read } from "./_guard-utils.mjs";
+import { operationKey, parseOpenApiContract } from "./_openapi-utils.mjs";
 
 const guardId = "backend-api-binding-gate";
 const violations = [];
 
-function normalizePath(rawPath) {
-  return rawPath
-    .trim()
-    .replace(/\/$/, "") // Strip trailing slash
-    .replace(/\{([^}]+)\}/g, (match, p1) => {
-      const cleanName = p1.endsWith("...") ? p1.slice(0, -3) : p1;
-      return `{${cleanName}}`;
-    });
-}
-
-// 1. Load OpenAPI contracts and extract path/method combinations
-function loadOpenApiRoutes(relPath) {
-  const fullPath = path.join(repoRoot, relPath);
-  if (!fs.existsSync(fullPath)) return [];
-  const content = fs.readFileSync(fullPath, "utf8");
-  const routes = [];
-  let currentPath = null;
-  
-  for (const line of content.split(/\r?\n/)) {
-    const pathMatch = line.match(/^  (\/[^\s:]+)\s*:/);
-    if (pathMatch) {
-      currentPath = pathMatch[1];
-      continue;
-    }
-    
-    if (currentPath) {
-      const methodMatch = line.match(/^    (get|post|patch|delete|put|options)\s*:/);
-      if (methodMatch) {
-        routes.push({
-          method: methodMatch[1].toUpperCase(),
-          path: normalizePath(currentPath)
-        });
-      }
-    }
-  }
-  return routes;
-}
-
-// 2. Parse Go router files and extract registered routes
-function loadGoRoutes(relPath) {
-  const fullPath = path.join(repoRoot, relPath);
-  if (!fs.existsSync(fullPath)) return [];
-  const content = fs.readFileSync(fullPath, "utf8");
-  const routes = [];
-  const lines = content.split(/\r?\n/);
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const routeMatch = line.match(/mux\.HandleFunc\(\s*["']([A-Z]+)\s+([^"']+)["']/);
-    if (routeMatch) {
-      const method = routeMatch[1];
-      const rawPath = routeMatch[2];
-      
-      if (rawPath === "/") continue;
-      
-      routes.push({
-        method,
-        path: normalizePath(rawPath),
-        line: i + 1
-      });
-    }
-  }
-  return routes;
-}
-
-// Map of services and their files
 const services = [
   {
     name: "DSH",
     openapi: "services/dsh/contracts/dsh.openapi.yaml",
-    router: "services/dsh/backend/internal/http/server.go"
+    router: "services/dsh/backend/internal/http/server.go",
   },
   {
     name: "WLT",
     openapi: "services/wlt/contracts/wlt.openapi.yaml",
-    router: "services/wlt/backend/internal/http/server.go"
+    router: "services/wlt/backend/internal/http/server.go",
   },
   {
     name: "Identity",
     openapi: "core/identity/contracts/auth.openapi.yaml",
-    router: "core/identity/backend/internal/http/server.go"
-  }
+    router: "core/identity/backend/internal/http/server.go",
+  },
 ];
 
-const openApiRoutesMap = {};
-for (const svc of services) {
-  openApiRoutesMap[svc.name] = loadOpenApiRoutes(svc.openapi);
+const gatedWltMutationRoutes = new Set([
+  "POST /wlt/payment-sessions/{paymentSessionId}/authorize",
+  "POST /wlt/payment-sessions/{paymentSessionId}/capture",
+  "POST /wlt/payment-sessions/{paymentSessionId}/expire",
+  "POST /wlt/payment-sessions/{paymentSessionId}/cod-collect",
+  "POST /wlt/refunds",
+  "POST /wlt/refunds/{refundId}/approve",
+  "POST /wlt/refunds/{refundId}/complete",
+  "POST /wlt/refunds/{refundId}/reject",
+  "POST /wlt/settlements",
+  "POST /wlt/settlements/{settlementId}/post",
+  "POST /wlt/cod-records/{codRecordId}/collect",
+  "POST /wlt/cod-records/{codRecordId}/remit",
+  "POST /wlt/commissions",
+  "POST /wlt/ledger/entries",
+]);
+
+function parseGoStringLiteral(source, quoteIndex) {
+  const quote = source[quoteIndex];
+  let value = "";
+  for (let i = quoteIndex + 1; i < source.length; i++) {
+    const char = source[i];
+    if (quote === "`") {
+      if (char === "`") return { value, end: i + 1 };
+      value += char;
+      continue;
+    }
+
+    if (char === "\\") {
+      value += source[i + 1] ?? "";
+      i++;
+      continue;
+    }
+    if (char === quote) return { value, end: i + 1 };
+    value += char;
+  }
+  return null;
 }
 
-// Core service validation
-for (const svc of services) {
-  const openApiRoutes = openApiRoutesMap[svc.name];
-  const goRoutes = loadGoRoutes(svc.router);
-  
-  const openApiRouteSet = new Set(openApiRoutes.map(r => `${r.method} ${r.path}`));
-  const goRouteSet = new Set(goRoutes.map(r => `${r.method} ${r.path}`));
-  
-  for (const goRoute of goRoutes) {
-    const key = `${goRoute.method} ${goRoute.path}`;
+function extractGoRoutes(file) {
+  const fullPath = path.join(repoRoot, file);
+  if (!fs.existsSync(fullPath)) return [];
+
+  const source = read(file);
+  const routes = [];
+  const calls = ["mux.HandleFunc(", "mux.Handle("];
+
+  for (const call of calls) {
+    let searchIndex = 0;
+    while (searchIndex < source.length) {
+      const callIndex = source.indexOf(call, searchIndex);
+      if (callIndex === -1) break;
+      searchIndex = callIndex + call.length;
+
+      const quoteIndex = source.slice(searchIndex).search(/["'`]/);
+      if (quoteIndex === -1) continue;
+      const literalIndex = searchIndex + quoteIndex;
+      const literal = parseGoStringLiteral(source, literalIndex);
+      if (!literal) continue;
+
+      const routeMatch = literal.value.match(/^([A-Z]+)\s+(\/\S+)$/);
+      if (!routeMatch) continue;
+      routes.push({
+        method: routeMatch[1],
+        path: routeMatch[2].replace(/\/$/, ""),
+        line: lineNumber(source, callIndex),
+      });
+    }
+  }
+
+  return routes;
+}
+
+function validateOperationIds(service, operations) {
+  const seen = new Map();
+  for (const operation of operations) {
+    if (!operation.operationId) {
+      violations.push({
+        file: service.openapi,
+        line: operation.line,
+        message: `MISSING_OPERATION_ID: ${operationKey(operation)} has no operationId`,
+      });
+      continue;
+    }
+
+    const previous = seen.get(operation.operationId);
+    if (previous) {
+      violations.push({
+        file: service.openapi,
+        line: operation.line,
+        message: `DUPLICATE_OPERATION_ID: "${operation.operationId}" already appears at line ${previous.line}`,
+      });
+    }
+    seen.set(operation.operationId, operation);
+  }
+}
+
+function validatePathParameters(service, operation) {
+  const declaredPathParams = new Set(
+    operation.parameters.filter((parameter) => parameter.in === "path").map((parameter) => parameter.name),
+  );
+
+  for (const pathParam of operation.pathParams) {
+    if (pathParam.wildcard) {
+      violations.push({
+        file: service.openapi,
+        line: operation.line,
+        message: `FORBIDDEN_WILDCARD_CONTRACT: ${operationKey(operation)} uses wildcard path parameter "${pathParam.rawName}"`,
+      });
+    }
+    if (!declaredPathParams.has(pathParam.name)) {
+      violations.push({
+        file: service.openapi,
+        line: operation.line,
+        message: `MISSING_PATH_PARAMETER: ${operationKey(operation)} does not declare path parameter "${pathParam.name}"`,
+      });
+    }
+  }
+}
+
+function hasRequiredHeader(operation, headerName) {
+  return operation.parameters.some(
+    (parameter) =>
+      parameter.in === "header" &&
+      parameter.required === true &&
+      parameter.name.toLowerCase() === headerName.toLowerCase(),
+  );
+}
+
+function validateInternalServiceRoute(service, operation) {
+  if (!operation.path.includes("/internal/")) return;
+
+  if (!operation.hasSecurity) {
+    violations.push({
+      file: service.openapi,
+      line: operation.line,
+      message: `MISSING_INTERNAL_SECURITY: ${operationKey(operation)} must define security`,
+    });
+  }
+  for (const header of ["Authorization", "X-Service-Caller"]) {
+    if (!hasRequiredHeader(operation, header)) {
+      violations.push({
+        file: service.openapi,
+        line: operation.line,
+        message: `MISSING_INTERNAL_HEADER: ${operationKey(operation)} must require ${header}`,
+      });
+    }
+  }
+}
+
+function validateWltMutationMetadata(service, operation) {
+  if (service.name !== "WLT") return;
+  if (!gatedWltMutationRoutes.has(operationKey(operation))) return;
+
+  const mutationApproved = operation.extensions.get("x-bthwani-mutation-approved");
+  const defaultEnabled = operation.extensions.get("x-bthwani-default-enabled");
+  if (mutationApproved !== false) {
+    violations.push({
+      file: service.openapi,
+      line: operation.line,
+      message: `MISSING_MUTATION_METADATA: ${operationKey(operation)} must set x-bthwani-mutation-approved: false`,
+    });
+  }
+  if (defaultEnabled !== false) {
+    violations.push({
+      file: service.openapi,
+      line: operation.line,
+      message: `MISSING_MUTATION_METADATA: ${operationKey(operation)} must set x-bthwani-default-enabled: false`,
+    });
+  }
+  if (!operation.responses.has("403")) {
+    violations.push({
+      file: service.openapi,
+      line: operation.line,
+      message: `MISSING_FEATURE_GATE_RESPONSE: ${operationKey(operation)} must document 403 FEATURE_NOT_ENABLED`,
+    });
+  }
+}
+
+const openApiRoutesByService = new Map();
+
+for (const service of services) {
+  const operations = parseOpenApiContract(service.openapi);
+  openApiRoutesByService.set(service.name, operations);
+  validateOperationIds(service, operations);
+
+  const openApiRouteSet = new Set(operations.map(operationKey));
+  const goRoutes = extractGoRoutes(service.router);
+  const goRouteSet = new Set(goRoutes.map((route) => `${route.method} ${route.path}`));
+
+  for (const route of goRoutes) {
+    const key = `${route.method} ${route.path}`;
     if (!openApiRouteSet.has(key)) {
       violations.push({
-        file: svc.router,
-        line: goRoute.line,
-        message: `FORBIDDEN: Route "${key}" is registered in Go router but not documented in OpenAPI contract "${svc.openapi}"`
+        file: service.router,
+        line: route.line,
+        message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go router but not documented exactly in ${service.openapi}`,
       });
     }
   }
-  
-  for (const apiRoute of openApiRoutes) {
-    const key = `${apiRoute.method} ${apiRoute.path}`;
+
+  for (const operation of operations) {
+    const key = operationKey(operation);
+    validatePathParameters(service, operation);
+    validateInternalServiceRoute(service, operation);
+    validateWltMutationMetadata(service, operation);
+
     if (!goRouteSet.has(key)) {
       violations.push({
-        file: svc.openapi,
-        message: `MISSING IMPLEMENTATION: Route "${key}" is documented in OpenAPI contract but not registered in Go router "${svc.router}"`
+        file: service.openapi,
+        line: operation.line,
+        message: `MISSING_IMPLEMENTATION: Route "${key}" is documented in OpenAPI but not registered exactly in ${service.router}`,
       });
     }
   }
 }
 
-// --- Cross-service DSH-WLT Outbound Client & Webhook checks ---
-
-function mapGoMethod(methodStr) {
-  const clean = methodStr.replace(/["']/g, "");
-  if (clean.includes("MethodPost")) return "POST";
-  if (clean.includes("MethodGet")) return "GET";
-  if (clean.includes("MethodPut")) return "PUT";
-  if (clean.includes("MethodPatch")) return "PATCH";
-  if (clean.includes("MethodDelete")) return "DELETE";
-  return clean.toUpperCase();
-}
-
-function verifyOutboundCall(targetService, method, pathStr, sourceFile, lineNum) {
-  const openApiRoutes = openApiRoutesMap[targetService];
-  if (!openApiRoutes) return;
-  
-  const normalizedPath = normalizePath(pathStr);
-  const openApiRouteSet = new Set(openApiRoutes.map(r => `${r.method} ${r.path}`));
-  
-  // Try direct match
-  const directKey = `${method} ${normalizedPath}`;
-  if (openApiRouteSet.has(directKey)) return;
-  
-  // Try parameter normalization match
-  const pathNorm = normalizedPath.replace(/\{[^}]+\}/g, "{param}");
-  for (const apiRoute of openApiRoutes) {
-    const apiNorm = apiRoute.path.replace(/\{[^}]+\}/g, "{param}");
-    if (apiRoute.method === method && apiNorm === pathNorm) return;
+function verifyOutboundCall(targetService, method, pathValue, sourceFile, line) {
+  const operations = openApiRoutesByService.get(targetService) ?? [];
+  const key = `${method} ${pathValue}`;
+  if (operations.some((operation) => operationKey(operation) === key)) return;
+  if (
+    pathValue.endsWith("/") &&
+    operations.some(
+      (operation) =>
+        operation.method === method &&
+        operation.path.startsWith(pathValue) &&
+        operation.path.slice(pathValue.length).match(/^\{[^}]+\}$/),
+    )
+  ) {
+    return;
   }
-  
+
   violations.push({
     file: sourceFile,
-    line: lineNum,
-    message: `FORBIDDEN CROSS-SERVICE CALL: Outbound request "${method} ${pathStr}" to ${targetService} service is not documented in its OpenAPI contract`
+    line,
+    message: `FORBIDDEN_CROSS_SERVICE_CALL: Outbound request "${key}" to ${targetService} is not documented in its OpenAPI contract`,
   });
 }
 
-// A. Check DSH -> WLT client outbound calls
-const dshWltClientFile = "services/dsh/backend/internal/wlt/client.go";
-if (fs.existsSync(path.join(repoRoot, dshWltClientFile))) {
-  const content = fs.readFileSync(path.join(repoRoot, dshWltClientFile), "utf8");
-  const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = line.match(/c\.baseURL\s*\+\s*["'](\/wlt\/[^"']+)["']/);
-    if (m) {
-      let method = "POST";
-      const methodMatch = line.match(/(http\.Method[A-Za-z]+|"[A-Z]+")/);
-      if (methodMatch) {
-        method = mapGoMethod(methodMatch[1]);
-      }
-      verifyOutboundCall("WLT", method, m[1], dshWltClientFile, i + 1);
-    }
+function scanOutboundLiterals(file, targetService, prefix) {
+  const fullPath = path.join(repoRoot, file);
+  if (!fs.existsSync(fullPath)) return;
+
+  const source = read(file);
+  const literalRegex = /(["'`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+  let match;
+  while ((match = literalRegex.exec(source))) {
+    const literal = match[2];
+    if (!literal.startsWith(prefix)) continue;
+
+    const before = source.slice(Math.max(0, match.index - 160), match.index);
+    let method = "GET";
+    if (/MethodPost|["']POST["']/.test(before)) method = "POST";
+    if (/MethodPut|["']PUT["']/.test(before)) method = "PUT";
+    if (/MethodPatch|["']PATCH["']/.test(before)) method = "PATCH";
+    if (/MethodDelete|["']DELETE["']/.test(before)) method = "DELETE";
+
+    verifyOutboundCall(targetService, method, literal, file, lineNumber(source, match.index));
   }
 }
 
-// B. Check DSH -> WLT finance proxy outbound reads
-const dshFinanceProxyFile = "services/dsh/backend/internal/http/financeproxy.go";
-if (fs.existsSync(path.join(repoRoot, dshFinanceProxyFile))) {
-  const content = fs.readFileSync(path.join(repoRoot, dshFinanceProxyFile), "utf8");
-  const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = line.match(/proxyFinanceRead\([^,]+,\s*[^,]+,\s*["'](\/wlt\/[^"']+)["']/);
-    if (m) {
-      let wltPath = m[1];
-      if (wltPath.endsWith("/")) {
-        wltPath = wltPath + "{id}";
-      }
-      verifyOutboundCall("WLT", "GET", wltPath, dshFinanceProxyFile, i + 1);
-    }
-  }
-}
-
-// C. Check WLT -> DSH webhook notifications
-const wltDshNotifyFile = "services/wlt/backend/internal/dshnotify/client.go";
-if (fs.existsSync(path.join(repoRoot, wltDshNotifyFile))) {
-  const content = fs.readFileSync(path.join(repoRoot, wltDshNotifyFile), "utf8");
-  const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = line.match(/c\.baseURL\s*\+\s*["'](\/dsh\/[^"']+)["']/);
-    if (m) {
-      let method = "POST";
-      const methodMatch = line.match(/(http\.Method[A-Za-z]+|"[A-Z]+")/);
-      if (methodMatch) {
-        method = mapGoMethod(methodMatch[1]);
-      }
-      verifyOutboundCall("DSH", method, m[1], wltDshNotifyFile, i + 1);
-    }
-  }
-}
+scanOutboundLiterals("services/dsh/backend/internal/wlt/client.go", "WLT", "/wlt/");
+scanOutboundLiterals("services/wlt/backend/internal/dshnotify/client.go", "DSH", "/dsh/");
 
 fail(guardId, violations);

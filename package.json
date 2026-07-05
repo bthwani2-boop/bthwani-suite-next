@@ -99,6 +99,7 @@
     "openapi:generate": "pnpm run openapi:generate:dsh && pnpm run openapi:generate:wlt && pnpm run openapi:generate:identity",
     "guard:api-binding": "node tools/guards/api-binding-gate.mjs",
     "guard:backend-api-binding": "node tools/guards/backend-api-binding-gate.mjs",
+    "guard:service-manifest-drift": "node tools/guards/service-manifest-drift-gate.mjs",
     "runtime:frontend-binding:check": "node tools/scripts/check-frontend-binding-readiness.mjs"
   },
   "devDependencies": {

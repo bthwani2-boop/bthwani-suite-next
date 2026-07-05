@@ -2143,7 +2143,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dsh/media/{mediaRef}": {
+    "/dsh/media": {
         parameters: {
             query?: never;
             header?: never;
@@ -6405,7 +6405,10 @@ export interface operations {
     reportWltPaymentSessionEvent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "wlt";
+            };
             path?: never;
             cookie?: never;
         };
@@ -7905,11 +7908,11 @@ export interface operations {
     };
     getMedia: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 mediaRef: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

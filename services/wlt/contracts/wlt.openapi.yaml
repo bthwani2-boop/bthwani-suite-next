@@ -353,6 +353,11 @@ paths:
     post:
       operationId: createWltRefund
       summary: Create a refund for a captured payment session.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltRefunds
       requestBody:
@@ -370,6 +375,8 @@ paths:
                 $ref: "#/components/schemas/WltRefundResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     get:
       operationId: listWltRefunds
       summary: List refunds by orderId or clientId.
@@ -422,6 +429,11 @@ paths:
     post:
       operationId: approveWltRefund
       summary: Approve a requested refund.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltRefunds
       parameters:
@@ -439,6 +451,8 @@ paths:
                 $ref: "#/components/schemas/WltRefundResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -446,6 +460,11 @@ paths:
     post:
       operationId: completeWltRefund
       summary: Complete an approved refund.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltRefunds
       parameters:
@@ -463,6 +482,8 @@ paths:
                 $ref: "#/components/schemas/WltRefundResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -470,6 +491,11 @@ paths:
     post:
       operationId: rejectWltRefund
       summary: Reject a refund.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltRefunds
       parameters:
@@ -487,6 +513,8 @@ paths:
                 $ref: "#/components/schemas/WltRefundResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -494,6 +522,11 @@ paths:
     post:
       operationId: createWltSettlement
       summary: Create a partner settlement record.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltSettlements
       requestBody:
@@ -511,6 +544,8 @@ paths:
                 $ref: "#/components/schemas/WltSettlementResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     get:
       operationId: listWltSettlements
       summary: List settlements by partnerId.
@@ -592,6 +627,11 @@ paths:
     post:
       operationId: postWltSettlement
       summary: Post (settle) a pending settlement.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltSettlements
       parameters:
@@ -609,6 +649,8 @@ paths:
                 $ref: "#/components/schemas/WltSettlementResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -705,6 +747,11 @@ paths:
     post:
       operationId: collectWltCod
       summary: Mark a COD record as collected.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltCod
       parameters:
@@ -722,6 +769,8 @@ paths:
                 $ref: "#/components/schemas/WltCodRecordResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -729,6 +778,11 @@ paths:
     post:
       operationId: remitWltCod
       summary: Mark a COD record as remitted.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltCod
       parameters:
@@ -746,6 +800,8 @@ paths:
                 $ref: "#/components/schemas/WltCodRecordResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -753,6 +809,11 @@ paths:
     post:
       operationId: createWltCommission
       summary: DSH-only. Create a commission record.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltCod
       parameters:
@@ -813,6 +874,11 @@ paths:
     post:
       operationId: appendWltLedgerEntry
       summary: Append an immutable ledger entry.
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       tags:
         - WltLedger
       requestBody:
@@ -830,6 +896,8 @@ paths:
                 $ref: "#/components/schemas/WltLedgerEntryResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     get:
       operationId: listWltLedgerEntries
       summary: List ledger entries with optional filters and cursor pagination.

@@ -1,8 +1,8 @@
 # DSH Service Blueprint
 
 Status: ACTIVE_RUNTIME_BLUEPRINT
-Current Runtime State: RUNTIME_VERIFIED
-Closure State: RUNTIME_VERIFIED
+Current Runtime State: NEEDS_RUNTIME_EVIDENCE
+Closure State: NEEDS_RUNTIME_EVIDENCE
 Contract: `contracts/dsh.openapi.yaml`
 Runtime Port: `58080` (container internal: `8080`)
 
@@ -28,7 +28,7 @@ The active runtime capabilities are:
 - Field Verification and Store Quality Assurance: verified.
 - Support, Incidents, and Escalation Room: verified.
 - Platform Analytics and Operational Reporting: verified.
-- Notifications and Actor Communication: verified.
+- Notifications and Actor Communication: needs current runtime evidence.
 - Marketing Command Deck: verified.
 - Platform Policies and Service Area Management: verified.
 - Administration, Roles, and Activation: verified.

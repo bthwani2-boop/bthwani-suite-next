@@ -233,7 +233,10 @@ export interface paths {
         /** List refunds by orderId or clientId. */
         get: operations["listWltRefunds"];
         put?: never;
-        /** Create a refund for a captured payment session. */
+        /**
+         * Create a refund for a captured payment session.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["createWltRefund"];
         delete?: never;
         options?: never;
@@ -267,7 +270,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approve a requested refund. */
+        /**
+         * Approve a requested refund.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["approveWltRefund"];
         delete?: never;
         options?: never;
@@ -284,7 +290,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Complete an approved refund. */
+        /**
+         * Complete an approved refund.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["completeWltRefund"];
         delete?: never;
         options?: never;
@@ -301,7 +310,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reject a refund. */
+        /**
+         * Reject a refund.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["rejectWltRefund"];
         delete?: never;
         options?: never;
@@ -319,7 +331,10 @@ export interface paths {
         /** List settlements by partnerId. */
         get: operations["listWltSettlements"];
         put?: never;
-        /** Create a partner settlement record. */
+        /**
+         * Create a partner settlement record.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["createWltSettlement"];
         delete?: never;
         options?: never;
@@ -370,7 +385,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Post (settle) a pending settlement. */
+        /**
+         * Post (settle) a pending settlement.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["postWltSettlement"];
         delete?: never;
         options?: never;
@@ -425,7 +443,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark a COD record as collected. */
+        /**
+         * Mark a COD record as collected.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["collectWltCod"];
         delete?: never;
         options?: never;
@@ -442,7 +463,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark a COD record as remitted. */
+        /**
+         * Mark a COD record as remitted.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["remitWltCod"];
         delete?: never;
         options?: never;
@@ -460,7 +484,10 @@ export interface paths {
         /** List commissions by orderId or captainId. */
         get: operations["listWltCommissions"];
         put?: never;
-        /** DSH-only. Create a commission record. */
+        /**
+         * DSH-only. Create a commission record.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["createWltCommission"];
         delete?: never;
         options?: never;
@@ -478,7 +505,10 @@ export interface paths {
         /** List ledger entries with optional filters and cursor pagination. */
         get: operations["listWltLedgerEntries"];
         put?: never;
-        /** Append an immutable ledger entry. */
+        /**
+         * Append an immutable ledger entry.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+         */
         post: operations["appendWltLedgerEntry"];
         delete?: never;
         options?: never;
@@ -1252,6 +1282,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getWltRefund: {
@@ -1299,6 +1330,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1323,6 +1355,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1347,6 +1380,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1396,6 +1430,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getWltSettlementSummary: {
@@ -1468,6 +1503,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1570,6 +1606,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1594,6 +1631,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1702,6 +1740,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getWltLedgerEntry: {

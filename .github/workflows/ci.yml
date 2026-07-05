@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - master
+      - implementing
   workflow_dispatch:
     inputs:
       reason:
@@ -74,6 +75,9 @@ jobs:
 
       - name: Guard — Backend API binding
         run: pnpm run guard:backend-api-binding
+
+      - name: Guard — Service manifest drift
+        run: pnpm run guard:service-manifest-drift
 
       - name: OpenAPI client drift check
         run: |
@@ -328,7 +332,7 @@ jobs:
       - name: Full runtime reset and smoke
         shell: pwsh
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
@@ -339,7 +343,7 @@ jobs:
 
       - name: Docker compose logs on failure
         if: failure()
-        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200 | tee /tmp/docker-logs.txt
 
       - name: Upload docker logs artifact
         if: failure()
@@ -386,7 +390,7 @@ jobs:
         env:
           WLT_MUTATIONS_ENABLED: "true"
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
@@ -400,7 +404,7 @@ jobs:
 
       - name: Docker compose logs on failure
         if: failure()
-        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200 | tee /tmp/docker-logs.txt
 
       - name: Docker compose down
         if: always()

@@ -1,6 +1,4 @@
 {
-  "git.path": "C:\\Program Files\\Git\\cmd\\git.exe",
-
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
@@ -38,12 +36,6 @@
     "javascriptreact",
     "typescript",
     "typescriptreact"
-  ],
-
-  "git.ignoredRepositories": [
-    "C:\\bthwani-suite-next\\.claude\\worktrees",
-    "C:\\Users\\Administrator\\.local\\share\\lean-ctx",
-    "C:\\Users\\Administrator\\.local\\state\\lean-ctx"
   ],
 
   "gitlens.blame.line.enabled": false,
