@@ -33,7 +33,7 @@ jobs:
           node-version: 24.17.0
 
       - name: Verify lockfile is up to date
-        run: pnpm install --frozen-lockfile --dry-run
+        run: pnpm install --frozen-lockfile
 
   node-fast-gate:
     name: Node fast gate (lint / typecheck / test / affected)
