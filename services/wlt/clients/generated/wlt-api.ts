@@ -1241,7 +1241,10 @@ export interface operations {
                 orderId?: string;
                 clientId?: string;
             };
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path?: never;
             cookie?: never;
         };
@@ -1288,7 +1291,10 @@ export interface operations {
     getWltRefund: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path: {
                 refundId: string;
             };
@@ -1389,7 +1395,10 @@ export interface operations {
             query: {
                 partnerId: string;
             };
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path?: never;
             cookie?: never;
         };
@@ -1440,7 +1449,10 @@ export interface operations {
                 periodStart?: string;
                 periodEnd?: string;
             };
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path?: never;
             cookie?: never;
         };
@@ -1461,7 +1473,10 @@ export interface operations {
     getWltSettlement: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path: {
                 settlementId: string;
             };
@@ -1513,7 +1528,10 @@ export interface operations {
                 captainId?: string;
                 partnerId?: string;
             };
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path?: never;
             cookie?: never;
         };
@@ -1564,7 +1582,10 @@ export interface operations {
     getWltCodRecord: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path: {
                 codRecordId: string;
             };
@@ -1641,7 +1662,10 @@ export interface operations {
                 orderId?: string;
                 captainId?: string;
             };
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path?: never;
             cookie?: never;
         };
@@ -1699,7 +1723,10 @@ export interface operations {
                 limit?: number;
                 cursor?: string;
             };
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path?: never;
             cookie?: never;
         };
@@ -1746,7 +1773,10 @@ export interface operations {
     getWltLedgerEntry: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
             path: {
                 entryId: string;
             };

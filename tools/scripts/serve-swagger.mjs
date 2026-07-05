@@ -8,47 +8,57 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../../');
 const contractsDir = path.resolve(rootDir, 'contracts');
 
-// 1. Bundle OpenAPI specification
-console.log('Bundling OpenAPI specifications...');
-try {
-  execSync('pnpm dlx @apidevtools/swagger-cli bundle contracts/master.openapi.yaml --outfile contracts/master.bundled.json --type json', {
-    cwd: rootDir,
-    stdio: 'inherit'
-  });
-  console.log('Bundle completed successfully.');
-} catch (error) {
-  console.error('Failed to bundle OpenAPI specifications:', error.message);
-  process.exit(1);
+const specs = [
+  { input: 'contracts/master.openapi.yaml', output: 'contracts/master.bundled.json', name: 'Master API Index' },
+  { input: 'core/identity/contracts/auth.openapi.yaml', output: 'contracts/identity.bundled.json', name: 'Core - Identity API' },
+  { input: 'core/providers/contracts/providers.openapi.yaml', output: 'contracts/providers.bundled.json', name: 'Core - Providers API' },
+  { input: 'services/dsh/contracts/dsh.openapi.yaml', output: 'contracts/dsh.bundled.json', name: 'Services - Dsh API' },
+  { input: 'services/wlt/contracts/wlt.openapi.yaml', output: 'contracts/wlt.bundled.json', name: 'Services - Wlt API' }
+];
+
+// 1. Bundle all OpenAPI specifications
+console.log('Bundling all OpenAPI specifications...');
+for (const spec of specs) {
+  console.log(`Bundling ${spec.name}...`);
+  try {
+    execSync(`pnpm dlx @apidevtools/swagger-cli bundle ${spec.input} --outfile ${spec.output} --type json`, {
+      cwd: rootDir,
+      stdio: 'inherit'
+    });
+  } catch (error) {
+    console.error(`Failed to bundle ${spec.name}:`, error.message);
+    process.exit(1);
+  }
 }
+console.log('All bundles completed successfully.');
 
 // 2. Start HTTP server
 const PORT = 8080;
 const server = http.createServer((req, res) => {
-  let filePath = '';
-  let contentType = 'text/html';
-
   if (req.url === '/' || req.url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(getHtmlContent());
     return;
-  } else if (req.url === '/master.bundled.json') {
-    filePath = path.join(contractsDir, 'master.bundled.json');
-    contentType = 'application/json';
-  } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+  }
+
+  // Serve bundled files
+  const matchedSpec = specs.find(s => req.url === `/${path.basename(s.output)}`);
+  if (matchedSpec) {
+    const filePath = path.join(rootDir, matchedSpec.output);
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end(`Server Error: ${err.code}`);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(content);
+      }
+    });
     return;
   }
 
-  fs.readFile(filePath, (err, content) => {
-    if (err) {
-      res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end(`Server Error: ${err.code}`);
-    } else {
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(content);
-    }
-  });
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
 });
 
 server.listen(PORT, () => {
@@ -63,6 +73,7 @@ server.listen(PORT, () => {
 });
 
 function getHtmlContent() {
+  const urlsList = specs.map(s => `{ url: "./${path.basename(s.output)}", name: "${s.name}" }`).join(',\n          ');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,7 +93,9 @@ function getHtmlContent() {
   <script>
     window.onload = () => {
       window.ui = SwaggerUIBundle({
-        url: './master.bundled.json',
+        urls: [
+          ${urlsList}
+        ],
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
