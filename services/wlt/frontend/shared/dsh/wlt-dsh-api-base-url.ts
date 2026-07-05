@@ -12,7 +12,8 @@ export function resolveWltApiBaseUrl(): string {
     const env = process.env as Record<string, string | undefined>;
     const configured =
       env["NEXT_PUBLIC_WLT_API_BASE_URL"] ??
-      env["EXPO_PUBLIC_WLT_API_BASE_URL"];
+      env["EXPO_PUBLIC_WLT_API_BASE_URL"] ??
+      env["WLT_API_URL"]; // @deprecated — migrate to NEXT_PUBLIC_WLT_API_BASE_URL
     if (configured && configured.trim().length > 0)
       return configured.trim().replace(/\/$/, "");
   }

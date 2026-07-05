@@ -1,6 +1,6 @@
 import { getWltApiBaseUrl } from "./wlt-dsh-api-base-url";
 import { wltFetchJson } from "./wlt-dsh-http-request";
-import type { WltDshFinanceRuntimeResult } from "./wlt-dsh-finance-hub.types";
+import type { WltDshFinanceRuntimeResult, WltCloseStatus } from "./wlt-dsh-finance-hub.types";
 
 export async function loadWltDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRuntimeResult> {
   const baseUrl = getWltApiBaseUrl();
@@ -13,12 +13,12 @@ export async function loadWltDshFinanceRuntimeReadModel(): Promise<WltDshFinance
   }
 
   const [overview, ledger, refunds, closeStatus] = await Promise.all([
-    wltFetchJson(`${baseUrl}/wlt/settlements`, (body) => body),
-    wltFetchJson(`${baseUrl}/wlt/ledger?limit=250`, (body) => body.entries ?? []),
-    wltFetchJson(`${baseUrl}/wlt/refunds`, (body) => body.refunds ?? []),
-    wltFetchJson(
+    wltFetchJson<any>(`${baseUrl}/wlt/settlements`, (body: any) => body),
+    wltFetchJson<any[]>(`${baseUrl}/wlt/ledger?limit=250`, (body: any) => body.entries ?? []),
+    wltFetchJson<any[]>(`${baseUrl}/wlt/refunds`, (body: any) => body.refunds ?? []),
+    wltFetchJson<WltCloseStatus>(
       `${baseUrl}/wlt/control-panel/reconciliation-close-status`,
-      (body) => body ?? { status: "open", businessDate: new Date().toISOString().split("T")[0] },
+      (body: any) => body ?? { status: "open", businessDate: new Date().toISOString().split("T")[0] },
     ),
   ]);
 

@@ -7,11 +7,11 @@ export async function fetchWltSettlementsByPartner(
 ): Promise<WltReferenceApiResult<WltDshSettlementReference[]>> {
   const baseUrl = getWltApiBaseUrl();
   if (!baseUrl) {
-    return { ok: false, message: "WLT API base URL is not configured" };
+    return { ok: false, kind: "network", message: "WLT API base URL is not configured" };
   }
   return wltFetchJson<WltDshSettlementReference[]>(
     `${baseUrl}/wlt/settlements?partnerId=${encodeURIComponent(partnerId)}`,
-    (body) => body.settlements as WltDshSettlementReference[],
+    (body: any) => body.settlements as WltDshSettlementReference[],
   );
 }
 
@@ -20,10 +20,10 @@ export async function fetchWltSettlementSummary(
 ): Promise<WltReferenceApiResult<WltDshSettlementSummary>> {
   const baseUrl = getWltApiBaseUrl();
   if (!baseUrl) {
-    return { ok: false, message: "WLT API base URL is not configured" };
+    return { ok: false, kind: "network", message: "WLT API base URL is not configured" };
   }
   return wltFetchJson<WltDshSettlementSummary>(
     `${baseUrl}/wlt/settlements/summary?partnerId=${encodeURIComponent(partnerId)}`,
-    (body) => body.summary as WltDshSettlementSummary,
+    (body: any) => body.summary as WltDshSettlementSummary,
   );
 }

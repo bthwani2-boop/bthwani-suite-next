@@ -16,7 +16,7 @@ export async function fetchWltLedgerEntries(
 ): Promise<WltReferenceApiResult<{ entries: WltDshLedgerEntry[]; nextCursor?: string }>> {
   const baseUrl = getWltApiBaseUrl();
   if (!baseUrl) {
-    return { ok: false, message: "WLT API base URL is not configured" };
+    return { ok: false, kind: "network", message: "WLT API base URL is not configured" };
   }
   const query = new URLSearchParams();
   if (params.actorId) query.set("actorId", params.actorId);
@@ -28,7 +28,7 @@ export async function fetchWltLedgerEntries(
   const qs = query.toString();
   return wltFetchJson<{ entries: WltDshLedgerEntry[]; nextCursor?: string }>(
     `${baseUrl}/wlt/ledger/entries${qs ? `?${qs}` : ""}`,
-    (body) => {
+    (body: any) => {
       const result: { entries: WltDshLedgerEntry[]; nextCursor?: string } = {
         entries: body.entries as WltDshLedgerEntry[],
       };

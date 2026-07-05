@@ -78,7 +78,23 @@ const API_PATH_LITERAL = /[`'"](\/(?:dsh|wlt|identity|providers)\/[^`'"?\s]*)/g;
 
 // ─── Main scan ───────────────────────────────────────────────────────────────
 
-const apiFiles = listCodeFiles().filter((f) => f.endsWith(".api.ts"));
+const apiFiles = listCodeFiles().filter((f) => {
+  if (f.endsWith(".api.ts") || f.endsWith(".client.ts") || f.endsWith("api-client.ts") || f.endsWith("runtime-adapter.ts")) {
+    return true;
+  }
+  const isSharedFile = /^services\/[^/]+\/frontend\/shared\//.test(f);
+  if (isSharedFile) {
+    try {
+      const content = fs.readFileSync(path.join(repoRoot, f), "utf8");
+      if (content.includes("/dsh/") || content.includes("/wlt/") || content.includes("/identity/")) {
+        return true;
+      }
+    } catch {
+      // Ignore if cannot read
+    }
+  }
+  return false;
+});
 
 for (const file of apiFiles) {
   const content = read(file);

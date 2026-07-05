@@ -7,11 +7,11 @@ export async function fetchWltRefund(
 ): Promise<WltReferenceApiResult<WltDshRefundReference>> {
   const baseUrl = getWltApiBaseUrl();
   if (!baseUrl) {
-    return { ok: false, message: "WLT API base URL is not configured" };
+    return { ok: false, kind: "network", message: "WLT API base URL is not configured" };
   }
   return wltFetchJson<WltDshRefundReference>(
     `${baseUrl}/wlt/refunds/${encodeURIComponent(refundId)}`,
-    (body) => body.refund as WltDshRefundReference,
+    (body: any) => body.refund as WltDshRefundReference,
   );
 }
 
@@ -20,10 +20,10 @@ export async function fetchWltRefundsByOrder(
 ): Promise<WltReferenceApiResult<WltDshRefundReference[]>> {
   const baseUrl = getWltApiBaseUrl();
   if (!baseUrl) {
-    return { ok: false, message: "WLT API base URL is not configured" };
+    return { ok: false, kind: "network", message: "WLT API base URL is not configured" };
   }
   return wltFetchJson<WltDshRefundReference[]>(
     `${baseUrl}/wlt/refunds?orderId=${encodeURIComponent(orderId)}`,
-    (body) => body.refunds as WltDshRefundReference[],
+    (body: any) => body.refunds as WltDshRefundReference[],
   );
 }

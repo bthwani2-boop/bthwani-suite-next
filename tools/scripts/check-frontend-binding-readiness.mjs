@@ -38,7 +38,7 @@ const services = [
       null,
       "http://localhost:58080",
     ),
-    healthPath: "/dsh/health",
+    healthPath: "/dsh/readiness",
   },
   {
     name: "WLT",
@@ -48,7 +48,7 @@ const services = [
       "WLT_API_URL",
       "http://localhost:58083",
     ),
-    healthPath: "/wlt/health",
+    healthPath: "/wlt/readiness",
   },
   {
     name: "Identity",
@@ -58,7 +58,7 @@ const services = [
       null,
       "http://localhost:58082",
     ),
-    healthPath: "/identity/health",
+    healthPath: "/identity/readiness",
   },
 ];
 

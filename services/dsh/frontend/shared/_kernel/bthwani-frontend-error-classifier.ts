@@ -1,7 +1,10 @@
 /**
- * Unified API error envelope for BThwani frontend surfaces.
+ * Frontend API error classifier for BThwani frontend surfaces.
  *
- * Replaces per-adapter ad-hoc error shapes with a single canonical type.
+ * NOTE: This is a frontend-only classifier used to map status codes and network errors
+ * into descriptive UI kinds. It is NOT a unified backend/frontend contract/envelope
+ * as there is no backend error format validation yet.
+ *
  * Classifiers translate raw HTTP/network errors from DSH and WLT HTTP clients
  * into structured `BthwaniApiError` values that screens can switch on.
  *
@@ -24,12 +27,11 @@ export type BthwaniApiErrorKind =
 
 export type BthwaniApiError = {
   readonly kind: BthwaniApiErrorKind;
-  readonly httpStatus?: number;
-  readonly correlationId?: string;
-  readonly message?: string;
+  readonly httpStatus?: number | undefined;
+  readonly correlationId?: string | undefined;
+  readonly message?: string | undefined;
 };
 
-// ─── DSH error classifier ────────────────────────────────────────────────────
 // Input: errors thrown by createDsh*HttpClient — shape: { kind, status?, body?, message? }
 
 export function classifyDshError(error: unknown): BthwaniApiError {
@@ -61,7 +63,6 @@ export function classifyDshError(error: unknown): BthwaniApiError {
   return { kind: "UNKNOWN" };
 }
 
-// ─── WLT error classifier ────────────────────────────────────────────────────
 // Input: WltReferenceApiResult<T> when ok === false — shape: { ok, kind, status?, message }
 
 export function classifyWltError(error: {

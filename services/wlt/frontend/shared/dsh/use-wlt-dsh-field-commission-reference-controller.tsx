@@ -29,7 +29,7 @@ export async function fetchWltFieldCommissionRef(
 ): Promise<WltReferenceApiResult<WltDshFieldCommissionReference>> {
   return wltFetchJson<WltDshFieldCommissionReference>(
     `${baseUrl}/wlt/references/field-commission?partnerId=${encodeURIComponent(partnerId)}`,
-    (body) => body.reference as WltDshFieldCommissionReference,
+    (body: any) => body.reference as WltDshFieldCommissionReference,
   );
 }
 
