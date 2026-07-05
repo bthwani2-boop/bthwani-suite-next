@@ -1,14 +1,14 @@
-﻿# 04 — مصفوفات المشروع والأسطح ولوحة التحكم وسلسلة الربط
+# 04 — مصفوفات المشروع والأسطح ولوحة التحكم وسلسلة الربط
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `04/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `04/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** مدخل matrices الإلزامية، project/surface/control-panel/binding matrices.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 17) matrices إلزامية
@@ -21,23 +21,14 @@ entity_boundary_matrix عند دخول Partner أو Store في النطاق
 surface_code_coverage_matrix
 surface_entity_language_matrix عند دخول Partner أو Store في النطاق
 control_panel_section_code_matrix
+control_panel_partner_store_section_matrix عند دخول Partner أو Store في النطاق
+control_panel_permission_section_matrix
+control_panel_runtime_route_section_matrix
+control_panel_empty_error_blocked_states_matrix
 binding_chain_matrix
-backend_layer_matrix عند دخول backend في النطاق
-database_truth_matrix عند دخول database في النطاق
-partner_store_database_truth_matrix عند دخول Partner أو Store في database في النطاق
-api_client_policy_matrix عند دخول API/client في النطاق
-ssot_matrix
-publishability_visibility_matrix عند دخول الظهور/النشر في النطاق
-store_client_visibility_gate_matrix عند دخول Store visibility للعميل في النطاق
-auth_permission_matrix عند دخول الصلاحيات في النطاق
-risk_based_test_matrix
-topic_file_organization_matrix
-consolidation_matrix
-journey_sequence_matrix
-evidence_matrix
 ```
 
-### 17.1 project_area_matrix
+### 17.1) project_area_matrix
 
 ```yaml
 project_area_matrix:
@@ -121,11 +112,10 @@ project_area_matrix:
 ```
 
 قواعد:
-
 - أي مجال غير مذكور = `FIX_REQUIRED`.
 - أي `NOT_APPLICABLE` بلا سبب ودليل عدم التأثر = `FIX_REQUIRED`.
 
-### 17.1.1 entity_boundary_matrix
+### 17.1.1) entity_boundary_matrix
 
 إلزامي كلما دخل Partner أو Store في نطاق الرحلة (انظر `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` قسم 11.1).
 
@@ -172,13 +162,14 @@ entity_boundary_matrix:
 ```
 
 قواعد:
-
 - أي استخدام لـ Partner بمعنى Store = `FIX_REQUIRED`.
 - أي استخدام لـ Store بمعنى Partner = `FIX_REQUIRED`.
 - أي status واحد يحاول تمثيل اعتماد الشريك وظهور المتجر معًا بلا فصل صريح = `FIX_REQUIRED`.
 - أي UI label يسبب لبسًا بين ملف الشريك والمتجر الظاهر للعميل = `FIX_REQUIRED`.
 
-### 17.2 surface_code_coverage_matrix
+---
+
+### 17.2) surface_code_coverage_matrix
 
 يجب ذكر كل سطح حتى لو كان خارج النطاق:
 
@@ -199,6 +190,8 @@ surface_code_coverage_matrix:
     raw_api_mapping_absence: PASS | FAIL | N/A
     process_env_absence: PASS | FAIL | N/A
     storage_operational_logic_absence: PASS | FAIL | N/A
+    loading_empty_error_success_contract: PASS | FAIL | N/A
+    blocked_disabled_retry_offline_contract: PASS | FAIL | N/A
     verification_command:
   app-partner:
     role:
@@ -215,6 +208,8 @@ surface_code_coverage_matrix:
     raw_api_mapping_absence:
     process_env_absence:
     storage_operational_logic_absence:
+    loading_empty_error_success_contract:
+    blocked_disabled_retry_offline_contract:
     verification_command:
   app-field:
     role:
@@ -231,6 +226,8 @@ surface_code_coverage_matrix:
     raw_api_mapping_absence:
     process_env_absence:
     storage_operational_logic_absence:
+    loading_empty_error_success_contract:
+    blocked_disabled_retry_offline_contract:
     verification_command:
   app-captain:
     role:
@@ -247,6 +244,8 @@ surface_code_coverage_matrix:
     raw_api_mapping_absence:
     process_env_absence:
     storage_operational_logic_absence:
+    loading_empty_error_success_contract:
+    blocked_disabled_retry_offline_contract:
     verification_command:
   control-panel:
     role:
@@ -263,55 +262,60 @@ surface_code_coverage_matrix:
     raw_api_mapping_absence:
     process_env_absence:
     storage_operational_logic_absence:
+    loading_empty_error_success_contract:
+    blocked_disabled_retry_offline_contract:
     verification_command:
 ```
 
 قواعد:
-
 - ممنوع حذف أي سطح.
 - `N/A` مسموح فقط إذا كان الدور `FORBIDDEN` أو `NOT_APPLICABLE` مع reason.
 - أي surface يحتوي business logic أو direct API أو state machine أو permission logic = `FIX_REQUIRED`.
 
-### 17.2.1 surface_entity_language_matrix
+---
+
+### 17.3) surface_entity_language_matrix
 
 إلزامي كلما دخل Partner أو Store في نطاق الرحلة.
 
 ```yaml
 surface_entity_language_matrix:
   app-field:
-    partner_labels_allowed:
-    store_labels_allowed:
-    forbidden_labels:
-    allowed_partner_actions:
-    allowed_store_actions:
-    forbidden_actions:
+    partner_labels_allowed: true
+    store_labels_allowed: true
+    forbidden_labels: "أي زر تفعيل شريك أو نشر متجر للعملاء"
+    allowed_partner_actions: "إنشاء onboarding Partner وجمع بيانات Store الأول"
+    allowed_store_actions: "إدخال بيانات المتجر التشغيلية الأولية فقط"
+    forbidden_actions: "تفعيل Partner، نشر Store للعملاء، أو تغيير client visibility"
     verification_command:
   control-panel:
-    partner_section_labels:
-    store_section_labels:
-    allowed_partner_decisions:
-    allowed_store_decisions:
-    forbidden_mixed_decisions:
+    partner_section_labels: "اعتماد الشركاء، تدقيق الهوية والوثائق"
+    store_section_labels: "نشر المتاجر، بوابات الظهور الجغرافي والعملاء"
+    allowed_partner_decisions: "الموافقة/الرفض النهائي لاعتماد الشريك"
+    allowed_store_decisions: "تعديل حالة النشر والظهور للمتجر مستقلًا عن الشريك"
+    forbidden_mixed_decisions: "اعتماد شريك يؤدي تلقائيًا لنشر متجر غير جاهز محتواه"
     verification_command:
   app-partner:
-    partner_status_labels:
-    store_management_labels:
-    forbidden_self_activation_labels:
+    partner_status_labels: "حالة الانضمام، حالة الوثائق، حالة الاعتماد"
+    store_management_labels: "إدارة ساعات العمل والكتالوج بعد الموافقة"
+    forbidden_self_activation_labels: "زر تفعيل الشريك ذاتيًا (Self-Activation Forbidden)"
     verification_command:
   app-client:
     visible_entity: StoreOnly
-    forbidden_partner_exposure: PASS | FAIL
+    forbidden_partner_exposure: "ممنوع كشف حالة الشريك القانونية أو بياناته الخاصة للعميل"
     verification_command:
 ```
 
 قواعد:
+- app-client لا يرى Partner إطلاقًا؛ يرى Stores فقط.
+- app-field ينشئ onboarding Partner ويجمع بيانات Store أول، ولا يفعّل Partner ولا ينشر Store.
+- app-partner يرى حالة Partner onboarding ويدير Store فقط بعد السماح، ولا يملك self-activation.
+- control-panel يملك قرارات اعتماد Partner وقرارات نشر/إخفاء Store حسب الصلاحيات.
+- app-captain لا يخلط Partner/Store إلا كقراءة تشغيلية عند وجود علاقة مثبتة.
 
-- app-client يجب أن يكون Store-only.
-- app-field يجب أن يقول ملف شريك / بيانات متجر أول، لا تفعيل متجر.
-- control-panel يجب أن يفصل بين قسم الشركاء وقسم المتاجر.
-- app-partner لا يعرض أي زر أو نص يوحي بأن الشريك يفعّل نفسه.
+---
 
-### 17.3 control_panel_section_code_matrix
+### 17.4) control_panel_section_code_matrix
 
 يجب ذكر كل قسم:
 
@@ -488,16 +492,101 @@ control_panel_section_code_matrix:
 ```
 
 قواعد:
-
 - ممنوع الاكتفاء بكلمة `control-panel` عامة.
 - أي قسم غير مذكور = `FIX_REQUIRED`.
 - أي قسم `PRIMARY` أو `SECONDARY` أو `READ_ONLY` يجب أن يذكر routes/actions/state/read-only data.
-- القسم `PRIMARY` هو مالك القرار داخل لوحة التحكم.
-- قسم آخر لا ينفذ قرار PRIMARY إلا إذا كان مصرحًا له داخل shared policy.
+- القسم `PRIMARY` هو مالك القرار داخل لوحة التحكم، وقسم آخر لا ينفذ قرار PRIMARY إلا إذا كان مصرحًا له داخل shared policy.
 
-### 17.4 binding_chain_matrix
+---
+
+### 17.4.1) control_panel_partner_store_section_matrix
+
+إلزامي للتحقق من الفصل الكودي التام بين قسم الشريك وقسم المتجر:
+
+```yaml
+control_panel_partner_store_section_matrix:
+  partners_section:
+    route_path: "/control-panel/partners"
+    ui_views: "PartnerList, PartnerDetail, DocumentVerifier"
+    business_actions: "approvePartner, rejectPartner, suspendPartner"
+    owner_model: "Partner"
+  stores_section:
+    route_path: "/control-panel/stores"
+    ui_views: "StoreList, StoreDetail, CatalogViewer"
+    business_actions: "publishStore, hideStore, updateMarketingVisibility"
+    owner_model: "Store"
+  cross_section_contamination_check:
+    forbidden_mixed_components_absence: PASS | FAIL
+    verification_command:
+```
+
+### 17.4.2) control_panel_permission_section_matrix
+
+مصفوفة فحص حظر تنفيذ قرارات الأقسام خارج نطاق الصلاحيات:
+
+```yaml
+control_panel_permission_section_matrix:
+  partners:
+    required_role: "partner_admin"
+    ui_visibility: "visible for partner_admin only"
+    enforced_at: "control-panel-permission-gate"
+  catalog:
+    required_role: "catalog_manager"
+    ui_visibility: "visible for catalog_manager and admins"
+    enforced_at: "control-panel-permission-gate"
+  finance_or_wlt:
+    required_role: "finance_auditor"
+    ui_visibility: "visible for finance_auditor only"
+    enforced_at: "control-panel-permission-gate"
+  verification_status: PASS | FAIL
+```
+
+### 17.4.3) control_panel_runtime_route_section_matrix
+
+مصفوفة بوابات مسارات التشغيل لكل قسم:
+
+```yaml
+control_panel_runtime_route_section_matrix:
+  route_check:
+    - path: "/control-panel/partners/:id"
+      lazy_loaded: true
+      unauthorized_redirect: "/403"
+    - path: "/control-panel/stores/:id"
+      lazy_loaded: true
+      unauthorized_redirect: "/403"
+  route_containment_status: PASS | FAIL
+  verification_command:
+```
+
+### 17.4.4) control_panel_empty_error_blocked_states_matrix
+
+مصفوفة تغطية حالات واجهة الاستجابة (Empty/Error/Blocked/Forbidden) لكل قسم:
+
+```yaml
+control_panel_empty_error_blocked_states_matrix:
+  states_coverage:
+    partners:
+      empty_state_present: true
+      error_state_present: true
+      forbidden_state_present: true
+      loading_state_present: true
+    stores:
+      empty_state_present: true
+      error_state_present: true
+      forbidden_state_present: true
+      loading_state_present: true
+  coverage_status: PASS | FAIL
+```
+
+---
+
+### 17.5) binding_chain_matrix
 
 أي رحلة فيها backend/API/frontend يجب أن تثبت سلسلة الربط الكاملة:
+
+```text
+database -> backend model -> service/domain policy -> route/handler -> OpenAPI -> generated/shared client -> shared brain -> surface UI
+```
 
 ```yaml
 binding_chain_matrix:
@@ -545,4 +634,4 @@ binding_chain_matrix:
     build:
 ```
 
-أي حلقة مفقودة = `FIX_REQUIRED`.
+أي حلقة مفقودة أو قفز في السلسلة = `FIX_REQUIRED`.

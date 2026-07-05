@@ -1,11 +1,11 @@
-﻿# 11 — Code-First / Fix-First / Full-Stack Multi-Surface Coverage Mode
+# 11 — Code-First / Fix-First / Full-Stack Multi-Surface Coverage Mode
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
-**File:** `11/11 numbered amendment, package file count: 12 Markdown files + trace`
+**File:** `11/11 amendment`
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained)
-**Amendment date:** `2026-07-03`
+**Amendment date:** `2026-07-06`
 **Scope:** Amendment إلزامي يقيّد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة الآن من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` وهذا الملف.

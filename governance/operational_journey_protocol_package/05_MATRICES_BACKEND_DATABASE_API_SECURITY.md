@@ -1,19 +1,19 @@
-﻿# 05 — مصفوفات backend/database/API/SSOT/visibility/auth/risk
+# 05 — مصفوفات backend/database/API/SSOT/visibility/auth/risk
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `05/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `05/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** مصفوفات طبقات الباك إند، قاعدة البيانات، API client، SSOT، الظهور، الصلاحيات، والاختبار المستند إلى المخاطر.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 17) matrices إلزامية — تابع
 
-### 17.5 backend_layer_matrix
+### 17.5) backend_layer_matrix
 
 ```yaml
 backend_layer_matrix:
@@ -75,7 +75,6 @@ backend_layer_matrix:
 ```
 
 قواعد:
-
 - routes لا تملك business logic.
 - handler لا يملك business decision النهائي إذا كان هناك service/domain policy.
 - repository لا يملك lifecycle decision.
@@ -83,7 +82,9 @@ backend_layer_matrix:
 - error mapping يجب أن يطابق contract.
 - أي خلط طبقي بلا سبب موثق = `FIX_REQUIRED`.
 
-### 17.6 database_truth_matrix
+---
+
+### 17.6) database_truth_matrix
 
 ```yaml
 database_truth_matrix:
@@ -106,12 +107,13 @@ database_truth_matrix:
 ```
 
 قواعد:
-
 - أي حقيقة تشغيلية يجب أن تمتلك مصدرًا واحدًا فقط.
 - أي جدول ثانٍ لنفس الحقيقة يجب تصنيفه.
 - أي اختلاف بين database constraints وbackend model وOpenAPI schema وfrontend types = `FIX_REQUIRED`.
 
-### 17.6.1 partner_store_database_truth_matrix
+---
+
+### 17.6.1) partner_store_database_truth_matrix
 
 إلزامي كلما دخل Partner أو Store في database في نطاق الرحلة.
 
@@ -143,12 +145,13 @@ partner_store_database_truth_matrix:
 ```
 
 قواعد:
-
 - partner identity لا تُكرر داخل store إلا كـ denormalized read model موثق.
 - store visibility لا تُحكم من Partner وحده إذا كان endpoint يعرض stores.
 - أي جدولين يملكان نفس lifecycle أو visibility بدون owner واحد = `FIX_REQUIRED`.
 
-### 17.7 api_client_policy_matrix
+---
+
+### 17.7) api_client_policy_matrix
 
 ```yaml
 api_client_policy_matrix:
@@ -164,14 +167,15 @@ api_client_policy_matrix:
 ```
 
 قواعد:
-
 - generated client هو الأصل عند وجود OpenAPI client generation.
 - shared manual client مسموح فقط بسبب موثق.
 - direct fetch داخل shared api.ts يجب أن يكون adapter معزولًا بلا business logic.
 - fetch/axios داخل surface = `FIX_REQUIRED`.
-- أي اختلاف بين OpenAPI وclient types = `FIX_REQUIRED`.
+- any difference between OpenAPI and client types = `FIX_REQUIRED`.
 
-### 17.8 ssot_matrix
+---
+
+### 17.8) ssot_matrix
 
 ```yaml
 ssot_matrix:
@@ -187,21 +191,11 @@ ssot_matrix:
     verification_command:
 ```
 
-أي مصدرين لنفس:
+أي مصدرين لنفس status, permission, lifecycle, readiness, visibility, financial reference, or operational truth = `FIX_REQUIRED`.
 
-```text
-status
-permission
-lifecycle
-readiness
-visibility
-financial reference
-operational truth
-```
+---
 
-= `FIX_REQUIRED`.
-
-### 17.9 publishability_visibility_matrix
+### 17.9) publishability_visibility_matrix
 
 ```yaml
 publishability_visibility_matrix:
@@ -222,46 +216,60 @@ publishability_visibility_matrix:
     verification_command:
 ```
 
-قاعدة حاكمة:
+قاعدة حاكمة: approved أو active وحدها لا تكفي. كل بوابة ظهور يجب إثباتها بالكامل.
 
-```text
-approved أو active وحدها لا تكفي. كل بوابة ظهور يجب إثباتها.
-```
+---
 
-### 17.9.1 store_client_visibility_gate_matrix
+### 17.9.1) store_client_visibility_gate_matrix
 
 إلزامي كلما دخل عرض Store للعميل في نطاق الرحلة.
 
 ```yaml
 store_client_visibility_gate_matrix:
   listDshStores:
-    must_filter_by_partner_readiness:
-    must_filter_by_store_status:
-    must_filter_by_catalog_approval:
-    must_filter_by_serviceability:
-    must_filter_by_marketing_visibility:
-    must_hide_when_partner_deactivated:
-    must_hide_when_client_hidden:
-    verification_command:
+    must_filter_by_partner_readiness: true
+    must_filter_by_store_status: true
+    must_filter_by_catalog_approval: true
+    must_filter_by_serviceability: true
+    must_filter_by_marketing_visibility: true
+    must_hide_when_partner_deactivated: true
+    must_hide_when_client_hidden: true
+    must_filter_by_permissions: true
+    must_hide_when_deleted_or_suspended: true
+    verification_command: "git grep -n 'listDshStores'"
   getDshHomeDiscovery:
-    must_filter_by_partner_readiness:
-    must_filter_by_store_status:
-    must_filter_by_catalog_approval:
-    must_filter_by_serviceability:
-    must_filter_by_marketing_visibility:
-    must_hide_when_partner_deactivated:
-    must_hide_when_client_hidden:
-    verification_command:
+    must_filter_by_partner_readiness: true
+    must_filter_by_store_status: true
+    must_filter_by_catalog_approval: true
+    must_filter_by_serviceability: true
+    must_filter_by_marketing_visibility: true
+    must_hide_when_partner_deactivated: true
+    must_hide_when_client_hidden: true
+    must_filter_by_permissions: true
+    must_hide_when_deleted_or_suspended: true
+    verification_command: "git grep -n 'getDshHomeDiscovery'"
   getDshStoreById:
-    same_visibility_policy_as_list:
-    verification_command:
+    same_visibility_policy_as_list: true
+    verification_command: "git grep -n 'getDshStoreById'"
 ```
 
-قاعدة حاكمة:
+بوابات الظهور الإلزامية (Visibility Gates):
+1. partner readiness (جاهزية الشريك للتشغيل)
+2. partner active/approved state (اعتماد وتفعيل الشريك)
+3. store publication status (حالة نشر المتجر)
+4. store client visibility flag (علامة ظهور المتجر للعملاء)
+5. catalog/content readiness (جاهزية كتالوج المنتجات)
+6. serviceability (التغطية الجغرافية والتوصيلية للمتجر)
+7. marketing visibility (الحالة التسويقية والظهور في البحث)
+8. permissions (صلاحيات الوصول)
+9. not deleted / not suspended (عدم حذف أو إيقاف الشريك أو المتجر)
+10. same visibility policy for list/get/discovery endpoints (تطابق الفلترة بين جميع نقاط الوصول للعميل)
 
-كل endpoint يعرض Stores للعميل يجب أن يطبق نفس بوابات الظهور. لا يكفي أن يكون `listDshStores` صحيحًا إذا كان `getDshHomeDiscovery` أو `getStoreById` يتجاوز نفس البوابات.
+قاعدة حاكمة: كل endpoint يعرض Stores للعميل يجب أن يطبق نفس بوابات الظهور. لا يكفي أن يكون `listDshStores` صحيحًا إذا كان `getDshHomeDiscovery` أو `getDshStoreById` يتجاوز نفس البوابات.
 
-### 17.10 auth_permission_matrix
+---
+
+### 17.10) auth_permission_matrix
 
 ```yaml
 auth_permission_matrix:
@@ -269,64 +277,82 @@ auth_permission_matrix:
     role:
     surface:
     backend_auth_middleware:
+    backend_enforcement_path:
+    frontend_guard_path:
     actor_session_mapping:
     role_to_surface_mapping:
     allowed_actions:
     forbidden_actions:
+    forbidden_states:
     forbidden_role_test: PASS | FAIL
     unauthenticated_case: PASS | FAIL
     forbidden_case: PASS | FAIL
     ui_401_403_handling: PASS | FAIL
+    audit_required: true | false
     permission_source_owner:
     verification_command:
 ```
 
 قواعد:
-
 - permission truth لا تكون داخل UI surface.
 - role policy لا تكون داخل UI surface.
 - UI يعرض الحالة، ولا يملك القرار.
 
-### 17.11 risk_based_test_matrix
+---
+
+### 17.11) risk_based_test_matrix
 
 ```yaml
 risk_based_test_matrix:
-  state_machine_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  api_contract_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  database_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  permission_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  visibility_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  financial_reference_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  multi_surface_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  runtime_bootstrap_changed:
-    affected: true | false
-    test_path:
-    verification_command:
-  guard_or_tooling_changed:
-    affected: true | false
-    test_path:
-    verification_command:
+  - risk: "state_machine_changed"
+    affected_layer: "shared_brain"
+    failure_mode: "invalid transitions or state lockups"
+    minimum_test: "unit test for state transitions"
+    runtime_smoke_required: true
+    guard_required: "guard:unified-fullstack-brain"
+    priority: "P0"
+    verification_command: "pnpm run test"
+  - risk: "api_contract_changed"
+    affected_layer: "contracts / backend / client"
+    failure_mode: "broken JSON payload structure or missing fields"
+    minimum_test: "contract check & generated types compilation check"
+    runtime_smoke_required: true
+    guard_required: "guard:no-broken-imports"
+    priority: "P0"
+    verification_command: "pnpm run typecheck"
+  - risk: "database_changed"
+    affected_layer: "database migrations / models"
+    failure_mode: "broken queries or null constraint violations"
+    minimum_test: "migration dry-run and model integration test"
+    runtime_smoke_required: true
+    guard_required: "guard:matrix:v3"
+    priority: "P0"
+    verification_command: "pnpm run foundation:gate"
+  - risk: "permission_changed"
+    affected_layer: "backend_auth_middleware / shared_brain"
+    failure_mode: "unauthorized action execution or privilege escalation"
+    minimum_test: "unit test for unauthorized actors & 403 response check"
+    runtime_smoke_required: true
+    guard_required: "guard:dsh-frontend-shared-boundary-imports"
+    priority: "P1"
+    verification_command: "pnpm run test"
+  - risk: "visibility_changed"
+    affected_layer: "backend query filters"
+    failure_mode: "inactive or unapproved store shown to client"
+    minimum_test: "negative visibility gate smoke test"
+    runtime_smoke_required: true
+    guard_required: "guard:no-preview-demo-mock-runtime"
+    priority: "P0"
+    verification_command: "pnpm run test"
+  - risk: "financial_reference_changed"
+    affected_layer: "wlt_for_dsh / finance_or_wlt"
+    failure_mode: "financial mutation executed in DSH scope"
+    minimum_test: "strict code inspection for mutation APIs"
+    runtime_smoke_required: false
+    guard_required: "guard:no-financial-mutation-outside-wlt"
+    priority: "P0"
+    verification_command: "pnpm run guard:no-financial-mutation-outside-wlt"
 ```
 
-غياب test مناسب لخطر داخل النطاق = `FIX_REQUIRED`.
+قواعد:
+- غياب اختبار مناسب لخطر داخل النطاق = `FIX_REQUIRED`.

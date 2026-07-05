@@ -1,11 +1,11 @@
-﻿# 07 — الفحوصات، Runtime Evidence، CI، ومراجعة PR
+# 07 — الفحوصات، Runtime Evidence، CI، ومراجعة PR
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `07/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `07/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** أوامر الفحص الكودية، runtime evidence، CI rules، وPR/merge review.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
@@ -17,7 +17,6 @@
 * يبدأ التحقق من مسارات الكود المتأثرة (affected paths) والـ guards الخاصة بالنطاق فقط.
 * لا يتم تشغيل الفحوصات الكاملة (full-suite) إلا إذا تغير الـ shared brain أو الـ API/database/migration/runtime، أو إذا فشل فحص المسارات المتأثرة (affected check)، أو كانت المنطقة (multi-surface) عالية الخطورة.
 * الفحوصات العامة المذكورة في هذا الملف هي فحوصات مرجعية تُستدعى حسب التأثر وليست إلزامية دائمًا في كل عملية إغلاق.
-
 
 ```powershell
 Set-Location -LiteralPath "<REPO_LOCAL>"
@@ -79,15 +78,10 @@ pnpm run build
 ```
 
 الحراس المكوّنة للبوابتين (لا تُشغّل مباشرة — تعمل عبر البوابات):
-
-```text
-foundation:gate  = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
-journey:gate     = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
-```
-
+- `foundation:gate` = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
+- `journey:gate` = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
 
 إذا كان الأمر غير موجود في `package.json` أو workspace:
-
 ```yaml
 result: FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
 missing_command:
@@ -103,22 +97,15 @@ verification_command:
 ## 20) Runtime Evidence
 
 Runtime Evidence إلزامي عند `implementation_or_closure` إذا كانت الرحلة تشغيلية.
-
 لكن:
-
-```text
-runtime success لا يستبدل Code-Based Gate
-screenshot لا يستبدل imports/contracts/tests
-manual navigation دليل إضافي فقط
-```
+- runtime success لا يستبدل Code-Based Gate
+- screenshot لا يستبدل imports/contracts/tests
+- manual navigation دليل إضافي فقط
 
 أي حالة:
-
-```text
-runtime success + code failure = FIX_REQUIRED
-screenshot success + broken code path = FIX_REQUIRED
-API smoke success + contract mismatch = FIX_REQUIRED
-```
+- runtime success + code failure = FIX_REQUIRED
+- screenshot success + broken code path = FIX_REQUIRED
+- API smoke success + contract mismatch = FIX_REQUIRED
 
 مصفوفة Runtime:
 
@@ -162,7 +149,6 @@ CI غير متاح = CI_NOT_CONFIGURED وليس PASS
 ```
 
 قواعد:
-
 - `analysis_only`: يمكن إخراج `ANALYSIS_PASS` مع `CI_NOT_CONFIGURED` إذا لم تكن CI مانعة للتحليل.
 - `implementation_or_closure`: يمنع `IMPLEMENTATION_PASS` مع CI غير مثبتة إلا ببديل مكافئ موثق.
 - `merge_review`: يمنع `MERGE_READY` دون CI أو بديل موثق.
@@ -183,30 +169,14 @@ ci_status:
 ## 22) PR / Merge Review
 
 عند مراجعة PR أو commit range، افحص:
-
-```text
-changed files
-commit intent
-scope containment
-base/head diff
-CI status
-guards/tests/build evidence
-ownership boundaries
-DSH/WLT financial boundary
-surface/shared split
-runtime impact
-API/database impact
-dead code or duplication
-unexplained files
-```
+- changed files, commit intent, scope containment, base/head diff.
+- CI status, guards/tests/build evidence.
+- ownership boundaries, DSH/WLT financial boundary.
+- surface/shared split, runtime impact.
+- API/database impact, dead code or duplication, unexplained files.
 
 نتائج الدمج المسموحة:
-
-```text
-MERGE_READY
-DO_NOT_MERGE
-BLOCKED_NEEDS_EVIDENCE
-```
+- `MERGE_READY` | `DO_NOT_MERGE` | `BLOCKED_NEEDS_EVIDENCE`
 
 مصفوفة الدمج:
 
@@ -227,5 +197,3 @@ merge_review_matrix:
   merge_decision: MERGE_READY | DO_NOT_MERGE | BLOCKED_NEEDS_EVIDENCE
   blockers:
 ```
-
----

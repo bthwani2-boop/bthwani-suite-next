@@ -1,14 +1,14 @@
-﻿# 02 — بوابات GitHub Remote والمصدر والتحكم البشري
+# 02 — بوابات GitHub Remote والمصدر والتحكم البشري
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `02/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `02/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** REF Resolution Gate، Human-Gated Git/GitHub، تعريف 100%، المصدر الحاكم، منع machine-readable، وبروتوكول القرار.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
 ## 4) بوابة حل REF من GitHub Remote
@@ -255,11 +255,11 @@ verified tests/guards
 
 ```yaml
 missing_item:
-path_or_scope:
-why_it_blocks_decision:
-required_evidence:
-verification_command:
-safe_interim_decision: FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
+  path_or_scope:
+  why_it_blocks_decision:
+  required_evidence:
+  verification_command:
+  safe_interim_decision: FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
 ```
 
 ---
@@ -283,5 +283,3 @@ git log --oneline --decorate -n 20
 - إذا ظهر working tree غير نظيف وغير مفهوم: `BLOCKED_NEEDS_EVIDENCE`.
 - إذا ظهرت تغييرات بشرية محلية: لا تكتب فوقها دون تصريح.
 - المسموح فقط تعديل working tree وإخراج تقرير وأوامر مقترحة.
-
----

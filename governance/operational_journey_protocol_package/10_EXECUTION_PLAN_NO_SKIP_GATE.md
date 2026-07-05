@@ -1,11 +1,11 @@
 # 10 — Execution Plan No-Skip Gate & Docker/Hosting/Runtime Matrix
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict
-**File:** `10/10` (Amendment)
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `10/11 (Amendment)`
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained, tools/plan archived)
-**Amendment date:** `2026-07-01`
+**Amendment date:** `2026-07-06`
 **Scope:** يسد فجوة السماح بالقفز/التجاهل أثناء كتابة أمر التنفيذ وخطة التنفيذ والتشخيص والتحليل والتنفيذ، ويضيف Docker/hosting/runtime كطبقة إلزامية لا يجوز إسقاطها، ويحمل guards/أوامر تحقق كانت موجودة فقط في `command_old_new` ولم تُنقل بقوة كافية إلى `07`.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة الآن من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` وهذا الملف.
@@ -28,7 +28,7 @@ execution_plan_completeness_gate:
     - final_report
   required_rule: >
     كل أمر تنفيذ أو خطة تنفيذ يجب أن تحتوي protocol_coverage_checklist
-    تربط كل ملف من ملفات الحزمة (00-10) بخطوة تنفيذ أو سبب استبعاد مثبت.
+    تربط كل ملف من ملفات الحزمة (00-11) بخطوة تنفيذ أو سبب استبعاد مثبت.
   mandatory_outputs:
     - protocol_file_coverage_matrix
     - execution_step_coverage_matrix
@@ -39,7 +39,7 @@ execution_plan_completeness_gate:
     - partner_store_database_truth_matrix
     - store_client_visibility_gate_matrix
   failure_conditions:
-    - أي ملف من ملفات البروتوكول (00-10) غير مذكور
+    - أي ملف من ملفات البروتوكول (00-11) غير مذكور
     - أي بند مستبعد بلا سبب ودليل عدم التأثر
     - أي خطوة تنفيذ بلا verification_command
     - أي خطة لا تغطي Docker/runtime/CI/database/backend/API/shared/surfaces عند دخولها في النطاق
@@ -72,22 +72,18 @@ justified_exclusion:
 أي ملف مرتبط بالرحلة يبقى بعد التنفيذ وفيه كود ميت أو تناقض أو تكرار أو منطق في غير مالكه أو مسار غير صحيح أو تنظيم خاطئ أو naming سيئ أو dependency غير مبررة أو mock/demo/preview runtime truth = `FIX_REQUIRED`.
 
 لا يجوز إعلان `IMPLEMENTATION_PASS` حتى تكون:
-
-```text
-protocol_coverage_checklist كاملة
-execution_plan_coverage_matrix كاملة
-docker_hosting_runtime_matrix مكتملة أو N/A بدليل
-dead_code_and_duplication_matrix مكتملة
-file_decision_matrix مكتملة لكل ملف مرتبط
-evidence_matrix مكتملة لكل طبقة داخل النطاق
-```
+- `protocol_coverage_checklist` كاملة
+- `execution_plan_coverage_matrix` كاملة
+- `docker_hosting_runtime_matrix` مكتملة أو N/A بدليل
+- `dead_code_and_duplication_matrix` مكتملة
+- `file_decision_matrix` مكتملة لكل ملف مرتبط
+- `evidence_matrix` مكتملة لكل طبقة داخل النطاق
 
 ### قاعدة التبسيط والمخارج المبكرة:
 1. **المخرجات التفصيلية والتقارير الطويلة لا تُطلب كاملة في كل تنفيذ**: عند عدم وجود فشل أو خطر عالٍ، يمكن للوكيل استخدام سجل الإغلاق المختصر `Compact Closure Ledger` (المعرّف في الملف 11) كبديل للمصفوفات التفصيلية الطويلة.
 2. **تبقى المصفوفات والتقارير التفصيلية إلزامية فقط عند**:
    فشل تحقق، تعارض ملكية، تغيير database/API/migration، موضوع مالي WLT/DSH، حذف/نقل/دمج ملفات، multi-surface runtime، أو خطر عالٍ.
 3. **منع المخارج المبكرة**: حالات `FIX_REQUIRED` و`BLOCKED_NEEDS_EVIDENCE` ليست مخارج مبكرة في `implementation_or_closure`؛ يجب على الوكيل السعي دائمًا لتصحيح الكود وتنفيذ الحلول بدلاً من مجرد التقرير السريع بوجود عوائق.
-
 
 ---
 
@@ -171,19 +167,11 @@ Pop-Location
 ```
 
 قواعد استخدام هذه الأوامر:
-
-```text
-foundation:gate إلزامي في كل رحلة بلا استثناء.
-journey:gate إلزامي في كل رحلة تمس surface أو shared أو WLT.
-Go backends تُشغَّل فقط إذا كانت داخل نطاق الرحلة الفعلي.
-```
+- `foundation:gate` إلزامي في كل رحلة بلا استثناء.
+- `journey:gate` إلزامي في كل رحلة تمس surface أو shared أو WLT.
+- Go backends تُشغَّل فقط إذا كانت داخل نطاق الرحلة الفعلي.
 
 إذا فشل أي أمر: `FIX_REQUIRED`. إذا كان الأمر غير موجود في `package.json` أو workspace: طبّق نفس قاعدة الأمر المفقود في `07` (القسم 19) — لا يجوز تحويله إلى PASS.
-
-
-
-
-
 
 ---
 
