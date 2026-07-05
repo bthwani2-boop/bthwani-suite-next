@@ -334,6 +334,7 @@ function Invoke-WltSmoke {
     clientId = "client-local-001"
     storeId = "store-1001"
     paymentMethod = "cod"
+    amountMinorUnits = 1000
   } | ConvertTo-Json
   $wltServiceHeaders = @{
     Authorization = "Bearer dev-only-dsh-wlt-shared-secret"
