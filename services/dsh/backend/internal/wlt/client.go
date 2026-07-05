@@ -54,7 +54,7 @@ func NewClient(baseURL, serviceToken string) *Client {
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
 func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSessionInput) (*PaymentSession, error) {

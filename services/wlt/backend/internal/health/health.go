@@ -3,6 +3,7 @@ package health
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"time"
 
 	"wlt-api/internal/shared"
@@ -37,10 +38,12 @@ func HandleReadiness(db *sql.DB) http.HandlerFunc {
 		if err != nil {
 			dbStatus = "down"
 		}
+		dshCallbackBaseURLStatus := configuredStatus(os.Getenv("WLT_DSH_BASE_URL"))
+		dshCallbackTokenStatus := configuredStatus(os.Getenv("DSH_WLT_SERVICE_TOKEN"))
 
 		overallStatus := "ready"
 		httpStatus := http.StatusOK
-		if dbStatus == "down" {
+		if dbStatus == "down" || dshCallbackBaseURLStatus != "configured" || dshCallbackTokenStatus != "configured" {
 			overallStatus = "not_ready"
 			httpStatus = http.StatusServiceUnavailable
 		}
@@ -49,11 +52,20 @@ func HandleReadiness(db *sql.DB) http.HandlerFunc {
 			Service: "wlt",
 			Status:  overallStatus,
 			Dependencies: map[string]string{
-				"postgres": dbStatus,
+				"postgres":                   dbStatus,
+				"dsh_callback_base_url":      dshCallbackBaseURLStatus,
+				"dsh_callback_service_token": dshCallbackTokenStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
 
 		shared.SendJSON(w, httpStatus, resp)
 	}
+}
+
+func configuredStatus(value string) string {
+	if value == "" {
+		return "missing"
+	}
+	return "configured"
 }

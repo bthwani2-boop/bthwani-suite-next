@@ -23,6 +23,17 @@ func TestClientNotConfiguredRejectsWithoutNetworkCall(t *testing.T) {
 	}
 }
 
+func TestClientNotConfiguredWithoutServiceToken(t *testing.T) {
+	c := NewClient("https://wlt.internal", "")
+	if c.Configured() {
+		t.Fatalf("expected client with missing service token to be unconfigured")
+	}
+	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{})
+	if err == nil || !strings.Contains(err.Error(), "not configured") {
+		t.Fatalf("expected not configured error, got: %v", err)
+	}
+}
+
 func TestCreatePaymentSessionSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

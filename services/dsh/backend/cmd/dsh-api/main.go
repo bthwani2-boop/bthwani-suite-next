@@ -55,8 +55,14 @@ func main() {
 	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wltClient, mediaClient)
 	handler := dshHttp.CorsMiddleware(authMode, router)
 
-	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
-	go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+	var cancelOutbox context.CancelFunc = func() {}
+	if wltClient.Configured() {
+		outboxCtx, stopOutbox := context.WithCancel(context.Background())
+		cancelOutbox = stopOutbox
+		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+	} else {
+		log.Println("[dsh-api] WLT outbox worker disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
+	}
 
 	server := &http.Server{
 		Addr:         ":" + port,

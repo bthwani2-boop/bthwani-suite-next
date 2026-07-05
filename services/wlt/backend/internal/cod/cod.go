@@ -42,13 +42,10 @@ type CreateCodRecordInput struct {
 	OrderID   string `json:"orderId"`
 	CaptainID string `json:"captainId"`
 	PartnerID string `json:"partnerId"`
-	// CheckoutIntentID, when set, is the sole source of AmountMinorUnits/
-	// Currency: WLT looks up its own payment session for that checkout intent
-	// rather than trusting a caller-supplied amount. Any AmountMinorUnits/
-	// Currency passed alongside CheckoutIntentID is ignored.
+	// CheckoutIntentID is the sole source of AmountMinorUnits/Currency: WLT
+	// looks up its own payment session for that checkout intent rather than
+	// trusting a caller-supplied amount.
 	CheckoutIntentID string `json:"checkoutIntentId"`
-	AmountMinorUnits int64  `json:"amountMinorUnits"`
-	Currency         string `json:"currency"`
 }
 
 type CreateCommissionInput struct {
@@ -56,8 +53,7 @@ type CreateCommissionInput struct {
 	CaptainID        string `json:"captainId"`
 	PartnerID        string `json:"partnerId"`
 	CommissionType   string `json:"commissionType"`
-	AmountMinorUnits int64  `json:"amountMinorUnits"`
-	Currency         string `json:"currency"`
+	CheckoutIntentID string `json:"checkoutIntentId"`
 }
 
 const codCols = `id, order_id, captain_id, partner_id, amount_minor_units, currency,
@@ -122,6 +118,9 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	if input.OrderID == "" || input.CaptainID == "" || input.PartnerID == "" {
 		return nil, fmt.Errorf("orderId, captainId, and partnerId are required")
 	}
+	if input.CheckoutIntentID == "" {
+		return nil, fmt.Errorf("checkoutIntentId is required")
+	}
 
 	existing, err := getCodRecordByOrder(db, input.OrderID)
 	if err != nil {
@@ -130,23 +129,18 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	if existing != nil {
 		return existing, nil
 	}
-
-	amountMinorUnits := input.AmountMinorUnits
-	currency := input.Currency
-	if input.CheckoutIntentID != "" {
-		session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
-		if err != nil {
-			return nil, err
-		}
-		if session == nil {
-			return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
-		}
-		if session.PaymentMethod != "cod" {
-			return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
-		}
-		amountMinorUnits = session.AmountMinorUnits
-		currency = session.Currency
+	session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+	if err != nil {
+		return nil, err
 	}
+	if session == nil {
+		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
+	}
+	if session.PaymentMethod != "cod" {
+		return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
+	}
+	amountMinorUnits := session.AmountMinorUnits
+	currency := session.Currency
 	if currency == "" {
 		currency = "YER"
 	}
@@ -251,19 +245,27 @@ func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, err
 	if commType == "" {
 		commType = "delivery_fee"
 	}
-	currency := input.Currency
+	if input.CheckoutIntentID == "" {
+		return nil, fmt.Errorf("checkoutIntentId is required")
+	}
+	session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+	if err != nil {
+		return nil, err
+	}
+	if session == nil {
+		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
+	}
+	currency := session.Currency
 	if currency == "" {
 		currency = "YER"
 	}
-	if input.AmountMinorUnits <= 0 {
-		return nil, fmt.Errorf("amountMinorUnits must be a positive integer")
-	}
+	amountMinorUnits := session.AmountMinorUnits
 	const q = `
 		INSERT INTO wlt_commissions
 			(order_id, captain_id, partner_id, commission_type, amount_minor_units, currency)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING ` + commissionCols
-	row := db.QueryRow(q, input.OrderID, input.CaptainID, input.PartnerID, commType, input.AmountMinorUnits, currency)
+	row := db.QueryRow(q, input.OrderID, input.CaptainID, input.PartnerID, commType, amountMinorUnits, currency)
 	return scanCommission(row)
 }
 

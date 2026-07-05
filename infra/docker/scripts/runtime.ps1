@@ -329,15 +329,20 @@ function Invoke-WltSmoke {
   Write-Host "  /wlt/references/wallet-status: $($walRef.reference.status)"
   if ($walRef.reference.status -ne "active") { throw "/wlt/references/wallet-status wrong status" }
 
+  $wltDshServiceToken = $env:WLT_DSH_SERVICE_TOKEN
+  if ([string]::IsNullOrWhiteSpace($wltDshServiceToken)) { throw "WLT_DSH_SERVICE_TOKEN is required for WLT smoke" }
+
   $sessionBody = @{
     checkoutIntentId = "checkout-smoke-0001"
     clientId = "client-local-001"
     storeId = "store-1001"
     paymentMethod = "cod"
     amountMinorUnits = 1000
+    currency = "YER"
+    cartSnapshotHash = "runtime-smoke-cart-snapshot"
   } | ConvertTo-Json
   $wltServiceHeaders = @{
-    Authorization = "Bearer dev-only-dsh-wlt-shared-secret"
+    Authorization = "Bearer $wltDshServiceToken"
     "X-Service-Caller" = "dsh"
     "Idempotency-Key" = "smoke-payment-session-0001"
     "X-Correlation-ID" = "smoke-payment-session-0001"

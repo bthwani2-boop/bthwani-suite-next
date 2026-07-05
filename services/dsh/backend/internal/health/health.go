@@ -3,6 +3,7 @@ package health
 import (
 	"database/sql"
 	"net/http"
+	"os"
 	"time"
 
 	"dsh-api/internal/store"
@@ -37,10 +38,12 @@ func HandleReadiness(db *sql.DB) http.HandlerFunc {
 		if err != nil {
 			dbStatus = "down"
 		}
+		wltBaseURLStatus := configuredStatus(os.Getenv("DSH_WLT_BASE_URL"))
+		wltTokenStatus := configuredStatus(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
 
 		overallStatus := "ready"
 		httpStatus := http.StatusOK
-		if dbStatus == "down" {
+		if dbStatus == "down" || wltBaseURLStatus != "configured" || wltTokenStatus != "configured" {
 			overallStatus = "not_ready"
 			httpStatus = http.StatusServiceUnavailable
 		}
@@ -49,11 +52,20 @@ func HandleReadiness(db *sql.DB) http.HandlerFunc {
 			Service: "dsh",
 			Status:  overallStatus,
 			Dependencies: map[string]string{
-				"postgres": dbStatus,
+				"postgres":          dbStatus,
+				"wlt_base_url":      wltBaseURLStatus,
+				"wlt_service_token": wltTokenStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
 
 		store.SendJSON(w, httpStatus, resp)
 	}
+}
+
+func configuredStatus(value string) string {
+	if value == "" {
+		return "missing"
+	}
+	return "configured"
 }

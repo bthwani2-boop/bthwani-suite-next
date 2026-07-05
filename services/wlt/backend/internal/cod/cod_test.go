@@ -102,3 +102,25 @@ func TestCreateCodRecordRejectsMissingFields(t *testing.T) {
 		t.Fatalf("expected error for missing orderId/captainId/partnerId")
 	}
 }
+
+func TestCreateCodRecordRequiresCheckoutIntentIdBeforeDatabaseLookup(t *testing.T) {
+	_, err := CreateCodRecord(nil, CreateCodRecordInput{
+		OrderID:   "order-1",
+		CaptainID: "captain-1",
+		PartnerID: "partner-1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "checkoutIntentId is required") {
+		t.Fatalf("expected checkoutIntentId required error, got %v", err)
+	}
+}
+
+func TestCreateCommissionRequiresCheckoutIntentIdBeforeDatabaseLookup(t *testing.T) {
+	_, err := CreateCommission(nil, CreateCommissionInput{
+		OrderID:   "order-1",
+		CaptainID: "captain-1",
+		PartnerID: "partner-1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "checkoutIntentId is required") {
+		t.Fatalf("expected checkoutIntentId required error, got %v", err)
+	}
+}
