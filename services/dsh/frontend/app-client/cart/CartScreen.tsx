@@ -239,7 +239,6 @@ export function CartScreen({
   // Autocheck serviceability
   useEffect(() => {
     if (storeId && serviceAreaCode) {
-      console.log("[CartScreen] autocheck serviceability useEffect triggered for store:", storeId, "area:", serviceAreaCode);
       void serviceabilityController.check(
         storeId,
         serviceAreaCode,

@@ -27,7 +27,6 @@ export function StoreDetailHeroSection({ store, selectedMode, onModeChange, onBa
         return false;
       }),
     );
-    console.log("[StoreDetailHeroSection] store.deliveryModeLabels:", store.deliveryModeLabels, "filtered:", filtered.map(f => f.id));
     return filtered.length > 0 ? filtered : DELIVERY_MODES;
   }, [store.deliveryModeLabels]);
 

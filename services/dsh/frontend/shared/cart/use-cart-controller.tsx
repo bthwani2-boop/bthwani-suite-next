@@ -87,11 +87,9 @@ export function useServiceabilityController() {
   const [serviceability, setServiceability] = useState<DshServiceabilityState>(serviceabilityIdleState());
 
   const check = useCallback(async (storeId: string, serviceAreaCode: string, latitude?: number, longitude?: number) => {
-    console.log("[useServiceabilityController] check called for store:", storeId, "area:", serviceAreaCode, "coords:", latitude, longitude);
     setServiceability({ kind: "checking" });
     try {
       const result = await checkServiceability(storeId, serviceAreaCode, latitude, longitude);
-      console.log("[useServiceabilityController] check result:", result);
       setServiceability(resolveServiceabilityState(result));
     } catch (error) {
       console.error("[useServiceabilityController] check error:", error);

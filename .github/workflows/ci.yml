@@ -79,6 +79,21 @@ jobs:
       - name: Guard — Service manifest drift
         run: pnpm run guard:service-manifest-drift
 
+      - name: Guard — Go route AST
+        run: pnpm run guard:go-routes-ci
+
+      - name: Guard — logic coverage
+        run: pnpm run guard:logic-coverage
+
+      - name: Guard — a11y
+        run: pnpm run guard:a11y
+
+      - name: Guard — dependency graph
+        run: pnpm run guard:dependency-graph
+
+      - name: Guard — ast-grep rules
+        run: pnpm run guard:ast-grep-rules
+
       - name: OpenAPI client drift check
         run: |
           pnpm run openapi:generate
