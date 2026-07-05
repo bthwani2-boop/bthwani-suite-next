@@ -1,0 +1,52 @@
+{
+  "git.path": "C:\\Program Files\\Git\\cmd\\git.exe",
+
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.nx/**": true,
+    "**/graphify-out/**": true,
+    "**/.claude/worktrees/**": true,
+    "**/.local/share/lean-ctx/**": true,
+    "**/.local/state/lean-ctx/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true
+  },
+
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/.nx/**": true,
+    "**/graphify-out/**": true,
+    "**/.claude/worktrees/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true
+  },
+
+  "typescript.tsserver.maxTsServerMemory": 4096,
+
+  "eslint.workingDirectories": [
+    { "mode": "auto" }
+  ],
+
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  "git.ignoredRepositories": [
+    "C:\\bthwani-suite-next\\.claude\\worktrees",
+    "C:\\Users\\Administrator\\.local\\share\\lean-ctx",
+    "C:\\Users\\Administrator\\.local\\state\\lean-ctx"
+  ],
+
+  "gitlens.blame.line.enabled": false,
+  "gitlens.currentLine.enabled": false,
+  "gitlens.statusBar.enabled": false
+}
