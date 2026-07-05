@@ -486,6 +486,7 @@ function Invoke-DshSmoke {
     description = "runtime smoke"
     sku = "SMOKE-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
     priceReference = "wlt-price-ref-smoke"
+    unitPrice = 10
     isActive = $true
     expectedVersion = 0
   } | ConvertTo-Json

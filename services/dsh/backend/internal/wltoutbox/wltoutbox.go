@@ -139,7 +139,7 @@ func min(a, b int) int {
 	return b
 }
 
-// pqStringArray formats a Go string slice as a Postgres array literal, e.g.
+// pqStringArray formats a []string as a Postgres array literal, e.g.
 // {"a","b"}. lib/pq does not marshal []string automatically for ANY($1).
 func pqStringArray(values []string) string {
 	out := "{"
