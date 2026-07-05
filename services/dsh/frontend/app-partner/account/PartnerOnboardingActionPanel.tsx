@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, ListItem, SectionHeader, Surface } from '@bthwani/ui-kit';
+import { Badge, Box, Button, ListItem, SectionHeader, Surface } from '@bthwani/ui-kit';
 
 export type PartnerOnboardingFlowId = 'doc-upload' | 'intake-start' | 'store-nomination';
 
@@ -25,7 +25,7 @@ export function DshPartnerOnboardingActionPanel({ activeFlowId, onSelectFlow }: 
             title={item.title}
             subtitle={item.subtitle}
             meta={activeFlowId === item.id ? 'المسار النشط' : 'افتح المسار'}
-            badgeLabel="Onboarding"
+            trailing={<Badge label="Onboarding" tone="neutral" />}
             onPress={() => onSelectFlow?.(item.id)}
           />
         ))}

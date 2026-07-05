@@ -42,8 +42,8 @@ export type DshProductRecord = {
   readonly category_id?: string;
   readonly approval_status: DshProductApprovalStatus;
   readonly media?: readonly DshProductMediaRecord[];
-  readonly price_override?: string;
-  readonly stock_override?: number;
+  readonly price_override?: string | undefined;
+  readonly stock_override?: number | undefined;
   readonly available_override?: boolean;
   readonly created_at: string;
   readonly updated_at: string;
@@ -65,7 +65,7 @@ export type DshUpdateProductRequest = {
   readonly gtin?: string;
   readonly barcode?: string;
   readonly description?: string;
-  readonly base_price_label?: string;
+  readonly base_price_label?: string | undefined;
   readonly category_id?: string;
 };
 
@@ -91,15 +91,15 @@ export type DshCategoryRecord = {
 };
 
 export type DshCreateCategoryRequest = {
-  readonly parent_id?: string;
+  readonly parent_id?: string | undefined;
   readonly name: string;
-  readonly description?: string;
+  readonly description?: string | undefined;
 };
 
 export type DshUpdateCategoryRequest = {
-  readonly parent_id?: string;
+  readonly parent_id?: string | undefined;
   readonly name?: string;
-  readonly description?: string;
+  readonly description?: string | undefined;
 };
 
 export type DshListCategoriesResponse = {
@@ -115,8 +115,8 @@ export type DshListCategoriesResponse = {
 
 export type DshCatalogOverrideInput = {
   readonly product_id: string;
-  readonly price_override?: string;
-  readonly stock_override?: number;
+  readonly price_override?: string | undefined;
+  readonly stock_override?: number | undefined;
   readonly available_override?: boolean;
 };
 
@@ -127,8 +127,8 @@ export type DshUpdateCatalogOverridesRequest = {
 export type DshCatalogOverrideRecord = {
   readonly store_id: string;
   readonly product_id: string;
-  readonly price_override?: string;
-  readonly stock_override?: number;
+  readonly price_override?: string | undefined;
+  readonly stock_override?: number | undefined;
   readonly available_override?: boolean;
   readonly updated_at: string;
 };

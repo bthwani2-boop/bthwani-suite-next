@@ -119,7 +119,7 @@ function IssueCategoryCard({ category, selected }: IssueCategoryCardProps) {
         {category.description}
       </Text>
 
-      <Text role="caption" tone="soft">
+      <Text role="caption" tone="muted">
         {`المسار التالي: ${category.nextFlowId}`}
       </Text>
     </Surface>
@@ -189,8 +189,8 @@ export function DshPartnerOrderIssuePanel({
         <Text role="bodySm" tone="muted">
           {selectedCategory.description}
         </Text>
-        <Text role="caption" tone="soft">{`المالك الحالي: ${selectedCategory.owner}`}</Text>
-        <Text role="caption" tone="soft">{`المسار التالي: ${selectedCategory.nextFlowId}`}</Text>
+        <Text role="caption" tone="muted">{`المالك الحالي: ${selectedCategory.owner}`}</Text>
+        <Text role="caption" tone="muted">{`المسار التالي: ${selectedCategory.nextFlowId}`}</Text>
         <Text role="caption" tone="success">
           {`الإجراءات المسموحة: ${selectedCategory.allowedActions.join(' · ')}`}
         </Text>

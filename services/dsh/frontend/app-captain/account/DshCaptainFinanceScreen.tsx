@@ -28,7 +28,7 @@ export function DshCaptainFinanceScreen({
 			<DshOperationScreen
 				state={state}
 				title="المالية"
-				subtitle="المالية مربوطة الآن بجسر WLT موحد لعرض COD والأرباح والتسوية في وضع preview فقط."
+				subtitle="المالية مربوطة بمرجع WLT الفعلي لعرض ذمة COD. الأرباح والتسوية والشحن الضامن غير متاحة بعد لعدم توفر مرجع WLT مجمّع بحسب الكابتن."
 				onRetry={onRetry}
 			/>
 		);

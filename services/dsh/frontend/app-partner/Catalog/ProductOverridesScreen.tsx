@@ -47,7 +47,7 @@ export function ProductOverridesScreen({
   onSaved,
 }: ProductOverridesScreenProps) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
 
   const [screenState, setScreenState] = React.useState<ProductOverridesScreenState>('loading');
   const [product, setProduct] = React.useState<DshProductRecord | null>(null);
@@ -143,11 +143,11 @@ export function ProductOverridesScreen({
   const isRTL = direction === 'rtl';
 
   if (screenState === 'loading') {
-    return <StateView kind="loading" title="جارٍ تحميل تفاصيل الكتالوج والتجاوزات…" />;
+    return <StateView title="جارٍ تحميل تفاصيل الكتالوج والتجاوزات…" loading />;
   }
 
   if (screenState === 'offline') {
-    return <StateView stateId="offline" actionLabel="إعادة المحاولة" onActionPress={handleRetry} />;
+    return <StateView title="تعذر الاتصال" tone="danger" actionLabel="إعادة المحاولة" onActionPress={handleRetry} />;
   }
 
   return (
@@ -219,9 +219,8 @@ export function ProductOverridesScreen({
               value={form.priceOverride}
               onChangeText={(v) => setForm((prev) => ({ ...prev, priceOverride: v }))}
               placeholder="مثال: 15.00"
-              keyboardType="decimal-pad"
-              style={{ textAlign: 'left' }}
-              editable={screenState !== 'saving'}
+              
+              disabled={screenState === 'saving'}
             />
 
             <TextField
@@ -229,9 +228,8 @@ export function ProductOverridesScreen({
               value={form.stockOverride}
               onChangeText={(v) => setForm((prev) => ({ ...prev, stockOverride: v.replace(/[^0-9]/g, '') }))}
               placeholder="مثال: 100"
-              keyboardType="numeric"
-              style={{ textAlign: 'left' }}
-              editable={screenState !== 'saving'}
+              
+              disabled={screenState === 'saving'}
             />
 
             <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing[2] }}>

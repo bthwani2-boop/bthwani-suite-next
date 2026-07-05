@@ -91,7 +91,7 @@ export function ProductEditScreen({
   onSaved,
 }: ProductEditScreenProps) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
   const mode: ProductEditScreenMode = productId ? 'edit' : 'create';
 
   const [screenState, setScreenState] = React.useState<ProductEditScreenState>(
@@ -115,7 +115,7 @@ export function ProductEditScreen({
 
     client
       .getProduct(productId)
-      .then((record) => {
+      .then((record: any) => {
         if (cancelled) return;
         setForm(formFromRecord(record));
         setApprovalStatus(record.approval_status);
@@ -221,17 +221,17 @@ export function ProductEditScreen({
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (screenState === 'loading') {
-    return <StateView kind="loading" title="جارٍ تحميل بيانات المنتج…" />;
+    return <StateView title="جارٍ تحميل بيانات المنتج…" loading />;
   }
 
   // ── Not-found state ────────────────────────────────────────────────────────
   if (screenState === 'not_found') {
-    return <StateView stateId="notFound" title="المنتج غير موجود" description="لم يُعثر على المنتج المطلوب. قد يكون محذوفاً أو أن الرابط غير صحيح." actionLabel={onBack ? 'العودة' : undefined} onActionPress={onBack} />;
+    return <StateView title="المنتج غير موجود" description="لم يُعثر على المنتج المطلوب. قد يكون محذوفاً أو أن الرابط غير صحيح." actionLabel={onBack ? 'العودة' : undefined} onActionPress={onBack} />;
   }
 
   // ── Offline state ──────────────────────────────────────────────────────────
   if (screenState === 'offline') {
-    return <StateView stateId="offline" actionLabel="إعادة المحاولة" onActionPress={handleRetry} />;
+    return <StateView title="تعذر الاتصال" tone="danger" actionLabel="إعادة المحاولة" onActionPress={handleRetry} />;
   }
 
   // ── Main form / saved / error states ──────────────────────────────────────
@@ -278,7 +278,7 @@ export function ProductEditScreen({
         <Box
           style={{
             backgroundColor: theme.line + '18',
-            borderRadius: radius.xs2,
+            borderRadius: radius.xs,
             padding: spacing[3],
             borderStartWidth: 3,
             borderStartColor: theme.brand,
@@ -296,7 +296,7 @@ export function ProductEditScreen({
           <Box
             style={{
               backgroundColor: theme.danger + '15',
-              borderRadius: radius.xs2,
+              borderRadius: radius.xs,
               padding: spacing[3],
               borderStartWidth: 3,
               borderStartColor: theme.danger,
@@ -321,7 +321,7 @@ export function ProductEditScreen({
           <Box
             style={{
               backgroundColor: theme.success + '15',
-              borderRadius: radius.xs2,
+              borderRadius: radius.xs,
               padding: spacing[3],
               borderStartWidth: 3,
               borderStartColor: theme.success,
@@ -354,7 +354,7 @@ export function ProductEditScreen({
             value={form.name}
             onChangeText={setField('name')}
             placeholder="مثال: مياه معدنية نقية 500 مل"
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
 
           <TextField
@@ -363,7 +363,7 @@ export function ProductEditScreen({
             value={form.basePriceLabel}
             onChangeText={setField('basePriceLabel')}
             placeholder="مثال: ٢.٥٠ ر.س"
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
 
           <TextField
@@ -373,7 +373,7 @@ export function ProductEditScreen({
             onChangeText={setField('description')}
             placeholder="وصف مختصر يساعد في التعريف والمراجعة"
             multiline
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
         </Box>
 
@@ -391,7 +391,7 @@ export function ProductEditScreen({
             value={form.sku}
             onChangeText={setField('sku')}
             placeholder="رمز تتبع المنتج الداخلي"
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
 
           <TextField
@@ -400,8 +400,7 @@ export function ProductEditScreen({
             value={form.gtin}
             onChangeText={setField('gtin')}
             placeholder="رقم EAN-13 أو UPC"
-            keyboardType="numeric"
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
 
           <TextField
@@ -410,7 +409,7 @@ export function ProductEditScreen({
             value={form.barcode}
             onChangeText={setField('barcode')}
             placeholder="EAN-13 / Code-128 / QR"
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
 
           <TextField
@@ -419,7 +418,7 @@ export function ProductEditScreen({
             value={form.categoryId}
             onChangeText={setField('categoryId')}
             placeholder="مثال: cat-beverages-water"
-            editable={!isReadOnly}
+            disabled={isReadOnly}
           />
         </Box>
 

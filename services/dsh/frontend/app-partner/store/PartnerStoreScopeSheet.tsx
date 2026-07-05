@@ -17,7 +17,7 @@ export function PartnerStoreScopeSheet({
     <Surface tone="raised" padding={5} gap={4} radiusToken="xl" border={false} style={{ margin: spacing[4] }}>
       <Text role="titleMd">نطاق الفرع</Text>
       {options.map((option) => (
-        <Button key={option.id} label={option.label} variant={option.id === selectedId ? 'primary' : 'secondary'} onPress={() => onSelect(option.id)} />
+        <Button key={option.id} label={option.label} tone={option.id === selectedId ? 'primary' : 'secondary'} onPress={() => onSelect(option.id)} />
       ))}
       <Button label="إغلاق" onPress={onClose} />
     </Surface>
