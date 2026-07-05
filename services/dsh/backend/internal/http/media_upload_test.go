@@ -148,8 +148,8 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, active)
-		VALUES ($1, 'partner', $2, true)`,
+		INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type, active)
+		VALUES ($1, 'partner', $2, 'own', true)`,
 		actorID, storeID); err != nil {
 		t.Fatalf("failed to insert test scope: %v", err)
 	}
