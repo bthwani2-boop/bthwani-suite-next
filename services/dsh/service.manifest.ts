@@ -54,6 +54,7 @@ export const dshServiceManifest = {
       "getDshCheckoutIntent",
       "cancelDshCheckoutIntent",
       "listOperatorCheckoutIntents",
+      "reportWltPaymentSessionEvent",
       // Orders Journey
       "createDshOrder",
       "listDshClientOrders",
@@ -64,6 +65,22 @@ export const dshServiceManifest = {
       "markDshOrderPreparing",
       "markDshOrderReadyForPickup",
       "listDshOperatorOrders",
+      "cancelDshOperatorOrder",
+      // Catalog Approvals Journey
+      "listDshCatalogApprovals",
+      "createDshCatalogApproval",
+      "getDshCatalogApproval",
+      "transitionDshCatalogApproval",
+      "listDshPartnerCatalogApprovals",
+      // Finance Proxy Journey
+      "listDshControlPanelFinanceSettlements",
+      "getDshControlPanelFinanceSettlementSummary",
+      "listDshControlPanelFinanceRefunds",
+      "getDshControlPanelFinanceRefundDetail",
+      "listDshControlPanelFinanceLedgerEntries",
+      "listDshControlPanelFinanceCodRecords",
+      "listDshControlPanelFinanceCommissions",
+      "listDshCaptainFinanceCodRecords",
       // Dispatch Journey
       "listDshDispatchAssignments",
       "createDshAssignment",
@@ -167,6 +184,13 @@ export const dshServiceManifest = {
       // Notifications & Actor Communication Journey
       "useNotificationsController",
       "usePlatformNotificationConfigController",
+      // Finance WLT Link Controllers
+      "useFinanceController",
+      "useFinanceVisibilityController",
+      "useWltCodController",
+      "useWltLedgerController",
+      "useWltRefundController",
+      "useWltSettlementController",
     ],
     primarySurfaces: [
       "app-client",

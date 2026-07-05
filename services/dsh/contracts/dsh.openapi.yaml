@@ -1164,6 +1164,45 @@ paths:
               schema: { $ref: "#/components/schemas/DshOrdersResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
+  /dsh/operator/orders/{orderId}/cancel:
+    post:
+      operationId: cancelDshOperatorOrder
+      summary: Operator cancels an active order with a mandatory reason.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Order cancelled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshOrderResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /dsh/operator/dispatch/assignments:
     get:
       operationId: listDshDispatchAssignments

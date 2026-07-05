@@ -76,6 +76,9 @@ jobs:
       - name: Guard — API binding
         run: pnpm run guard:api-binding
 
+      - name: Guard — Backend API binding
+        run: pnpm run guard:backend-api-binding
+
       - name: OpenAPI client drift check
         run: |
           pnpm run openapi:generate
