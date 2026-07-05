@@ -2,6 +2,31 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Providers } from "./providers";
 import { WebThemeStyle } from "@bthwani/ui-kit/web";
+import {
+  alpha,
+  dshAccentTeal,
+  dshAccentTealDeep,
+  dshBlue,
+  dshBlueBright,
+  dshCardBg,
+  dshCardBorder,
+  dshMainBg,
+  dshNavy,
+  dshNavyLight,
+  dshNavyMid,
+  dshOrange,
+  dshOrangeDeeper,
+  dshPurple,
+  dshPurpleDeep,
+  dshSidebarBorder,
+  dshSidebarText,
+  dshSidebarTextActive,
+  dshTextMuted,
+  dshTextPrimary,
+  dshTextSecondary,
+  dshTopbarBg,
+  dshTopbarBorder,
+} from "../theme/dsh-colors";
 
 export const metadata: Metadata = {
   title: "لوحة التحكم — DSH",
@@ -24,45 +49,45 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
           :root {
             /* Brand */
-            --dsh-navy:        rgb(13, 20, 37);
-            --dsh-navy-mid:    rgb(21, 32, 64);
-            --dsh-navy-light:  rgb(30, 45, 85);
-            --dsh-blue:        rgb(59, 123, 255);
-            --dsh-blue-glow:   rgba(59, 123, 255, 0.2);
-            --dsh-blue-bright: rgb(94, 151, 255);
-            --dsh-accent-teal: rgb(0, 194, 168);
+            --dsh-navy:        ${dshNavy};
+            --dsh-navy-mid:    ${dshNavyMid};
+            --dsh-navy-light:  ${dshNavyLight};
+            --dsh-blue:        ${dshBlue};
+            --dsh-blue-glow:   ${alpha(dshBlue, 0.2)};
+            --dsh-blue-bright: ${dshBlueBright};
+            --dsh-accent-teal: ${dshAccentTeal};
 
             /* Sidebar */
             --sidebar-bg:      var(--dsh-navy);
             --sidebar-hover:   var(--dsh-navy-mid);
             --sidebar-active:  var(--dsh-navy-light);
-            --sidebar-text:    rgb(168, 191, 223);
-            --sidebar-text-active: rgb(255, 255, 255);
-            --sidebar-border:  rgb(26, 42, 74);
+            --sidebar-text:    ${dshSidebarText};
+            --sidebar-text-active: ${dshSidebarTextActive};
+            --sidebar-border:  ${dshSidebarBorder};
             --sidebar-width:   15.5rem;
 
             /* Main content */
-            --main-bg:         rgb(240, 244, 250);
-            --card-bg:         rgb(255, 255, 255);
-            --card-border:     rgb(226, 232, 243);
-            --card-shadow:     0 1px 3px rgba(13,20,37,0.07), 0 4px 16px rgba(13,20,37,0.06);
-            --card-shadow-hover: 0 8px 32px rgba(59,123,255,0.15), 0 2px 8px rgba(13,20,37,0.1);
+            --main-bg:         ${dshMainBg};
+            --card-bg:         ${dshCardBg};
+            --card-border:     ${dshCardBorder};
+            --card-shadow:     0 1px 3px ${alpha(dshTextPrimary, 0.07)}, 0 4px 16px ${alpha(dshTextPrimary, 0.06)};
+            --card-shadow-hover: 0 8px 32px ${alpha(dshBlue, 0.15)}, 0 2px 8px ${alpha(dshTextPrimary, 0.1)};
 
             /* Topbar */
-            --topbar-bg:       rgb(255, 255, 255);
-            --topbar-border:   rgb(226, 232, 243);
+            --topbar-bg:       ${dshTopbarBg};
+            --topbar-border:   ${dshTopbarBorder};
             --topbar-height:   3.75rem;
 
             /* Text */
-            --text-primary:    rgb(13, 20, 37);
-            --text-secondary:  rgb(90, 106, 133);
-            --text-muted:      rgb(138, 155, 187);
+            --text-primary:    ${dshTextPrimary};
+            --text-secondary:  ${dshTextSecondary};
+            --text-muted:      ${dshTextMuted};
 
             /* Gradients */
-            --grad-blue:       linear-gradient(135deg, rgb(59, 123, 255) 0%, rgb(94, 151, 255) 100%);
-            --grad-teal:       linear-gradient(135deg, rgb(0, 194, 168) 0%, rgb(0, 168, 150) 100%);
-            --grad-orange:     linear-gradient(135deg, rgb(255, 122, 61) 0%, rgb(255, 90, 31) 100%);
-            --grad-purple:     linear-gradient(135deg, rgb(124, 92, 255) 0%, rgb(155, 125, 255) 100%);
+            --grad-blue:       linear-gradient(135deg, ${dshBlue} 0%, ${dshBlueBright} 100%);
+            --grad-teal:       linear-gradient(135deg, ${dshAccentTeal} 0%, ${dshAccentTealDeep} 100%);
+            --grad-orange:     linear-gradient(135deg, ${dshOrange} 0%, ${dshOrangeDeeper} 100%);
+            --grad-purple:     linear-gradient(135deg, ${dshPurple} 0%, ${dshPurpleDeep} 100%);
 
             /* Typography */
             --font-arabic:     'Cairo', 'system-ui', sans-serif;
