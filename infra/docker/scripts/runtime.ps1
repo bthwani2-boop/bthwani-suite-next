@@ -335,7 +335,13 @@ function Invoke-WltSmoke {
     storeId = "store-1001"
     paymentMethod = "cod"
   } | ConvertTo-Json
-  $session = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions" -Method Post -ContentType "application/json" -Body $sessionBody -TimeoutSec 10 -ErrorAction Stop
+  $wltServiceHeaders = @{
+    Authorization = "Bearer dev-only-dsh-wlt-shared-secret"
+    "X-Service-Caller" = "dsh"
+    "Idempotency-Key" = "smoke-payment-session-0001"
+    "X-Correlation-ID" = "smoke-payment-session-0001"
+  }
+  $session = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions" -Method Post -Headers $wltServiceHeaders -ContentType "application/json" -Body $sessionBody -TimeoutSec 10 -ErrorAction Stop
   Write-Host "  /wlt/payment-sessions POST: $($session.paymentSession.id)"
   if ([string]::IsNullOrWhiteSpace($session.paymentSession.id)) { throw "/wlt/payment-sessions did not return id" }
   $sessionRead = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions/$($session.paymentSession.id)" -TimeoutSec 10 -ErrorAction Stop
