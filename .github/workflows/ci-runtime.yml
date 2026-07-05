@@ -1,0 +1,94 @@
+name: CI — Runtime Smoke
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'infra/docker/**'
+      - 'services/**'
+      - 'core/identity/**'
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual runtime smoke'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker-smoke:
+    name: Docker runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full runtime reset
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+
+      - name: Identity smoke
+        run: pnpm run runtime:identity:smoke
+
+      - name: WireMock financial provider smoke
+        run: pnpm run runtime:wiremock:financial:smoke
+
+      - name: WLT provider-through-WLT smoke
+        run: pnpm run runtime:wlt:provider:smoke
+
+      - name: WLT smoke
+        run: pnpm run runtime:wlt:smoke
+
+      - name: Runtime smoke
+        run: pnpm run runtime:smoke
+
+      - name: Docker compose ps
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
+
+      - name: Capture docker logs on failure
+        if: failure()
+        run: |
+          docker compose \
+            --env-file infra/docker/env/runtime.env.example \
+            -f infra/docker/compose.runtime.yml \
+            -f infra/docker/compose.financial-simulators.yml \
+            logs --tail=500 > /tmp/docker-logs.txt 2>&1 || true
+
+      - name: Upload docker logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-runtime-logs-${{ github.run_id }}
+          path: /tmp/docker-logs.txt
+          retention-days: 7
+
+      - name: Docker compose down
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans

@@ -1,0 +1,297 @@
+name: CI — DB Gate
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'services/**/database/**'
+      - 'infra/data-plane/**'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual DB gate'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-db-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-static-guards:
+    name: Migration static guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Empty migration guard
+        run: |
+          echo "Checking for empty migration files..."
+          EMPTY_FILES=""
+          for f in services/wlt/database/migrations/*.sql services/dsh/database/migrations/*.sql; do
+            [ -f "$f" ] || continue
+            if [ ! -s "$f" ]; then
+              EMPTY_FILES="$EMPTY_FILES $f"
+            fi
+          done
+          if [ -n "$EMPTY_FILES" ]; then
+            echo "ERROR: Empty migration file(s) found:$EMPTY_FILES"
+            exit 1
+          fi
+          echo "OK: No empty migration files."
+
+      - name: Destructive migration guard
+        run: |
+          echo "Checking for destructive SQL statements in migrations..."
+          FOUND=0
+          for f in services/wlt/database/migrations/*.sql services/dsh/database/migrations/*.sql; do
+            [ -f "$f" ] || continue
+            if grep -qiE '^\s*(DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE\s+TABLE|DROP\s+SCHEMA)' "$f"; then
+              echo "WARNING: Destructive statement found in: $f"
+              grep -niE '^\s*(DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE\s+TABLE|DROP\s+SCHEMA)' "$f"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 1 ]; then
+            echo "ERROR: Destructive migrations require explicit review. See output above."
+            exit 1
+          fi
+          echo "OK: No destructive migrations detected."
+
+      - name: WLT migration order check
+        run: |
+          echo "Checking WLT migration sequence..."
+          node - <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const dir = 'services/wlt/database/migrations';
+          const files = fs.readdirSync(dir)
+            .filter(f => f.endsWith('.sql'))
+            .sort();
+          let prev = -1;
+          for (const f of files) {
+            const m = f.match(/^wlt-(\d+)/);
+            if (!m) {
+              console.error(`ERROR: Migration file does not match naming pattern wlt-NNN_*: ${f}`);
+              process.exit(1);
+            }
+            const n = parseInt(m[1], 10);
+            if (n <= prev) {
+              console.error(`ERROR: Migration order violation: ${f} (${n}) after ${prev}`);
+              process.exit(1);
+            }
+            prev = n;
+          }
+          console.log(`OK: WLT migration sequence is valid (${files.length} files).`);
+          EOF
+
+      - name: DSH migration order check
+        run: |
+          echo "Checking DSH migration sequence..."
+          node - <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const dir = 'services/dsh/database/migrations';
+          const files = fs.readdirSync(dir)
+            .filter(f => f.endsWith('.sql'))
+            .sort();
+          let prev = -1;
+          for (const f of files) {
+            const m = f.match(/^dsh-(\d+)/);
+            if (!m) {
+              console.error(`ERROR: Migration file does not match naming pattern dsh-NNN_*: ${f}`);
+              process.exit(1);
+            }
+            const n = parseInt(m[1], 10);
+            if (n <= prev) {
+              console.error(`ERROR: Migration order violation: ${f} (${n}) after ${prev}`);
+              process.exit(1);
+            }
+            prev = n;
+          }
+          console.log(`OK: DSH migration sequence is valid (${files.length} files).`);
+          EOF
+
+  wlt-db-gate:
+    name: WLT DB gate (migrations + seed idempotency + Go tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: migration-static-guards
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache: true
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run WLT migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/wlt/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Seed idempotency check (run seeds twice)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          SEEDS=$(ls services/wlt/database/seeds/local/*.sql 2>/dev/null || true)
+          if [ -z "$SEEDS" ]; then
+            echo "No WLT local seeds found — skipping idempotency check."
+            exit 0
+          fi
+          echo "--- First seed run ---"
+          for f in $SEEDS; do
+            echo "Applying $f (run 1)"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+          echo "--- Second seed run (idempotency check) ---"
+          for f in $SEEDS; do
+            echo "Applying $f (run 2)"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+          echo "OK: Seed idempotency check passed."
+
+      - name: Run WLT Go tests with DB
+        working-directory: services/wlt/backend
+        env:
+          DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:5432/wlt_runtime?sslmode=disable
+          WLT_REQUIRE_DB_TESTS: "true"
+        run: go test -v ./...
+
+  dsh-db-gate:
+    name: DSH DB gate (migrations + seed idempotency + Go tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: migration-static-guards
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Run DSH migrations
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/dsh/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Seed idempotency check (run seeds twice)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          SEEDS=$(ls services/dsh/database/seeds/local/*.sql 2>/dev/null || true)
+          if [ -z "$SEEDS" ]; then
+            echo "No DSH local seeds found — skipping idempotency check."
+            exit 0
+          fi
+          echo "--- First seed run ---"
+          for f in $SEEDS; do
+            echo "Applying $f (run 1)"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+          echo "--- Second seed run (idempotency check) ---"
+          for f in $SEEDS; do
+            echo "Applying $f (run 2)"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+          echo "OK: Seed idempotency check passed."
+
+      - name: Run DSH Go tests with DB
+        working-directory: services/dsh/backend
+        env:
+          DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+          DSH_REQUIRE_DB_TESTS: "true"
+        run: go test -v ./...

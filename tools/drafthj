@@ -1,0 +1,1223 @@
+
+ 
+ 
+لا. **لم ننتهِ من كل المخالفات.**
+الفرع `front-backend` تحسّن بعد آخر رفع، لكنه ما زال **غير قابل للإغلاق** بسبب موانع CI/runtime/config/financial-boundary/evidence.
+ 
+```yaml id="azp7dx"
+repo: bthwani2-boop/bthwani-suite-next
+ref: front-backend
+latest_remote_sha: ddcfe79196f90d720efcd495603f496b5ba5f1fd
+compare_to_master: ahead_by_3
+status: FAIL_UNTIL_VERIFIED
+merge_status: DO_NOT_MERGE
+ready_100_percent: false
+```
+ 
+---
+ 
+# الحكم المختصر
+ 
+```yaml id="bv8guh"
+هل انتهينا؟: لا
+هل تحسّن التنفيذ؟: نعم
+هل بقيت مخالفات كارثية؟: نعم
+أخطر المتبقي:
+  - لا يوجد CI run على SHA الحالي
+  - runtime env لا يمرر service tokens اللازمة بين DSH و WLT
+  - Docker runtime smoke غير متوافق مع WLT auth/amount الجديد
+  - WLT ما زال يعرّض financial read surfaces بدون حوكمة كافية
+  - WLT COD/commission endpoints ما زالت تسمح بمسارات مالية يمكن أن تثق بمدخلات caller
+  - TypeScript coverage لا يغطي كل DSH surfaces
+  - اختبارات DB لا تغطي كل replay/order/payment correctness
+```
+ 
+---
+ 
+# ما أُصلح فعليًا
+ 
+## 1) CI أصبح يشمل `front-backend`
+ 
+تمت إضافة `front-backend` إلى push branches في CI.
+ 
+لكن لا توجد workflow runs على الـ SHA الحالي.
+ 
+**الحكم:** trigger موجود، الدليل العملي غير موجود.
+ 
+---
+ 
+## 2) DSH → WLT checkout amount snapshot تحسّن
+ 
+`handleCreateCheckoutIntent` صار يحسب `ComputeCheckoutSnapshot` قبل WLT handoff، ثم يرسل `AmountMinorUnits`, `Currency`, و`CartSnapshotHash` إلى WLT.
+ 
+`ComputeCheckoutSnapshot` يجمع cart item prices ويرفض أي item بسعر غير موجب.
+ 
+**الحكم:** فجوة amount=0 أُغلقت جزئيًا.
+ 
+---
+ 
+## 3) DSH order item price لم يعد صفرًا تلقائيًا
+ 
+`CreateOrder` يقرأ `unit_price` من `dsh_cart_items` ويرفض `unit_price <= 0`.
+ 
+**الحكم:** تحسّن صحيح.
+ 
+---
+ 
+## 4) DSH → WLT delivery-completed outbox أضيف
+ 
+تمت إضافة outbox durable لـ WLT events، ويُكتب داخل transaction الخاصة بـ PoD.
+ويوجد جدول `dsh_wlt_outbox_events`.
+ويوجد worker يعالج retry وmark sent/failed.
+ 
+**الحكم:** فجوة fire-and-forget القديمة في DSH → WLT COD delivery تحسّنت.
+ 
+---
+ 
+# المخالفات والفجوات المتبقية
+ 
+## P0-1 — لا يوجد CI run على commit الحالي
+ 
+**المكان:** GitHub Actions / branch evidence.
+ 
+**الدليل:** لا توجد workflow runs على SHA الحالي.
+ 
+**الأثر:**
+لا يمكن إثبات نجاح:
+ 
+```yaml id="ez7rd9"
+- contracts:lint
+- foundation:gate
+- journey:gate
+- typecheck
+- build
+- test
+- DSH Go
+- WLT Go
+- DB integration
+- Docker runtime smoke
+```
+ 
+**الحكم:** `DO_NOT_MERGE`.
+ 
+**المعالجة:**
+شغّل CI على `front-backend` وتحقق من green run على SHA الحالي أو SHA التصحيح التالي.
+ 
+---
+ 
+## P0-2 — Docker runtime env لا يمرر service tokens المطلوبة
+ 
+**المكان:**
+ 
+```text id="ac885g"
+infra/docker/env/runtime.env.example
+infra/docker/compose.runtime.yml
+services/dsh/backend/cmd/dsh-api/main.go
+services/wlt/backend/cmd/wlt-api/main.go
+```
+ 
+DSH يقرأ `WLT_DSH_SERVICE_TOKEN`.
+WLT service auth يرفض الطلب إذا env token غير مضبوط.
+لكن `runtime.env.example` لا يحتوي `WLT_DSH_SERVICE_TOKEN` ولا `DSH_WLT_SERVICE_TOKEN`.
+ 
+وفي `compose.runtime.yml`، `wlt-api` لا يمرر `WLT_DSH_SERVICE_TOKEN`، و`dsh-api` لا يمرر `WLT_DSH_SERVICE_TOKEN` أو `DSH_WLT_SERVICE_TOKEN`.
+ 
+**الأثر الكارثي:**
+ 
+```yaml id="dwvc79"
+breaks:
+  - DSH checkout -> WLT payment session
+  - DSH outbox worker -> WLT COD record
+  - WLT -> DSH payment-session event callback
+  - Docker runtime smoke
+  - أي end-to-end يدّعي DSH/WLT integration
+```
+ 
+**المعالجة الصحيحة:**
+ 
+```yaml id="knmjb3"
+add_to_runtime_env:
+  WLT_DSH_SERVICE_TOKEN: dev-wlt-dsh-service-token
+  DSH_WLT_SERVICE_TOKEN: dev-dsh-wlt-service-token
+ 
+compose_wlt_api_env:
+  WLT_DSH_SERVICE_TOKEN: ${WLT_DSH_SERVICE_TOKEN}
+ 
+compose_dsh_api_env:
+  WLT_DSH_SERVICE_TOKEN: ${WLT_DSH_SERVICE_TOKEN}
+  DSH_WLT_SERVICE_TOKEN: ${DSH_WLT_SERVICE_TOKEN}
+```
+ 
+---
+ 
+## P0-3 — Docker runtime smoke أصبح غير متوافق مع WLT auth/amount الجديد
+ 
+**المكان:**
+ 
+```text id="p41mle"
+infra/docker/scripts/runtime.ps1
+```
+ 
+`Invoke-WltSmoke` يرسل `POST /wlt/payment-sessions` بدون Authorization، بدون `X-Service-Caller`, بدون `Idempotency-Key`, بدون `X-Correlation-ID`, وبدون `amountMinorUnits`.
+ 
+لكن WLT الآن يشترط service caller auth.
+ويشترط `amountMinorUnits > 0`.
+ 
+والـ CI يشغّل Docker runtime reset/smoke.
+ 
+**الأثر:**
+حتى لو الكود صحيح، الـ runtime smoke مرشح للفشل فورًا.
+ 
+**المعالجة:**
+ 
+```yaml id="z2x27e"
+fix_runtime_smoke:
+  - أضف headers:
+      Authorization: Bearer $env:WLT_DSH_SERVICE_TOKEN
+      X-Service-Caller: dsh
+      X-Correlation-ID: smoke-wlt-payment-session
+      Idempotency-Key: smoke-wlt-payment-session
+  - أضف body:
+      amountMinorUnits: قيمة > 0
+      currency: YER
+      cartSnapshotHash: smoke hash
+```
+ 
+---
+ 
+## P0-4 — WLT financial read surfaces مكشوفة كـ routes عادية
+ 
+**المكان:**
+ 
+```text id="g2wc7x"
+services/wlt/backend/internal/http/server.go
+services/wlt/service.manifest.ts
+```
+ 
+Manifest يقول إن WLT يملك `refunds`, `settlements`, `commissions`, `cod_financial_state`, `ledger`، وأن المسموح لـ DSH هو references فقط.
+ 
+لكن router يعرّف read routes مالية واسعة:
+ 
+```text id="gbj6x8"
+/wlt/refunds
+/wlt/settlements
+/wlt/cod-records
+/wlt/commissions
+/wlt/ledger/entries
+```
+ 
+**المشكلة:**
+هذه ليست read-only references بسيطة؛ هذه financial data surfaces. وجودها بدون service auth/actor auth/role policy واضح يناقض حدود WLT/DSH.
+ 
+**الأثر:**
+ 
+```yaml id="dtd8nx"
+impact:
+  - potential financial data exposure
+  - DSH/UI may consume WLT internals instead of governed references
+  - contradicts allowedForDsh reference-only boundary
+```
+ 
+**المعالجة الأقل مخاطرة:**
+ 
+```yaml id="crg93e"
+fix:
+  - gate كل financial list/detail reads خلف WLT_INTERNAL_READS_ENABLED أو service auth
+  - أبقِ فقط /wlt/references/* كـ public/read-reference
+  - لا تعرض ledger/refunds/settlements/cod/commissions بدون auth
+```
+ 
+---
+ 
+## P0-5 — `/wlt/cod-records` يمكن أن يثق بمبلغ قادم من caller إذا غاب checkoutIntentId
+ 
+**المكان:**
+ 
+```text id="sf1n2x"
+services/wlt/backend/internal/cod/cod.go
+```
+ 
+`CreateCodRecordInput` يسمح بـ `AmountMinorUnits` و`Currency`.
+إذا كان `CheckoutIntentID` موجودًا، WLT يعيد اشتقاق المبلغ من payment session. لكن إذا لم يكن موجودًا، يستخدم `input.AmountMinorUnits` و`input.Currency`.
+ 
+**المخالفة:**
+WLT يجب ألا يقبل مبلغ COD من caller حتى لو كان caller هو DSH service. يجب أن يشتق COD amount دائمًا من WLT payment session أو يرفض الطلب.
+ 
+**الأثر:**
+ 
+```yaml id="x6degt"
+impact:
+  - service caller يمكنه إنشاء COD record بمبلغ يدوي
+  - كسر مبدأ WLT owns financial truth
+  - خطر تسوية/تحصيل بمبلغ غير مطابق للطلب
+```
+ 
+**المعالجة:**
+ 
+```yaml id="owh2hp"
+required_fix:
+  - اجعل checkoutIntentId required في HTTP CreateCodRecord
+  - احذف fallback AmountMinorUnits/Currency من مسار HTTP
+  - اترك fallback فقط لاختبارات داخلية إن لزم، أو احذفه بالكامل
+```
+ 
+---
+ 
+## P0-6 — `/wlt/commissions` غير gated ويقبل مبلغًا من caller
+ 
+**المكان:**
+ 
+```text id="r9c1yq"
+services/wlt/backend/internal/http/server.go
+services/wlt/backend/internal/cod/cod.go
+```
+ 
+Router يترك `POST /wlt/commissions` غير داخل mutation gate.
+`CreateCommissionInput` يقبل `AmountMinorUnits` و`Currency` من request.
+ثم `CreateCommission` يخزن المبلغ القادم بعد التحقق أنه موجب.
+ 
+Manifest يقول `mutationRuntimeReady: false` و`mutationJourneysApproved: false`.
+ 
+**المخالفة:**
+commission creation mutation مالية. لا يجب تركها خارج gate ولا قبول amount من caller بلا policy.
+ 
+**الأثر:**
+إمكانية إنشاء commissions بمبالغ غير مشتقة من WLT rules.
+ 
+**المعالجة:**
+ 
+```yaml id="twrqkt"
+fix:
+  - ضع POST /wlt/commissions خلف mutation gate
+  - أو اجعله DSH-service-only + derive amount من WLT rule engine
+  - لا تقبل amountMinorUnits من caller
+```
+ 
+---
+ 
+## P0-7 — WLT → DSH payment event ما زال fire-and-forget
+ 
+**المكان:**
+ 
+```text id="wvq0ca"
+services/wlt/backend/internal/dshnotify/client.go
+services/wlt/backend/internal/payment/payment.go
+services/dsh/backend/internal/http/wlt_events.go
+```
+ 
+WLT notifier يقول إن الإرسال best-effort، والأخطاء تُسجل ولا تُرجع.
+`NotifyPaymentEvent` يشغل goroutine ويسجل الخطأ فقط.
+WLT payment code يستخدم notifier عند الفشل أو capture.
+ 
+DSH endpoint نفسه محمي بـ `DSH_WLT_SERVICE_TOKEN`.
+ 
+**المشكلة:**
+إذا ضاع callback، non-COD checkout قد يبقى `payment_pending`. التعليق يقول إن DSH يمكنه polling/reconcile، لكن لا يوجد هنا دليل على reconciliation worker.
+ 
+**المعالجة:**
+ 
+```yaml id="in2r6m"
+fix:
+  - WLT outbox للأحداث الخارجة إلى DSH
+  - أو DSH reconciliation worker يقرأ /wlt/payment-sessions/{id}
+  - اختبارات: lost callback لا يترك DSH عالقًا
+```
+ 
+---
+ 
+## P1-1 — TypeScript coverage لا يغطي كل DSH surfaces
+ 
+**المكان:**
+ 
+```text id="qi630r"
+services/dsh/tsconfig.json
+services/dsh/package.json
+```
+ 
+`services/dsh/package.json` يشغل `tsc -p tsconfig.json`.
+لكن `tsconfig.json` يشمل فقط:
+ 
+```text id="7j3yq7"
+domain
+clients
+frontend/shared
+frontend/app-captain
+```
+ 
+ولا يشمل `app-client`, `app-partner`, `app-field`, `control-panel`.
+ 
+**الأثر:**
+لا يمكن ادعاء multi-surface type safety.
+ 
+**المعالجة:**
+ 
+```yaml id="lx1ufs"
+fix:
+  - أضف tsconfig لكل surface
+  - أو وسّع include
+  - واجعل CI يشغل كل surfaces
+```
+ 
+---
+ 
+## P1-2 — DSH HTTP kernel غير موحد بالكامل
+ 
+**المكان:**
+ 
+```text id="zrgrj0"
+services/dsh/frontend/shared/_kernel/dsh-http-request.ts
+```
+ 
+`parseResponse` موجود ويعالج 204 وbody error.
+لكن `createDshFlexibleHttpClient` يرجع `response.json()` مباشرة.
+و`createDshRawHttpClient` يرمي خطأ بدون body ثم يرجع `response.json()` مباشرة.
+ 
+**الأثر:**
+اختلاف behavior بين clients: 204، error body، وتصنيف network/http ليست موحدة.
+ 
+**المعالجة:**
+اجعل كل variants تستخدم `parseResponse`.
+ 
+---
+ 
+## P1-3 — WLT-for-DSH read helper غير runtime-grade
+ 
+**المكان:**
+ 
+```text id="ens5wd"
+services/wlt/frontend/shared/dsh/wlt-dsh-http-request.ts
+```
+ 
+`wltFetchJson` يستخدم `fetch(url)` فقط، بلا timeout، بلا correlation id، بلا safe 204، وبلا حفظ error body.
+ 
+**المعالجة:**
+ 
+```yaml id="kg0cmu"
+fix:
+  - AbortSignal.timeout
+  - safe JSON parsing
+  - 204 handling
+  - preserve response body on error
+  - optional X-Correlation-ID
+```
+ 
+---
+ 
+## P1-4 — WLT payment-session replay غير مثبت باختبار DB كافٍ
+ 
+اختبارات `payment_session_test.go` تغطي missing token, wrong token, wrong caller, missing headers, non-positive amount.
+ 
+لكن لا يوجد إثبات DB واضح لـ:
+ 
+```yaml id="pco7j8"
+missing_tests:
+  - same checkoutIntentId + same payload => same session
+  - same checkoutIntentId + different amount => 409
+  - same checkoutIntentId + different client/store/paymentMethod => 409
+```
+ 
+**المعالجة:**
+أضف DB integration tests لـ idempotency/replay mismatch.
+ 
+---
+ 
+## P1-5 — DSH order DB correctness غير مثبت كفاية
+ 
+`orders_test.go` ما زال يثبت فقط missing required fields وبعض constants/reason checks.
+ 
+رغم أن الكود أصبح يرفض zero price، لا يوجد test DB كافٍ يثبت:
+ 
+```yaml id="93fn6n"
+missing_order_tests:
+  - order from priced COD cart creates priced items
+  - order before WLT reference returns conflict
+  - order from zero-priced cart item is rejected
+  - duplicate order for same checkoutIntentId is prevented
+```
+ 
+**المعالجة:**
+أضف `orders_db_test.go`.
+ 
+---
+ 
+## P1-6 — Checkout → Order orchestration ما زال في frontend shared، وليس backend-atomic
+ 
+**المكان:**
+ 
+```text id="a20go3"
+services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx
+```
+ 
+الـ hook يرسل checkout submit، ثم عند `checkout.state.kind === "success"` يستدعي `order.submit`.
+ 
+هذا أفضل من أن تكون العملية داخل `CheckoutScreen`، لكنه ما زال frontend-driven orchestration.
+ 
+**الأثر:**
+إذا أُغلق التطبيق أو انقطع الاتصال بعد WLT reference وقبل `order.submit`، قد يبقى checkout intent بدون order.
+ 
+**المعالجة الأقل مخاطرة الآن:**
+ 
+```yaml id="duz3gm"
+fix:
+  - backend endpoint واحد: POST /dsh/client/checkout-intents/{id}/confirm-order
+  - أو backend auto-create order after COD reference/payment_confirmed
+  - frontend يعرض النتيجة فقط
+```
+ 
+---
+ 
+## P1-7 — WLT outbox worker يعمل دائمًا حتى لو WLT client غير مكتمل
+ 
+DSH main يبدأ outbox worker دائمًا بعد إنشاء `wltClient`.
+لكن `wlt.Client.Configured()` يتحقق من `baseURL` فقط، لا من `serviceToken`.
+ 
+**الأثر:**
+في runtime ناقص token، worker سيحاول إرسال أحداث بتوكن فارغ، فتفشل وتتكرر retry. هذا آمن ماليًا لأنه لا يسقط الحدث، لكنه ضجيج تشغيلي وفشل readiness غير مكشوف.
+ 
+**المعالجة:**
+ 
+```yaml id="eo09vy"
+fix:
+  - Client.Configured() يشترط baseURL + serviceToken
+  - readiness يصرّح wlt_outbox_configured=false عند نقص token
+  - worker لا يبدأ إلا إذا DSH_WLT/WLT_DSH config مكتمل
+```
+ 
+---
+ 
+## P1-8 — Runtime smoke يرسل cart body فيه fields لم تعد مصدر truth
+ 
+في DSH smoke، cart body يرسل `productName` و`priceReference`.
+بينما cart handler لا يأخذ إلا `storeId`, `fulfillmentMode`, `productId`, و`quantity`.
+ 
+**الأثر:**
+هذا ضجيج وتناقض في smoke. حتى لو backend يتجاهل الحقول الزائدة، الاختبار يوحي أن UI/runner ما زال يعتقد أن client يرسل price/name.
+ 
+**المعالجة:**
+احذف `productName` و`priceReference` من smoke request.
+ 
+---
+ 
+## P2-1 — outbox status يحتوي `failed` لكن الكود لا يستخدمه
+ 
+Migration يسمح بـ `status IN ('pending', 'sent', 'failed')`.
+لكن `MarkFailed` يبقي status = `pending` ويزيد attempt_count.
+ 
+**الأثر:**
+`failed` حالة ميتة/ضجيج schema.
+ 
+**المعالجة:**
+إما احذف `failed` من check constraint، أو استخدمه بعد max attempts. بما أن السياسة تقول retry indefinitely، الأفضل حذف `failed`.
+ 
+---
+ 
+## P2-2 — ActiveOrderTracker ما زال يحتوي local-only chat/proximity state
+ 
+`CheckoutScreen` ما زال يحتوي `ActiveOrderTracker` وفيه تعليق “Simulated Proximity and Bell States”.
+الـ chat local-only يضيف رسائل محلية لا تُرسل.
+ 
+**الحكم:**
+لم يعد كارثيًا لأنه يصرّح أن المحادثة غير مفعلة، لكنه ضجيج UI وتشغيل غير حقيقي.
+ 
+**المعالجة:**
+افصل tracker إلى shared operational controller، أو عطّل chat UI حتى يوجد endpoint حقيقي.
+ 
+---
+ 
+## P2-3 — WLT @manifest.ts ما زال يعلن generated client غير جاهز
+ 
+`generatedClientReady: false`.
+ 
+**الأثر:**
+لا يجوز ادعاء contract/generated-client closure.
+ 
+**المعالجة:**
+إما توليد/تثبيت clients وربط الاختبارات بها، أو إبقاء الحالة غير جاهزة صراحة.
+ 
+---
+ 
+# ملخص كل المتبقي حسب الأولوية
+ 
+```yaml id="plx35n"
+P0:
+  - no_ci_run_on_latest_sha
+  - runtime_env_missing_service_tokens
+  - docker_runtime_smoke_incompatible_with_wlt_auth_and_amount
+  - wlt_financial_read_surfaces_exposed_without_clear_auth_gate
+  - wlt_cod_record_can_fallback_to_caller_amount
+  - wlt_commission_create_not_gated_and_trusts_caller_amount
+  - wlt_to_dsh_payment_event_fire_and_forget
+ 
+P1:
+  - dsh_typescript_coverage_missing_surfaces
+  - dsh_http_kernel_inconsistent
+  - wlt_dsh_fetch_helper_not_runtime_grade
+  - wlt_payment_session_replay_tests_incomplete
+  - dsh_order_db_tests_incomplete
+  - checkout_to_order_flow_still_frontend_orchestrated
+  - wlt_outbox_worker_starts_without_complete_service_token_validation
+  - runtime_smoke_cart_body_contains_obsolete_fields
+ 
+P2:
+  - outbox_failed_status_dead_or_unused
+  - active_order_tracker_local_chat_noise
+  - wlt_generated_client_not_ready
+```
+ 
+---
+ 
+# أمر التنفيذ النهائي المباشر
+ 
+```text id="v2rm66"
+REPO:
+bthwani2-boop/bthwani-suite-next
+ 
+REF:
+front-backend
+ 
+CURRENT_REMOTE_SHA:
+ddcfe79196f90d720efcd495603f496b5ba5f1fd
+ 
+LOCAL_PATH:
+C:\bthwani-suite-next
+ 
+نفّذ إغلاقًا نهائيًا لما تبقى في DSH وما يرتبط به في WLT على ref مباشر front-backend من GitHub Remote فقط. لا تعتمد على المحلي أو الذاكرة أو أي ادعاء سابق. الحالة الحالية ليست READY.
+ 
+أغلق التالي إلزاميًا:
+ 
+1) CI evidence:
+- ادفع commit تصحيح إلى front-backend.
+- تأكد أن GitHub Actions تعمل على front-backend.
+- لا تعلن READY إلا بعد green workflow على commit التصحيح.
+ 
+2) Runtime service tokens:
+- أضف إلى infra/docker/env/runtime.env.example:
+  WLT_DSH_SERVICE_TOKEN=dev-wlt-dsh-service-token
+  DSH_WLT_SERVICE_TOKEN=dev-dsh-wlt-service-token
+- أضف إلى compose.runtime.yml:
+  wlt-api:
+    WLT_DSH_SERVICE_TOKEN: ${WLT_DSH_SERVICE_TOKEN}
+    DSH_WLT_SERVICE_TOKEN: ${DSH_WLT_SERVICE_TOKEN}
+  dsh-api:
+    WLT_DSH_SERVICE_TOKEN: ${WLT_DSH_SERVICE_TOKEN}
+    DSH_WLT_SERVICE_TOKEN: ${DSH_WLT_SERVICE_TOKEN}
+- اجعل DSH/WLT readiness تكشف missing token.
+ 
+3) Runtime smoke:
+- حدّث Invoke-WltSmoke:
+  - أرسل Authorization Bearer token
+  - X-Service-Caller=dsh
+  - X-Correlation-ID
+  - Idempotency-Key
+  - amountMinorUnits > 0
+  - currency=YER
+  - cartSnapshotHash
+- احذف productName/priceReference من DSH cart smoke request.
+ 
+4) WLT financial surfaces:
+- Gate أو احمِ read routes المالية:
+  /wlt/refunds
+  /wlt/settlements
+  /wlt/cod-records
+  /wlt/commissions
+  /wlt/ledger/entries
+- أبقِ public فقط /wlt/references/*.
+- أضف tests تثبت أن financial reads لا تتاح بلا auth.
+ 
+5) COD/commission financial truth:
+- اجعل checkoutIntentId required في POST /wlt/cod-records.
+- احذف fallback الذي يقبل AmountMinorUnits/Currency من caller.
+- ضع POST /wlt/commissions خلف mutation gate أو اجعله يشتق المبلغ من WLT rule engine.
+- لا تقبل commission amount من caller.
+- أضف tests.
+ 
+6) WLT -> DSH payment event reliability:
+- لا تجعل NotifyPaymentEvent fire-and-forget فقط.
+- أضف WLT outbox أو DSH reconciliation worker.
+- أثبت lost callback recovery باختبار.
+ 
+7) TypeScript coverage:
+- غطِّ:
+  services/dsh/frontend/app-client
+  services/dsh/frontend/app-partner
+  services/dsh/frontend/app-field
+  services/dsh/frontend/app-captain
+  services/dsh/frontend/control-panel
+  services/dsh/frontend/shared
+- شغّل ذلك في CI.
+ 
+8) HTTP kernel:
+- كل DSH HTTP clients تستخدم parseResponse.
+- wltFetchJson يحصل على timeout/safe-json/error-body/correlation.
+ 
+9) Tests:
+- WLT DB replay:
+  same payload => same session
+  mismatch payload => 409
+- DSH order DB:
+  priced COD cart => priced order items
+  no WLT ref => conflict
+  zero-priced cart => rejected
+  duplicate order => prevented
+- Runtime:
+  docker reset profiles identity,dsh,wlt,financial-simulators,mail passes.
+ 
+بعد التنفيذ:
+pnpm install --frozen-lockfile
+pnpm run contracts:lint
+pnpm run foundation:gate
+pnpm run journey:gate
+pnpm run typecheck
+pnpm run test
+pnpm run build
+pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+ 
+**ثم push إلى front-backend وانتظر GitHub Actions. لا تكتب MERGE_READY أو 100% إلا بعد green CI على commit التصحيح.**
+```
+ 
+الحكم النهائي الآن: **لم ننتهِ. الفرع تحسّن، لكن يوجد P0 حقيقي، والدمج ممنوع حتى إغلاق ما سبق وإثباته بـ CI/runtime evidence.**
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+صحيح. الاعتراض في محله: **التحليل السابق لم يكن كافيًا لنطاق الشاشات والـ frontend الكامل**. كان مركّزًا أكثر على DSH/WLT المالي والـ runtime، بينما الفرع ما زال يحتوي شاشات كثيرة، مسارات غير مربوطة، clients لا تطابق backend، وملفات ضخمة تكسر مبدأ full-stack موحد متعدد السطوح.
+ 
+## الحكم الحالي
+ 
+```yaml id="kcx92p"
+ref: front-backend
+status: NOT_READY_FOR_TESTING
+merge_status: DO_NOT_MERGE
+frontend_full_stack_status: FAIL
+docker_runtime_status: FAIL_UNTIL_FIXED
+main_reason:
+  - كثير من الشاشات موجودة كـ UI أو panels محلية
+  - بعض clients لا تطابق backend routes
+  - بعض الأسطح لا تدخل typecheck
+  - Docker/CI لا يثبتان هذه الأسطح
+  - WLT/DSH finance/control links غير محكومة كفاية
+```
+ 
+---
+ 
+# 1) حجم الواجهات كبير جدًا ولم يتم ربطه بالكامل
+ 
+يوجد عدد كبير من الشاشات في كل سطح، وليس مجرد checkout/orders:
+ 
+* `app-client`: طلبات، تتبع، كتالوج، متجر، حساب، دعم، إشعارات، عربة، checkout، home discovery.
+* `app-partner`: inbox، catalog management، product edit/media/overrides، store profile، courier، team management، support، operations screens.
+* `app-field`: onboarding، visits، verification، partner progress، finance، escalation، history، profile.
+* `control-panel`: operations, support, platform, partners, catalogs, marketing, finance, live orders, heatmap, rescue.
+* `app-captain`: map, orders, POD, pickup/dropoff, support, finance, profile, store pickup context.
+ 
+**الخلاصة:** نطاق DSH frontend واسع، وحالته لا تثبت أنه full-stack جاهز.
+ 
+---
+ 
+# 2) مخالفة كارثية: frontend shared order client لا يطابق backend routes
+ 
+## المشكلة
+ 
+`dsh-order-lifecycle-client.ts` يستخدم routes مثل:
+ 
+```text id="2j5cl1"
+/orders
+/orders/{id}
+/orders/{id}/status
+/orders/{id}/assign-captain
+/orders/{id}/accept-task
+/orders/{id}/pickup
+/orders/{id}/deliver
+```
+ 
+لكن backend الحقيقي يعرّف routes مختلفة:
+ 
+```text id="7xd7h1"
+/dsh/client/orders
+/dsh/partner/orders/{orderId}/ready
+/dsh/operator/dispatch/assignments
+/dsh/captain/dispatch/assignments/{assignmentId}/accept
+/dsh/captain/dispatch/assignments/{assignmentId}/status
+/dsh/captain/dispatch/assignments/{assignmentId}/pod
+```
+ 
+## الأثر
+ 
+هذا يكسر:
+ 
+```yaml id="fbf5jl"
+broken_surfaces:
+  - app-partner markReady/updateOrderStatus
+  - app-captain accept/decline/pickup/deliver/location
+  - control-panel live orders assignment
+  - shared operations runtime adapter
+  - any screen relying on dsh-order-lifecycle-client
+```
+ 
+**هذه P0.** لا يمكن اختبار full-stack قبل توحيد هذا client أو حذفه واستبداله بعملاء مطابقين للـ backend.
+ 
+---
+ 
+# 3) مخالفة كارثية: status model في frontend لا يطابق backend
+ 
+frontend client يتوقع statuses uppercase مثل:
+ 
+```text id="fnfjq8"
+CREATED
+ACCEPTED
+READY_FOR_PICKUP
+DELIVERED
+CANCELLED
+ACCEPTED_BY_CAPTAIN
+PICKED_UP
+EN_ROUTE
+ARRIVED
+```
+ 
+بينما backend يستخدم statuses lowercase:
+ 
+```text id="mpfmnx"
+pending
+store_accepted
+preparing
+ready_for_pickup
+driver_assigned
+driver_arrived_store
+picked_up
+arrived_customer
+delivered
+cancelled
+```
+ 
+مثال مباشر: `LiveOrdersScreen` لا يظهر إجراء “إسناد كابتن” إلا إذا `order.status === 'CREATED'`، وهذا لن يحدث مع backend الذي يرجع `pending`.
+ 
+```yaml id="u0k0ni"
+impact:
+  - أزرار لا تظهر
+  - حالات لا تُفسّر
+  - queues تظهر فارغة أو خاطئة
+  - captain/partner/control-panel لا يرون lifecycle الحقيقي
+```
+ 
+**هذه P0.**
+ 
+---
+ 
+# 4) مخالفة أمنية/تشغيلية: shared order client يسمح بهويات افتراضية وضعيفة
+ 
+`orderAuthHeaders` يستخدم `client-101` افتراضيًا إذا لا يوجد bearer token أو client id.
+ 
+وفي نفس الملف توجد دالة `wltCallbackHeaders` فيها token ثابت:
+ 
+```text id="plrgv9"
+X-WLT-Callback-Token: dev-secret
+```
+ 
+الـ client يعرّض `refundCallback` من frontend shared client.
+ 
+```yaml id="i0e2vt"
+problem:
+  - client id افتراضي يمكن أن يعطي نتائج مضللة
+  - callback token ثابت داخل frontend shared code
+  - refund callback لا يجب أن يكون callable من surface عام
+impact:
+  - اختبارات مضللة
+  - خطر تجاوز حدود WLT/DSH
+  - كسر service-to-service boundary
+```
+ 
+**هذه P0.**
+ 
+---
+ 
+# 5) app-partner يحتوي شاشات تشغيلية محلية غير مربوطة
+ 
+`DshPartnerRouteRenderer` يربط عددًا كبيرًا من routes إلى شاشات وpanels داخل ملف واحد، ويستخدم props كثيرة لحالة سطح كامل.
+ 
+داخل `OperationScreens.tsx` توجد شاشة `AuctionStatusUpdateScreen` بحالة محلية فقط: `selectedStatus`, `statusNote`, `savedMessage`.
+والزر يقول “حفظ التحديث محليًا” ويحدث state فقط.
+ 
+`DshPartnerInventoryActionPanel` يقول صراحة: “لا يوجد API أو استيراد runtime جديد في هذا panel.”
+ 
+`DshPartnerOrderActionPanel` يقول إن إجراءات الطلب “دون أي منطق خلفي”، وبعض أزرار موصل الشريك لا تنفذ backend action.
+ 
+`DshPartnerOrderConversationPanel` يستخدم رسائل افتراضية ثابتة وdraft محلي بدون إرسال API.
+ 
+```yaml id="tsjgqz"
+classification: P0/P1
+problem:
+  - شاشات تظهر كأنها تشغيلية
+  - لكنها ليست full-stack
+  - بعضها state محلي فقط
+  - بعضها يعلن عدم وجود API
+impact:
+  - اختبار المستخدم سيكون مضللًا
+  - partner app غير جاهز كمسار تشغيل حقيقي
+```
+ 
+---
+ 
+# 6) app-partner markReady يستخدم endpoint غير موجود
+ 
+في `usePartnerOrdersRuntime`, `markReady` يستدعي:
+ 
+```text id="c4wau4"
+/orders/{orderId}/status
+status: READY_FOR_PICKUP
+actor: partner
+```
+ 
+لكن backend الحقيقي لديه:
+ 
+```text id="3j5ed5"
+/dsh/partner/orders/{orderId}/ready
+```
+ 
+```yaml id="d0039y"
+impact:
+  - زر جاهزية الطلب في partner app سيفشل
+  - أو سيضرب endpoint غير موجود
+  - أو لن يغيّر backend state
+priority: P0
+```
+ 
+---
+ 
+# 7) app-captain runtime actions لا تطابق backend dispatch model
+ 
+`useCaptainOrderRuntime` يستدعي endpoints مبنية على order id:
+ 
+```text id="s08bih"
+/orders/{orderId}/accept-task
+/orders/{orderId}/decline-task
+/orders/{orderId}/pickup
+/orders/{orderId}/location
+/orders/{orderId}/deliver
+/orders/{orderId}/fail-delivery
+```
+ 
+لكن backend dispatch model يعمل على assignment id:
+ 
+```text id="h6yz8r"
+/dsh/captain/dispatch/assignments/{assignmentId}/accept
+/dsh/captain/dispatch/assignments/{assignmentId}/decline
+/dsh/captain/dispatch/assignments/{assignmentId}/status
+/dsh/captain/dispatch/assignments/{assignmentId}/pod
+```
+ 
+```yaml id="iiphmo"
+impact:
+  - قبول المهمة قد يفشل
+  - رفض المهمة قد يفشل
+  - تحديث الموقع قد يفشل
+  - POD قد لا يصل إلى backend
+  - captain app غير جاهز لاختبار دورة توصيل حقيقية
+priority: P0
+```
+ 
+---
+ 
+# 8) app-captain ما زال يحتوي قيم عرض وهمية/ثابتة
+ 
+`DshCaptainSurface` يمرر `EMPTY_CAPTAIN_ORDER_SUMMARY` في non-home routes بدل order runtime summary حقيقي.
+ 
+وفي home أيضًا يستخدم `EMPTY_CAPTAIN_ORDER_SUMMARY`.
+ 
+`DshCaptainRouteRenderer` يعرض في الحساب قيمًا ثابتة مثل:
+ 
+```text id="0beom7"
+4.9 / 5
+Elite 3
+حالة المراجعة: جاهز
+الاعتماد الحقيقي: قيد الربط
+جدول اليوم: صباحي
+```
+ 
+كما أن `onRingBell` لا ينفذ شيئًا حقيقيًا في surface.
+ 
+```yaml id="j2q9e4"
+problem:
+  - تفاصيل الطلب غير مأخوذة من backend
+  - تقييم/مستوى/دوام/وثائق ثابتة
+  - bell/proximity ليس full-stack
+impact:
+  - app-captain غير جاهز للاختبار الحقيقي
+priority: P1
+```
+ 
+---
+ 
+# 9) control-panel Operations يحتوي مساحات كثيرة غير مربوطة
+ 
+`CommandCenterScreen` يعرض توصيات وتدخلات وخطط خدمة لكنها كلها تقول “سيتم ربطها بـ API”.
+ 
+كما أن مؤشرات الخدمة وWLT finance alerts غير مربوطة.
+ 
+`LiveOrdersScreen` يحتوي:
+ 
+```text id="1jr9po"
+PENDING_APPROVAL_ORDERS = []
+PREVIEW_ROWS = []
+```
+ 
+وفيه fallback إلى Preview، وqueues فارغة، وبعض actions مجرد local feedback بـ `setTimeout`.
+ 
+```yaml id="uch3gu"
+problem:
+  - command center ليس runtime command center حقيقي
+  - live orders جزئي
+  - pending approvals فارغة
+  - fulfillment queues فارغة
+  - actions محلية
+priority: P0/P1
+```
+ 
+---
+ 
+# 10) control-panel finance يقول عبارات جاهزية غير صحيحة
+ 
+`FinanceDashboardScreen` يقول:
+ 
+```text id="h18z4g"
+المنصة في وضع التشغيل الفوري.
+الأرقام مستمدة ومطابقة مباشرة مع خادم WLT.
+لا توجد معوقات تشغيلية معلقة.
+```
+ 
+لكن نفس الشاشة تقول لتبويبات أخرى: “سيتم ربط تبويب ... بالخادم المالي في شريحة لاحقة.”
+ 
+```yaml id="nflryp"
+problem:
+  - النص يعلن جاهزية مالية لا يثبتها الكود
+  - بعض التبويبات غير مربوطة
+  - هذا تناقض UI/runtime
+priority: P0
+```
+ 
+---
+ 
+# 11) DSH finance frontend يقرأ WLT مباشرة بدل proxy/governed boundary
+ 
+`useFinanceController` يستدعي `loadWltDshFinanceRuntimeReadModel` من `@bthwani/wlt`.
+ 
+And this reads directly:
+ 
+```text id="hgb43i"
+/wlt/settlements
+/wlt/ledger?limit=250
+/wlt/refunds
+/wlt/control-panel/reconciliation-close-status
+```
+ 
+```yaml id="kknh0b"
+problem:
+  - DSH control-panel frontend يتصل مباشرة بـ WLT financial surfaces
+  - لا يوجد DSH backend proxy واضح
+  - لا يوجد auth/correlation policy كافٍ في هذا المستوى
+impact:
+  - كسر boundary
+  - صعوبة الاختبار عبر Docker
+  - CORS/security/runtime failures
+priority: P0
+```
+ 
+---
+ 
+# 12) app-field فيه أجزاء runtime حقيقية، لكن ما زال يحتوي أثر donor وقيود native/build
+ 
+`FieldPartnerOnboardingScreen` يقول إنه مستخرج من donor.
+ 
+ويستخدم image picker بدل document picker لأن native build الحالي لا يملك `expo-document-picker`.
+ 
+`DshFieldPartnersScreen` أيضًا يقول إنه نسخة طبق الأصل من donor، ويعرض location label افتراضيًا “الرياض · جولة المتاجر”.
+ 
+مع ذلك، جزء onboarding نفسه أفضل من غيره لأنه يمر عبر controller وAPI calls: `fieldCreateDraft`, `fieldUpdatePartnerStore`, `fieldSubmitPartner`, `fieldUploadDocument`, `fieldCreateVisit`.
+ 
+```yaml id="tpx86q"
+classification: mixed
+correct:
+  - onboarding controller موجود
+  - field APIs موجودة
+wrong:
+  - donor residue
+  - city/location mismatch
+  - native dependency workaround
+  - ليس مثبتًا في CI/surface typecheck الكامل
+priority: P1
+```
+ 
+---
+ 
+# 13) ملفات الشاشات ضخمة ومخالفة للتقسيم الصحي
+ 
+## app-partner
+ 
+`DshPartnerRouteRenderer` يحتوي routing ضخم لكثير من الشاشات داخل ملف واحد، مع props كثيرة جدًا.
+ 
+`OperationScreens.tsx` يحتوي عدة شاشات داخل ملف واحد: auction, conversation, inventory, onboarding, order actions, order issues.
+ 
+## app-captain
+ 
+`DshCaptainRouteRenderer` يملك props ضخمة جدًا، ويحتوي render switch كبير لكل مسارات الكابتن.
+ 
+`DshCaptainSurface` يمزج providers, identity config, appearance, nav, WLT copy, route rendering, home composition, store courier mode, map layer.
+ 
+## control-panel
+ 
+`OperationsHubScreen` يحمّل lazy screens كثيرة، يدير tabs/subtabs/focus params/breadcrumb/workbench داخل ملف واحد.
+ 
+```yaml id="p9xqwr"
+problem:
+  - ملفات ضخمة
+  - routing + state + UI + policy في نفس الملف
+  - صعب اختبارها
+  - صعب ضمان full-stack binding
+  - أي تعديل سيكسر أسطح متعددة
+priority: P1
+required_fix:
+  - فصل route map
+  - فصل screen containers
+  - فصل presentational components
+  - فصل runtime controllers
+  - منع state المحلي التشغيلي داخل screen files
+```
+ 
+---
+ 
+# 14) TypeScript لا يغطي كل هذه الأسطح أصلًا
+ 
+`services/dsh/tsconfig.json` يشمل:
+ 
+```text id="4e2knh"
+domain
+clients
+frontend/shared
+frontend/app-captain
+```
+ 
+ولا يشمل:
+ 
+```text id="h5bd1h"
+frontend/app-client
+frontend/app-partner
+frontend/app-field
+frontend/control-panel
+```
+ 
+```yaml id="glexbf"
+impact:
+  - ملفات ضخمة قد تحتوي أخطاء TypeScript ولا تظهر
+  - app-partner/app-field/control-panel غير مثبتة
+  - لا يمكن القول إن frontend جاهز للاختبار
+priority: P0
+```
+ 
+---
+ 
+# 15) Docker لا يثبت frontend الحقيقي
+ 
+حتى لو Docker شغّل backend وruntime smoke، فهذا لا يثبت:
+ 
+```yaml id="qf7jv8"
+not_proven_by_docker:
+  - app-client navigation
+  - app-partner routes
+  - app-field onboarding media/native flow
+  - app-captain dispatch/POD/location flow
+  - control-panel tabs/screens
+  - WLT finance screen binding
+  - frontend shared clients matching backend routes
+```
+ 
+وفوق ذلك، runtime env/smoke نفسه ما زال عنده مشاكل service tokens وWLT auth/amount كما سبق. `runtime.env.example` لا يحتوي tokens المطلوبة، وcompose لا يمررها كما يجب.
+ 
+---
+ 
+# 16) قائمة المخالفات النهائية المؤكدة
+ 
+```yaml id="dru1nf"
+P0:
+  - frontend_order_lifecycle_client_routes_do_not_match_backend
+  - frontend_order_statuses_do_not_match_backend_statuses
+  - app_partner_mark_ready_calls_nonexistent_route
+  - app_captain_runtime_actions_call_nonexistent_order_based_routes
+  - control_panel_live_orders_dispatch_condition_uses_wrong_status_CREATED
+  - frontend_shared_client_has_default_client_101_identity
+  - frontend_shared_client_contains_dev_wlt_callback_token
+  - refund_callback_exposed_from_frontend_shared_client
+  - control_panel_finance_claims_no_blockers_while_tabs_are_unbound
+  - DSH_frontend_reads_WLT_financial_surfaces_directly
+  - typecheck_excludes_app_client_app_partner_app_field_control_panel
+  - docker_runtime_does_not_prove_frontend_surfaces
+  - runtime_env_service_tokens_missing_or_not_proven
+ 
+P1:
+  - app_partner_many_screens_are_local_or_not_backend_bound
+  - partner_inventory_panel_explicitly_has_no_runtime_api
+  - partner_conversation_uses_default_messages_and_local_draft
+  - control_panel_command_center_has_NEEDS_RUNTIME_EVIDENCE_sections
+  - live_orders_has_empty_preview_and_pending_queues
+  - app_captain_uses_EMPTY_CAPTAIN_ORDER_SUMMARY
+  - app_captain_profile_docs_shifts_rating_level_are_static
+  - app_field_has_donor_residue_and_riyadh_label
+  - expo_document_picker_not_linked_so_document_flow_uses_image_picker
+  - route_renderer_files_are_too_large_and_mix_routing_state_ui_policy
+  - DSH_HTTP_kernel_and_order_lifecycle_client_are_not_unified
+  - WLT_read_helper_not_runtime_grade
+ 
+P2:
+  - placeholder/donor/comments/noise_remain
+  - local_chat_ui_noise_remains
+  - large_files_need_refactor_for_maintainability
+  - generated_client_not_ready
+```
+ 
+---
+ 
+# النتيجة المباشرة
+ 
+```yaml id="a5gzvk"
+هل الكود جاهز للاختبار؟: لا
+هل Docker جاهز لاختبار شامل؟: لا
+هل DSH frontend full-stack موحد؟: لا
+هل كل الشاشات مربوطة؟: لا
+هل توجد شاشات كبيرة ومخالفة للتقسيم؟: نعم
+هل توجد endpoints/clients مكسورة؟: نعم
+هل توجد فجوات كارثية؟: نعم
+```
+ 
+---
+ 
+# ما يجب عمله أولًا
+ 
+```yaml id="yx9rof"
+execution_order:
+  1: أوقف ادعاء الجاهزية نهائيًا حتى تثبت full-stack surface binding
+  2: أصلح dsh-order-lifecycle-client أو احذفه واستبدله بعملاء مطابقين للـ backend
+  3: وحّد order status contract بين backend/frontend/OpenAPI
+  4: غطِّ كل frontend surfaces in tsconfig/CI
+  5: صنّف كل شاشة:
+      - FULLSTACK_BOUND
+      - READ_ONLY_BOUND
+      - UI_ONLY_BLOCKED
+      - DEAD_OR_DONOR
+      - NEEDS_BACKEND
+  6: افصل ملفات الشاشات الضخمة
+  7: اربط app-partner/app-captain/control-panel بالـ backend الحقيقي
+  8: امنع أي frontend من امتلاك service callback tokens أو refund callbacks
+  9: اجعل Docker/CI يثبت backend + frontend route smoke + typecheck لكل surface
+```
+ 
+الحكم النهائي: **اعتراضك صحيح. الفرع `front-backend` ما زال بعيدًا عن جاهزية الاختبار الشامل.**

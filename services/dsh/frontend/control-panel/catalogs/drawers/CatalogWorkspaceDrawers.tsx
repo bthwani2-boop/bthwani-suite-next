@@ -118,7 +118,7 @@ export function CatalogWorkspaceRouter({
     }
     break;
     case "audit-trail": {
-      drawerContent = <CatalogAuditTrailWorkspace productId={productId} onClose={onClose} />;
+      drawerContent = <CatalogAuditTrailWorkspace {...(productId !== undefined ? { productId } : {})} onClose={onClose} />;
     }
     break;
     case "publication-readiness": {

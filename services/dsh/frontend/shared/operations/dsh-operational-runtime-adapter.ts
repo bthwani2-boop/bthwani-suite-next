@@ -56,15 +56,19 @@ function toRuntimeRow(o: DshOrderRecord): DshRuntimeOrderRow {
 
 export async function fetchDshRuntimeOrders(
   query: DshListOrdersQuery = {},
-  clientId?: string
+  clientId?: string,
+  scope: DshListOrdersQuery['scope'] = 'operator',
 ): Promise<DshRuntimeOrdersResult> {
   const baseUrl = resolveDshOrderApiBaseUrl();
   if (!baseUrl) {
     return { kind: 'offline' };
   }
-  const client = createDshOrderLifecycleHttpClient(baseUrl, globalThis.fetch, clientId ? { clientId } : {});
+  const client = createDshOrderLifecycleHttpClient(baseUrl, globalThis.fetch, {
+    ...(clientId ? { clientId } : {}),
+    scope,
+  });
   try {
-    const resp = await client.listOrders(query);
+    const resp = await client.listOrders({ ...query, scope });
     return {
       kind: 'ok',
       orders: resp.orders.map(toRuntimeRow),

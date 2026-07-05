@@ -224,7 +224,7 @@ export function ExceptionsEscalationsScreen({
 
   React.useEffect(() => {
     let cancelled = false;
-    fetchDshRuntimeOrders({ status: 'FAILED_DELIVERY', limit: 50 }).then((result) => {
+    fetchDshRuntimeOrders({ status: 'cancelled', limit: 50, scope: 'operator' }).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
         setRuntimeExcState({ orders: result.orders, loaded: true, error: null, offline: false });

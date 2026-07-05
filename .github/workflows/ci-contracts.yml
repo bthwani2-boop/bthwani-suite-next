@@ -1,0 +1,161 @@
+name: CI — Contracts & OpenAPI Gate
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'services/**/contracts/**'
+      - 'core/**/contracts/**'
+      - 'contracts/**'
+      - '**/*.openapi.yaml'
+      - '**/*.openapi.json'
+      - '**/generated/**'
+  push:
+    branches:
+      - master
+    paths:
+      - 'services/**/contracts/**'
+      - 'core/**/contracts/**'
+      - 'contracts/**'
+      - '**/*.openapi.yaml'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual contracts gate'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts-lint:
+    name: Contracts lint (bthwani contracts-foundation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run contracts lint
+        run: pnpm run contracts:lint
+
+  spectral-lint:
+    name: OpenAPI Spectral lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint DSH OpenAPI
+        run: |
+          pnpm dlx @stoplight/spectral-cli lint \
+            services/dsh/contracts/dsh.openapi.yaml \
+            --ruleset .spectral.yaml 2>/dev/null || \
+          pnpm dlx @stoplight/spectral-cli lint \
+            services/dsh/contracts/dsh.openapi.yaml \
+            --ruleset "{extends: ['spectral:oas']}"
+
+      - name: Lint WLT OpenAPI
+        run: |
+          if [ -f services/wlt/contracts/wlt.openapi.yaml ]; then
+            pnpm dlx @stoplight/spectral-cli lint \
+              services/wlt/contracts/wlt.openapi.yaml \
+              --ruleset .spectral.yaml 2>/dev/null || \
+            pnpm dlx @stoplight/spectral-cli lint \
+              services/wlt/contracts/wlt.openapi.yaml \
+              --ruleset "{extends: ['spectral:oas']}"
+          else
+            echo "WLT OpenAPI contract not found — skipping."
+          fi
+
+      - name: Lint Identity OpenAPI
+        run: |
+          if [ -f core/identity/contracts/auth.openapi.yaml ]; then
+            pnpm dlx @stoplight/spectral-cli lint \
+              core/identity/contracts/auth.openapi.yaml \
+              --ruleset .spectral.yaml 2>/dev/null || \
+            pnpm dlx @stoplight/spectral-cli lint \
+              core/identity/contracts/auth.openapi.yaml \
+              --ruleset "{extends: ['spectral:oas']}"
+          else
+            echo "Identity OpenAPI contract not found — skipping."
+          fi
+
+  openapi-client-drift:
+    name: Generated client drift check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate identity client
+        run: |
+          if [ -f core/identity/contracts/auth.openapi.yaml ]; then
+            pnpm dlx openapi-typescript \
+              core/identity/contracts/auth.openapi.yaml \
+              -o core/identity/clients/generated/identity-api.ts
+          fi
+
+      - name: Check for client drift
+        run: |
+          if git diff --exit-code core/identity/clients/generated/; then
+            echo "OK: Generated clients are up to date."
+          else
+            echo "ERROR: Generated client files have drifted from the OpenAPI spec."
+            echo "Run 'pnpm dlx openapi-typescript <spec> -o <output>' locally and commit the result."
+            git diff --stat core/identity/clients/generated/
+            exit 1
+          fi

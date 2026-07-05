@@ -1,0 +1,125 @@
+name: CI — PR Fast Gate
+
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-pr-fast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lockfile-check:
+    name: Lockfile integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+
+      - name: Verify lockfile is up to date
+        run: pnpm install --frozen-lockfile --dry-run
+
+  node-fast-gate:
+    name: Node fast gate (lint / typecheck / test / affected)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lockfile-check
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Affected typecheck
+        run: pnpm run affected:typecheck --base=origin/master --head=HEAD
+
+      - name: Affected build
+        run: pnpm run affected:build --base=origin/master --head=HEAD
+
+      - name: Affected test
+        run: pnpm run affected:test --base=origin/master --head=HEAD
+
+  guards-fast:
+    name: Guards (contracts + boundary + policy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lockfile-check
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Contracts lint
+        run: pnpm run contracts:lint
+
+      - name: Guard — no broken imports
+        run: pnpm run guard:no-broken-imports
+
+      - name: Guard — runtime config
+        run: pnpm run guard:runtime-config
+
+      - name: Guard — UI kit boundary
+        run: pnpm run guard:ui-kit-boundary
+
+      - name: Guard — fullstack boundary
+        run: pnpm run guard:fullstack-boundary
+
+      - name: Guard — WLT financial boundary
+        run: pnpm run guard:wlt-financial-boundary
+
+      - name: Guard — cleanup policy
+        run: pnpm run guard:cleanup-policy

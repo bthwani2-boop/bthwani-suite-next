@@ -551,7 +551,7 @@ export function AdministrationDashboardScreen() {
             key={t.id}
             active={mainTab === t.id}
             onClick={() => setMainTab(t.id)}
-            badge={t.badge}
+            {...(t.badge !== undefined ? { badge: t.badge } : {})}
           >
             {t.label}
           </MainTabButton>

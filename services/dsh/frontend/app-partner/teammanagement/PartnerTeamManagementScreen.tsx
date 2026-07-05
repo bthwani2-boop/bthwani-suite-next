@@ -53,11 +53,11 @@ function resolveTeamStatusTone(status: PartnerTeamStatus): 'success' | 'warning'
   return 'danger';
 }
 
-function resolveTeamRoleTone(role: PartnerTeamRole): 'brand' | 'info' | 'success' | 'default' {
+function resolveTeamRoleTone(role: PartnerTeamRole): 'brand' | 'action' | 'success' | 'muted' {
   if (role === 'owner') return 'brand';
-  if (role === 'supervisor') return 'info';
+  if (role === 'supervisor') return 'action';
   if (role === 'courier') return 'success';
-  return 'default';
+  return 'muted';
 }
 
 function resolveMemberActionLabel(member: PartnerTeamMember): string {
@@ -124,8 +124,8 @@ export function PartnerTeamManagementScreen({
         {/* Info Banner */}
         <Card tone="info" padding={3}>
           <View style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2], alignItems: 'flex-start' }}>
-            <Icon name="information-circle-outline" size={18} tone="info" style={{ marginTop: 2 }} />
-            <Text role="bodySm" tone="info" align="start" style={{ flex: 1 }}>
+            <Icon name="information-circle-outline" size={18} tone="brand" style={{ marginTop: 2 }} />
+            <Text role="bodySm" tone="action" align="start" style={{ flex: 1 }}>
               الأدوار والدعوات تُعرض من runtime فقط، وتبقى إجراءات التعديل خلف مالك الصلاحيات المركزي.
             </Text>
           </View>
@@ -163,7 +163,7 @@ export function PartnerTeamManagementScreen({
           <Text role="bodyStrong" align="start">أعضاء الفريق التشغيلي ({members.length})</Text>
 
           {members.length === 0 ? (
-            <Card tone="neutral" padding={3}>
+            <Card tone="default" padding={3}>
               <Text role="bodySm" tone="muted" align="start">
                 لا توجد بيانات أعضاء runtime لهذا الفرع حالياً.
               </Text>
@@ -199,7 +199,7 @@ export function PartnerTeamManagementScreen({
                               : 'person-outline'
                       }
                       size={20}
-                      tone={roleTone}
+                      tone={roleTone === 'brand' ? 'action' : roleTone === 'muted' ? 'neutral' : roleTone}
                       style={{ marginHorizontal: spacing[1] }}
                     />
                     <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-start', marginHorizontal: spacing[2] }}>

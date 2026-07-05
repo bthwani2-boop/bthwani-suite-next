@@ -1,35 +1,28 @@
-name: CI
+name: CI — Full Baseline Gate
 
 on:
-  pull_request:
-    branches:
-      - master
   push:
     branches:
       - master
-      - begin
-      - branch-validation
-      - starting
-      - front-backend
   workflow_dispatch:
     inputs:
       reason:
         description: 'Manual trigger reason'
         required: false
-        default: 'manual master baseline verification'
+        default: 'manual full baseline verification'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-full-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  node-gates:
-    name: Node / PNPM gates
+  node-full-gate:
+    name: Node / PNPM full gate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -294,56 +287,27 @@ jobs:
         working-directory: core/identity/backend
         run: go build ./...
 
-  docker-runtime-smoke:
-    name: Docker runtime smoke
+  report-failure:
+    name: Upload failure artifacts
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    if: failure()
+    needs: [node-full-gate, wlt-go, wlt-go-db, dsh-go, dsh-go-db, identity-go]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Full runtime reset and smoke
-        shell: pwsh
+      - name: Collect failure summary
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+          echo "# CI Full Gate Failure Report" > failure-report.md
+          echo "" >> failure-report.md
+          echo "- Run: ${{ github.run_id }}" >> failure-report.md
+          echo "- SHA: ${{ github.sha }}" >> failure-report.md
+          echo "- Branch: ${{ github.ref_name }}" >> failure-report.md
+          echo "- Triggered by: ${{ github.event_name }}" >> failure-report.md
+          echo "- Time: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> failure-report.md
 
-      - name: WireMock financial provider smoke
-        run: pnpm run runtime:wiremock:financial:smoke
-
-      - name: WLT provider-through-WLT smoke
-        run: pnpm run runtime:wlt:provider:smoke
-
-      - name: Docker compose ps
-        if: always()
-        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
-
-      - name: Docker compose logs on failure
-        if: failure()
-        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
-
-      - name: Upload docker logs artifact
-        if: failure()
+      - name: Upload failure report
         uses: actions/upload-artifact@v4
         with:
-          name: docker-logs-${{ github.run_id }}
-          path: /tmp/docker-logs.txt
-          retention-days: 7
-
-      - name: Docker compose down
-        if: always()
-        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
+          name: ci-full-failure-${{ github.run_id }}
+          path: failure-report.md
+          retention-days: 14

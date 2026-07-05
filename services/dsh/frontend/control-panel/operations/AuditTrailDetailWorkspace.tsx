@@ -18,12 +18,12 @@ import {
 } from '../../shared/identity-access/dsh-role-permission.model';
 
 export type AuditTrailDetailWorkspaceProps = {
-  orderId?: string;
+  orderId?: string | undefined;
   /** Look up by entryId; falls back to first preview entry when absent. */
-  entryId?: string;
+  entryId?: string | undefined;
   /** Pass a resolved entry directly (overrides entryId lookup). */
-  auditEntry?: DshAuditEntry;
-  onClose?: () => void;
+  auditEntry?: DshAuditEntry | undefined;
+  onClose?: (() => void) | undefined;
 };
 
 const DECISION_TONE: Record<DshAuditEntry['decision'], 'success' | 'warning' | 'danger'> = {
@@ -55,7 +55,7 @@ export function AuditTrailDetailWorkspace({
 
   if (!entry) {
     return (
-      <WebControlPanelInspectorShell title={shellTitle} onClose={onClose}>
+      <WebControlPanelInspectorShell title={shellTitle} onClose={onClose ?? (() => undefined)}>
         <Box gap={4} padding={4}>
           <Text role="bodySm" tone="muted">
             لا يوجد سجل تدقيق مرتبط بهذا الكيان.
@@ -68,7 +68,7 @@ export function AuditTrailDetailWorkspace({
   const decisionTone = DECISION_TONE[entry.decision];
 
   return (
-    <WebControlPanelInspectorShell title={shellTitle} onClose={onClose}>
+    <WebControlPanelInspectorShell title={shellTitle} onClose={onClose ?? (() => undefined)}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', overflowY: 'auto', height: '100%', paddingRight: '2px' }}>
 
         {/* ── Decision banner ── */}

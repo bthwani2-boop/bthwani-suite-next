@@ -45,10 +45,8 @@ export function AuditSupportSlaScreen({ hubHref: _hubHref, subGroup: _subGroup }
       if (cancelled) return;
       if (result.kind === 'ok') {
         const auditNeeded = result.orders.filter((o) =>
-          o.status === 'FAILED_DELIVERY' ||
-          o.status === 'RETURNING_TO_STORE' ||
-          o.status === 'RETURNED' ||
-          o.status === 'CANCELLED'
+          o.status === 'cancelled' ||
+          o.status === 'delivered'
         );
         setRuntimeAuditState({ orders: auditNeeded, isLoading: false, error: null, offline: false });
       } else if (result.kind === 'offline') {

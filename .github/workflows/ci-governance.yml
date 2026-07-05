@@ -1,0 +1,102 @@
+name: CI — Repository Governance
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual governance check'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance-check:
+    name: Repository governance checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check CODEOWNERS exists
+        run: |
+          if [ ! -f .github/CODEOWNERS ]; then
+            echo "ERROR: .github/CODEOWNERS is missing."
+            exit 1
+          fi
+          echo "OK: CODEOWNERS exists."
+
+      - name: Check pull_request_template exists
+        run: |
+          if [ ! -f .github/pull_request_template.md ]; then
+            echo "ERROR: .github/pull_request_template.md is missing."
+            exit 1
+          fi
+          echo "OK: pull_request_template.md exists."
+
+      - name: Check CodeQL workflow is not disabled or deleted
+        run: |
+          if [ ! -f .github/workflows/codeql.yml ]; then
+            echo "ERROR: .github/workflows/codeql.yml has been deleted or renamed."
+            exit 1
+          fi
+          if grep -q "if: false" .github/workflows/codeql.yml; then
+            echo "ERROR: CodeQL workflow appears to be disabled (if: false)."
+            exit 1
+          fi
+          echo "OK: codeql.yml is present and not disabled."
+
+      - name: Check all workflows have timeout-minutes
+        run: |
+          echo "Checking all workflows have timeout-minutes on jobs..."
+          VIOLATIONS=""
+          for f in .github/workflows/*.yml; do
+            if ! grep -q "timeout-minutes:" "$f"; then
+              VIOLATIONS="$VIOLATIONS\n  MISSING timeout-minutes: $f"
+            fi
+          done
+          if [ -n "$VIOLATIONS" ]; then
+            echo -e "WARNING: Workflows missing timeout-minutes:$VIOLATIONS"
+            # Warn only, do not fail — enforce progressively
+          else
+            echo "OK: All workflows have timeout-minutes."
+          fi
+
+      - name: Warn on CI/CD changes from non-chore branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          CHANGED_WORKFLOWS=$(git diff --name-only origin/master...HEAD -- .github/workflows/ 2>/dev/null || true)
+          if [ -n "$CHANGED_WORKFLOWS" ]; then
+            if ! echo "$BRANCH" | grep -qE '^chore/ci-'; then
+              echo "WARNING: Workflow file(s) changed from branch '$BRANCH' (expected chore/ci-* prefix):"
+              echo "$CHANGED_WORKFLOWS"
+              echo "Ensure this change has been reviewed."
+              # Warn only — enforced via CODEOWNERS + required review
+            else
+              echo "OK: Workflow changes from expected branch pattern '$BRANCH'."
+            fi
+          else
+            echo "OK: No workflow files changed."
+          fi
+
+      - name: Check dependabot.yml exists and covers Go modules
+        run: |
+          if [ ! -f .github/dependabot.yml ]; then
+            echo "ERROR: .github/dependabot.yml is missing."
+            exit 1
+          fi
+          if ! grep -q "gomod" .github/dependabot.yml; then
+            echo "ERROR: dependabot.yml does not include gomod ecosystem."
+            exit 1
+          fi
+          echo "OK: dependabot.yml covers gomod."

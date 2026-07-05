@@ -47,7 +47,7 @@ export function ControlPanelDshClosureHubScreen() {
 
   React.useEffect(() => {
     if (SECONDARY_TABS[activeTab]?.length > 0) {
-      setActiveSubTab(SECONDARY_TABS[activeTab][0].id);
+      setActiveSubTab(SECONDARY_TABS[activeTab]?.[0]?.id ?? '');
     } else {
       setActiveSubTab('');
     }

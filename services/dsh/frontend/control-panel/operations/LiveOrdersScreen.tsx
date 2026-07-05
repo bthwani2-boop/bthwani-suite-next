@@ -394,11 +394,13 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
                     statusTone={resolveRuntimeOrderStatusTone(order.status)}
                     sla={`تاريخ الإنشاء: ${new Date(order.createdAt).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`}
                     onInspect={() => router.push(`/operations?group=exceptions&orderId=${order.id}`)}
-                    primaryAction={order.status === 'CREATED' ? {
-                      id: `${order.id}-dispatch`,
-                      label: 'إسناد كابتن',
-                      onAction: () => router.push(`/operations?group=dispatch-capacity&orderId=${order.id}`),
-                    } : undefined}
+                    {...(order.status === 'pending' ? {
+                      primaryAction: {
+                        id: `${order.id}-dispatch`,
+                        label: 'إسناد كابتن',
+                        onAction: () => router.push(`/operations?group=dispatch-capacity&orderId=${order.id}`),
+                      },
+                    } : {})}
                   />
                 ))
               : PREVIEW_ROWS.map((order) => (
@@ -418,11 +420,13 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
                       label: order.suggestion.action,
                       onAction: () => handlePrimaryAction(order.id, order.suggestion.action),
                     }}
-                    secondaryAction={order.suggestion.secondary ? {
-                      id: `${order.id}-secondary`,
-                      label: order.suggestion.secondary,
-                      onAction: () => handleSecondaryAction(order.id, order.suggestion.secondary),
-                    } : undefined}
+                    {...(order.suggestion.secondary ? {
+                      secondaryAction: {
+                        id: `${order.id}-secondary`,
+                        label: order.suggestion.secondary,
+                        onAction: () => handleSecondaryAction(order.id, order.suggestion.secondary),
+                      },
+                    } : {})}
                   />
                 ))
             }

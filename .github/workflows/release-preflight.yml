@@ -1,0 +1,304 @@
+name: Release Preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Release preflight reason / version tag'
+        required: true
+        default: 'pre-release readiness check'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-preflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  node-full-gate:
+    name: "[Preflight] Node / PNPM full gate"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Contracts lint
+        run: pnpm run contracts:lint
+
+      - name: Guard — no broken imports
+        run: pnpm run guard:no-broken-imports
+
+      - name: Guard — runtime config
+        run: pnpm run guard:runtime-config
+
+      - name: Guard — UI kit boundary
+        run: pnpm run guard:ui-kit-boundary
+
+      - name: Guard — fullstack boundary
+        run: pnpm run guard:fullstack-boundary
+
+      - name: Guard — WLT financial boundary
+        run: pnpm run guard:wlt-financial-boundary
+
+      - name: Guard — cleanup policy
+        run: pnpm run guard:cleanup-policy
+
+      - name: Foundation gate
+        run: pnpm run foundation:gate
+
+      - name: Journey gate
+        run: pnpm run journey:gate
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm run test
+
+  wlt-go:
+    name: "[Preflight] WLT Go backend"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache: true
+
+      - name: Go test
+        working-directory: services/wlt/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: services/wlt/backend
+        run: go build ./...
+
+  dsh-go:
+    name: "[Preflight] DSH Go backend"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+
+      - name: Go test
+        working-directory: services/dsh/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: services/dsh/backend
+        run: go build ./...
+
+  identity-go:
+    name: "[Preflight] Identity Go backend"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/identity/backend/go.mod
+          cache: true
+
+      - name: Go test
+        working-directory: core/identity/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: core/identity/backend
+        run: go build ./...
+
+  db-migration-guards:
+    name: "[Preflight] DB migration guards"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Empty migration guard
+        run: |
+          for f in services/wlt/database/migrations/*.sql services/dsh/database/migrations/*.sql; do
+            [ -f "$f" ] || continue
+            if [ ! -s "$f" ]; then
+              echo "ERROR: Empty migration: $f"; exit 1
+            fi
+          done
+          echo "OK: No empty migrations."
+
+      - name: Destructive migration guard
+        run: |
+          FOUND=0
+          for f in services/wlt/database/migrations/*.sql services/dsh/database/migrations/*.sql; do
+            [ -f "$f" ] || continue
+            if grep -qiE '^\s*(DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE\s+TABLE)' "$f"; then
+              echo "WARNING: Destructive statement in $f"; FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 1 ]; then echo "ERROR: Destructive migrations detected."; exit 1; fi
+          echo "OK: No destructive migrations."
+
+  contracts-check:
+    name: "[Preflight] Contracts lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Contracts lint
+        run: pnpm run contracts:lint
+
+  mobile-verify:
+    name: "[Preflight] Mobile Expo verify"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Mobile Expo verify
+        run: pnpm run mobile:expo:verify
+
+  generate-preflight-report:
+    name: Generate BTHWANI_RELEASE_PREFLIGHT_REPORT
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - node-full-gate
+      - wlt-go
+      - dsh-go
+      - identity-go
+      - db-migration-guards
+      - contracts-check
+      - mobile-verify
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate preflight report
+        run: |
+          STATUS_NODE="${{ needs.node-full-gate.result }}"
+          STATUS_WLT="${{ needs.wlt-go.result }}"
+          STATUS_DSH="${{ needs.dsh-go.result }}"
+          STATUS_IDENTITY="${{ needs.identity-go.result }}"
+          STATUS_DB="${{ needs.db-migration-guards.result }}"
+          STATUS_CONTRACTS="${{ needs.contracts-check.result }}"
+          STATUS_MOBILE="${{ needs.mobile-verify.result }}"
+
+          pass() { [ "$1" = "success" ] && echo "✅ PASS" || echo "❌ FAIL ($1)"; }
+
+          OVERALL="PASS"
+          for s in $STATUS_NODE $STATUS_WLT $STATUS_DSH $STATUS_IDENTITY $STATUS_DB $STATUS_CONTRACTS $STATUS_MOBILE; do
+            [ "$s" != "success" ] && OVERALL="FAIL"
+          done
+
+          cat > BTHWANI_RELEASE_PREFLIGHT_REPORT.md <<EOF
+          # BTHWANI RELEASE PREFLIGHT REPORT
+
+          **Overall**: $OVERALL
+          **SHA**: ${{ github.sha }}
+          **Branch**: ${{ github.ref_name }}
+          **Triggered by**: ${{ github.actor }}
+          **Reason**: ${{ github.event.inputs.reason }}
+          **Time**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          ---
+
+          | Gate | Status |
+          |---|---|
+          | Node / PNPM full gate | $(pass $STATUS_NODE) |
+          | WLT Go backend | $(pass $STATUS_WLT) |
+          | DSH Go backend | $(pass $STATUS_DSH) |
+          | Identity Go backend | $(pass $STATUS_IDENTITY) |
+          | DB migration guards | $(pass $STATUS_DB) |
+          | Contracts lint | $(pass $STATUS_CONTRACTS) |
+          | Mobile Expo verify | $(pass $STATUS_MOBILE) |
+
+          ---
+
+          > This report is a readiness check only. It does not trigger any store submission or deployment.
+          EOF
+
+          echo "--- PREFLIGHT REPORT ---"
+          cat BTHWANI_RELEASE_PREFLIGHT_REPORT.md
+
+      - name: Upload preflight report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BTHWANI_RELEASE_PREFLIGHT_REPORT-${{ github.run_id }}
+          path: BTHWANI_RELEASE_PREFLIGHT_REPORT.md
+          retention-days: 30

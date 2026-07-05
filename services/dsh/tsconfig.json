@@ -22,10 +22,19 @@
   "include": [
     "domain/**/*.ts",
     "clients/**/*.ts",
+    "frontend/**/*.d.ts",
     "frontend/shared/**/*.ts",
     "frontend/shared/**/*.tsx",
+    "frontend/app-client/**/*.ts",
+    "frontend/app-client/**/*.tsx",
+    "frontend/app-partner/**/*.ts",
+    "frontend/app-partner/**/*.tsx",
+    "frontend/app-field/**/*.ts",
+    "frontend/app-field/**/*.tsx",
     "frontend/app-captain/**/*.ts",
-    "frontend/app-captain/**/*.tsx"
+    "frontend/app-captain/**/*.tsx",
+    "frontend/control-panel/**/*.ts",
+    "frontend/control-panel/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
