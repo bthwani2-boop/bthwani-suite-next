@@ -122,6 +122,13 @@ export const dshServiceManifest = {
       "uploadFieldPartnerDocument",
       "createFieldPartnerVisit",
       "submitFieldPartnerDraft",
+      // Notifications & Actor Communication Journey
+      "listDshNotifications",
+      "markDshNotificationRead",
+      "markAllDshNotificationsRead",
+      "updateDshNotificationPreferences",
+      "listDshPlatformNotificationConfig",
+      "upsertDshPlatformNotificationConfig",
     ],
     backendRuntimeReady: true,
     generatedClientReady: true,
@@ -157,6 +164,9 @@ export const dshServiceManifest = {
       "usePartnerOnboardingController",
       "usePartnerAdminController",
       "usePartnerSelfController",
+      // Notifications & Actor Communication Journey
+      "useNotificationsController",
+      "usePlatformNotificationConfigController",
     ],
     primarySurfaces: [
       "app-client",
@@ -173,7 +183,7 @@ export const dshServiceManifest = {
   nextOperationalJourney: {
     id: "notifications",
     name: "Notifications & Actor Communication",
-    closureState: "NEEDS_CONTRACT_EVIDENCE",
+    closureState: "NEEDS_RUNTIME_EVIDENCE",
   },
   boundaries: {
     ownsOperationalCommerceTruth: true,

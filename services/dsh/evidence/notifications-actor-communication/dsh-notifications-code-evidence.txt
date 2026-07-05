@@ -1,0 +1,24 @@
+Notifications & Actor Communication code evidence
+
+Scope:
+- Capability: dsh.notifications
+- Surfaces: app-client, control-panel, app-partner, app-field, app-captain
+- Contract operations:
+  - listDshNotifications
+  - markDshNotificationRead
+  - markAllDshNotificationsRead
+  - updateDshNotificationPreferences
+  - listDshPlatformNotificationConfig
+  - upsertDshPlatformNotificationConfig
+
+Implemented sources:
+- Backend routes: services/dsh/backend/internal/http/notifications.go
+- Backend domain: services/dsh/backend/internal/notifications/notifications.go
+- OpenAPI contract: services/dsh/contracts/dsh.openapi.yaml
+- Generated client types: services/dsh/clients/generated/dsh-api.ts
+- Database migration: services/dsh/database/migrations/dsh-011_notifications.sql
+- Shared frontend controller: services/dsh/frontend/shared/notifications
+
+Closure note:
+- This artifact is code-based evidence only.
+- dsh.notifications must remain NEEDS_RUNTIME_EVIDENCE/FIX_REQUIRED until a dedicated runtime smoke proves the six notification routes are reachable in the runtime environment with expected auth behavior and not 404.

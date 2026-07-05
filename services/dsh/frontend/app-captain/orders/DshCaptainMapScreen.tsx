@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Badge, Box, Button, KeyValueList, SectionHeader, Surface, Text, Icon, colorRoles } from '@bthwani/ui-kit';
+import { Badge, Box, Button, KeyValueList, SectionHeader, Surface, Text, Icon, colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 
 const SurfaceAny = Surface as any;
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "bold",
     color: colorRoles.brandStructure,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: alpha(colorPalette.white, 0.8),
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 4,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(255, 80, 13, 0.3)",
+    backgroundColor: alpha(colorRoles.brandAction, 0.3),
     top: -6,
     left: -6,
   },

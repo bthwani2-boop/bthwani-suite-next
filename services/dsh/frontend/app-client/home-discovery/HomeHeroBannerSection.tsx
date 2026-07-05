@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colorRoles, neutralScale, brandScale, statusScale, spacing, radius } from '@bthwani/ui-kit';
+import { colorRoles, colorPalette, alpha, neutralScale, brandScale, statusScale, spacing, radius } from '@bthwani/ui-kit';
 import type { BannerViewModel } from '../../shared/home-discovery';
 
 type Props = {
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: neutralScale[0],
     textAlign: 'right',
-    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowColor: alpha(colorPalette.black, 0.35),
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },

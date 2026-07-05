@@ -1,8 +1,9 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
+  Box,
+  borders,
   Button,
   Card,
   Header,
@@ -57,18 +58,18 @@ export function FieldReadinessQueueScreen() {
       <Header title="قائمة تصعيدات التحقق الميداني" subtitle="راجع التصعيدات الواردة من الموظفين الميدانيين وتخذ إجراءاً" />
 
       {actionState.kind === "error" && (
-        <Card><View style={styles.notice}><Text tone="danger">{actionState.message}</Text><Button label="إغلاق" tone="ghost" onPress={resetAction} /></View></Card>
+        <Card><Box style={styles.notice}><Text tone="danger">{actionState.message}</Text><Button label="إغلاق" tone="ghost" onPress={resetAction} /></Box></Card>
       )}
 
       <Card>
-        <View style={styles.filters}>
+        <Box style={styles.filters}>
           {FILTERS.map((f) => (
             <Button key={f.value} label={f.label} tone={activeFilter === f.value ? "primary" : "ghost"} onPress={() => {
               setActiveFilter(f.value);
               void loadOperatorEscalations(f.value || undefined);
             }} />
           ))}
-        </View>
+        </Box>
       </Card>
 
       {listState.kind === "loading" && <StateView title="جاري تحميل التصعيدات…" />}
@@ -78,32 +79,32 @@ export function FieldReadinessQueueScreen() {
       {listState.kind === "success" &&
         listState.escalations.map((esc) => (
           <Card key={esc.id}>
-            <View style={styles.escalationHeader}>
-              <View style={styles.escalationMeta}>
+            <Box style={styles.escalationHeader}>
+              <Box style={styles.escalationMeta}>
                 <Text role="titleSm">{ESCALATION_CATEGORY_LABELS[esc.category]}</Text>
                 <Text role="caption" tone="muted">متجر: {esc.storeId}</Text>
                 <Text role="caption" tone="muted">{esc.createdAt}</Text>
-              </View>
-              <View style={styles.badges}>
+              </Box>
+              <Box style={styles.badges}>
                 <Badge label={ESCALATION_SEVERITY_LABELS[esc.severity]} tone={esc.severity === "critical" ? "danger" : esc.severity === "high" ? "warning" : "neutral"} />
                 <Badge label={esc.status === "resolved" ? "محلول" : esc.status === "acknowledged" ? "قيد المراجعة" : "مفتوح"} tone={esc.status === "resolved" ? "success" : esc.status === "acknowledged" ? "info" : "warning"} />
-              </View>
-            </View>
-            <View style={styles.description}><Text tone="secondary">{esc.description}</Text></View>
+              </Box>
+            </Box>
+            <Box style={styles.description}><Text tone="secondary">{esc.description}</Text></Box>
             {esc.status !== "resolved" && (
-              <View style={styles.actions}>
+              <Box style={styles.actions}>
                 {esc.status === "open" && <Button label="تأكيد الاستلام" tone="secondary" disabled={actionState.kind === "submitting"} onPress={() => handleAcknowledge(esc.id)} />}
                 <Button label="حل التصعيد" tone="success" onPress={() => setResolveId(resolveId === esc.id ? null : esc.id)} />
-              </View>
+              </Box>
             )}
             {resolveId === esc.id && (
-              <View style={styles.resolveForm}>
+              <Box style={styles.resolveForm}>
                 <TextField label="ملاحظة الحل" value={resolutionNote} onChangeText={setResolutionNote} placeholder="صف الإجراء المتخذ" multiline />
-                <View style={styles.formActions}>
+                <Box style={styles.formActions}>
                   <Button label={actionState.kind === "submitting" ? "جاري الحفظ…" : "تأكيد الحل"} tone="success" disabled={resolutionNote.trim().length < 5 || actionState.kind === "submitting"} onPress={() => handleResolve(esc.id)} />
                   <Button label="إلغاء" tone="ghost" onPress={() => setResolveId(null)} />
-                </View>
-              </View>
+                </Box>
+              </Box>
             )}
           </Card>
         ))}
@@ -111,7 +112,7 @@ export function FieldReadinessQueueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = {
   notice: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", padding: spacing[3] },
   filters: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2], padding: spacing[3] },
   escalationHeader: { flexDirection: "row-reverse", justifyContent: "space-between", padding: spacing[3] },
@@ -119,6 +120,6 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" },
   description: { paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
   actions: { flexDirection: "row-reverse", gap: spacing[2], paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
-  resolveForm: { padding: spacing[3], gap: spacing[2], borderTopWidth: StyleSheet.hairlineWidth },
+  resolveForm: { padding: spacing[3], gap: spacing[2], borderTopWidth: borders.hairline },
   formActions: { flexDirection: "row-reverse", gap: spacing[2] },
-});
+} as const;

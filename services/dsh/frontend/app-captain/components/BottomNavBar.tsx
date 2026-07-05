@@ -3,9 +3,9 @@
  * Fully compliant with @bthwani/ui-kit design tokens:
  *   brandAction  brandAction  → active icons / launcher active state
  *   brandStructure brandStructure → floating button default
- *   textMuted    rgba(10,47,92,0.68) → inactive items
+ *   textMuted    alpha(brandStructure, 0.68) → inactive items
  *   surfaceBase  surfaceBase  → pill background
- *   borderSubtle rgba(10,47,92,0.10) → pill border
+ *   borderSubtle alpha(brandStructure, 0.10) → pill border
  */
 import React from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';

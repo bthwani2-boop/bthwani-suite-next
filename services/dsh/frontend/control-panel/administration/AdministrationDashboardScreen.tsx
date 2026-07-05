@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
 ﻿import React, { useState, useMemo } from "react";
 import {
   CpButton,
@@ -160,7 +160,7 @@ export function AdministrationDashboardScreen() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "0.75rem",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                boxShadow: `0 1px 3px ${alpha(colorPalette.black, 0.05)}`,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

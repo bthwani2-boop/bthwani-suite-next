@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
-import { TextField, Text, spacing, radius, colorRoles, Icon, Button, Surface } from '@bthwani/ui-kit';
+import { TextField, Text, spacing, radius, colorRoles, neutralScale, alpha, Icon, Button, Surface } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm, FieldOnboardingValidationErrors } from '../../shared/field-onboarding';
 
 type Props = {
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "rgba(100, 116, 139, 0.4)",
+    backgroundColor: alpha(neutralScale[500], 0.4),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(29, 78, 216, 0.3)",
+    backgroundColor: alpha(colorRoles.info, 0.3),
     top: -5,
     left: -5,
   },

@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
 import React, { useState } from "react";
 
 import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
@@ -151,7 +151,7 @@ export function CatalogWorkspaceRouter({
         style={{
           position: "absolute",
           inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.4)",
+          backgroundColor: alpha(colorPalette.black, 0.4),
           backdropFilter: "blur(2px)",
         }}
       />
@@ -164,7 +164,7 @@ export function CatalogWorkspaceRouter({
           height: "100%",
           backgroundColor: "var(--surface-raised, colorRoles.surfaceBase)",
           borderLeft: `1px solid ${colorRoles.surfaceBase}`,
-          boxShadow: "-4px 0 24px rgba(0,0,0,0.15)",
+          boxShadow: `-4px 0 24px ${alpha(colorPalette.black, 0.15)}`,
           display: "flex",
           flexDirection: "column",
           animation: "slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)",

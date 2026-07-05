@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { Box, Text, useTheme, colorRoles } from '@bthwani/ui-kit';
+import { Box, Text, useTheme, colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
 
 export type ModernPremiumHeaderProps = {
   title?: string;
@@ -71,7 +71,7 @@ export function ModernPremiumHeader({
         <Pressable
           onPress={onTickerPress}
           disabled={!onTickerPress}
-          style={[styles.tickerBanner, { backgroundColor: 'rgba(0, 0, 0, 0.25)' }]}
+          style={[styles.tickerBanner, { backgroundColor: alpha(colorPalette.black, 0.25) }]}
         >
           <View style={[styles.tickerContent, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             {tickerStatus ? (
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: alpha(colorPalette.white, 0.15),
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',

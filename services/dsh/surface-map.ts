@@ -23,45 +23,45 @@ export type DshSurfaceDefinition = {
 export const DSH_SURFACE_MAP = [
   {
     surface: "app-client",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch", "dsh.notifications"],
     implementationState: "runtime-verified",
   },
   {
     surface: "app-partner",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog", "dsh.client.orders", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.catalog", "dsh.client.orders", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics", "dsh.notifications"],
     implementationState: "runtime-verified",
     dependencyRole: "downstream",
     dependencyNotes: [
       "Partner manages own-store catalog; catalog readiness affects store publication eligibility.",
       "Store Discovery owns store role context; Catalog Management owns catalog CRUD and submission workflow.",
     ],
-    firstExecutableJourneys: ["orders", "field-readiness"],
+    firstExecutableJourneys: ["orders", "field-readiness", "notifications"],
   },
   {
     surface: "app-captain",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.dispatch"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.dispatch", "dsh.notifications"],
     implementationState: "runtime-verified",
     dependencyRole: "none-for-store-discovery",
     dependencyNotes: [
       "Captain interaction starts with assignment, pickup, and delivery.",
       "Store Discovery requires pickup-point readiness reporting; delivery lifecycle remains excluded.",
     ],
-    firstExecutableJourneys: ["dispatch"],
+    firstExecutableJourneys: ["dispatch", "notifications"],
   },
   {
     surface: "app-field",
-    capabilityIds: ["dsh.store.discovery", "dsh.field.readiness"],
+    capabilityIds: ["dsh.store.discovery", "dsh.field.readiness", "dsh.notifications"],
     implementationState: "runtime-verified",
     dependencyRole: "upstream",
     dependencyNotes: [
       "Field onboarding and visit evidence can qualify stores for approval.",
       "Store Discovery requires assigned-store verification submission; broader field workflow remains excluded.",
     ],
-    firstExecutableJourneys: ["field-readiness"],
+    firstExecutableJourneys: ["field-readiness", "notifications"],
   },
   {
     surface: "control-panel",
-    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics"],
+    capabilityIds: ["dsh.store.discovery", "dsh.client.home-discovery", "dsh.client.catalog", "dsh.client.cart", "dsh.client.checkout", "dsh.client.orders", "dsh.client.dispatch", "dsh.field.readiness", "dsh.support.hub", "dsh.operator.analytics", "dsh.notifications"],
     implementationState: "runtime-verified",
   },
 ] as const satisfies readonly DshSurfaceDefinition[];

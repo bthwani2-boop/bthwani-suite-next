@@ -13,8 +13,8 @@ import (
 	_ "github.com/lib/pq"
 
 	"wlt-api/internal/dshnotify"
+	"wlt-api/internal/dshoutbox"
 	wltHttp "wlt-api/internal/http"
-	"wlt-api/internal/payment"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 
 	dshBaseURL := os.Getenv("WLT_DSH_BASE_URL")
 	dshServiceToken := os.Getenv("DSH_WLT_SERVICE_TOKEN")
-	payment.ConfigureDshNotifier(dshnotify.NewClient(dshBaseURL, dshServiceToken))
+	dshClient := dshnotify.NewClient(dshBaseURL, dshServiceToken)
 
 	log.Println("[wlt-api] connecting to database...")
 	db, err := sql.Open("postgres", databaseURL)
@@ -51,6 +51,15 @@ func main() {
 	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
 	router := wltHttp.NewRouter(db, mutationsEnabled)
 	handler := wltHttp.CorsMiddleware(authMode, router)
+
+	var cancelOutbox context.CancelFunc = func() {}
+	if dshClient.Configured() {
+		outboxCtx, stopOutbox := context.WithCancel(context.Background())
+		cancelOutbox = stopOutbox
+		go dshoutbox.RunWorker(outboxCtx, db, dshClient, 15*time.Second)
+	} else {
+		log.Println("[wlt-api] DSH outbox worker disabled: WLT_DSH_BASE_URL and DSH_WLT_SERVICE_TOKEN are required")
+	}
 
 	server := &http.Server{
 		Addr:         ":" + port,
@@ -71,6 +80,7 @@ func main() {
 
 	<-stop
 	log.Println("[wlt-api] shutting down gracefully...")
+	cancelOutbox()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

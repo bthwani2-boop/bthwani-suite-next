@@ -7,27 +7,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"wlt-api/internal/dshnotify"
+	"wlt-api/internal/dshoutbox"
 	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
 
-// dshNotifier reports terminal payment-session outcomes back to DSH so
-// non-COD checkout intents can leave payment_pending. It is nil until
-// ConfigureDshNotifier is called at startup; notifications are then a
-// best-effort side effect and never block or fail the WLT transition itself.
-var dshNotifier *dshnotify.Client
-
-func ConfigureDshNotifier(client *dshnotify.Client) {
-	dshNotifier = client
-}
-
-func notifyDsh(session *PaymentSession, status string) {
-	if dshNotifier == nil || session == nil {
-		return
-	}
-	dshNotifier.NotifyPaymentEvent(session.CheckoutIntentID, session.ID, status)
-}
+// dshNotifier delivery is handled by the durable outbox (internal/dshoutbox):
+// each terminal transition below enqueues an event in the same transaction
+// as its status update, and a background worker drains the outbox and calls
+// dshnotify.Client.Notify with retry. This keeps the WLT transition itself
+// free of any dependency on DSH being reachable.
 
 type PaymentSession struct {
 	ID                string  `json:"id"`
@@ -118,8 +107,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 	}
 	result, err := authorizeProvider(ctx, client, current, amountMinorUnits, currency, meta)
 	if err != nil {
-		_ = markSessionFailed(db, sessionID)
-		notifyDsh(current, "failed")
+		_ = markSessionFailedAndNotify(db, current)
 		return nil, err
 	}
 	const q = `
@@ -158,26 +146,10 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 	}
 	result, err := captureProvider(ctx, client, current, meta)
 	if err != nil {
-		_ = markSessionFailed(db, sessionID)
-		notifyDsh(current, "failed")
+		_ = markSessionFailedAndNotify(db, current)
 		return nil, err
 	}
-	const q = `
-		UPDATE wlt_payment_sessions
-		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
-		          status, provider_reference, amount_minor_units, currency,
-		          captured_at, created_at, updated_at`
-	row := db.QueryRow(q, sessionID, result.ProviderReference)
-	s, err := scanSession(row)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err == nil {
-		notifyDsh(s, "captured")
-	}
-	return s, err
+	return captureSessionAndNotify(db, sessionID, result.ProviderReference)
 }
 
 func authorizeProvider(ctx context.Context, client financialProvider, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
@@ -216,9 +188,57 @@ func captureProvider(ctx context.Context, client financialProvider, session *Pay
 	return result, nil
 }
 
-func markSessionFailed(db *sql.DB, sessionID string) error {
-	_, err := db.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', updated_at = NOW() WHERE id = $1`, sessionID)
-	return err
+// markSessionFailedAndNotify marks sessionID failed and enqueues the DSH
+// outbox event in the same transaction, so a lost DSH webhook can never
+// happen without the WLT-side status transition also being rolled back.
+func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession) error {
+	if session == nil {
+		return nil
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', updated_at = NOW() WHERE id = $1`, session.ID); err != nil {
+		return err
+	}
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.CheckoutIntentID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// captureSessionAndNotify commits the captured transition and enqueues the
+// DSH outbox event atomically.
+func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*PaymentSession, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	const q = `
+		UPDATE wlt_payment_sessions
+		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		          status, provider_reference, amount_minor_units, currency,
+		          captured_at, created_at, updated_at`
+	row := tx.QueryRow(q, sessionID, providerReference)
+	s, err := scanSession(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.CheckoutIntentID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func newProviderClient() (*provider.Client, error) {
@@ -290,10 +310,17 @@ func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	return s, err
 }
 
+// ExpireSession commits the expired transition and enqueues the DSH outbox
+// event atomically.
 func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 	const q = `
 		UPDATE wlt_payment_sessions
 		SET status = 'expired', updated_at = NOW()
@@ -301,15 +328,21 @@ func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
-	row := db.QueryRow(q, sessionID)
+	row := tx.QueryRow(q, sessionID)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	if err == nil {
-		notifyDsh(s, "expired")
+	if err != nil {
+		return nil, err
 	}
-	return s, err
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.CheckoutIntentID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // HTTP handlers

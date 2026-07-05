@@ -9,6 +9,7 @@ import {
   Button,
   Text,
   colorRoles,
+  alpha,
   radius,
   spacing,
 } from '@bthwani/ui-kit';
@@ -127,7 +128,7 @@ function ActionStrip({ icon, title, subtitle, expanded, onPress, children }: Act
         }}
       >
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, flex: 1 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255, 80, 13, 0.08)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: alpha(colorRoles.brandAction, 0.08), justifyContent: 'center', alignItems: 'center' }}>
             {icon === 'car' ? <CarIcon /> : icon === 'notifications' ? <BellIcon /> : <LockIcon />}
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>

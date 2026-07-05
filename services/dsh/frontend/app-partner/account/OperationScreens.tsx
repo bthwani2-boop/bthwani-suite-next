@@ -1,8 +1,10 @@
 import React from 'react';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Box, Button, Chip, ListItem, Surface, Text, TextField,
   spacing,
   Badge,
 } from '@bthwani/ui-kit';
+import { ActorNotificationsPanel } from '../../shared/notifications';
 import {
   mapDshPartnerOperationalFlowToSupportRoute,
   type DshPartnerOperationalFlowId,
@@ -318,17 +320,25 @@ export function NotificationsScreen({
   onBack,
   onRetry,
 }: NotificationsScreenProps) {
+  const identity = useIdentitySession();
+
   return (
     <Box gap={4}>
       <OperationHeader
-        title="تنبيهات الطلب"
-        subtitle="هذه الشاشة تعرض تنبيهات الطلب المرتبطة مباشرةً بقرارات التشغيل الحالية بدل placeholder عام."
+        title="الإشعارات والتواصل"
+        subtitle="مركز إشعارات الممثل العام يظهر أولًا، وتنبيهات الطلب تبقى مرتبطة بسياق الطلب الحالي."
         actions={
           <>
             {onOpenInbox ? <Button label="العودة لصندوق الطلبات" tone="secondary" fullWidth={false} onPress={onOpenInbox} /> : null}
             {onBack ? <Button label="رجوع" fullWidth={false} onPress={onBack} /> : null}
           </>
         }
+      />
+
+      <ActorNotificationsPanel
+        authKind={identity.state.kind}
+        title="إشعارات الشريك"
+        emptyDescription="ستظهر هنا إشعارات الفرع، القبول، والمراسلات التشغيلية للشريك."
       />
 
       <DshPartnerOrderAlertsPanel

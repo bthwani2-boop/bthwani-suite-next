@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
 
 describe("notifications states", () => {
   it("notifIdle returns kind=idle", async () => {
@@ -143,5 +144,51 @@ describe("platform-policies serviceability", () => {
     assert.equal(result.isActive, true);
     assert.equal(result.activeStores, 5);
     assert.equal(result.slaAvailable, true);
+  });
+});
+
+describe("notifications journey maps", () => {
+  const operations = [
+    "listDshNotifications",
+    "markDshNotificationRead",
+    "markAllDshNotificationsRead",
+    "updateDshNotificationPreferences",
+    "listDshPlatformNotificationConfig",
+    "upsertDshPlatformNotificationConfig",
+  ];
+
+  const surfaces = [
+    "app-client",
+    "control-panel",
+    "app-partner",
+    "app-field",
+    "app-captain",
+  ];
+
+  it("keeps contract operations in OpenAPI and generated client", () => {
+    const openapi = readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
+    const generatedClient = readFileSync(new URL("../clients/generated/dsh-api.ts", import.meta.url), "utf8");
+
+    for (const operation of operations) {
+      assert.ok(openapi.includes(`operationId: ${operation}`), `missing OpenAPI operation ${operation}`);
+      assert.ok(generatedClient.includes(operation), `missing generated client operation ${operation}`);
+    }
+  });
+
+  it("keeps dsh.notifications surfaces consistent across capability and surface maps", () => {
+    const capabilityMap = readFileSync(new URL("../capability-map.ts", import.meta.url), "utf8");
+    const surfaceMap = readFileSync(new URL("../surface-map.ts", import.meta.url), "utf8");
+    const notificationCapability = capabilityMap.slice(
+      capabilityMap.indexOf('id: "dsh.notifications"'),
+      capabilityMap.indexOf('id: "dsh.marketing"')
+    );
+
+    for (const surface of surfaces) {
+      assert.ok(notificationCapability.includes(`"${surface}"`), `missing notifications capability surface ${surface}`);
+    }
+
+    const surfaceEntries = [...surfaceMap.matchAll(/capabilityIds: \[([^\]]+)\]/g)]
+      .filter((match) => match[1]?.includes("dsh.notifications"));
+    assert.equal(surfaceEntries.length, surfaces.length);
   });
 });

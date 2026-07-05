@@ -12,6 +12,8 @@ import {
   StateView,
   Text,
   lightThemeColors,
+  colorPalette,
+  alpha,
 } from "@bthwani/ui-kit";
 import { useFinanceController } from "../../shared/finance-wlt-link/finance";
 
@@ -216,7 +218,7 @@ export function FinanceDashboardScreen() {
 
         {/* Sub tabs (filters) */}
         {subTabItems && subTabItems.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: 'rgba(0,0,0,0.02)', borderRadius: '4px', paddingLeft: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: alpha(colorPalette.black, 0.02), borderRadius: '4px', paddingLeft: '0.5rem' }}>
             {subTabItems.map((subTab: any) => (
               <Button
                 key={subTab.id}
@@ -231,7 +233,7 @@ export function FinanceDashboardScreen() {
 
         {/* Operational Readiness Strip */}
         {activeState === 'ready' && (
-          <Card style={{ padding: '1rem', margin: '0.5rem 0', backgroundColor: 'rgba(0,0,0,0.01)' }}>
+          <Card style={{ padding: '1rem', margin: '0.5rem 0', backgroundColor: alpha(colorPalette.black, 0.01) }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
               <div
                 style={{

@@ -9,6 +9,7 @@ import {
   Button,
   Text,
   colorRoles,
+  alpha,
   radius,
   spacing,
 } from '@bthwani/ui-kit';
@@ -172,7 +173,7 @@ function AddressRow({ address, isLast = false, onSetDefault, onEdit }: AddressRo
         }}
       >
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, flex: 1 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255, 80, 13, 0.08)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: alpha(colorRoles.brandAction, 0.08), justifyContent: 'center', alignItems: 'center' }}>
             <PinIcon color={colorRoles.brandAction} />
           </View>
           <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>

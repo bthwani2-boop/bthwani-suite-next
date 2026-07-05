@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, statusScale, alpha } from '@bthwani/ui-kit';
 import { useState } from "react";
 import type {
   DshPartner,
@@ -78,7 +78,7 @@ export function PartnerDetailPanel({
         <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--dsh-text-primary)" }}>{partner.displayName}</h2>
         <p style={{ color: "var(--dsh-text-muted)", margin: "0.25rem 0 0" }}>{partner.legalNameAr} — {partner.primaryPhone}</p>
         <div style={{ marginTop: "0.75rem" }}>
-          <span style={{ padding: "0.25rem 0.75rem", borderRadius: "1rem", backgroundColor: "rgba(59,123,255,0.08)", color: "rgb(29,78,216)", fontSize: "0.875rem", fontWeight: 500 }}>
+          <span style={{ padding: "0.25rem 0.75rem", borderRadius: "1rem", backgroundColor: `${alpha(colorRoles.info, 0.08)}`, color: `${colorRoles.info}`, fontSize: "0.875rem", fontWeight: 500 }}>
             {getDshPartnerActivationStatusLabel(partner.activationStatus)}
           </span>
         </div>
@@ -86,12 +86,12 @@ export function PartnerDetailPanel({
 
       {/* Banners */}
       {actionState.kind === "error" && (
-        <div style={{ padding: "0.75rem 1rem", backgroundColor: "var(--status-danger-surface, rgba(220,38,38,0.06))", border: "1px solid var(--status-danger-border, rgba(220,38,38,0.2))", borderRadius: "0.5rem", color: "var(--status-danger, colorRoles.brandAction)", marginBottom: "1rem" }}>
+        <div style={{ padding: "0.75rem 1rem", backgroundColor: `var(--status-danger-surface, ${alpha(statusScale.danger, 0.06)})`, border: `1px solid var(--status-danger-border, ${alpha(statusScale.danger, 0.2)})`, borderRadius: "0.5rem", color: `var(--status-danger, ${colorRoles.brandAction})`, marginBottom: "1rem" }}>
           {actionState.message}
         </div>
       )}
       {actionState.kind === "success" && (
-        <div style={{ padding: "0.75rem 1rem", backgroundColor: "var(--status-success-surface, rgba(21,128,61,0.06))", border: "1px solid var(--status-success-border, rgba(21,128,61,0.2))", borderRadius: "0.5rem", color: "var(--status-success, rgb(21,128,61))", marginBottom: "1rem" }}>
+        <div style={{ padding: "0.75rem 1rem", backgroundColor: `var(--status-success-surface, ${alpha(statusScale.success, 0.06)})`, border: `1px solid var(--status-success-border, ${alpha(statusScale.success, 0.2)})`, borderRadius: "0.5rem", color: `var(--status-success, ${statusScale.success})`, marginBottom: "1rem" }}>
           تمت العملية بنجاح
         </div>
       )}
@@ -158,7 +158,7 @@ export function PartnerDetailPanel({
                         padding: "0.75rem",
                         borderRadius: "0.5rem",
                         border: selected ? "1px solid var(--dsh-sidebar-accent)" : "1px solid var(--dsh-card-border)",
-                        backgroundColor: selected ? "rgba(59,123,255,0.08)" : "var(--dsh-card-bg)",
+                        backgroundColor: selected ? `${alpha(colorRoles.info, 0.08)}` : "var(--dsh-card-bg)",
                         color: "var(--dsh-text-primary)",
                         textAlign: "right",
                         cursor: "pointer",
@@ -251,7 +251,7 @@ export function PartnerDetailPanel({
                       {doc.mediaRef}
                     </div>
                     {doc.rejectionReason && (
-                      <div style={{ color: "var(--status-danger, colorRoles.brandAction)", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+                      <div style={{ color: `var(--status-danger, ${colorRoles.brandAction})`, fontSize: "0.875rem", marginTop: "0.25rem" }}>
                         سبب الرفض: {doc.rejectionReason}
                       </div>
                     )}
@@ -259,8 +259,8 @@ export function PartnerDetailPanel({
                   <span style={{
                     padding: "0.25rem 0.625rem",
                     borderRadius: "1rem",
-                    backgroundColor: statusTone === "success" ? "var(--status-success-surface, rgba(21,128,61,0.08))" : statusTone === "danger" ? "var(--status-danger-surface, rgba(220,38,38,0.08))" : "var(--status-warning-surface, rgba(194,65,12,0.08))",
-                    color: statusTone === "success" ? "var(--status-success, rgb(21,128,61))" : statusTone === "danger" ? "var(--status-danger, colorRoles.brandAction)" : "var(--status-warning, rgb(194,65,12))",
+                    backgroundColor: statusTone === "success" ? `var(--status-success-surface, ${alpha(statusScale.success, 0.08)})` : statusTone === "danger" ? `var(--status-danger-surface, ${alpha(statusScale.danger, 0.08)})` : `var(--status-warning-surface, ${alpha(statusScale.warning, 0.08)})`,
+                    color: statusTone === "success" ? `var(--status-success, ${statusScale.success})` : statusTone === "danger" ? `var(--status-danger, ${colorRoles.brandAction})` : `var(--status-warning, ${statusScale.warning})`,
                     fontSize: "0.8125rem",
                   }}>
                     {statusLabel}
@@ -342,13 +342,13 @@ export function PartnerDetailPanel({
             const vm = buildPartnerReadinessViewModel(readiness);
             return (
               <div>
-                <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", backgroundColor: vm.allGatesPassed ? "var(--status-success-surface, rgba(21,128,61,0.06))" : "var(--status-danger-surface, rgba(220,38,38,0.06))", borderRadius: "0.5rem", border: `1px solid ${vm.allGatesPassed ? "var(--status-success-border, rgba(21,128,61,0.2))" : "var(--status-danger-border, rgba(220,38,38,0.2))"}` }}>
-                  <strong style={{ color: vm.allGatesPassed ? "var(--status-success, rgb(21,128,61))" : "var(--status-danger, colorRoles.brandAction)" }}>{vm.allGatesPassed ? "✓ جاهز للتفعيل" : "غير جاهز للتفعيل"}</strong>
-                  {vm.blockerLabel && <p style={{ margin: "0.25rem 0 0", fontSize: "0.875rem", color: "var(--status-danger, colorRoles.brandAction)" }}>{vm.blockerLabel}</p>}
+                <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", backgroundColor: vm.allGatesPassed ? `var(--status-success-surface, ${alpha(statusScale.success, 0.06)})` : `var(--status-danger-surface, ${alpha(statusScale.danger, 0.06)})`, borderRadius: "0.5rem", border: `1px solid ${vm.allGatesPassed ? `var(--status-success-border, ${alpha(statusScale.success, 0.2)})` : `var(--status-danger-border, ${alpha(statusScale.danger, 0.2)})`}` }}>
+                  <strong style={{ color: vm.allGatesPassed ? `var(--status-success, ${statusScale.success})` : `var(--status-danger, ${colorRoles.brandAction})` }}>{vm.allGatesPassed ? "✓ جاهز للتفعيل" : "غير جاهز للتفعيل"}</strong>
+                  {vm.blockerLabel && <p style={{ margin: "0.25rem 0 0", fontSize: "0.875rem", color: `var(--status-danger, ${colorRoles.brandAction})` }}>{vm.blockerLabel}</p>}
                 </div>
                 {vm.items.map((item) => (
                   <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 0", borderBottom: `1px solid var(--dsh-content-bg)` }}>
-                    <span style={{ color: item.satisfied ? "var(--status-success, rgb(21,128,61))" : "var(--status-danger, colorRoles.brandAction)", fontSize: "1.25rem" }}>{item.satisfied ? "✓" : "✗"}</span>
+                    <span style={{ color: item.satisfied ? `var(--status-success, ${statusScale.success})` : `var(--status-danger, ${colorRoles.brandAction})`, fontSize: "1.25rem" }}>{item.satisfied ? "✓" : "✗"}</span>
                     <div>
                       <div style={{ fontWeight: 500, color: "var(--dsh-text-primary)" }}>{item.label}</div>
                       {!item.satisfied && <div style={{ fontSize: "0.8125rem", color: "var(--dsh-text-muted)" }}>{item.blockedReason}</div>}

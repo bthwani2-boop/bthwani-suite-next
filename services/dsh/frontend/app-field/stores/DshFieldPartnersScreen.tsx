@@ -2,6 +2,7 @@
 // شاشة ملفات الانضمام الميدانية — تقرأ من runtime الحقيقي فقط (useFieldPartnerDraftsController).
 import React from 'react';
 import { ScrollView, View, Pressable, StatusBar, Platform } from 'react-native';
+import { useIdentitySession } from '@bthwani/core-identity';
 import {
   Badge,
   Button,
@@ -11,9 +12,11 @@ import {
   spacing,
   radius,
   colorRoles,
+  alpha,
   Icon,
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
+import { useNotificationsController } from '../../shared/notifications';
 import { FieldPartnerCard } from './FieldPartnerCard';
 
 type DshFieldPartnersScreenProps = {
@@ -36,13 +39,17 @@ const FILTER_OPTIONS: readonly { id: FilterOptionId; label: string }[] = [
 // Layout: [🔍] ——— [بثواني / 📍 جولة المتاجر] ——— [🔔 👤]
 function FieldTopBar({
   onSearchPress,
+  onNotificationsPress,
   onAccountPress,
+  unreadCount = 0,
   // Generic label by default — the actual city/route must come from the
   // runtime user scope, never a hardcoded city.
   locationLabel = 'جولة المتاجر',
 }: {
   onSearchPress: () => void;
+  onNotificationsPress: () => void;
   onAccountPress: () => void;
+  unreadCount?: number;
   locationLabel?: string;
 }) {
   return (
@@ -86,8 +93,8 @@ function FieldTopBar({
             بثواني
           </Text>
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12 }}>📍</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12 }}>
+            <Text style={{ color: alpha(colorRoles.surfaceBase, 0.88), fontSize: 12 }}>📍</Text>
+            <Text style={{ color: alpha(colorRoles.surfaceBase, 0.88), fontSize: 12 }}>
               {locationLabel}
             </Text>
           </View>
@@ -95,8 +102,32 @@ function FieldTopBar({
 
         {/* Right: bell + person icons */}
         <View style={{ flexDirection: 'row', gap: spacing[1] }}>
-          <Pressable style={{ padding: spacing[2] }} accessibilityLabel="الإشعارات">
+          <Pressable
+            onPress={onNotificationsPress}
+            style={{ padding: spacing[2], position: 'relative' }}
+            accessibilityLabel={unreadCount > 0 ? `الإشعارات، ${unreadCount} غير مقروءة` : 'الإشعارات'}
+          >
             <Icon name="notifications-outline" size={24} color={colorRoles.surfaceBase} />
+            {unreadCount > 0 ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: colorRoles.surfaceBase,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 3,
+                }}
+              >
+                <Text style={{ color: colorRoles.brandAction, fontSize: 10, fontWeight: 'bold' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
           <Pressable
             onPress={onAccountPress}
@@ -110,7 +141,6 @@ function FieldTopBar({
     </>
   );
 }
-
 // ─── Priority "Next Store" card (donor: المتجر التالي في جولتك) ─────────────
 function NextPartnerCard({
   displayName,
@@ -159,7 +189,6 @@ function NextPartnerCard({
     </Pressable>
   );
 }
-
 // ─── Filter pill row ──────────────────────────────────────────────────────────
 function FilterPills({
   options,
@@ -216,7 +245,17 @@ export function DshFieldPartnersScreen({
   onOpenAccount,
   onCreatePartner,
 }: DshFieldPartnersScreenProps) {
+  const identity = useIdentitySession();
   const controller = useFieldPartnerDraftsController();
+  const notifications = useNotificationsController(identity.state.kind);
+  const unreadCount = notifications.state.kind === 'success' ? notifications.state.unreadCount : 0;
+  const handleNotificationsPress = React.useCallback(() => {
+    if (unreadCount > 0) {
+      void notifications.markAllRead();
+      return;
+    }
+    void notifications.reload();
+  }, [notifications, unreadCount]);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showSearch, setShowSearch] = React.useState(false);
@@ -272,7 +311,9 @@ export function DshFieldPartnersScreen({
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
         <FieldTopBar
           onSearchPress={() => setShowSearch((v) => !v)}
+          onNotificationsPress={handleNotificationsPress}
           onAccountPress={onOpenAccount}
+          unreadCount={unreadCount}
         />
         <StateView loading title="التحميل قيد التقدم" description="نقوم بمزامنة أحدث بيانات المتجر والمواقع الآن." />
       </View>
@@ -284,7 +325,9 @@ export function DshFieldPartnersScreen({
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
         <FieldTopBar
           onSearchPress={() => setShowSearch((v) => !v)}
+          onNotificationsPress={handleNotificationsPress}
           onAccountPress={onOpenAccount}
+          unreadCount={unreadCount}
         />
         <StateView
           tone="danger"
@@ -302,7 +345,9 @@ export function DshFieldPartnersScreen({
       {/* Orange Top Bar */}
       <FieldTopBar
         onSearchPress={() => setShowSearch((v) => !v)}
+        onNotificationsPress={handleNotificationsPress}
         onAccountPress={onOpenAccount}
+        unreadCount={unreadCount}
       />
 
       <ScrollView

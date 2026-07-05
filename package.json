@@ -86,6 +86,7 @@
     "mobile:eas:build:captain:dev": "pnpm --dir apps/app-captain/runtime dlx eas-cli@latest build --platform android --profile development --clear-cache --non-interactive",
     "mobile:eas:build:field:dev": "pnpm --dir apps/app-field/runtime dlx eas-cli@latest build --platform android --profile development --clear-cache --non-interactive",
     "mobile:eas:build": "node tools/scripts/eas-build-mobile.mjs",
+    "reverse": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/reverse-all.ps1",
     "client": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1",
     "captain": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1",
     "field": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1",

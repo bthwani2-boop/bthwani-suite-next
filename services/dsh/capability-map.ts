@@ -287,7 +287,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── Notifications & Actor Communication ───────────────────────────────────
   {
     id: "dsh.notifications",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: [
       "listDshNotifications",
       "markDshNotificationRead",
@@ -296,9 +296,9 @@ export const DSH_CAPABILITY_MAP = [
       "listDshPlatformNotificationConfig",
       "upsertDshPlatformNotificationConfig",
     ],
-    surfaces: ["control-panel", "app-partner", "app-field", "app-captain"],
+    surfaces: ["app-client", "control-panel", "app-partner", "app-field", "app-captain"],
     runtimeBound: true,
-    closureState: "RUNTIME_VERIFIED",
+    closureState: "FIX_REQUIRED",
   },
   // ── Marketing Command Deck ─────────────────────────────────────────────────
   // Active decks are all API-backed: campaigns and tickers (soft
