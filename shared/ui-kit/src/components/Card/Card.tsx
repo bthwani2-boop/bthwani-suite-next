@@ -80,7 +80,7 @@ export type ProductCardProps = {
   readonly id: string;
   readonly title: string;
   readonly subtitle?: string;
-  readonly imageSource?: { uri: string } | number | null;
+  readonly imageSource?: { uri: string } | number | null | undefined;
   readonly categoryLabel?: string;
   readonly preparationTime?: string;
   readonly price?: ProductCardPrice;

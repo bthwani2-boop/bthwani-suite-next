@@ -57,7 +57,19 @@ import {
   getWltDshPartnerOperationalModeCommission,
   wltDshPartnerUiCopy,
 } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner_wlt_dsh_partner_ui_copy.facade';
-import type { DshPartnerRecord as DshCanonicalStoreCard } from '../../shared/partner/partner.types';
+type DshCanonicalStoreCard = {
+  readonly id?: string;
+  readonly sourceRecordId?: string;
+  readonly publishStage?: string;
+  readonly zoneLabel?: string;
+  readonly storeName?: string;
+  readonly cityLabel?: string;
+  readonly branchLabel?: string;
+  readonly managerName?: string;
+  readonly operatingHoursLabel?: string;
+  readonly deliveryReadinessLabel?: string;
+  readonly coverageSummary?: string;
+};
 import { mapPublishStageToPartnerActivationStatus, resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client-visibility.model';
 import { WltDshPartnerBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner.facade';
 import type { DshPartnerHubSurfaceProps, PartnerHubSection } from '../dsh-partner.types';
@@ -86,7 +98,7 @@ type PartnerOperationalMode = {
   id: PartnerOperationalModeId;
   title: string;
   subtitle: string;
-  commission: string;
+  commission: string | undefined;
   enabled: boolean;
 };
 
@@ -551,7 +563,7 @@ function HubNavRow({
         alignItems: 'center',
         paddingHorizontal: spacing[4],
         paddingVertical: 14,
-        borderRadius: radius.md2,
+        borderRadius: radius.md,
         backgroundColor: pressed ? theme.surfaceInset : theme.surfaceRaised,
         gap: spacing[3],
         borderWidth: 1,
@@ -692,7 +704,7 @@ function OperationsModeRow({
               flexShrink: 0,
             }}
           >
-            <Icon name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'} size={16} tone={selected ? 'brand' : 'default'} />
+            <Icon name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'} size={16} tone={selected ? 'brand' : 'muted'} />
           </View>
 
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -880,7 +892,7 @@ function OperationsPanel({
                     <Icon
                       name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'}
                       size={18}
-                      tone={isSelected ? 'brand' : 'default'}
+                      tone={isSelected ? 'brand' : 'muted'}
                     />
                     <Box style={{ gap: 2, alignItems: 'flex-start', flex: 1 }}>
                       <Text role="bodyStrong" align="start">{mode.title}</Text>
@@ -981,7 +993,7 @@ function OperationsPanel({
                         <Icon
                           name={member.role === 'courier' ? 'bicycle-outline' : member.role === 'owner' ? 'shield-checkmark-outline' : member.role === 'supervisor' ? 'person-circle-outline' : 'person-outline'}
                           size={16}
-                          tone={roleTone}
+                          tone={roleTone === 'neutral' ? 'muted' : roleTone === 'info' ? 'action' : roleTone}
                         />
                         <Box style={{ gap: 2, flexShrink: 1, minWidth: 0 }}>
                           <Text role="bodyStrong" align="start">{member.name}</Text>
@@ -1214,11 +1226,16 @@ function OperationsPanel({
  * Designed for later real-data binding without layout changes. */
 
 
-function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info'; icon: React.ComponentProps<typeof Icon>['name'] }) {
+function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info' | 'muted'; icon: React.ComponentProps<typeof Icon>['name'] }) {
 
   const { direction } = useDirection();
   const accentColor = tone === 'action' ? theme.brand : tone === 'success' ? theme.success : tone === 'info' ? theme.info : theme.lineStrong;
-  const iconTone = tone === 'default' ? undefined : tone === 'action' ? 'brand' as const : tone;
+  const iconTone =
+    tone === 'default' ? undefined
+      : tone === 'action' ? ('brand' as const)
+        : tone === 'info' ? ('action' as const)
+          : tone === 'muted' ? ('muted' as const)
+            : tone;
 
   return (
     <Box
@@ -1227,7 +1244,7 @@ function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { labe
       style={{ flex: 1, minWidth: 140, borderBottomWidth: 2, borderBottomColor: accentColor }}
     >
       <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
-        <Icon name={icon} size={14} tone={iconTone} />
+        <Icon name={icon} size={14} {...(iconTone !== undefined ? { tone: iconTone } : {})} />
         <Text role="caption" tone="muted" numberOfLines={1} style={{ flex: 1, textAlign: direction === 'rtl' ? 'right' : 'left' }}>
           {label}
         </Text>
@@ -1296,7 +1313,6 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
         padding={3}
         gap={3}
         background="surfaceRaised"
-        elevationToken="raised"
         radiusToken="md"
         border={false}
         style={{
@@ -1328,7 +1344,6 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
         padding={3}
         gap={3}
         background="surfaceRaised"
-        elevationToken="raised"
         radiusToken="md"
         border={false}
         style={{
@@ -1402,7 +1417,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const marketingGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('marketing'), []);
   const financeGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('finance'), []);
   // ML-T1: journey map reference — summary-only; details on-demand per on-demand contract
-  const partnerStatusStep = React.useMemo(() => getDshPartnerJourneyStep('partner-status-visibility'), []);
+  const partnerStatusStep = React.useMemo(() => getDshPartnerJourneyStep(undefined), []);
   const {
     hydrated: appearanceHydrated,
     mode: appearanceMode,
@@ -1438,7 +1453,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const _storeMediaId = activeCanonicalStore?.id ?? canonicalStoreId;
   const resolvedActiveZoneLabel = activeCanonicalStore?.zoneLabel ?? activeZoneLabel;
 
-  const { assets: storeMediaAssets = [] } = useDshEntityMedia('store', _storeMediaId);
+  const storeMediaState = useDshEntityMedia(_storeMediaId, 'store');
+  const storeMediaAssets = storeMediaState.kind === 'ready' ? storeMediaState.assets : [];
   const storeCoverUrl = storeMediaAssets.find((a) => a.purpose === 'cover')?.public_url;
   const storeLogoUrl = storeMediaAssets.find((a) => a.purpose === 'logo')?.public_url;
 
@@ -1456,7 +1472,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
 
   const storeVisibility = React.useMemo(() => {
     return resolveDshStoreClientVisibility({
-      publishStage: activeCanonicalStore?.publishStage,
+      ...(activeCanonicalStore?.publishStage !== undefined ? { publishStage: activeCanonicalStore.publishStage } : {}),
       activationStatus: resolvedActivationStatus,
       catalogPublished: listingEnabled,
       deliveryModesReady: serviceModes.some((mode) => mode.enabled),
@@ -1509,11 +1525,13 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   );
 
   if (state !== 'ready') {
-    const stateId = state === 'loading' ? 'loading' : state === 'empty' ? 'empty' : state === 'offline' ? 'offline' : 'blockingError';
+    const isLoading = state === 'loading';
+    const tone = state === 'offline' ? 'warning' : state === 'empty' ? 'neutral' : state === 'loading' ? 'neutral' : 'danger';
 
     return (
       <StateView
-        stateId={stateId}
+        loading={isLoading}
+        tone={tone}
         title="مركز حساب الشريك"
         description="نجهز الآن نموذج التنقل الخاص بالحساب. سيبقى المسار واضحًا ومضغوطًا حتى يكتمل التحميل."
         actionLabel={onOpenOrdersBoard ? 'فتح الطلبات' : undefined}
@@ -1615,14 +1633,14 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             activeZoneLabel={resolvedActiveZoneLabel}
             storeOpen={storeOpen}
             listingEnabled={listingEnabled}
-            canonicalStoreId={activeCanonicalStore?.id}
-            sourceRecordId={activeCanonicalStore?.sourceRecordId}
-            deliveryReadinessLabel={activeCanonicalStore?.deliveryReadinessLabel}
-            coverageSummary={activeCanonicalStore?.coverageSummary}
-            publishStage={activeCanonicalStore?.publishStage}
+            {...(activeCanonicalStore?.id !== undefined ? { canonicalStoreId: activeCanonicalStore.id } : {})}
+            {...(activeCanonicalStore?.sourceRecordId !== undefined ? { sourceRecordId: activeCanonicalStore.sourceRecordId } : {})}
+            {...(activeCanonicalStore?.deliveryReadinessLabel !== undefined ? { deliveryReadinessLabel: activeCanonicalStore.deliveryReadinessLabel } : {})}
+            {...(activeCanonicalStore?.coverageSummary !== undefined ? { coverageSummary: activeCanonicalStore.coverageSummary } : {})}
+            {...(activeCanonicalStore?.publishStage !== undefined ? { publishStage: activeCanonicalStore.publishStage } : {})}
             activationStatus={resolvedActivationStatus}
             serviceModes={serviceModes}
-            onOpenStoreScope={onOpenStoreScope}
+            {...(onOpenStoreScope !== undefined ? { onOpenStoreScope } : {})}
           />
         </HubSectionShell>
       );
@@ -1781,7 +1799,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
                   style={{
                     flexDirection: rowDirection,
                     backgroundColor: theme.surfaceInset,
-                    borderRadius: radius.sm2,
+                    borderRadius: radius.sm,
                     padding: 3,
                     borderWidth: 1,
                     borderColor: theme.line,
@@ -1994,7 +2012,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             branchLabel={resolvedBranchLabel}
             activeZoneLabel={resolvedActiveZoneLabel}
             todayHoursLabel={resolvedTodayHoursLabel}
-            canonicalStoreId={activeCanonicalStore?.id}
+            {...(activeCanonicalStore?.id !== undefined ? { canonicalStoreId: activeCanonicalStore.id } : {})}
           />
         </HubSectionShell>
       );
@@ -2011,7 +2029,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           activeZoneLabel={resolvedActiveZoneLabel}
           serviceModes={serviceModes}
           onBack={() => updateSection('hub')}
-          onOpenStoreCourierSetup={onOpenStoreCourierSetup}
+          {...(onOpenStoreCourierSetup !== undefined ? { onOpenStoreCourierSetup } : {})}
           listingEnabled={listingEnabled}
           storeVisibility={storeVisibility}
           visibilityLabel={visibilityLabel}

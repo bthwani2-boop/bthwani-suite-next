@@ -332,10 +332,10 @@ export function NotificationsScreen({
       />
 
       <DshPartnerOrderAlertsPanel
-        activeOrderId={activeOrderId}
+        {...(activeOrderId !== undefined ? { activeOrderId } : {})}
         onOpenOrder={(orderId) => onOpenOrderSupport?.(orderId)}
         onOpenFlow={(flowId) => onOpenAlertsSupport?.(flowId)}
-        onRetry={onRetry}
+        {...(onRetry !== undefined ? { onRetry } : {})}
       />
     </Box>
   );

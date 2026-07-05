@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, ListItem, SectionHeader, StateView, Surface, Text, TextField } from '@bthwani/ui-kit';
+import { Badge, Box, Button, ListItem, SectionHeader, StateView, Surface, Text, TextField } from '@bthwani/ui-kit';
 import type { DshPartnerOperationalFlowId } from '../dsh-partner.types';
 import {
   shouldShowDshPartnerOrderConversation,
@@ -31,7 +31,6 @@ export function DshPartnerOrderConversationPanel({
       <Surface tone="raised" gap={3}>
         <SectionHeader title="محادثة الطلب" subtitle="المحادثة لا تُفتح لكل الأنماط التشغيلية." />
         <StateView
-          stateId="empty"
           title="المحادثة غير مفعلة لهذا النوع"
           description="هذا المسار متاح فقط في استلم بنفسك أو توصيل المتجر. عند إغلاق دورة الطلب تُغلق المحادثة سياقيًا ولا تتحول إلى inbox عام."
         />
@@ -49,7 +48,7 @@ export function DshPartnerOrderConversationPanel({
             title={message.authorLabel}
             subtitle={message.body}
             meta={message.timestampLabel}
-            badgeLabel={message.acknowledged ? 'مقروء' : 'بانتظار الإقرار'}
+            trailing={<Badge label={message.acknowledged ? 'مقروء' : 'بانتظار الإقرار'} tone="neutral" />}
           />
         ))}
       </Box>

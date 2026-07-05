@@ -18,6 +18,8 @@ import {
   TextField,
   radius,
 } from '@bthwani/ui-kit';
+import { useWltDshCaptainCodReferenceController } from '@bthwani/wlt/frontend/shared/dsh/use-wlt-dsh-captain-cod-reference-controller';
+import type { WltDshCodReference } from '@bthwani/wlt/frontend/shared/dsh/wlt-dsh-boundary.types';
 
 function ChevronDownIcon() {
   return <Icon name="chevron-down" tone="muted" size={18} />;
@@ -81,6 +83,9 @@ export type WltDshCaptainBridgeProps = {
   dshClientId?: string | null;
 };
 
+const WLT_MUTATIONS_NOT_APPROVED_MESSAGE =
+  'شحن الرصيد وطلب التسوية عمليتان ماليتان حقيقيتان عبر WLT وغير معتمدتين للتشغيل الحي بعد. ستُفعّلان تلقائيًا فور اعتماد WLT لعمليات الدفع.';
+
 type WltDshFinanceSummaryRecord = {
   id: string;
   title: string;
@@ -93,6 +98,26 @@ type WltDshFinanceSummaryRecord = {
   kind: 'captain-eligibility-topup' | 'captain-cod-liability' | 'captain-earning';
   holdReason?: string;
 };
+
+function formatMinorUnitsToLabel(amountMinorUnits: number, currency: string, sign: '+' | '-' | '' = ''): string {
+  const major = Math.abs(amountMinorUnits) / 100;
+  return `${sign}${major.toLocaleString()} ${currency}`;
+}
+
+function codReferenceToRecord(ref: WltDshCodReference): WltDshFinanceSummaryRecord {
+  const isRemitted = ref.status === 'remitted' || ref.remittedAt != null;
+  return {
+    id: ref.id,
+    title: `تحصيل طلب #${ref.orderId}`,
+    subtitle: 'نقد عند الاستلام COD',
+    timeLabel: ref.collectedAt ?? ref.createdAt,
+    amountLabel: formatMinorUnitsToLabel(ref.amountMinorUnits, ref.currency, '-'),
+    tone: 'negative',
+    statusLabel: isRemitted ? 'تم الإيداع' : 'قيد الإيداع',
+    statusTone: isRemitted ? 'success' : 'warning',
+    kind: 'captain-cod-liability',
+  };
+}
 
 function RecordRow({ record }: { record: WltDshFinanceSummaryRecord }) {
   const { direction } = useDirection();
@@ -147,6 +172,7 @@ function RecordRow({ record }: { record: WltDshFinanceSummaryRecord }) {
 export function WltDshCaptainBridge({
   section = 'eligibility',
   onBack,
+  dshClientId,
 }: WltDshCaptainBridgeProps) {
   const theme = useTheme() as any;
   const { direction } = useDirection();
@@ -154,92 +180,35 @@ export function WltDshCaptainBridge({
 
   const [expandedSection, setExpandedSection] = React.useState<string | null>(section);
 
-  // Eligibility local state
-  const [eligibilityBalance, setEligibilityBalance] = React.useState(3500);
-  const isEligible = eligibilityBalance >= 2000;
-  const eligibilityShortfall = isEligible ? 0 : 2000 - eligibilityBalance;
+  // COD liability is WLT-owned financial truth: fetched via the WLT captain-scoped
+  // reference controller, never computed or simulated locally in DSH.
+  const captainId = dshClientId ?? null;
+  const codController = useWltDshCaptainCodReferenceController(captainId);
+
+  const codRecords: WltDshFinanceSummaryRecord[] =
+    codController.state.kind === 'loaded'
+      ? codController.state.records.map(codReferenceToRecord)
+      : [];
+
+  const codOutstandingMinorUnits = codController.state.kind === 'loaded'
+    ? codController.state.records
+        .filter((r) => r.status !== 'remitted' && r.remittedAt == null)
+        .reduce((sum, r) => sum + r.amountMinorUnits, 0)
+    : 0;
+  const codCurrency = codController.state.kind === 'loaded' && codController.state.records[0]
+    ? codController.state.records[0].currency
+    : 'ر.ي';
+
+  // Eligibility, earnings and settlement mutation actions are NOT wired to fabricated
+  // local success — WLT mutation journeys are not yet approved for live processing
+  // (mutationJourneysApproved: false in services/wlt/service.manifest.ts). Until WLT
+  // exposes an approved mutation endpoint, these actions are surfaced as disabled with
+  // an explicit not-yet-available notice instead of simulating money movement.
+  const [eligibilityBalance] = React.useState(0);
+  const isEligible = false;
 
   const [showFundingForm, setShowFundingForm] = React.useState(false);
-  const [fundingAmountText, setFundingAmountText] = React.useState(eligibilityShortfall > 0 ? String(eligibilityShortfall) : '2000');
   const [selectedMethod, setSelectedMethod] = React.useState<'card' | 'karimi' | 'one_cash' | 'saba'>('card');
-  const [fundingLoading, setFundingLoading] = React.useState(false);
-  const [fundingSuccess, setFundingSuccess] = React.useState(false);
-
-  // Settlement local state
-  const [pendingPayout, setPendingPayout] = React.useState(18500);
-  const [settledAmount, setSettledAmount] = React.useState(124000);
-  const [settlementLoading, setSettlementLoading] = React.useState(false);
-  const [settlementSuccess, setSettlementSuccess] = React.useState(false);
-
-  // Static Mock Records
-  const [records, setRecords] = React.useState<WltDshFinanceSummaryRecord[]>([
-    { id: 'rec-1', title: 'شحن رصيد الضامن', subtitle: 'بطاقة ائتمانية - فيزا', timeLabel: 'اليوم، 10:14 ص', amountLabel: '+2,000 ر.ي', tone: 'positive', statusLabel: 'مكتمل', statusTone: 'success', kind: 'captain-eligibility-topup' },
-    { id: 'rec-2', title: 'تحصيل طلب #28401', subtitle: 'نقد عند الاستلام COD', timeLabel: 'أمس، 08:30 م', amountLabel: '-4,500 ر.ي', tone: 'negative', statusLabel: 'قيد الإيداع', statusTone: 'warning', kind: 'captain-cod-liability' },
-    { id: 'rec-3', title: 'عمولة توصيل طلب #28401', subtitle: 'توصيل بثواني - فئة Elite', timeLabel: 'أمس، 08:30 م', amountLabel: '+850 ر.ي', tone: 'positive', statusLabel: 'محتسب', statusTone: 'success', kind: 'captain-earning' },
-    { id: 'rec-4', title: 'شحن رصيد الضامن', subtitle: 'بنك الكريمي', timeLabel: '24 يونيو، 02:15 م', amountLabel: '+1,500 ر.ي', tone: 'positive', statusLabel: 'مكتمل', statusTone: 'success', kind: 'captain-eligibility-topup' },
-  ]);
-
-  const handleConfirmFunding = async () => {
-    const val = parseFloat(fundingAmountText);
-    if (isNaN(val) || val <= 0) return;
-    setFundingLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setEligibilityBalance((prev) => prev + val);
-    setRecords((prev) => [
-      {
-        id: `rec-fund-${Date.now()}`,
-        title: 'شحن رصيد الضامن',
-        subtitle: selectedMethod === 'card' ? 'بطاقة ائتمانية' : selectedMethod === 'karimi' ? 'بنك الكريمي' : selectedMethod === 'one_cash' ? 'ONE كاش' : 'سباكاش',
-        timeLabel: 'الآن',
-        amountLabel: `+${val.toLocaleString()} ر.ي`,
-        tone: 'positive',
-        statusLabel: 'مكتمل',
-        statusTone: 'success',
-        kind: 'captain-eligibility-topup',
-      },
-      ...prev,
-    ]);
-    setFundingSuccess(true);
-    setShowFundingForm(false);
-    setFundingLoading(false);
-  };
-
-  const handleRequestSettlement = async () => {
-    setOriginalSettlement(pendingPayout);
-  };
-
-  const [originalSettlement, setOriginalSettlement] = React.useState<number | null>(null);
-
-  const performSettlement = async () => {
-    if (originalSettlement === null) return;
-    setSettlementLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setSettledAmount((prev) => prev + originalSettlement);
-    setPendingPayout(0);
-    setSettlementSuccess(true);
-    setSettlementLoading(false);
-    setOriginalSettlement(null);
-  };
-
-  React.useEffect(() => {
-    if (originalSettlement !== null) {
-      performSettlement();
-    }
-  }, [originalSettlement]);
-
-  React.useEffect(() => {
-    if (fundingSuccess) {
-      const t = setTimeout(() => setFundingSuccess(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [fundingSuccess]);
-
-  React.useEffect(() => {
-    if (settlementSuccess) {
-      const t = setTimeout(() => setSettlementSuccess(false), 4000);
-      return () => clearTimeout(t);
-    }
-  }, [settlementSuccess]);
 
   const paymentMethods = [
     { id: 'card' as const, label: 'بطاقة ائتمانية' },
@@ -271,54 +240,18 @@ export function WltDshCaptainBridge({
                   { label: 'الرصيد الضامن الحالي', value: `${eligibilityBalance.toLocaleString()} ر.ي`, tone: isEligible ? 'success' : 'warning' },
                   { label: 'الحد الأدنى المطلوب', value: '2,000 ر.ي', tone: 'info' },
                   { label: 'الحالة', value: isEligible ? 'مؤهل لاستقبال الطلبات' : 'غير مؤهل — رصيد غير كافٍ', tone: isEligible ? 'success' : 'warning' },
-                  ...(eligibilityShortfall > 0 ? [{ label: 'المبلغ المطلوب للتأهل', value: `${eligibilityShortfall.toLocaleString()} ر.ي`, tone: 'warning' as const }] : []),
                 ]}
               />
 
-              {eligibilityShortfall > 0 && !showFundingForm && !fundingSuccess ? (
-                <Box
-                  gap={1}
-                  style={{
-                    paddingVertical: spacing[2],
-                    paddingHorizontal: spacing[3],
-                    borderRightWidth: isRtl ? 4 : 0,
-                    borderLeftWidth: isRtl ? 0 : 4,
-                    borderRightColor: isRtl ? theme.warning : undefined,
-                    borderLeftColor: isRtl ? undefined : theme.warning,
-                  }}
-                >
-                  <Text role="bodyStrong" style={{ textAlign: isRtl ? 'right' : 'left' }}>غير مؤهل لاستقبال الطلبات</Text>
-                  <Text role="bodySm" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                    يرجى شحن رصيد الضامن لتفعيل حسابك وتلقي العروض مرة أخرى.
-                  </Text>
-                </Box>
-              ) : null}
-
-              {fundingSuccess && (
-                <StateView
-                  tone="success"
-                  title="تم شحن الرصيد بنجاح!"
-                  description="تم تحديث الرصيد الضامن الخاص بك وأصبحت جاهزاً للعمل."
-                />
-              )}
+              <StateView
+                tone="info"
+                title="شحن الرصيد الضامن غير متاح حاليًا"
+                description={WLT_MUTATIONS_NOT_APPROVED_MESSAGE}
+              />
 
               {showFundingForm ? (
                 <Surface tone="inset" padding={3} gap={3} style={{ borderRadius: radius.sm, borderWidth: 1, borderColor: theme.line }}>
                   <Text role="bodyStrong" style={{ textAlign: 'right' }}>إجراء شحن رصيد الضامن</Text>
-
-                  {(() => {
-                    const TextFieldAny = TextField as any;
-                    return (
-                      <TextFieldAny
-                        label="مبلغ شحن رصيد الضامن"
-                        value={fundingAmountText}
-                        onChangeText={setFundingAmountText}
-                        placeholder="أدخل مبلغ الشحن..."
-                        keyboardType="numeric"
-                        style={{ textAlign: 'right' }}
-                      />
-                    );
-                  })()}
 
                   <Box gap={1}>
                     <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>وسيلة الشحن</Text>
@@ -346,18 +279,8 @@ export function WltDshCaptainBridge({
 
                   <Box layoutDirection="row" gap={2} style={{ flexDirection: 'row-reverse', marginTop: spacing[2] }}>
                     <Button
-                      label="تأكيد عملية الشحن"
-                      tone="primary"
-                      loading={fundingLoading}
-                      disabled={fundingLoading || !fundingAmountText}
-                      fullWidth={false}
-                      style={{ flex: 1 }}
-                      onPress={handleConfirmFunding}
-                    />
-                    <Button
                       label="إلغاء"
                       tone="secondary"
-                      disabled={fundingLoading}
                       fullWidth={false}
                       style={{ flex: 1 }}
                       onPress={() => setShowFundingForm(false)}
@@ -365,25 +288,14 @@ export function WltDshCaptainBridge({
                   </Box>
                 </Surface>
               ) : (
-                !fundingSuccess && (
-                  <Box gap={2} style={{ paddingVertical: 4 }}>
-                    <Button
-                      label={eligibilityShortfall > 0 ? `اشحن ${eligibilityShortfall.toLocaleString()} ر.ي للتأهل` : 'شحن رصيد إضافي'}
-                      tone={eligibilityShortfall > 0 ? 'primary' : 'ghost'}
-                      fullWidth
-                      onPress={() => {
-                        setFundingAmountText(eligibilityShortfall > 0 ? String(eligibilityShortfall) : '2000');
-                        setShowFundingForm(true);
-                      }}
-                    />
-                  </Box>
-                )
-              )}
-
-              {records.filter((r) => r.kind === 'captain-eligibility-topup').length > 0 && (
-                <Box gap={2} style={{ marginTop: spacing[2] }}>
-                  <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>سجل عمليات الشحن الأخيرة</Text>
-                  {records.filter((r) => r.kind === 'captain-eligibility-topup').map((r) => <RecordRow key={r.id} record={r} />)}
+                <Box gap={2} style={{ paddingVertical: 4 }}>
+                  <Button
+                    label="شحن رصيد إضافي"
+                    tone="ghost"
+                    fullWidth
+                    disabled
+                    onPress={() => setShowFundingForm(true)}
+                  />
                 </Box>
               )}
             </Box>
@@ -393,7 +305,7 @@ export function WltDshCaptainBridge({
           <ActionStrip
             icon="wallet-outline"
             title="ذمة COD"
-            subtitle={`الذمة القائمة: 4,500 ر.ي`}
+            subtitle={`الذمة القائمة: ${formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency)}`}
             expanded={expandedSection === 'cod-liability'}
             onPress={() => setExpandedSection(expandedSection === 'cod-liability' ? null : 'cod-liability')}
           >
@@ -401,33 +313,50 @@ export function WltDshCaptainBridge({
               <Text role="label" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
                 تحصيل الدفع عند الاستلام — ذمة مستحقة
               </Text>
-              <KeyValueList
-                dense
-                items={[
-                  { label: 'المبلغ المحصّل — ذمة قائمة', value: '4,500 ر.ي', tone: 'warning' },
-                  { label: 'إيداع الدفع معلّق', value: '0 ر.ي', tone: 'warning' },
-                  { label: 'دورة التسوية', value: 'أسبوعية - كل خميس', tone: 'default' },
-                  { label: 'الإجراء التالي', value: 'إيداع المبلغ بالبنك قبل موعد التسوية', tone: 'info' },
-                ]}
-              />
+
+              {codController.state.kind === 'loading' && (
+                <StateView tone="info" title="جاري تحميل بيانات COD..." loading />
+              )}
+
+              {codController.state.kind === 'error' && (
+                <StateView
+                  tone="danger"
+                  title="تعذّر تحميل بيانات COD"
+                  description={codController.state.message}
+                  actionLabel="إعادة المحاولة"
+                  onActionPress={codController.retry}
+                />
+              )}
+
+              {codController.state.kind === 'not_available' && (
+                <StateView
+                  tone="info"
+                  title="بيانات COD غير متاحة"
+                  description="تعذّر تحديد هوية الكابتن أو نقطة اتصال WLT الخاصة بذمة COD."
+                />
+              )}
+
+              {codController.state.kind === 'loaded' && codRecords.length === 0 && (
+                <StateView
+                  tone="success"
+                  title="لا توجد ذمة COD قائمة"
+                  description="لا يوجد مبالغ تحصيل عند الاستلام بانتظار الإيداع حاليًا."
+                />
+              )}
+
+              {codController.state.kind === 'loaded' && codRecords.length > 0 && (
+                <KeyValueList
+                  dense
+                  items={[
+                    { label: 'المبلغ المحصّل — ذمة قائمة', value: formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency), tone: 'warning' },
+                    { label: 'دورة التسوية', value: 'أسبوعية - كل خميس', tone: 'default' },
+                    { label: 'الإجراء التالي', value: 'إيداع المبلغ بالبنك قبل موعد التسوية', tone: 'info' },
+                  ]}
+                />
+              )}
+
               <Box gap={2}>
-                {records.filter((r) => r.kind === 'captain-cod-liability').map((r) => <RecordRow key={r.id} record={r} />)}
-              </Box>
-              <Box
-                gap={1}
-                style={{
-                  paddingVertical: spacing[2],
-                  paddingHorizontal: spacing[3],
-                  borderRightWidth: isRtl ? 4 : 0,
-                  borderLeftWidth: isRtl ? 0 : 4,
-                  borderRightColor: isRtl ? theme.warning : undefined,
-                  borderLeftColor: isRtl ? undefined : theme.warning,
-                }}
-              >
-                <Text role="bodyStrong" style={{ textAlign: isRtl ? 'right' : 'left' }}>إيداع COD مطلوب</Text>
-                <Text role="bodySm" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                  المبلغ المحصّل ذمة مستحقة على الكابتن حتى يتم الإيداع والمطابقة.
-                </Text>
+                {codRecords.map((r) => <RecordRow key={r.id} record={r} />)}
               </Box>
             </Box>
           </ActionStrip>
@@ -436,26 +365,16 @@ export function WltDshCaptainBridge({
           <ActionStrip
             icon="trending-up-outline"
             title="الأرباح"
-            subtitle={`إجمالي الأرباح: ${pendingPayout.toLocaleString()} ر.ي`}
+            subtitle="غير متاح — بانتظار مرجع أرباح كابتن معتمد من WLT"
             expanded={expandedSection === 'earnings'}
             onPress={() => setExpandedSection(expandedSection === 'earnings' ? null : 'earnings')}
           >
             <Box gap={3} style={{ paddingY: 8 }}>
-              <Text role="label" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                الأرباح والمكاسب التشغيلية
-              </Text>
-              <KeyValueList
-                dense
-                items={[
-                  { label: 'إجمالي الأرباح', value: `${pendingPayout.toLocaleString()} ر.ي`, tone: 'success' },
-                  { label: 'المدفوعات المتوقعة', value: `${pendingPayout.toLocaleString()} ر.ي`, tone: 'warning' },
-                  { label: 'دورة الأرباح', value: 'أسبوعية', tone: 'default' },
-                  { label: 'موعد الدفع', value: 'الخميس القادم', tone: 'info' },
-                ]}
+              <StateView
+                tone="info"
+                title="مرجع الأرباح التجميعي للكابتن غير متاح بعد"
+                description="WLT يوفر حاليًا العمولة لكل طلب على حدة فقط (commissions?orderId=). عرض إجمالي أرباح الكابتن يتطلب نقطة مرجع WLT مجمّعة بحسب captainId لم تُنشر بعد."
               />
-              <Box gap={2}>
-                {records.filter((r) => r.kind === 'captain-earning').map((r) => <RecordRow key={r.id} record={r} />)}
-              </Box>
             </Box>
           </ActionStrip>
 
@@ -463,67 +382,16 @@ export function WltDshCaptainBridge({
           <ActionStrip
             icon="sync-outline"
             title="التسوية"
-            subtitle={`أرباح معلقة للتسوية: ${pendingPayout.toLocaleString()} ر.ي · مبلغ التسوية المدفوع: ${settledAmount.toLocaleString()} ر.ي`}
+            subtitle="غير متاح — التسوية عملية مالية معتمدة على مستوى partnerId فقط حاليًا"
             expanded={expandedSection === 'settlement'}
             onPress={() => setExpandedSection(expandedSection === 'settlement' ? null : 'settlement')}
           >
             <Box gap={3} style={{ paddingY: 8 }}>
-              <Text role="label" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                التسوية والدورة المالية
-              </Text>
-              <KeyValueList
-                dense
-                items={[
-                  { label: 'أرباح معلقة للتسوية', value: `${pendingPayout.toLocaleString()} ر.ي`, tone: pendingPayout > 0 ? 'warning' : 'default' },
-                  { label: 'مبلغ التسوية المدفوع', value: `${settledAmount.toLocaleString()} ر.ي`, tone: 'success' },
-                  { label: 'الدورة', value: 'أسبوعية - كل خميس', tone: 'default' },
-                ]}
+              <StateView
+                tone="info"
+                title="تسوية الكابتن غير متاحة بعد"
+                description={"عمليات مالية غير معتمدة للتشغيل الحي بعد؛ كما أن WLT يعرض حاليًا مرجع تسوية بحسب partnerId فقط (wlt-dsh-settlement.api.ts) وليس بحسب captainId."}
               />
-
-              {settlementSuccess && (
-                <StateView
-                  tone="success"
-                  title="تم طلب التسوية بنجاح!"
-                  description="تم إرسال طلب الصرف وجاري تحويل أرباحك إلى حسابك البنكي المعتمد."
-                />
-              )}
-
-              {pendingPayout > 0 ? (
-                !settlementSuccess && (
-                  <Box gap={2} style={{ paddingVertical: 4 }}>
-                    <Button
-                      label={`طلب تسوية المستحقات (${pendingPayout.toLocaleString()} ر.ي)`}
-                      tone="primary"
-                      loading={settlementLoading}
-                      disabled={settlementLoading}
-                      fullWidth
-                      onPress={handleRequestSettlement}
-                    />
-                    <Text role="caption" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                      سيتم معالجة الطلب وصرف الأرباح لحسابك البنكي مباشرة.
-                    </Text>
-                  </Box>
-                )
-              ) : (
-                !settlementSuccess && (
-                  <Box
-                    gap={1}
-                    style={{
-                      paddingVertical: spacing[2],
-                      paddingHorizontal: spacing[3],
-                      borderRightWidth: isRtl ? 4 : 0,
-                      borderLeftWidth: isRtl ? 0 : 4,
-                      borderRightColor: isRtl ? theme.success : undefined,
-                      borderLeftColor: isRtl ? undefined : theme.success,
-                    }}
-                  >
-                    <Text role="bodyStrong" style={{ textAlign: isRtl ? 'right' : 'left' }}>لا يوجد مستحقات معلقة</Text>
-                    <Text role="bodySm" tone="muted" style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                      تم تسوية وصرف جميع الأرباح المحتسبة للأسبوع الحالي.
-                    </Text>
-                  </Box>
-                )
-              )}
             </Box>
           </ActionStrip>
         </Box>

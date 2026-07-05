@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Switch } from 'react-native';
 import {
   Box,
   Button,
@@ -9,7 +9,6 @@ import {
   KeyValueList,
   MobileScrollView,
   MobileStickyPrimaryAction,
-  Switch,
   Text,
   TextField,
   TopBar,
@@ -32,7 +31,7 @@ import {
   resolveStoreDeliveryPolicyLabel,
   resolveStoreDeliveryPricingSourceLabel,
 } from '../../shared/store';
-import { getSurfaceModeCapability, getSurfaceRoleSummaryForMode } from '../../shared/orders';
+import { getSurfaceModeCapability, getSurfaceRoleSummaryForMode } from '../../shared/identity-access';
 
 const BRANCH_OPTIONS = [
   { id: 'all', label: 'كل الفروع' },
@@ -53,7 +52,7 @@ function SelectionBlock<T extends string>({
   onSelect: (id: T) => void;
   direction: 'ltr' | 'rtl';
 }) {
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
 
   return (
     <Box gap={0}>
@@ -137,7 +136,7 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
 
       {/* SSoT visibility capability badge */}
       <Box padding={2} background="surfaceInset" radiusToken="md">
-        <Text role="caption" tone="brand" align="start">
+        <Text role="caption" tone="action" align="start">
           {`الدور المعتمد بالمنظومة (SSoT): ${getSurfaceRoleSummaryForMode('app-partner', 'partner_delivery')}`}
         </Text>
       </Box>
@@ -158,14 +157,12 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
           placeholder="05XXXXXXXX"
           value={courierPhone}
           onChangeText={setCourierPhone}
-          keyboardType="phone-pad"
         />
-        <Switch
-          label="حالة التفعيل"
-          description={isActive ? 'الموصل مفعّل وجاهز لاستقبال الطلبات' : 'الموصل غير مفعّل حاليًا'}
-          value={isActive}
-          onValueChange={setIsActive}
-        />
+        <Box gap={1}>
+          <Text role="bodyStrong">حالة التفعيل</Text>
+          <Text role="caption" tone="muted">{isActive ? 'الموصل مفعّل وجاهز لاستقبال الطلبات' : 'الموصل غير مفعّل حاليًا'}</Text>
+          <Switch value={isActive} onValueChange={setIsActive} />
+        </Box>
       </Box>
 
       <Divider />

@@ -20,8 +20,14 @@ type MediaReviewRecord = ApprovalRecord & {
   systemNote?: string;
 };
 
+let _approvalRecordsCache: ApprovalRecord[] = [];
+
+export async function refreshDshMarketingSignals(): Promise<void> {
+  _approvalRecordsCache = await getAllApprovalRecords();
+}
+
 function getMediaReviewItems(): MediaReviewRecord[] {
-  return getAllApprovalRecords()
+  return _approvalRecordsCache
     .filter((record: ApprovalRecord) =>
       (MARKETING_SIGNAL_ENTITY_TYPES as readonly string[]).includes(record.entityType) &&
       (MARKETING_SIGNAL_STAGES as readonly string[]).includes(record.stage)

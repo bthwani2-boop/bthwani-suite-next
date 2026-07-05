@@ -105,7 +105,7 @@ export function CategoryManagementScreen({
   onBack,
 }: CategoryManagementScreenProps) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
 
   const [screenState, setScreenState] = React.useState<CategoryScreenState>('loading');
   const [categories, setCategories] = React.useState<readonly DshCategoryRecord[]>([]);
@@ -244,17 +244,17 @@ export function CategoryManagementScreen({
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (screenState === 'loading') {
-    return <StateView kind="loading" title="جارٍ تحميل الفئات…" />;
+    return <StateView title="جارٍ تحميل الفئات…" loading />;
   }
 
   // ── Offline state ──────────────────────────────────────────────────────────
   if (screenState === 'offline') {
-    return <StateView stateId="offline" actionLabel="إعادة المحاولة" onActionPress={loadCategories} />;
+    return <StateView title="تعذر الاتصال" tone="danger" actionLabel="إعادة المحاولة" onActionPress={loadCategories} />;
   }
 
   // ── Error state ────────────────────────────────────────────────────────────
   if (screenState === 'error') {
-    return <StateView stateId="recoverableError" title="حدث خطأ غير متوقع" description="فشل تحميل قائمة الفئات. يرجى التحقق من الخادم وإعادة المحاولة." actionLabel="إعادة المحاولة" onActionPress={loadCategories} />;
+    return <StateView title="حدث خطأ غير متوقع" description="فشل تحميل قائمة الفئات. يرجى التحقق من الخادم وإعادة المحاولة." actionLabel="إعادة المحاولة" onActionPress={loadCategories} />;
   }
 
   const flatTree = buildFlatTree(categories);
@@ -284,7 +284,7 @@ export function CategoryManagementScreen({
         <Box
           style={{
             backgroundColor: theme.line + '18',
-            borderRadius: radius.xs2,
+            borderRadius: radius.xs,
             padding: spacing[3],
             borderStartWidth: 3,
             borderStartColor: theme.brand,
@@ -300,7 +300,7 @@ export function CategoryManagementScreen({
           <Box
             style={{
               backgroundColor: theme.danger + '15',
-              borderRadius: radius.xs2,
+              borderRadius: radius.xs,
               padding: spacing[3],
               borderStartWidth: 3,
               borderStartColor: theme.danger,
@@ -333,7 +333,7 @@ export function CategoryManagementScreen({
                       alignItems: 'center',
                       padding: spacing[3],
                       backgroundColor: theme.line + '08',
-                      borderRadius: radius.xs2,
+                      borderRadius: radius.xs,
                       marginRight: direction === 'rtl' ? depth * 20 : 0,
                       marginLeft: direction === 'ltr' ? depth * 20 : 0,
                       borderStartWidth: depth > 0 ? 2 : 0,

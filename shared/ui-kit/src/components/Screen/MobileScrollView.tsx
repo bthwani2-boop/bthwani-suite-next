@@ -8,6 +8,7 @@ export type MobileScrollViewProps = {
   padding?: number;
   gap?: number;
   contentContainerStyle?: any;
+  showsVerticalScrollIndicator?: boolean;
 };
 
 export function MobileScrollView({
@@ -16,10 +17,12 @@ export function MobileScrollView({
   padding,
   gap,
   contentContainerStyle,
+  showsVerticalScrollIndicator,
 }: MobileScrollViewProps) {
   return (
     <ScrollView
       style={{ flex: fill ? 1 : undefined }}
+      showsVerticalScrollIndicator={showsVerticalScrollIndicator}
       contentContainerStyle={[
         {
           padding: padding ? (spacing as any)[padding] || padding * 4 : undefined,

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
+import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
 import type { DshPartnerPreparationStage } from '../../shared/orders';
-import type { DshFulfillmentDeliveryMode } from '../../shared/checkout/dsh-client-binding.contracts';
-import { getSurfaceModeCapability } from '../../shared/orders';
+import type { DshFulfillmentDeliveryMode } from '../../shared/delivery';
+import { getSurfaceModeCapability } from '../../shared/identity-access';
 
 type PartnerFulfillmentMode = DshFulfillmentDeliveryMode;
 
@@ -58,8 +58,8 @@ export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, onSe
       />
 
       <Surface tone="default" gap={2}>
-        <Text role="label">{modeInfo.title}</Text>
-        <Text role="bodySm" tone="muted">{modeInfo.instruction}</Text>
+        <Text role="label">{modeInfo?.title}</Text>
+        <Text role="bodySm" tone="muted">{modeInfo?.instruction}</Text>
       </Surface>
 
       {getSurfaceModeCapability(resolvedMode).partner.manageCourier ? (
@@ -71,12 +71,12 @@ export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, onSe
           <ListItem
             title="اسم الموصل"
             subtitle="لم يُعيَّن بعد — أضف موصل الشريك من إعدادات الفريق."
-            badgeLabel="معلّق"
+            trailing={<Badge label="معلّق" tone="neutral" />}
           />
           <ListItem
             title="حالة التعيين"
             subtitle="في انتظار التعيين من مشرف الفرع."
-            badgeLabel="لم يُعيَّن"
+            trailing={<Badge label="لم يُعيَّن" tone="neutral" />}
           />
           <Box gap={2}>
             <Button label="جاهز للخروج" size="sm" tone="secondary" fullWidth={false} />
@@ -94,7 +94,7 @@ export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, onSe
             key={item.id}
             title={item.title}
             subtitle={`${item.subtitle} — الحالة: ${item.lifecycleStatus}${item.prerequisiteStatus ? ` — يبدأ بعد: ${item.prerequisiteStatus}` : ''}`}
-            badgeLabel={item.badgeLabel}
+            trailing={<Badge label={item.badgeLabel} tone="neutral" />}
             meta={activeFlowId === item.id ? 'المسار النشط' : 'افتح المسار'}
             onPress={() => onSelectFlow?.(item.id as PartnerOrderActionFlowId)}
           />

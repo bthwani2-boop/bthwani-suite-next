@@ -134,7 +134,7 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack }: DshFieldPar
             documents.map((doc) => (
               <View key={doc.id} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing[1] }}>
                 <Text role="bodySm" style={{ textAlign: 'right' }}>
-                  {DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType}
+                  {(DOCUMENT_TYPE_LABELS as Record<string, string>)[doc.documentType] ?? doc.documentType}
                 </Text>
                 <Badge
                   label={DOCUMENT_STATUS_LABELS[doc.documentStatus] ?? doc.documentStatus}

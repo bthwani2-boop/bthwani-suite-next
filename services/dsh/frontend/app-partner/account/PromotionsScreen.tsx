@@ -88,12 +88,12 @@ function PromotionRow({
   onActionPress,
 }: {
   offer: PartnerOfferRecord;
-  visibilityNote?: string;
+  visibilityNote?: string | undefined;
   showDivider?: boolean;
   actionLabel: string;
   onActionPress: (offer: PartnerOfferRecord) => void;
 }) {
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
   const statusDisplay = translateStatus(offer.status);
   const metaLabel = offer.activeFromDate && offer.activeToDate
     ? `${offer.activeFromDate} → ${offer.activeToDate}`
@@ -304,7 +304,7 @@ export function PromotionsScreen({
           value={translateOfferType(form.offerType)}
           onChangeText={() => {}}
           hint="اختر: discount · free-delivery · bundle · buy-x-get-y · coupon"
-          editable={false}
+          disabled={true}
         />
         <TextField
           label="قيمة العرض"
@@ -392,15 +392,13 @@ export function PromotionsScreen({
 
       <Tabs<PromotionsTab>
         items={[
-          { value: 'active', label: 'النشطة' },
-          { value: 'pending', label: 'قيد المراجعة' },
-          { value: 'rejected', label: 'المرفوضة' },
-          { value: 'new', label: 'اقتراح جديد' },
+          { id: 'active', label: 'النشطة' },
+          { id: 'pending', label: 'قيد المراجعة' },
+          { id: 'rejected', label: 'المرفوضة' },
+          { id: 'new', label: 'اقتراح جديد' },
         ]}
         value={activeTab}
         onValueChange={setActiveTab}
-        variant="pill"
-        scrollable
       />
 
       {statusMessage ? (

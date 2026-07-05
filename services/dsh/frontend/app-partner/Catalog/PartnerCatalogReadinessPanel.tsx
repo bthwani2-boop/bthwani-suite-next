@@ -49,7 +49,7 @@ type ReadinessRow = {
   owner: string;
   currentOwner: 'partner' | 'catalog' | 'marketing' | 'operations';
   partnerCanFix: boolean;
-  reason?: string;
+  reason?: string | undefined;
   nextAction: string;
   apiNote: string;
 };
@@ -60,7 +60,7 @@ function deriveReadinessRows(
   stockCount: number,
 ): ReadinessRow[] {
   const stageLabel = publishStage ? translateStage(publishStage) : '—';
-  const isClientVisible = canRenderInClientSurface(publishStage, 'product');
+  const isClientVisible = publishStage ? canRenderInClientSurface(publishStage) : false;
 
   return [
     {
@@ -135,10 +135,10 @@ export function PartnerCatalogReadinessPanel({
   onEditStock,
   onEditAvailability,
 }: PartnerCatalogReadinessPanelProps) {
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
 
   const rows = deriveReadinessRows(publishStage, available, stockCount);
-  const isClientVisible = canRenderInClientSurface(publishStage, 'product');
+  const isClientVisible = publishStage ? canRenderInClientSurface(publishStage) : false;
   const stageLabel = publishStage ? translateStage(publishStage) : 'غير محدد';
   const ownerLabel = publishStage ? translateOwner(publishStage) : 'غير محدد';
 
@@ -151,7 +151,7 @@ export function PartnerCatalogReadinessPanel({
       padding={4}
       gap={4}
       border
-      style={{ borderRadius: radius.sm2, direction: 'rtl' }}
+      style={{ borderRadius: radius.sm, direction: 'rtl' }}
     >
       {/* Header */}
       <Box layoutDirection="row" justify="space-between" align="center">
@@ -159,7 +159,7 @@ export function PartnerCatalogReadinessPanel({
           <Text role="titleLg" weight="black" style={{ fontSize: 16, color: theme.brandHeaderBackground }}>
             🚦 جاهزية الكتالوج
           </Text>
-          <Text role="caption" tone="muted" style={{ fontSize: typography.overline.fontSize }}>
+          <Text role="caption" tone="muted" style={{ fontSize: typography.caption.fontSize }}>
             ملخص جاهزية مستمد من حالة الكتالوج المشتركة
           </Text>
         </Box>
@@ -174,7 +174,7 @@ export function PartnerCatalogReadinessPanel({
         padding={3}
         gap={2}
         style={{
-          borderRadius: radius.xs2,
+          borderRadius: radius.xs,
           borderWidth: 2,
           borderColor: isClientVisible ? theme.success : theme.warning,
           borderStyle: 'solid',
@@ -217,7 +217,7 @@ export function PartnerCatalogReadinessPanel({
             style={{
               padding: 10,
               backgroundColor: row.satisfied ? theme.surfaceInset : theme.dangerSurface || theme.surfaceInset,
-              borderRadius: radius.xs2,
+              borderRadius: radius.xs,
               borderWidth: 1,
               borderColor: row.satisfied ? theme.success : row.partnerCanFix ? theme.warning : theme.danger,
               borderStyle: 'solid',
@@ -230,17 +230,17 @@ export function PartnerCatalogReadinessPanel({
               <Text
                 role="caption"
                 weight="bold"
-                style={{ fontSize: typography.overline.fontSize, color: row.satisfied ? theme.success : row.partnerCanFix ? theme.warning : theme.danger }}
+                style={{ fontSize: typography.caption.fontSize, color: row.satisfied ? theme.success : row.partnerCanFix ? theme.warning : theme.danger }}
               >
                 {row.satisfied ? '✅' : row.partnerCanFix ? '⚠️ بإمكانك الإصلاح' : '🔒 خارج صلاحية الشريك'}
               </Text>
             </Box>
             {row.reason && (
-              <Text role="caption" tone="muted" style={{ fontSize: typography.overline.fontSize }}>
+              <Text role="caption" tone="muted" style={{ fontSize: typography.caption.fontSize }}>
                 {row.reason}
               </Text>
             )}
-            <Text role="caption" weight="semibold" style={{ fontSize: typography.overline.fontSize, color: theme.brandHeaderBackground }}>
+            <Text role="caption" weight="semibold" style={{ fontSize: typography.caption.fontSize, color: theme.brandHeaderBackground }}>
               {row.nextAction}
             </Text>
             <Text role="caption" tone="muted" style={{ fontSize: 10, direction: 'ltr' }}>
@@ -255,7 +255,7 @@ export function PartnerCatalogReadinessPanel({
         tone="inset"
         padding={3}
         gap={2}
-        style={{ borderRadius: radius.xs2, borderWidth: 1, borderColor: theme.line, borderStyle: 'solid' }}
+        style={{ borderRadius: radius.xs, borderWidth: 1, borderColor: theme.line, borderStyle: 'solid' }}
       >
         <Text role="caption" weight="black" style={{ color: theme.brandHeaderBackground }}>
           صلاحيات الشريك في هذا المنتج
@@ -308,7 +308,7 @@ export function PartnerCatalogReadinessPanel({
         <Surface
           tone="inset"
           padding={3}
-          style={{ borderRadius: radius.xs2, borderWidth: 2, borderColor: theme.success, borderStyle: 'solid' }}
+          style={{ borderRadius: radius.xs, borderWidth: 2, borderColor: theme.success, borderStyle: 'solid' }}
         >
           <Text role="caption" weight="black" style={{ color: theme.success, textAlign: 'center' }}>
             🎉 المنتج ظاهر للعميل ومتوفر للطلب

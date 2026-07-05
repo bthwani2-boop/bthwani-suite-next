@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Chip, ListItem, StateView, Surface, Text } from '@bthwani/ui-kit';
+import { Badge, Box, Button, Chip, ListItem, StateView, Surface, Text } from '@bthwani/ui-kit';
 import type { DshPartnerOperationalFlowId } from '../dsh-partner.types';
 import type { DshPartnerOrderAlertItem } from '../../shared/orders';
 
@@ -57,22 +57,22 @@ const defaultItems: DshPartnerOrderAlertItem[] = [
 
 function renderState(state: Exclude<DshPartnerOrderAlertsPanelState, 'ready'>, onRetry?: () => void) {
   if (state === 'loading') {
-    return <StateView stateId="loading" title="جارٍ تجهيز تنبيهات الطلب" description="نرتب التنبيهات المرتبطة بدورة الطلب الحالية فقط." />;
+    return <StateView title="جارٍ تجهيز تنبيهات الطلب" description="نرتب التنبيهات المرتبطة بدورة الطلب الحالية فقط." />;
   }
 
   if (state === 'empty') {
-    return <StateView stateId="empty" title="لا توجد تنبيهات طلب الآن" description="عند ظهور طلب يحتاج قبولًا أو معالجة سيظهر هنا داخل نفس سياق الطلب." actionLabel={onRetry ? 'تحديث' : undefined} onActionPress={onRetry} />;
+    return <StateView title="لا توجد تنبيهات طلب الآن" description="عند ظهور طلب يحتاج قبولًا أو معالجة سيظهر هنا داخل نفس سياق الطلب." actionLabel={onRetry ? 'تحديث' : undefined} onActionPress={onRetry} />;
   }
 
   if (state === 'offline') {
-    return <StateView stateId="offline" title="تنبيهات الطلب غير متصلة" description="أعد المحاولة عند عودة الاتصال لاسترجاع آخر تنبيه مرتبط بالطلب." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
+    return <StateView title="تنبيهات الطلب غير متصلة" description="أعد المحاولة عند عودة الاتصال لاسترجاع آخر تنبيه مرتبط بالطلب." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
   }
 
   if (state === 'disabled') {
-    return <StateView kind="warning" title="تنبيهات الطلب متوقفة مؤقتًا" description="المسار ظاهر لكن التنبيهات معلقة لحين اكتمال التحقق التشغيلي." actionLabel={onRetry ? 'تحقق الآن' : undefined} onActionPress={onRetry} />;
+    return <StateView tone="warning" title="تنبيهات الطلب متوقفة مؤقتًا" description="المسار ظاهر لكن التنبيهات معلقة لحين اكتمال التحقق التشغيلي." actionLabel={onRetry ? 'تحقق الآن' : undefined} onActionPress={onRetry} />;
   }
 
-  return <StateView stateId="recoverableError" title="تعذر تحميل تنبيهات الطلب" description="أعد المحاولة من دون مغادرة سياق الطلب الحالي." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
+  return <StateView title="تعذر تحميل تنبيهات الطلب" description="أعد المحاولة من دون مغادرة سياق الطلب الحالي." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
 }
 
 function resolveAlertChipLabel(alertId: DshPartnerOrderAlertItem['alertId']) {
@@ -123,7 +123,7 @@ export function DshPartnerOrderAlertsPanel({
             title={`${item.title} · ${item.orderId}`}
             subtitle={item.description}
             meta={item.timeLabel}
-            badgeLabel={resolveAlertChipLabel(item.alertId)}
+            trailing={<Badge label={resolveAlertChipLabel(item.alertId)} tone="neutral" />}
             onPress={() => onOpenOrder?.(item.orderId)}
           />
         ))}
@@ -131,7 +131,7 @@ export function DshPartnerOrderAlertsPanel({
 
       <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap' }}>
         <Button label="فتح تنبيهات الطلب" tone="secondary" fullWidth={false} onPress={() => onOpenFlow?.('order-alerts')} />
-        <Button label="فتح الطلب المحدد" fullWidth={false} onPress={() => onOpenOrder?.(visibleItems[0].orderId)} />
+        <Button label="فتح الطلب المحدد" fullWidth={false} onPress={() => onOpenOrder?.(visibleItems[0]!.orderId)} />
       </Box>
     </Surface>
   );

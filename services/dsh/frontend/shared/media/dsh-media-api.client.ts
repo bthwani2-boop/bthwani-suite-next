@@ -9,6 +9,10 @@ export type DshMediaAsset = {
   readonly url: string;
   readonly mime_type: string;
   readonly created_at: string;
+  readonly purpose?: string;
+  readonly public_url?: string;
+  readonly status?: string;
+  readonly file_size_bytes?: number;
 };
 
 export type DshMediaApiError = {

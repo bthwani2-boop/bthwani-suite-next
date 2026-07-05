@@ -37,9 +37,9 @@ export type DshStoreClientVisibilityResult = {
 
 export type DshStoreClientVisibilityOptions = {
   readonly storeId?: string;
-  readonly publishStage?: string;
+  readonly publishStage?: string | undefined;
   readonly approvalStage?: string;
-  readonly activationStatus?: DshPartnerActivationStatus;
+  readonly activationStatus?: DshPartnerActivationStatus | undefined;
   readonly fieldReadinessReady?: boolean;
   readonly documentsVerified?: boolean;
   readonly opsApproved?: boolean;

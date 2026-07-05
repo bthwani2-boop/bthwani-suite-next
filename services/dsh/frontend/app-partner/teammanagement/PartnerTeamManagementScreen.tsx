@@ -77,7 +77,7 @@ export function PartnerTeamManagementScreen({
   onBack,
 }: PartnerTeamManagementScreenProps) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
 
   const [selectedMemberId, setSelectedMemberId] = React.useState<string>('');
   const [inviteDraft, setInviteDraft] = React.useState('');

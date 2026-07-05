@@ -42,6 +42,12 @@
       ],
       "react-native": [
         "apps/app-client/runtime/node_modules/react-native"
+      ],
+      "expo-image-picker": [
+        "apps/app-field/runtime/node_modules/expo-image-picker"
+      ],
+      "expo-location": [
+        "apps/app-field/runtime/node_modules/expo-location"
       ]
     }
   }
