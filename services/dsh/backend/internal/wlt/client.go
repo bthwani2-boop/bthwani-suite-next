@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -142,4 +144,65 @@ func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDelive
 		return fmt.Errorf("WLT delivery-completed returned HTTP %d", response.StatusCode)
 	}
 	return nil
+}
+
+// financeReadAllowlist enumerates the WLT internal financial read collections
+// DSH is allowed to proxy for its own authenticated surfaces. Anything else
+// is rejected before an upstream request is made.
+var financeReadAllowlist = map[string]struct{}{
+	"/wlt/settlements":         {},
+	"/wlt/settlements/summary": {},
+	"/wlt/refunds":             {},
+	"/wlt/ledger/entries":      {},
+	"/wlt/cod-records":         {},
+	"/wlt/commissions":         {},
+}
+
+func financeReadPathAllowed(path string) bool {
+	if _, ok := financeReadAllowlist[path]; ok {
+		return true
+	}
+	// Single-resource refund detail: /wlt/refunds/{refundId}
+	if rest, ok := strings.CutPrefix(path, "/wlt/refunds/"); ok {
+		return rest != "" && !strings.Contains(rest, "/")
+	}
+	return false
+}
+
+// FinanceRead performs a service-authenticated GET against an allowlisted WLT
+// internal financial read path and returns the upstream HTTP status plus the
+// raw JSON body. WLT stays the only financial truth owner: DSH forwards the
+// governed view verbatim and never derives or mutates amounts here.
+func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values, correlationID string) (int, []byte, error) {
+	if !c.Configured() {
+		return 0, nil, fmt.Errorf("WLT integration is not configured")
+	}
+	if !financeReadPathAllowed(path) {
+		return 0, nil, fmt.Errorf("WLT finance read path %q is not allowlisted", path)
+	}
+	target := c.baseURL + path
+	if len(query) > 0 {
+		target += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return 0, nil, fmt.Errorf("build WLT finance read request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if correlationID != "" {
+		req.Header.Set("X-Correlation-ID", correlationID)
+	}
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("call WLT finance read: %w", err)
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
+	if err != nil {
+		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
+	}
+	return response.StatusCode, body, nil
 }

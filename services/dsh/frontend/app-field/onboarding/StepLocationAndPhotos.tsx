@@ -1,5 +1,5 @@
 // app-field — Step 2: الموقع والصور الميدانية
-// Extracted 1:1 from bthwani-suite donor. No business logic here.
+// Presentational step for the field onboarding wizard. No business logic here.
 import React, { useState } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';

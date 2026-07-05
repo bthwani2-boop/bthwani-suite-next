@@ -1,8 +1,12 @@
-import { resolveWltApiBaseUrl } from "../../_kernel/wlt-api-base-url";
+import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../_kernel/dsh-http-request";
 import type { DshWltCodView, DshWltCommissionView } from "./wlt-cod.types";
+import type { WltDshCodReference } from "@bthwani/wlt";
+import type { WltReferenceApiResult } from "@bthwani/wlt/frontend/shared/dsh/wlt-dsh-http-request";
 
-const { request: wltGet } = createDshHttpClient(resolveWltApiBaseUrl(), "wlt-cod");
+// WLT internal financial reads are service-authenticated; DSH surfaces read
+// them through the governed DSH finance proxy, never from the browser.
+const { request: wltGet } = createDshHttpClient(resolveDshApiBaseUrl(), "wlt-cod");
 
 type WltCodRecordRaw = {
   readonly id: string;
@@ -115,7 +119,7 @@ export async function fetchDshWltCodRecordsByCapitain(
 ): Promise<{ ok: true; views: DshWltCodView[] } | { ok: false; message: string }> {
   try {
     const body = await wltGet<{ codRecords: WltCodRecordRaw[] }>(
-      `/wlt/cod-records?captainId=${encodeURIComponent(captainId)}`,
+      `/dsh/control-panel/finance/cod-records?captainId=${encodeURIComponent(captainId)}`,
     );
     return { ok: true, views: body.codRecords.map(toCodView) };
   } catch (e) {
@@ -129,11 +133,26 @@ export async function fetchDshWltCommissionsByOrder(
 ): Promise<{ ok: true; views: DshWltCommissionView[] } | { ok: false; message: string }> {
   try {
     const body = await wltGet<{ commissions: WltCommissionRaw[] }>(
-      `/wlt/commissions?orderId=${encodeURIComponent(orderId)}`,
+      `/dsh/control-panel/finance/commissions?orderId=${encodeURIComponent(orderId)}`,
     );
     return { ok: true, views: body.commissions.map(toCommissionView) };
   } catch (e) {
     const err = e as { kind?: string; status?: number; message?: string };
     return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
+  }
+}
+
+// Captain self-view: the DSH backend locks the captain id to the
+// authenticated actor, so no captainId parameter exists here by design.
+export async function fetchDshCaptainOwnCodRecords(): Promise<WltReferenceApiResult<WltDshCodReference[]>> {
+  try {
+    const body = await wltGet<{ codRecords?: WltDshCodReference[] }>("/dsh/captain/finance/cod-records");
+    return { ok: true, data: body.codRecords ?? [] };
+  } catch (e) {
+    const err = e as { kind?: string; status?: number; body?: string; message?: string };
+    if (err.kind === "http") {
+      return { ok: false, kind: "http", ...(err.status !== undefined ? { status: err.status } : {}), message: err.body || `HTTP ${err.status ?? "error"}` };
+    }
+    return { ok: false, kind: "network", message: err.message ?? "network error" };
   }
 }

@@ -694,7 +694,7 @@ export function ExceptionsEscalationsScreen({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 800 }}>الظهور:</span>
-                <WebControlPanelStatusTag label={VISIBILITY_LABELS[flow.visibility]} tone="neutral" />
+                <WebControlPanelStatusTag label={VISIBILITY_LABELS[flow.visibility] ?? flow.visibility} tone="neutral" />
               </div>
 
               <KeyValueList

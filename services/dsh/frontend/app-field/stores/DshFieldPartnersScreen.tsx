@@ -1,5 +1,5 @@
 // app-field — DshFieldPartnersScreen
-// نسخة طبق الأصل من مانح dsh-suite — شاشة ملفات الانضمام الميدانية
+// شاشة ملفات الانضمام الميدانية — تقرأ من runtime الحقيقي فقط (useFieldPartnerDraftsController).
 import React from 'react';
 import { ScrollView, View, Pressable, StatusBar, Platform } from 'react-native';
 import {
@@ -33,11 +33,13 @@ const FILTER_OPTIONS: readonly { id: FilterOptionId; label: string }[] = [
 ];
 
 // ─── Orange Brand Header (exact donor replica) ───────────────────────────────
-// Layout: [🔍] ——— [بثواني / 📍 الرياض · جولة المتاجر] ——— [🔔 👤]
+// Layout: [🔍] ——— [بثواني / 📍 جولة المتاجر] ——— [🔔 👤]
 function FieldTopBar({
   onSearchPress,
   onAccountPress,
-  locationLabel = 'الرياض · جولة المتاجر',
+  // Generic label by default — the actual city/route must come from the
+  // runtime user scope, never a hardcoded city.
+  locationLabel = 'جولة المتاجر',
 }: {
   onSearchPress: () => void;
   onAccountPress: () => void;

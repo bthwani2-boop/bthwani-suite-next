@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import {
+  DSH_CAPTAIN_CONTRACT_CAPABILITIES,
   createDshOrderLifecycleHttpClient,
   resolveDshOrderApiBaseUrl,
 } from '../orders/dsh-order-lifecycle-client';
@@ -108,6 +109,10 @@ export function useCaptainActiveLocationPush({
   const captainOrderRuntime = useCaptainOrderRuntime();
 
   React.useEffect(() => {
+    // Location push is not part of the DSH backend contract yet
+    // (DSH_CAPTAIN_CONTRACT_CAPABILITIES.locationPush === false). The feature
+    // is disabled explicitly here instead of firing requests that fail.
+    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.locationPush) return undefined;
     if (!lifecycleStatus || !activeDeliveryStates.has(lifecycleStatus)) return undefined;
     if (!activeOrderId || !captainId) return undefined;
 
@@ -123,8 +128,10 @@ export function useCaptainActiveLocationPush({
         longitude,
         lifecycleStatus,
         orderStatus: 'EN_ROUTE',
-      }).catch(() => {
-        // Location push failures are non-fatal for the UI binding.
+      }).catch((err: unknown) => {
+        // Surface the failure instead of swallowing it silently; delivery
+        // continues, but operators must be able to see the push failed.
+        console.warn('[captain:location-push] failed', err);
       });
     };
 

@@ -46,7 +46,7 @@ export function ControlPanelDshClosureHubScreen() {
   };
 
   React.useEffect(() => {
-    if (SECONDARY_TABS[activeTab]?.length > 0) {
+    if ((SECONDARY_TABS[activeTab]?.length ?? 0) > 0) {
       setActiveSubTab(SECONDARY_TABS[activeTab]?.[0]?.id ?? '');
     } else {
       setActiveSubTab('');
@@ -210,7 +210,7 @@ export function ControlPanelDshClosureDashboardScreen() {
               title={journey.entityLabel ?? journey.id}
               reason={journey.reason}
               confidence={journey.confidence}
-              auditTag={journey.lifecycleStep}
+              {...(journey.lifecycleStep !== undefined ? { auditTag: journey.lifecycleStep } : {})}
               primaryAction={{ id: journey.id, label: journey.primaryActionLabel }}
             />
           ))}

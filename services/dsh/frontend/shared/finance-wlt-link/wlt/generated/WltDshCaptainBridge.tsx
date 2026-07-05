@@ -20,6 +20,7 @@ import {
 } from '@bthwani/ui-kit';
 import { useWltDshCaptainCodReferenceController } from '@bthwani/wlt/frontend/shared/dsh/use-wlt-dsh-captain-cod-reference-controller';
 import type { WltDshCodReference } from '@bthwani/wlt/frontend/shared/dsh/wlt-dsh-boundary.types';
+import { fetchDshCaptainOwnCodRecords } from '../../wlt-cod/wlt-cod.api';
 
 function ChevronDownIcon() {
   return <Icon name="chevron-down" tone="muted" size={18} />;
@@ -181,9 +182,11 @@ export function WltDshCaptainBridge({
   const [expandedSection, setExpandedSection] = React.useState<string | null>(section);
 
   // COD liability is WLT-owned financial truth: fetched via the WLT captain-scoped
-  // reference controller, never computed or simulated locally in DSH.
+  // reference controller. Transport goes through the governed DSH finance proxy
+  // (/dsh/captain/finance/cod-records) because WLT's internal read is
+  // service-authenticated — never fetched directly from the browser.
   const captainId = dshClientId ?? null;
-  const codController = useWltDshCaptainCodReferenceController(captainId);
+  const codController = useWltDshCaptainCodReferenceController(captainId, fetchDshCaptainOwnCodRecords);
 
   const codRecords: WltDshFinanceSummaryRecord[] =
     codController.state.kind === 'loaded'
@@ -390,7 +393,7 @@ export function WltDshCaptainBridge({
               <StateView
                 tone="info"
                 title="تسوية الكابتن غير متاحة بعد"
-                description={"عمليات مالية غير معتمدة للتشغيل الحي بعد؛ كما أن WLT يعرض حاليًا مرجع تسوية بحسب partnerId فقط (wlt-dsh-settlement.api.ts) وليس بحسب captainId."}
+                description={"عمليات مالية غير معتمدة للتشغيل الحي بعد؛ كما أن WLT يعرض حاليًا مرجع تسوية بحسب partnerId فقط وليس بحسب captainId."}
               />
             </Box>
           </ActionStrip>

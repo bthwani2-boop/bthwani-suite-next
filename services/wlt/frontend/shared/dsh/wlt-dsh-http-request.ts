@@ -7,11 +7,15 @@ function wltCorrId(): string {
 }
 
 /**
- * Shared unauthenticated GET+parse helper for WLT-for-DSH reference endpoints.
- * Centralizes fetch/timeout/correlation-id/ok-check/error-shape logic.
+ * Shared GET+parse helper for WLT **public reference** endpoints only
+ * (/wlt/references/*). Centralizes fetch/timeout/correlation-id/ok-check/
+ * error-shape logic.
  *
- * WLT reference endpoints are read-only and unauthenticated by design —
- * auth is enforced at the DSH layer that initiates the call.
+ * Only the public reference endpoints are unauthenticated by design. WLT's
+ * internal financial reads (settlements, refunds, ledger, COD, commissions)
+ * are service-authenticated and MUST be consumed through the governed DSH
+ * finance proxy (/dsh/control-panel/finance/*, /dsh/captain/finance/*) —
+ * never with this helper and never directly from the browser.
  */
 export async function wltFetchJson<T>(
   url: string,
@@ -27,7 +31,8 @@ export async function wltFetchJson<T>(
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) {
-      return { ok: false, kind: "http", status: res.status, message: `HTTP ${res.status}` };
+      const errBody = await res.text().catch(() => "");
+      return { ok: false, kind: "http", status: res.status, message: errBody || `HTTP ${res.status}` };
     }
     const body = await res.json();
     return { ok: true, data: extract(body) };

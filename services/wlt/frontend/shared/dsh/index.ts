@@ -12,6 +12,5 @@ export * from "./wlt-dsh-field-commission.states";
 export * from "./wlt-dsh-field-commission.view-model";
 export * from "./use-wlt-dsh-field-commission-reference-controller";
 export * from "./use-wlt-dsh-payment-controller";
-export * from "./wlt-dsh-cod.api";
 export * from "./wlt-dsh-captain-cod.states";
 export * from "./use-wlt-dsh-captain-cod-reference-controller";

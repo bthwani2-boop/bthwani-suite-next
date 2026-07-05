@@ -79,6 +79,9 @@ const API_PATH_LITERAL = /[`'"](\/(?:dsh|wlt|identity|providers)\/[^`'"?\s]*)/g;
 // ─── Main scan ───────────────────────────────────────────────────────────────
 
 const apiFiles = listCodeFiles().filter((f) => {
+  // Navigation registries define UI route hrefs (e.g. "/dsh/finance"), not
+  // API endpoints — they are not adapters and are excluded from this gate.
+  if (f.endsWith("-registry.ts")) return false;
   if (f.endsWith(".api.ts") || f.endsWith(".client.ts") || f.endsWith("api-client.ts") || f.endsWith("runtime-adapter.ts")) {
     return true;
   }
@@ -127,7 +130,10 @@ for (const file of apiFiles) {
   const usesApprovedClient =
     DSH_HTTP_CLIENT_PATTERN.test(content) || WLT_HTTP_CLIENT_PATTERN.test(content);
 
-  if (!usesApprovedClient) {
+  // Multipart upload adapters (FormData) cannot use the JSON kernel client;
+  // their single fetch() call is the approved binary-upload transport.
+  const isMultipartUploadAdapter = content.includes("new FormData(");
+  if (!usesApprovedClient && !isMultipartUploadAdapter) {
     const fetchMatches = [...content.matchAll(RAW_FETCH_PATTERN)];
     if (fetchMatches.length > 0) {
       violations.push({

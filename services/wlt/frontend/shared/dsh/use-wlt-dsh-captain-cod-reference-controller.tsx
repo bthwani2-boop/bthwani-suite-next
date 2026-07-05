@@ -1,6 +1,17 @@
 import { useEffect, useReducer } from "react";
 import type { WltCaptainCodState } from "./wlt-dsh-captain-cod.states";
-import { fetchWltCodRecordsByCapitain } from "./wlt-dsh-cod.api";
+import type { WltDshCodReference } from "./wlt-dsh-boundary.types";
+import type { WltReferenceApiResult } from "./wlt-dsh-http-request";
+
+/**
+ * Transport for the captain COD read model. WLT's internal /wlt/cod-records
+ * read is service-authenticated, so the DSH surface injects a fetcher that
+ * goes through the governed DSH finance proxy (actor-authenticated); WLT
+ * keeps owning the read-model semantics and state machine.
+ */
+export type WltCaptainCodRecordsFetcher = (
+  captainId: string,
+) => Promise<WltReferenceApiResult<WltDshCodReference[]>>;
 
 type Action =
   | { type: "LOADING" }
@@ -33,6 +44,7 @@ export type WltCaptainCodController = {
  */
 export function useWltDshCaptainCodReferenceController(
   captainId: string | null | undefined,
+  fetchCodRecords: WltCaptainCodRecordsFetcher,
 ): WltCaptainCodController {
   const [state, dispatch] = useReducer(reducer, { kind: "not_available" });
 
@@ -44,7 +56,7 @@ export function useWltDshCaptainCodReferenceController(
 
     dispatch({ type: "LOADING" });
 
-    fetchWltCodRecordsByCapitain(captainId)
+    fetchCodRecords(captainId)
       .then((res) => {
         if (res.ok) {
           dispatch({ type: "LOADED", records: res.data });
@@ -63,7 +75,7 @@ export function useWltDshCaptainCodReferenceController(
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captainId]);
+  }, [captainId, fetchCodRecords]);
 
   return { state, retry: load };
 }

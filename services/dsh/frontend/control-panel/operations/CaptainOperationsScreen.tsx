@@ -103,21 +103,25 @@ export function CaptainOperationsScreen({ hubHref: _hubHref, subGroup: _subGroup
                 }
               },
             }}
-            secondaryAction={cap.suggestion.secondary ? (() => {
-              const secAction = cap.suggestion.secondary;
-              return {
-                id: `${cap.id}-secondary`,
-                label: secAction,
-                onAction: () => {
-                  if (loadingCap[cap.id]) return;
-                  if (secAction === 'تعطيل مؤقت') {
-                    router.push(buildOperationsHref('exceptions-escalations'));
-                  } else {
-                    triggerAction(cap.id, secAction);
-                  }
-                },
-              };
-            })() : undefined}
+            {...(cap.suggestion.secondary
+              ? {
+                  secondaryAction: (() => {
+                    const secAction = cap.suggestion.secondary;
+                    return {
+                      id: `${cap.id}-secondary`,
+                      label: secAction,
+                      onAction: () => {
+                        if (loadingCap[cap.id]) return;
+                        if (secAction === 'تعطيل مؤقت') {
+                          router.push(buildOperationsHref('exceptions-escalations'));
+                        } else {
+                          triggerAction(cap.id, secAction);
+                        }
+                      },
+                    };
+                  })(),
+                }
+              : {})}
           />
         ))}
       </Box>

@@ -199,7 +199,7 @@ export function PartnerTeamManagementScreen({
                               : 'person-outline'
                       }
                       size={20}
-                      tone={roleTone === 'brand' ? 'action' : roleTone === 'muted' ? 'neutral' : roleTone}
+                      tone={roleTone}
                       style={{ marginHorizontal: spacing[1] }}
                     />
                     <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-start', marginHorizontal: spacing[2] }}>
@@ -207,7 +207,7 @@ export function PartnerTeamManagementScreen({
                       <Text role="caption" tone="muted" align="start">{member.branchAssignment}</Text>
                     </View>
                     <View style={{ alignItems: direction === 'rtl' ? 'flex-start' : 'flex-end', gap: 4 }}>
-                      <Badge label={member.roleLabel} tone={roleTone} />
+                      <Badge label={member.roleLabel} tone={roleTone === 'brand' ? 'action' : roleTone === 'muted' ? 'neutral' : roleTone} />
                       <Badge label={member.statusLabel} tone={statusTone} />
                     </View>
                     <Icon name={isSelected ? 'chevron-down' : 'chevron-forward-outline'} mirrored tone="muted" size={14} style={{ marginStart: spacing[2] }} />

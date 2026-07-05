@@ -1,8 +1,10 @@
-import { resolveWltApiBaseUrl } from "../../_kernel/wlt-api-base-url";
+import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../_kernel/dsh-http-request";
 import type { DshWltRefundView } from "./wlt-refund.types";
 
-const { request: wltGet } = createDshHttpClient(resolveWltApiBaseUrl(), "wlt-refund");
+// WLT internal financial reads are service-authenticated; DSH surfaces read
+// them through the governed DSH finance proxy, never from the browser.
+const { request: wltGet } = createDshHttpClient(resolveDshApiBaseUrl(), "wlt-refund");
 
 type WltRefundRaw = {
   readonly id: string;
@@ -62,7 +64,7 @@ export async function fetchDshWltRefundView(
 ): Promise<{ ok: true; view: DshWltRefundView } | { ok: false; message: string }> {
   try {
     const body = await wltGet<{ refund: WltRefundRaw }>(
-      `/wlt/refunds/${encodeURIComponent(refundId)}`,
+      `/dsh/control-panel/finance/refunds/${encodeURIComponent(refundId)}`,
     );
     return { ok: true, view: toView(body.refund) };
   } catch (e) {
@@ -76,7 +78,7 @@ export async function fetchDshWltRefundsByOrderView(
 ): Promise<{ ok: true; views: DshWltRefundView[] } | { ok: false; message: string }> {
   try {
     const body = await wltGet<{ refunds: WltRefundRaw[] }>(
-      `/wlt/refunds?orderId=${encodeURIComponent(orderId)}`,
+      `/dsh/control-panel/finance/refunds?orderId=${encodeURIComponent(orderId)}`,
     );
     return { ok: true, views: body.refunds.map(toView) };
   } catch (e) {

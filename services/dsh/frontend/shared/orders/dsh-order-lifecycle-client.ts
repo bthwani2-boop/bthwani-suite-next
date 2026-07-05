@@ -141,7 +141,11 @@ export type DshOrderApiHttpError = {
   readonly status: number;
   readonly body: string;
 };
-export type DshOrderApiError = DshOrderApiOfflineError | DshOrderApiHttpError;
+export type DshOrderApiContractError = {
+  readonly kind: 'contract';
+  readonly message: string;
+};
+export type DshOrderApiError = DshOrderApiOfflineError | DshOrderApiHttpError | DshOrderApiContractError;
 
 type BackendOrderItem = {
   readonly id?: string;
@@ -197,6 +201,21 @@ export function isDshOrderApiOfflineError(err: unknown): err is DshOrderApiOffli
   return typeof err === 'object' && err !== null && (err as { kind?: unknown }).kind === 'offline';
 }
 
+export function isDshOrderApiContractError(err: unknown): err is DshOrderApiContractError {
+  return typeof err === 'object' && err !== null && (err as { kind?: unknown }).kind === 'contract';
+}
+
+/**
+ * Mutations the current DSH backend contract does not expose. Surfaces must
+ * consult these flags and disable the related actions instead of invoking
+ * them and relying on a runtime failure.
+ */
+export const DSH_CAPTAIN_CONTRACT_CAPABILITIES = {
+  locationPush: false,
+  failDelivery: false,
+  confirmReturn: false,
+} as const;
+
 export function resolveDshOrderApiBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl') ?? null;
 }
@@ -225,8 +244,8 @@ export interface DshOrderLifecycleClient {
   getCaptainLocation(
     orderId: string
   ): Promise<{
-    latitude: number;
-    longitude: number;
+    latitude: number | null;
+    longitude: number | null;
     lifecycle_status: string;
     order_status: string;
   }>;
@@ -320,8 +339,19 @@ function normalizeDshOrderStatus(status: unknown): DshOrderStatus {
     case 'failed_delivery':
     case 'returning_to_store':
       return 'cancelled';
-    default:
+    // Dispatch-assignment statuses that appear when an assignment is
+    // projected as an order record (see normalizeDispatchAssignmentAsOrder).
+    case 'offered':
+      return 'driver_assigned';
+    case 'declined':
       return 'pending';
+    case 'completed':
+      return 'delivered';
+    default:
+      throw {
+        kind: 'contract',
+        message: `unknown DSH order status "${value}" — backend/frontend status contract drift must be fixed, not masked`,
+      } as DshOrderApiContractError;
   }
 }
 
@@ -392,7 +422,7 @@ function normalizeOrderList(resp: { readonly orders?: readonly BackendOrder[]; r
 }
 
 function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
-  const status = raw.delivery?.status ?? raw.status ?? 'driver_assigned';
+  const status = raw.delivery?.status || raw.status || 'driver_assigned';
   const captainId = raw.captainId;
   const lifecycleStatus = raw.delivery?.status;
   const podReference = raw.delivery?.podReference;
@@ -582,9 +612,12 @@ export function createDshOrderLifecycleHttpClient(
         orderAuthHeaders(auth),
       );
       const assignment = resp.assignment;
+      // The DSH tracking contract exposes lifecycle state only — no captain
+      // coordinates. Callers must render "tracking unavailable" for null
+      // coordinates instead of plotting a fake 0,0 position.
       return {
-        latitude: 0,
-        longitude: 0,
+        latitude: null,
+        longitude: null,
         lifecycle_status: assignment?.delivery?.status ?? assignment?.status ?? '',
         order_status: assignment?.delivery?.status ?? assignment?.status ?? '',
       };

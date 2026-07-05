@@ -93,7 +93,9 @@ export type WltDshFinanceRuntimeReadModel = {
   readonly overview: any; // settlements list
   readonly ledgerEntries: readonly any[]; // raw ledger entries
   readonly refunds: readonly any[]; // raw refunds queue
-  readonly closeStatus: WltCloseStatus;
+  // Optional: WLT does not expose a reconciliation close-status endpoint yet,
+  // so runtime read models omit it. Consumers must treat "absent" as open.
+  readonly closeStatus?: WltCloseStatus;
   readonly fetchedAt: string;
 };
 

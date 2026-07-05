@@ -122,11 +122,7 @@ export function createDshFlexibleHttpClient(baseUrl: string, timeoutMs = 10000) 
     } catch (error) {
       throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
     }
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw { kind: "http", status: response.status, body };
-    }
-    return response.json() as Promise<T>;
+    return parseResponse<T>(response);
   }
   return { request };
 }
@@ -155,8 +151,7 @@ export function createDshRawHttpClient(baseUrl: string, corrPrefix: string, time
     } catch (error) {
       throw { kind: "network", message: error instanceof Error ? error.message : "network error" };
     }
-    if (!response.ok) throw { kind: "http", status: response.status };
-    return response.json() as Promise<T>;
+    return parseResponse<T>(response);
   }
   return { req };
 }

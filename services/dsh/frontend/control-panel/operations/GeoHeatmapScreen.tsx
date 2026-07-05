@@ -239,7 +239,7 @@ export function GeoHeatmapScreen({ hubHref, subGroup }: { hubHref: string; subGr
                   primaryAction={{ id: `${zone.id}-select`, label: 'تثبيت المنطقة', onAction: () => setSelectedZoneId(zone.id) }}
                   secondaryAction={{
                     id: `${zone.id}-guide`,
-                    label: recommendation.secondaryActionLabel,
+                    label: recommendation?.secondaryActionLabel ?? 'عرض الدليل',
                     onAction: () => {
                       setSelectedZoneId(zone.id);
                       handleShowEvidence(zone.id);
@@ -284,14 +284,20 @@ export function GeoHeatmapScreen({ hubHref, subGroup }: { hubHref: string; subGr
                 reason={selectedRecommendation ? `${selectedRecommendation.reason} · ${selectedRecommendation.evidence}` : 'اختر منطقة لعرض التوصية.'}
                 confidence={selectedRecommendation?.confidence ?? 'medium'}
                 auditTag={translateDshRuntimeBindingStatus(selectedRecommendation?.runtimeBindingStatus ?? 'NEEDS_RUNTIME_EVIDENCE')}
-                primaryAction={selectedRecommendation ? { id: `${selectedRecommendation.id}-primary`, label: selectedRecommendation.primaryActionLabel, onAction: () => handleApplyPlan(selectedZone.id, selectedRecommendation.nextAction) } : undefined}
-                secondaryAction={selectedRecommendation ? { id: `${selectedRecommendation.id}-secondary`, label: selectedRecommendation.secondaryActionLabel, onAction: () => handleShowEvidence(selectedZone.id) } : undefined}
+                {...(selectedRecommendation && selectedZone
+                  ? {
+                      primaryAction: { id: `${selectedRecommendation.id}-primary`, label: selectedRecommendation.primaryActionLabel, onAction: () => handleApplyPlan(selectedZone.id, selectedRecommendation.nextAction) },
+                      secondaryAction: { id: `${selectedRecommendation.id}-secondary`, label: selectedRecommendation.secondaryActionLabel, onAction: () => handleShowEvidence(selectedZone.id) },
+                    }
+                  : {})}
               />
 
-              <WebControlPanelActionCluster
-                primary={{ id: 'apply-plan', label: 'تثبيت القرار', onAction: () => handleApplyPlan(selectedZone.id, selectedZone.recommendedAction) }}
-                secondary={{ id: 'show-evidence', label: 'عرض الدليل', onAction: () => handleShowEvidence(selectedZone.id) }}
-              />
+              {selectedZone && (
+                <WebControlPanelActionCluster
+                  primary={{ id: 'apply-plan', label: 'تثبيت القرار', onAction: () => handleApplyPlan(selectedZone.id, selectedZone.recommendedAction) }}
+                  secondary={{ id: 'show-evidence', label: 'عرض الدليل', onAction: () => handleShowEvidence(selectedZone.id) }}
+                />
+              )}
 
               <Box gap={1}>
                 <WebControlPanelStatusTag label={`مخاطر الالتقاط ${selectedZone?.delayedPickups ?? 0}`} tone={(selectedZone?.delayedPickups ?? 0) > 0 ? 'danger' : 'success'} />

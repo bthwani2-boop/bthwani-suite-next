@@ -223,7 +223,7 @@ export function PartnerDetailPanel({
             <p style={{ color: "var(--dsh-text-muted)" }}>لا توجد وثائق مرفوعة</p>
           )}
           {documents.map((doc) => {
-            const typeLabel = DOCUMENT_TYPE_LABELS[doc.documentType as any] ?? doc.documentType;
+            const typeLabel = (DOCUMENT_TYPE_LABELS as Record<string, string>)[doc.documentType] ?? doc.documentType;
             const statusLabel = doc.documentStatus === "approved"
               ? "معتمد"
               : doc.documentStatus === "rejected"

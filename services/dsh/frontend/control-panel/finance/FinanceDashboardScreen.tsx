@@ -127,7 +127,10 @@ export function FinanceDashboardScreen() {
         <Card style={{ padding: '2rem' }}>
           <Text role="titleMd" style={{ marginBottom: '1rem' }}>الخلاصة والتدقيق المالي العام</Text>
           <Text role="body" tone="muted">
-            المنصة في وضع التشغيل الفوري. الأرقام مستمدة ومطابقة مباشرة مع خادم WLT. لا توجد معوقات تشغيلية معلقة.
+            الأرقام مستمدة مباشرة من خادم WLT عبر وكيل DSH المالي المحكوم.
+          </Text>
+          <Text role="body" tone="muted" style={{ marginTop: '0.5rem' }}>
+            {`الوضع التشغيلي: ${financeHubView.operationalRisk} · حظر الصرف/التسوية: ${financeHubView.holdsStatus} · الإجراء المطلوب: ${financeHubView.requiredAction}`}
           </Text>
         </Card>
       );

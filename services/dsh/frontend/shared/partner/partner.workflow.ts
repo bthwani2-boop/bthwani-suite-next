@@ -2,9 +2,6 @@
 // Authority: dsh/frontend/shared/partner
 // Promotion candidates, catalog queue, stage/owner translation utilities.
 
-import { addDshAuditEntry } from '../identity-access/dsh-role-permission.model';
-import type { DshAuditEntry } from '../identity-access/dsh-role-permission.model';
-import type { DshOperationsDecisionKind, DshOrderLifecycleStatus } from '../orders';
 
 // ─── ApprovalStage ──────────────────────────────────────────────────────────
 export type ApprovalStage =
@@ -168,20 +165,6 @@ export function translateEntityType(entityType: string | undefined): string {
 
 // ─── Live Order Decisions & Auditing ────────────────────────────────────────
 
-export type LiveOrderDecisionRecord = {
-  decision: DshOperationsDecisionKind;
-  note: string;
-  submitted: boolean;
-  nextLifecycleStatus: DshOrderLifecycleStatus;
-};
-
-let _globalLiveOrderDecisions: Record<string, LiveOrderDecisionRecord> = {};
-
-const PENDING_APPROVAL_LOOKUP: Record<string, { customerName: string; storeName: string }> = {
-  'PA-0081': { customerName: 'أحمد محمد', storeName: 'بيك إن بريستو' },
-  'PA-0082': { customerName: 'سارة خالد', storeName: 'برغر لاب' },
-};
-
 export type UiAuditRow = {
   id: string; who: string; why: string; when: string; permissionResult: string;
   slaBreachReason: string; supportTicketLink: string; proofRequired: string;
@@ -191,49 +174,3 @@ export type UiAuditRow = {
 let _globalUiAuditRows: UiAuditRow[] = [];
 
 export function getDynamicUiAudits(): UiAuditRow[] { return _globalUiAuditRows; }
-
-export function getLiveOrderDecisions(): Record<string, LiveOrderDecisionRecord> {
-  return _globalLiveOrderDecisions;
-}
-
-export function updateLiveOrderDecision(
-  orderId: string,
-  decision: DshOperationsDecisionKind,
-  note: string,
-  nextLifecycleStatus: DshOrderLifecycleStatus,
-): void {
-  _globalLiveOrderDecisions = { ..._globalLiveOrderDecisions, [orderId]: { decision, note, submitted: true, nextLifecycleStatus } };
-
-  const info = PENDING_APPROVAL_LOOKUP[orderId] || { customerName: 'عميل', storeName: 'متجر' };
-  const orderLabel = `${info.customerName} — ${info.storeName}`;
-  const decisionResult = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'pending';
-  const decisionLabel = decision === 'approve' ? 'موافق' : decision === 'reject' ? 'مرفوض' : 'طلب تعديل';
-  const statusTone = decision === 'approve' ? 'success' : decision === 'reject' ? 'danger' : 'warning';
-
-  const auditEntry: DshAuditEntry = {
-    entryId: `${orderId}-audit`,
-    actorRoleId: 'platform-operator',
-    actorName: 'مشغّل المنصة',
-    timestamp: new Date().toISOString(),
-    section: 'catalog-approval',
-    sensitiveAction: 'approve-catalog',
-    decision: decisionResult,
-    reason: note || 'مراجعة واعتماد الطلب المعلق تشغيلياً.',
-    evidence: 'مرفقات الطلب ومستند إثبات الشريك',
-    relatedEntityId: orderId,
-    relatedEntityLabel: orderLabel,
-    affectedSurfaces: ['control-panel', 'app-partner', 'app-client'],
-    wltReadOnly: false,
-    rollbackNote: decision === 'approve' ? 'يمكن إلغاء الموافقة وإعادة الطلب للمراجعة' : undefined,
-  };
-  addDshAuditEntry(auditEntry);
-
-  const ticketId = orderId === 'PA-0081' ? 'تذكرة-4022' : orderId === 'PA-0082' ? 'تذكرة-4025' : 'عام';
-  const uiAuditRow: UiAuditRow = {
-    id: `${orderId}-audit`, who: 'مشغّل المنصة', why: 'قرار مراجعة العمليات', when: 'منذ ثوانٍ',
-    permissionResult: decisionLabel, slaBreachReason: 'مراجعة تشغيلية', supportTicketLink: ticketId,
-    proofRequired: 'صورة إثبات', evidenceState: 'مكتمل', resolutionPath: 'حل',
-    note: note || 'مراجعة واعتماد الطلب المعلق تشغيلياً.', statusTone: statusTone,
-  };
-  _globalUiAuditRows = [uiAuditRow, ..._globalUiAuditRows];
-}

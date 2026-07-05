@@ -6,6 +6,7 @@ import React from 'react';
 import type { CompactOrderChatMessage, CaptainAppMode } from './captain.contract';
 import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
 import { resolveDshRuntimeOrderId, useCaptainOrderRuntime } from './use-captain-order-runtime';
+import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
 
 export type DeliveryActionsDeps = {
   captainRuntimeId: string;
@@ -140,6 +141,13 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
 
   const reportPodFailure = React.useCallback(async () => {
     if (!captainRuntimeId) return void setCaptainPodState('error');
+    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery) {
+      // The DSH backend contract does not expose a failed-delivery mutation
+      // yet; the action is disabled explicitly instead of failing opaquely.
+      console.warn('[captain:pod-fail] delivery-failure reporting is not exposed by the DSH backend contract — action disabled');
+      setCaptainPodState('error');
+      return;
+    }
     try {
       await captainOrderRuntime.failDelivery(resolveDshRuntimeOrderId(activeOrderId), captainRuntimeId);
       setCaptainPodState('retry-required');

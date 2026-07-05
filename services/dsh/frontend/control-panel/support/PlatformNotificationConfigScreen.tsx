@@ -5,6 +5,7 @@ import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { Badge, DataTable, Header, ScrollScreen, StateView, Text, spacing } from "@bthwani/ui-kit";
 import { usePlatformNotificationConfigController } from "../../shared/notifications";
+import type { DshPlatformNotificationConfig } from "../../shared/notifications";
 
 export function PlatformNotificationConfigScreen() {
   const identity = useIdentitySession();
@@ -15,7 +16,7 @@ export function PlatformNotificationConfigScreen() {
   }
   if (state.kind === "loading" || state.kind === "idle") return <StateView title="جارٍ التحميل…" />;
   if (state.kind === "error") {
-    return <StateView title="خطأ" description={state.message} actionLabel="إعادة المحاولة" onAction={reload} />;
+    return <StateView title="خطأ" description={state.message} actionLabel="إعادة المحاولة" onActionPress={reload} />;
   }
   if (state.configs.length === 0) {
     return (
@@ -30,16 +31,19 @@ export function PlatformNotificationConfigScreen() {
     <ScrollScreen>
       <Header title="إعدادات الإشعارات" subtitle="إدارة وتهيئة إشعارات المنصة" />
       <View style={styles.container}>
-        <DataTable
+        <DataTable<DshPlatformNotificationConfig>
           columns={[
-            { key: "topic", label: "الموضوع" },
-            { key: "isEnabled", label: "الحالة", render: (v: boolean) => (
-              <Badge label={v ? "مفعّل" : "معطَّل"} variant={v ? "success" : "neutral"} />
-            )},
-            { key: "description", label: "الوصف" },
-            { key: "updatedBy", label: "عُدِّل من" },
+            { key: "topic", header: "الموضوع", render: (row) => <Text role="bodySm">{row.topic}</Text> },
+            {
+              key: "isEnabled",
+              header: "الحالة",
+              render: (row) => <Badge label={row.isEnabled ? "مفعّل" : "معطّل"} tone={row.isEnabled ? "success" : "neutral"} />,
+            },
+            { key: "description", header: "الوصف", render: (row) => <Text role="bodySm">{row.description}</Text> },
+            { key: "updatedBy", header: "عُدِّل من", render: (row) => <Text role="bodySm">{row.updatedBy}</Text> },
           ]}
           rows={state.configs}
+          getRowKey={(row) => row.id}
         />
       </View>
     </ScrollScreen>
@@ -47,5 +51,5 @@ export function PlatformNotificationConfigScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { margin: spacing.md },
+  container: { margin: spacing[4] },
 });

@@ -3,6 +3,7 @@
 // POST /dsh/catalog-approvals/{id}/transition).
 // Replaces the previous in-memory mock in partner.workflow.ts.
 import { PlatformVarsRegistry } from '../platform/platform-vars';
+import { createDshFlexibleHttpClient } from '../_kernel/dsh-http-request';
 import type {
   ApprovalEntityType,
   ApprovalRecord,
@@ -16,28 +17,20 @@ function resolveBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl');
 }
 
-function authHeaders(): Record<string, string> {
-  const token = PlatformVarsRegistry.get('dshAuthBearerToken');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
+// Goes through the shared kernel HTTP client (approved adapter transport).
+// An unreachable/misconfigured API still surfaces as null/empty rather than
+// fabricated data — callers render honest empty states.
+async function request<T>(path: string, options?: { method?: 'POST'; body?: unknown }): Promise<T | null> {
   const baseUrl = resolveBaseUrl();
   if (!baseUrl) return null;
+  const token = PlatformVarsRegistry.get('dshAuthBearerToken');
+  const { request: send } = createDshFlexibleHttpClient(baseUrl);
   try {
-    const res = await fetch(new URL(path, baseUrl).toString(), {
-      ...init,
-      headers: { ...authHeaders(), ...(init?.headers ?? {}) },
+    return await send<T>(path, {
+      ...(options?.method ? { method: options.method } : {}),
+      ...(options?.body !== undefined ? { body: options.body } : {}),
+      ...(token ? { token } : {}),
     });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
   } catch {
     return null;
   }
@@ -57,7 +50,7 @@ export async function createCatalogApproval(
 ): Promise<ApprovalRecord | null> {
   const body = await request<{ record: ApprovalRecord }>('/dsh/catalog-approvals', {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: input,
   });
   return body?.record ?? null;
 }
@@ -97,7 +90,7 @@ export async function transitionCatalogApproval(
 ): Promise<ApprovalRecord | null> {
   const body = await request<{ record: ApprovalRecord }>(
     `/dsh/catalog-approvals/${encodeURIComponent(id)}/transition`,
-    { method: 'POST', body: JSON.stringify({ toStage, actionLabel }) },
+    { method: 'POST', body: { toStage, actionLabel } },
   );
   return body?.record ?? null;
 }
