@@ -66,3 +66,7 @@ node-gates*.log
 
 # Generated Swagger / OpenAPI bundles
 *.bundled.json
+
+# Explicitly track bthwani-deep-diagnostic-input.md
+!tools/diagnostics/bthwani-deep-diagnostic-input.md
+
