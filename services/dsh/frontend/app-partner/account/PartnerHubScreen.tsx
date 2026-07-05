@@ -118,25 +118,6 @@ type NotificationPreferenceId =
 
 type NotificationPreferenceState = Record<NotificationPreferenceId, boolean>;
 
-type PartnerTeamRole = 'owner' | 'supervisor' | 'staff' | 'courier';
-type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
-
-type PartnerTeamMember = {
-  id: string;
-  name: string;
-  role: PartnerTeamRole;
-  roleLabel: string;
-  status: PartnerTeamStatus;
-  statusLabel: string;
-  branchAssignment: string;
-  permissionsSummary: string;
-  deliveryAssignment: string;
-  inviteLifecycle: string;
-  operationalImpact: string;
-  auditNote: string;
-  inlineActionLabel: string;
-};
-
 type PartnerCoverageZoneStatus = 'active' | 'pending' | 'blocked';
 
 type PartnerCoverageZone = {
@@ -156,7 +137,6 @@ type PartnerCoverageZone = {
   auditNote: string;
 };
 
-const runtimePartnerTeamMembers: readonly PartnerTeamMember[] = [];
 const runtimePartnerCoverageZones: readonly PartnerCoverageZone[] = [];
 
 const runtimePartnerAnalytics = {
@@ -728,6 +708,7 @@ function OperationsPanel({
   serviceModes,
   onBack,
   onOpenStoreCourierSetup,
+  onOpenTeamManagement,
   listingEnabled,
   storeVisibility,
   visibilityLabel,
@@ -741,21 +722,17 @@ function OperationsPanel({
   serviceModes: readonly { id: string; label: string; description: string; enabled: boolean }[];
   onBack: () => void;
   onOpenStoreCourierSetup?: () => void;
+  onOpenTeamManagement?: () => void;
   listingEnabled: boolean;
   storeVisibility: ReturnType<typeof resolveDshStoreClientVisibility>;
   visibilityLabel: string;
 }) {
   const { direction } = useDirection();
 
-  const teamMembers = runtimePartnerTeamMembers;
   const coverageZones = runtimePartnerCoverageZones;
   const [selectedModeId, setSelectedModeId] = React.useState<PartnerOperationalMode['id'] | ''>('pickup');
-  const [teamPanelOpen, setTeamPanelOpen] = React.useState(false);
   const [coveragePanelOpen, setCoveragePanelOpen] = React.useState(false);
-  const [selectedMemberId, setSelectedMemberId] = React.useState<string>(teamMembers.find((member) => member.role === 'supervisor')?.id ?? teamMembers[0]?.id ?? '');
   const [selectedZoneId, setSelectedZoneId] = React.useState<string>(coverageZones.find((zone) => zone.status === 'active')?.id ?? coverageZones[0]?.id ?? '');
-  const [inviteDraft, setInviteDraft] = React.useState('');
-  const [lastSaveLabel, setLastSaveLabel] = React.useState<string | null>(null);
 
   const resolvedModes = React.useMemo(
     () =>
@@ -767,12 +744,6 @@ function OperationsPanel({
   );
 
   const activeModesCount = resolvedModes.filter((mode) => mode.enabled).length;
-      const activeSupervisorCount = teamMembers.filter((member) => member.role === 'supervisor' && member.status === 'active').length;
-      const activeTeamCount = teamMembers.filter((member) => member.status === 'active').length;
-      const pausedTeamCount = teamMembers.filter((member) => member.status === 'paused').length;
-      const invitedTeamCount = teamMembers.filter((member) => member.status === 'invited').length;
-      const blockedTeamCount = teamMembers.filter((member) => member.status === 'blocked').length;
-      const reviewTeamCount = teamMembers.filter((member) => member.status === 'review-needed').length;
       const activeZoneCount = coverageZones.filter((zone) => zone.status === 'active').length;
       const pendingZoneCount = coverageZones.filter((zone) => zone.status === 'pending').length;
       const blockedZoneCount = coverageZones.filter((zone) => zone.status === 'blocked').length;
@@ -927,159 +898,22 @@ function OperationsPanel({
 
       <Divider />
 
-      {/* 5) Flat Team Section with inline expansion */}
+      {/* 5) Team summary — full member management lives in PartnerTeamManagementScreen */}
       <Box gap={3} paddingY={2}>
         <Box layoutDirection="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Box style={{ gap: 2, alignItems: 'flex-start' }}>
             <Text role="bodyStrong" align="start">الفريق</Text>
-            <Text role="caption" tone="muted" align="start">{teamRoleSummary} · {teamStatusSummary}</Text>
+            <Text role="caption" tone="muted" align="start">إدارة الأدوار والدعوات والصلاحيات لأعضاء الفرع.</Text>
           </Box>
           <Button
-            label={teamPanelOpen ? 'إخفاء الأعضاء' : 'إدارة الفريق'}
+            label="إدارة الفريق"
             tone="secondary"
             size="sm"
             fullWidth={false}
-            onPress={() => setTeamPanelOpen((current) => !current)}
+            onPress={onOpenTeamManagement}
+            disabled={!onOpenTeamManagement}
           />
         </Box>
-
-        <Box layoutDirection="row" style={{ flexWrap: 'wrap', gap: spacing[2] }}>
-          <SummaryCell label="نشط" value={String(activeTeamCount)} tone="success" />
-          <SummaryCell label="موقوف" value={String(pausedTeamCount)} tone="warning" />
-          <SummaryCell label="قيد المراجعة" value={String(reviewTeamCount)} tone="info" />
-        </Box>
-
-        {teamPanelOpen && (
-          <Box gap={3} style={{ paddingHorizontal: spacing[1], marginTop: spacing[1] }}>
-            <Box layoutDirection="row" style={{ alignItems: 'center', gap: 6 }}>
-              <Icon name="information-circle-outline" size={14} tone="muted" />
-              <Text role="caption" tone="muted" align="start" style={{ flex: 1 }}>
-                الأدوار والدعوات هنا محلية حتى يتصل مسار إدارة الأعضاء في Control Panel.
-              </Text>
-            </Box>
-
-            <Box gap={0}>
-              {teamMembers.map((member) => {
-                const isMemberSelected = selectedMemberId === member.id;
-                const roleTone = resolveTeamRoleTone(member.role);
-                const statusTone = resolveTeamStatusTone(member.status);
-                const memberActionLabel = resolveMemberActionLabel(member);
-                const isLastSupervisor = member.role === 'supervisor' && member.status === 'active' && activeSupervisorCount <= 1;
-
-                return (
-                  <Box key={member.id} style={{ borderBottomWidth: 1, borderBottomColor: theme.line + '22', paddingVertical: spacing[2] }}>
-                    <Pressable
-                      onPress={() => setSelectedMemberId(isMemberSelected ? '' : member.id)}
-                      style={({ pressed }) => ({
-                        flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-                        alignItems: 'center',
-                        backgroundColor: pressed ? theme.surfaceInset : undefined,
-                        padding: spacing[1],
-                      })}
-                    >
-                      <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2], flexShrink: 1, minWidth: 0 }}>
-                        <Icon
-                          name={member.role === 'courier' ? 'bicycle-outline' : member.role === 'owner' ? 'shield-checkmark-outline' : member.role === 'supervisor' ? 'person-circle-outline' : 'person-outline'}
-                          size={16}
-                          tone={roleTone}
-                        />
-                        <Box style={{ gap: 2, flexShrink: 1, minWidth: 0 }}>
-                          <Text role="bodyStrong" align="start">{member.name}</Text>
-                          <Text role="caption" tone="muted" align="start">{member.branchAssignment}</Text>
-                        </Box>
-                      </Box>
-                      <Box style={{ alignItems: direction === 'rtl' ? 'flex-start' : 'flex-end', gap: 2, marginStart: spacing[2] }}>
-                        <Badge label={member.roleLabel} tone={roleTone} />
-                        <Badge label={member.statusLabel} tone={statusTone} />
-                        <Text role="caption" tone="muted">{memberActionLabel}</Text>
-                      </Box>
-                      <Icon name={isMemberSelected ? 'chevron-down' : 'chevron-forward-outline'} mirrored tone="muted" size={14} style={{ marginStart: spacing[2] }} />
-                    </Pressable>
-
-                    {isMemberSelected && (
-                      <Box paddingX={4} gap={2} style={{ paddingTop: spacing[3] }}>
-                        <KeyValueList
-                          dense
-                          items={[
-                            { label: 'الحالة', value: member.statusLabel, tone: statusTone },
-                            { label: 'تعيين الفرع', value: member.branchAssignment },
-                            { label: 'ملخص الصلاحيات', value: member.permissionsSummary },
-                            { label: 'إسناد التوصيل', value: member.deliveryAssignment },
-                            { label: 'دورة الدعوة', value: member.inviteLifecycle },
-                            { label: 'المراجعة/الأثر', value: member.operationalImpact },
-                          ]}
-                        />
-                        <Text role="bodySm" tone="muted" align="start">
-                          {member.auditNote}
-                        </Text>
-                        {isLastSupervisor ? (
-                          <Text role="caption" tone="warning" align="start">
-                            لا يمكن تعطيل آخر مشرف.
-                          </Text>
-                        ) : null}
-                        <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap' }}>
-                          <Button
-                            label={memberActionLabel}
-                            tone={member.status === 'blocked' ? 'secondary' : 'brand'}
-                            size="sm"
-                            fullWidth={false}
-                            disabled={isLastSupervisor}
-                            onPress={() => {
-                              if (isLastSupervisor) {
-                                setLastSaveLabel('لا يمكن تعطيل آخر مشرف.');
-                                return;
-                              }
-
-                              setLastSaveLabel(`${memberActionLabel}: ${member.name}`);
-                            }}
-                          />
-                          <Button
-                            label={member.status === 'invited' ? 'إعادة إرسال الدعوة' : member.status === 'blocked' ? 'طلب مراجعة' : 'مراجعة الصلاحيات'}
-                            tone="secondary"
-                            size="sm"
-                            fullWidth={false}
-                            onPress={() => {
-                              setLastSaveLabel(`${member.statusLabel}: ${member.name}`);
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                );
-              })}
-            </Box>
-
-            <Box gap={3} style={{ marginTop: spacing[2] }}>
-              <TextField
-                label="اسم العضو أو البريد"
-                placeholder="مثال: staff@bthwani.sa"
-                value={inviteDraft}
-                onChangeText={setInviteDraft}
-                hint="إنشاء دعوة محلية — مسار العضوية المركزي قيد الربط (J-006)."
-              />
-              <Button
-                label="إضافة عضو"
-                tone="secondary"
-                size="sm"
-                fullWidth={false}
-                onPress={() => {
-                  if (!inviteDraft.trim()) {
-                    return;
-                  }
-
-                  setLastSaveLabel(`دعوة محلية: ${inviteDraft.trim()}`);
-                  setInviteDraft('');
-                }}
-              />
-              {lastSaveLabel && (
-                <Text role="caption" tone="success" align="start">
-                  {lastSaveLabel}
-                </Text>
-              )}
-            </Box>
-          </Box>
-        )}
       </Box>
 
       <Divider />
