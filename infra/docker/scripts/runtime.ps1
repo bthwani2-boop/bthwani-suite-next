@@ -289,6 +289,10 @@ function Invoke-ValkeySmoke {
 
 function Invoke-WltFinancialProviderSmoke {
   Write-Host "`n--- WLT financial provider smoke ---"
+  if ($env:WLT_MUTATIONS_ENABLED -ne "true") {
+    Write-Host "  Skipping: WLT_MUTATIONS_ENABLED is not true"
+    return
+  }
   pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:RepoRoot "tools/scripts/smoke-wlt-provider-through-wlt.ps1") -BaseUrl "http://localhost:58083"
   if ($LASTEXITCODE -ne 0) { throw "WLT financial provider smoke failed" }
 }
