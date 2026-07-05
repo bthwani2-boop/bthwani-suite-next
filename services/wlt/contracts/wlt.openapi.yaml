@@ -628,9 +628,6 @@ paths:
     get:
       operationId: listWltCodRecords
       summary: List COD records by captainId or partnerId.
-    get:
-      operationId: listWltCodRecords
-      summary: List COD records by captainId or partnerId.
       tags:
         - WltCod
       parameters:
@@ -760,13 +757,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-    get:
-      operationId: listWltCommissions
-      summary: List commissions by orderId or captainId.
-      tags:
-        - WltCod
-        "400":
-          $ref: "#/components/responses/BadRequest"
     get:
       operationId: listWltCommissions
       summary: List commissions by orderId or captainId.
@@ -1544,7 +1534,6 @@ components:
           format: int64
         currency:
           type: string
-          default: YER
           default: YER
 
     WltCodRecordResponse:

@@ -1851,7 +1851,7 @@ paths:
   /dsh/internal/wlt/payment-session-events:
     post:
       operationId: reportWltPaymentSessionEvent
-      summary: WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization.
+      summary: "WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization."
       tags: [DshCheckout]
       x-bthwani-client-generation: DISABLED
       security:
@@ -1871,7 +1871,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { description: Only the WLT service may report payment-session events. }
         "404": { description: Checkout intent not found. }
-        "409": { description: paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome. }
+        "409": { description: "paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome." }
 
   # ── Notifications ─────────────────────────────────────────────────
   /dsh/notifications:
