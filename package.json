@@ -86,7 +86,13 @@
     "field": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1",
     "partner": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1",
     "control": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/control-panel/runtime/start.ps1",
-    "yagni:diagnostics": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-yagni-diagnostics.ps1"
+    "yagni:diagnostics": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-yagni-diagnostics.ps1",
+    "openapi:generate:dsh": "pnpm dlx openapi-typescript@7.13.0 services/dsh/contracts/dsh.openapi.yaml -o services/dsh/clients/generated/dsh-api.ts",
+    "openapi:generate:wlt": "pnpm dlx openapi-typescript@7.13.0 services/wlt/contracts/wlt.openapi.yaml -o services/wlt/clients/generated/wlt-api.ts",
+    "openapi:generate:identity": "pnpm dlx openapi-typescript@7.13.0 core/identity/contracts/auth.openapi.yaml -o core/identity/clients/generated/identity-api.ts",
+    "openapi:generate": "pnpm run openapi:generate:dsh && pnpm run openapi:generate:wlt && pnpm run openapi:generate:identity",
+    "guard:api-binding": "node tools/guards/api-binding-gate.mjs",
+    "runtime:frontend-binding:check": "node tools/scripts/check-frontend-binding-readiness.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
