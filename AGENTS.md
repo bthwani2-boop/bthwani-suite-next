@@ -44,6 +44,63 @@ All scans and file operations must adhere to the token-drain exclusions specifie
 
 Escalate only for explicit closure/PR/release requests or high-risk work: WLT/finance, security, auth, privacy, secrets, data mutation, migrations, runtime, public contracts, dependency upgrades, CI, broad move/delete/refactor, or unclear ownership/dependency/routing/duplication.
 
+## Universal Task Router
+
+Before any task, classify it using this router. This applies to all future work, not only the current chat.
+
+### 1) Task Mode
+
+Select exactly one primary mode:
+
+| Mode | Use when | Default verification |
+|---|---|---|
+| `TEXT_ONLY` | docs, wording, prompts, agent wording | `git --no-pager diff --check` |
+| `CODE_ONLY` | code logic, static bindings, contracts, type safety, no runtime claim | targeted `tsc`, guard, contract, or affected check |
+| `RUNTIME` | runtime behavior, server/app startup, Docker, ports, env runtime | targeted runtime smoke only |
+| `UI_CODE` | UI code, routes, screens, state, component logic without visual proof | targeted typecheck/guard |
+| `UI_VISUAL` | visual parity, screenshots, premium layout proof, store/release visual checks | code check + visual evidence only when explicitly required |
+| `API_CONTRACT` | OpenAPI, client generation, backend/frontend binding | contract lint + client/typecheck |
+| `DSH_WLT` | any DSH topic or DSH-WLT boundary, finance, checkout, payment, commission, handoff | paired backend/frontend code inspection + WLT boundary guard |
+| `SECURITY_PRIVACY` | secrets, auth, privacy, sensitive config/logs | security skill + targeted checks |
+| `AGENT_SYSTEM` | AGENTS.md, .agents, skills, adapters, governance | diff check + agent skill integrity when structure changes |
+| `DEPENDENCY_CI` | package.json, lockfile, CI, toolchain | explicit approval + targeted package/CI verification |
+| `REFACTOR_CLEANUP` | move/delete/merge/deduplicate/dead code | graph/impact check + affected validation |
+
+Do not mix modes unless the task truly crosses boundaries. If mixed, choose the highest-risk mode and note the reason.
+
+### 2) Tool Ladder
+
+1. LeanCTX when active, for context gathering and multi-agent handoff.
+2. Direct repo files as source of truth.
+3. Graphify for architecture, dependency, ownership, DSH/WLT, dead-code, duplication, routing, or multi-surface work.
+4. Existing package scripts and guards before inventing new commands.
+5. Direct `tsc --noEmit` when package scripts may hide failures.
+6. Nx affected only after changes or when workspace impact must be scoped.
+7. Static analysis helpers only when the problem pattern requires them (`ast-grep`, `dependency-cruiser`, `madge`, `knip`, `jscpd`).
+8. Runtime commands only when runtime behavior is changed or claimed.
+
+### 3) Closure Vocabulary
+
+Agents must not overclaim.
+
+Allowed results: `CODE_CHECK_PASS`, `CODE_CHECK_FAIL`, `DSH_WLT_CODE_CLOSURE_PASS`, `DSH_WLT_CODE_CLOSURE_FAIL`, `RUNTIME_SMOKE_PASS`, `RUNTIME_SMOKE_FAIL`, `UI_VISUAL_PASS`, `READY_FOR_PR`, `BLOCKED_EXTERNAL`, `PROTOCOL_VIOLATION`.
+
+Forbidden unless actually proven: `RUNTIME_VERIFIED` without runtime execution, `IMPLEMENTATION_PASS` for code-only checks, "100% runtime" without runtime proof, "visual pass" without visual review when visual proof was required.
+
+### 4) Deep Work Escalation
+
+Escalate from `CODE_BASED_LEAN` to deeper code closure when: DSH/WLT boundary is touched; WLT/finance/payment/commission/checkout/handoff is touched; shared brain is touched; API contract or generated/manual client is touched; route/navigation/screen registry spans more than one surface; control-panel sections are affected; ownership is unclear; move/delete/merge/refactor is requested; duplicate logic or dead code is suspected; agent/governance/skill files are modified; or the user asks for "deep", "100%", "closure", "no gaps", or "everything".
+
+Deeper closure still does not mean full build/test/runtime by default. It means deeper static discovery, paired inspection, impact graphing, and targeted verification.
+
+### 5) Paired Agent Rule
+
+For cross-layer or cross-service tasks, use producer/reviewer pairs: a backend/code owner for backend/API/contracts/data/validation, a frontend/code owner for frontend/shared/controllers/screens/control-panel/bindings, and a coordinator that compares both and blocks closure until they agree. Mandatory for DSH/WLT, API + frontend binding, finance/security/auth/privacy, broad refactor/move/delete, and control-panel + app multi-surface features.
+
+### 6) Performance and Quality Axes
+
+Consider only the axes a task actually affects: correctness, ownership, API/contract alignment, type safety, dependency direction, duplication, dead code, state logic, permission logic, loading/error/empty behavior, runtime config, security/privacy, finance ownership, UI/shared ownership, control-panel coverage, cross-surface impact. A missing affected axis means incomplete closure.
+
 ## Graphify
 
 Shared skill:

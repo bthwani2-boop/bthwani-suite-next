@@ -4,6 +4,7 @@ Version: 2026.06.24-v1
 
 ## Active skills
 
+- `bthwani-universal-task-router` — Classify any task into mode, risk, tools, agent pattern, and allowed closure result before execution.
 - `bthwani-current-workspace-authority` — Confirm current repo, branch, target paths, and donor boundary before edits.
 - `bthwani-evidence-gate-router` — Classify the task and choose the smallest sufficient verification gate (defaults to CODE_BASED_LEAN).
 - `bthwani-guard-command-router` — Map required checks to existing package scripts or guard files without inventing commands.

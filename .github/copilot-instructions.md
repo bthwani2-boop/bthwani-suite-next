@@ -10,6 +10,8 @@ Read first:
 
 Copilot is an implementation assistant only. It must not decide architecture, widen scope, delete/move/rename files, change dependencies, or claim final acceptance. All commands must follow the safety policy.
 
+This adapter is thin. Do not duplicate global policy here. If this file conflicts with `AGENTS.md`, `AGENTS.md` wins.
+
 Before editing, state the exact files you intend to touch. After editing, provide changed paths and ask for Git evidence.
 
 

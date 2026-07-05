@@ -35,6 +35,22 @@ High-risk or cross-service work.
 - Load: authority + `bthwani-evidence-gate-router` + task skill
 - Evidence gate is not default. Use it only for high-risk work, final closure, PR readiness, release readiness, or explicit user request.
 
+## Universal Router Link
+
+Before selecting a skill, apply the Universal Task Router in `AGENTS.md`.
+
+Routing order: identify task mode, identify risk level, select at most the required skills, select the smallest sufficient verification, escalate only when the task mode requires it.
+
+Mandatory escalations:
+- `DSH_WLT` → `bthwani-dsh-wlt-finance-boundary` + `graphify` when ownership or dependency impact is broad.
+- `API_CONTRACT` → `bthwani-api-runtime-binding` + `bthwani-guard-command-router`.
+- `AGENT_SYSTEM` → `bthwani-agent-skill-integrity`.
+- `REFACTOR_CLEANUP` → `bthwani-clean-code-guard` + `graphify`.
+- `SECURITY_PRIVACY` → `bthwani-security-secrets-privacy`.
+- `RUNTIME` → `bthwani-docker-journey-runtime` only when runtime behavior is changed or claimed.
+
+Do not load skills merely because they exist. Load only what the task mode requires.
+
 ---
 
 ## Skill Catalog (load only what the task needs)

@@ -5,8 +5,10 @@ Allowed by default:
 - git diff
 - git log
 - git show
-- read-only graphify commands
-- read-only nx inspection
+- read-only graphify commands (graphify read-only analysis)
+- read-only nx inspection (nx show projects, nx graph/read-only project inspection)
+- git grep / ripgrep / ast-grep search (read-only)
+- dependency-cruiser/madge/knip/jscpd in report-only mode
 - typecheck/test/build when non-destructive
 - pnpm scripts that do not alter dependencies or delete data
 
@@ -17,6 +19,7 @@ Requires explicit user approval:
 - delete/move/rename files or folders
 - dependency changes
 - lockfile changes
+- codemods or generated client regeneration
 - docker destructive reset/down with data loss
 - force operations
 - remote writes
