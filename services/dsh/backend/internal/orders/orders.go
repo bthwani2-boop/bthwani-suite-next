@@ -506,12 +506,14 @@ type DeliveryCompletionContext struct {
 }
 
 // GetOrderDeliveryContext resolves the checkout intent, payment method, and
-// owning partner for an order, so the dispatch HTTP layer can decide whether
-// (and how) to notify WLT once a delivery is marked complete.
-func GetOrderDeliveryContext(db *sql.DB, orderID string) (*DeliveryCompletionContext, error) {
+// owning partner for an order, so the dispatch layer can decide whether (and
+// how) to notify WLT once a delivery is marked complete. It takes the same
+// transaction that confirms the delivery so the lookup and the outbox write
+// that follows it are atomic with the delivery confirmation.
+func GetOrderDeliveryContext(tx *sql.Tx, orderID string) (*DeliveryCompletionContext, error) {
 	var ctx DeliveryCompletionContext
 	var partnerID sql.NullString
-	err := db.QueryRow(`
+	err := tx.QueryRow(`
 		SELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id
 		FROM dsh_orders o
 		JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id

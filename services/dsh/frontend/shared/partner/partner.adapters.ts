@@ -23,6 +23,16 @@ type PartnerOrderStatus =
   | 'cancelled';
 
 const statusMap: Record<string, PartnerOrderStatus> = {
+  pending: 'needs_accept',
+  store_accepted: 'preparation_started',
+  preparing: 'preparing',
+  ready_for_pickup: 'ready',
+  driver_assigned: 'captain_assigned',
+  driver_arrived_store: 'captain_arriving',
+  picked_up: 'handoff',
+  arrived_customer: 'delivering',
+  delivered: 'completed',
+  cancelled: 'cancelled',
   CREATED: 'needs_accept',
   ACCEPTED: 'preparation_started',
   READY_FOR_PICKUP: 'ready',
@@ -54,7 +64,7 @@ const nextActionMap: Record<PartnerOrderStatus, string> = {
 };
 
 export function mapRuntimeRowToPartnerOrderItem(row: DshRuntimeOrderRow) {
-  const partnerStatus = statusMap[row.status] ?? 'needs_accept';
+  const partnerStatus = statusMap[row.status] ?? statusMap[row.status.toLowerCase()] ?? 'needs_accept';
   const created = new Date(row.createdAt);
   const elapsed = Math.max(0, Math.floor((Date.now() - created.getTime()) / 60000));
   return {

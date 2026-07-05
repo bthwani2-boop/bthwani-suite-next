@@ -163,8 +163,8 @@ export function ControlPanelDshWorkspaceFrame({
                 ownerSurface={decisionBoard.ownerSurface}
                 evidenceHint={decisionBoard.evidenceHint}
                 routeHint={decisionBoard.routeHint}
-                decisionTone={decisionBoard.decisionTone}
-                recommendation={decisionBoard.recommendation}
+                {...(decisionBoard.decisionTone !== undefined ? { decisionTone: decisionBoard.decisionTone } : {})}
+                {...(decisionBoard.recommendation !== undefined ? { recommendation: decisionBoard.recommendation } : {})}
               />
             ) : null}
 
@@ -178,9 +178,9 @@ export function ControlPanelDshWorkspaceFrame({
                         title={action.label}
                         description={action.description}
                         footerLabel={action.badge ?? 'فتح'}
-                        href={action.href}
-                        tone={action.tone}
-                        onAction={action.onAction}
+                        {...(action.href !== undefined ? { href: action.href } : {})}
+                        {...(action.tone !== undefined ? { tone: action.tone } : {})}
+                        {...(action.onAction !== undefined ? { onAction: action.onAction } : {})}
                       />
                     </Box>
                   ))}
@@ -197,9 +197,9 @@ export function ControlPanelDshWorkspaceFrame({
                       id={item.id}
                       label={item.label}
                       description={item.description}
-                      href={item.href}
-                      badge={item.badge}
-                      onAction={item.onAction}
+                      {...(item.href !== undefined ? { href: item.href } : {})}
+                      {...(item.badge !== undefined ? { badge: item.badge } : {})}
+                      {...(item.onAction !== undefined ? { onAction: item.onAction } : {})}
                     />
                   ))}
                 </Box>

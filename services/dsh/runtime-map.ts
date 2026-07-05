@@ -151,7 +151,7 @@ export const DSH_RUNTIME_MAP = [
     generatedClientReady: true,
     surfaceBindingApproved: true,
     state: "verified",
-    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
+    runtimeEvidence: "services/dsh/evidence/notifications-actor-communication/dsh-notifications-runtime-smoke.txt",
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
   // Campaigns, tickers, and partner-offers are all API-backed with governed

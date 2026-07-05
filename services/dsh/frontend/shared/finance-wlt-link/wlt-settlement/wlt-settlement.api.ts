@@ -1,8 +1,10 @@
-import { resolveWltApiBaseUrl } from "../../_kernel/wlt-api-base-url";
+import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../_kernel/dsh-http-request";
 import type { DshWltSettlementView, DshWltSettlementSummaryView } from "./wlt-settlement.types";
 
-const { request: wltGet } = createDshHttpClient(resolveWltApiBaseUrl(), "wlt-settlement");
+// WLT internal financial reads are service-authenticated; DSH surfaces read
+// them through the governed DSH finance proxy, never from the browser.
+const { request: wltGet } = createDshHttpClient(resolveDshApiBaseUrl(), "wlt-settlement");
 
 type WltSettlementRaw = {
   readonly id: string;
@@ -68,7 +70,7 @@ export async function fetchDshWltSettlementsByPartner(
 ): Promise<{ ok: true; views: DshWltSettlementView[] } | { ok: false; message: string }> {
   try {
     const body = await wltGet<{ settlements: WltSettlementRaw[] }>(
-      `/wlt/settlements?partnerId=${encodeURIComponent(partnerId)}`,
+      `/dsh/control-panel/finance/settlements?partnerId=${encodeURIComponent(partnerId)}`,
     );
     return { ok: true, views: body.settlements.map(toView) };
   } catch (e) {
@@ -82,7 +84,7 @@ export async function fetchDshWltSettlementSummary(
 ): Promise<{ ok: true; view: DshWltSettlementSummaryView } | { ok: false; message: string }> {
   try {
     const body = await wltGet<{ summary: WltSettlementSummaryRaw }>(
-      `/wlt/settlements/summary?partnerId=${encodeURIComponent(partnerId)}`,
+      `/dsh/control-panel/finance/settlements/summary?partnerId=${encodeURIComponent(partnerId)}`,
     );
     const s = body.summary;
     return {

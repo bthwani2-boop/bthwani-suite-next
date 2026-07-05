@@ -11,6 +11,8 @@ import {
   StateView,
   Text,
   lightThemeColors,
+  colorPalette,
+  alpha,
 } from '@bthwani/ui-kit';
 import { usePartnersController } from "../../shared/partner";
 
@@ -205,7 +207,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
 
         {/* Sub tabs (filters) */}
         {subTabItems && subTabItems.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: 'rgba(0,0,0,0.02)', borderRadius: '4px', paddingLeft: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: alpha(colorPalette.black, 0.02), borderRadius: '4px', paddingLeft: '0.5rem' }}>
             {subTabItems.map((subTab: any) => (
               <Button
                 key={subTab.id}

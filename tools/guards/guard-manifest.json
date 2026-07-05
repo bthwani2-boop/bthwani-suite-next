@@ -11,13 +11,15 @@
       "ui-kit-boundary",
       "runtime-config",
       "no-broken-imports",
-      "cleanup-policy"
+      "cleanup-policy",
+      "api-binding"
     ],
     "journey": [
       "fullstack-boundary",
       "wlt-financial-boundary",
       "runtime-config",
-      "no-broken-imports"
+      "no-broken-imports",
+      "api-binding"
     ]
   }
 }

@@ -103,7 +103,7 @@ export function ControlPanelDshOperationsScreen({
     setActiveGroup(group);
   }, [group]);
 
-  const activeGroupMeta = getOperationsGroupMeta(activeGroup);
+  const activeGroupMeta = getOperationsGroupMeta(activeGroup) ?? getOperationsGroupMeta('command-center')!;
   const activeSubGroup = searchParams.get('subGroup') || activeGroupMeta.subGroups?.[0]?.id || undefined;
   const activeSubGroupMeta = activeGroupMeta.subGroups?.find((sub) => sub.id === activeSubGroup);
 

@@ -111,7 +111,7 @@ export function StoreHero({
         <View style={styles.heroCoverFade} pointerEvents="none">
           {Array.from({ length: 120 }, (_, i) => {
             const t = i / 119;
-            const alpha = Math.pow(t, 1.5) * 0.88;
+            const bandOpacity = Math.pow(t, 1.5) * 0.88;
             return (
               <View
                 key={i}
@@ -119,7 +119,7 @@ export function StoreHero({
                   styles.heroCoverFadeBand,
                   {
                     top: `${(t * 100).toFixed(2)}%` as DimensionValue,
-                    backgroundColor: `rgba(255, 255, 255, ${alpha.toFixed(3)})`,
+                    backgroundColor: alpha(colorPalette.white, bandOpacity),
                   },
                 ]}
               />
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   heroCoverOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: alpha(colorPalette.black, 0.3),
   },
   heroCoverFade: {
     position: 'absolute',
@@ -425,9 +425,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.90)',
+    backgroundColor: alpha(colorPalette.white, 0.9),
     borderWidth: 1,
-    borderColor: 'rgba(10, 47, 92, 0.08)',
+    borderColor: alpha(NAVY, 0.08),
     shadowColor: colorRoles.shadowBase,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -554,12 +554,12 @@ const styles = StyleSheet.create({
   heroFeatureChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: alpha(colorPalette.black, 0.04),
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: alpha(colorPalette.white, 0.15),
     gap: 6,
     minHeight: 32,
   },

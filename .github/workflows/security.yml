@@ -1,0 +1,160 @@
+name: Security Gate
+
+on:
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual security scan'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Dependency review (PR only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0, AGPL-3.0
+
+  govulncheck-wlt:
+    name: govulncheck — WLT backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        working-directory: services/wlt/backend
+        run: govulncheck ./...
+
+  govulncheck-dsh:
+    name: govulncheck — DSH backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        working-directory: services/dsh/backend
+        run: govulncheck ./...
+
+  govulncheck-identity:
+    name: govulncheck — Identity backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        working-directory: core/identity/backend
+        run: govulncheck ./...
+
+  pnpm-audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm audit (high severity)
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
+  workflow-permissions-audit:
+    name: Workflow permissions audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check all workflows declare explicit permissions
+        run: |
+          echo "Auditing workflow permissions..."
+          VIOLATIONS=""
+          for f in .github/workflows/*.yml; do
+            if ! grep -q "^permissions:" "$f"; then
+              VIOLATIONS="$VIOLATIONS\n  MISSING permissions block: $f"
+            fi
+            if grep -qE "^\s+write-all" "$f"; then
+              VIOLATIONS="$VIOLATIONS\n  FORBIDDEN write-all: $f"
+            fi
+          done
+          if [ -n "$VIOLATIONS" ]; then
+            echo -e "ERROR: Workflow permission violations found:$VIOLATIONS"
+            exit 1
+          fi
+          echo "OK: All workflows have explicit permissions blocks."

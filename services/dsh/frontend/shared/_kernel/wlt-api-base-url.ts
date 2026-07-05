@@ -1,6 +1,5 @@
-export function resolveWltApiBaseUrl(): string {
-  if (typeof process !== "undefined" && process.env?.WLT_API_URL) {
-    return process.env.WLT_API_URL.replace(/\/$/, "");
-  }
-  return "http://localhost:58083";
-}
+/**
+ * Single source of truth for the WLT API base URL used by DSH frontend adapters.
+ * Re-exported from @bthwani/wlt to avoid duplicate resolver logic.
+ */
+export { resolveWltApiBaseUrl, validateWltApiBaseUrl } from "@bthwani/wlt";

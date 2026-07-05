@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./web": "./src/web.ts",
     "./mobile": "./src/mobile.tsx",
-    "./next": "./src/next.ts"
+    "./next": "./src/next.ts",
+    "./tokens": "./src/tokens/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

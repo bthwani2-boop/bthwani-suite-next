@@ -390,7 +390,7 @@ export function AssistedOrderDeskScreen({ hubHref: _hubHref, subGroup: _subGroup
                   recommendation={desk.submitDraftPreview.nextAction}
                   reason={`${modeLabel} · ${zone}`}
                   sla={desk.auditFlags.join(' · ')}
-                  onInspect={isSelected ? () => setSelectedDeskId(null) : undefined}
+                  {...(isSelected ? { onInspect: () => setSelectedDeskId(null) } : {})}
                   primaryAction={{
                     id: `${desk.deskId}-open`,
                     label: isSelected ? 'إغلاق' : 'فتح workspace',

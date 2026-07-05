@@ -177,6 +177,8 @@ export function FieldStoreVerificationScreen() {
   );
 }
 
+export default FieldStoreVerificationScreen;
+
 const styles = StyleSheet.create({
   cardContent: {
     padding: spacing[4],

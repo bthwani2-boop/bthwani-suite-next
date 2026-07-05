@@ -10,7 +10,7 @@ type CaptainNavigationDeps = {
   command: { target: DshCaptainCommandTarget; token?: number };
   route: DshCaptainRoute;
   setRoute: React.Dispatch<React.SetStateAction<DshCaptainRoute>>;
-  setActiveOrderId: React.Dispatch<React.SetStateAction<string>>;
+  setActiveAssignmentId: React.Dispatch<React.SetStateAction<string>>;
   setSelectedSupportScreen: React.Dispatch<React.SetStateAction<CaptainSupportRoute>>;
 };
 
@@ -18,7 +18,7 @@ export function useCaptainNavigationModel({
   command,
   route,
   setRoute,
-  setActiveOrderId,
+  setActiveAssignmentId,
   setSelectedSupportScreen,
 }: CaptainNavigationDeps) {
   const routeHistoryRef = React.useRef<DshCaptainRoute[]>(['home']);
@@ -58,7 +58,7 @@ export function useCaptainNavigationModel({
   }, [route, setRoute]);
 
   const goToInbox = React.useCallback(() => setRoute('inbox'), [setRoute]);
-  const openOrderDetail = React.useCallback((id: string) => { setActiveOrderId(id); setRoute('detail'); }, [setActiveOrderId, setRoute]);
+  const openOrderDetail = React.useCallback((assignmentId: string) => { setActiveAssignmentId(assignmentId); setRoute('detail'); }, [setActiveAssignmentId, setRoute]);
   const openCaptainAccount = React.useCallback(() => setRoute('account'), [setRoute]);
   const openCaptainAccountSection = React.useCallback((r: DshCaptainRoute) => setRoute(r), [setRoute]);
   const openSupportDirectory = React.useCallback(() => setRoute('support-directory'), [setRoute]);

@@ -1,0 +1,14 @@
+Notifications runtime smoke
+base_url=http://127.0.0.1:58080
+timestamp=2026-07-05T15:21:27Z
+resolved_head_sha=74ae6878fbed08e8eabc472da6ea8fe5982d3544
+PASS GET /dsh/health => 200
+PASS GET /dsh/notifications => 401
+PASS POST /dsh/notifications/00000000-0000-0000-0000-000000000000/read => 401
+PASS POST /dsh/notifications/read-all => 401
+PASS PUT /dsh/notifications/preferences => 401
+PASS GET /dsh/operator/notifications/config => 401
+PASS PUT /dsh/operator/notifications/config => 401
+PASS database tables => dsh_notifications|dsh_notification_preferences|dsh_platform_notification_config
+database_proof_method=docker exec bthwani-postgres-runtime psql -U dsh_runtime -d dsh_runtime (DATABASE_URL host/db resolved from bthwani-dsh-api-runtime container env: postgres://dsh_runtime:***@postgres:5432/dsh_runtime)
+note=prior run failed database proof because DSH_DATABASE_URL/psql were checked against the wrong local defaults (bthwani_runtime db, no local psql binary); the live runtime container's actual database is dsh_runtime, queried directly via docker exec against bthwani-postgres-runtime

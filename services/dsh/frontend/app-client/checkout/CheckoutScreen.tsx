@@ -12,6 +12,8 @@ import {
   Icon,
   Surface,
   colorRoles,
+  colorPalette,
+  alpha,
   radius,
   spacing,
   useDirection,
@@ -401,7 +403,7 @@ function ActiveOrderTracker({
                 <Text role="titleMd" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>
                   {isDelivered ? "تم وصول الطلب بنجاح ✓" : "جاري توصيل ومتابعة طلبك"}
                 </Text>
-                <Text role="caption" style={{ color: "rgba(255, 255, 255, 0.9)", marginTop: 2, fontWeight: "600" }}>
+                <Text role="caption" style={{ color: alpha(colorPalette.white, 0.9), marginTop: 2, fontWeight: "600" }}>
                   رقم الطلب: #DSH-{orderId.slice(0, 8).toUpperCase()}
                 </Text>
               </View>
@@ -411,7 +413,7 @@ function ActiveOrderTracker({
 
           {/* Smart Bilateral Bell Action inside the hero card */}
           {status !== "delivered" && status !== "cancelled" && (
-            <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255, 255, 255, 0.12)", paddingTop: 10 }}>
+            <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: alpha(colorPalette.white, 0.12), paddingTop: 10 }}>
               <TouchableOpacity
                 style={[
                   { height: 44, borderRadius: 10, justifyContent: "center", alignItems: "center", flexDirection: "row-reverse", gap: 8 },
@@ -438,7 +440,7 @@ function ActiveOrderTracker({
               </View>
               <View style={{ flex: 1, alignItems: "flex-end" }}>
                 <Text role="bodyStrong" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>قرع الكابتن جرس الوصول! 🔔</Text>
-                <Text role="caption" style={{ color: "rgba(255, 255, 255, 0.9)", marginTop: 2 }}>
+                <Text role="caption" style={{ color: alpha(colorPalette.white, 0.9), marginTop: 2 }}>
                   تنبيه: الكابتن عند الباب الآن وبانتظارك لاستلام الطلب (حفاظاً على خصوصية رقمك الفعلي).
                 </Text>
               </View>
@@ -665,7 +667,7 @@ function ActiveOrderTracker({
                   >
                     <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                       <Text style={[styles.messageSender, isClient && { color: colorRoles.surfaceBase }]}>{msg.sender}</Text>
-                      <Text style={[styles.messageTime, isClient && { color: "rgba(255,255,255,0.7)" }]}>{msg.time}</Text>
+                      <Text style={[styles.messageTime, isClient && { color: alpha(colorPalette.white, 0.7) }]}>{msg.time}</Text>
                     </View>
                     <Text style={[styles.messageBody, isClient && { color: colorRoles.surfaceBase }]}>{msg.text}</Text>
                   </Surface>
@@ -904,13 +906,13 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: alpha(colorPalette.white, 0.08),
   },
   pulseIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: alpha(colorPalette.white, 0.1),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -918,7 +920,7 @@ const styles = StyleSheet.create({
     backgroundColor: colorRoles.brandAction,
     padding: spacing[4],
     borderRadius: radius.md,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: alpha(colorPalette.white, 0.2),
     borderWidth: 1,
     shadowColor: colorRoles.brandAction,
     shadowOffset: { width: 0, height: 4 },
@@ -930,7 +932,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: alpha(colorPalette.white, 0.2),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1061,12 +1063,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   callButton: {
-    backgroundColor: "rgba(29, 78, 216, 0.08)",
+    backgroundColor: alpha(colorRoles.info, 0.08),
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(29, 78, 216, 0.2)",
+    borderColor: alpha(colorRoles.info, 0.2),
   },
   callButtonText: {
     fontSize: 12.5,
@@ -1148,12 +1150,12 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(29, 78, 216, 0.08)",
+    backgroundColor: alpha(colorRoles.info, 0.08),
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(29, 78, 216, 0.2)",
+    borderColor: alpha(colorRoles.info, 0.2),
   },
   attachmentBadgeText: {
     fontSize: 11,
@@ -1179,7 +1181,7 @@ const styles = StyleSheet.create({
   },
   chatQuickActionSelected: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: "rgba(29, 78, 216, 0.05)",
+    backgroundColor: alpha(colorRoles.info, 0.05),
   },
   chatTextInput: {
     minHeight: 88,
@@ -1278,12 +1280,12 @@ const styles = StyleSheet.create({
     color: colorRoles.textSecondary,
   },
   bellRingBtn: {
-    backgroundColor: "rgba(29, 78, 216, 0.08)",
+    backgroundColor: alpha(colorRoles.info, 0.08),
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(29, 78, 216, 0.2)",
+    borderColor: alpha(colorRoles.info, 0.2),
   },
   bellRingBtnActive: {
     backgroundColor: colorRoles.brandAction,

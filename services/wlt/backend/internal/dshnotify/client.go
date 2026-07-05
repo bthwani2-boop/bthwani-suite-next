@@ -1,21 +1,28 @@
-// Package dshnotify sends best-effort payment-session outcome events from
-// WLT (the sole owner of payment authorization/capture truth) back to DSH,
-// so non-COD checkout intents (wallet, mixed, official_wallet) can leave
-// payment_pending once WLT reaches a terminal outcome. Notification failures
-// are logged, not propagated: WLT's own state transition has already been
-// committed and is the source of truth: DSH can also poll
-// GET /wlt/payment-sessions/{id} to reconcile if a webhook delivery is lost.
+// Package dshnotify sends payment-session outcome events from WLT (the sole
+// owner of payment authorization/capture truth) back to DSH, so non-COD
+// checkout intents (wallet, mixed, official_wallet) can leave payment_pending
+// once WLT reaches a terminal outcome. Delivery is durable: callers enqueue
+// the event in the wlt_dsh_outbox_events table (see internal/dshoutbox) in
+// the same transaction as the status transition, and a background worker
+// calls Notify with retry until DSH accepts it -- a lost webhook no longer
+// depends on a single best-effort HTTP call surviving.
 package dshnotify
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 )
+
+// ErrNotConfigured is returned by Notify when the client is missing the DSH
+// base URL or the shared service token, so callers (the outbox worker) can
+// distinguish a misconfiguration from a delivery failure rather than
+// silently treating an unsent notification as success.
+var ErrNotConfigured = errors.New("dshnotify: client is not configured (missing baseURL or serviceToken)")
 
 type Client struct {
 	baseURL      string
@@ -35,26 +42,16 @@ func NewClient(baseURL, serviceToken string) *Client {
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-// NotifyPaymentEvent reports a terminal (or intermediate) payment-session
-// status for a checkout intent to DSH. It is fire-and-forget from the
-// caller's perspective: errors are logged and swallowed.
-func (c *Client) NotifyPaymentEvent(checkoutIntentID, paymentSessionID, status string) {
+// Notify reports a terminal payment-session status for a checkout intent to
+// DSH. Callers (see internal/dshoutbox) are responsible for retrying on
+// error; this call does not retry or swallow failures itself.
+func (c *Client) Notify(ctx context.Context, checkoutIntentID, paymentSessionID, status string) error {
 	if !c.Configured() {
-		return
+		return ErrNotConfigured
 	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := c.notify(ctx, checkoutIntentID, paymentSessionID, status); err != nil {
-			log.Printf("[wlt-api] failed to notify DSH of payment session event (checkoutIntentId=%s, status=%s): %v", checkoutIntentID, status, err)
-		}
-	}()
-}
-
-func (c *Client) notify(ctx context.Context, checkoutIntentID, paymentSessionID, status string) error {
 	body, err := json.Marshal(map[string]string{
 		"checkoutIntentId": checkoutIntentID,
 		"paymentSessionId": paymentSessionID,

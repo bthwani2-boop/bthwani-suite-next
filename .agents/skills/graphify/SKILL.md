@@ -30,6 +30,23 @@ Graphify writes:
 
 Use Graphify before deep codebase work involving architecture, imports, exports, service boundaries, multi-surface flows, DSH/WLT links, duplicated logic, dead code, risky refactors, ownership decisions, and broad file discovery.
 
+## Required for Deep Work
+
+Graphify is optional for focused implementation, but mandatory before closure decisions involving:
+
+- DSH/WLT links
+- service boundaries
+- shared brain ownership
+- multi-surface flows
+- control-panel + mobile app impact
+- duplicated logic
+- dead code
+- risky move/delete/merge/refactor
+- unclear import/export ownership
+- broad route/navigation impact
+
+Graphify output is impact guidance only. Final truth remains repo files + targeted verification.
+
 ## Token rule
 
 Prefer focused graph outputs before reading many raw files. Use Graphify to reduce token waste, not to replace verification.

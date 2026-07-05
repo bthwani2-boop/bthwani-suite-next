@@ -1333,6 +1333,317 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/control-panel/finance/settlements:
+    get:
+      operationId: listDshControlPanelFinanceSettlements
+      summary: Operator reads the governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT settlements view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/settlements/summary:
+    get:
+      operationId: getDshControlPanelFinanceSettlementSummary
+      summary: Operator reads the governed WLT settlement summary through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT settlement summary (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/refunds:
+    get:
+      operationId: listDshControlPanelFinanceRefunds
+      summary: Operator reads the governed WLT refunds view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT refunds view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/refunds/{refundId}:
+    get:
+      operationId: getDshControlPanelFinanceRefund
+      summary: Operator reads one governed WLT refund through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: refundId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT refund view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/ledger/entries:
+    get:
+      operationId: listDshControlPanelFinanceLedgerEntries
+      summary: Operator reads the governed WLT ledger entries view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: actorId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: actorType
+          in: query
+          required: false
+          schema: { type: string }
+        - name: orderId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: entryType
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT ledger entries view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/cod-records:
+    get:
+      operationId: listDshControlPanelFinanceCodRecords
+      summary: Operator reads the governed WLT COD records view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: captainId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: orderId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT COD records view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/commissions:
+    get:
+      operationId: listDshControlPanelFinanceCommissions
+      summary: Operator reads the governed WLT commissions view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: captainId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT commissions view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/captain/finance/cod-records:
+    get:
+      operationId: listDshCaptainFinanceCodRecords
+      summary: Captain reads their own governed WLT COD liability records. The captain id always comes from the authenticated actor, never from the query.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: WLT COD records view for the authenticated captain (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/catalog-approvals:
+    get:
+      operationId: listDshCatalogApprovals
+      summary: List catalog approval records (partner submission review queue).
+      tags: [DshCatalogApprovals]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: entityType
+          in: query
+          required: false
+          schema: { type: string }
+        - name: stage
+          in: query
+          required: false
+          schema: { type: string }
+        - name: source
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Catalog approval records.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    post:
+      operationId: createDshCatalogApproval
+      summary: Create a catalog approval record.
+      tags: [DshCatalogApprovals]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "201":
+          description: Created catalog approval record.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/catalog-approvals/{recordId}:
+    get:
+      operationId: getDshCatalogApproval
+      summary: Read one catalog approval record.
+      tags: [DshCatalogApprovals]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: recordId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Catalog approval record.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/catalog-approvals/{recordId}/transition:
+    post:
+      operationId: transitionDshCatalogApproval
+      summary: Transition a catalog approval record to a new stage.
+      tags: [DshCatalogApprovals]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: recordId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Updated catalog approval record.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/catalog-approvals:
+    get:
+      operationId: listDshPartnerCatalogApprovals
+      summary: Partner reads their own catalog approval queue.
+      tags: [DshCatalogApprovals]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Partner catalog approval queue.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
   # ── Field Verification & Store Quality Assurance ──────────────────
 
   /dsh/field/stores/{storeId}/visits:
@@ -1851,7 +2162,7 @@ paths:
   /dsh/internal/wlt/payment-session-events:
     post:
       operationId: reportWltPaymentSessionEvent
-      summary: WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization.
+      summary: "WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization."
       tags: [DshCheckout]
       x-bthwani-client-generation: DISABLED
       security:
@@ -1871,7 +2182,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { description: Only the WLT service may report payment-session events. }
         "404": { description: Checkout intent not found. }
-        "409": { description: paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome. }
+        "409": { description: "paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome." }
 
   # ── Notifications ─────────────────────────────────────────────────
   /dsh/notifications:

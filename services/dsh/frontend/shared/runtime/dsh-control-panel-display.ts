@@ -63,12 +63,13 @@ export function getDshRecommendationSeverityLabel(severity: DshRecommendationSev
 export const DSH_CROSS_SURFACE_JOURNEYS: readonly DshUnifiedRecommendation[] = [];
 
 /**
- * Resolves a UI tone from an order's UPPER_CASE runtime status string.
+ * Resolves a UI tone from an order's backend runtime status string.
  * Matches status values from DshOrderRecord (dsh-order-lifecycle-client.ts).
  */
 export function resolveRuntimeOrderStatusTone(status: string): DshControlPanelTone {
-  if (status === 'FAILED_DELIVERY' || status === 'CANCELLED') return 'danger';
-  if (status === 'CREATED' || status === 'RETURNING_TO_STORE') return 'warning';
-  if (status === 'DELIVERED' || status === 'RETURNED') return 'success';
+  const normalized = status.toLowerCase();
+  if (normalized === 'cancelled' || normalized === 'failed_delivery') return 'danger';
+  if (normalized === 'pending' || normalized === 'created' || normalized === 'returning_to_store') return 'warning';
+  if (normalized === 'delivered' || normalized === 'returned') return 'success';
   return 'neutral';
 }

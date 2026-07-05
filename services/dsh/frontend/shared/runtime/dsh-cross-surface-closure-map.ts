@@ -15,7 +15,8 @@ export type DshClosureDomain =
   | 'field-operations'
   | 'control-panel-operations'
   | 'control-panel-support'
-  | 'control-panel-finance';
+  | 'control-panel-finance'
+  | 'actor-communication';
 
 /**
  * DSH Closure Status — دقيق وغير وهمي.
@@ -96,7 +97,8 @@ export type DshLifecycleStep =
   | 'operations-monitoring'
   | 'operations-intervention'
   | 'finance-review'
-  | 'catalog-governance';
+  | 'catalog-governance'
+  | 'notification';
 
 export type DshCounterpartLink = {
   surfaceId: DshSurfaceId;
@@ -138,7 +140,8 @@ export type DshClosureArea =
   | 'field-visit-evidence'
   | 'control-panel-ops'
   | 'control-panel-support'
-  | 'control-panel-governance';
+  | 'control-panel-governance'
+  | 'actor-notifications';
 
 export type DshCrossSurfaceClosureItem = {
   surfaceId: DshSurfaceId;
@@ -581,6 +584,136 @@ export const DSH_CROSS_SURFACE_CLOSURE_MAP: readonly DshCrossSurfaceClosureItem[
     screenProof: 'OrderRescueScreen.tsx يستهلك rescueReasonSelector + ownerSelection + nextActionSelector + requiredEvidence + supportHandoff + wltImpactVisibility + decisionSignal.',
     stateCoverageProof: 'item_unavailable / payment_failure / handoff_mismatch وغيرها + selected owner + selected next action + required audit/reason موثقة في shared preview.',
     crossSurfaceProof: 'OrderRescueScreen يربط Support ticket وManual Call Intake وCustomer 360 وWLT visibility من metadata مشتركة مع carry-over للهوية والطلب والتذكرة.',
+  },
+  {
+    surfaceId: 'app-client',
+    actor: 'client',
+    area: 'actor-notifications',
+    domain: 'actor-communication',
+    step: 'notification',
+    status: 'needs-visual-evidence',
+    runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
+    title: 'إشعارات العميل',
+    description: 'NotificationCenterScreen يستهلك useNotificationsController للعناصر والقراءة الجماعية.',
+    screenOwner: 'dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx',
+    primaryAction: 'قراءة الإشعار أو تحديد الكل مقروءًا.',
+    requiredStates: ['loading', 'empty', 'error', 'success'],
+    evidenceStatus: 'needs-visual-evidence',
+    remainingBlocker: 'ينقص runtime smoke مخصص للعمليات الستة وvisual evidence عند الإغلاق النهائي.',
+    crossSurfaceDependencies: ['shared notifications controller', 'backend notifications routes', 'OpenAPI notifications operations'],
+    wltBoundary: 'لا توجد mutation مالية داخل DSH notifications.',
+    visualEvidenceRequired: true,
+    evidenceHint: 'التقاط مركز إشعارات العميل بعد runtime smoke المخصص.',
+    runtimeEvidenceHint: 'services/dsh/evidence/notifications-actor-communication/dsh-notifications-code-evidence.txt',
+    routeHint: '/app-client/notifications',
+    routeProof: 'DshClientSurface يفتح NotificationCenterScreen من زر الإشعارات.',
+    screenProof: 'NotificationCenterScreen.tsx يستهلك useNotificationsController.',
+    stateCoverageProof: 'idle/loading/error/empty/success + markRead/markAllRead.',
+    crossSurfaceProof: 'يشترك مع الأسطح الأخرى في shared/notifications controller وbackend routes نفسها.',
+  },
+  {
+    surfaceId: 'app-partner',
+    actor: 'partner',
+    area: 'actor-notifications',
+    domain: 'actor-communication',
+    step: 'notification',
+    status: 'needs-visual-evidence',
+    runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
+    title: 'إشعارات الشريك',
+    description: 'NotificationsScreen يعرض ActorNotificationsPanel العام قبل تنبيهات الطلب المحلية.',
+    screenOwner: 'dsh/frontend/app-partner/account/OperationScreens.tsx',
+    primaryAction: 'قراءة إشعار الشريك أو فتح تنبيهات الطلب المرتبطة بالطلب الحالي.',
+    requiredStates: ['loading', 'empty', 'error', 'success'],
+    evidenceStatus: 'needs-visual-evidence',
+    remainingBlocker: 'ينقص runtime smoke مخصص وإثبات بصري عند الإغلاق النهائي.',
+    crossSurfaceDependencies: ['shared notifications controller', 'partner order alerts panel'],
+    wltBoundary: 'إشعارات مالية إن وجدت تبقى عرضًا فقط ولا تنقل mutation مالية إلى DSH.',
+    visualEvidenceRequired: true,
+    evidenceHint: 'التقاط شاشة إشعارات الشريك مع panel العام وتنبيهات الطلب.',
+    runtimeEvidenceHint: 'services/dsh/evidence/notifications-actor-communication/dsh-notifications-code-evidence.txt',
+    routeHint: '/app-partner/notifications',
+    routeProof: 'DshPartnerRouteRenderer يفتح NotificationsScreen.',
+    screenProof: 'NotificationsScreen يستهلك ActorNotificationsPanel.',
+    stateCoverageProof: 'idle/loading/error/empty/success + markRead/markAllRead.',
+    crossSurfaceProof: 'يشترك مع app-client/app-field/app-captain/control-panel في shared notifications API.',
+  },
+  {
+    surfaceId: 'app-field',
+    actor: 'field',
+    area: 'actor-notifications',
+    domain: 'actor-communication',
+    step: 'notification',
+    status: 'needs-visual-evidence',
+    runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
+    title: 'إشعارات المندوب الميداني',
+    description: 'جرس FieldTopBar أصبح يعرض unread count من useNotificationsController ويغلق القراءة الجماعية.',
+    screenOwner: 'dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx',
+    primaryAction: 'قراءة عداد الإشعارات أو تحديثه/تحديده مقروءًا من الجرس الحالي.',
+    requiredStates: ['loading', 'empty', 'error', 'success'],
+    evidenceStatus: 'needs-visual-evidence',
+    remainingBlocker: 'ينقص route/screen مخصص كامل وruntime smoke مخصص قبل الإغلاق.',
+    crossSurfaceDependencies: ['shared notifications controller', 'field onboarding surface'],
+    wltBoundary: 'لا توجد ملكية مالية في إشعارات field.',
+    visualEvidenceRequired: true,
+    evidenceHint: 'التقاط top bar مع عداد الإشعارات بعد seed runtime مناسب.',
+    runtimeEvidenceHint: 'services/dsh/evidence/notifications-actor-communication/dsh-notifications-code-evidence.txt',
+    routeHint: '/app-field/stores',
+    routeProof: 'DshFieldPartnersScreen يربط FieldTopBar بمتحكم الإشعارات.',
+    screenProof: 'FieldTopBar يعرض unread badge من useNotificationsController.',
+    stateCoverageProof: 'success unread count + reload/markAllRead behavior.',
+    crossSurfaceProof: 'يستخدم controller نفسه المستعمل في بقية الأسطح.',
+  },
+  {
+    surfaceId: 'app-captain',
+    actor: 'captain',
+    area: 'actor-notifications',
+    domain: 'actor-communication',
+    step: 'notification',
+    status: 'needs-visual-evidence',
+    runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
+    title: 'إشعارات الكابتن',
+    description: 'هيدر الكابتن وroute الجرس يستهلكان shared notifications بدل badge ثابت.',
+    screenOwner: 'dsh/frontend/app-captain/DshCaptainSurface.tsx + DshCaptainRouteRenderer.tsx',
+    primaryAction: 'فتح إشعارات الكابتن أو الرجوع لصندوق الطلبات.',
+    requiredStates: ['loading', 'empty', 'error', 'success'],
+    evidenceStatus: 'needs-visual-evidence',
+    remainingBlocker: 'ينقص runtime smoke مخصص وإثبات بصري عند الإغلاق النهائي.',
+    crossSurfaceDependencies: ['shared notifications controller', 'captain order inbox'],
+    wltBoundary: 'لا توجد mutation مالية في جرس الكابتن.',
+    visualEvidenceRequired: true,
+    evidenceHint: 'التقاط الهيدر مع badge ومحتوى route الجرس بعد runtime seed.',
+    runtimeEvidenceHint: 'services/dsh/evidence/notifications-actor-communication/dsh-notifications-code-evidence.txt',
+    routeHint: '/app-captain/bell',
+    routeProof: 'DshCaptainSurface يفتح route=bell وDshCaptainRouteRenderer يعرض ActorNotificationsPanel.',
+    screenProof: 'DshCaptainSurface يستخدم unread count من useNotificationsController.',
+    stateCoverageProof: 'idle/loading/error/empty/success + markRead/markAllRead.',
+    crossSurfaceProof: 'يشترك مع بقية الأسطح في backend routes والعقد نفسه.',
+  },
+  {
+    surfaceId: 'control-panel',
+    actor: 'operator',
+    area: 'actor-notifications',
+    domain: 'actor-communication',
+    step: 'notification',
+    status: 'needs-visual-evidence',
+    runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE',
+    title: 'إعدادات إشعارات المنصة',
+    description: 'PlatformNotificationConfigScreen تعرض وتعدل config المنصة عبر save من shared controller.',
+    screenOwner: 'dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx',
+    primaryAction: 'إنشاء أو تعديل topic وactorTypes وحالة التفعيل.',
+    requiredStates: ['loading', 'empty', 'error', 'success'],
+    evidenceStatus: 'needs-visual-evidence',
+    remainingBlocker: 'ينقص runtime smoke مخصص لإثبات GET/PUT config وvisual evidence عند الإغلاق النهائي.',
+    crossSurfaceDependencies: ['shared platform notification config controller', 'backend operator notification config routes'],
+    wltBoundary: 'إعدادات إشعارات المنصة لا تمنح DSH أي mutation مالية.',
+    visualEvidenceRequired: true,
+    evidenceHint: 'التقاط list/edit/save لإعدادات الإشعارات بعد runtime smoke.',
+    runtimeEvidenceHint: 'services/dsh/evidence/notifications-actor-communication/dsh-notifications-code-evidence.txt',
+    routeHint: '/support/notifications-config',
+    routeProof: 'PlatformNotificationConfigScreen موجودة تحت control-panel/support.',
+    screenProof: 'الشاشة تستهلك usePlatformNotificationConfigController.save.',
+    stateCoverageProof: 'loading/empty/error/success + save enabled/disabled.',
+    crossSurfaceProof: 'operator config يضبط topics المستهلكة عبر backend notifications للأدوار الأخرى.',
   },
   {
     surfaceId: 'control-panel',

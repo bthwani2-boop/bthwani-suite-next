@@ -22,7 +22,7 @@ type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
 import { BottomNavBar } from './components/BottomNavBar';
 import { MobileWorkspaceHeader } from './components/MobileWorkspaceHeader';
 import { ModernPremiumHeader } from './components/ModernPremiumHeader';
-import { configureIdentitySession } from '@bthwani/core-identity';
+import { configureIdentitySession, useIdentitySession } from '@bthwani/core-identity';
 import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
 
 configureIdentitySession(resolveIdentityApiBaseUrl());
@@ -40,9 +40,9 @@ import { DshCaptainMapLayer } from './orders/DshCaptainMapLayer';
 import { DshCaptainHomeOrderPanel } from './orders/DshCaptainHomeOrderPanel';
 import { DshCaptainRouteRenderer } from './DshCaptainRouteRenderer';
 import type { DshCaptainRoute, DshCaptainSurfaceProps } from './dsh-captain.types';
-import { EMPTY_CAPTAIN_ORDER_SUMMARY } from '../shared/delivery';
 import { useDshCaptainSurfaceModel } from './useDshCaptainSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared';
+import { useNotificationsController } from '../shared/notifications';
 import type { DshCaptainOrdersScreen } from './orders/DshCaptainOrdersScreen';
 
 type CaptainOrderDetailSummary = React.ComponentProps<typeof DshCaptainOrdersScreen>['summary'];
@@ -58,6 +58,7 @@ export function DshCaptainSurface(props: DshCaptainSurfaceProps) {
 }
 
 function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshCaptainSurfaceProps) {
+  const identity = useIdentitySession();
   const { theme } = useTheme();
   const { dshAuthBearerToken, dshClientId } = usePlatformVars();
   const captainRuntimeId = React.useMemo(() => (captainId ?? dshClientId ?? '').trim(), [captainId, dshClientId]);
@@ -65,6 +66,8 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
   const insets = useSafeAreaInsets();
 
   const { state: ui, actions, derived } = useDshCaptainSurfaceModel(command, captainRuntimeId);
+  const notifications = useNotificationsController(identity.state.kind);
+  const notificationBadgeCount = notifications.state.kind === 'success' ? notifications.state.unreadCount : 0;
 
   React.useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
@@ -156,7 +159,7 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
       actions={[
         { id: 'account',       icon: <Icon name="person-outline"       size={20} color={colorPalette.white} />, accessibilityLabel: 'الحساب',    onPress: actions.openCaptainAccount },
         { id: 'search',        icon: <Icon name="search-outline"        size={20} color={colorPalette.white} />, accessibilityLabel: 'البحث',     onPress: actions.openSupportDirectory },
-        { id: 'notifications', icon: <Icon name="notifications-outline" size={20} color={colorPalette.white} />, badgeCount: 2, accessibilityLabel: 'الإشعارات', onPress: () => actions.setRoute('bell') },
+        { id: 'notifications', icon: <Icon name="notifications-outline" size={20} color={colorPalette.white} />, badgeCount: notificationBadgeCount, accessibilityLabel: 'الإشعارات', onPress: () => actions.setRoute('bell') },
         ...(derived.isStoreCourierMode ? [] : [{
           id: 'wallet',
           icon: <Icon name="wallet-outline" size={20} color={colorPalette.white} />,
@@ -173,16 +176,18 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
 
   // ── Non-home routes → RouteRenderer handles ALL rendering ─────────────────
   if (ui.route !== 'home') {
-    const activeSummary = EMPTY_CAPTAIN_ORDER_SUMMARY as NonNullable<CaptainOrderDetailSummary>;
+    const activeSummary = derived.activeSummary as NonNullable<CaptainOrderDetailSummary>;
     const activeOrderDisplayId = derived.activeOrderDisplayId;
     const orderChatState = ui.inboxState === 'delivered' ? 'readOnly' : 'active';
 
     return (
       <DshCaptainRouteRenderer
         route={ui.route}
+        activeAssignmentId={ui.activeAssignmentId}
         activeOrderId={ui.activeOrderId}
         activeOrderDisplayId={activeOrderDisplayId}
         activeSummary={activeSummary}
+        inboxItems={ui.inboxItems}
         inboxState={ui.inboxState}
         orderChatState={orderChatState}
         captainRuntimeId={captainRuntimeId}
@@ -213,7 +218,7 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
         appearanceMode={appearanceMode}
         wltSummaryLabel={wltDshCaptainUiCopy.summaryLabel}
         onOpenOrder={actions.openOrderDetail}
-        onRetryInbox={() => actions.setInboxState('ready')}
+        onRetryInbox={actions.refreshInbox}
         onConfirmPickup={actions.confirmPickup}
         onConfirmDelivery={actions.confirmDelivery}
         onConfirmPodSubmission={actions.confirmPodSubmission}
@@ -242,7 +247,7 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
   }
 
   // ── Home screen (route === 'home') ─────────────────────────────────────────
-  const activeSummary = EMPTY_CAPTAIN_ORDER_SUMMARY as NonNullable<CaptainOrderDetailSummary>;
+  const activeSummary = derived.activeSummary as NonNullable<CaptainOrderDetailSummary>;
 
   const orderPanelNode = (
     <DshCaptainHomeOrderPanel

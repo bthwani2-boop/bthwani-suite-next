@@ -16,6 +16,7 @@ import (
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
 	"dsh-api/internal/wlt"
+	"dsh-api/internal/wltoutbox"
 )
 
 func main() {
@@ -50,9 +51,18 @@ func main() {
 	log.Println("[dsh-api] database connected successfully")
 
 	mediaClient := newMediaClientOrNil()
-
-	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wlt.NewClient(wltBaseURL, wltServiceToken), mediaClient)
+	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
+	router := dshHttp.NewRouter(db, auth.NewClient(identityBaseURL), wltClient, mediaClient)
 	handler := dshHttp.CorsMiddleware(authMode, router)
+
+	var cancelOutbox context.CancelFunc = func() {}
+	if wltClient.Configured() {
+		outboxCtx, stopOutbox := context.WithCancel(context.Background())
+		cancelOutbox = stopOutbox
+		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
+	} else {
+		log.Println("[dsh-api] WLT outbox worker disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
+	}
 
 	server := &http.Server{
 		Addr:         ":" + port,
@@ -74,6 +84,7 @@ func main() {
 
 	<-stop
 	log.Println("[dsh-api] shutting down gracefully...")
+	cancelOutbox()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

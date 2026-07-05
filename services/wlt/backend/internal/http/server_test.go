@@ -25,6 +25,7 @@ func TestMutationRoutesDisabledByDefault(t *testing.T) {
 		{http.MethodPost, "/wlt/settlements/s-1/post"},
 		{http.MethodPost, "/wlt/cod-records/c-1/collect"},
 		{http.MethodPost, "/wlt/cod-records/c-1/remit"},
+		{http.MethodPost, "/wlt/commissions"},
 		{http.MethodPost, "/wlt/ledger/entries"},
 	}
 
@@ -55,5 +56,28 @@ func TestReadRoutesStillWorkWhenMutationsDisabled(t *testing.T) {
 	}
 	if rec.Code != http.StatusOK {
 		t.Fatalf("/wlt/health: expected 200, got %d", rec.Code)
+	}
+}
+
+func TestFinancialReadRoutesRequireInternalServiceAuth(t *testing.T) {
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
+	router := NewRouter(nil, true)
+
+	readRoutes := []string{
+		"/wlt/refunds",
+		"/wlt/settlements/summary",
+		"/wlt/settlements",
+		"/wlt/cod-records",
+		"/wlt/commissions",
+		"/wlt/ledger/entries",
+	}
+
+	for _, path := range readRoutes {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("GET %s: expected 401 service auth gate, got %d", path, rec.Code)
+		}
 	}
 }

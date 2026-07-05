@@ -15,8 +15,8 @@ import {
   buildWltDshFinanceHubViewModel,
 } from '@bthwani/wlt';
 import {
-  loadWltDshFinanceRuntimeReadModel,
-} from '@bthwani/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.api';
+  loadDshFinanceRuntimeReadModel,
+} from './finance-hub-runtime.api';
 import type {
   WltDshFinanceRuntimeResult,
   WltDshFinanceHubViewModel,
@@ -95,7 +95,7 @@ export function useFinanceController({
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await loadWltDshFinanceRuntimeReadModel();
+      const result = await loadDshFinanceRuntimeReadModel();
       setRuntimeFinance(result);
       setErrorMsg(null);
     } catch (e) {

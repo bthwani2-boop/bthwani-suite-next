@@ -38,6 +38,21 @@ if (-not (Test-Path -LiteralPath $EnvFile)) {
   throw "Env file not found: $EnvFile"
 }
 
+# Load environment variables from EnvFile into PowerShell environment
+Get-Content -LiteralPath $EnvFile | ForEach-Object {
+  $line = $_.Trim()
+  if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
+    $parts = $line.Split("=", 2)
+    $key = $parts[0].Trim()
+    $val = $parts[1].Trim()
+    if ($val.StartsWith('"') -and $val.EndsWith('"')) { $val = $val.Substring(1, $val.Length - 2) }
+    elseif ($val.StartsWith("'") -and $val.EndsWith("'")) { $val = $val.Substring(1, $val.Length - 2) }
+    if (-not (Get-Item -Path "Env:$key" -ErrorAction SilentlyContinue)) {
+      [System.Environment]::SetEnvironmentVariable($key, $val)
+    }
+  }
+}
+
 # ── Parse profiles ────────────────────────────────────────────────────────────
 $ProfileList = @()
 if ($Profiles -ne "") {
@@ -274,6 +289,10 @@ function Invoke-ValkeySmoke {
 
 function Invoke-WltFinancialProviderSmoke {
   Write-Host "`n--- WLT financial provider smoke ---"
+  if ($env:WLT_MUTATIONS_ENABLED -ne "true") {
+    Write-Host "  Skipping: WLT_MUTATIONS_ENABLED is not true"
+    return
+  }
   pwsh -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:RepoRoot "tools/scripts/smoke-wlt-provider-through-wlt.ps1") -BaseUrl "http://localhost:58083"
   if ($LASTEXITCODE -ne 0) { throw "WLT financial provider smoke failed" }
 }
@@ -329,13 +348,25 @@ function Invoke-WltSmoke {
   Write-Host "  /wlt/references/wallet-status: $($walRef.reference.status)"
   if ($walRef.reference.status -ne "active") { throw "/wlt/references/wallet-status wrong status" }
 
+  $wltDshServiceToken = $env:WLT_DSH_SERVICE_TOKEN
+  if ([string]::IsNullOrWhiteSpace($wltDshServiceToken)) { throw "WLT_DSH_SERVICE_TOKEN is required for WLT smoke" }
+
   $sessionBody = @{
     checkoutIntentId = "checkout-smoke-0001"
     clientId = "client-local-001"
     storeId = "store-1001"
     paymentMethod = "cod"
+    amountMinorUnits = 1000
+    currency = "YER"
+    cartSnapshotHash = "runtime-smoke-cart-snapshot"
   } | ConvertTo-Json
-  $session = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions" -Method Post -ContentType "application/json" -Body $sessionBody -TimeoutSec 10 -ErrorAction Stop
+  $wltServiceHeaders = @{
+    Authorization = "Bearer $wltDshServiceToken"
+    "X-Service-Caller" = "dsh"
+    "Idempotency-Key" = "smoke-payment-session-0001"
+    "X-Correlation-ID" = "smoke-payment-session-0001"
+  }
+  $session = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions" -Method Post -Headers $wltServiceHeaders -ContentType "application/json" -Body $sessionBody -TimeoutSec 10 -ErrorAction Stop
   Write-Host "  /wlt/payment-sessions POST: $($session.paymentSession.id)"
   if ([string]::IsNullOrWhiteSpace($session.paymentSession.id)) { throw "/wlt/payment-sessions did not return id" }
   $sessionRead = Invoke-RestMethod "http://localhost:58083/wlt/payment-sessions/$($session.paymentSession.id)" -TimeoutSec 10 -ErrorAction Stop
@@ -486,6 +517,7 @@ function Invoke-DshSmoke {
     description = "runtime smoke"
     sku = "SMOKE-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
     priceReference = "wlt-price-ref-smoke"
+    unitPrice = 10
     isActive = $true
     expectedVersion = 0
   } | ConvertTo-Json
@@ -650,8 +682,6 @@ function Invoke-DshSmoke {
       storeId = "store-1001"
       fulfillmentMode = "bthwani_delivery"
       productId = $product.product.id
-      productName = $product.product.name
-      priceReference = "wlt-price-ref-smoke"
       quantity = 1
     } | ConvertTo-Json
     $cartItem = Invoke-RestMethod "http://localhost:58080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10

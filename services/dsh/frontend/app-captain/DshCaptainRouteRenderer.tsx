@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Badge, Box, Button, Divider, Icon, KeyValueList, MobileScrollView, Text, TopBar, spacing, colorRoles } from '@bthwani/ui-kit';
 type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
 import type { DshCaptainRoute } from './dsh-captain.types';
@@ -24,6 +25,8 @@ import { CaptainStorePickupContextScreen } from './store/CaptainStorePickupConte
 import { OfferDeclineSheet } from './orders/OfferDeclineSheet';
 import { CaptainSupportScreenRouter } from './account/CaptainSupportScreenRouter';
 import type { DshCaptainBellEvent } from '../shared/orders/orders.state-machine';
+import type { DshCaptainOrderBellItem } from '../shared/orders';
+import { ActorNotificationsPanel } from '../shared/notifications';
 
 type CaptainOrderDetailSummary = React.ComponentProps<typeof CaptainOrderDetailScreen>['summary'];
 type CaptainOrdersInboxScreenState = NonNullable<React.ComponentProps<typeof CaptainOrdersInboxScreen>>['state'];
@@ -31,9 +34,11 @@ type PodScreenState = NonNullable<React.ComponentProps<typeof DshCaptainPoDSubmi
 
 export type DshCaptainRouteRendererProps = {
   route: DshCaptainRoute;
+  activeAssignmentId: string;
   activeOrderId: string;
   activeOrderDisplayId: string;
   activeSummary: CaptainOrderDetailSummary;
+  inboxItems: DshCaptainOrderBellItem[];
   inboxState: CaptainOrdersInboxScreenState;
   orderChatState: 'readOnly' | 'active';
   captainRuntimeId: string;
@@ -108,8 +113,9 @@ const routeHeaderMeta: Partial<Record<DshCaptainRoute, { title: string; subtitle
 };
 
 export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
+  const identity = useIdentitySession();
   const {
-    route, activeOrderId, activeOrderDisplayId, activeSummary, inboxState, orderChatState,
+    route, activeAssignmentId, activeOrderId, activeOrderDisplayId, activeSummary, inboxItems, inboxState, orderChatState,
     captainRuntimeId, captainPodRequired, captainCollectsCod, isStoreCourierMode,
     selectedSupportScreen, isPickupSheetVisible, isDeliverySheetVisible, isDeclineSheetVisible,
     declineOrderId, declineSheetState, pickupSheetState, captainPodState, captainPodPhotoUri,
@@ -140,14 +146,15 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       <DshEntryScreen
         state={captainEntryState}
         onOpenOffersPress={onGoToInbox}
-        onOpenExecutionPress={() => onOpenOrder(activeOrderId)}
-        onOpenProofCapturePress={() => onOpenOrder(activeOrderId)}
+        onOpenExecutionPress={() => onOpenOrder(activeAssignmentId)}
+        onOpenProofCapturePress={() => onOpenOrder(activeAssignmentId)}
       />
     );
 
     if (route === 'inbox') return (
       <CaptainOrdersInboxScreen
         state={inboxState}
+        items={inboxItems}
         onRetry={onRetryInbox}
         onOpenOrder={onOpenOrder}
         onOpenNextOrder={onOpenOrder}
@@ -191,11 +198,17 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     );
 
     if (route === 'bell') return (
-      <DshCaptainBellScreen
-        onOpenInbox={onGoToInbox}
-        onOpenNextOrder={() => onOpenOrder(activeOrderId)}
-        onRetry={() => {}}
-      />
+      <Box gap={3}>
+        <ActorNotificationsPanel
+          authKind={identity.state.kind}
+          title="إشعارات الكابتن"
+          emptyDescription="ستظهر هنا إشعارات العروض، الالتقاط، والتواصل التشغيلي للكابتن."
+        />
+        <Box layoutDirection="row" gap={2} style={{ flexDirection: 'row-reverse', flexWrap: 'wrap' }}>
+          <Button label="فتح صندوق الطلبات" tone="secondary" fullWidth={false} onPress={onGoToInbox} />
+          <Button label="فتح الطلب النشط" fullWidth={false} onPress={() => onOpenOrder(activeAssignmentId)} />
+        </Box>
+      </Box>
     );
 
     if (route === 'orderchat') return (

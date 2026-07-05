@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text, colorRoles } from '@bthwani/ui-kit';
+import { Box, Text, colorRoles, alpha } from '@bthwani/ui-kit';
 import {
   WebControlDisclosureItem,
   WebControlPanelKpiStrip,
@@ -46,8 +46,8 @@ export function ControlPanelDshClosureHubScreen() {
   };
 
   React.useEffect(() => {
-    if (SECONDARY_TABS[activeTab]?.length > 0) {
-      setActiveSubTab(SECONDARY_TABS[activeTab][0].id);
+    if ((SECONDARY_TABS[activeTab]?.length ?? 0) > 0) {
+      setActiveSubTab(SECONDARY_TABS[activeTab]?.[0]?.id ?? '');
     } else {
       setActiveSubTab('');
     }
@@ -135,7 +135,7 @@ export function ControlPanelDshClosureHubScreen() {
               onClick={() => setActiveSubTab(sub.id)}
               className={styles.surfaceTab}
               style={{
-                backgroundColor: sub.id === activeSubTab ? 'rgba(255, 80, 13, 0.1)' : 'transparent',
+                backgroundColor: sub.id === activeSubTab ? alpha(colorRoles.brandAction, 0.1) : 'transparent',
                 color: sub.id === activeSubTab ? colorRoles.brandAction : colorRoles.brandStructure,
                 borderColor: sub.id === activeSubTab ? colorRoles.brandAction : 'transparent',
               }}
@@ -210,7 +210,7 @@ export function ControlPanelDshClosureDashboardScreen() {
               title={journey.entityLabel ?? journey.id}
               reason={journey.reason}
               confidence={journey.confidence}
-              auditTag={journey.lifecycleStep}
+              {...(journey.lifecycleStep !== undefined ? { auditTag: journey.lifecycleStep } : {})}
               primaryAction={{ id: journey.id, label: journey.primaryActionLabel }}
             />
           ))}

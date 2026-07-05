@@ -1,5 +1,4 @@
 // app-field — FieldPartnerOnboardingScreen
-// Design extracted 100% from bthwani-suite donor: DshFieldStoreOnboardingScreen.tsx
 // 4-group wizard with vertical timeline, missing-count badges, escalation footer.
 // Rules of Hooks: ALL hooks called unconditionally before any early return.
 

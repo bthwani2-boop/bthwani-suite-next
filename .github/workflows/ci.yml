@@ -10,6 +10,7 @@ on:
       - begin
       - branch-validation
       - starting
+      - front-backend
   workflow_dispatch:
     inputs:
       reason:
@@ -34,22 +35,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
           version: 10.34.2
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
 
       - name: Contracts lint
         run: pnpm run contracts:lint
 
+      - name: Guard — no broken imports
+        run: pnpm run guard:no-broken-imports
+
+      - name: Guard — runtime config
+        run: pnpm run guard:runtime-config
+
+      - name: Guard — UI kit boundary
+        run: pnpm run guard:ui-kit-boundary
+
+      - name: Guard — fullstack boundary
+        run: pnpm run guard:fullstack-boundary
+
+      - name: Guard — WLT financial boundary
+        run: pnpm run guard:wlt-financial-boundary
+
+      - name: Guard — cleanup policy
+        run: pnpm run guard:cleanup-policy
+
+      - name: Guard — API binding
+        run: pnpm run guard:api-binding
+
+      - name: OpenAPI client drift check
+        run: |
+          pnpm run openapi:generate
+          git diff --exit-code services/dsh/clients/generated/ services/wlt/clients/generated/ core/identity/clients/generated/ || \
+            (echo "ERROR: Generated API clients have drifted from OpenAPI specs. Run 'pnpm run openapi:generate' and commit." && exit 1)
 
       - name: Foundation gate
         run: pnpm run foundation:gate
@@ -79,6 +110,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/wlt/backend/go.mod
+          cache: true
 
       - name: Go test
         working-directory: services/wlt/backend
@@ -116,6 +148,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/wlt/backend/go.mod
+          cache: true
 
       - name: Install postgresql-client
         run: |
@@ -136,7 +169,7 @@ jobs:
         env:
           PGHOST: localhost
           PGPORT: 5432
-          PGPASSWORD: wlt_runtime_password
+          PGPASSWORD: bthwani_runtime_password
         run: |
           for f in services/wlt/database/migrations/*.sql; do
             echo "Applying $f"
@@ -163,6 +196,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/dsh/backend/go.mod
+          cache: true
 
       - name: Go test
         working-directory: services/dsh/backend
@@ -200,6 +234,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/dsh/backend/go.mod
+          cache: true
 
       - name: Install postgresql-client
         run: |
@@ -220,7 +255,7 @@ jobs:
         env:
           PGHOST: localhost
           PGPORT: 5432
-          PGPASSWORD: dsh_runtime_password
+          PGPASSWORD: bthwani_runtime_password
         run: |
           for f in services/dsh/database/migrations/*.sql; do
             echo "Applying $f"
@@ -231,7 +266,7 @@ jobs:
         env:
           PGHOST: localhost
           PGPORT: 5432
-          PGPASSWORD: dsh_runtime_password
+          PGPASSWORD: bthwani_runtime_password
         run: |
           for f in services/dsh/database/seeds/local/*.sql; do
             echo "Applying $f"
@@ -258,6 +293,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: core/identity/backend/go.mod
+          cache: true
 
       - name: Go test
         working-directory: core/identity/backend
@@ -276,21 +312,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
           version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Full runtime reset and smoke
         shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
+
+      - name: WireMock financial provider smoke
+        run: pnpm run runtime:wiremock:financial:smoke
+
+      - name: Docker compose ps
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml ps
+
+      - name: Docker compose logs on failure
+        if: failure()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200
+
+      - name: Upload docker logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-logs-${{ github.run_id }}
+          path: /tmp/docker-logs.txt
+          retention-days: 7
+
+      - name: Docker compose down
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
+
+  # Not run on pull_request/push: it requires WLT_MUTATIONS_ENABLED=true, which
+  # is not an approved default (see services/wlt/service.manifest.ts
+  # mutationRuntimeReady/mutationJourneysApproved). Trigger manually only when
+  # the WLT payment-session mutation journey itself needs verification.
+  wlt-mutation-lab-smoke:
+    name: WLT mutation lab smoke (manual, unapproved mutations)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full runtime reset and smoke (mutations enabled)
+        shell: pwsh
+        env:
+          WLT_MUTATIONS_ENABLED: "true"
         run: |
           pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail
 

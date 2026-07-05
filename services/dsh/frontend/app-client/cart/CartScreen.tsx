@@ -15,6 +15,10 @@ import {
   Surface,
   TextField,
   colorRoles,
+  colorPalette,
+  alpha,
+  statusScale,
+  neutralScale,
   radius,
   spacing,
   useDirection,
@@ -929,7 +933,7 @@ export function CartScreen({
                 {selectedFulfillmentMode !== "pickup" && (
                   <View style={styles.modalCard}>
                     <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-                      <View style={[styles.modalIconBg, { backgroundColor: "rgba(5, 150, 105, 0.1)" }]}>
+                      <View style={[styles.modalIconBg, { backgroundColor: alpha(statusScale.success, 0.1) }]}>
                         <Icon name="location" size={20} color={colorRoles.brandStructure} />
                       </View>
                       <View style={{ flex: 1, alignItems: "flex-end" }}>
@@ -946,7 +950,7 @@ export function CartScreen({
                 {/* Note & Schedule */}
                 <View style={styles.modalCard}>
                   <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-                    <View style={[styles.modalIconBg, { backgroundColor: "rgba(217, 119, 6, 0.1)" }]}>
+                    <View style={[styles.modalIconBg, { backgroundColor: alpha(statusScale.warning, 0.1) }]}>
                       <Icon name="time-outline" size={20} color={colorRoles.brandAction} />
                     </View>
                     <View style={{ flex: 1, alignItems: "flex-end" }}>
@@ -1394,7 +1398,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "bold",
     color: colorRoles.brandStructure,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: alpha(colorPalette.white, 0.8),
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: radius.xs,
@@ -1408,13 +1412,13 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(255, 80, 13, 0.3)",
+    backgroundColor: alpha(colorRoles.brandAction, 0.3),
     top: -5,
     left: -5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.65)", // Dark semi-transparent backdrop
+    backgroundColor: alpha(neutralScale[900], 0.65), // Dark semi-transparent backdrop
     justifyContent: "flex-end",
   },
   modalContent: {
@@ -1471,7 +1475,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(29, 78, 216, 0.1)",
+    backgroundColor: alpha(colorRoles.info, 0.1),
     justifyContent: "center",
     alignItems: "center",
   },

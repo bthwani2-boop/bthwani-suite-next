@@ -148,7 +148,7 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
   const handleTransition = async (toStatus: string) => {
     await detail.transition({
       toStatus: toStatus as import("../../shared/partner").DshPartnerActivationStatus,
-      reason: transitionReason || undefined,
+      ...(transitionReason ? { reason: transitionReason } : {}),
     });
     setShowTransitionInput(null);
     setTransitionReason("");

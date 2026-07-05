@@ -1,8 +1,10 @@
-import { resolveWltApiBaseUrl } from "../../_kernel/wlt-api-base-url";
+import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../_kernel/dsh-http-request";
 import type { DshWltLedgerEntryView, DshWltLedgerParams } from "./wlt-ledger.types";
 
-const { request: wltGet } = createDshHttpClient(resolveWltApiBaseUrl(), "wlt-ledger");
+// WLT internal financial reads are service-authenticated; DSH surfaces read
+// them through the governed DSH finance proxy, never from the browser.
+const { request: wltGet } = createDshHttpClient(resolveDshApiBaseUrl(), "wlt-ledger");
 
 type WltLedgerEntryRaw = {
   readonly id: string;
@@ -64,7 +66,7 @@ export async function fetchDshWltLedgerEntries(params: DshWltLedgerParams): Prom
     if (params.cursor) query.set("cursor", params.cursor);
     const qs = query.toString();
     const body = await wltGet<{ entries: WltLedgerEntryRaw[]; nextCursor?: string }>(
-      `/wlt/ledger/entries${qs ? `?${qs}` : ""}`,
+      `/dsh/control-panel/finance/ledger/entries${qs ? `?${qs}` : ""}`,
     );
     return {
       ok: true,

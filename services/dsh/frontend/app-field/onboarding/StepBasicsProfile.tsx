@@ -1,5 +1,5 @@
 // app-field — Step 1: بيانات المتجر الأساسية
-// Extracted 1:1 from bthwani-suite donor. No business logic here.
+// Presentational step for the field onboarding wizard. No business logic here.
 import React from 'react';
 import { View } from 'react-native';
 import { TextField, Text, spacing, colorRoles } from '@bthwani/ui-kit';

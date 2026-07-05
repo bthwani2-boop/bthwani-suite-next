@@ -8,7 +8,7 @@ import {
   View,
   Text,
 } from 'react-native';
-import { colorRoles, colorPalette } from '@bthwani/ui-kit';
+import { colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
 import type { CatalogProduct } from '../../shared/catalog/catalog.types';
 
 export type StoreMeasurementSheetProps = {
@@ -174,7 +174,7 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
                       <Text
                         style={[
                           styles.optionPrice,
-                          { color: selected ? 'rgba(255,255,255,0.8)' : colorRoles.textSecondary },
+                          { color: selected ? alpha(colorPalette.white, 0.8) : colorRoles.textSecondary },
                         ]}
                       >
                         {price.toFixed(1).replace(/\.0$/, '')} د.ي
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   // Donor: soft overlay (no dark backdrop)
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: alpha(colorPalette.black, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
   },

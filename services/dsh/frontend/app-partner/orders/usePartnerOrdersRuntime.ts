@@ -28,7 +28,7 @@ export function usePartnerOrdersRuntime(route: string) {
     if (route !== 'inbox') return;
     let cancelled = false;
     setState('loading');
-    fetchDshRuntimeOrders({ limit: 100 }, partnerClientId).then((result) => {
+    fetchDshRuntimeOrders({ limit: 100, scope: 'partner' }, partnerClientId, 'partner').then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
         const nextOrders = result.orders.map(mapRuntimeRowToPartnerOrderItem);
@@ -50,7 +50,7 @@ export function usePartnerOrdersRuntime(route: string) {
   const markReady = React.useCallback(
     (orderId: string) => {
       orderLifecycleClient
-        .updateOrderStatus(orderId, { actor: 'partner', status: 'READY_FOR_PICKUP' })
+        .updateOrderStatus(orderId, { actor: 'partner', status: 'ready_for_pickup' })
         .then(() => {
           setOrders((prev) =>
             prev.map((item) =>

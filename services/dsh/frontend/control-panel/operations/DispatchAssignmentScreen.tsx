@@ -73,9 +73,9 @@ function buildRuntimeDispatchRow(o: DshRuntimeOrderRow): DispatchRowState {
     captain: o.captainId ?? 'لا يوجد',
     distance: '—',
     confidence: '—',
-    statusTone: o.status === 'CREATED' ? 'warning' : 'brand',
+    statusTone: o.status === 'pending' ? 'warning' : 'brand',
     status: o.status,
-    recommendation: o.status === 'CREATED' ? 'يحتاج إسناد كابتن' : `الحالة: ${o.status}`,
+    recommendation: o.status === 'pending' ? 'يحتاج إسناد كابتن' : `الحالة: ${o.status}`,
     note: `متجر: ${o.storeId} | عميل: ${o.clientId}`,
     blocker: 'لا يوجد',
     pickupEta: '—',
@@ -102,7 +102,7 @@ export function DispatchAssignmentScreen({ subGroup }: DispatchAssignmentScreenP
 
   React.useEffect(() => {
     let cancelled = false;
-    fetchDshRuntimeOrders({ status: 'CREATED', limit: 100 }).then((result) => {
+    fetchDshRuntimeOrders({ status: 'pending', limit: 100, scope: 'operator' }).then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
         const isEmpty = result.orders.length === 0;
@@ -361,14 +361,16 @@ export function DispatchAssignmentScreen({ subGroup }: DispatchAssignmentScreenP
                     setSelectedRowId(item.id);
                     router.push(buildOperationsHref('dispatch-assignment', { orderId: item.id }));
                   }}
-                  primaryAction={item.customStatus ? undefined : {
-                    id: `${item.id}-primary`,
-                    label: primaryLabel,
-                    onAction: () => {
-                      setSelectedRowId(item.id);
-                      router.push(buildOperationsHref('dispatch-assignment', { orderId: item.id }));
+                  {...(!item.customStatus ? {
+                    primaryAction: {
+                      id: `${item.id}-primary`,
+                      label: primaryLabel,
+                      onAction: () => {
+                        setSelectedRowId(item.id);
+                        router.push(buildOperationsHref('dispatch-assignment', { orderId: item.id }));
+                      },
                     },
-                  }}
+                  } : {})}
                   secondaryAction={{
                     id: `${item.id}-secondary`,
                     label: secondaryLabel,

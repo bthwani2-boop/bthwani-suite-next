@@ -26,7 +26,7 @@ for (const file of listCodeFiles()) {
   const content = read(file);
   for (const item of findImportSpecifiers(content)) {
     const spec = item.specifier;
-    const ALLOWED_SUBPATHS = ["@bthwani/ui-kit/web", "@bthwani/ui-kit/mobile", "@bthwani/ui-kit/next"];
+    const ALLOWED_SUBPATHS = ["@bthwani/ui-kit/web", "@bthwani/ui-kit/mobile", "@bthwani/ui-kit/next", "@bthwani/ui-kit/tokens"];
     const isDeepAlias = spec.startsWith("@bthwani/ui-kit/") && !ALLOWED_SUBPATHS.includes(spec);
     const isDeepPath = spec.includes("shared/ui-kit/src/") || spec.includes("shared/ui-kit/tokens/");
 
@@ -141,6 +141,73 @@ for (const file of listCodeFiles()) {
       file,
       message: `reusable design primitive '${basename}' belongs in shared/ui-kit`
     });
+  }
+}
+
+// 7. no-raw-colors-outside-ui-kit (Error)
+for (const file of listCodeFiles()) {
+  const isExcludedFromColors =
+    file.startsWith("shared/ui-kit/") ||
+    file.startsWith("tools/") ||
+    file.startsWith("governance/") ||
+    file.startsWith("infra/") ||
+    file.startsWith("contracts/") ||
+    file.startsWith("apps/control-panel/") ||
+    file.endsWith(".d.ts");
+
+  if (isExcludedFromColors) continue;
+
+  const content = read(file);
+  const lines = content.split(/\r?\n/);
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const cleanLine = line.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "").trim();
+    if (cleanLine.length === 0) continue;
+
+    const hasHex = /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/gi.test(cleanLine);
+    const hasCssColor = /\b(?:rgb|rgba|hsl|hsla)\([^)]+\)/gi.test(cleanLine);
+
+    if (hasHex || hasCssColor) {
+      violations.push({
+        file,
+        line: i + 1,
+        message: `FORBIDDEN: raw color value found in styling: "${line.trim()}". Use brand tokens or colorRoles from shared/ui-kit instead.`
+      });
+    }
+  }
+}
+
+// 8. platform-imports-validation (Error)
+for (const file of listCodeFiles()) {
+  const content = read(file);
+  const isWebOnly = file.includes("control-panel/") || file.includes("/web/");
+  const isMobileOnly = file.includes("app-captain/") || file.includes("app-client/") || file.includes("app-field/") || file.includes("app-partner/") || file.includes("/mobile/");
+
+  for (const item of findImportSpecifiers(content)) {
+    const spec = item.specifier;
+    
+    if (isWebOnly) {
+      const isMobileOnlyPkg = spec === "react-native" || spec.startsWith("react-native-") || spec === "expo" || spec.startsWith("expo-") || spec === "@tamagui/native";
+      if (isMobileOnlyPkg) {
+        violations.push({
+          file,
+          line: lineNumber(content, item.index),
+          message: `FORBIDDEN: importing mobile-only library '${spec}' in web-only / control-panel file`
+        });
+      }
+    }
+
+    if (isMobileOnly) {
+      const isWebOnlyPkg = spec.startsWith("next/") || spec === "react-dom" || spec.startsWith("react-dom/") || spec === "@tamagui/web";
+      if (isWebOnlyPkg) {
+        violations.push({
+          file,
+          line: lineNumber(content, item.index),
+          message: `FORBIDDEN: importing Next.js / web-only library '${spec}' in mobile / Expo file`
+        });
+      }
+    }
   }
 }
 

@@ -13,7 +13,7 @@ export async function fetchWltPaymentStatusRef(
 ) {
   return wltFetchJson<WltPaymentStatusReference>(
     `${baseUrl}/wlt/references/payment-status?orderId=${encodeURIComponent(orderId)}`,
-    (body) => body.reference as WltPaymentStatusReference,
+    (body: any) => body.reference as WltPaymentStatusReference,
   );
 }
 
@@ -23,7 +23,7 @@ export async function fetchWltPaymentSessionReference(
 ) {
   return wltFetchJson<WltDshPaymentSessionReference>(
     `${baseUrl}/wlt/payment-sessions/${encodeURIComponent(paymentSessionId)}`,
-    (body) => body.paymentSession as WltDshPaymentSessionReference,
+    (body: any) => body.paymentSession as WltDshPaymentSessionReference,
   );
 }
 
@@ -33,7 +33,7 @@ export async function fetchWltSettlementStatusRef(
 ) {
   return wltFetchJson<WltSettlementStatusReference>(
     `${baseUrl}/wlt/references/settlement-status?orderId=${encodeURIComponent(orderId)}`,
-    (body) => body.reference as WltSettlementStatusReference,
+    (body: any) => body.reference as WltSettlementStatusReference,
   );
 }
 
@@ -43,6 +43,6 @@ export async function fetchWltRefundStatusRef(
 ) {
   return wltFetchJson<WltRefundStatusReference>(
     `${baseUrl}/wlt/references/refund-status?orderId=${encodeURIComponent(orderId)}`,
-    (body) => body.reference as WltRefundStatusReference,
+    (body: any) => body.reference as WltRefundStatusReference,
   );
 }

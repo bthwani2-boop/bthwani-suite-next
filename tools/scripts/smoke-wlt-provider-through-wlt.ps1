@@ -24,6 +24,8 @@ function Invoke-WltJson {
   $headers = @{
     "X-Correlation-ID" = $CorrelationId
     "Idempotency-Key" = $IdempotencyKey
+    "Authorization" = "Bearer dev-only-dsh-wlt-shared-secret"
+    "X-Service-Caller" = "dsh"
   }
   $uri = "$BaseUrl$Path"
   if ($null -eq $Body) {
@@ -42,6 +44,7 @@ $session = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions" -Body @{
   clientId = "client-local-001"
   storeId = "store-1001"
   paymentMethod = "official_wallet"
+  amountMinorUnits = 1000
 }
 if ([string]::IsNullOrWhiteSpace($session.paymentSession.id)) { throw "WLT did not create payment session" }
 

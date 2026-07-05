@@ -25,6 +25,7 @@ import (
 func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux := http.NewServeMux()
 	gate := newMutationGate(mutationsEnabled)
+	readGate := requireInternalFinancialRead
 
 	mux.HandleFunc("GET /wlt/health", health.HandleHealth)
 	mux.HandleFunc("GET /wlt/readiness", health.HandleReadiness(db))
@@ -42,35 +43,38 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", gate(payment.HandleExpireSession(db)))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", gate(payment.HandleMarkCodCollected(db)))
 
-	// WLT Refund Status: Refunds (financial mutation; gated)
+	// WLT Refund Status: public references stay under /wlt/references/*; broad
+	// financial read surfaces require service-level internal read auth.
 	mux.HandleFunc("POST /wlt/refunds", gate(refund.HandleCreateRefund(db)))
-	mux.HandleFunc("GET /wlt/refunds/{refundId}", refund.HandleGetRefund(db))
-	mux.HandleFunc("GET /wlt/refunds", refund.HandleListRefunds(db))
+	mux.HandleFunc("GET /wlt/refunds/{refundId}", readGate(refund.HandleGetRefund(db)))
+	mux.HandleFunc("GET /wlt/refunds", readGate(refund.HandleListRefunds(db)))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(refund.HandleApproveRefund(db)))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(refund.HandleCompleteRefund(db)))
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(refund.HandleRejectRefund(db)))
 
-	// WLT Settlement Status: Settlements (financial mutation; gated)
-	mux.HandleFunc("GET /wlt/settlements/summary", settlement.HandleGetSettlementSummary(db))
+	// WLT Settlement Status: public status references stay under /wlt/references/*;
+	// settlement financial ledgers require internal read auth.
+	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummary(db)))
 	mux.HandleFunc("POST /wlt/settlements", gate(settlement.HandleCreateSettlement(db)))
-	mux.HandleFunc("GET /wlt/settlements/{settlementId}", settlement.HandleGetSettlement(db))
-	mux.HandleFunc("GET /wlt/settlements", settlement.HandleListSettlements(db))
+	mux.HandleFunc("GET /wlt/settlements/{settlementId}", readGate(settlement.HandleGetSettlement(db)))
+	mux.HandleFunc("GET /wlt/settlements", readGate(settlement.HandleListSettlements(db)))
 	mux.HandleFunc("POST /wlt/settlements/{settlementId}/post", gate(settlement.HandlePostSettlement(db)))
 
-	// WLT Commission: COD Commission (create is DSH-only service-to-service;
-	// collect/remit are ops mutations and stay gated until approved)
+	// WLT Commission: COD records and commission reads expose financial data.
+	// Creation remains service-authenticated by handler and commission mutation
+	// is also behind the mutation gate until the journey is approved.
 	mux.HandleFunc("POST /wlt/cod-records", cod.HandleCreateCodRecord(db))
-	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", cod.HandleGetCodRecord(db))
-	mux.HandleFunc("GET /wlt/cod-records", cod.HandleListCodRecords(db))
+	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", readGate(cod.HandleGetCodRecord(db)))
+	mux.HandleFunc("GET /wlt/cod-records", readGate(cod.HandleListCodRecords(db)))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/collect", gate(cod.HandleCollectCod(db)))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/remit", gate(cod.HandleRemitCod(db)))
-	mux.HandleFunc("POST /wlt/commissions", cod.HandleCreateCommission(db))
-	mux.HandleFunc("GET /wlt/commissions", cod.HandleListCommissions(db))
+	mux.HandleFunc("POST /wlt/commissions", gate(cod.HandleCreateCommission(db)))
+	mux.HandleFunc("GET /wlt/commissions", readGate(cod.HandleListCommissions(db)))
 
-	// WLT Ledger: Ledger Audit (financial mutation; gated)
+	// WLT Ledger: all ledger surfaces are financial internals.
 	mux.HandleFunc("POST /wlt/ledger/entries", gate(ledger.HandleAppendLedgerEntry(db)))
-	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", ledger.HandleGetLedgerEntry(db))
-	mux.HandleFunc("GET /wlt/ledger/entries", ledger.HandleListLedgerEntries(db))
+	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", readGate(ledger.HandleGetLedgerEntry(db)))
+	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
@@ -103,6 +107,15 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
+			return
+		}
+		next(w, r)
+	}
 }
 
 // newMutationGate returns a wrapper that rejects gated financial-mutation
