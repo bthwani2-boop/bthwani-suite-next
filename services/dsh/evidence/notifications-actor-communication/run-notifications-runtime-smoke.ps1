@@ -1,7 +1,9 @@
 param(
   [string]$BaseUrl = "http://127.0.0.1:58080",
   [string]$DatabaseUrl = $env:DSH_DATABASE_URL,
-  [string]$OutputPath = "services/dsh/evidence/notifications-actor-communication/dsh-notifications-runtime-smoke.txt"
+  [string]$OutputPath = "services/dsh/evidence/notifications-actor-communication/dsh-notifications-runtime-smoke.txt",
+  [string]$Ref = "implementing",
+  [string]$HeadSha = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +35,17 @@ function Test-Route([string]$method, [string]$path, [int[]]$acceptedStatuses, [s
   }
 }
 
+if ([string]::IsNullOrWhiteSpace($HeadSha)) {
+  try {
+    $HeadSha = (git rev-parse HEAD).Trim()
+  } catch {
+    $HeadSha = "unknown"
+  }
+}
+
 Add-Result "Notifications runtime smoke"
+Add-Result "ref=$Ref"
+Add-Result "head_sha=$HeadSha"
 Add-Result "base_url=$BaseUrl"
 Add-Result "timestamp=$((Get-Date).ToUniversalTime().ToString('o'))"
 
@@ -50,11 +62,23 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
   $failed = $true
 } else {
   $psql = Get-Command psql -ErrorAction SilentlyContinue
+  $tableSql = "select to_regclass('public.dsh_notifications'), to_regclass('public.dsh_notification_preferences'), to_regclass('public.dsh_platform_notification_config');"
   if (-not $psql) {
-    Add-Result "FAIL database proof => psql is not available"
-    $failed = $true
+    $docker = Get-Command docker -ErrorAction SilentlyContinue
+    if (-not $docker) {
+      Add-Result "FAIL database proof => psql and docker are not available"
+      $failed = $true
+    } else {
+      $containerDbUrl = $DatabaseUrl -replace '@localhost:\d+/', '@localhost:5432/' -replace '@127.0.0.1:\d+/', '@localhost:5432/'
+      $tableResult = docker exec -t bthwani-postgres-runtime psql $containerDbUrl -tAc $tableSql
+      if ($LASTEXITCODE -ne 0 -or $tableResult -notmatch "dsh_notifications" -or $tableResult -notmatch "dsh_notification_preferences" -or $tableResult -notmatch "dsh_platform_notification_config") {
+        Add-Result "FAIL database tables => $tableResult"
+        $failed = $true
+      } else {
+        Add-Result "PASS database tables => $tableResult"
+      }
+    }
   } else {
-    $tableSql = "select to_regclass('public.dsh_notifications'), to_regclass('public.dsh_notification_preferences'), to_regclass('public.dsh_platform_notification_config');"
     $tableResult = & psql $DatabaseUrl -tAc $tableSql
     if ($LASTEXITCODE -ne 0 -or $tableResult -notmatch "dsh_notifications" -or $tableResult -notmatch "dsh_notification_preferences" -or $tableResult -notmatch "dsh_platform_notification_config") {
       Add-Result "FAIL database tables => $tableResult"
@@ -63,6 +87,12 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {
       Add-Result "PASS database tables => $tableResult"
     }
   }
+}
+
+if ($failed) {
+  Add-Result "final_status=FAIL"
+} else {
+  Add-Result "final_status=PASS"
 }
 
 $resolvedOutput = Join-Path (Get-Location) $OutputPath
