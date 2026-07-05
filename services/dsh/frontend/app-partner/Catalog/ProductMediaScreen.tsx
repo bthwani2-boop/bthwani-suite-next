@@ -46,11 +46,11 @@ function buildAuthHeaders(partnerId?: string): Record<string, string> {
 }
 
 function isOfflineError(err: unknown): boolean {
-	return typeof err === 'object' && err !== null && (err as DshMediaApiError).kind === 'offline';
+	return typeof err === 'object' && err !== null && (err as DshMediaApiError).code === 'offline';
 }
 
 function isStorageUnavailableError(err: unknown): boolean {
-	return typeof err === 'object' && err !== null && (err as DshMediaApiError).kind === 'storage_unavailable';
+	return typeof err === 'object' && err !== null && (err as DshMediaApiError).code === 'storage_unavailable';
 }
 
 function formatMediaLabel(asset: DshMediaAsset): string {
@@ -63,7 +63,7 @@ function formatMediaLabel(asset: DshMediaAsset): string {
 
 export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMediaScreenProps) {
 	const { direction } = useDirection();
-	const { theme } = useTheme();
+	const theme = useTheme() as any;
 
 	const client = React.useMemo(() => getDshMediaRuntimeClient(), []);
 
@@ -181,15 +181,15 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 	const isWorking = screenState === 'loading' || screenState === 'uploading';
 
 	if (screenState === 'loading' && assets.length === 0) {
-		return <StateView kind="loading" title="جارٍ تحميل وسائط المنتج…" />;
+		return <StateView title="جارٍ تحميل وسائط المنتج…" loading />;
 	}
 
 	if (screenState === 'offline') {
-		return <StateView stateId="offline" actionLabel="إعادة المحاولة" onActionPress={loadAssets} />;
+		return <StateView title="تعذر الاتصال" tone="danger" actionLabel="إعادة المحاولة" onActionPress={loadAssets} />;
 	}
 
 	if (screenState === 'disabled' || !client) {
-		return <StateView stateId="blockingError" title="واجهة API غير متاحة" description="تحقق من DSH_API_BASE_URL." actionLabel={onBack ? 'رجوع' : undefined} onActionPress={onBack} />;
+		return <StateView title="واجهة API غير متاحة" description="تحقق من DSH_API_BASE_URL." actionLabel={onBack ? 'رجوع' : undefined} onActionPress={onBack} />;
 	}
 
 	return (
@@ -218,7 +218,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 					<Box
 						style={{
 							backgroundColor: theme.danger + '15',
-							borderRadius: radius.xs2,
+							borderRadius: radius.xs,
 							padding: spacing[3],
 							borderStartWidth: 3,
 							borderStartColor: theme.danger,
@@ -237,14 +237,14 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 					<Box
 						style={{
 							backgroundColor: theme.brand + '12',
-							borderRadius: radius.xs2,
+							borderRadius: radius.xs,
 							padding: spacing[3],
 							borderStartWidth: 3,
 							borderStartColor: theme.brand,
 							gap: spacing[2],
 						}}
 					>
-						<Text role="bodyStrong" tone="brand" align="start">جارٍ الرفع… {uploadProgress}%</Text>
+						<Text role="bodyStrong" tone="action" align="start">جارٍ الرفع… {uploadProgress}%</Text>
 						<ActivityIndicator size="small" color={theme.brand} />
 					</Box>
 				)}
@@ -256,7 +256,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 					<Text role="bodyStrong" align="start">وسائط المنتج الحالية ({assets.length})</Text>
 
 					{assets.length === 0 ? (
-						<Box style={{ padding: spacing[6], borderStyle: 'dashed', borderWidth: 1, borderColor: theme.line, borderRadius: radius.xs2, alignItems: 'center' }}>
+						<Box style={{ padding: spacing[6], borderStyle: 'dashed', borderWidth: 1, borderColor: theme.line, borderRadius: radius.xs, alignItems: 'center' }}>
 							<Text role="bodySm" tone="muted" align="center">لا توجد وسائط مرتبطة بهذا المنتج.</Text>
 						</Box>
 					) : (
@@ -289,7 +289,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 									<Box style={{ flex: 1 }}>
 										<Text role="bodyStrong" align="start" style={{ fontSize: typography.caption.fontSize }}>{asset.id}</Text>
 										<Text role="caption" tone="muted" align="start">{formatMediaLabel(asset)}</Text>
-										<Chip label={asset.status} />
+										<Chip label={asset.status ?? "غير محدد"} />
 									</Box>
 								</Box>
 

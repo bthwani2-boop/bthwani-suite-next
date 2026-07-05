@@ -10,6 +10,7 @@ import {
   Surface,
   Text,
   colorPalette,
+  colorRoles,
   spacing,
   radius,
   Icon,
@@ -53,14 +54,13 @@ export function DshPartnerOrderRejectionScreen({
   const [showRejectionPanel, setShowRejectionPanel] = React.useState(false);
 
   if (state === 'loading') {
-    return <Surface style={styles.root}><StateView stateId="loading" /></Surface>;
+    return <Surface style={styles.root}><StateView title="جارٍ التحميل" loading /></Surface>;
   }
 
   if (state === 'success') {
     return (
       <Surface style={styles.root}>
         <StateView
-          stateId="success"
           title="تم تحديث حالة الطلب"
           description="تم تسجيل قرارك بنجاح وسيتم إبلاغ العميل والعمليات."
           actionLabel="العودة للطلبات"
@@ -79,7 +79,7 @@ export function DshPartnerOrderRejectionScreen({
         </Text>
       </Box>
 
-      <Surface tone="brand" gap={3}>
+      <Surface tone="action" gap={3}>
         <Box style={{ flexDirection: resolveRowDirection(direction), justifyContent: 'space-between', alignItems: 'center' }}>
           <Text role="titleMd" style={{ color: colorPalette.white }}>الطلب {orderCode}</Text>
           <Chip label="جديد" selected />
@@ -130,7 +130,7 @@ export function DshPartnerOrderRejectionScreen({
                 <View style={[styles.radioCircle, selectedReasonId === reason.id && styles.radioCircleActive]}>
                   {selectedReasonId === reason.id && <View style={styles.radioInner} />}
                 </View>
-                <Text role="bodyMd" style={[styles.reasonLabel, selectedReasonId === reason.id && { color: colorPalette.brandStrong }]}>
+                <Text role="bodyMd" style={[styles.reasonLabel, selectedReasonId === reason.id && { color: colorRoles.brandActionPressed }]}>
                   {reason.label}
                 </Text>
               </Pressable>
@@ -148,7 +148,7 @@ export function DshPartnerOrderRejectionScreen({
         </Surface>
       )}
 
-      <Box padding={spacing[3]} style={{ backgroundColor: colorPalette.surfacePrimary, borderRadius: radius.md }}>
+      <Box padding={spacing[3]} style={{ backgroundColor: colorRoles.surfaceBase, borderRadius: radius.md }}>
         <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', gap: spacing[2] }}>
           <Icon name="time-outline" size={16} tone="muted" />
           <Text role="caption" tone="muted">ملاحظة: التأخر في اتخاذ القرار قد يؤدي إلى إلغاء الطلب تلقائياً.</Text>
@@ -167,15 +167,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing[2],
     borderBottomWidth: 1,
-    borderBottomColor: colorPalette.line,
+    borderBottomColor: colorRoles.borderSubtle,
   },
   itemText: {
     flex: 1,
-    color: colorPalette.brandStrong,
+    color: colorRoles.brandActionPressed,
     textAlign: 'right',
   },
   itemQty: {
-    color: colorPalette.brand,
+    color: colorRoles.brandAction,
     width: 40,
     textAlign: 'left',
   },
@@ -184,33 +184,33 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
     paddingHorizontal: spacing[1],
     borderBottomWidth: 1,
-    borderBottomColor: colorPalette.line,
+    borderBottomColor: colorRoles.borderSubtle,
     gap: spacing[3],
   },
   reasonItemSelected: {
-    backgroundColor: colorPalette.line + '10',
+    backgroundColor: colorRoles.borderSubtle + '10',
   },
   reasonLabel: {
     flex: 1,
     textAlign: 'right',
-    color: colorPalette.brandStrong,
+    color: colorRoles.brandActionPressed,
   },
   radioCircle: {
     width: 20,
     height: 20,
     borderRadius: radius.sm,
     borderWidth: 2,
-    borderColor: colorPalette.line,
+    borderColor: colorRoles.borderSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioCircleActive: {
-    borderColor: colorPalette.danger,
+    borderColor: colorRoles.danger,
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colorPalette.danger,
+    backgroundColor: colorRoles.danger,
   },
 });

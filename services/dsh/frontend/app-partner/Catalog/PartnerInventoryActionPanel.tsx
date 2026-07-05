@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
+import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
 
 export type PartnerInventoryFlowId = 'inventory-adjust' | 'inventory-update' | 'items-upsert';
 
@@ -29,7 +29,7 @@ export function DshPartnerInventoryActionPanel({ activeFlowId, onSelectFlow }: D
             title={item.title}
             subtitle={item.subtitle}
             meta={activeFlowId === item.id ? 'المسار النشط' : 'افتح المسار'}
-            badgeLabel="Catalog"
+            trailing={<Badge label="Catalog" tone="neutral" />}
             onPress={() => onSelectFlow?.(item.id)}
           />
         ))}

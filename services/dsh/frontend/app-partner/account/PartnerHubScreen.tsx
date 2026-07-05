@@ -57,7 +57,19 @@ import {
   getWltDshPartnerOperationalModeCommission,
   wltDshPartnerUiCopy,
 } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner_wlt_dsh_partner_ui_copy.facade';
-import type { DshPartnerRecord as DshCanonicalStoreCard } from '../../shared/partner/partner.types';
+type DshCanonicalStoreCard = {
+  readonly id?: string;
+  readonly sourceRecordId?: string;
+  readonly publishStage?: string;
+  readonly zoneLabel?: string;
+  readonly storeName?: string;
+  readonly cityLabel?: string;
+  readonly branchLabel?: string;
+  readonly managerName?: string;
+  readonly operatingHoursLabel?: string;
+  readonly deliveryReadinessLabel?: string;
+  readonly coverageSummary?: string;
+};
 import { mapPublishStageToPartnerActivationStatus, resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client-visibility.model';
 import { WltDshPartnerBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner.facade';
 import type { DshPartnerHubSurfaceProps, PartnerHubSection } from '../dsh-partner.types';
@@ -86,7 +98,7 @@ type PartnerOperationalMode = {
   id: PartnerOperationalModeId;
   title: string;
   subtitle: string;
-  commission: string;
+  commission: string | undefined;
   enabled: boolean;
 };
 
@@ -118,6 +130,25 @@ type NotificationPreferenceId =
 
 type NotificationPreferenceState = Record<NotificationPreferenceId, boolean>;
 
+type PartnerTeamRole = 'owner' | 'supervisor' | 'staff' | 'courier';
+type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
+
+type PartnerTeamMember = {
+  id: string;
+  name: string;
+  role: PartnerTeamRole;
+  roleLabel: string;
+  status: PartnerTeamStatus;
+  statusLabel: string;
+  branchAssignment: string;
+  permissionsSummary: string;
+  deliveryAssignment: string;
+  inviteLifecycle: string;
+  operationalImpact: string;
+  auditNote: string;
+  inlineActionLabel: string;
+};
+
 type PartnerCoverageZoneStatus = 'active' | 'pending' | 'blocked';
 
 type PartnerCoverageZone = {
@@ -137,6 +168,7 @@ type PartnerCoverageZone = {
   auditNote: string;
 };
 
+const runtimePartnerTeamMembers: readonly PartnerTeamMember[] = [];
 const runtimePartnerCoverageZones: readonly PartnerCoverageZone[] = [];
 
 const runtimePartnerAnalytics = {
@@ -531,7 +563,7 @@ function HubNavRow({
         alignItems: 'center',
         paddingHorizontal: spacing[4],
         paddingVertical: 14,
-        borderRadius: radius.md2,
+        borderRadius: radius.md,
         backgroundColor: pressed ? theme.surfaceInset : theme.surfaceRaised,
         gap: spacing[3],
         borderWidth: 1,
@@ -672,7 +704,7 @@ function OperationsModeRow({
               flexShrink: 0,
             }}
           >
-            <Icon name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'} size={16} tone={selected ? 'brand' : 'default'} />
+            <Icon name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'} size={16} tone={selected ? 'brand' : 'muted'} />
           </View>
 
           <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -708,7 +740,6 @@ function OperationsPanel({
   serviceModes,
   onBack,
   onOpenStoreCourierSetup,
-  onOpenTeamManagement,
   listingEnabled,
   storeVisibility,
   visibilityLabel,
@@ -722,17 +753,21 @@ function OperationsPanel({
   serviceModes: readonly { id: string; label: string; description: string; enabled: boolean }[];
   onBack: () => void;
   onOpenStoreCourierSetup?: () => void;
-  onOpenTeamManagement?: () => void;
   listingEnabled: boolean;
   storeVisibility: ReturnType<typeof resolveDshStoreClientVisibility>;
   visibilityLabel: string;
 }) {
   const { direction } = useDirection();
 
+  const teamMembers = runtimePartnerTeamMembers;
   const coverageZones = runtimePartnerCoverageZones;
   const [selectedModeId, setSelectedModeId] = React.useState<PartnerOperationalMode['id'] | ''>('pickup');
+  const [teamPanelOpen, setTeamPanelOpen] = React.useState(false);
   const [coveragePanelOpen, setCoveragePanelOpen] = React.useState(false);
+  const [selectedMemberId, setSelectedMemberId] = React.useState<string>(teamMembers.find((member) => member.role === 'supervisor')?.id ?? teamMembers[0]?.id ?? '');
   const [selectedZoneId, setSelectedZoneId] = React.useState<string>(coverageZones.find((zone) => zone.status === 'active')?.id ?? coverageZones[0]?.id ?? '');
+  const [inviteDraft, setInviteDraft] = React.useState('');
+  const [lastSaveLabel, setLastSaveLabel] = React.useState<string | null>(null);
 
   const resolvedModes = React.useMemo(
     () =>
@@ -744,6 +779,12 @@ function OperationsPanel({
   );
 
   const activeModesCount = resolvedModes.filter((mode) => mode.enabled).length;
+      const activeSupervisorCount = teamMembers.filter((member) => member.role === 'supervisor' && member.status === 'active').length;
+      const activeTeamCount = teamMembers.filter((member) => member.status === 'active').length;
+      const pausedTeamCount = teamMembers.filter((member) => member.status === 'paused').length;
+      const invitedTeamCount = teamMembers.filter((member) => member.status === 'invited').length;
+      const blockedTeamCount = teamMembers.filter((member) => member.status === 'blocked').length;
+      const reviewTeamCount = teamMembers.filter((member) => member.status === 'review-needed').length;
       const activeZoneCount = coverageZones.filter((zone) => zone.status === 'active').length;
       const pendingZoneCount = coverageZones.filter((zone) => zone.status === 'pending').length;
       const blockedZoneCount = coverageZones.filter((zone) => zone.status === 'blocked').length;
@@ -851,7 +892,7 @@ function OperationsPanel({
                     <Icon
                       name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'}
                       size={18}
-                      tone={isSelected ? 'brand' : 'default'}
+                      tone={isSelected ? 'brand' : 'muted'}
                     />
                     <Box style={{ gap: 2, alignItems: 'flex-start', flex: 1 }}>
                       <Text role="bodyStrong" align="start">{mode.title}</Text>
@@ -898,22 +939,159 @@ function OperationsPanel({
 
       <Divider />
 
-      {/* 5) Team summary — full member management lives in PartnerTeamManagementScreen */}
+      {/* 5) Flat Team Section with inline expansion */}
       <Box gap={3} paddingY={2}>
         <Box layoutDirection="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Box style={{ gap: 2, alignItems: 'flex-start' }}>
             <Text role="bodyStrong" align="start">الفريق</Text>
-            <Text role="caption" tone="muted" align="start">إدارة الأدوار والدعوات والصلاحيات لأعضاء الفرع.</Text>
+            <Text role="caption" tone="muted" align="start">{teamRoleSummary} · {teamStatusSummary}</Text>
           </Box>
           <Button
-            label="إدارة الفريق"
+            label={teamPanelOpen ? 'إخفاء الأعضاء' : 'إدارة الفريق'}
             tone="secondary"
             size="sm"
             fullWidth={false}
-            onPress={onOpenTeamManagement}
-            disabled={!onOpenTeamManagement}
+            onPress={() => setTeamPanelOpen((current) => !current)}
           />
         </Box>
+
+        <Box layoutDirection="row" style={{ flexWrap: 'wrap', gap: spacing[2] }}>
+          <SummaryCell label="نشط" value={String(activeTeamCount)} tone="success" />
+          <SummaryCell label="موقوف" value={String(pausedTeamCount)} tone="warning" />
+          <SummaryCell label="قيد المراجعة" value={String(reviewTeamCount)} tone="info" />
+        </Box>
+
+        {teamPanelOpen && (
+          <Box gap={3} style={{ paddingHorizontal: spacing[1], marginTop: spacing[1] }}>
+            <Box layoutDirection="row" style={{ alignItems: 'center', gap: 6 }}>
+              <Icon name="information-circle-outline" size={14} tone="muted" />
+              <Text role="caption" tone="muted" align="start" style={{ flex: 1 }}>
+                الأدوار والدعوات هنا محلية حتى يتصل مسار إدارة الأعضاء في Control Panel.
+              </Text>
+            </Box>
+
+            <Box gap={0}>
+              {teamMembers.map((member) => {
+                const isMemberSelected = selectedMemberId === member.id;
+                const roleTone = resolveTeamRoleTone(member.role);
+                const statusTone = resolveTeamStatusTone(member.status);
+                const memberActionLabel = resolveMemberActionLabel(member);
+                const isLastSupervisor = member.role === 'supervisor' && member.status === 'active' && activeSupervisorCount <= 1;
+
+                return (
+                  <Box key={member.id} style={{ borderBottomWidth: 1, borderBottomColor: theme.line + '22', paddingVertical: spacing[2] }}>
+                    <Pressable
+                      onPress={() => setSelectedMemberId(isMemberSelected ? '' : member.id)}
+                      style={({ pressed }) => ({
+                        flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
+                        alignItems: 'center',
+                        backgroundColor: pressed ? theme.surfaceInset : undefined,
+                        padding: spacing[1],
+                      })}
+                    >
+                      <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2], flexShrink: 1, minWidth: 0 }}>
+                        <Icon
+                          name={member.role === 'courier' ? 'bicycle-outline' : member.role === 'owner' ? 'shield-checkmark-outline' : member.role === 'supervisor' ? 'person-circle-outline' : 'person-outline'}
+                          size={16}
+                          tone={roleTone === 'neutral' ? 'muted' : roleTone === 'info' ? 'action' : roleTone}
+                        />
+                        <Box style={{ gap: 2, flexShrink: 1, minWidth: 0 }}>
+                          <Text role="bodyStrong" align="start">{member.name}</Text>
+                          <Text role="caption" tone="muted" align="start">{member.branchAssignment}</Text>
+                        </Box>
+                      </Box>
+                      <Box style={{ alignItems: direction === 'rtl' ? 'flex-start' : 'flex-end', gap: 2, marginStart: spacing[2] }}>
+                        <Badge label={member.roleLabel} tone={roleTone} />
+                        <Badge label={member.statusLabel} tone={statusTone} />
+                        <Text role="caption" tone="muted">{memberActionLabel}</Text>
+                      </Box>
+                      <Icon name={isMemberSelected ? 'chevron-down' : 'chevron-forward-outline'} mirrored tone="muted" size={14} style={{ marginStart: spacing[2] }} />
+                    </Pressable>
+
+                    {isMemberSelected && (
+                      <Box paddingX={4} gap={2} style={{ paddingTop: spacing[3] }}>
+                        <KeyValueList
+                          dense
+                          items={[
+                            { label: 'الحالة', value: member.statusLabel, tone: statusTone },
+                            { label: 'تعيين الفرع', value: member.branchAssignment },
+                            { label: 'ملخص الصلاحيات', value: member.permissionsSummary },
+                            { label: 'إسناد التوصيل', value: member.deliveryAssignment },
+                            { label: 'دورة الدعوة', value: member.inviteLifecycle },
+                            { label: 'المراجعة/الأثر', value: member.operationalImpact },
+                          ]}
+                        />
+                        <Text role="bodySm" tone="muted" align="start">
+                          {member.auditNote}
+                        </Text>
+                        {isLastSupervisor ? (
+                          <Text role="caption" tone="warning" align="start">
+                            لا يمكن تعطيل آخر مشرف.
+                          </Text>
+                        ) : null}
+                        <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap' }}>
+                          <Button
+                            label={memberActionLabel}
+                            tone={member.status === 'blocked' ? 'secondary' : 'brand'}
+                            size="sm"
+                            fullWidth={false}
+                            disabled={isLastSupervisor}
+                            onPress={() => {
+                              if (isLastSupervisor) {
+                                setLastSaveLabel('لا يمكن تعطيل آخر مشرف.');
+                                return;
+                              }
+
+                              setLastSaveLabel(`${memberActionLabel}: ${member.name}`);
+                            }}
+                          />
+                          <Button
+                            label={member.status === 'invited' ? 'إعادة إرسال الدعوة' : member.status === 'blocked' ? 'طلب مراجعة' : 'مراجعة الصلاحيات'}
+                            tone="secondary"
+                            size="sm"
+                            fullWidth={false}
+                            onPress={() => {
+                              setLastSaveLabel(`${member.statusLabel}: ${member.name}`);
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+
+            <Box gap={3} style={{ marginTop: spacing[2] }}>
+              <TextField
+                label="اسم العضو أو البريد"
+                placeholder="مثال: staff@bthwani.sa"
+                value={inviteDraft}
+                onChangeText={setInviteDraft}
+                hint="إنشاء دعوة محلية — مسار العضوية المركزي قيد الربط (J-006)."
+              />
+              <Button
+                label="إضافة عضو"
+                tone="secondary"
+                size="sm"
+                fullWidth={false}
+                onPress={() => {
+                  if (!inviteDraft.trim()) {
+                    return;
+                  }
+
+                  setLastSaveLabel(`دعوة محلية: ${inviteDraft.trim()}`);
+                  setInviteDraft('');
+                }}
+              />
+              {lastSaveLabel && (
+                <Text role="caption" tone="success" align="start">
+                  {lastSaveLabel}
+                </Text>
+              )}
+            </Box>
+          </Box>
+        )}
       </Box>
 
       <Divider />
@@ -1048,11 +1226,16 @@ function OperationsPanel({
  * Designed for later real-data binding without layout changes. */
 
 
-function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info'; icon: React.ComponentProps<typeof Icon>['name'] }) {
+function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info' | 'muted'; icon: React.ComponentProps<typeof Icon>['name'] }) {
 
   const { direction } = useDirection();
   const accentColor = tone === 'action' ? theme.brand : tone === 'success' ? theme.success : tone === 'info' ? theme.info : theme.lineStrong;
-  const iconTone = tone === 'default' ? undefined : tone === 'action' ? 'brand' as const : tone;
+  const iconTone =
+    tone === 'default' ? undefined
+      : tone === 'action' ? ('brand' as const)
+        : tone === 'info' ? ('action' as const)
+          : tone === 'muted' ? ('muted' as const)
+            : tone;
 
   return (
     <Box
@@ -1061,7 +1244,7 @@ function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { labe
       style={{ flex: 1, minWidth: 140, borderBottomWidth: 2, borderBottomColor: accentColor }}
     >
       <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
-        <Icon name={icon} size={14} tone={iconTone} />
+        <Icon name={icon} size={14} {...(iconTone !== undefined ? { tone: iconTone } : {})} />
         <Text role="caption" tone="muted" numberOfLines={1} style={{ flex: 1, textAlign: direction === 'rtl' ? 'right' : 'left' }}>
           {label}
         </Text>
@@ -1130,7 +1313,6 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
         padding={3}
         gap={3}
         background="surfaceRaised"
-        elevationToken="raised"
         radiusToken="md"
         border={false}
         style={{
@@ -1162,7 +1344,6 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
         padding={3}
         gap={3}
         background="surfaceRaised"
-        elevationToken="raised"
         radiusToken="md"
         border={false}
         style={{
@@ -1236,7 +1417,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const marketingGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('marketing'), []);
   const financeGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('finance'), []);
   // ML-T1: journey map reference — summary-only; details on-demand per on-demand contract
-  const partnerStatusStep = React.useMemo(() => getDshPartnerJourneyStep('partner-status-visibility'), []);
+  const partnerStatusStep = React.useMemo(() => getDshPartnerJourneyStep(undefined), []);
   const {
     hydrated: appearanceHydrated,
     mode: appearanceMode,
@@ -1272,7 +1453,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const _storeMediaId = activeCanonicalStore?.id ?? canonicalStoreId;
   const resolvedActiveZoneLabel = activeCanonicalStore?.zoneLabel ?? activeZoneLabel;
 
-  const { assets: storeMediaAssets = [] } = useDshEntityMedia('store', _storeMediaId);
+  const storeMediaState = useDshEntityMedia(_storeMediaId, 'store');
+  const storeMediaAssets = storeMediaState.kind === 'ready' ? storeMediaState.assets : [];
   const storeCoverUrl = storeMediaAssets.find((a) => a.purpose === 'cover')?.public_url;
   const storeLogoUrl = storeMediaAssets.find((a) => a.purpose === 'logo')?.public_url;
 
@@ -1290,7 +1472,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
 
   const storeVisibility = React.useMemo(() => {
     return resolveDshStoreClientVisibility({
-      publishStage: activeCanonicalStore?.publishStage,
+      ...(activeCanonicalStore?.publishStage !== undefined ? { publishStage: activeCanonicalStore.publishStage } : {}),
       activationStatus: resolvedActivationStatus,
       catalogPublished: listingEnabled,
       deliveryModesReady: serviceModes.some((mode) => mode.enabled),
@@ -1343,11 +1525,13 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   );
 
   if (state !== 'ready') {
-    const stateId = state === 'loading' ? 'loading' : state === 'empty' ? 'empty' : state === 'offline' ? 'offline' : 'blockingError';
+    const isLoading = state === 'loading';
+    const tone = state === 'offline' ? 'warning' : state === 'empty' ? 'neutral' : state === 'loading' ? 'neutral' : 'danger';
 
     return (
       <StateView
-        stateId={stateId}
+        loading={isLoading}
+        tone={tone}
         title="مركز حساب الشريك"
         description="نجهز الآن نموذج التنقل الخاص بالحساب. سيبقى المسار واضحًا ومضغوطًا حتى يكتمل التحميل."
         actionLabel={onOpenOrdersBoard ? 'فتح الطلبات' : undefined}
@@ -1449,14 +1633,14 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             activeZoneLabel={resolvedActiveZoneLabel}
             storeOpen={storeOpen}
             listingEnabled={listingEnabled}
-            canonicalStoreId={activeCanonicalStore?.id}
-            sourceRecordId={activeCanonicalStore?.sourceRecordId}
-            deliveryReadinessLabel={activeCanonicalStore?.deliveryReadinessLabel}
-            coverageSummary={activeCanonicalStore?.coverageSummary}
-            publishStage={activeCanonicalStore?.publishStage}
+            {...(activeCanonicalStore?.id !== undefined ? { canonicalStoreId: activeCanonicalStore.id } : {})}
+            {...(activeCanonicalStore?.sourceRecordId !== undefined ? { sourceRecordId: activeCanonicalStore.sourceRecordId } : {})}
+            {...(activeCanonicalStore?.deliveryReadinessLabel !== undefined ? { deliveryReadinessLabel: activeCanonicalStore.deliveryReadinessLabel } : {})}
+            {...(activeCanonicalStore?.coverageSummary !== undefined ? { coverageSummary: activeCanonicalStore.coverageSummary } : {})}
+            {...(activeCanonicalStore?.publishStage !== undefined ? { publishStage: activeCanonicalStore.publishStage } : {})}
             activationStatus={resolvedActivationStatus}
             serviceModes={serviceModes}
-            onOpenStoreScope={onOpenStoreScope}
+            {...(onOpenStoreScope !== undefined ? { onOpenStoreScope } : {})}
           />
         </HubSectionShell>
       );
@@ -1615,7 +1799,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
                   style={{
                     flexDirection: rowDirection,
                     backgroundColor: theme.surfaceInset,
-                    borderRadius: radius.sm2,
+                    borderRadius: radius.sm,
                     padding: 3,
                     borderWidth: 1,
                     borderColor: theme.line,
@@ -1828,7 +2012,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             branchLabel={resolvedBranchLabel}
             activeZoneLabel={resolvedActiveZoneLabel}
             todayHoursLabel={resolvedTodayHoursLabel}
-            canonicalStoreId={activeCanonicalStore?.id}
+            {...(activeCanonicalStore?.id !== undefined ? { canonicalStoreId: activeCanonicalStore.id } : {})}
           />
         </HubSectionShell>
       );
@@ -1845,7 +2029,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           activeZoneLabel={resolvedActiveZoneLabel}
           serviceModes={serviceModes}
           onBack={() => updateSection('hub')}
-          onOpenStoreCourierSetup={onOpenStoreCourierSetup}
+          {...(onOpenStoreCourierSetup !== undefined ? { onOpenStoreCourierSetup } : {})}
           listingEnabled={listingEnabled}
           storeVisibility={storeVisibility}
           visibilityLabel={visibilityLabel}

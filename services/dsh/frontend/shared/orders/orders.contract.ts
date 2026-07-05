@@ -725,5 +725,5 @@ export type PartnerOrderItem = {
   itemsSummaryLabel?: string;
   paymentLabel?: string;
   slaLabel?: string;
-  nextOwnerLabel?: string;
+  nextOwnerLabel?: string | undefined;
 };

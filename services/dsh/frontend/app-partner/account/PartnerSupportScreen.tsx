@@ -26,7 +26,7 @@ import { getPartnerOrderIssueCategorySpec } from '../orders/PartnerOrderIssuePan
 import { isDshHiddenCompatFlow } from '../../shared/runtime/dsh-flow-registry';
 import { resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-control-panel-governance.map';
 import { DSH_ORDER_LIFECYCLE_HANDOFFS, getHandoffsForSurface, getSurfaceObservation } from '../../shared/orders';
-import { getSurfaceModeCapability } from '../../shared/orders';
+import { getSurfaceModeCapability } from '../../shared/identity-access/surface-visibility.policy';
 
 export type PartnerSupportRouteId = DshPartnerSupportRouteId;
 
@@ -38,7 +38,8 @@ function ReadOnlyMetaLabel({
   label: string;
   tone?: 'brand' | 'warning' | 'danger' | 'info' | 'success';
 }) {
-  return <Badge label={label} tone={tone} />;
+  const badgeTone = tone === 'brand' ? 'action' : tone;
+  return <Badge label={label} tone={badgeTone} />;
 }
 
 type CaseLifecycle =
@@ -90,11 +91,11 @@ type OperationsSupportCase = {
 };
 
 const commandCenterFilterItems = [
-  { value: 'all', label: 'الكل' },
-  { value: 'urgent', label: 'عاجل' },
-  { value: 'conversations', label: 'محادثات' },
-  { value: 'inventory-branch', label: 'مخزون' },
-  { value: 'escalation', label: 'تصعيد' },
+  { id: 'all', label: 'الكل' },
+  { id: 'urgent', label: 'عاجل' },
+  { id: 'conversations', label: 'محادثات' },
+  { id: 'inventory-branch', label: 'مخزون' },
+  { id: 'escalation', label: 'تصعيد' },
 ] as const;
 
 const runtimePartnerSupportCases: readonly OperationsSupportCase[] = [];
@@ -420,7 +421,7 @@ function InlineActionPanel({
 
   return (
     <Box padding={2} gap={2} background="surfaceInset" radiusToken="md" style={{ marginVertical: 4 }}>
-      <Text role="caption" tone="brand" style={{ textAlign }}>خيارات المعالجة الفورية</Text>
+      <Text role="caption" tone="action" style={{ textAlign }}>خيارات المعالجة الفورية</Text>
 
       <View style={{ flexDirection: rowDirection, flexWrap: 'wrap', gap: 6 }}>
         <Button
@@ -504,10 +505,10 @@ function InlineDetailsPanel({ item }: { item: OperationsSupportCase }) {
       </Text>
 
       <View style={{ gap: 2, alignItems: direction === 'rtl' ? 'flex-end' : 'flex-start' }}>
-        <Text role="caption" tone="brand" style={{ textAlign }}>
+        <Text role="caption" tone="action" style={{ textAlign }}>
           {`القرار التالي: ${item.nextDecision}`}
         </Text>
-        <Text role="caption" tone="soft" style={{ textAlign }}>
+        <Text role="caption" tone="muted" style={{ textAlign }}>
           {`ملاحظة: ${item.operationalNote}`}
         </Text>
       </View>
@@ -631,7 +632,7 @@ function CommandCenterCaseRow({
           onClose={onCloseAction}
           onFeedback={onFeedback}
           onLifecycleChange={onLifecycleChange}
-          feedback={feedback}
+          {...(feedback !== undefined ? { feedback } : {})}
         />
       ) : null}
 
@@ -793,8 +794,6 @@ export function PartnerSupportScreen({
             onValueChange={(id) => {
               setSelectedFilterId(id as DshPartnerSupportCommandFilterId);
             }}
-            variant="pill"
-            style={{ flex: 1 }}
           />
           <Button
             label={showSearch ? "إلغاء" : "بحث"}
@@ -842,14 +841,17 @@ export function PartnerSupportScreen({
             <Text role="caption" tone="muted" style={{ textAlign }}>
               {focusCase.orderRef.replace('ORD-', 'طلب ')}
             </Text>
-            <Text role="bodySm" tone="soft" style={{ textAlign }}>
+            <Text role="bodySm" tone="muted" style={{ textAlign }}>
               {`الإجراء التالي: ${focusCase.nextActionLabel}`}
             </Text>
-            {caseLifecycleById[focusCase.id] ? (
-              <Text role="caption" tone="muted" style={{ textAlign }}>
-                {resolveCaseLifecycleLabel(caseLifecycleById[focusCase.id])}
-              </Text>
-            ) : null}
+            {(() => {
+              const focusCaseLifecycle = caseLifecycleById[focusCase.id];
+              return focusCaseLifecycle ? (
+                <Text role="caption" tone="muted" style={{ textAlign }}>
+                  {resolveCaseLifecycleLabel(focusCaseLifecycle)}
+                </Text>
+              ) : null;
+            })()}
           </View>
 
           <View style={{ flexDirection: rowDirection, gap: spacing[2], marginTop: spacing[1], width: '100%' }}>
@@ -883,7 +885,7 @@ export function PartnerSupportScreen({
               }}
               onFeedback={(msg) => setCaseFeedback(focusCase.id, msg)}
               onLifecycleChange={(lifecycle) => setCaseLifecycle(focusCase.id, lifecycle)}
-              feedback={actionFeedbackByCaseId[focusCase.id]}
+              {...(actionFeedbackByCaseId[focusCase.id] !== undefined ? { feedback: actionFeedbackByCaseId[focusCase.id] } : {})}
             />
           ) : null}
 
@@ -903,7 +905,7 @@ export function PartnerSupportScreen({
 
         {listCases.length === 0 && !focusCase ? (
           <StateView
-            stateId="empty"
+            tone="neutral"
             title="لا توجد حالات دعم حية"
             description="سيظهر صف الدعم بعد وصول الحالات الفعلية من DSH API. تم عزل الحالات التجريبية المحلية."
           />
@@ -916,7 +918,7 @@ export function PartnerSupportScreen({
                 isExpanded={expandedCaseId === item.id}
                 isActiveAction={activeActionCaseId === item.id}
                 activeActionType={activeActionCaseId === item.id ? activeActionType : null}
-                lifecycle={caseLifecycleById[item.id]}
+                {...(caseLifecycleById[item.id] !== undefined ? { lifecycle: caseLifecycleById[item.id] } : {})}
                 onToggleDetails={() => {
                   setExpandedCaseId(expandedCaseId === item.id ? null : item.id);
                 }}

@@ -60,7 +60,7 @@ const identityDocuments = [
 
 function SectionBlock({ title, subtitle, actionLabel, expanded, onToggle, children }: SectionBlockProps) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
 
   return (
     <Box gap={3} style={{ paddingVertical: spacing[1] }}>
@@ -103,7 +103,7 @@ export function StoreProfileScreen({
   onOpenStoreScope,
 }: StoreProfileScreenProps) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
   const [branchSectionOpen, setBranchSectionOpen] = React.useState(true);
   const [identitySectionOpen, setIdentitySectionOpen] = React.useState(false);
   const [visibilitySectionOpen, setVisibilitySectionOpen] = React.useState(false);
@@ -183,7 +183,7 @@ export function StoreProfileScreen({
         <Box gap={3} style={{ paddingHorizontal: spacing[1] }}>
           <TextField label="اسم الفرع" value={branchName} onChangeText={setBranchName} placeholder="اسم الفرع الحالي" />
           <TextField label="العنوان" value={branchAddress} onChangeText={setBranchAddress} placeholder="عنوان الفرع" multiline />
-          <TextField label="رقم التواصل" value={branchContact} onChangeText={setBranchContact} placeholder="رقم الهاتف" keyboardType="phone-pad" />
+          <TextField label="رقم التواصل" value={branchContact} onChangeText={setBranchContact} placeholder="رقم الهاتف" />
           <Text role="caption" tone="muted" align="start">
             التعديلات تبقى محلية حتى الضغط على زر الحفظ الأساسي أسفل الصفحة.
           </Text>

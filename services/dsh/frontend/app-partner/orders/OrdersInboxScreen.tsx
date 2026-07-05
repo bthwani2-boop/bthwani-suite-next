@@ -14,6 +14,7 @@ import {
   Tabs,
   Text,
   colorPalette,
+  colorRoles,
   resolveRowDirection,
   useDirection,
   spacing,
@@ -68,19 +69,19 @@ export type PartnerOrdersHomeScreenState = 'ready' | 'loading' | 'empty' | 'erro
 
 export type PartnerOrdersHomeScreenProps = {
   state?: PartnerOrdersHomeScreenState;
-  items?: readonly PartnerOrderItem[];
+  items?: readonly PartnerOrderItem[] | undefined;
   branchLabel?: string;
   quickAlert?: string;
-  searchMode?: boolean;
+  searchMode?: boolean | undefined;
   orderMode?: DshPartnerOrderConversationMode;
   showOrderConversation?: boolean;
   showOrderAlerts?: boolean;
-  onCloseSearch?: () => void;
+  onCloseSearch?: (() => void) | undefined;
   onOpenOrderAction?: (actionId: OrderHubAction, orderId: string) => void;
   onOpenEntryPress?: () => void;
   onOpenMaintenancePress?: () => void;
   onOpenInventoryManagementPress?: () => void;
-  onRetry?: () => void;
+  onRetry?: (() => void) | undefined;
 };
 
 const stageFilters: ReadonlyArray<{ id: OrderStageFilterId; label: string; tone: 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'info' }> = [
@@ -207,26 +208,26 @@ function resolveOrderAction(status: PartnerOrderStatus): OrderHubAction {
 
 function renderState(state: Exclude<PartnerOrdersHomeScreenState, 'ready'>, onRetry?: () => void) {
   if (state === 'loading') {
-    return <StateView stateId="loading" title="جارٍ تجهيز لوحة عمليات الطلب" description="نرتب أحدث الطلبات والمسارات المرتبطة بها الآن." />;
+    return <StateView title="جارٍ تجهيز لوحة عمليات الطلب" description="نرتب أحدث الطلبات والمسارات المرتبطة بها الآن." />;
   }
 
   if (state === 'empty') {
-    return <StateView stateId="empty" title="لا توجد طلبات الآن" description="ستظهر الطلبات الجديدة هنا فور وصولها." actionLabel={onRetry ? 'تحديث' : undefined} onActionPress={onRetry} />;
+    return <StateView title="لا توجد طلبات الآن" description="ستظهر الطلبات الجديدة هنا فور وصولها." actionLabel={onRetry ? 'تحديث' : undefined} onActionPress={onRetry} />;
   }
 
   if (state === 'offline') {
-    return <StateView stateId="offline" title="الاتصال غير متاح" description="تحقق من الشبكة ثم أعد فتح لوحة الطلبات." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
+    return <StateView title="الاتصال غير متاح" description="تحقق من الشبكة ثم أعد فتح لوحة الطلبات." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
   }
 
   if (state === 'disabled') {
-    return <StateView kind="warning" title="لوحة عمليات الطلب متوقفة مؤقتًا" description="الوصول متوقف حتى يكتمل التحقق التشغيلي." actionLabel={onRetry ? 'تحقق الآن' : undefined} onActionPress={onRetry} />;
+    return <StateView tone="warning" title="لوحة عمليات الطلب متوقفة مؤقتًا" description="الوصول متوقف حتى يكتمل التحقق التشغيلي." actionLabel={onRetry ? 'تحقق الآن' : undefined} onActionPress={onRetry} />;
   }
 
   if (state === 'partial') {
-    return <StateView kind="warning" title="توفر جزئي" description="بعض البيانات متاحة الآن مع متابعة المزامنة." actionLabel={onRetry ? 'إعادة المزامنة' : undefined} onActionPress={onRetry} />;
+    return <StateView tone="warning" title="توفر جزئي" description="بعض البيانات متاحة الآن مع متابعة المزامنة." actionLabel={onRetry ? 'إعادة المزامنة' : undefined} onActionPress={onRetry} />;
   }
 
-  return <StateView stateId="recoverableError" title="تعذر فتح لوحة عمليات الطلب" description="حدث خلل مؤقت. أعد المحاولة من دون فقدان السياق." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
+  return <StateView title="تعذر فتح لوحة عمليات الطلب" description="حدث خلل مؤقت. أعد المحاولة من دون فقدان السياق." actionLabel={onRetry ? 'إعادة المحاولة' : undefined} onActionPress={onRetry} />;
 }
 
 function resolveOrderHistory(status: PartnerOrderStatus, orderMode: DshPartnerOrderConversationMode) {
@@ -263,7 +264,7 @@ function ReadOnlyMetaLabel({
   label: string;
   tone?: 'brand' | 'warning' | 'danger' | 'info' | 'success' | 'default';
 }) {
-  return <Badge label={label} tone={tone} />;
+  return <Badge label={label} tone={tone === 'brand' ? 'action' : tone === 'default' ? 'neutral' : tone} />;
 }
 
 // ─── Inline Details Panel ──────────────────────────────────────────────────────
@@ -321,7 +322,7 @@ function InlineOrderActionPanel({
 
   return (
     <Box padding={2} gap={2} background="surfaceInset" radiusToken="md" style={{ marginVertical: 4 }}>
-      <Text role="caption" tone="brand" style={{ textAlign }}>خيارات المعالجة الفورية</Text>
+      <Text role="caption" tone="action" style={{ textAlign }}>خيارات المعالجة الفورية</Text>
 
       <View style={{ flexDirection: rowDirection, flexWrap: 'wrap', gap: 6 }}>
         <Button
@@ -404,7 +405,7 @@ function CommandCenterOrderRow({
           <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: direction === 'rtl' ? 'flex-end' : 'flex-start' }}>
             <View style={{ width: '100%', flexDirection: rowDirection, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
               <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 6 }}>
-                <Text role="bodyStrong" style={{ textAlign, color: colorPalette.textPrimary }}>
+                <Text role="bodyStrong" style={{ textAlign, color: colorRoles.textPrimary }}>
                   {item.orderCode}
                 </Text>
                 {isNewUnread ? (
@@ -626,7 +627,7 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
     }
 
     if (!filteredItems.some((item) => item.id === selectedOrderId)) {
-      setSelectedOrderId(filteredItems[0].id);
+      setSelectedOrderId(filteredItems[0]!.id);
     }
   }, [filteredItems, selectedOrderId]);
 
@@ -714,7 +715,7 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
   const stageTabItems = stageFilters.map((filter) => {
     const count = filter.id === 'all' ? enrichedItems.length : (stageCounts[filter.id] ?? 0);
     const label = filter.id === 'all' ? `الكل (${count})` : count > 0 ? `${filter.label} (${count})` : filter.label;
-    return { value: filter.id, label };
+    return { id: filter.id, label };
   });
 
   const focusOrder = filteredItems[0];
@@ -755,8 +756,6 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
             items={stageTabItems}
             value={selectedStage}
             onValueChange={(val) => setSelectedStage(val as OrderStageFilterId)}
-            variant="pill"
-            scrollable={true}
           />
 
           {/* Level 2: Secondary control buttons row and toggleable search field */}
@@ -786,7 +785,6 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
 
           {showSearch ? (
             <SearchField
-              label=""
               value={query}
               onChangeText={setQuery}
               placeholder="رقم الطلب، العنصر، أو الحالة..."
@@ -812,7 +810,7 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
             </View>
 
             <View style={{ gap: 2, alignItems: direction === 'rtl' ? 'flex-end' : 'flex-start', width: '100%' }}>
-              <Text role="bodyStrong" style={{ textAlign, fontSize: 16, color: colorPalette.textPrimary }}>
+              <Text role="bodyStrong" style={{ textAlign, fontSize: 16, color: colorRoles.textPrimary }}>
                 {focusOrder.orderCode}
               </Text>
               <Text role="caption" tone="muted" style={{ textAlign }}>
@@ -889,7 +887,6 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
 
         {filteredItems.length === 0 && !focusOrder ? (
           <StateView
-            stateId="empty"
             title="لا توجد طلبات مطابقة"
             description="غيّر المرحلة أو امسح الفلاتر النشطة لترى طلبات أخرى."
             actionLabel="مسح الفلاتر"
@@ -1018,12 +1015,12 @@ export type PartnerOrdersInboxListItem = PartnerOrderItem;
 export type PartnerOrdersInboxScreenProps = {
   state?: PartnerOrdersInboxScreenState;
   items?: readonly PartnerOrdersInboxListItem[];
-  searchMode?: boolean;
-  onCloseSearch?: () => void;
+  searchMode?: boolean | undefined;
+  onCloseSearch?: (() => void) | undefined;
   // ML-020: explicit mark-ready callback — triggered when partner confirms order ready for pickup
   onMarkReady?: (orderId: string) => void;
   onOpenNextOrder?: (orderId: string) => void;
-  onRetry?: () => void;
+  onRetry?: (() => void) | undefined;
 };
 
 export function PartnerOrdersInboxScreen({ state = 'empty', items, searchMode, onCloseSearch, onMarkReady, onOpenNextOrder, onRetry }: PartnerOrdersInboxScreenProps) {

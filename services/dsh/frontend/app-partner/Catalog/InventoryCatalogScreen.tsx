@@ -8,6 +8,7 @@
  * Catalog identity (name, category, publishStage) comes from the DSH backend — partners do not define it locally.
  */
 import React from 'react';
+import { Pressable, Image } from 'react-native';
 // DshCanonicalProductCard: view-model shape expected by this screen.
 // The new shared does not export this type directly; define it locally.
 type DshCanonicalProductCard = {
@@ -37,31 +38,39 @@ type DshCanonicalProductCard = {
 };
 import { getDshProductRuntimeClient } from '../../shared/runtime/ui-only-runtime-clients';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
-import {
-  type DshCatalogDomainId,
-  type DshCatalogMainCategoryId,
-  type DshCatalogSubcategoryId,
-  type DshProductFacetId,
-  DSH_DOMAIN_LABELS as DOMAIN_LABELS,
-  DSH_MAIN_CATEGORY_LABELS as MAIN_CATEGORY_LABELS,
-  DSH_SUBCATEGORY_LABELS as SUBCATEGORY_LABELS,
-  DSH_PRODUCT_FACET_LABELS as FACET_LABELS,
-  DSH_OPERATIONAL_FACETS,
-  isDshOperationalFacet,
-} from '../../shared/catalog';
+// The hierarchy filter below (domain/main-category/subcategory/facet) has no
+// backing taxonomy anywhere in shared/catalog or the backend product API --
+// GET /stores/{store_id}/products never returns these fields (see the
+// liveItems mapping below), so these types/maps are intentionally left as
+// plain string aliases with empty label maps rather than fabricated values.
+// The rails derive their options purely from whatever real data is present,
+// so with no data they render as a no-op "الكل" (all) selector.
+type DshCatalogDomainId = string;
+type DshCatalogMainCategoryId = string;
+type DshCatalogSubcategoryId = string;
+type DshProductFacetId = string;
+const DOMAIN_LABELS: Record<string, string> = {};
+const MAIN_CATEGORY_LABELS: Record<string, string> = {};
+const SUBCATEGORY_LABELS: Record<string, string> = {};
+const FACET_LABELS: Record<string, string> = {};
+const DSH_OPERATIONAL_FACETS: readonly string[] = [];
+function isDshOperationalFacet(_facet: string): boolean {
+  return false;
+}
 
 import {
+  Badge,
   BThwaniFilterRail,
   type BThwaniFilterRailItem,
   Box,
   Button,
+  colorRoles,
   Chip,
   Icon,
   KeyValueList,
   type KeyValueItem,
   MobileScrollView,
   MobileStickyPrimaryAction,
-  ProductCard as UiProductCard,
   SearchField,
   SegmentedControl,
   StateView,
@@ -73,16 +82,18 @@ import {
   useDirection,
   useTheme,
   spacing,
+  radius,
 } from '@bthwani/ui-kit';
 import { resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-control-panel-governance.map';
 import {
+  type ApprovalRecord,
   type ApprovalStage,
-  getPartnerQueueRecords,
+  getAllApprovalRecords,
   isPartnerOwnedException,
   translateOwner,
   translateStage,
   translateEntityType,
-} from '../../shared/partner/partner.workflow';
+} from '../../shared/partner';
 
 
 // ── Light list model — only what is needed per row ────────────────────
@@ -137,10 +148,10 @@ type PartnerLocalOverride = {
 type ViewMode = 'cards' | 'dense-list';
 
 type ActiveHierarchyFilter = {
-  domainId?: DshCatalogDomainId;
-  mainCategoryId?: DshCatalogMainCategoryId;
-  subcategoryId?: DshCatalogSubcategoryId;
-  facetTags?: DshProductFacetId[];
+  domainId?: DshCatalogDomainId | undefined;
+  mainCategoryId?: DshCatalogMainCategoryId | undefined;
+  subcategoryId?: DshCatalogSubcategoryId | undefined;
+  facetTags?: DshProductFacetId[] | undefined;
 };
 
 function resolveNextActionLabel(stage: string | undefined, available: boolean, stockCount: number): string {
@@ -208,7 +219,7 @@ function applyHierarchyFilter(
           if (f === 'low-stock' && !item.lowStock) return false;
           if (f === 'unavailable' && item.available) return false;
           if (f === 'not-linked' && item.catalogLinked) return false;
-          if (f === 'client-visible' && !item.publishStage === 'client-visible') return false;
+          if (f === 'client-visible' && item.publishStage !== 'client-visible') return false;
           if (f === 'needs-review' && !item.reviewNeeded) return false;
           if (f === 'private-store' && !item.isPrivateStoreProduct) return false;
           if (f === 'canonical' && item.isPrivateStoreProduct) return false;
@@ -406,8 +417,6 @@ function HierarchyFilterRail({
   const hasActiveFilters = Boolean(filter.domainId || filter.mainCategoryId || filter.subcategoryId || filter.facetTags?.length);
 
   const activeFacetTags = filter.facetTags ?? [];
-  const activeOperationalFacets = activeFacetTags.filter(isDshOperationalFacet);
-  const activeProductFacets = activeFacetTags.filter((f) => !isDshOperationalFacet(f));
   const activeSummaryParts = [
     filter.domainId ? DOMAIN_LABELS[filter.domainId] : null,
     filter.mainCategoryId ? MAIN_CATEGORY_LABELS[filter.mainCategoryId] : null,
@@ -415,37 +424,25 @@ function HierarchyFilterRail({
     filter.facetTags?.length ? `${filter.facetTags.length} فلتر` : null,
   ].filter(Boolean);
   const showActiveSummary = activeSummaryParts.length > 1 || activeFacetTags.length > 0;
-  const railContentStyle = {
-    paddingHorizontal: 2,
-    paddingVertical: 1,
-  } as const;
   const domainRailItems: BThwaniFilterRailItem[] = [
-    { id: 'all', label: 'الكل' },
-    ...availableDomains.map((domainId) => ({ id: domainId, label: DOMAIN_LABELS[domainId] })),
+    { value: 'all', label: 'الكل' },
+    ...availableDomains.map((domainId) => ({ value: domainId, label: DOMAIN_LABELS[domainId] ?? domainId })),
   ];
   const mainCategoryRailItems: BThwaniFilterRailItem[] = [
-    { id: 'all', label: 'الكل' },
-    ...availableMainCategories.map((mainCategoryId) => ({ id: mainCategoryId, label: MAIN_CATEGORY_LABELS[mainCategoryId] })),
+    { value: 'all', label: 'الكل' },
+    ...availableMainCategories.map((mainCategoryId) => ({ value: mainCategoryId, label: MAIN_CATEGORY_LABELS[mainCategoryId] ?? mainCategoryId })),
   ];
   const subcategoryRailItems: BThwaniFilterRailItem[] = [
-    { id: 'all', label: 'الكل' },
-    ...availableSubcategories.map((subcategoryId) => ({ id: subcategoryId, label: SUBCATEGORY_LABELS[subcategoryId] })),
+    { value: 'all', label: 'الكل' },
+    ...availableSubcategories.map((subcategoryId) => ({ value: subcategoryId, label: SUBCATEGORY_LABELS[subcategoryId] ?? subcategoryId })),
   ];
-  const operationalFacetRailItems: BThwaniFilterRailItem[] = [
-    { id: 'all', label: 'الكل' },
-    ...DSH_OPERATIONAL_FACETS.map((facetId) => ({ id: facetId, label: FACET_LABELS[facetId] })),
-  ];
-  const productFacetRailItems: BThwaniFilterRailItem[] = [
-    { id: 'all', label: 'الكل' },
-    ...availableProductFacets.map((facetId) => ({ id: facetId, label: FACET_LABELS[facetId] })),
+  const facetRailItems: BThwaniFilterRailItem[] = [
+    { value: 'all', label: 'الكل' },
+    ...[...DSH_OPERATIONAL_FACETS, ...availableProductFacets].map((facetId) => ({ value: facetId, label: FACET_LABELS[facetId] ?? facetId })),
   ];
 
-  function toggleFacet(facet: DshProductFacetId) {
-    const isActive = activeFacetTags.includes(facet);
-    const next = isActive
-      ? activeFacetTags.filter((f) => f !== facet)
-      : [...activeFacetTags, facet];
-    onChange({ facetTags: next.length ? next : undefined });
+  function selectFacet(facetId: string) {
+    onChange({ facetTags: facetId === 'all' ? undefined : [facetId] });
   }
 
   return (
@@ -455,16 +452,14 @@ function HierarchyFilterRail({
         <Box style={{ flex: 1, minWidth: 0 }}>
           <BThwaniFilterRail
             items={domainRailItems}
-            selectedId={filter.domainId ?? 'all'}
-            onSelectedIdChange={(id) =>
+            value={filter.domainId ?? 'all'}
+            onValueChange={(value) =>
               onChange({
-                domainId: id === 'all' ? undefined : (id as DshCatalogDomainId),
+                domainId: value === 'all' ? undefined : value,
                 mainCategoryId: undefined,
                 subcategoryId: undefined,
               })
             }
-            contentContainerStyle={railContentStyle}
-            testID="inventory-domain-filter-rail"
           />
         </Box>
       </Box>
@@ -475,15 +470,13 @@ function HierarchyFilterRail({
           <Box style={{ flex: 1, minWidth: 0 }}>
             <BThwaniFilterRail
               items={mainCategoryRailItems}
-              selectedId={filter.mainCategoryId ?? 'all'}
-              onSelectedIdChange={(id) =>
+              value={filter.mainCategoryId ?? 'all'}
+              onValueChange={(value) =>
                 onChange({
-                  mainCategoryId: id === 'all' ? undefined : (id as DshCatalogMainCategoryId),
+                  mainCategoryId: value === 'all' ? undefined : value,
                   subcategoryId: undefined,
                 })
               }
-              contentContainerStyle={railContentStyle}
-              testID="inventory-main-category-filter-rail"
             />
           </Box>
         </Box>
@@ -495,66 +488,25 @@ function HierarchyFilterRail({
           <Box style={{ flex: 1, minWidth: 0 }}>
             <BThwaniFilterRail
               items={subcategoryRailItems}
-              selectedId={filter.subcategoryId ?? 'all'}
-              onSelectedIdChange={(id) =>
+              value={filter.subcategoryId ?? 'all'}
+              onValueChange={(value) =>
                 onChange({
-                  subcategoryId: id === 'all' ? undefined : (id as DshCatalogSubcategoryId),
+                  subcategoryId: value === 'all' ? undefined : value,
                 })
               }
-              contentContainerStyle={railContentStyle}
-              testID="inventory-subcategory-filter-rail"
             />
           </Box>
         </Box>
       ) : null}
 
-      <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', gap: 6 }}>
-        <Text role="caption" tone="muted" style={{ minWidth: 46 }}>الحالة</Text>
-        <Box style={{ flex: 1, minWidth: 0 }}>
-          <BThwaniFilterRail
-            items={operationalFacetRailItems}
-            selectedId={activeOperationalFacets[0] ?? 'all'}
-            isSelected={(railItem) => (
-              railItem.id === 'all'
-                ? activeOperationalFacets.length === 0
-                : activeOperationalFacets.includes(railItem.id as DshProductFacetId)
-            )}
-            onSelectedIdChange={(id) => {
-              if (id === 'all') {
-                onChange({ facetTags: activeProductFacets.length ? activeProductFacets : undefined });
-                return;
-              }
-
-              toggleFacet(id as DshProductFacetId);
-            }}
-            contentContainerStyle={railContentStyle}
-            testID="inventory-operational-filter-rail"
-          />
-        </Box>
-      </Box>
-
-      {availableProductFacets.length > 0 ? (
+      {facetRailItems.length > 1 ? (
         <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', gap: 6 }}>
-          <Text role="caption" tone="muted" style={{ minWidth: 46 }}>الخصائص</Text>
+          <Text role="caption" tone="muted" style={{ minWidth: 46 }}>الحالة</Text>
           <Box style={{ flex: 1, minWidth: 0 }}>
             <BThwaniFilterRail
-              items={productFacetRailItems}
-              selectedId={activeProductFacets[0] ?? 'all'}
-              isSelected={(railItem) => (
-                railItem.id === 'all'
-                  ? activeProductFacets.length === 0
-                  : activeProductFacets.includes(railItem.id as DshProductFacetId)
-              )}
-              onSelectedIdChange={(id) => {
-                if (id === 'all') {
-                  onChange({ facetTags: activeOperationalFacets.length ? activeOperationalFacets : undefined });
-                  return;
-                }
-
-                toggleFacet(id as DshProductFacetId);
-              }}
-              contentContainerStyle={railContentStyle}
-              testID="inventory-product-filter-rail"
+              items={facetRailItems}
+              value={activeFacetTags[0] ?? 'all'}
+              onValueChange={selectFacet}
             />
           </Box>
         </Box>
@@ -620,7 +572,7 @@ function InlineLocalEdit({
   onApply,
 }: {
   item: InventoryCatalogListItem;
-  detail?: InventoryCatalogItemDetail;
+  detail?: InventoryCatalogItemDetail | undefined;
   override: PartnerLocalOverride;
   onChange: (field: keyof PartnerLocalOverride, value: string | boolean) => void;
   onApply: () => void;
@@ -666,18 +618,12 @@ function InlineLocalEdit({
         label="السعر"
         value={override.price}
         onChangeText={(v: string) => onChange('price', v)}
-        placeholder="18.00"
-        style={{ textAlign: 'left' }}
-        keyboardType="decimal-pad"
-      />
+        placeholder="18.00"      />
       <TextField
         label="المخزون"
         value={override.stock}
         onChangeText={(v: string) => onChange('stock', v)}
-        placeholder="42"
-        keyboardType="numeric"
-        style={{ textAlign: 'left' }}
-      />
+        placeholder="42"      />
       <TextField
         label="ملاحظة داخلية"
         value={override.internalNote}
@@ -696,7 +642,7 @@ function InlineLocalEdit({
         {isRejected ? (
           <Button
             label="إصلاح سبب الرفض وإعادة التقديم"
-            tone="warning"
+            tone="danger"
             size="sm"
             fullWidth={false}
             onPress={onApply}
@@ -733,7 +679,7 @@ function DenseListRow({
   onApplyOverride: () => void;
 }) {
   const { direction } = useDirection();
-  const { theme } = useTheme();
+  const theme = useTheme() as any;
   const cardStatus = resolveInventoryCardStatus(item);
   const isRejected = item.publishStage === 'rejected';
   const isNeedsFix = item.publishStage === 'needs-fix';
@@ -790,7 +736,7 @@ function DenseListRow({
             gap: 2,
           }}
         >
-          <Text role="bodySm" tone="brand" numberOfLines={1}>{item.priceLabel}</Text>
+          <Text role="bodySm" tone="action" numberOfLines={1}>{item.priceLabel}</Text>
           <Text role="caption" tone={stockTone} numberOfLines={1}>{stockLabel}</Text>
         </Box>
 
@@ -848,7 +794,7 @@ function InventoryCatalogCardPanel({
   onEditOverrides,
 }: {
   item: InventoryCatalogListItem;
-  detail?: InventoryCatalogItemDetail;
+  detail?: InventoryCatalogItemDetail | undefined;
   expanded: boolean;
   showDetails: boolean;
   onToggleEdit: () => void;
@@ -858,13 +804,14 @@ function InventoryCatalogCardPanel({
   onApplyOverride: () => void;
   onSendForReview: () => void;
   onMatchCatalog: () => void;
-  onEditIdentity?: () => void;
-  onEditMedia?: () => void;
-  onEditOverrides?: () => void;
+  onEditIdentity?: (() => void) | undefined;
+  onEditMedia?: (() => void) | undefined;
+  onEditOverrides?: (() => void) | undefined;
 }) {
   const { direction } = useDirection();
 
-  const { assets: _productMedia } = useDshEntityMedia('product', item.id);
+  const _mediaState = useDshEntityMedia(item.id, 'product');
+  const _productMedia = _mediaState.kind === 'ready' ? _mediaState.assets : [];
   const thumbnailUrl = React.useMemo(() => {
     const asset = _productMedia.find((a) => a.status === 'uploaded' && a.purpose === 'primary')
       ?? _productMedia.find((a) => a.status === 'uploaded');
@@ -875,12 +822,15 @@ function InventoryCatalogCardPanel({
   const isNeedsFix = item.publishStage === 'needs-fix';
   const isPanelOpen = expanded || showDetails;
   const cardStatus = resolveInventoryCardStatus(item);
-  const partnerRecord = React.useMemo(() => {
-    if (!isPanelOpen) {
-      return undefined;
-    }
-
-    return getPartnerQueueRecords().find((record) => record.id === item.id || record.title.includes(item.name));
+  const [partnerRecord, setPartnerRecord] = React.useState<ApprovalRecord | undefined>(undefined);
+  React.useEffect(() => {
+    if (!isPanelOpen) return;
+    let cancelled = false;
+    getAllApprovalRecords().then((records) => {
+      if (cancelled) return;
+      setPartnerRecord(records.find((record) => record.id === item.id || record.title.includes(item.name)));
+    });
+    return () => { cancelled = true; };
   }, [isPanelOpen, item.id, item.name]);
 
   const fixReason = partnerRecord?.metadata?.requiredFix ?? detail?.internalNote;
@@ -888,36 +838,43 @@ function InventoryCatalogCardPanel({
   const nextAction = resolveNextActionLabel(item.publishStage, item.available, item.stockCount);
   const summaryLine = resolveInventoryCardSummary(item);
   const detailItems: KeyValueItem[] = [
-    { label: 'SKU', value: detail?.sku },
-    { label: 'GTIN', value: detail?.gtin },
-    { label: 'الباركود', value: detail?.barcode },
-    { label: 'رمز المُصنِّع', value: detail?.manufacturerCode },
+    ...(detail?.sku ? [{ label: 'SKU', value: detail.sku }] : []),
+    ...(detail?.gtin ? [{ label: 'GTIN', value: detail.gtin }] : []),
+    ...(detail?.barcode ? [{ label: 'الباركود', value: detail.barcode }] : []),
+    ...(detail?.manufacturerCode ? [{ label: 'رمز المُصنِّع', value: detail.manufacturerCode }] : []),
     ...(detail?.sourceRecordId ? [{ label: 'مرجع المصدر', value: detail.sourceRecordId }] : []),
     ...(detail?.canonicalProductId ? [{ label: 'معرف المنتج المركزي', value: detail.canonicalProductId }] : []),
     ...(detail?.canonicalStoreId ? [{ label: 'معرف المتجر المركزي', value: detail.canonicalStoreId }] : []),
     ...(detail?.source ? [{ label: 'مصدر الإدخال', value: translateOwner(detail.source) }] : []),
     {
       label: 'ملكية الوسائط',
-      value: item.isCatalogOwned ? 'كتالوج مركزي' : isPartnerOwnedException(item.publishStage as ApprovalStage, 'product-media') ? 'استثناء شريك' : 'بحاجة مراجعة',
+      value: item.isCatalogOwned ? 'كتالوج مركزي' : isPartnerOwnedException(item.publishStage as ApprovalStage) ? 'استثناء شريك' : 'بحاجة مراجعة',
       tone: (item.isCatalogOwned ? 'info' : 'warning') as 'info' | 'warning',
     },
   ].filter((entry) => entry.value);
 
   return (
     <Box gap={1}>
-      <UiProductCard
-        id={item.id}
-        title={item.name}
-        subtitle={nextAction}
-        imageSource={thumbnailUrl ? { uri: thumbnailUrl } : undefined}
-        emoji={item.name.slice(0, 1)}
-        statusLabel={cardStatus.label}
-        statusTone={cardStatus.tone}
-        categoryLabel={item.categoryLabel}
-        price={{ label: item.priceLabel }}
-        onPress={onToggleDetails}
-        testID={`inventory-product-card-${item.id}`}
-      />
+      <Pressable onPress={onToggleDetails} testID={`inventory-product-card-${item.id}`}>
+        <Box layoutDirection="row" gap={2} padding={2} style={{ alignItems: 'center' }}>
+          <Box style={{ width: 44, height: 44, borderRadius: radius.sm, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colorRoles.surfaceInset }}>
+            {thumbnailUrl ? (
+              <Image source={{ uri: thumbnailUrl }} style={{ width: 44, height: 44 }} />
+            ) : (
+              <Text role="titleMd">{item.name.slice(0, 1)}</Text>
+            )}
+          </Box>
+          <Box gap={0} style={{ flex: 1 }}>
+            <Text role="bodyStrong" numberOfLines={1}>{item.name}</Text>
+            <Text role="caption" tone="muted" numberOfLines={1}>{nextAction}</Text>
+            <Text role="caption" tone="muted" numberOfLines={1}>{item.categoryLabel}</Text>
+          </Box>
+          <Box gap={1} style={{ alignItems: 'flex-end' }}>
+            <Text role="bodyStrong">{item.priceLabel}</Text>
+            <Badge label={cardStatus.label} tone={cardStatus.tone === 'default' ? 'neutral' : cardStatus.tone} />
+          </Box>
+        </Box>
+      </Pressable>
 
       {isPanelOpen ? (
         <Surface tone="inset" padding={2} gap={2} border={false}>
@@ -1049,9 +1006,9 @@ function InventoryCatalogContent({
     let cancelled = false;
     const apiClient = getDshProductRuntimeClient();
     apiClient.listProducts(canonicalStoreId, { limit: 100 })
-      .then((resp) => {
+      .then((resp: any) => {
         if (cancelled) return;
-        const liveItems = resp.products.map((p): InventoryCatalogListItem => ({
+        const liveItems = resp.products.map((p: any): InventoryCatalogListItem => ({
           id: p.id,
           name: p.name,
           categoryLabel: p.category_id ?? 'بدون فئة',
@@ -1089,7 +1046,7 @@ function InventoryCatalogContent({
   const notLinkedCount = items.filter((item) => !item.catalogLinked).length;
   const clientVisibleCount = items.filter((item) => item.publishStage === 'client-visible').length;
   const kpiItems = [
-    { label: 'المنتجات', value: String(totalProducts), tone: 'brand' as const },
+    { label: 'المنتجات', value: String(totalProducts), tone: 'action' as const },
     { label: 'منخفض', value: String(lowStockCount), tone: lowStockCount > 0 ? 'warning' as const : 'success' as const },
     { label: 'مراجعة', value: String(reviewCount), tone: reviewCount > 0 ? 'warning' as const : 'success' as const },
     { label: 'غير مرتبط', value: String(notLinkedCount), tone: notLinkedCount > 0 ? 'danger' as const : 'success' as const },
@@ -1205,7 +1162,7 @@ function InventoryCatalogContent({
             >
               <Text role="caption" tone="muted" numberOfLines={1}>{item.label}</Text>
               <Text role="label" tone={item.tone} numberOfLines={1}>{item.value}</Text>
-              {index < kpiItems.length - 1 ? <Text role="caption" tone="soft">|</Text> : null}
+              {index < kpiItems.length - 1 ? <Text role="caption" tone="muted">|</Text> : null}
             </Box>
           ))}
         </Box>
@@ -1214,7 +1171,6 @@ function InventoryCatalogContent({
       {/* Search */}
       <Surface tone="raised" padding={1} gap={1}>
         <SearchField
-          label="بحث"
           value={query}
           onChangeText={setQuery}
           placeholder="اسم المنتج، SKU، GTIN، الباركود"
@@ -1262,12 +1218,10 @@ function InventoryCatalogContent({
       {/* View mode + result count */}
       <Box style={{ flexDirection: resolveRowDirection(direction), alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
         <Text role="label" tone="muted">{filteredItems.length} منتج</Text>
-        <SegmentedControl<ViewMode>
-          size="sm"
-          fullWidth={false}
+        <SegmentedControl
           value={viewMode}
-          onValueChange={setViewMode}
-          options={[
+          onValueChange={(v) => setViewMode(v as ViewMode)}
+          items={[
             { value: 'cards', label: 'بطاقات' },
             { value: 'dense-list', label: 'قائمة كثيفة' },
           ]}
@@ -1278,7 +1232,6 @@ function InventoryCatalogContent({
       <Box gap={1}>
         {filteredItems.length === 0 ? (
           <StateView
-            stateId="empty"
             title="لا توجد نتائج مطابقة"
             description="جرّب اسم مختلفاً أو صفّح الفلاتر."
             actionLabel="إعادة ضبط الفلتر والبحث"
@@ -1358,10 +1311,7 @@ function InventoryCatalogContent({
               label={bulkPrice.kind === 'percent' ? 'نسبة الزيادة/النقص (مثال: +10 أو -5)' : 'المبلغ المضاف/المطروح (مثال: +2 أو -1.5)'}
               value={bulkPrice.value}
               onChangeText={(v: string) => { setBulkPrice({ ...bulkPrice, value: v }); setBulkPreviewMessage(null); }}
-              placeholder={bulkPrice.kind === 'percent' ? '+10' : '+2.00'}
-              style={{ textAlign: 'left' }}
-              keyboardType="decimal-pad"
-            />
+              placeholder={bulkPrice.kind === 'percent' ? '+10' : '+2.00'}            />
             <Button
               label="معاينة التغييرات قبل التطبيق"
               tone="secondary"

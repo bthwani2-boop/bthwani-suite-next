@@ -156,7 +156,7 @@ export function FieldPartnerOnboardingScreen({
       kind: 'photo',
       label: PHOTO_LABELS[key],
       status: form[key]?.trim() ? 'uploaded' : 'missing',
-      previewUri: form[key],
+      ...(form[key] ? { previewUri: form[key] } : {}),
     })),
   ];
   const missingItems = getFieldRequiredMissingItems(form, state.uploadedDocumentTypes);

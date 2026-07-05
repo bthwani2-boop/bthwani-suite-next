@@ -278,7 +278,7 @@ export const SUPPORT_OWNERSHIP: SupportOwnershipInfo = {
 
 // ─── Approval Stage ───────────────────────────────────────────────────────────
 // Shared type for partner/catalog approval workflow stages
-export type ApprovalStage =
+export type SupportApprovalStage =
   | 'partner-review'
   | 'partner-approved'
   | 'catalog-review'

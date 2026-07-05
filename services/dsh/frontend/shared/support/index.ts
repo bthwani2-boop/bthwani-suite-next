@@ -17,7 +17,7 @@ export {
   filterTicketsBySearch,
 } from "./support-registry";
 export type {
-  ApprovalStage,
+  SupportApprovalStage,
   OperationsSupportFlowSpec,
   SupportIncidentTone,
   SupportIncidentViewModel,

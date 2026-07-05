@@ -11,17 +11,23 @@ import { getDshControlPanelGovernanceEntry } from '../../shared/runtime';
 import type { AnyOperationsWorkspaceId } from './operations.registry';
 import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from './operations.registry';
 import styles from '../shared/control-panel-surface.module.css';
-import { getDshSignalSummaries, getDshSignalEventLabel, getDshSignalEventTone } from '../../shared/marketing/dsh-signal-layer.model';
+import { getDshSignalSummaries, getDshSignalEventLabel, getDshSignalEventTone, refreshDshMarketingSignals } from '../../shared/marketing/dsh-signal-layer.model';
 
 export type CommandCenterScreenProps = { hubHref: string; subGroup?: string; };
 
-const OPS_SIGNAL_SUMMARIES = getDshSignalSummaries('control-panel', 'ops');
-const OPS_URGENT_SIGNALS = OPS_SIGNAL_SUMMARIES
-  .filter((s) => s.priority === 'urgent' && s.readState === 'unread')
-  .slice(0, 3);
-
 export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCenterScreenProps) {
   const router = useRouter();
+  const [opsUrgentSignals, setOpsUrgentSignals] = React.useState(() =>
+    getDshSignalSummaries('control-panel', 'ops').filter((s) => s.priority === 'urgent' && s.readState === 'unread').slice(0, 3)
+  );
+  React.useEffect(() => {
+    let cancelled = false;
+    refreshDshMarketingSignals().then(() => {
+      if (cancelled) return;
+      setOpsUrgentSignals(getDshSignalSummaries('control-panel', 'ops').filter((s) => s.priority === 'urgent' && s.readState === 'unread').slice(0, 3));
+    });
+    return () => { cancelled = true; };
+  }, []);
   const operationsGovernance = getDshControlPanelGovernanceEntry('operations');
   const supportGovernance = getDshControlPanelGovernanceEntry('support');
   const financeGovernance = getDshControlPanelGovernanceEntry('finance');
@@ -117,11 +123,11 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
         </div>
 
         {/* 4. Signal layer */}
-        {OPS_URGENT_SIGNALS.length > 0 ? (
+        {opsUrgentSignals.length > 0 ? (
           <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
             <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>إشارات النظام العاجلة</h3>
             <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-              {OPS_URGENT_SIGNALS.map((signal) => {
+              {opsUrgentSignals.map((signal) => {
                 const tone = getDshSignalEventTone(signal.kind);
                 const statusTone = tone === 'danger' ? 'danger' as const
                   : tone === 'warning' ? 'warning' as const
