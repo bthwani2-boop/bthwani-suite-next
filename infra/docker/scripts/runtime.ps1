@@ -38,6 +38,21 @@ if (-not (Test-Path -LiteralPath $EnvFile)) {
   throw "Env file not found: $EnvFile"
 }
 
+# Load environment variables from EnvFile into PowerShell environment
+Get-Content -LiteralPath $EnvFile | ForEach-Object {
+  $line = $_.Trim()
+  if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
+    $parts = $line.Split("=", 2)
+    $key = $parts[0].Trim()
+    $val = $parts[1].Trim()
+    if ($val.StartsWith('"') -and $val.EndsWith('"')) { $val = $val.Substring(1, $val.Length - 2) }
+    elseif ($val.StartsWith("'") -and $val.EndsWith("'")) { $val = $val.Substring(1, $val.Length - 2) }
+    if (-not (Get-Item -Path "Env:$key" -ErrorAction SilentlyContinue)) {
+      [System.Environment]::SetEnvironmentVariable($key, $val)
+    }
+  }
+}
+
 # ── Parse profiles ────────────────────────────────────────────────────────────
 $ProfileList = @()
 if ($Profiles -ne "") {
