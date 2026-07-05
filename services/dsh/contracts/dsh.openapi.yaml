@@ -3490,8 +3490,11 @@ paths:
           content:
             application/octet-stream:
               schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
 
   /dsh/field/partners/{partnerId}/visits:
     post:

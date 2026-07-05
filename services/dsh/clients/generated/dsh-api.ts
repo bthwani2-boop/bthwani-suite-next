@@ -7926,8 +7926,11 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     createFieldPartnerVisit: {

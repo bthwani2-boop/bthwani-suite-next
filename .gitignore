@@ -1,5 +1,20 @@
 node_modules/
 .pnpm-store/
+
+# Exclude plain-text and markdown files from Graphify semantic scan
+**/*.txt
+**/*.md
+**/*.pdf
+**/*.zip
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.gif
+**/*.svg
+**/*.ico
+
+
 .env
 .env.*
 !.env.example
@@ -47,3 +62,6 @@ tools/registry/runs/
 node-gates*.log
 *_HANDOFF.zip
 .claude/settings.local.json
+
+# Generated Swagger / OpenAPI bundles
+*.bundled.json

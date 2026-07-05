@@ -383,6 +383,16 @@ paths:
       tags:
         - WltRefunds
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: orderId
           in: query
           schema:
@@ -408,6 +418,16 @@ paths:
       tags:
         - WltRefunds
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: refundId
           in: path
           required: true
@@ -552,6 +572,16 @@ paths:
       tags:
         - WltSettlements
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: partnerId
           in: query
           required: true
@@ -574,6 +604,16 @@ paths:
       tags:
         - WltSettlements
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: partnerId
           in: query
           required: true
@@ -606,6 +646,16 @@ paths:
       tags:
         - WltSettlements
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: settlementId
           in: path
           required: true
@@ -701,6 +751,16 @@ paths:
       tags:
         - WltCod
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: captainId
           in: query
           schema:
@@ -726,6 +786,16 @@ paths:
       tags:
         - WltCod
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: codRecordId
           in: path
           required: true
@@ -852,6 +922,16 @@ paths:
       tags:
         - WltCod
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: orderId
           in: query
           schema:
@@ -904,6 +984,16 @@ paths:
       tags:
         - WltLedger
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: actorId
           in: query
           schema:
@@ -952,6 +1042,16 @@ paths:
       tags:
         - WltLedger
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
         - name: entryId
           in: path
           required: true

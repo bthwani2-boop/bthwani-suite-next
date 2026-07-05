@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { fail, lineNumber, repoRoot, read } from "./_guard-utils.mjs";
 import { operationKey, parseOpenApiContract } from "./_openapi-utils.mjs";
 
@@ -67,8 +68,9 @@ function extractGoRoutes(file) {
   const fullPath = path.join(repoRoot, file);
   if (!fs.existsSync(fullPath)) return [];
 
+  // Fallback / First Layer: Literal String Scan
   const source = read(file);
-  const routes = [];
+  const literalRoutes = [];
   const calls = ["mux.HandleFunc(", "mux.Handle("];
 
   for (const call of calls) {
@@ -86,7 +88,7 @@ function extractGoRoutes(file) {
 
       const routeMatch = literal.value.match(/^([A-Z]+)\s+(\/\S+)$/);
       if (!routeMatch) continue;
-      routes.push({
+      literalRoutes.push({
         method: routeMatch[1],
         path: routeMatch[2].replace(/\/$/, ""),
         line: lineNumber(source, callIndex),
@@ -94,7 +96,36 @@ function extractGoRoutes(file) {
     }
   }
 
-  return routes;
+  // Second Layer: Go AST Extractor
+  try {
+    const extractorPath = path.join(repoRoot, "tools/guards/extract_routes.go");
+    const relativeFilePath = path.relative(repoRoot, fullPath).replace(/\\/g, "/");
+    const stdout = execSync(`go run "${extractorPath}" "${relativeFilePath}"`, { cwd: repoRoot, stdio: ["ignore", "pipe", "ignore"] });
+    const astRoutes = JSON.parse(stdout.toString());
+    
+    // Merge AST routes into literal routes, matching by method/path
+    const literalKeys = new Set(literalRoutes.map(r => `${r.method} ${r.path}`));
+    for (const r of astRoutes) {
+      if (r.method === "" || r.path === "") continue;
+      const key = `${r.method} ${r.path}`;
+      if (!literalKeys.has(key)) {
+        let line = 1;
+        const index = source.indexOf(key);
+        if (index !== -1) {
+          line = lineNumber(source, index);
+        }
+        literalRoutes.push({
+          method: r.method,
+          path: r.path.replace(/\/$/, ""),
+          line,
+        });
+      }
+    }
+  } catch (err) {
+    // Fallback silently if Go execution fails
+  }
+
+  return literalRoutes;
 }
 
 function validateOperationIds(service, operations) {
@@ -174,6 +205,35 @@ function validateInternalServiceRoute(service, operation) {
   }
 }
 
+const wltFinancialReadRoutes = new Set([
+  "GET /wlt/refunds",
+  "GET /wlt/refunds/{refundId}",
+  "GET /wlt/settlements",
+  "GET /wlt/settlements/{settlementId}",
+  "GET /wlt/settlements/summary",
+  "GET /wlt/cod-records",
+  "GET /wlt/cod-records/{codRecordId}",
+  "GET /wlt/commissions",
+  "GET /wlt/ledger/entries",
+  "GET /wlt/ledger/entries/{entryId}",
+]);
+
+function validateWltFinancialReadRoute(service, operation) {
+  if (service.name !== "WLT") return;
+  const key = `${operation.method} ${operation.path}`;
+  if (!wltFinancialReadRoutes.has(key)) return;
+
+  for (const header of ["Authorization", "X-Service-Caller"]) {
+    if (!hasRequiredHeader(operation, header)) {
+      violations.push({
+        file: service.openapi,
+        line: operation.line,
+        message: `MISSING_FINANCIAL_READ_HEADER: WLT financial read route "${key}" is missing required header "${header}"`,
+      });
+    }
+  }
+}
+
 function validateWltMutationMetadata(service, operation) {
   if (service.name !== "WLT") return;
   if (!gatedWltMutationRoutes.has(operationKey(operation))) return;
@@ -230,6 +290,7 @@ for (const service of services) {
     validatePathParameters(service, operation);
     validateInternalServiceRoute(service, operation);
     validateWltMutationMetadata(service, operation);
+    validateWltFinancialReadRoute(service, operation);
 
     if (!goRouteSet.has(key)) {
       violations.push({

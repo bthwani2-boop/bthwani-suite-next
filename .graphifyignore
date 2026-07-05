@@ -1,11 +1,32 @@
-.git/
+# ─── Graphify ignore — code-only corpus, no LLM key needed ───────────────────
+# Follows gitignore syntax. Merged with .gitignore automatically.
+# Root-level dir patterns (no **/ prefix) match from the repo root.
+
+# ── IDE / editor runtime bundles ─────────────────────────────────────────────
+resources/
+apps/control-panel/runtime/
+
+# ── Dockerfile and extension-less config files ───────────────────────────────
+Dockerfile
+**/Dockerfile
+*.dockerfile
+**/*.dockerfile
+.go-version
+.lean-ctx-id
+.aiderignore
+.aiexclude
+.cursorignore
+tools/comand
+tools/drafthj
+
+# ── Custom Go caches (project-local) ─────────────────────────────────────────
+.gocache-dsh/
+.gocache-wlt/
+.gocache-identity/
+.gocache*/
+
+# ── Generated / cache / toolchain output ─────────────────────────────────────
 node_modules/
-.pnpm-store/
-.next/
-.expo/
-.turbo/
-.nx/
-.cache/
 dist/
 build/
 out/
@@ -14,16 +35,70 @@ tmp/
 temp/
 logs/
 graphify-out/
+.pnpm-store/
+.turbo/
+.nx/
+.cache/
+.next/
+.expo/
+.yagni-out/
 .diagnostics/
 
-# Go caches
+# ── Go caches ─────────────────────────────────────────────────────────────────
 .gocache*/
 .gomodcache*/
 
-# Registry / archived diagnostics
+# ── Registry / archived diagnostics ─────────────────────────────────────────
 tools/registry/runs/
 
-# Binary / media / archive / logs
+# ── Evidence / reports / generated operational records ───────────────────────
+evidence/
+**/evidence/
+reports/
+**/reports/
+**/screenshots/
+**/recordings/
+**/visual-evidence/
+
+# ── Generated API clients (code-gen artefacts, not source) ───────────────────
+**/generated/
+**/__generated__/
+**/clients/generated/
+
+# ── Agent / skill documentation noise ────────────────────────────────────────
+.agents/
+**/.agents/
+
+# ── Documentation & governance ────────────────────────────────────────────────
+docs/
+**/docs/
+governance/
+infra/
+tools/trash/
+
+# ── Lockfiles (large, not meaningful for code graph) ─────────────────────────
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# ── Doc/text file extensions ─────────────────────────────────────────────────
+*.md
+**/*.md
+*.mdx
+**/*.mdx
+*.txt
+**/*.txt
+*.csv
+**/*.csv
+*.jsonl
+**/*.jsonl
+*.yml
+**/*.yml
+*.yaml
+**/*.yaml
+
+
+# ── Binary / media / archive ─────────────────────────────────────────────────
 *.zip
 *.7z
 *.rar
@@ -47,33 +122,5 @@ tools/registry/runs/
 *.db-shm
 *.db-wal
 *.tsbuildinfo
-
-# Lockfiles
-pnpm-lock.yaml
-package-lock.json
-yarn.lock
-
-# Reduce non-code graph noise
-docs/
-**/docs/
-**/*.md
-**/*.mdx
-**/*.csv
-**/*.jsonl
-**/*.txt
-
-# Evidence / reports / generated operational records
-evidence/
-**/evidence/
-reports/
-**/reports/
-**/screenshots/
-**/recordings/
-**/visual-evidence/
-**/generated/
-**/__generated__/
-tools/registry/runs/
-
-# Agent/skill documentation noise
-.agents/
-**/.agents/
+*.map
+**/*.map

@@ -164,8 +164,7 @@ function parseOperationBlock({ file, apiPath, method, startLine, blockLines, com
   return operation;
 }
 
-export function parseOpenApiContract(file) {
-  const content = read(file);
+export function parseOpenApiContractContent(content, file = "test.yaml") {
   const lines = content.split(/\r?\n/);
   const componentParameters = parseComponentParameters(lines);
   const operations = [];
@@ -216,6 +215,11 @@ export function parseOpenApiContract(file) {
 
   flushOperation();
   return operations;
+}
+
+export function parseOpenApiContract(file) {
+  const content = read(file);
+  return parseOpenApiContractContent(content, file);
 }
 
 export function operationKey(operation) {

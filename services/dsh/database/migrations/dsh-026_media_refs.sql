@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS dsh_media_refs (
     media_ref           TEXT        PRIMARY KEY DEFAULT 'media_' || replace(gen_random_uuid()::text, '-', ''),
     storage_key         TEXT        NOT NULL UNIQUE,
