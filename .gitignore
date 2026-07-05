@@ -70,3 +70,5 @@ node-gates*.log
 # Explicitly track bthwani-deep-diagnostic-input.md
 !tools/diagnostics/bthwani-deep-diagnostic-input.md
 
+# Explicitly track TOOLS_SETUP.md
+!tools/diagnostics/TOOLS_SETUP.md
