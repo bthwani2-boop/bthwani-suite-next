@@ -8,6 +8,7 @@ Default project execution uses code-based checks.
 The default execution model for all tasks is **CODE_BASED_LEAN**. Normal implementation is live-code first and token-efficient.
 
 ### Core Rules
+
 - **Live-Code First**: Inspect only the directly relevant code paths. Reuse existing code first. Avoid adding unnecessary abstractions, files, or dependencies.
 - **Smallest Safe Diff**: Implement the smallest correct change that solves the task.
 - **Automation over Manual**: LEAN means using the "smallest sufficient automation" (e.g., targeted local guards or package scripts) to verify correctness. It strictly prohibits manual file-by-file modifications as a primary development method and requires automated validation checks post-remediation.
@@ -20,6 +21,7 @@ The default execution model for all tasks is **CODE_BASED_LEAN**. Normal impleme
 ## Escalation Rules
 
 Create evidence files (including screenshots, logs, or handoff packs) only when:
+
 - High-risk work is involved (WLT/finance, security, auth, privacy, secrets, database migrations, runtime/Docker environment changes).
 - Destructive operations, broad refactoring, public contract/OpenAPI changes, or dependency upgrades are performed.
 - Preparing for a PR, merge, or release readiness check.
@@ -32,6 +34,7 @@ Create evidence files (including screenshots, logs, or handoff packs) only when:
 To maximize token efficiency and avoid scanning massive generated, temporary, or third-party assets, all tools and scans MUST ignore the following paths:
 
 ### Excluded Directories
+
 - `.git/` (Git repository metadata)
 - `node_modules/` (Third-party dependencies)
 - `.pnpm-store/` (Local package cache)
@@ -56,6 +59,7 @@ To maximize token efficiency and avoid scanning massive generated, temporary, or
 - `android/` / `ios/` (Mobile platform directories, except when executing native tasks)
 
 ### Excluded File Extensions & Patterns
+
 - Media & Binary files: `*.png`, `*.jpg`, `*.jpeg`, `*.webp`, `*.gif`, `*.svg`, `*.ico`, `*.mp4`, `*.mov`, `*.avi`, `*.pdf`
 - Archive files: `*.zip`, `*.7z`, `*.rar`, `*.tar`, `*.gz`
 - Map files: `*.map`
@@ -67,8 +71,10 @@ To maximize token efficiency and avoid scanning massive generated, temporary, or
 ## Document Link & Ignore File Policy
 
 ### Repo-Relative Links
+
 - All links inside committed repository documents (governance, agents, skills, and codebases) must be **repo-relative** (e.g., `../governance/LEAN_CODE_BASED_CHECK.md`).
 - **NEVER** commit Windows or machine-local file scheme links (e.g., `file:///C:/...` or `file:///c:/...`).
 
 ### Ignore File Alignment
+
 - All project ignore configurations (`.graphifyignore`, `.aiderignore`, `.cursorignore`, `.aiexclude`) and automated guard exclusions must fully align with the **Token-Drain Exclusions** defined in this document.

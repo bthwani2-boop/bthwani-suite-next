@@ -11,6 +11,7 @@
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 11) تعريف الرحلة قبل التنفيذ
 
 قبل أي تعديل، يجب إخراج تعريف الرحلة التالي:
@@ -158,6 +159,7 @@ services/wlt/contracts
 المسار الحاكم: `services/dsh/frontend/shared`
 
 يمتلك ويحكم:
+
 - logic / state / policy / API mapping / validation.
 - types, states, state machines, view-models, controllers/hooks.
 - API clients/adapters, permissions, role/view policies, validation rules.
@@ -170,6 +172,7 @@ services/wlt/contracts
 ### 13.2) DSH UI-only surfaces
 
 المسارات:
+
 - `services/dsh/frontend/app-client`
 - `services/dsh/frontend/app-partner`
 - `services/dsh/frontend/app-field`
@@ -177,6 +180,7 @@ services/wlt/contracts
 - `services/dsh/frontend/control-panel`
 
 المسموح (واجهة فقط):
+
 - rendering, layout, labels, icons.
 - navigation composition.
 - role-specific visible rendering.
@@ -184,6 +188,7 @@ services/wlt/contracts
 - surface-specific composition.
 
 الممنوع:
+
 - direct API (fetch/axios مباشر).
 - process.env أو URL construction.
 - raw API response mapping inside UI.
@@ -198,6 +203,7 @@ services/wlt/contracts
 المسار الحاكم: `services/wlt/frontend/shared/dsh`
 
 يمتلك:
+
 - WLT-for-DSH types, states, contracts, view-models.
 - read-only API adapters/controllers.
 - financial reference mappings.
@@ -207,6 +213,7 @@ services/wlt/contracts
 ### 13.4) WLT UI-only surfaces
 
 المسارات:
+
 - `services/wlt/frontend/app-client`
 - `services/wlt/frontend/app-partner`
 - `services/wlt/frontend/app-field`
@@ -214,6 +221,7 @@ services/wlt/contracts
 - `services/wlt/frontend/control-panel`
 
 ممنوع فيها:
+
 - financial mutation.
 - ledger/payment/refund/settlement/commission/payout truth.
 - API adapter مباشر أو state machine or controller-core.
@@ -222,6 +230,7 @@ services/wlt/contracts
 ### 13.5) Apps runtime
 
 المسارات:
+
 - `apps/app-client/runtime`
 - `apps/app-partner/runtime`
 - `apps/app-field/runtime`
@@ -229,9 +238,11 @@ services/wlt/contracts
 - `apps/control-panel/runtime`
 
 المسموح:
+
 - provider wrapping, navigation entry point, runtime bootstrap, surface mounting.
 
 الممنوع:
+
 - business logic, API binding, state machine, controllers, financial logic.
 
 ---
@@ -259,9 +270,11 @@ WLT هو المالك الوحيد للحقيقة المالية.
 DSH لا ينفّذ financial mutation.
 
 ممنوع على DSH امتلاك أو تنفيذ:
+
 - payment mutation, wallet mutation, refund finalization, settlement posting, commission truth, COD financial truth, ledger mutation, reconciliation, financial reports truth, provider direct access.
 
 المسموح لـ DSH:
+
 - عرض references/status/metadata المالية للقراءة فقط.
 
 أي mutation مالي خارج WLT يعتبر `FIX_REQUIRED`.

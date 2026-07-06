@@ -11,6 +11,7 @@
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 17) matrices إلزامية — تابع
 
 ### 17.12) topic_file_organization_matrix
@@ -64,6 +65,7 @@ topic_file_organization_matrix:
 ```
 
 قواعد:
+
 - أي سطح غير مذكور = `FIX_REQUIRED`.
 - أي ملف بلا responsibility = `FIX_REQUIRED`.
 - أي ملف كبير بلا split decision = `FIX_REQUIRED`.
@@ -131,6 +133,7 @@ journey_sequence_matrix:
 ```
 
 قواعد:
+
 - لا يجوز تنفيذ رحلة جديدة كأنها معزولة عما سبق.
 - إذا كانت الرحلة تعتمد على نقص سابق مانع: `FIX_REQUIRED`.
 - إذا كان النقص خارج النطاق ولا يمنع: يسجل في carry_forward.
@@ -144,6 +147,7 @@ journey_sequence_matrix:
 ### 18.1) Performance & Speed Code Checks
 
 أي رحلة يجب أن تثبت أنها لا تضيف بطئًا أو تعقيدًا غير مبرر عبر:
+
 - عدم تنفيذ عمليات ثقيلة داخل render.
 - عدم بناء view-models داخل surface إذا كان مكانها shared.
 - عدم تكرار API calls بين الأسطح لنفس المصدر.
@@ -161,6 +165,7 @@ journey_sequence_matrix:
 ### 18.2) File Size Rules
 
 Frontend File Size Rules:
+
 - screen/component file > 350 سطر = `FIX_REQUIRED` إلا بسبب معماري موثق.
 - screen/component file > 500 سطر = `MUST_SPLIT`.
 - shared controller/hook > 300 سطر = `REVIEW_SPLIT`.
@@ -169,6 +174,7 @@ Frontend File Size Rules:
 - Topic بلا تقسيم واضح = `FIX_REQUIRED`.
 
 Backend File Size Rules:
+
 - backend handler file > 400 سطر = `REVIEW_SPLIT`.
 - backend service/repository > 500 سطر = `REVIEW_SPLIT`.
 - handler يخلط routing + validation + business rules + persistence = `MUST_SPLIT`.
@@ -179,6 +185,7 @@ Backend File Size Rules:
 ممنوع استخدام: `new` | `old` | `temp` | `final` | `final2` | `test2` | `copy` | `backup` | `legacy` | `random` | `helpers.ts` أو `utils.ts` يحتوي منطقًا حاكمًا غير مصنف.
 
 النمط داخل shared:
+
 - `<topic>.types.ts`
 - `<topic>.state.ts`
 - `<topic>.view-model.ts`
@@ -191,6 +198,7 @@ Backend File Size Rules:
 - `<topic>.index.ts`
 
 النمط داخل surface:
+
 - `<Topic>Screen.tsx`
 - `<Topic>Section.tsx`
 - `<Topic>Card.tsx`
@@ -202,6 +210,7 @@ Backend File Size Rules:
 ### 18.4) Topic Folder Organization
 
 DSH shared:
+
 ```text
 services/dsh/frontend/shared/<topic>/
   index.ts
@@ -217,6 +226,7 @@ services/dsh/frontend/shared/<topic>/
 ```
 
 WLT-for-DSH shared:
+
 ```text
 services/wlt/frontend/shared/dsh/<topic>/
   index.ts
@@ -232,6 +242,7 @@ services/wlt/frontend/shared/dsh/<topic>/
 ```
 
 Surface topic folder:
+
 ```text
 services/<service>/frontend/<surface>/<topic>/
   <Topic>Screen.tsx
@@ -252,6 +263,7 @@ services/<service>/frontend/<surface>/<topic>/
 ## 24) حذف/نقل/دمج الملفات
 
 قبل حذف أو نقل أو دمج أي ملف، يجب إثبات سلامة العملية كوديًا وعدم وجود أي ارتباط معلّق عبر البوابات التالية:
+
 1. `imports` (الاستيرادات المباشرة)
 2. `exports` (التصديرات التي تعتمد عليها ملفات أخرى)
 3. `routes` (مسارات التوجيه والتوصيل)
@@ -310,6 +322,7 @@ zero_defect_closure_matrix:
 ```
 
 قواعد صارمة:
+
 - أي فحص بحالة FAIL أو بلا evidence = `FIX_REQUIRED` فورًا.
 - لا يجوز `KEEP_ACTIVE` إذا كانت أي فئة N/A بلا مبرر موثق.
 - تعميم فحص التسرب (leakage_status) ليشمل: تسرب مالي خارج WLT، تسرب logic إلى surfaces، تسرب process.env/أسرار، تسرب raw API response، تسرب mock/demo/preview كحقيقة تشغيلية.
@@ -319,6 +332,7 @@ zero_defect_closure_matrix:
 ### 24.2) implementation_or_closure_no_pending_fix_rule — التنفيذ الإلزامي المباشر ومنع التشخيص فقط
 
 عند `task_mode: implementation_or_closure`:
+
 - يُحظر الاكتفاء بالتقرير أو التشخيص أو الخطة؛ **أي فئة FAIL في المصفوفة يجب معالجتها مباشرة وفوريًا في الكود الحي داخل شجرة العمل المحلية**:
   - `dead_content` -> حذف مباشر (RETIRE_DEAD) بعد التحقق من بوابات 24.
   - `duplication` -> دمج فعلي (MERGE_DUPLICATE).
@@ -335,6 +349,7 @@ zero_defect_closure_matrix:
 استخدم مصادر خارجية رسمية أو مفتوحة موثوقة فقط عند وجود فجوة لا يمكن حسمها من الريبو أو العقود أو المانح.
 
 يجب توثيق:
+
 ```yaml
 external_reference_record:
   gap:

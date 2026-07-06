@@ -72,6 +72,7 @@ justified_exclusion:
 أي ملف مرتبط بالرحلة يبقى بعد التنفيذ وفيه كود ميت أو تناقض أو تكرار أو منطق في غير مالكه أو مسار غير صحيح أو تنظيم خاطئ أو naming سيئ أو dependency غير مبررة أو mock/demo/preview runtime truth = `FIX_REQUIRED`.
 
 لا يجوز إعلان `IMPLEMENTATION_PASS` حتى تكون:
+
 - `protocol_coverage_checklist` كاملة
 - `execution_plan_coverage_matrix` كاملة
 - `docker_hosting_runtime_matrix` مكتملة أو N/A بدليل
@@ -79,7 +80,8 @@ justified_exclusion:
 - `file_decision_matrix` مكتملة لكل ملف مرتبط
 - `evidence_matrix` مكتملة لكل طبقة داخل النطاق
 
-### قاعدة التبسيط والمخارج المبكرة:
+### قاعدة التبسيط والمخارج المبكرة
+
 1. **المخرجات التفصيلية والتقارير الطويلة لا تُطلب كاملة في كل تنفيذ**: عند عدم وجود فشل أو خطر عالٍ، يمكن للوكيل استخدام سجل الإغلاق المختصر `Compact Closure Ledger` (المعرّف في الملف 11) كبديل للمصفوفات التفصيلية الطويلة.
 2. **تبقى المصفوفات والتقارير التفصيلية إلزامية فقط عند**:
    فشل تحقق، تعارض ملكية، تغيير database/API/migration، موضوع مالي WLT/DSH، حذف/نقل/دمج ملفات، multi-surface runtime، أو خطر عالٍ.
@@ -167,6 +169,7 @@ Pop-Location
 ```
 
 قواعد استخدام هذه الأوامر:
+
 - `foundation:gate` إلزامي في كل رحلة بلا استثناء.
 - `journey:gate` إلزامي في كل رحلة تمس surface أو shared أو WLT.
 - Go backends تُشغَّل فقط إذا كانت داخل نطاق الرحلة الفعلي.

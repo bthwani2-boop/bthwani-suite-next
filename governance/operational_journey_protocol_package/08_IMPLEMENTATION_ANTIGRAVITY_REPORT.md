@@ -11,9 +11,11 @@
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 23) قواعد تنفيذ الإصلاح في الكود الحي
 
 عند `implementation_or_closure` فقط:
+
 - الباك إند: routes, handlers, services, repositories, database truth, migrations.
 - العقود والمستهلكين: OpenAPI, API clients.
 - الواجهة المشتركة: shared brains (DSH and WLT-for-DSH).
@@ -22,6 +24,7 @@
 - التحقق: tests, guards, evidence.
 
 قواعد التنفيذ:
+
 - **قاعدة Code First:** الأولوية دائمًا للكود الحي: تعديل، تصحيح، تنظيف، تنظيم، نقل، دمج، حذف، إضافة، ثم تحقق مختصر وحاسم. ممنوع تحويل التنفيذ إلى كتابة أدلة وتقارير طويلة.
 - **قاعدة No report instead of fix:** أي نقص مثبت داخل النطاق لا يترك كـ TODO أو blocker أو مجرد تقرير، بل يتحول فورًا إلى تعديل كود حي.
 - **الدليل النهائي المختصر:** يجب أن يكون الدليل حاسمًا ومختصرًا (Minimal Sufficient Evidence) كدليل حاسم واحد (مثل diff أو مخرج أمر أو نتيجة اختبار)، ولا يجوز إنشاء ملفات أدلة (evidence files) كثيرة ومكررة.

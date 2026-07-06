@@ -19,7 +19,7 @@ Define the performance and runtime baseline policies that prevent the constructi
 
 ## Database Rules
 
-1. **Mandatory Pagination**: Every list endpoint must implement cursor-based or limit-offset pagination. 
+1. **Mandatory Pagination**: Every list endpoint must implement cursor-based or limit-offset pagination.
 2. **Strict Limits**: List queries must enforce a strict default and maximum `limit` value to prevent scanning large sections of tables.
 3. **Optimized Indexes**: Indexes must exist for every filter, sort, and foreign key column used in queries. Unindexed queries in production paths are forbidden.
 4. **No N+1 Queries**: Database queries must retrieve required data in bulk (e.g., via joins or prefetching). Iterative subqueries are forbidden.
@@ -52,6 +52,7 @@ These targets are measured and validated under load testing, not simply stated v
 ## Acceptance Condition
 
 This document is accepted only when:
+
 - The performance and runtime baseline policies are registered as canonical.
 - The `guard-manifest.json` registers the active verification guards.
 - Codebase performance and runtime rules are verified by the active gates.

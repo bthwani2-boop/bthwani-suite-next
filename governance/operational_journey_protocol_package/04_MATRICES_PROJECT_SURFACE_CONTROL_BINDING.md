@@ -11,6 +11,7 @@
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 17) matrices إلزامية
 
 أي رحلة لا تحتوي matrices التالية تصنف `FIX_REQUIRED`:
@@ -112,6 +113,7 @@ project_area_matrix:
 ```
 
 قواعد:
+
 - أي مجال غير مذكور = `FIX_REQUIRED`.
 - أي `NOT_APPLICABLE` بلا سبب ودليل عدم التأثر = `FIX_REQUIRED`.
 
@@ -162,6 +164,7 @@ entity_boundary_matrix:
 ```
 
 قواعد:
+
 - أي استخدام لـ Partner بمعنى Store = `FIX_REQUIRED`.
 - أي استخدام لـ Store بمعنى Partner = `FIX_REQUIRED`.
 - أي status واحد يحاول تمثيل اعتماد الشريك وظهور المتجر معًا بلا فصل صريح = `FIX_REQUIRED`.
@@ -268,6 +271,7 @@ surface_code_coverage_matrix:
 ```
 
 قواعد:
+
 - ممنوع حذف أي سطح.
 - `N/A` مسموح فقط إذا كان الدور `FORBIDDEN` أو `NOT_APPLICABLE` مع reason.
 - أي surface يحتوي business logic أو direct API أو state machine أو permission logic = `FIX_REQUIRED`.
@@ -307,6 +311,7 @@ surface_entity_language_matrix:
 ```
 
 قواعد:
+
 - app-client لا يرى Partner إطلاقًا؛ يرى Stores فقط.
 - app-field ينشئ onboarding Partner ويجمع بيانات Store أول، ولا يفعّل Partner ولا ينشر Store.
 - app-partner يرى حالة Partner onboarding ويدير Store فقط بعد السماح، ولا يملك self-activation.
@@ -492,6 +497,7 @@ control_panel_section_code_matrix:
 ```
 
 قواعد:
+
 - ممنوع الاكتفاء بكلمة `control-panel` عامة.
 - أي قسم غير مذكور = `FIX_REQUIRED`.
 - أي قسم `PRIMARY` أو `SECONDARY` أو `READ_ONLY` يجب أن يذكر routes/actions/state/read-only data.

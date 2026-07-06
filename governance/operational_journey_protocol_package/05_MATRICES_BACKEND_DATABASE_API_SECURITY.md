@@ -11,6 +11,7 @@
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 17) matrices إلزامية — تابع
 
 ### 17.5) backend_layer_matrix
@@ -75,6 +76,7 @@ backend_layer_matrix:
 ```
 
 قواعد:
+
 - routes لا تملك business logic.
 - handler لا يملك business decision النهائي إذا كان هناك service/domain policy.
 - repository لا يملك lifecycle decision.
@@ -107,6 +109,7 @@ database_truth_matrix:
 ```
 
 قواعد:
+
 - أي حقيقة تشغيلية يجب أن تمتلك مصدرًا واحدًا فقط.
 - أي جدول ثانٍ لنفس الحقيقة يجب تصنيفه.
 - أي اختلاف بين database constraints وbackend model وOpenAPI schema وfrontend types = `FIX_REQUIRED`.
@@ -145,6 +148,7 @@ partner_store_database_truth_matrix:
 ```
 
 قواعد:
+
 - partner identity لا تُكرر داخل store إلا كـ denormalized read model موثق.
 - store visibility لا تُحكم من Partner وحده إذا كان endpoint يعرض stores.
 - أي جدولين يملكان نفس lifecycle أو visibility بدون owner واحد = `FIX_REQUIRED`.
@@ -167,6 +171,7 @@ api_client_policy_matrix:
 ```
 
 قواعد:
+
 - generated client هو الأصل عند وجود OpenAPI client generation.
 - shared manual client مسموح فقط بسبب موثق.
 - direct fetch داخل shared api.ts يجب أن يكون adapter معزولًا بلا business logic.
@@ -254,6 +259,7 @@ store_client_visibility_gate_matrix:
 ```
 
 بوابات الظهور الإلزامية (Visibility Gates):
+
 1. partner readiness (جاهزية الشريك للتشغيل)
 2. partner active/approved state (اعتماد وتفعيل الشريك)
 3. store publication status (حالة نشر المتجر)
@@ -294,6 +300,7 @@ auth_permission_matrix:
 ```
 
 قواعد:
+
 - permission truth لا تكون داخل UI surface.
 - role policy لا تكون داخل UI surface.
 - UI يعرض الحالة، ولا يملك القرار.
@@ -355,4 +362,5 @@ risk_based_test_matrix:
 ```
 
 قواعد:
+
 - غياب اختبار مناسب لخطر داخل النطاق = `FIX_REQUIRED`.

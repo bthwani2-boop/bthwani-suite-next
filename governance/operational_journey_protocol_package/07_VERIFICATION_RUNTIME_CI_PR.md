@@ -11,9 +11,11 @@
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 19) أوامر فحص كودية مستهدفة
 
 ### Affected-Only Verification
+
 * يبدأ التحقق من مسارات الكود المتأثرة (affected paths) والـ guards الخاصة بالنطاق فقط.
 * لا يتم تشغيل الفحوصات الكاملة (full-suite) إلا إذا تغير الـ shared brain أو الـ API/database/migration/runtime، أو إذا فشل فحص المسارات المتأثرة (affected check)، أو كانت المنطقة (multi-surface) عالية الخطورة.
 * الفحوصات العامة المذكورة في هذا الملف هي فحوصات مرجعية تُستدعى حسب التأثر وليست إلزامية دائمًا في كل عملية إغلاق.
@@ -78,10 +80,12 @@ pnpm run build
 ```
 
 الحراس المكوّنة للبوابتين (لا تُشغّل مباشرة — تعمل عبر البوابات):
-- `foundation:gate` = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
-- `journey:gate` = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
+
+* `foundation:gate` = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
+* `journey:gate` = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
 
 إذا كان الأمر غير موجود في `package.json` أو workspace:
+
 ```yaml
 result: FIX_REQUIRED | BLOCKED_NEEDS_EVIDENCE
 missing_command:
@@ -98,14 +102,16 @@ verification_command:
 
 Runtime Evidence إلزامي عند `implementation_or_closure` إذا كانت الرحلة تشغيلية.
 لكن:
-- runtime success لا يستبدل Code-Based Gate
-- screenshot لا يستبدل imports/contracts/tests
-- manual navigation دليل إضافي فقط
+
+* runtime success لا يستبدل Code-Based Gate
+* screenshot لا يستبدل imports/contracts/tests
+* manual navigation دليل إضافي فقط
 
 أي حالة:
-- runtime success + code failure = FIX_REQUIRED
-- screenshot success + broken code path = FIX_REQUIRED
-- API smoke success + contract mismatch = FIX_REQUIRED
+
+* runtime success + code failure = FIX_REQUIRED
+* screenshot success + broken code path = FIX_REQUIRED
+* API smoke success + contract mismatch = FIX_REQUIRED
 
 مصفوفة Runtime:
 
@@ -149,9 +155,10 @@ CI غير متاح = CI_NOT_CONFIGURED وليس PASS
 ```
 
 قواعد:
-- `analysis_only`: يمكن إخراج `ANALYSIS_PASS` مع `CI_NOT_CONFIGURED` إذا لم تكن CI مانعة للتحليل.
-- `implementation_or_closure`: يمنع `IMPLEMENTATION_PASS` مع CI غير مثبتة إلا ببديل مكافئ موثق.
-- `merge_review`: يمنع `MERGE_READY` دون CI أو بديل موثق.
+
+* `analysis_only`: يمكن إخراج `ANALYSIS_PASS` مع `CI_NOT_CONFIGURED` إذا لم تكن CI مانعة للتحليل.
+* `implementation_or_closure`: يمنع `IMPLEMENTATION_PASS` مع CI غير مثبتة إلا ببديل مكافئ موثق.
+* `merge_review`: يمنع `MERGE_READY` دون CI أو بديل موثق.
 
 ```yaml
 ci_status:
@@ -169,14 +176,16 @@ ci_status:
 ## 22) PR / Merge Review
 
 عند مراجعة PR أو commit range، افحص:
-- changed files, commit intent, scope containment, base/head diff.
-- CI status, guards/tests/build evidence.
-- ownership boundaries, DSH/WLT financial boundary.
-- surface/shared split, runtime impact.
-- API/database impact, dead code or duplication, unexplained files.
+
+* changed files, commit intent, scope containment, base/head diff.
+* CI status, guards/tests/build evidence.
+* ownership boundaries, DSH/WLT financial boundary.
+* surface/shared split, runtime impact.
+* API/database impact, dead code or duplication, unexplained files.
 
 نتائج الدمج المسموحة:
-- `MERGE_READY` | `DO_NOT_MERGE` | `BLOCKED_NEEDS_EVIDENCE`
+
+* `MERGE_READY` | `DO_NOT_MERGE` | `BLOCKED_NEEDS_EVIDENCE`
 
 مصفوفة الدمج:
 

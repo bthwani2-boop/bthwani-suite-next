@@ -26,7 +26,7 @@
 ## 1) Manifest
 
 | الملف | الدور |
-|---|---|
+| --- | --- |
 | `00_INDEX_AND_COVERAGE.md` | فهرس الحزمة، مصادرها، مصفوفة تغطية v1→v3، مصفوفة v2→v3، self-containment، و legacy harvest. |
 | `01_COMMAND_INPUTS_RESULTS.md` | الغرض، قالب الإدخال، الأمر المباشر، النتائج المسموحة. |
 | `02_REMOTE_REF_SOURCE_GIT_GATES.md` | REF Gate، Human Gate، 100% Evidence، المصدر، machine-readable، القرار، المحلي. |
@@ -128,7 +128,7 @@ coverage_result:
 ## 3) مصفوفة تغطية v2 → ملفات الحزمة
 
 | قسم v2 | الملف |
-|---|---|
+| --- | --- |
 | `0) الغرض الحاكم` | `01_COMMAND_INPUTS_RESULTS.md` |
 | `1) قالب الاستخدام الإلزامي` | `01_COMMAND_INPUTS_RESULTS.md` |
 | `2) أمر التنفيذ المباشر` | `01_COMMAND_INPUTS_RESULTS.md` |
@@ -171,7 +171,7 @@ coverage_result:
 ## 4) مصفوفة تغطية v1 الأصلي → ملفات الحزمة
 
 | مستوى | قسم v1 الأصلي | التغطية في الحزمة |
-|---:|---|---|
+| ---: | --- | --- |
 | H2 | `0) طريقة الاستخدام` | `01_COMMAND_INPUTS_RESULTS.md` |
 | H2 | `0.1) بوابة التحكم البشري بالتغييرات` | `02_REMOTE_REF_SOURCE_GIT_GATES.md` |
 | H2 | `0.2) تعريف 100% داخل هذا البروتوكول` | `02_REMOTE_REF_SOURCE_GIT_GATES.md` |
@@ -236,7 +236,7 @@ coverage_result:
 ## 5) فحص المصطلحات والبنود الحاكمة
 
 | بند/مصطلح حاكم | حالة التغطية داخل ملفات 01-11 |
-|---|---|
+| --- | --- |
 | `Human-Gated Git/GitHub` | `PASS` |
 | `PROTOCOL_VIOLATION` | `PASS` |
 | `100%` | `PASS` |
