@@ -1,0 +1,3600 @@
+{
+  "head_sha": "2ba18161c27654d970b16c51667756a0aa6a2716",
+  "status": "DISCOVERY_ONLY",
+  "source_files": {
+    "service_blueprint": {
+      "path": "services/dsh/SERVICE_BLUEPRINT.md",
+      "exists": true
+    },
+    "service_manifest": {
+      "path": "services/dsh/service.manifest.ts",
+      "exists": true
+    },
+    "runtime_map": {
+      "path": "services/dsh/runtime-map.ts",
+      "exists": true
+    },
+    "capability_map": {
+      "path": "services/dsh/capability-map.ts",
+      "exists": true
+    },
+    "dsh_operational_registry": {
+      "path": "services/dsh/frontend/shared/operations/dsh-operational-registry.ts",
+      "exists": true
+    },
+    "cross_surface_closure_map": {
+      "path": "services/dsh/frontend/shared/runtime/dsh-cross-surface-closure-map.ts",
+      "exists": true
+    },
+    "dsh_openapi": {
+      "path": "services/dsh/contracts/dsh.openapi.yaml",
+      "exists": true
+    },
+    "wlt_openapi": {
+      "path": "services/wlt/contracts/wlt.openapi.yaml",
+      "exists": true
+    },
+    "identity_openapi": {
+      "path": "core/identity/contracts/auth.openapi.yaml",
+      "exists": true
+    }
+  },
+  "openapi_files": [
+    "contracts/master.openapi.yaml",
+    "core/identity/contracts/auth.openapi.yaml",
+    "core/providers/contracts/providers.openapi.yaml",
+    "services/dsh/contracts/dsh.openapi.yaml",
+    "services/wlt/contracts/wlt.openapi.yaml"
+  ],
+  "generated_clients": [
+    "core/identity/clients/generated/identity-api.d.ts",
+    "core/identity/clients/generated/identity-api.ts",
+    "services/dsh/clients/generated/dsh-api.ts",
+    "services/wlt/clients/generated/wlt-api.ts"
+  ],
+  "backend_routes": [
+    "services/dsh/backend/internal/homediscovery/handler.go",
+    "services/dsh/backend/internal/http/administration.go",
+    "services/dsh/backend/internal/http/analytics.go",
+    "services/dsh/backend/internal/http/cart.go",
+    "services/dsh/backend/internal/http/catalog.go",
+    "services/dsh/backend/internal/http/catalog_approval.go",
+    "services/dsh/backend/internal/http/checkout.go",
+    "services/dsh/backend/internal/http/dispatch.go",
+    "services/dsh/backend/internal/http/fieldreadiness.go",
+    "services/dsh/backend/internal/http/financeproxy.go",
+    "services/dsh/backend/internal/http/marketing.go",
+    "services/dsh/backend/internal/http/media_upload.go",
+    "services/dsh/backend/internal/http/media_upload_test.go",
+    "services/dsh/backend/internal/http/notifications.go",
+    "services/dsh/backend/internal/http/orders.go",
+    "services/dsh/backend/internal/http/partner_self.go",
+    "services/dsh/backend/internal/http/platformpolicies.go",
+    "services/dsh/backend/internal/http/protected_store.go",
+    "services/dsh/backend/internal/http/server.go",
+    "services/dsh/backend/internal/http/server_test.go",
+    "services/dsh/backend/internal/http/support.go",
+    "services/dsh/backend/internal/http/wlt_events.go",
+    "services/dsh/backend/internal/http/wlt_events_test.go",
+    "services/dsh/backend/internal/partner/handler.go",
+    "services/dsh/backend/internal/partner/handler_test.go",
+    "services/dsh/backend/internal/store/handler.go",
+    "services/wlt/backend/internal/http/server.go",
+    "services/wlt/backend/internal/http/server_test.go",
+    "services/wlt/backend/internal/reference/handler.go"
+  ],
+  "frontend_surfaces": [
+    "services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx",
+    "services/dsh/frontend/app-captain/account/DshCaptainEntryScreen.tsx",
+    "services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx",
+    "services/dsh/frontend/app-captain/account/DshCaptainOperationsScreen.tsx",
+    "services/dsh/frontend/app-captain/account/DshCaptainProfileScreen.tsx",
+    "services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
+    "services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx",
+    "services/dsh/frontend/app-captain/DshOperationScreen.tsx",
+    "services/dsh/frontend/app-captain/orders/DshCaptainHomeOrderPanel.tsx",
+    "services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx",
+    "services/dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx",
+    "services/dsh/frontend/app-captain/orders/DshCaptainPickupDropoffScreen.tsx",
+    "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderActionSection.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderBellSection.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderChatSection.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderDetailSection.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderInboxSection.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderProofSection.tsx",
+    "services/dsh/frontend/app-captain/orders/SimpleSupportScreen.tsx",
+    "services/dsh/frontend/app-captain/store/CaptainStorePickupContextScreen.tsx",
+    "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx",
+    "services/dsh/frontend/app-client/account/AppearanceHubScreen.tsx",
+    "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx",
+    "services/dsh/frontend/app-client/account/IdentityHubScreen.tsx",
+    "services/dsh/frontend/app-client/account/MySpaceScreen.tsx",
+    "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
+    "services/dsh/frontend/app-client/cart/CartScreen.tsx",
+    "services/dsh/frontend/app-client/cart/PaymentDecisionSection.tsx",
+    "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
+    "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+    "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomeCategorySection.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryRoute.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomeFilterRailSection.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomeHeroBannerSection.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
+    "services/dsh/frontend/app-client/home-discovery/HomeStoreFeedSection.tsx",
+    "services/dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx",
+    "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+    "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
+    "services/dsh/frontend/app-client/store/StoreDetailHeroSection.tsx",
+    "services/dsh/frontend/app-client/store/StoreDetailRoute.tsx",
+    "services/dsh/frontend/app-client/store/StoreDetailScreen.tsx",
+    "services/dsh/frontend/app-client/store/StoreDiscoveryRoute.tsx",
+    "services/dsh/frontend/app-client/store/StoreDiscoveryScreen.tsx",
+    "services/dsh/frontend/app-client/support/SupportTicketScreen.tsx",
+    "services/dsh/frontend/app-client/support/TicketDetailScreen.tsx",
+    "services/dsh/frontend/app-field/account/DshFieldProfileHomeScreen.tsx",
+    "services/dsh/frontend/app-field/account/DshFieldProfileScreen.tsx",
+    "services/dsh/frontend/app-field/DshFieldRouteRenderer.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+    "services/dsh/frontend/app-field/onboarding/FieldPartnerOnboardingScreen.tsx",
+    "services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx",
+    "services/dsh/frontend/app-field/stores/FieldStoreVerificationScreen.tsx",
+    "services/dsh/frontend/app-partner/account/OperationScreens.tsx",
+    "services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx",
+    "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+    "services/dsh/frontend/app-partner/account/PartnerOnboardingActionPanel.tsx",
+    "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+    "services/dsh/frontend/app-partner/account/PartnerVideoSubmissionPanel.tsx",
+    "services/dsh/frontend/app-partner/account/PromotionsScreen.tsx",
+    "services/dsh/frontend/app-partner/Catalog/CategoryManagementScreen.tsx",
+    "services/dsh/frontend/app-partner/Catalog/InventoryCatalogScreen.tsx",
+    "services/dsh/frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx",
+    "services/dsh/frontend/app-partner/Catalog/PartnerCatalogReadinessPanel.tsx",
+    "services/dsh/frontend/app-partner/Catalog/PartnerInventoryActionPanel.tsx",
+    "services/dsh/frontend/app-partner/Catalog/ProductEditScreen.tsx",
+    "services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
+    "services/dsh/frontend/app-partner/Catalog/ProductOverridesScreen.tsx",
+    "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
+    "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+    "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+    "services/dsh/frontend/app-partner/orders/PartnerOrderActionPanel.tsx",
+    "services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx",
+    "services/dsh/frontend/app-partner/orders/PartnerOrderConversationPanel.tsx",
+    "services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx",
+    "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
+    "services/dsh/frontend/app-partner/store/PartnerStoreScreen.tsx",
+    "services/dsh/frontend/app-partner/store/StoreProfileScreen.tsx",
+    "services/dsh/frontend/app-partner/teammanagement/PartnerTeamManagementScreen.tsx",
+    "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/analytics/AnalyticsDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
+    "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/dashboard/ControlPanelDshClosureDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx",
+    "services/dsh/frontend/control-panel/marketing/components/MarketingHomeDiscoveryPanel.tsx",
+    "services/dsh/frontend/control-panel/marketing/components/VisibilityGatesSection.tsx",
+    "services/dsh/frontend/control-panel/marketing/home-discovery/HomeDiscoveryAdminScreen.tsx",
+    "services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/AssistedOrderDeskScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/AwnakScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/CaptainOperationsScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/CartActivityScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/CommandCenterScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerDetailPanel.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/stores/StoreAdminTable.tsx",
+    "services/dsh/frontend/control-panel/partners/stores/StoreDetailAdminPanel.tsx",
+    "services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx",
+    "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
+    "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
+    "services/dsh/frontend/control-panel/shared/ControlPanelDshActionQueue.tsx",
+    "services/dsh/frontend/control-panel/shared/ControlPanelDshDecisionBoard.tsx",
+    "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
+    "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
+    "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
+    "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
+    "services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx"
+  ],
+  "package_scripts_source": "package.json",
+  "smart_segmentation_policy": {
+    "unit": "business_outcome_fullstack_multi_surface",
+    "split_when": [
+      "different business outcome",
+      "different state machine",
+      "different owner boundary",
+      "different WLT financial truth boundary",
+      "different runtime or CI proof path"
+    ],
+    "merge_when": [
+      "same user/system outcome",
+      "same state chain",
+      "same backend/API/database truth",
+      "same affected surface set"
+    ],
+    "single_surface_allowed": "only_with_verified_exclusion"
+  },
+  "proposed_journey_groups": [
+    {
+      "journey_group_id": "journey:identity:identity",
+      "source": "OpenAPI operation grouping",
+      "status": "PROPOSED_UNFILLED",
+      "segmentation_rule": "business_outcome_fullstack_multi_surface",
+      "required_action": "expand_group_to_all_affected_surfaces_tabs_backend_api_database_runtime_ci_and_cleanup_decisions",
+      "service": "identity",
+      "tag_or_root": "identity",
+      "operations": [
+        {
+          "operation_id": "getIdentityHealth",
+          "method": "GET",
+          "path": "/identity/health",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        },
+        {
+          "operation_id": "getIdentityReadiness",
+          "method": "GET",
+          "path": "/identity/readiness",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        }
+      ],
+      "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
+    },
+    {
+      "journey_group_id": "journey:identity:auth",
+      "source": "OpenAPI operation grouping",
+      "status": "PROPOSED_UNFILLED",
+      "segmentation_rule": "business_outcome_fullstack_multi_surface",
+      "required_action": "expand_group_to_all_affected_surfaces_tabs_backend_api_database_runtime_ci_and_cleanup_decisions",
+      "service": "identity",
+      "tag_or_root": "auth",
+      "operations": [
+        {
+          "operation_id": "login",
+          "method": "POST",
+          "path": "/auth/login",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        },
+        {
+          "operation_id": "logout",
+          "method": "POST",
+          "path": "/auth/logout",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        },
+        {
+          "operation_id": "refreshSession",
+          "method": "POST",
+          "path": "/auth/refresh",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        },
+        {
+          "operation_id": "getAuthSession",
+          "method": "GET",
+          "path": "/auth/session",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        },
+        {
+          "operation_id": "introspectToken",
+          "method": "POST",
+          "path": "/auth/introspect",
+          "source_path": "core/identity/contracts/auth.openapi.yaml"
+        }
+      ],
+      "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
+    },
+    {
+      "journey_group_id": "journey:providers:providers",
+      "source": "OpenAPI operation grouping",
+      "status": "PROPOSED_UNFILLED",
+      "segmentation_rule": "business_outcome_fullstack_multi_surface",
+      "required_action": "expand_group_to_all_affected_surfaces_tabs_backend_api_database_runtime_ci_and_cleanup_decisions",
+      "service": "providers",
+      "tag_or_root": "providers",
+      "operations": [
+        {
+          "operation_id": "getExternalProviderHealth",
+          "method": "GET",
+          "path": "/providers/health",
+          "source_path": "core/providers/contracts/providers.openapi.yaml"
+        }
+      ],
+      "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
+    },
+    {
+      "journey_group_id": "journey:dsh:dsh",
+      "source": "OpenAPI operation grouping",
+      "status": "PROPOSED_UNFILLED",
+      "segmentation_rule": "business_outcome_fullstack_multi_surface",
+      "required_action": "expand_group_to_all_affected_surfaces_tabs_backend_api_database_runtime_ci_and_cleanup_decisions",
+      "service": "dsh",
+      "tag_or_root": "dsh",
+      "operations": [
+        {
+          "operation_id": "getDshHealth",
+          "method": "GET",
+          "path": "/dsh/health",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshReadiness",
+          "method": "GET",
+          "path": "/dsh/readiness",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshStores",
+          "method": "GET",
+          "path": "/dsh/stores",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshHomeDiscovery",
+          "method": "GET",
+          "path": "/dsh/home-discovery",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listOperatorHomeDiscoveryContent",
+          "method": "GET",
+          "path": "/dsh/operator/home-discovery/{kind}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createOperatorHomeDiscoveryContent",
+          "method": "POST",
+          "path": "/dsh/operator/home-discovery/{kind}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateOperatorHomeDiscoveryContent",
+          "method": "PATCH",
+          "path": "/dsh/operator/home-discovery/{kind}/{itemId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "deleteOperatorHomeDiscoveryContent",
+          "method": "DELETE",
+          "path": "/dsh/operator/home-discovery/{kind}/{itemId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshStore",
+          "method": "GET",
+          "path": "/dsh/stores/{storeId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshStoreContext",
+          "method": "GET",
+          "path": "/dsh/store-context",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listOperatorDshStores",
+          "method": "GET",
+          "path": "/dsh/operator/stores",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getOperatorDshStore",
+          "method": "GET",
+          "path": "/dsh/operator/stores/{storeId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updatePartnerStoreSettings",
+          "method": "PATCH",
+          "path": "/dsh/partner/stores/{storeId}/settings",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "submitFieldStoreVerification",
+          "method": "POST",
+          "path": "/dsh/field/stores/{storeId}/verifications",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "reportCaptainPickupReadiness",
+          "method": "POST",
+          "path": "/dsh/captain/stores/{storeId}/pickup-readiness",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "governDshStore",
+          "method": "POST",
+          "path": "/dsh/operator/stores/{storeId}/governance",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshStoreAudit",
+          "method": "GET",
+          "path": "/dsh/operator/stores/{storeId}/audit",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getPublishedDshCatalog",
+          "method": "GET",
+          "path": "/dsh/stores/{storeId}/catalog",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getPartnerDshCatalog",
+          "method": "GET",
+          "path": "/dsh/partner/catalog",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createPartnerCatalogCategory",
+          "method": "POST",
+          "path": "/dsh/partner/catalog/categories",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updatePartnerCatalogCategory",
+          "method": "PATCH",
+          "path": "/dsh/partner/catalog/categories/{categoryId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "deletePartnerCatalogCategory",
+          "method": "DELETE",
+          "path": "/dsh/partner/catalog/categories/{categoryId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createPartnerCatalogProduct",
+          "method": "POST",
+          "path": "/dsh/partner/catalog/products",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updatePartnerCatalogProduct",
+          "method": "PATCH",
+          "path": "/dsh/partner/catalog/products/{productId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "deletePartnerCatalogProduct",
+          "method": "DELETE",
+          "path": "/dsh/partner/catalog/products/{productId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createPartnerCatalogMediaUploadIntent",
+          "method": "POST",
+          "path": "/dsh/partner/catalog/media/upload-intents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "completePartnerCatalogMedia",
+          "method": "PATCH",
+          "path": "/dsh/partner/catalog/media/{mediaId}/complete",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "deletePartnerCatalogMedia",
+          "method": "DELETE",
+          "path": "/dsh/partner/catalog/media/{mediaId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "submitPartnerCatalog",
+          "method": "POST",
+          "path": "/dsh/partner/catalog/submit",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listOperatorCatalogSubmissions",
+          "method": "GET",
+          "path": "/dsh/operator/catalog/submissions",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "decideOperatorCatalogSubmission",
+          "method": "POST",
+          "path": "/dsh/operator/catalog/{storeId}/decision",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listOperatorCatalogAudit",
+          "method": "GET",
+          "path": "/dsh/operator/catalog/{storeId}/audit",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshClientCart",
+          "method": "GET",
+          "path": "/dsh/client/cart",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "clearDshClientCart",
+          "method": "DELETE",
+          "path": "/dsh/client/cart",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshCartItem",
+          "method": "POST",
+          "path": "/dsh/client/cart/items",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "removeDshCartItem",
+          "method": "DELETE",
+          "path": "/dsh/client/cart/items/{itemId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "checkDshCartServiceability",
+          "method": "POST",
+          "path": "/dsh/client/cart/serviceability",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listOperatorCarts",
+          "method": "GET",
+          "path": "/dsh/operator/carts",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshCheckoutIntent",
+          "method": "POST",
+          "path": "/dsh/client/checkout-intents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshCheckoutIntent",
+          "method": "GET",
+          "path": "/dsh/client/checkout-intents/{intentId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "cancelDshCheckoutIntent",
+          "method": "POST",
+          "path": "/dsh/client/checkout-intents/{intentId}/cancel",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listOperatorCheckoutIntents",
+          "method": "GET",
+          "path": "/dsh/operator/checkout-intents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshOrder",
+          "method": "POST",
+          "path": "/dsh/client/orders",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshClientOrders",
+          "method": "GET",
+          "path": "/dsh/client/orders",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshClientOrder",
+          "method": "GET",
+          "path": "/dsh/client/orders/{orderId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerOrders",
+          "method": "GET",
+          "path": "/dsh/partner/orders",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "acceptDshOrder",
+          "method": "POST",
+          "path": "/dsh/partner/orders/{orderId}/accept",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "rejectDshOrder",
+          "method": "POST",
+          "path": "/dsh/partner/orders/{orderId}/reject",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "markDshOrderPreparing",
+          "method": "POST",
+          "path": "/dsh/partner/orders/{orderId}/preparing",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "markDshOrderReadyForPickup",
+          "method": "POST",
+          "path": "/dsh/partner/orders/{orderId}/ready",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshOperatorOrders",
+          "method": "GET",
+          "path": "/dsh/operator/orders",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "cancelDshOperatorOrder",
+          "method": "POST",
+          "path": "/dsh/operator/orders/{orderId}/cancel",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshDispatchAssignments",
+          "method": "GET",
+          "path": "/dsh/operator/dispatch/assignments",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshAssignment",
+          "method": "POST",
+          "path": "/dsh/operator/dispatch/assignments",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshCaptainAssignments",
+          "method": "GET",
+          "path": "/dsh/captain/dispatch/assignments",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "acceptDshAssignment",
+          "method": "POST",
+          "path": "/dsh/captain/dispatch/assignments/{assignmentId}/accept",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "declineDshAssignment",
+          "method": "POST",
+          "path": "/dsh/captain/dispatch/assignments/{assignmentId}/decline",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshDeliveryStatus",
+          "method": "POST",
+          "path": "/dsh/captain/dispatch/assignments/{assignmentId}/status",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "submitDshPoD",
+          "method": "POST",
+          "path": "/dsh/captain/dispatch/assignments/{assignmentId}/pod",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshClientOrderTracking",
+          "method": "GET",
+          "path": "/dsh/client/orders/{orderId}/tracking",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshControlPanelFinanceSettlements",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/settlements",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshControlPanelFinanceSettlementSummary",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/settlements/summary",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshControlPanelFinanceRefunds",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/refunds",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshControlPanelFinanceRefund",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/refunds/{refundId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshControlPanelFinanceLedgerEntries",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/ledger/entries",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshControlPanelFinanceCodRecords",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/cod-records",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshControlPanelFinanceCommissions",
+          "method": "GET",
+          "path": "/dsh/control-panel/finance/commissions",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshCaptainFinanceCodRecords",
+          "method": "GET",
+          "path": "/dsh/captain/finance/cod-records",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshCatalogApprovals",
+          "method": "GET",
+          "path": "/dsh/catalog-approvals",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshCatalogApproval",
+          "method": "POST",
+          "path": "/dsh/catalog-approvals",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshCatalogApproval",
+          "method": "GET",
+          "path": "/dsh/catalog-approvals/{recordId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "transitionDshCatalogApproval",
+          "method": "POST",
+          "path": "/dsh/catalog-approvals/{recordId}/transition",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerCatalogApprovals",
+          "method": "GET",
+          "path": "/dsh/partner/catalog-approvals",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshFieldVisit",
+          "method": "POST",
+          "path": "/dsh/field/stores/{storeId}/visits",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshFieldVisits",
+          "method": "GET",
+          "path": "/dsh/field/stores/{storeId}/visits",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "completeDshFieldVisit",
+          "method": "POST",
+          "path": "/dsh/field/visits/{visitId}/complete",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshReadinessCheck",
+          "method": "PUT",
+          "path": "/dsh/field/visits/{visitId}/checks",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshVisitChecks",
+          "method": "GET",
+          "path": "/dsh/field/visits/{visitId}/checks",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshReadinessEscalation",
+          "method": "POST",
+          "path": "/dsh/field/stores/{storeId}/escalations",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshOperatorEscalations",
+          "method": "GET",
+          "path": "/dsh/operator/field-readiness/escalations",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshOperatorEscalation",
+          "method": "PATCH",
+          "path": "/dsh/operator/field-readiness/escalations/{escalationId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPartnerOnboardingStatus",
+          "method": "GET",
+          "path": "/dsh/partner/stores/{storeId}/onboarding-status",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshSupportTicket",
+          "method": "POST",
+          "path": "/dsh/support/tickets",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshMyTickets",
+          "method": "GET",
+          "path": "/dsh/support/tickets",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshSupportTicket",
+          "method": "GET",
+          "path": "/dsh/support/tickets/{ticketId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "addDshTicketMessage",
+          "method": "POST",
+          "path": "/dsh/support/tickets/{ticketId}/messages",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshTicketMessages",
+          "method": "GET",
+          "path": "/dsh/support/tickets/{ticketId}/messages",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshOperatorTickets",
+          "method": "GET",
+          "path": "/dsh/operator/support/tickets",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshOperatorTicket",
+          "method": "PATCH",
+          "path": "/dsh/operator/support/tickets/{ticketId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshIncident",
+          "method": "POST",
+          "path": "/dsh/operator/incidents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshIncidents",
+          "method": "GET",
+          "path": "/dsh/operator/incidents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshIncident",
+          "method": "PATCH",
+          "path": "/dsh/operator/incidents/{incidentId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPlatformKpis",
+          "method": "GET",
+          "path": "/dsh/operator/analytics/platform",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshOrderAnalytics",
+          "method": "GET",
+          "path": "/dsh/operator/analytics/orders",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshDeliveryAnalytics",
+          "method": "GET",
+          "path": "/dsh/operator/analytics/delivery",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshSupportAnalytics",
+          "method": "GET",
+          "path": "/dsh/operator/analytics/support",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshStoreAnalytics",
+          "method": "GET",
+          "path": "/dsh/operator/analytics/stores",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPartnerPerformance",
+          "method": "GET",
+          "path": "/dsh/partner/analytics/performance",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "reportWltPaymentSessionEvent",
+          "method": "POST",
+          "path": "/dsh/internal/wlt/payment-session-events",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshNotifications",
+          "method": "GET",
+          "path": "/dsh/notifications",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "markDshNotificationRead",
+          "method": "POST",
+          "path": "/dsh/notifications/{notificationId}/read",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "markAllDshNotificationsRead",
+          "method": "POST",
+          "path": "/dsh/notifications/read-all",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshNotificationPreferences",
+          "method": "PUT",
+          "path": "/dsh/notifications/preferences",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPlatformNotificationConfig",
+          "method": "GET",
+          "path": "/dsh/operator/notifications/config",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshPlatformNotificationConfig",
+          "method": "PUT",
+          "path": "/dsh/operator/notifications/config",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshCampaigns",
+          "method": "GET",
+          "path": "/dsh/operator/marketing/campaigns",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshCampaign",
+          "method": "POST",
+          "path": "/dsh/operator/marketing/campaigns",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshCampaign",
+          "method": "GET",
+          "path": "/dsh/operator/marketing/campaigns/{campaignId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshCampaign",
+          "method": "PATCH",
+          "path": "/dsh/operator/marketing/campaigns/{campaignId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "archiveDshCampaign",
+          "method": "DELETE",
+          "path": "/dsh/operator/marketing/campaigns/{campaignId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshMarketingTickers",
+          "method": "GET",
+          "path": "/dsh/operator/marketing/tickers",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshMarketingTicker",
+          "method": "POST",
+          "path": "/dsh/operator/marketing/tickers",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshMarketingTicker",
+          "method": "PATCH",
+          "path": "/dsh/operator/marketing/tickers/{tickerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "deleteDshMarketingTicker",
+          "method": "DELETE",
+          "path": "/dsh/operator/marketing/tickers/{tickerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerOffers",
+          "method": "GET",
+          "path": "/dsh/operator/marketing/partner-offers",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshPartnerOffer",
+          "method": "PATCH",
+          "path": "/dsh/operator/marketing/partner-offers/{offerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "archiveDshPartnerOffer",
+          "method": "DELETE",
+          "path": "/dsh/operator/marketing/partner-offers/{offerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerSelfOffers",
+          "method": "GET",
+          "path": "/dsh/partner/marketing/offers",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "submitDshPartnerSelfOffer",
+          "method": "POST",
+          "path": "/dsh/partner/marketing/offers",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshZones",
+          "method": "GET",
+          "path": "/dsh/operator/platform/zones",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshZone",
+          "method": "POST",
+          "path": "/dsh/operator/platform/zones",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateDshZone",
+          "method": "PATCH",
+          "path": "/dsh/operator/platform/zones/{zoneId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshSlaRules",
+          "method": "GET",
+          "path": "/dsh/operator/platform/sla-rules",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshSlaRules",
+          "method": "PUT",
+          "path": "/dsh/operator/platform/sla-rules",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshCapacityConfig",
+          "method": "GET",
+          "path": "/dsh/operator/platform/capacity",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshCapacityConfig",
+          "method": "PUT",
+          "path": "/dsh/operator/platform/capacity",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshZoneServiceability",
+          "method": "GET",
+          "path": "/dsh/operator/platform/serviceability/{zoneId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshAdminRoles",
+          "method": "GET",
+          "path": "/dsh/operator/admin/roles",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshAdminRole",
+          "method": "POST",
+          "path": "/dsh/operator/admin/roles",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshAdminStaff",
+          "method": "GET",
+          "path": "/dsh/operator/admin/staff",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "assignDshStaffRole",
+          "method": "POST",
+          "path": "/dsh/operator/admin/staff/{staffId}/roles",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartners",
+          "method": "GET",
+          "path": "/dsh/operator/partners",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createDshPartner",
+          "method": "POST",
+          "path": "/dsh/operator/partners",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPartner",
+          "method": "GET",
+          "path": "/dsh/operator/partners/{partnerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "transitionDshPartner",
+          "method": "POST",
+          "path": "/dsh/operator/partners/{partnerId}/transition",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPartnerReadiness",
+          "method": "GET",
+          "path": "/dsh/operator/partners/{partnerId}/readiness",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerDocuments",
+          "method": "GET",
+          "path": "/dsh/operator/partners/{partnerId}/documents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "addDshPartnerDocument",
+          "method": "POST",
+          "path": "/dsh/operator/partners/{partnerId}/documents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "reviewDshPartnerDocument",
+          "method": "PATCH",
+          "path": "/dsh/operator/partners/{partnerId}/documents/{docId}/review",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerStores",
+          "method": "GET",
+          "path": "/dsh/operator/partners/{partnerId}/stores",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "linkDshPartnerStore",
+          "method": "POST",
+          "path": "/dsh/operator/partners/{partnerId}/stores",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerAuditEvents",
+          "method": "GET",
+          "path": "/dsh/operator/partners/{partnerId}/audit",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerFieldVisits",
+          "method": "GET",
+          "path": "/dsh/operator/partners/{partnerId}/field-visits",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPartnerActivationStatus",
+          "method": "GET",
+          "path": "/dsh/partner/activation/status",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshPartnerSelfReadiness",
+          "method": "GET",
+          "path": "/dsh/partner/activation/readiness",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listFieldPartnerDrafts",
+          "method": "GET",
+          "path": "/dsh/field/partners",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createFieldPartnerDraft",
+          "method": "POST",
+          "path": "/dsh/field/partners/drafts",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getFieldPartnerDraft",
+          "method": "GET",
+          "path": "/dsh/field/partners/{partnerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateFieldPartnerDraft",
+          "method": "PATCH",
+          "path": "/dsh/field/partners/{partnerId}",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getFieldPartnerReadiness",
+          "method": "GET",
+          "path": "/dsh/field/partners/{partnerId}/readiness",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getFieldPartnerStore",
+          "method": "GET",
+          "path": "/dsh/field/partners/{partnerId}/store",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "updateFieldPartnerStore",
+          "method": "PATCH",
+          "path": "/dsh/field/partners/{partnerId}/store",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listFieldPartnerDocuments",
+          "method": "GET",
+          "path": "/dsh/field/partners/{partnerId}/documents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "uploadFieldPartnerDocument",
+          "method": "POST",
+          "path": "/dsh/field/partners/{partnerId}/documents",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "uploadFieldMedia",
+          "method": "POST",
+          "path": "/dsh/field/media/uploads",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getMedia",
+          "method": "GET",
+          "path": "/dsh/media",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "createFieldPartnerVisit",
+          "method": "POST",
+          "path": "/dsh/field/partners/{partnerId}/visits",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listFieldPartnerFieldVisits",
+          "method": "GET",
+          "path": "/dsh/field/partners/{partnerId}/field-visits",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "submitFieldPartnerDraft",
+          "method": "POST",
+          "path": "/dsh/field/partners/{partnerId}/submit",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshPartnerActivations",
+          "method": "GET",
+          "path": "/dsh/operator/admin/partners",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "activateDshPartner",
+          "method": "POST",
+          "path": "/dsh/operator/admin/partners/{partnerId}/activate",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "blockDshPartner",
+          "method": "POST",
+          "path": "/dsh/operator/admin/partners/{partnerId}/block",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshCaptainCredentials",
+          "method": "GET",
+          "path": "/dsh/operator/admin/captains",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshCaptainCredential",
+          "method": "POST",
+          "path": "/dsh/operator/admin/captains/{captainId}/credential",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "listDshAdminAudit",
+          "method": "GET",
+          "path": "/dsh/operator/admin/audit",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        }
+      ],
+      "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
+    },
+    {
+      "journey_group_id": "journey:wlt:wlt",
+      "source": "OpenAPI operation grouping",
+      "status": "PROPOSED_UNFILLED",
+      "segmentation_rule": "business_outcome_fullstack_multi_surface",
+      "required_action": "expand_group_to_all_affected_surfaces_tabs_backend_api_database_runtime_ci_and_cleanup_decisions",
+      "service": "wlt",
+      "tag_or_root": "wlt",
+      "operations": [
+        {
+          "operation_id": "getWltHealth",
+          "method": "GET",
+          "path": "/wlt/health",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltReadiness",
+          "method": "GET",
+          "path": "/wlt/readiness",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltPaymentStatusRef",
+          "method": "GET",
+          "path": "/wlt/references/payment-status",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltSettlementStatusRef",
+          "method": "GET",
+          "path": "/wlt/references/settlement-status",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltRefundStatusRef",
+          "method": "GET",
+          "path": "/wlt/references/refund-status",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltWalletStatusRef",
+          "method": "GET",
+          "path": "/wlt/references/wallet-status",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "createWltPaymentSessionReference",
+          "method": "POST",
+          "path": "/wlt/payment-sessions",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltPaymentSessionReference",
+          "method": "GET",
+          "path": "/wlt/payment-sessions/{paymentSessionId}",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "authorizeWltPaymentSession",
+          "method": "POST",
+          "path": "/wlt/payment-sessions/{paymentSessionId}/authorize",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "captureWltPaymentSession",
+          "method": "POST",
+          "path": "/wlt/payment-sessions/{paymentSessionId}/capture",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "expireWltPaymentSession",
+          "method": "POST",
+          "path": "/wlt/payment-sessions/{paymentSessionId}/expire",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "markWltCodCollected",
+          "method": "POST",
+          "path": "/wlt/payment-sessions/{paymentSessionId}/cod-collect",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "createWltRefund",
+          "method": "POST",
+          "path": "/wlt/refunds",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "listWltRefunds",
+          "method": "GET",
+          "path": "/wlt/refunds",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltRefund",
+          "method": "GET",
+          "path": "/wlt/refunds/{refundId}",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "approveWltRefund",
+          "method": "POST",
+          "path": "/wlt/refunds/{refundId}/approve",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "completeWltRefund",
+          "method": "POST",
+          "path": "/wlt/refunds/{refundId}/complete",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "rejectWltRefund",
+          "method": "POST",
+          "path": "/wlt/refunds/{refundId}/reject",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "createWltSettlement",
+          "method": "POST",
+          "path": "/wlt/settlements",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "listWltSettlements",
+          "method": "GET",
+          "path": "/wlt/settlements",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltSettlementSummary",
+          "method": "GET",
+          "path": "/wlt/settlements/summary",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltSettlement",
+          "method": "GET",
+          "path": "/wlt/settlements/{settlementId}",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "postWltSettlement",
+          "method": "POST",
+          "path": "/wlt/settlements/{settlementId}/post",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "createWltCodRecord",
+          "method": "POST",
+          "path": "/wlt/cod-records",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "listWltCodRecords",
+          "method": "GET",
+          "path": "/wlt/cod-records",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltCodRecord",
+          "method": "GET",
+          "path": "/wlt/cod-records/{codRecordId}",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "collectWltCod",
+          "method": "POST",
+          "path": "/wlt/cod-records/{codRecordId}/collect",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "remitWltCod",
+          "method": "POST",
+          "path": "/wlt/cod-records/{codRecordId}/remit",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "createWltCommission",
+          "method": "POST",
+          "path": "/wlt/commissions",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "listWltCommissions",
+          "method": "GET",
+          "path": "/wlt/commissions",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "appendWltLedgerEntry",
+          "method": "POST",
+          "path": "/wlt/ledger/entries",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "listWltLedgerEntries",
+          "method": "GET",
+          "path": "/wlt/ledger/entries",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltLedgerEntry",
+          "method": "GET",
+          "path": "/wlt/ledger/entries/{entryId}",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        }
+      ],
+      "required_surface_policy": "no_single_surface_journey_without_verified_exclusion"
+    }
+  ],
+  "proposed_journeys": [
+    {
+      "journey_id": "api:getIdentityHealth",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getIdentityHealth",
+      "method": "GET",
+      "path": "/identity/health",
+      "journey_group_key": "identity:identity"
+    },
+    {
+      "journey_id": "api:getIdentityReadiness",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getIdentityReadiness",
+      "method": "GET",
+      "path": "/identity/readiness",
+      "journey_group_key": "identity:identity"
+    },
+    {
+      "journey_id": "api:login",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "login",
+      "method": "POST",
+      "path": "/auth/login",
+      "journey_group_key": "identity:auth"
+    },
+    {
+      "journey_id": "api:logout",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "logout",
+      "method": "POST",
+      "path": "/auth/logout",
+      "journey_group_key": "identity:auth"
+    },
+    {
+      "journey_id": "api:refreshSession",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "refreshSession",
+      "method": "POST",
+      "path": "/auth/refresh",
+      "journey_group_key": "identity:auth"
+    },
+    {
+      "journey_id": "api:getAuthSession",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getAuthSession",
+      "method": "GET",
+      "path": "/auth/session",
+      "journey_group_key": "identity:auth"
+    },
+    {
+      "journey_id": "api:introspectToken",
+      "source_path": "core/identity/contracts/auth.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "introspectToken",
+      "method": "POST",
+      "path": "/auth/introspect",
+      "journey_group_key": "identity:auth"
+    },
+    {
+      "journey_id": "api:getExternalProviderHealth",
+      "source_path": "core/providers/contracts/providers.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getExternalProviderHealth",
+      "method": "GET",
+      "path": "/providers/health",
+      "journey_group_key": "providers:providers"
+    },
+    {
+      "journey_id": "api:getDshHealth",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshHealth",
+      "method": "GET",
+      "path": "/dsh/health",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshReadiness",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshReadiness",
+      "method": "GET",
+      "path": "/dsh/readiness",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshStores",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshStores",
+      "method": "GET",
+      "path": "/dsh/stores",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshHomeDiscovery",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshHomeDiscovery",
+      "method": "GET",
+      "path": "/dsh/home-discovery",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listOperatorHomeDiscoveryContent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listOperatorHomeDiscoveryContent",
+      "method": "GET",
+      "path": "/dsh/operator/home-discovery/{kind}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createOperatorHomeDiscoveryContent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createOperatorHomeDiscoveryContent",
+      "method": "POST",
+      "path": "/dsh/operator/home-discovery/{kind}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateOperatorHomeDiscoveryContent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateOperatorHomeDiscoveryContent",
+      "method": "PATCH",
+      "path": "/dsh/operator/home-discovery/{kind}/{itemId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:deleteOperatorHomeDiscoveryContent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "deleteOperatorHomeDiscoveryContent",
+      "method": "DELETE",
+      "path": "/dsh/operator/home-discovery/{kind}/{itemId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshStore",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshStore",
+      "method": "GET",
+      "path": "/dsh/stores/{storeId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshStoreContext",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshStoreContext",
+      "method": "GET",
+      "path": "/dsh/store-context",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listOperatorDshStores",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listOperatorDshStores",
+      "method": "GET",
+      "path": "/dsh/operator/stores",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getOperatorDshStore",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getOperatorDshStore",
+      "method": "GET",
+      "path": "/dsh/operator/stores/{storeId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updatePartnerStoreSettings",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updatePartnerStoreSettings",
+      "method": "PATCH",
+      "path": "/dsh/partner/stores/{storeId}/settings",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:submitFieldStoreVerification",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "submitFieldStoreVerification",
+      "method": "POST",
+      "path": "/dsh/field/stores/{storeId}/verifications",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:reportCaptainPickupReadiness",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "reportCaptainPickupReadiness",
+      "method": "POST",
+      "path": "/dsh/captain/stores/{storeId}/pickup-readiness",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:governDshStore",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "governDshStore",
+      "method": "POST",
+      "path": "/dsh/operator/stores/{storeId}/governance",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshStoreAudit",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshStoreAudit",
+      "method": "GET",
+      "path": "/dsh/operator/stores/{storeId}/audit",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getPublishedDshCatalog",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getPublishedDshCatalog",
+      "method": "GET",
+      "path": "/dsh/stores/{storeId}/catalog",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getPartnerDshCatalog",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getPartnerDshCatalog",
+      "method": "GET",
+      "path": "/dsh/partner/catalog",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createPartnerCatalogCategory",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createPartnerCatalogCategory",
+      "method": "POST",
+      "path": "/dsh/partner/catalog/categories",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updatePartnerCatalogCategory",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updatePartnerCatalogCategory",
+      "method": "PATCH",
+      "path": "/dsh/partner/catalog/categories/{categoryId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:deletePartnerCatalogCategory",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "deletePartnerCatalogCategory",
+      "method": "DELETE",
+      "path": "/dsh/partner/catalog/categories/{categoryId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createPartnerCatalogProduct",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createPartnerCatalogProduct",
+      "method": "POST",
+      "path": "/dsh/partner/catalog/products",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updatePartnerCatalogProduct",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updatePartnerCatalogProduct",
+      "method": "PATCH",
+      "path": "/dsh/partner/catalog/products/{productId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:deletePartnerCatalogProduct",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "deletePartnerCatalogProduct",
+      "method": "DELETE",
+      "path": "/dsh/partner/catalog/products/{productId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createPartnerCatalogMediaUploadIntent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createPartnerCatalogMediaUploadIntent",
+      "method": "POST",
+      "path": "/dsh/partner/catalog/media/upload-intents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:completePartnerCatalogMedia",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "completePartnerCatalogMedia",
+      "method": "PATCH",
+      "path": "/dsh/partner/catalog/media/{mediaId}/complete",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:deletePartnerCatalogMedia",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "deletePartnerCatalogMedia",
+      "method": "DELETE",
+      "path": "/dsh/partner/catalog/media/{mediaId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:submitPartnerCatalog",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "submitPartnerCatalog",
+      "method": "POST",
+      "path": "/dsh/partner/catalog/submit",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listOperatorCatalogSubmissions",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listOperatorCatalogSubmissions",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/submissions",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:decideOperatorCatalogSubmission",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "decideOperatorCatalogSubmission",
+      "method": "POST",
+      "path": "/dsh/operator/catalog/{storeId}/decision",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listOperatorCatalogAudit",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listOperatorCatalogAudit",
+      "method": "GET",
+      "path": "/dsh/operator/catalog/{storeId}/audit",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshClientCart",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshClientCart",
+      "method": "GET",
+      "path": "/dsh/client/cart",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:clearDshClientCart",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "clearDshClientCart",
+      "method": "DELETE",
+      "path": "/dsh/client/cart",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshCartItem",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshCartItem",
+      "method": "POST",
+      "path": "/dsh/client/cart/items",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:removeDshCartItem",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "removeDshCartItem",
+      "method": "DELETE",
+      "path": "/dsh/client/cart/items/{itemId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:checkDshCartServiceability",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "checkDshCartServiceability",
+      "method": "POST",
+      "path": "/dsh/client/cart/serviceability",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listOperatorCarts",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listOperatorCarts",
+      "method": "GET",
+      "path": "/dsh/operator/carts",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshCheckoutIntent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshCheckoutIntent",
+      "method": "POST",
+      "path": "/dsh/client/checkout-intents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshCheckoutIntent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshCheckoutIntent",
+      "method": "GET",
+      "path": "/dsh/client/checkout-intents/{intentId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:cancelDshCheckoutIntent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "cancelDshCheckoutIntent",
+      "method": "POST",
+      "path": "/dsh/client/checkout-intents/{intentId}/cancel",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listOperatorCheckoutIntents",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listOperatorCheckoutIntents",
+      "method": "GET",
+      "path": "/dsh/operator/checkout-intents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshOrder",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshOrder",
+      "method": "POST",
+      "path": "/dsh/client/orders",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshClientOrders",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshClientOrders",
+      "method": "GET",
+      "path": "/dsh/client/orders",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshClientOrder",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshClientOrder",
+      "method": "GET",
+      "path": "/dsh/client/orders/{orderId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerOrders",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerOrders",
+      "method": "GET",
+      "path": "/dsh/partner/orders",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:acceptDshOrder",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "acceptDshOrder",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/accept",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:rejectDshOrder",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "rejectDshOrder",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/reject",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:markDshOrderPreparing",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "markDshOrderPreparing",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/preparing",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:markDshOrderReadyForPickup",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "markDshOrderReadyForPickup",
+      "method": "POST",
+      "path": "/dsh/partner/orders/{orderId}/ready",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshOperatorOrders",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshOperatorOrders",
+      "method": "GET",
+      "path": "/dsh/operator/orders",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:cancelDshOperatorOrder",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "cancelDshOperatorOrder",
+      "method": "POST",
+      "path": "/dsh/operator/orders/{orderId}/cancel",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshDispatchAssignments",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshDispatchAssignments",
+      "method": "GET",
+      "path": "/dsh/operator/dispatch/assignments",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshAssignment",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshAssignment",
+      "method": "POST",
+      "path": "/dsh/operator/dispatch/assignments",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshCaptainAssignments",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshCaptainAssignments",
+      "method": "GET",
+      "path": "/dsh/captain/dispatch/assignments",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:acceptDshAssignment",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "acceptDshAssignment",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/accept",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:declineDshAssignment",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "declineDshAssignment",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/decline",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshDeliveryStatus",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshDeliveryStatus",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/status",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:submitDshPoD",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "submitDshPoD",
+      "method": "POST",
+      "path": "/dsh/captain/dispatch/assignments/{assignmentId}/pod",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshClientOrderTracking",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshClientOrderTracking",
+      "method": "GET",
+      "path": "/dsh/client/orders/{orderId}/tracking",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshControlPanelFinanceSettlements",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshControlPanelFinanceSettlements",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/settlements",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshControlPanelFinanceSettlementSummary",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshControlPanelFinanceSettlementSummary",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/settlements/summary",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshControlPanelFinanceRefunds",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshControlPanelFinanceRefunds",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/refunds",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshControlPanelFinanceRefund",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshControlPanelFinanceRefund",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/refunds/{refundId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshControlPanelFinanceLedgerEntries",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshControlPanelFinanceLedgerEntries",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/ledger/entries",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshControlPanelFinanceCodRecords",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshControlPanelFinanceCodRecords",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/cod-records",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshControlPanelFinanceCommissions",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshControlPanelFinanceCommissions",
+      "method": "GET",
+      "path": "/dsh/control-panel/finance/commissions",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshCaptainFinanceCodRecords",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshCaptainFinanceCodRecords",
+      "method": "GET",
+      "path": "/dsh/captain/finance/cod-records",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshCatalogApprovals",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshCatalogApprovals",
+      "method": "GET",
+      "path": "/dsh/catalog-approvals",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshCatalogApproval",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshCatalogApproval",
+      "method": "POST",
+      "path": "/dsh/catalog-approvals",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshCatalogApproval",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshCatalogApproval",
+      "method": "GET",
+      "path": "/dsh/catalog-approvals/{recordId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:transitionDshCatalogApproval",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "transitionDshCatalogApproval",
+      "method": "POST",
+      "path": "/dsh/catalog-approvals/{recordId}/transition",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerCatalogApprovals",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerCatalogApprovals",
+      "method": "GET",
+      "path": "/dsh/partner/catalog-approvals",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshFieldVisit",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshFieldVisit",
+      "method": "POST",
+      "path": "/dsh/field/stores/{storeId}/visits",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshFieldVisits",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshFieldVisits",
+      "method": "GET",
+      "path": "/dsh/field/stores/{storeId}/visits",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:completeDshFieldVisit",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "completeDshFieldVisit",
+      "method": "POST",
+      "path": "/dsh/field/visits/{visitId}/complete",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshReadinessCheck",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshReadinessCheck",
+      "method": "PUT",
+      "path": "/dsh/field/visits/{visitId}/checks",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshVisitChecks",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshVisitChecks",
+      "method": "GET",
+      "path": "/dsh/field/visits/{visitId}/checks",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshReadinessEscalation",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshReadinessEscalation",
+      "method": "POST",
+      "path": "/dsh/field/stores/{storeId}/escalations",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshOperatorEscalations",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshOperatorEscalations",
+      "method": "GET",
+      "path": "/dsh/operator/field-readiness/escalations",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshOperatorEscalation",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshOperatorEscalation",
+      "method": "PATCH",
+      "path": "/dsh/operator/field-readiness/escalations/{escalationId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPartnerOnboardingStatus",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPartnerOnboardingStatus",
+      "method": "GET",
+      "path": "/dsh/partner/stores/{storeId}/onboarding-status",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshSupportTicket",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshSupportTicket",
+      "method": "POST",
+      "path": "/dsh/support/tickets",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshMyTickets",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshMyTickets",
+      "method": "GET",
+      "path": "/dsh/support/tickets",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshSupportTicket",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshSupportTicket",
+      "method": "GET",
+      "path": "/dsh/support/tickets/{ticketId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:addDshTicketMessage",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "addDshTicketMessage",
+      "method": "POST",
+      "path": "/dsh/support/tickets/{ticketId}/messages",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshTicketMessages",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshTicketMessages",
+      "method": "GET",
+      "path": "/dsh/support/tickets/{ticketId}/messages",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshOperatorTickets",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshOperatorTickets",
+      "method": "GET",
+      "path": "/dsh/operator/support/tickets",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshOperatorTicket",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshOperatorTicket",
+      "method": "PATCH",
+      "path": "/dsh/operator/support/tickets/{ticketId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshIncident",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshIncident",
+      "method": "POST",
+      "path": "/dsh/operator/incidents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshIncidents",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshIncidents",
+      "method": "GET",
+      "path": "/dsh/operator/incidents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshIncident",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshIncident",
+      "method": "PATCH",
+      "path": "/dsh/operator/incidents/{incidentId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPlatformKpis",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPlatformKpis",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/platform",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshOrderAnalytics",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshOrderAnalytics",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/orders",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshDeliveryAnalytics",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshDeliveryAnalytics",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/delivery",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshSupportAnalytics",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshSupportAnalytics",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/support",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshStoreAnalytics",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshStoreAnalytics",
+      "method": "GET",
+      "path": "/dsh/operator/analytics/stores",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPartnerPerformance",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPartnerPerformance",
+      "method": "GET",
+      "path": "/dsh/partner/analytics/performance",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:reportWltPaymentSessionEvent",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "reportWltPaymentSessionEvent",
+      "method": "POST",
+      "path": "/dsh/internal/wlt/payment-session-events",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshNotifications",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshNotifications",
+      "method": "GET",
+      "path": "/dsh/notifications",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:markDshNotificationRead",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "markDshNotificationRead",
+      "method": "POST",
+      "path": "/dsh/notifications/{notificationId}/read",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:markAllDshNotificationsRead",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "markAllDshNotificationsRead",
+      "method": "POST",
+      "path": "/dsh/notifications/read-all",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshNotificationPreferences",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshNotificationPreferences",
+      "method": "PUT",
+      "path": "/dsh/notifications/preferences",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPlatformNotificationConfig",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPlatformNotificationConfig",
+      "method": "GET",
+      "path": "/dsh/operator/notifications/config",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshPlatformNotificationConfig",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshPlatformNotificationConfig",
+      "method": "PUT",
+      "path": "/dsh/operator/notifications/config",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshCampaigns",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshCampaigns",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/campaigns",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshCampaign",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshCampaign",
+      "method": "POST",
+      "path": "/dsh/operator/marketing/campaigns",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshCampaign",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshCampaign",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/campaigns/{campaignId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshCampaign",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshCampaign",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/campaigns/{campaignId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:archiveDshCampaign",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "archiveDshCampaign",
+      "method": "DELETE",
+      "path": "/dsh/operator/marketing/campaigns/{campaignId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshMarketingTickers",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshMarketingTickers",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/tickers",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshMarketingTicker",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshMarketingTicker",
+      "method": "POST",
+      "path": "/dsh/operator/marketing/tickers",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshMarketingTicker",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshMarketingTicker",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/tickers/{tickerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:deleteDshMarketingTicker",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "deleteDshMarketingTicker",
+      "method": "DELETE",
+      "path": "/dsh/operator/marketing/tickers/{tickerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerOffers",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerOffers",
+      "method": "GET",
+      "path": "/dsh/operator/marketing/partner-offers",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshPartnerOffer",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshPartnerOffer",
+      "method": "PATCH",
+      "path": "/dsh/operator/marketing/partner-offers/{offerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:archiveDshPartnerOffer",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "archiveDshPartnerOffer",
+      "method": "DELETE",
+      "path": "/dsh/operator/marketing/partner-offers/{offerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerSelfOffers",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerSelfOffers",
+      "method": "GET",
+      "path": "/dsh/partner/marketing/offers",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:submitDshPartnerSelfOffer",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "submitDshPartnerSelfOffer",
+      "method": "POST",
+      "path": "/dsh/partner/marketing/offers",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshZones",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshZones",
+      "method": "GET",
+      "path": "/dsh/operator/platform/zones",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshZone",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshZone",
+      "method": "POST",
+      "path": "/dsh/operator/platform/zones",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateDshZone",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateDshZone",
+      "method": "PATCH",
+      "path": "/dsh/operator/platform/zones/{zoneId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshSlaRules",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshSlaRules",
+      "method": "GET",
+      "path": "/dsh/operator/platform/sla-rules",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshSlaRules",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshSlaRules",
+      "method": "PUT",
+      "path": "/dsh/operator/platform/sla-rules",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshCapacityConfig",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshCapacityConfig",
+      "method": "GET",
+      "path": "/dsh/operator/platform/capacity",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshCapacityConfig",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshCapacityConfig",
+      "method": "PUT",
+      "path": "/dsh/operator/platform/capacity",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshZoneServiceability",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshZoneServiceability",
+      "method": "GET",
+      "path": "/dsh/operator/platform/serviceability/{zoneId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshAdminRoles",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshAdminRoles",
+      "method": "GET",
+      "path": "/dsh/operator/admin/roles",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshAdminRole",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshAdminRole",
+      "method": "POST",
+      "path": "/dsh/operator/admin/roles",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshAdminStaff",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshAdminStaff",
+      "method": "GET",
+      "path": "/dsh/operator/admin/staff",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:assignDshStaffRole",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "assignDshStaffRole",
+      "method": "POST",
+      "path": "/dsh/operator/admin/staff/{staffId}/roles",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartners",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartners",
+      "method": "GET",
+      "path": "/dsh/operator/partners",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createDshPartner",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createDshPartner",
+      "method": "POST",
+      "path": "/dsh/operator/partners",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPartner",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPartner",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:transitionDshPartner",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "transitionDshPartner",
+      "method": "POST",
+      "path": "/dsh/operator/partners/{partnerId}/transition",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPartnerReadiness",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPartnerReadiness",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}/readiness",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerDocuments",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerDocuments",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}/documents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:addDshPartnerDocument",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "addDshPartnerDocument",
+      "method": "POST",
+      "path": "/dsh/operator/partners/{partnerId}/documents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:reviewDshPartnerDocument",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "reviewDshPartnerDocument",
+      "method": "PATCH",
+      "path": "/dsh/operator/partners/{partnerId}/documents/{docId}/review",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerStores",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerStores",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}/stores",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:linkDshPartnerStore",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "linkDshPartnerStore",
+      "method": "POST",
+      "path": "/dsh/operator/partners/{partnerId}/stores",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerAuditEvents",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerAuditEvents",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}/audit",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerFieldVisits",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerFieldVisits",
+      "method": "GET",
+      "path": "/dsh/operator/partners/{partnerId}/field-visits",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPartnerActivationStatus",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPartnerActivationStatus",
+      "method": "GET",
+      "path": "/dsh/partner/activation/status",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshPartnerSelfReadiness",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshPartnerSelfReadiness",
+      "method": "GET",
+      "path": "/dsh/partner/activation/readiness",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listFieldPartnerDrafts",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listFieldPartnerDrafts",
+      "method": "GET",
+      "path": "/dsh/field/partners",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createFieldPartnerDraft",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createFieldPartnerDraft",
+      "method": "POST",
+      "path": "/dsh/field/partners/drafts",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getFieldPartnerDraft",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getFieldPartnerDraft",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateFieldPartnerDraft",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateFieldPartnerDraft",
+      "method": "PATCH",
+      "path": "/dsh/field/partners/{partnerId}",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getFieldPartnerReadiness",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getFieldPartnerReadiness",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}/readiness",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getFieldPartnerStore",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getFieldPartnerStore",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}/store",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:updateFieldPartnerStore",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "updateFieldPartnerStore",
+      "method": "PATCH",
+      "path": "/dsh/field/partners/{partnerId}/store",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listFieldPartnerDocuments",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listFieldPartnerDocuments",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}/documents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:uploadFieldPartnerDocument",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "uploadFieldPartnerDocument",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/documents",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:uploadFieldMedia",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "uploadFieldMedia",
+      "method": "POST",
+      "path": "/dsh/field/media/uploads",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getMedia",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getMedia",
+      "method": "GET",
+      "path": "/dsh/media",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:createFieldPartnerVisit",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createFieldPartnerVisit",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/visits",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listFieldPartnerFieldVisits",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listFieldPartnerFieldVisits",
+      "method": "GET",
+      "path": "/dsh/field/partners/{partnerId}/field-visits",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:submitFieldPartnerDraft",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "submitFieldPartnerDraft",
+      "method": "POST",
+      "path": "/dsh/field/partners/{partnerId}/submit",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshPartnerActivations",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshPartnerActivations",
+      "method": "GET",
+      "path": "/dsh/operator/admin/partners",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:activateDshPartner",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "activateDshPartner",
+      "method": "POST",
+      "path": "/dsh/operator/admin/partners/{partnerId}/activate",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:blockDshPartner",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "blockDshPartner",
+      "method": "POST",
+      "path": "/dsh/operator/admin/partners/{partnerId}/block",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshCaptainCredentials",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshCaptainCredentials",
+      "method": "GET",
+      "path": "/dsh/operator/admin/captains",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshCaptainCredential",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshCaptainCredential",
+      "method": "POST",
+      "path": "/dsh/operator/admin/captains/{captainId}/credential",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:listDshAdminAudit",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listDshAdminAudit",
+      "method": "GET",
+      "path": "/dsh/operator/admin/audit",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getWltHealth",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltHealth",
+      "method": "GET",
+      "path": "/wlt/health",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltReadiness",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltReadiness",
+      "method": "GET",
+      "path": "/wlt/readiness",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltPaymentStatusRef",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltPaymentStatusRef",
+      "method": "GET",
+      "path": "/wlt/references/payment-status",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltSettlementStatusRef",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltSettlementStatusRef",
+      "method": "GET",
+      "path": "/wlt/references/settlement-status",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltRefundStatusRef",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltRefundStatusRef",
+      "method": "GET",
+      "path": "/wlt/references/refund-status",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltWalletStatusRef",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltWalletStatusRef",
+      "method": "GET",
+      "path": "/wlt/references/wallet-status",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:createWltPaymentSessionReference",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createWltPaymentSessionReference",
+      "method": "POST",
+      "path": "/wlt/payment-sessions",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltPaymentSessionReference",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltPaymentSessionReference",
+      "method": "GET",
+      "path": "/wlt/payment-sessions/{paymentSessionId}",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:authorizeWltPaymentSession",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "authorizeWltPaymentSession",
+      "method": "POST",
+      "path": "/wlt/payment-sessions/{paymentSessionId}/authorize",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:captureWltPaymentSession",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "captureWltPaymentSession",
+      "method": "POST",
+      "path": "/wlt/payment-sessions/{paymentSessionId}/capture",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:expireWltPaymentSession",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "expireWltPaymentSession",
+      "method": "POST",
+      "path": "/wlt/payment-sessions/{paymentSessionId}/expire",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:markWltCodCollected",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "markWltCodCollected",
+      "method": "POST",
+      "path": "/wlt/payment-sessions/{paymentSessionId}/cod-collect",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:createWltRefund",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createWltRefund",
+      "method": "POST",
+      "path": "/wlt/refunds",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:listWltRefunds",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listWltRefunds",
+      "method": "GET",
+      "path": "/wlt/refunds",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltRefund",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltRefund",
+      "method": "GET",
+      "path": "/wlt/refunds/{refundId}",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:approveWltRefund",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "approveWltRefund",
+      "method": "POST",
+      "path": "/wlt/refunds/{refundId}/approve",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:completeWltRefund",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "completeWltRefund",
+      "method": "POST",
+      "path": "/wlt/refunds/{refundId}/complete",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:rejectWltRefund",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "rejectWltRefund",
+      "method": "POST",
+      "path": "/wlt/refunds/{refundId}/reject",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:createWltSettlement",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createWltSettlement",
+      "method": "POST",
+      "path": "/wlt/settlements",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:listWltSettlements",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listWltSettlements",
+      "method": "GET",
+      "path": "/wlt/settlements",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltSettlementSummary",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltSettlementSummary",
+      "method": "GET",
+      "path": "/wlt/settlements/summary",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltSettlement",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltSettlement",
+      "method": "GET",
+      "path": "/wlt/settlements/{settlementId}",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:postWltSettlement",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "postWltSettlement",
+      "method": "POST",
+      "path": "/wlt/settlements/{settlementId}/post",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:createWltCodRecord",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createWltCodRecord",
+      "method": "POST",
+      "path": "/wlt/cod-records",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:listWltCodRecords",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listWltCodRecords",
+      "method": "GET",
+      "path": "/wlt/cod-records",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltCodRecord",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltCodRecord",
+      "method": "GET",
+      "path": "/wlt/cod-records/{codRecordId}",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:collectWltCod",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "collectWltCod",
+      "method": "POST",
+      "path": "/wlt/cod-records/{codRecordId}/collect",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:remitWltCod",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "remitWltCod",
+      "method": "POST",
+      "path": "/wlt/cod-records/{codRecordId}/remit",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:createWltCommission",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "createWltCommission",
+      "method": "POST",
+      "path": "/wlt/commissions",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:listWltCommissions",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listWltCommissions",
+      "method": "GET",
+      "path": "/wlt/commissions",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:appendWltLedgerEntry",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "appendWltLedgerEntry",
+      "method": "POST",
+      "path": "/wlt/ledger/entries",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:listWltLedgerEntries",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "listWltLedgerEntries",
+      "method": "GET",
+      "path": "/wlt/ledger/entries",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltLedgerEntry",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltLedgerEntry",
+      "method": "GET",
+      "path": "/wlt/ledger/entries/{entryId}",
+      "journey_group_key": "wlt:wlt"
+    }
+  ]
+}

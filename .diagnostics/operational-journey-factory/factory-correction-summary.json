@@ -1,0 +1,270 @@
+﻿{
+    "head_sha":  "2ba18161c27654d970b16c51667756a0aa6a2716",
+    "gap_count":  64,
+    "blocking_gaps":  56,
+    "nonblocking_gaps":  8,
+    "active_fail_tools":  0,
+    "generated_clients":  4,
+    "generated_client_paths":  [
+                                   "core/identity/clients/generated/identity-api.d.ts",
+                                   "core/identity/clients/generated/identity-api.ts",
+                                   "services/dsh/clients/generated/dsh-api.ts",
+                                   "services/wlt/clients/generated/wlt-api.ts"
+                               ],
+    "surface_kinds":  {
+                          "runtime_shell":  7,
+                          "ui_surface":  6,
+                          "other":  1,
+                          "shared_brain":  2,
+                          "ui_kit":  1
+                      },
+    "gaps_by_type":  {
+                         "UNBOUND_SCREEN":  4,
+                         "BUSINESS_LOGIC_IN_SURFACE":  40,
+                         "DIRECT_API_IN_SURFACE":  2,
+                         "SHARED_API_LOGIC_MIXED":  10,
+                         "DIRECT_API_IN_SHARED_UNCLASSIFIED":  8
+                     },
+    "first_30_blocking_gaps":  [
+                                   {
+                                       "gap_id":  "UNBOUND_SCREEN:services/wlt/frontend/app-client",
+                                       "type":  "UNBOUND_SCREEN",
+                                       "severity":  "HIGH",
+                                       "path":  "services/wlt/frontend/app-client",
+                                       "required_action":  "classify_surface_or_justify_exclusion",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "UNBOUND_SCREEN:services/wlt/frontend/app-partner",
+                                       "type":  "UNBOUND_SCREEN",
+                                       "severity":  "HIGH",
+                                       "path":  "services/wlt/frontend/app-partner",
+                                       "required_action":  "classify_surface_or_justify_exclusion",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "UNBOUND_SCREEN:services/wlt/frontend/app-field",
+                                       "type":  "UNBOUND_SCREEN",
+                                       "severity":  "HIGH",
+                                       "path":  "services/wlt/frontend/app-field",
+                                       "required_action":  "classify_surface_or_justify_exclusion",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "UNBOUND_SCREEN:services/wlt/frontend/app-captain",
+                                       "type":  "UNBOUND_SCREEN",
+                                       "severity":  "HIGH",
+                                       "path":  "services/wlt/frontend/app-captain",
+                                       "required_action":  "classify_surface_or_justify_exclusion",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-client/cart/CartScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-client/cart/CartScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "DIRECT_API_IN_SURFACE:services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
+                                       "type":  "DIRECT_API_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
+                                       "required_action":  "bind_to_shared_controller_or_adapter",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "DIRECT_API_IN_SURFACE:services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+                                       "type":  "DIRECT_API_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+                                       "required_action":  "bind_to_shared_controller_or_adapter",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/catalogs/drawers/CatalogWorkspaceDrawers.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/catalogs/drawers/CatalogWorkspaceDrawers.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AssistedOrderDeskScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/AssistedOrderDeskScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AuditTrailDetailWorkspace.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/AuditTrailDetailWorkspace.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AwnakScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/AwnakScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/CaptainOperationsScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/CaptainOperationsScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/CommandCenterScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/CommandCenterScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   },
+                                   {
+                                       "gap_id":  "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
+                                       "type":  "BUSINESS_LOGIC_IN_SURFACE",
+                                       "severity":  "HIGH",
+                                       "path":  "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
+                                       "required_action":  "move_or_bind_to_shared_or_backend_owner",
+                                       "verification":  "pnpm run diagnostics:operational:surfaces"
+                                   }
+                               ]
+}
