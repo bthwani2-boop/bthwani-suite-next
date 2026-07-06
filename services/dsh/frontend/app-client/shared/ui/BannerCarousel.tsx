@@ -46,6 +46,7 @@ export function BannerCarousel({ banners, variant = "primary" }: Props) {
               source={item.image as ImageSourcePropType}
               style={styles.image}
               resizeMode="cover"
+              alt=""
             />
           ) : null}
           <View style={styles.content}>

@@ -29,7 +29,7 @@ export default function DshStoresPage() {
           title={<strong>لوحة التحكم — DSH</strong>}
           serviceLabel={
             <span>
-              <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/dsh/partners")}>الشركاء</span>
+              <span role="button" style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => router.push("/dsh/partners")}>الشركاء</span>
               {" / المتاجر"}
             </span>
           }

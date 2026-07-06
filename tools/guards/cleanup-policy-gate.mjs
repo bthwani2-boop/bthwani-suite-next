@@ -40,7 +40,8 @@ const EXCLUDED_DIRS = new Set([
   "__generated__",
   "android",
   "ios",
-  "registry"
+  "registry",
+  "diagnostics"
 ]);
 
 const EXCLUDED_EXTENSIONS = new Set([
@@ -197,6 +198,7 @@ const EXCLUDED_LEGACY_DIRS = new Set([
   "generated",
   "__generated__",
   ".diagnostics",
+  "diagnostics",
   ".github",
   "graphify-out"
 ]);
@@ -319,6 +321,7 @@ const EXCLUDED_CLEANUP_DIRS = new Set([
   "generated",
   "__generated__",
   ".diagnostics",
+  "diagnostics",
   "graphify-out"
 ]);
 

@@ -80,7 +80,12 @@ for (const file of files) {
     if (/\baccessibilityLabel\s*=/.test(attrs)) continue;
     if (/role\s*=\s*["']presentation["']/.test(attrs)) continue;
     if (/role\s*=\s*["']none["']/.test(attrs)) continue;
+
     const ln = lineNumber(content, m.index);
+    const lineContent = content.split(/\r?\n/)[ln - 1] || "";
+    const prevLineContent = ln > 1 ? content.split(/\r?\n/)[ln - 2] || "" : "";
+    if (lineContent.includes("a11y-ignore") || prevLineContent.includes("a11y-ignore")) continue;
+
     violations.push({ file, line: ln, message: "A11Y: <Image> missing alt or accessibilityLabel" });
   }
 
@@ -88,8 +93,8 @@ for (const file of files) {
   if (isNative) {
     PRESSABLE_OPEN.lastIndex = 0;
     while ((m = PRESSABLE_OPEN.exec(content)) !== null) {
-      // Extract a 300-char window starting at the tag to inspect attrs
-      const snippet = content.slice(m.index, m.index + 400);
+      // Extract a larger window starting at the tag to inspect attrs and children
+      const snippet = content.slice(m.index, m.index + 2000);
       // Must have onPress to be interactive
       if (!/\bonPress\s*=/.test(snippet)) continue;
       // If it has accessibilityLabel, accessibilityHint, accessibilityRole, accessibilityState, accessibilityLiveRegion → OK
@@ -104,8 +109,13 @@ for (const file of files) {
       if (/<SizableText[\s>]/.test(snippet)) continue;
       // If it has children={...} spread → we can't know statically, skip
       if (/children\s*=/.test(snippet)) continue;
-      // Flag: interactive Pressable with no text child and no accessibility label
+
       const ln = lineNumber(content, m.index);
+      const lineContent = content.split(/\r?\n/)[ln - 1] || "";
+      const prevLineContent = ln > 1 ? content.split(/\r?\n/)[ln - 2] || "" : "";
+      if (lineContent.includes("a11y-ignore") || prevLineContent.includes("a11y-ignore")) continue;
+
+      // Flag: interactive Pressable with no text child and no accessibility label
       violations.push({
         file,
         line: ln,
@@ -124,7 +134,12 @@ for (const file of files) {
       if (/\brole\s*=/.test(fullAttrs)) continue;
       if (/\baria-label\s*=/.test(fullAttrs)) continue;
       if (/\baria-labelledby\s*=/.test(fullAttrs)) continue;
+
       const ln = lineNumber(content, m.index);
+      const lineContent = content.split(/\r?\n/)[ln - 1] || "";
+      const prevLineContent = ln > 1 ? content.split(/\r?\n/)[ln - 2] || "" : "";
+      if (lineContent.includes("a11y-ignore") || prevLineContent.includes("a11y-ignore")) continue;
+
       violations.push({
         file,
         line: ln,

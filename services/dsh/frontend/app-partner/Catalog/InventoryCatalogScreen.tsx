@@ -859,7 +859,7 @@ function InventoryCatalogCardPanel({
         <Box layoutDirection="row" gap={2} padding={2} style={{ alignItems: 'center' }}>
           <Box style={{ width: 44, height: 44, borderRadius: radius.sm, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colorRoles.surfaceInset }}>
             {thumbnailUrl ? (
-              <Image source={{ uri: thumbnailUrl }} style={{ width: 44, height: 44 }} />
+              <Image source={{ uri: thumbnailUrl }} style={{ width: 44, height: 44 }} alt="" />
             ) : (
               <Text role="titleMd">{item.name.slice(0, 1)}</Text>
             )}

@@ -89,6 +89,14 @@
       "source_file": "tools/guards/service-manifest-drift-gate.mjs"
     },
     {
+      "id": "frontend-feature-binding",
+      "name": "Frontend Feature Binding Gate",
+      "script": "guard:frontend-feature-binding",
+      "exit_level": "fail",
+      "description": "Verifies that frontend screens are properly bound to shared controllers, OpenAPI spec operations, and backend routes across all operational slices.",
+      "source_file": "tools/guards/frontend-feature-binding-gate.mjs"
+    },
+    {
       "id": "go-routes-ci",
       "name": "Go Routes CI Gate",
       "script": "guard:go-routes-ci",

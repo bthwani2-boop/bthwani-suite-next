@@ -70,7 +70,7 @@ export function ProductCard({
       {/* ── Image area (left side in RTL) ── */}
       <Pressable onPress={onImagePress} style={styles.imageArea}>
         {imageSource ? (
-          <Image source={imageSource} style={styles.image} resizeMode="cover" />
+          <Image source={imageSource} style={styles.image} resizeMode="cover" alt="" />
         ) : (
           <View style={[styles.image, styles.imagePlaceholder]} />
         )}

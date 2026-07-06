@@ -96,6 +96,7 @@ export function StepEvidence({ items, loadingMap, onPick }: Props) {
                     <Image
                       source={{ uri: item.previewUri }}
                       style={{ width: 56, height: 56, borderRadius: radius.xs, borderWidth: 1, borderColor: colorRoles.borderStrong }}
+                      alt=""
                     />
                   ) : (
                     <View style={{ width: 56, height: 56, borderRadius: radius.xs, backgroundColor: colorRoles.surfaceMuted, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colorRoles.borderStrong }}>
@@ -121,6 +122,7 @@ export function StepEvidence({ items, loadingMap, onPick }: Props) {
                 {onPick && !isUploading && (
                   <View style={{ paddingStart: spacing[2] }}>
                     <Pressable
+                      accessibilityLabel="اختر صورة"
                       onPress={() => onPick(item, 'library')}
                       hitSlop={12}
                       style={{

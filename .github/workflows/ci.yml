@@ -118,6 +118,9 @@ jobs:
       - name: Guard — Service manifest drift
         run: pnpm run guard:service-manifest-drift
 
+      - name: Guard — Frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+
       - name: Guard — Go route AST
         run: pnpm run guard:go-routes-ci
 

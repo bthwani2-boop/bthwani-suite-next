@@ -14,12 +14,50 @@
     ".cache/**",
     ".gocache*/**",
     ".gomodcache*/**",
-    "tools/registry/runs/**"
+    "tools/registry/runs/**",
+    "tools/diagnostics/**",
+    "services/dsh/evidence/**",
+    "infra/**",
+    "governance/**",
+    ".github/**"
   ],
   "ignoreFiles": [
     "**/*.generated.ts",
     "**/*.generated.tsx",
     "**/*.gen.ts",
     "**/__generated__/**"
-  ]
+  ],
+  "ignoreDependencies": [
+    "@react-native-async-storage/async-storage",
+    "@react-native-community/netinfo",
+    "@react-native/metro-config",
+    "expo-file-system",
+    "expo-haptics",
+    "expo-image-picker",
+    "expo-location",
+    "expo-system-ui",
+    "expo-updates",
+    "react-native-gesture-handler",
+    "react-native-maps",
+    "react-native-reanimated",
+    "react-native-screens",
+    "react-native-svg",
+    "react-native-worklets",
+    "react-native-web",
+    "@bthwani/app-shell",
+    "@bthwani/core-identity",
+    "@expo/vector-icons",
+    "@types/react",
+    "@ast-grep/cli",
+    "@stoplight/spectral-cli",
+    "autocannon",
+    "babel-plugin-react-compiler",
+    "dependency-cruiser",
+    "jscpd",
+    "madge",
+    "markdownlint-cli2",
+    "sherif",
+    "size-limit"
+  ],
+  "ignoreExportsUsedInFile": true
 }

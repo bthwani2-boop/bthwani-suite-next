@@ -179,6 +179,7 @@ export function StoreCardPremium({
               style={StyleSheet.absoluteFill}
               accessibilityIgnoresInvertColors
               resizeMode="cover"
+              alt=""
             />
           ) : (
             <Text style={styles.squareEmoji}>{store.placeholderEmoji}</Text>
@@ -192,6 +193,7 @@ export function StoreCardPremium({
               source={store.logoImageSource}
               style={styles.logoImg}
               resizeMode="contain"
+              alt=""
             />
           ) : (
             <View style={[styles.logoImg, styles.logoFallback]}>

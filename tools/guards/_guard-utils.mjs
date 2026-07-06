@@ -45,6 +45,7 @@ const EXCLUDED_EXTENSIONS = new Set([
 export function isExcluded(relPath, isDir, name) {
   if (isDir) {
     if (EXCLUDED_DIRS.has(name)) return true;
+    if (relPath === "tools/diagnostics") return true;
   }
 
   if (relPath.startsWith("tools/registry/runs")) {

@@ -62,6 +62,7 @@ export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
                 accessibilityIgnoresInvertColors
+                alt=""
               />
             ) : (
               <View style={[StyleSheet.absoluteFill, styles.bannerPlaceholder]} />

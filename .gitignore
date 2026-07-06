@@ -59,6 +59,9 @@ services/dsh/database/seeds/local/media/
 tools/registry/runs/
 .diagnostics/
 tools/diagnostics/graph.json
+tools/diagnostics/*.raw.json
+tools/diagnostics/*.full.json
+tools/diagnostics/knip-report.json
 *.log
 node-gates*.log
 *_HANDOFF.zip
@@ -72,3 +75,6 @@ node-gates*.log
 
 # Explicitly track TOOLS_SETUP.md
 !tools/diagnostics/TOOLS_SETUP.md
+
+# Explicitly track diagnostic scripts
+!tools/diagnostics/scripts/*.mjs

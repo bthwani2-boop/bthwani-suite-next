@@ -93,6 +93,7 @@ export function BottomNavBar({
 
       {/* Floating centre button */}
       <Pressable
+        accessibilityLabel="launcher"
         onPress={onLauncherPress}
         style={({ pressed }) => [
           styles.floatingBtn,
