@@ -76,5 +76,14 @@ node-gates*.log
 # Explicitly track TOOLS_SETUP.md
 !tools/diagnostics/TOOLS_SETUP.md
 
+# Explicitly track operational journey factory governance templates
+!governance/operational_journey_factory/
+!governance/operational_journey_factory/**/*.md
+!governance/operational_journey_factory/generated/
+!governance/operational_journey_factory/generated/.gitkeep
+
+# Explicitly track operational journey checklist
+!tools/checklist/operational-journey-factory-checklist.md
+
 # Explicitly track diagnostic scripts
 !tools/diagnostics/scripts/*.mjs

@@ -241,6 +241,14 @@
       "source_file": "tools/guards/guard-registry-gate.mjs"
     },
     {
+      "id": "operational-journey-factory",
+      "name": "Operational Journey Template Factory Gate",
+      "script": "guard:operational-journey-factory",
+      "exit_level": "fail",
+      "description": "Verifies the operational journey factory templates, generators, package bindings, output policy, and no-skip multi-surface rules.",
+      "source_file": "tools/guards/operational-journey-template-factory-gate.mjs"
+    },
+    {
       "id": "markdown-governance",
       "name": "Markdown Governance Linter",
       "script": "guard:markdown-governance",
