@@ -1,0 +1,64 @@
+name: Design System Governance
+
+on:
+  push:
+    branches: [implementing, main]
+    paths:
+      - "shared/ui-kit/**"
+      - "apps/**/src/**"
+      - "services/**/frontend/**"
+      - "tools/guards/design-tokens-gate.mjs"
+      - "tools/guards/ui-provider-required-gate.mjs"
+      - "tools/guards/icon-contract-gate.mjs"
+      - "tools/guards/brand-identity-report.mjs"
+      - "tools/guards/ui-kit-boundary-gate.mjs"
+  pull_request:
+    branches: [implementing, main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+
+jobs:
+  ui-kit-governance:
+    name: UI Kit Governance Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Guard — UI Provider required (FAIL)
+        run: pnpm run guard:ui-provider
+
+      - name: Guard — Icon contract (FAIL)
+        run: pnpm run guard:icon-contract
+
+      - name: Guard — UI Kit boundary / raw colors (FAIL)
+        run: pnpm run guard:ui-kit-boundary
+
+      - name: Guard — Design tokens layout (WARN only)
+        run: pnpm run guard:design-tokens
+        continue-on-error: true
+
+      - name: Generate Brand Identity Report
+        run: pnpm run guard:brand-identity
+
+      - name: Upload Brand Identity Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brand-identity-report
+          path: .diagnostics/tools/brand-identity-report.md
+          retention-days: 30

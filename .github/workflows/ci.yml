@@ -94,6 +94,16 @@ jobs:
       - name: Guard — ast-grep rules
         run: pnpm run guard:ast-grep-rules
 
+      - name: Guard — UI Provider required
+        run: pnpm run guard:ui-provider
+
+      - name: Guard — Icon contract
+        run: pnpm run guard:icon-contract
+
+      - name: Guard — Design tokens (warn only)
+        run: pnpm run guard:design-tokens
+        continue-on-error: true
+
       - name: OpenAPI client drift check
         run: |
           pnpm run openapi:generate

@@ -116,7 +116,12 @@
     "guard:a11y": "node tools/guards/a11y-gate.mjs",
     "guard:dependency-graph": "node tools/guards/dependency-graph-gate.mjs",
     "guard:ast-grep-rules": "node tools/guards/ast-grep-rules-gate.mjs",
-    "guard:logic-all": "node tools/guards/go-routes-ci.mjs && node tools/guards/logic-coverage-gate.mjs && node tools/guards/a11y-gate.mjs && node tools/guards/dependency-graph-gate.mjs && node tools/guards/ast-grep-rules-gate.mjs"
+    "guard:logic-all": "node tools/guards/go-routes-ci.mjs && node tools/guards/logic-coverage-gate.mjs && node tools/guards/a11y-gate.mjs && node tools/guards/dependency-graph-gate.mjs && node tools/guards/ast-grep-rules-gate.mjs",
+    "guard:ui-provider": "node tools/guards/ui-provider-required-gate.mjs",
+    "guard:icon-contract": "node tools/guards/icon-contract-gate.mjs",
+    "guard:design-tokens": "node tools/guards/design-tokens-gate.mjs",
+    "guard:brand-identity": "node tools/guards/brand-identity-report.mjs",
+    "diagnostics:ui-kit": "node tools/guards/ui-provider-required-gate.mjs && node tools/guards/icon-contract-gate.mjs && node tools/guards/design-tokens-gate.mjs && node tools/guards/ui-kit-boundary-gate.mjs && node tools/guards/brand-identity-report.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
