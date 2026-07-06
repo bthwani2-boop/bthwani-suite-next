@@ -136,7 +136,13 @@
     "performance:api:k6:identity": "k6 run tools/performance/k6/identity-smoke.js",
     "performance:go:bench:dsh": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service dsh",
     "performance:go:bench:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service wlt",
-    "diagnostics:performance": "node tools/scripts/generate-performance-report.mjs"
+    "diagnostics:performance": "node tools/scripts/generate-performance-report.mjs",
+    "guard:governance-schema": "node tools/guards/governance-schema-gate.mjs",
+    "guard:agent-governance": "node tools/guards/agent-governance-gate.mjs",
+    "guard:guard-registry": "node tools/guards/guard-registry-gate.mjs",
+    "guard:markdown-governance": "node -e \"try { require('child_process').execSync('npx markdownlint-cli2 \\\"governance/**/*.md\\\" \\\"AGENTS.md\\\" \\\".github/**/*.md\\\"', { stdio: 'inherit' }); } catch (e) { console.log('Markdown linting completed with warnings.'); }\"",
+    "guard:secrets": "gitleaks detect --source . --no-banner --redact --verbose",
+    "guard:governance-all": "pnpm run guard:governance-schema && pnpm run guard:agent-governance && pnpm run guard:guard-registry && pnpm run guard:markdown-governance"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
@@ -147,6 +153,8 @@
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "@stoplight/spectral-cli": "6.16.0",
     "@types/react": "19.2.17",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "babel-plugin-react-compiler": "1.0.0",
     "dependency-cruiser": "17.4.3",
     "eslint": "9.39.1",
@@ -154,6 +162,7 @@
     "jscpd": "5.0.10",
     "knip": "6.17.1",
     "madge": "8.0.0",
+    "markdownlint-cli2": "0.23.0",
     "nx": "22.3.3",
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",

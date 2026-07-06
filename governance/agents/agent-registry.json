@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "antigravity",
+      "name": "Antigravity Brain Agent",
+      "owner": "BThwani Core Team",
+      "scope": "global",
+      "description": "Core brain agent governing the workspace operations, code modifications, and compliance verification.",
+      "primary_file": "AGENTS.md"
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI Adapter",
+      "owner": "BThwani Platform Team",
+      "scope": "tools",
+      "description": "Thin CLI adapter interface wrapping brain instructions for execution.",
+      "primary_file": "GEMINI.md"
+    }
+  ]
+}

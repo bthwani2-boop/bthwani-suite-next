@@ -1,0 +1,250 @@
+{
+  "entries": [
+    {
+      "id": "foundation",
+      "name": "Foundation Gate",
+      "script": "guard:foundation",
+      "exit_level": "fail",
+      "description": "Validates core workspace blueprints, matrix structures, and canonical formats.",
+      "source_file": "tools/scripts/run-foundation-gate.ps1"
+    },
+    {
+      "id": "journey",
+      "name": "Journey Gate",
+      "script": "guard:journey",
+      "exit_level": "fail",
+      "description": "Validates transaction journeys, integration models, and simulation coverage.",
+      "source_file": "tools/scripts/run-journey-gate.ps1"
+    },
+    {
+      "id": "ui-kit-boundary",
+      "name": "UI Kit Boundary Gate",
+      "script": "guard:ui-kit-boundary",
+      "exit_level": "fail",
+      "description": "Enforces visual identity, raw colors constraints, and ui-kit limits.",
+      "source_file": "tools/guards/ui-kit-boundary-gate.mjs"
+    },
+    {
+      "id": "fullstack-boundary",
+      "name": "Fullstack Boundary Gate",
+      "script": "guard:fullstack-boundary",
+      "exit_level": "fail",
+      "description": "Enforces separation between backend models and frontend view presentation.",
+      "source_file": "tools/guards/fullstack-boundary-gate.mjs"
+    },
+    {
+      "id": "wlt-financial-boundary",
+      "name": "WLT Financial Boundary Gate",
+      "script": "guard:wlt-financial-boundary",
+      "exit_level": "fail",
+      "description": "Enforces boundaries around financial records, wallet structures, and mutation paths.",
+      "source_file": "tools/guards/wlt-financial-boundary-gate.mjs"
+    },
+    {
+      "id": "runtime-config",
+      "name": "Runtime Config Gate",
+      "script": "guard:runtime-config",
+      "exit_level": "fail",
+      "description": "Verifies correctness of Docker settings, ports, and environment files.",
+      "source_file": "tools/guards/runtime-config-gate.mjs"
+    },
+    {
+      "id": "no-broken-imports",
+      "name": "No Broken Imports Gate",
+      "script": "guard:no-broken-imports",
+      "exit_level": "fail",
+      "description": "Ensures all file imports resolve statically and do not reference missing dependencies.",
+      "source_file": "tools/guards/no-broken-imports.mjs"
+    },
+    {
+      "id": "cleanup-policy",
+      "name": "Cleanup Policy Gate",
+      "script": "guard:cleanup-policy",
+      "exit_level": "fail",
+      "description": "Checks for local path patterns, legacy term markers, and deprecated guards.",
+      "source_file": "tools/guards/cleanup-policy-gate.mjs"
+    },
+    {
+      "id": "api-binding",
+      "name": "API Binding Gate",
+      "script": "guard:api-binding",
+      "exit_level": "fail",
+      "description": "Checks OpenAPI contract compatibility.",
+      "source_file": "tools/guards/api-binding-gate.mjs"
+    },
+    {
+      "id": "backend-api-binding",
+      "name": "Backend API Binding Gate",
+      "script": "guard:backend-api-binding",
+      "exit_level": "fail",
+      "description": "Validates backend routing patterns against OpenAPI client generated mappings.",
+      "source_file": "tools/guards/backend-api-binding-gate.mjs"
+    },
+    {
+      "id": "service-manifest-drift",
+      "name": "Service Manifest Drift Gate",
+      "script": "guard:service-manifest-drift",
+      "exit_level": "fail",
+      "description": "Validates consistency between service manifests and actual backend structures.",
+      "source_file": "tools/guards/service-manifest-drift-gate.mjs"
+    },
+    {
+      "id": "go-routes-ci",
+      "name": "Go Routes CI Gate",
+      "script": "guard:go-routes-ci",
+      "exit_level": "fail",
+      "description": "Extracts backend Go routes and checks for endpoint consistency.",
+      "source_file": "tools/guards/go-routes-ci.mjs"
+    },
+    {
+      "id": "logic-coverage",
+      "name": "Logic Coverage Gate",
+      "script": "guard:logic-coverage",
+      "exit_level": "fail",
+      "description": "Checks logic flows, dead buttons, and unmapped client requests.",
+      "source_file": "tools/guards/logic-coverage-gate.mjs"
+    },
+    {
+      "id": "a11y",
+      "name": "A11y Gate",
+      "script": "guard:a11y",
+      "exit_level": "fail",
+      "description": "Verifies accessibility elements statically (labels, roles).",
+      "source_file": "tools/guards/a11y-gate.mjs"
+    },
+    {
+      "id": "dependency-graph",
+      "name": "Dependency Graph Gate",
+      "script": "guard:dependency-graph",
+      "exit_level": "fail",
+      "description": "Verifies architectural layering and scopes circular warnings.",
+      "source_file": "tools/guards/dependency-graph-gate.mjs"
+    },
+    {
+      "id": "ast-grep-rules",
+      "name": "AST Grep Rules Gate",
+      "script": "guard:ast-grep-rules",
+      "exit_level": "fail",
+      "description": "Checks structural AST compliance.",
+      "source_file": "tools/guards/ast-grep-rules-gate.mjs"
+    },
+    {
+      "id": "ui-provider",
+      "name": "UI Provider Required Gate",
+      "script": "guard:ui-provider",
+      "exit_level": "fail",
+      "description": "Ensures components are wrapped inside UI Context Provider.",
+      "source_file": "tools/guards/ui-provider-required-gate.mjs"
+    },
+    {
+      "id": "icon-contract",
+      "name": "Icon Contract Gate",
+      "script": "guard:icon-contract",
+      "exit_level": "fail",
+      "description": "Checks visual assets and icon boundaries.",
+      "source_file": "tools/guards/icon-contract-gate.mjs"
+    },
+    {
+      "id": "design-tokens",
+      "name": "Design Tokens Gate",
+      "script": "guard:design-tokens",
+      "exit_level": "warn",
+      "description": "Checks raw layouts and warn on spacing anomalies.",
+      "source_file": "tools/guards/design-tokens-gate.mjs"
+    },
+    {
+      "id": "brand-identity",
+      "name": "Brand Identity Report Gate",
+      "script": "guard:brand-identity",
+      "exit_level": "warn",
+      "description": "Generates layout and colors report.",
+      "source_file": "tools/guards/brand-identity-report.mjs"
+    },
+    {
+      "id": "repo-size",
+      "name": "Repository Size Gate",
+      "script": "guard:repo-size",
+      "exit_level": "fail",
+      "description": "Restricts forbidden files and large blobs from tracking.",
+      "source_file": "tools/guards/repository-size-gate.mjs"
+    },
+    {
+      "id": "repo-naming",
+      "name": "Repository Naming Gate",
+      "script": "guard:repo-naming",
+      "exit_level": "warn",
+      "description": "Verifies naming patterns of components, routes, and migrations.",
+      "source_file": "tools/guards/repository-naming-gate.mjs"
+    },
+    {
+      "id": "repo-structure",
+      "name": "Repository Structure Gate",
+      "script": "guard:repo-structure",
+      "exit_level": "warn",
+      "description": "Verifies directory boundaries, depth levels, and import policies.",
+      "source_file": "tools/guards/repository-structure-gate.mjs"
+    },
+    {
+      "id": "heavy-imports",
+      "name": "Heavy Imports Gate",
+      "script": "guard:heavy-imports",
+      "exit_level": "fail",
+      "description": "Validates packages and import weights.",
+      "source_file": "tools/guards/heavy-import-gate.mjs"
+    },
+    {
+      "id": "performance-budget",
+      "name": "Performance Budget Gate",
+      "script": "guard:performance-budget",
+      "exit_level": "fail",
+      "description": "Validates performance budget definitions.",
+      "source_file": "tools/guards/performance-budget-gate.mjs"
+    },
+    {
+      "id": "bundle-budget",
+      "name": "Bundle Budget Gate",
+      "script": "guard:bundle-budget",
+      "exit_level": "warn",
+      "description": "Validates bundle sizing and dependencies.",
+      "source_file": "tools/guards/bundle-budget-gate.mjs"
+    },
+    {
+      "id": "governance-schema",
+      "name": "Governance Schema Gate",
+      "script": "guard:governance-schema",
+      "exit_level": "fail",
+      "description": "Validates governance registry files (agents, skills, guards) against JSON schemas using Ajv.",
+      "source_file": "tools/guards/governance-schema-gate.mjs"
+    },
+    {
+      "id": "agent-governance",
+      "name": "Agent Governance Gate",
+      "script": "guard:agent-governance",
+      "exit_level": "fail",
+      "description": "Verifies workspace skills coherence, mandatory markdown headers, and AGENTS.md vs GEMINI.md policy consistency.",
+      "source_file": "tools/guards/agent-governance-gate.mjs"
+    },
+    {
+      "id": "guard-registry",
+      "name": "Guard Registry Alignment Gate",
+      "script": "guard:guard-registry",
+      "exit_level": "fail",
+      "description": "Verifies that all operational guards are registered and aligned across package.json, code, and CI workflows.",
+      "source_file": "tools/guards/guard-registry-gate.mjs"
+    },
+    {
+      "id": "markdown-governance",
+      "name": "Markdown Governance Linter",
+      "script": "guard:markdown-governance",
+      "exit_level": "warn",
+      "description": "Checks governance documents and agent guides for Markdown styling rules using markdownlint-cli2."
+    },
+    {
+      "id": "secrets",
+      "name": "Secrets Detection Gate",
+      "script": "guard:secrets",
+      "exit_level": "fail",
+      "description": "Audits the codebase for exposed passwords, keys, tokens, or configuration leaks using Gitleaks."
+    }
+  ]
+}

@@ -91,6 +91,15 @@ jobs:
         run: pnpm run guard:bundle-budget
         continue-on-error: true
 
+      - name: Guard — governance schema validation (FAIL)
+        run: pnpm run guard:governance-schema
+
+      - name: Guard — agent and skills consistency (FAIL)
+        run: pnpm run guard:agent-governance
+
+      - name: Guard — guard registry alignment (FAIL)
+        run: pnpm run guard:guard-registry
+
       - name: Guard — API binding
         run: pnpm run guard:api-binding
 

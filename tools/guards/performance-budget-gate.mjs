@@ -70,7 +70,7 @@ function checkMs(val, key, min = 1, max = 5000) {
 }
 
 if (budgets.api?.dsh) {
-  checkMs(budgets.api.dsh.health_p95_ms,    "api.dsh.health_p95_ms",    50, 2000);
+  checkMs(budgets.api.dsh.health_p95_ms,    "api.dsh.health_p95_ms",    50, 2000); // gitleaks:allow
   checkMs(budgets.api.dsh.checkout_p95_ms,  "api.dsh.checkout_p95_ms",  100, 5000);
   if (budgets.api.dsh.error_rate_max > 0.1) {
     violations.push({ file: "tools/performance/performance-budgets.json", line: 0,

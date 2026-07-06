@@ -1,0 +1,90 @@
+name: Governance As Code Audit
+
+on:
+  push:
+    branches: [implementing, main]
+    paths:
+      - "governance/**"
+      - ".github/workflows/**"
+      - "tools/guards/*-gate.mjs"
+      - "tools/guards/governance-schema-gate.mjs"
+      - "tools/guards/agent-governance-gate.mjs"
+      - "tools/guards/guard-registry-gate.mjs"
+  pull_request:
+    branches: [implementing, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  governance-audit:
+    name: Governance Compliance Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed for gitleaks history checks
+
+      # ── 1. Setup Node & Run Custom Schema / Coherence Gates ────────────────
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Guard — Governance registry schema validation (Ajv)
+        run: pnpm run guard:governance-schema
+
+      - name: Guard — Agent and skills consistency
+        run: pnpm run guard:agent-governance
+
+      - name: Guard — Guard registry alignment
+        run: pnpm run guard:guard-registry
+
+      # ── 2. GitHub Actions Workflows Static Analysis ────────────────────────
+      - name: actionlint (FAIL on invalid Actions syntax)
+        uses: reviewdog/action-actionlint@v1
+        with:
+          fail_on_error: true
+
+      - name: zizmor (FAIL on Actions security vulnerabilities)
+        uses: woodruffw/zizmor-action@v1
+        with:
+          scan-ref: ".github/workflows"
+
+      # ── 3. OPA/Conftest Validation (FAIL on policy violations) ─────────────
+      - name: Conftest — Validate Agent Registry
+        uses: open-policy-agent/conftest-action@v1
+        with:
+          policy: governance/policies
+          file: governance/agents/agent-registry.json
+
+      - name: Conftest — Validate Skills Registry
+        uses: open-policy-agent/conftest-action@v1
+        with:
+          policy: governance/policies
+          file: governance/skills/skills-registry.json
+
+      - name: Conftest — Validate Guard Registry
+        uses: open-policy-agent/conftest-action@v1
+        with:
+          policy: governance/policies
+          file: governance/guards/guard-registry.json
+
+      # ── 4. Gitleaks Secrets Scanning ────────────────────────────────────────
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # optional for open source repos
+        continue-on-error: true # set to true if first execution to prevent breaking initial runs
