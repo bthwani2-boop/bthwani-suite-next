@@ -97,24 +97,43 @@ function Get-ComposeBase {
 
 function Wait-ForPostgres {
   $max = 30
+
+  $RequiredDatabases = @("bthwani_runtime")
+  if ($script:ProfileList -contains "identity") { $RequiredDatabases += "identity_runtime" }
+  if ($script:ProfileList -contains "dsh") { $RequiredDatabases += "dsh_runtime" }
+  if ($script:ProfileList -contains "wlt") { $RequiredDatabases += "wlt_runtime" }
+
+  $RequiredDatabases = $RequiredDatabases | Select-Object -Unique
+
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "Waiting for Postgres ($i/$max)..."
-    # Ensure Postgres is up and accepting queries on the initialized runtime database
-    docker compose @(Get-ComposeBase) exec -T postgres psql -U bthwani_runtime -d bthwani_runtime -c "SELECT 1" 2>$null
+
+    docker compose @(Get-ComposeBase) exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime 2>$null
     if ($LASTEXITCODE -eq 0) {
-      # Make sure the initialization is fully finished (which creates identity_runtime) and the real server has started
-      docker compose @(Get-ComposeBase) exec -T postgres psql -U identity_runtime -d identity_runtime -c "SELECT 1" 2>$null
-      if ($LASTEXITCODE -eq 0) {
+      $Missing = @()
+
+      foreach ($db in $RequiredDatabases) {
+        $Sql = "SELECT 1 FROM pg_database WHERE datname = '$db';"
+        $Result = docker compose @(Get-ComposeBase) exec -T postgres psql -U bthwani_runtime -d bthwani_runtime -tAc $Sql 2>$null
+        if ($LASTEXITCODE -ne 0 -or (($Result -join '').Trim()) -ne "1") {
+          $Missing += $db
+        }
+      }
+
+      if ($Missing.Count -eq 0) {
         Start-Sleep -Seconds 2
         Write-Host "Postgres: healthy"
         return
       }
+
+      Write-Host "Postgres is up but missing DB(s): $($Missing -join ', ')"
     }
+
     Start-Sleep -Seconds 3
   }
+
   throw "Postgres did not become healthy after $max attempts"
 }
-
 function Wait-ForDshApi {
   $max = 20
   for ($i = 1; $i -le $max; $i++) {
@@ -853,44 +872,80 @@ elseif ($Action -eq "seed") {
 # ── Action: smoke ─────────────────────────────────────────────────────────────
 elseif ($Action -eq "smoke") {
   Write-Host "=== runtime:smoke (profiles: $($ProfileList -join ','))"
+
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
+  if ($LASTEXITCODE -ne 0) { throw "Postgres start failed for smoke (exit $LASTEXITCODE)" }
+
   Wait-ForPostgres
 
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate
+
+    # BootstrapLocalActors runs only when identity-api starts. Recreate it after migrations
+    # so operator/partner/field/captain/client local actors match the current Postgres volume.
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --force-recreate identity-api
+    if ($LASTEXITCODE -ne 0) { throw "Identity API recreate failed for smoke (exit $LASTEXITCODE)" }
+
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
-    Start-DshApi
   }
+
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
     Invoke-WltSeed
+
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --force-recreate wlt-api
+    if ($LASTEXITCODE -ne 0) { throw "WLT API recreate failed for smoke (exit $LASTEXITCODE)" }
+
     Wait-ForWltApi
     Invoke-WltSmoke
   }
+
   if ($ProfileList -contains "dsh") {
+    Invoke-Migrate
+    Invoke-Seed
+
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --force-recreate dsh-api
+    if ($LASTEXITCODE -ne 0) { throw "DSH API recreate failed for smoke (exit $LASTEXITCODE)" }
+
     Wait-ForDshApi
     Invoke-DshSmoke
   }
+
   if ($ProfileList -contains "media") {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d minio
+    if ($LASTEXITCODE -ne 0) { throw "MinIO start failed for smoke (exit $LASTEXITCODE)" }
+
     Invoke-MinioSmoke
   }
+
   if ($ProfileList -contains "financial-simulators") {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d wiremock-financial-provider
+    if ($LASTEXITCODE -ne 0) { throw "WireMock financial provider start failed for smoke (exit $LASTEXITCODE)" }
+
     Wait-ForWireMockFinancialProvider
     Invoke-WireMockFinancialSmoke
     Invoke-WltFinancialProviderSmoke
   }
+
   if ($ProfileList -contains "mail") {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d mailpit
+    if ($LASTEXITCODE -ne 0) { throw "Mailpit start failed for smoke (exit $LASTEXITCODE)" }
+
     Wait-ForMailpit
     Invoke-MailpitSmoke
   }
+
   if ($ProfileList -contains "cache") {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d valkey
+    if ($LASTEXITCODE -ne 0) { throw "Valkey start failed for smoke (exit $LASTEXITCODE)" }
+
     Wait-ForValkey
     Invoke-ValkeySmoke
   }
+
   Write-Host "smoke: PASS"
 }
-
-# ── Action: all ───────────────────────────────────────────────────────────────
 elseif ($Action -eq "all") {
   Write-Host "=== runtime:all (profiles: $($ProfileList -join ','))"
   docker info | Out-Null
@@ -964,3 +1019,5 @@ elseif ($Action -eq "all") {
 
   Write-Host "`nruntime:all: PASS"
 }
+
+

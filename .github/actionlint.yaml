@@ -1,0 +1,7 @@
+self-hosted-runner:
+  labels:
+    - self-hosted
+    - bthwani-lenovo
+    - linux
+    - wsl
+    - docker

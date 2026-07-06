@@ -2,6 +2,23 @@ name: Performance Governance
 
 on:
   workflow_dispatch:
+    inputs:
+      run_k6:
+        description: "Run k6 API smoke tests"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      run_lighthouse:
+        description: "Run Lighthouse CI for control panel"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: read
@@ -153,5 +170,6 @@ jobs:
           name: lighthouse-report
           path: .lighthouseci/
           retention-days: 14
+
 
 
