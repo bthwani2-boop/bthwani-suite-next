@@ -121,7 +121,12 @@
     "guard:icon-contract": "node tools/guards/icon-contract-gate.mjs",
     "guard:design-tokens": "node tools/guards/design-tokens-gate.mjs",
     "guard:brand-identity": "node tools/guards/brand-identity-report.mjs",
-    "diagnostics:ui-kit": "node tools/guards/ui-provider-required-gate.mjs && node tools/guards/icon-contract-gate.mjs && node tools/guards/design-tokens-gate.mjs && node tools/guards/ui-kit-boundary-gate.mjs && node tools/guards/brand-identity-report.mjs"
+    "diagnostics:ui-kit": "node tools/guards/ui-provider-required-gate.mjs && node tools/guards/icon-contract-gate.mjs && node tools/guards/design-tokens-gate.mjs && node tools/guards/ui-kit-boundary-gate.mjs && node tools/guards/brand-identity-report.mjs",
+    "guard:repo-size": "node tools/guards/repository-size-gate.mjs",
+    "guard:repo-naming": "node tools/guards/repository-naming-gate.mjs",
+    "guard:repo-structure": "node tools/guards/repository-structure-gate.mjs",
+    "guard:repo-all": "node tools/guards/repository-size-gate.mjs && node tools/guards/repository-naming-gate.mjs && node tools/guards/repository-structure-gate.mjs",
+    "diagnostics:repo-structure": "node tools/scripts/generate-repository-structure-report.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

@@ -70,6 +70,17 @@ jobs:
       - name: Guard — cleanup policy
         run: pnpm run guard:cleanup-policy
 
+      - name: Guard — repository size (FAIL on forbidden files)
+        run: pnpm run guard:repo-size
+
+      - name: Guard — repository naming (WARN — legacy files present)
+        run: pnpm run guard:repo-naming
+        continue-on-error: true
+
+      - name: Guard — repository structure (depth + ownership)
+        run: pnpm run guard:repo-structure
+        continue-on-error: true
+
       - name: Guard — API binding
         run: pnpm run guard:api-binding
 
