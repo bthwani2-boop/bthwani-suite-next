@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot } from "../guards/_guard-utils.mjs";
@@ -45,6 +45,7 @@ const baseline = readJson("tools/toolchain/tool-activation-baseline.json", { bas
 const expected = readJson("tools/toolchain/expected-tool-ids.v5.json", { expected_tools: [] }).expected_tools || [];
 const guardRegistry = readJson("governance/guards/guard-registry.json", { entries: [] });
 const workflowText = readWorkflowText();
+const workflowTextLower = workflowText.toLowerCase();
 const guardFiles = listDir("tools/guards", (name) => name.endsWith(".mjs") || name.endsWith(".go"));
 const scriptFiles = listDir("tools/scripts", (name) => name.endsWith(".mjs") || name.endsWith(".ps1") || name.endsWith(".sh"));
 const workflowFiles = listDir(".github/workflows", (name) => name.endsWith(".yml") || name.endsWith(".yaml"));
@@ -57,20 +58,52 @@ function commandFor(entry) {
   return entry.package_script || entry.fulfilled_by || "";
 }
 
+function workflowEvidenceFor(entry, command) {
+  const id = String(entry.id || "").toLowerCase();
+  const commandNeedle = String(command || "").toLowerCase();
+
+  const byCommand = Boolean(commandNeedle)
+    && (workflowTextLower.includes(commandNeedle) || workflowTextLower.includes(`pnpm run ${commandNeedle}`));
+
+  const byFileName = workflowFiles.some((rel) => path.basename(rel).toLowerCase().includes(id));
+  const byWorkflowName = workflowTextLower.includes(`name: ${id}`) || workflowTextLower.includes(`name: "${id}"`);
+  const byAction = workflowTextLower.includes(`${id}-action`) || workflowTextLower.includes(`/${id}`) || workflowTextLower.includes(`${id} scan`);
+
+  return {
+    workflow_found: byCommand || byFileName || byWorkflowName || byAction,
+    evidence: [
+      byCommand ? "workflow_command" : "",
+      byFileName ? "workflow_filename" : "",
+      byWorkflowName ? "workflow_name" : "",
+      byAction ? "workflow_action_or_step" : ""
+    ].filter(Boolean)
+  };
+}
+
 function classify(entry) {
   const activation = baseline[entry.id] || entry.activation || "optional";
   const command = commandFor(entry);
-  const hasScript = command ? scriptValues.has(command) || command.startsWith("github/") || command === "sonarqube" : false;
-  const hasWorkflow = command ? workflowText.includes(command) || workflowText.includes(`pnpm run ${command}`) : false;
+  const hasPackageScript = command ? scriptValues.has(command) : false;
+  const hasVirtualScript = command ? command.startsWith("github/") || command === "sonarqube" : false;
+  const workflow = workflowEvidenceFor(entry, command);
+  const hasExecutionBinding = hasPackageScript || hasVirtualScript || workflow.workflow_found;
   const statuses = [];
 
-  if (activation === "active" && (!hasScript || !hasWorkflow)) statuses.push(hasScript ? "ACTIVE_WARN" : "ACTIVE_FAIL");
+  if (activation === "active" && entry.failure_policy === "fail" && !hasExecutionBinding) {
+    statuses.push("ACTIVE_FAIL");
+  }
+
+  if (activation === "active" && entry.failure_policy === "fail" && hasExecutionBinding && command && !workflow.workflow_found) {
+    statuses.push("ACTIVE_WARN");
+  }
+
   if (activation === "partial") statuses.push("PARTIAL");
   if (activation === "optional") statuses.push("OPTIONAL");
   if (command && command.startsWith("guard:") && !scriptValues.has(command)) statuses.push("MISSING_SCRIPT");
   if (!baseline[entry.id]) statuses.push("UNMAPPED_TOOL");
+  if (!command && workflow.workflow_found) statuses.push("WORKFLOW_ONLY");
   if (!entry.owner && !entry.team) statuses.push("NEEDS_OWNER");
-  if (statuses.length === 0) statuses.push("ACTIVE_WARN");
+  if (statuses.length === 0) statuses.push("ACTIVE_BOUND");
 
   return {
     tool_id: entry.id,
@@ -78,8 +111,9 @@ function classify(entry) {
     activation,
     failure_policy: entry.failure_policy || "manual",
     command,
-    script_found: hasScript,
-    workflow_found: hasWorkflow,
+    script_found: hasPackageScript || hasVirtualScript,
+    workflow_found: workflow.workflow_found,
+    workflow_evidence: workflow.evidence,
     detected_from: ["tools/toolchain/tool-catalog.v5.json", "tools/toolchain/tool-activation-baseline.json"],
     classification: statuses
   };
@@ -97,6 +131,7 @@ for (const id of expected) {
       command: "",
       script_found: false,
       workflow_found: false,
+      workflow_evidence: [],
       detected_from: ["tools/toolchain/expected-tool-ids.v5.json"],
       classification: ["UNMAPPED_TOOL"]
     });

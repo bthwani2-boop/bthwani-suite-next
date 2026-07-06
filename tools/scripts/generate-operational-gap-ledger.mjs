@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot } from "../guards/_guard-utils.mjs";
@@ -23,6 +23,7 @@ function readJson(name, fallback) {
 function gap({ source_tool, path: sourcePath, type, severity = "HIGH", journey = "factory", affected_surface = "multi-surface", owner = "unassigned", reason, suggested_action, verification_command, blocks_journey_start = true }) {
   return {
     gap_id: `${type}:${sourcePath}`.replace(/[^A-Za-z0-9:_./-]/g, "_"),
+    type,
     source_tool,
     path: sourcePath,
     reason,
@@ -36,6 +37,44 @@ function gap({ source_tool, path: sourcePath, type, severity = "HIGH", journey =
     status: "OPEN",
     blocks_journey_start
   };
+}
+
+function isAllowedSharedDirectApiFile(file) {
+  return /\.(api|client|transport)\.(ts|tsx|js|jsx)$/.test(file)
+    || /\/_kernel\/.*(http|request|api-base-url).*\.(ts|tsx|js|jsx)$/.test(file);
+}
+
+function assessTool(tool) {
+  const classification = tool.classification || [];
+  const activation = tool.activation || "optional";
+  const failurePolicy = tool.failure_policy || "manual";
+
+  const hasActiveFail = classification.includes("ACTIVE_FAIL");
+  const hasMissingScript = classification.includes("MISSING_SCRIPT");
+  const hasUnmapped = classification.includes("UNMAPPED_TOOL");
+  const hasActiveWarn = classification.includes("ACTIVE_WARN");
+
+  if (hasActiveFail || hasMissingScript || (activation === "active" && failurePolicy === "fail" && hasUnmapped)) {
+    return {
+      emit: true,
+      blocks: true,
+      severity: hasActiveFail ? "CRITICAL" : "HIGH",
+      type: "CI_NOT_PROVEN",
+      reason: `Tool classified as ${classification.join(", ")}.`
+    };
+  }
+
+  if (activation === "active" && failurePolicy === "fail" && hasActiveWarn) {
+    return {
+      emit: true,
+      blocks: false,
+      severity: "HIGH",
+      type: "CI_WEAKLY_BOUND",
+      reason: `Active fail-policy tool is weakly bound: ${classification.join(", ")}.`
+    };
+  }
+
+  return { emit: false, blocks: false, severity: "LOW", type: "TOOL_METADATA", reason: "" };
 }
 
 const toolchain = readJson("toolchain-inventory.json", null);
@@ -54,18 +93,20 @@ if (!toolchain) {
   }));
 } else {
   for (const tool of toolchain.tools || []) {
-    if ((tool.classification || []).some((item) => ["ACTIVE_FAIL", "MISSING_SCRIPT", "UNMAPPED_TOOL", "NEEDS_OWNER"].includes(item))) {
-      gaps.push(gap({
-        source_tool: "toolchain-inventory",
-        path: tool.tool_id,
-        type: "CI_NOT_PROVEN",
-        severity: tool.classification.includes("ACTIVE_FAIL") ? "CRITICAL" : "HIGH",
-        owner: "toolchain",
-        reason: `Tool classified as ${tool.classification.join(", ")}.`,
-        suggested_action: "classify_or_bind_tool",
-        verification_command: "pnpm run diagnostics:operational:toolchain"
-      }));
-    }
+    const assessment = assessTool(tool);
+    if (!assessment.emit) continue;
+
+    gaps.push(gap({
+      source_tool: "toolchain-inventory",
+      path: tool.tool_id,
+      type: assessment.type,
+      severity: assessment.severity,
+      owner: "toolchain",
+      reason: assessment.reason,
+      suggested_action: assessment.blocks ? "classify_or_bind_tool" : "strengthen_tool_binding_or_document_workflow_evidence",
+      verification_command: "pnpm run diagnostics:operational:toolchain",
+      blocks_journey_start: assessment.blocks
+    }));
   }
 }
 
@@ -85,32 +126,67 @@ if (!surfaces) {
       path: surface,
       type: "UNBOUND_SCREEN",
       affected_surface: surface,
-      reason: "Required surface name was not discovered.",
+      reason: "Required UI surface was not discovered.",
       suggested_action: "classify_surface_or_justify_exclusion",
       verification_command: "pnpm run diagnostics:operational:surfaces"
     }));
   }
-  for (const file of surfaces.direct_api_signs || []) {
-    gaps.push(gap({
-      source_tool: "surface-inventory",
-      path: file,
-      type: "DIRECT_API_IN_SURFACE",
-      affected_surface: file.split("/").slice(0, 4).join("/"),
-      reason: "Surface file contains direct API or runtime config signs.",
-      suggested_action: "bind_to_shared_controller_or_adapter",
-      verification_command: "pnpm run diagnostics:operational:surfaces"
-    }));
-  }
-  for (const file of surfaces.local_business_logic_candidates || []) {
-    gaps.push(gap({
-      source_tool: "surface-inventory",
-      path: file,
-      type: "BUSINESS_LOGIC_IN_SURFACE",
-      affected_surface: file.split("/").slice(0, 4).join("/"),
-      reason: "Surface file contains operational business logic candidates.",
-      suggested_action: "move_or_bind_to_shared_or_backend_owner",
-      verification_command: "pnpm run diagnostics:operational:surfaces"
-    }));
+
+  for (const surface of surfaces.surfaces || []) {
+    const directApiFiles = surface.direct_api_signs || [];
+    const localLogicFiles = surface.local_business_logic_candidates || [];
+    const localLogicSet = new Set(localLogicFiles);
+
+    if (surface.kind === "ui_surface") {
+      for (const file of directApiFiles) {
+        gaps.push(gap({
+          source_tool: "surface-inventory",
+          path: file,
+          type: "DIRECT_API_IN_SURFACE",
+          affected_surface: surface.surface,
+          reason: "UI surface file contains direct API or runtime config signs.",
+          suggested_action: "bind_to_shared_controller_or_adapter",
+          verification_command: "pnpm run diagnostics:operational:surfaces"
+        }));
+      }
+
+      for (const file of localLogicFiles) {
+        gaps.push(gap({
+          source_tool: "surface-inventory",
+          path: file,
+          type: "BUSINESS_LOGIC_IN_SURFACE",
+          affected_surface: surface.surface,
+          reason: "UI surface file contains operational business logic candidates.",
+          suggested_action: "move_or_bind_to_shared_or_backend_owner",
+          verification_command: "pnpm run diagnostics:operational:surfaces"
+        }));
+      }
+
+      continue;
+    }
+
+    if (surface.kind === "shared_brain") {
+      for (const file of directApiFiles) {
+        if (isAllowedSharedDirectApiFile(file) && !localLogicSet.has(file)) continue;
+
+        gaps.push(gap({
+          source_tool: "surface-inventory",
+          path: file,
+          type: localLogicSet.has(file) ? "SHARED_API_LOGIC_MIXED" : "DIRECT_API_IN_SHARED_UNCLASSIFIED",
+          severity: localLogicSet.has(file) ? "HIGH" : "MEDIUM",
+          affected_surface: surface.surface,
+          owner: "shared_brain",
+          reason: localLogicSet.has(file)
+            ? "Shared file mixes runtime API access with operational/domain logic candidates."
+            : "Shared file contains direct API signs but is not named as adapter/client/transport/kernel.",
+          suggested_action: localLogicSet.has(file)
+            ? "split_transport_from_shared_domain_logic"
+            : "rename_or_move_to_shared_adapter_or_kernel",
+          verification_command: "pnpm run diagnostics:operational:surfaces",
+          blocks_journey_start: localLogicSet.has(file)
+        }));
+      }
+    }
   }
 }
 
@@ -135,6 +211,21 @@ if (!journeys) {
         verification_command: "pnpm run diagnostics:operational:inventory"
       }));
     }
+  }
+
+  if ((journeys.openapi_files || []).length > 0 && (journeys.generated_clients || []).length === 0) {
+    gaps.push(gap({
+      source_tool: "journey-inventory",
+      path: "clients/generated",
+      type: "MISSING_GENERATED_CLIENTS",
+      severity: "CRITICAL",
+      affected_surface: "multi-surface",
+      owner: "api-contracts",
+      reason: "OpenAPI files exist but generated clients were not discovered.",
+      suggested_action: "run_openapi_generate_or_fix_generated_client_detection",
+      verification_command: "pnpm run openapi:generate && pnpm run diagnostics:operational:inventory",
+      blocks_journey_start: true
+    }));
   }
 }
 

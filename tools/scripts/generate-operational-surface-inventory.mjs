@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot, isExcluded, toPosix } from "../guards/_guard-utils.mjs";
@@ -13,12 +13,55 @@ const roots = [
   "shared/ui-kit"
 ];
 
+const uiSurfaceRoots = [
+  "services/dsh/frontend/app-client",
+  "services/dsh/frontend/app-partner",
+  "services/dsh/frontend/app-field",
+  "services/dsh/frontend/app-captain",
+  "services/dsh/frontend/control-panel",
+  "services/wlt/frontend/app-client",
+  "services/wlt/frontend/app-partner",
+  "services/wlt/frontend/app-field",
+  "services/wlt/frontend/app-captain",
+  "services/wlt/frontend/control-panel"
+];
+
+const sharedBrainRoots = [
+  "services/dsh/frontend/shared",
+  "services/wlt/frontend/shared"
+];
+
 function headSha() {
   try {
     return execSync("git rev-parse HEAD", { cwd: repoRoot, encoding: "utf8" }).trim();
   } catch {
     return "HEAD_UNAVAILABLE";
   }
+}
+
+function rootMatches(file, root) {
+  return file === root || file.startsWith(`${root}/`);
+}
+
+function existingRoot(root) {
+  return fs.existsSync(path.join(repoRoot, root));
+}
+
+function classifyOwner(file) {
+  for (const root of sharedBrainRoots) {
+    if (rootMatches(file, root)) return { kind: "shared_brain", surface: root };
+  }
+
+  for (const root of uiSurfaceRoots) {
+    if (rootMatches(file, root)) return { kind: "ui_surface", surface: root };
+  }
+
+  const runtimeMatch = file.match(/^apps\/([^/]+)\/runtime(?:\/|$)/);
+  if (runtimeMatch) return { kind: "runtime_shell", surface: `apps/${runtimeMatch[1]}/runtime` };
+
+  if (rootMatches(file, "shared/ui-kit")) return { kind: "ui_kit", surface: "shared/ui-kit" };
+
+  return { kind: "other", surface: file.split("/").slice(0, 4).join("/") };
 }
 
 function listFiles(relRoot, files = []) {
@@ -38,6 +81,7 @@ function listFiles(relRoot, files = []) {
 }
 
 function classifyFile(file) {
+  const owner = classifyOwner(file);
   const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
   const base = path.basename(file);
   const isScreen = /Screen\.(tsx|ts)$/.test(base) || /screen/i.test(file);
@@ -52,7 +96,8 @@ function classifyFile(file) {
 
   return {
     path: file,
-    surface: file.split("/").slice(0, 4).join("/"),
+    surface: owner.surface,
+    kind: owner.kind,
     screens: isScreen ? [file] : [],
     pages: isPage ? [file] : [],
     route_bindings: isRoute ? [file] : [],
@@ -73,6 +118,7 @@ const surfaces = new Map();
 for (const item of items) {
   const current = surfaces.get(item.surface) || {
     surface: item.surface,
+    kind: item.kind,
     files: 0,
     screens: [],
     pages: [],
@@ -94,9 +140,13 @@ for (const item of items) {
   surfaces.set(item.surface, current);
 }
 
-const requiredSurfaces = ["app-client", "app-partner", "app-captain", "app-field", "control-panel"];
-const surfaceText = Array.from(surfaces.keys()).join("\n");
-const missingRequiredSurfaces = requiredSurfaces.filter((surface) => !surfaceText.includes(surface));
+const requiredUiSurfaces = uiSurfaceRoots.filter(existingRoot);
+const discoveredUiSurfaces = new Set(
+  Array.from(surfaces.values())
+    .filter((surface) => surface.kind === "ui_surface")
+    .map((surface) => surface.surface)
+);
+const missingRequiredSurfaces = requiredUiSurfaces.filter((surface) => !discoveredUiSurfaces.has(surface));
 
 const inventory = {
   head_sha: headSha(),
@@ -123,13 +173,13 @@ lines.push("");
 lines.push(`head_sha: \`${inventory.head_sha}\``);
 lines.push("status: `DISCOVERY_ONLY`");
 lines.push("");
-lines.push("| Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |");
-lines.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+lines.push("| Kind | Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |");
+lines.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
 for (const surface of inventory.surfaces) {
-  lines.push(`| \`${surface.surface}\` | ${surface.files} | ${surface.screens.length} | ${surface.pages.length} | ${surface.route_bindings.length} | ${surface.direct_api_signs.length} | ${surface.local_business_logic_candidates.length} | ${surface.icons_components_actions_candidates} | ${surface.states_candidates} |`);
+  lines.push(`| ${surface.kind} | \`${surface.surface}\` | ${surface.files} | ${surface.screens.length} | ${surface.pages.length} | ${surface.route_bindings.length} | ${surface.direct_api_signs.length} | ${surface.local_business_logic_candidates.length} | ${surface.icons_components_actions_candidates} | ${surface.states_candidates} |`);
 }
 lines.push("");
-lines.push("## Missing Required Surface Names");
+lines.push("## Missing Required UI Surfaces");
 for (const surface of missingRequiredSurfaces) lines.push(`- ${surface}`);
 
 fs.writeFileSync(path.join(outDir, "surface-inventory.md"), lines.join("\n"), "utf8");

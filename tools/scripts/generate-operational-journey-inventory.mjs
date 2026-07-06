@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot, isExcluded, toPosix } from "../guards/_guard-utils.mjs";
@@ -27,6 +27,22 @@ function listFiles(relRoot, matcher, files = []) {
     if (isExcluded(rel, entry.isDirectory(), entry.name)) continue;
     if (entry.isDirectory()) {
       listFiles(rel, matcher, files);
+      continue;
+    }
+    if (matcher(rel)) files.push(rel);
+  }
+  return files;
+}
+
+function listFilesNoGeneratedExclusion(relRoot, matcher, files = []) {
+  const absRoot = path.join(repoRoot, relRoot);
+  if (!fs.existsSync(absRoot)) return files;
+  for (const entry of fs.readdirSync(absRoot, { withFileTypes: true })) {
+    const full = path.join(absRoot, entry.name);
+    const rel = toPosix(path.relative(repoRoot, full));
+    if (entry.isDirectory()) {
+      if ([".git", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx", ".cache", "dist", "build", "out", "coverage"].includes(entry.name)) continue;
+      listFilesNoGeneratedExclusion(rel, matcher, files);
       continue;
     }
     if (matcher(rel)) files.push(rel);
@@ -97,7 +113,7 @@ const sourceFiles = {
 };
 
 const openapiFiles = listFiles(".", (rel) => rel.endsWith(".openapi.yaml"));
-const generatedClients = listFiles(".", (rel) => /\/clients\/generated\/.*\.(ts|tsx)$/.test(rel));
+const generatedClients = listFilesNoGeneratedExclusion(".", (rel) => /\/clients\/generated\/.*\.(ts|tsx)$/.test(rel));
 const backendRoutes = listFiles("services", (rel) => /\.(go|ts|js)$/.test(rel) && /backend/.test(rel) && /(route|router|server|http|handler)/i.test(rel));
 const frontendSurfaces = listFiles("services", (rel) => /frontend\/.*\.(tsx|ts|jsx|js)$/.test(rel) && /(Screen|page|Route|Navigator|Tab|Section|Panel)/.test(rel));
 
