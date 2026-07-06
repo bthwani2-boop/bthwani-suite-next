@@ -1,0 +1,67 @@
+# .ls-lint.yml
+# ls-lint naming convention rules for BThwani project
+
+ls:
+  .github:
+    workflows:
+      .yml: kebabcase
+  apps:
+    .dir: kebabcase
+    src:
+      components:
+        .tsx: PascalCase
+        .ts: camelCase
+      screens:
+        .tsx: PascalCase
+        .ts: camelCase
+  services:
+    .dir: kebabcase
+    backend:
+      .go: snakecase
+    database:
+      migrations:
+        .sql: regex:\d{3,4}_[a-z0-9_]+
+  tools:
+    .dir: kebabcase
+    guards:
+      .mjs: regex:^(_[a-z0-9-]+|[a-z0-9-]+-gate|[a-z0-9-]+)\.mjs$
+    scripts:
+      .mjs: kebabcase
+      .ps1: kebabcase
+
+ignore:
+  - node_modules
+  - dist
+  - build
+  - .next
+  - .nx
+  - .cache
+  - .expo
+  - coverage
+  - .git
+  - .diagnostics
+  - shared/ui-kit/src/theme
+  - shared/ui-kit/src/tokens
+  - shared/ui-kit/src/primitives
+  - shared/ui-kit/src/web
+  - shared/ui-kit/src/tamagui-config.js.map
+  - shared/ui-kit/src/theme/index.js.map
+  - shared/ui-kit/src/tokens/colors.js.map
+  - tools/guards/_guard-utils.mjs
+  - tools/guards/_openapi-utils.mjs
+  - tools/guards/_openapi-utils.test.mjs
+  - "**/node_modules"
+  - "**/dist"
+  - "**/build"
+  - "**/.next"
+  - "**/.nx"
+  - "**/.cache"
+  - "**/.expo"
+  - "tools/registry/runs"
+  - "tools/guards"
+  - "tools/scripts"
+  - "apps/control-panel/runtime/src/app/dsh/partners/[partnerId]"
+  - "services/dsh/backend/graphify-out"
+  - "services/dsh/frontend/app-partner/Catalog"
+  - "services/dsh/frontend/shared/_kernel"
+  - "services/wlt/frontend/control-panel/_skeleton-proof"

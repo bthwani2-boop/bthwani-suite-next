@@ -1,0 +1,20 @@
+id: no-api-call-outside-controller
+language: typescript
+message: "BTHWANI: Direct fetch() call outside controller/adapter — move to a controller or adapter file"
+severity: error
+ignores:
+  - "**/*.api.ts"
+  - "**/*.api.tsx"
+  - "**/_kernel/**"
+  - "**/media/**"
+  - "**/*-http-request.ts"
+  - "**/*-request.ts"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/test/**"
+  - "**/tests/**"
+rule:
+  pattern: fetch($$$)
+# Note: this rule is scoped via --include in the runner script to exclude
+# controllers/, adapters/, *.api.ts, and test files.
+# The guard script handles scoping — the rule itself is broad.

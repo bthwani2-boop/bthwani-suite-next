@@ -132,7 +132,7 @@ export const ProductCard = memo(function ProductCard({
         {/* Inner container to clip the image to rounded corners */}
         <YStack style={styles.imageInnerContainer}>
           {imageSource ? (
-            <Image source={imageSource} style={styles.productImage} />
+            <Image source={imageSource} style={styles.productImage} alt="" />
           ) : (
             <YStack style={styles.productImagePlaceholder} />
           )}

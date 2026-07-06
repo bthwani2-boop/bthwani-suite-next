@@ -31,6 +31,7 @@ export default function DshPartnerDetailPage() {
           title={<strong>لوحة التحكم — DSH</strong>}
           serviceLabel={
             <span
+              role="button"
               style={{ cursor: "pointer", textDecoration: "underline" }}
               onClick={() => router.push("/dsh/partners")}
             >

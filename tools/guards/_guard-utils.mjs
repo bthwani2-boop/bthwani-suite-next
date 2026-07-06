@@ -45,6 +45,7 @@ const EXCLUDED_EXTENSIONS = new Set([
 export function isExcluded(relPath, isDir, name) {
   if (isDir) {
     if (EXCLUDED_DIRS.has(name)) return true;
+    if (relPath === "tools/diagnostics") return true;
   }
 
   if (relPath.startsWith("tools/registry/runs")) {
@@ -209,3 +210,30 @@ export function loadTsconfigAliases() {
 
   return aliases;
 }
+
+export function assertActiveOrWarn(toolId, binaryName) {
+  const baselinePath = path.join(repoRoot, "tools/toolchain/tool-activation-baseline.json");
+  let activation = "optional";
+  if (fs.existsSync(baselinePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+      activation = data.baseline[toolId] || "optional";
+    } catch {}
+  }
+
+  if (activation === "active") {
+    console.error(`\n[${toolId.toUpperCase()} ERROR] Required active toolchain binary '${binaryName}' is not installed.`);
+    console.error("Active checks must fail closed.\n");
+    process.exit(1);
+  }
+
+  if (activation === "partial") {
+    console.warn(`\n[${toolId.toUpperCase()} WARN] Partial toolchain binary '${binaryName}' is not installed.`);
+    console.warn("Partial checks are warn-only until their baseline is accepted.\n");
+    process.exit(0);
+  }
+
+  console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' binary not installed. Tool is optional.\n`);
+  process.exit(0);
+}
+

@@ -1,0 +1,44 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.nx/**": true,
+    "**/graphify-out/**": true,
+    "**/.claude/worktrees/**": true,
+    "**/.local/share/lean-ctx/**": true,
+    "**/.local/state/lean-ctx/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true
+  },
+
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/.nx/**": true,
+    "**/graphify-out/**": true,
+    "**/.claude/worktrees/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.next/**": true,
+    "**/coverage/**": true
+  },
+
+  "typescript.tsserver.maxTsServerMemory": 4096,
+
+  "eslint.workingDirectories": [
+    { "mode": "auto" }
+  ],
+
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  "gitlens.blame.line.enabled": false,
+  "gitlens.currentLine.enabled": false,
+  "gitlens.statusBar.enabled": false
+}

@@ -280,6 +280,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 											source={{ uri: asset.public_url }}
 											style={{ width: 64, height: 64, borderRadius: radius.xs, backgroundColor: theme.line + '20' }}
 											resizeMode="cover"
+											alt=""
 										/>
 									) : (
 										<Box style={{ width: 64, height: 64, borderRadius: radius.xs, backgroundColor: theme.line + '20', justifyContent: 'center', alignItems: 'center' }}>

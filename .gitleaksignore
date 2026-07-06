@@ -1,0 +1,5 @@
+# .gitleaksignore
+# Sourced from Gitleaks false positive fingerprints
+
+# performance-budget-gate.mjs line 73 false positive generic-api-key
+dd6f345174025430738772bede1d82298bdafb71:tools/guards/performance-budget-gate.mjs:generic-api-key:73

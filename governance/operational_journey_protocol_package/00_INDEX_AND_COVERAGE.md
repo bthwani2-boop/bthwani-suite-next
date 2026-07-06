@@ -9,7 +9,7 @@
 **Compared source v1 upload:** `Pasted text.txt`
 **Compared source v2 upload:** `command_operational_journey_unified_PROTOCOL_v2_<REF>.md`
 **Package version:** `v3-modular-12files-strict-amended`
-**Date:** `2026-07-03`
+**Date:** `2026-07-06`
 
 ---
 
@@ -26,20 +26,82 @@
 ## 1) Manifest
 
 | الملف | الدور |
-|---|---|
-| `00_INDEX_AND_COVERAGE.md` | فهرس الحزمة، مصادرها، مصفوفة تغطية v1→v3، ومصفوفة v2→v3. |
+| --- | --- |
+| `00_INDEX_AND_COVERAGE.md` | فهرس الحزمة، مصادرها، مصفوفة تغطية v1→v3، مصفوفة v2→v3، self-containment، و legacy harvest. |
 | `01_COMMAND_INPUTS_RESULTS.md` | الغرض، قالب الإدخال، الأمر المباشر، النتائج المسموحة. |
 | `02_REMOTE_REF_SOURCE_GIT_GATES.md` | REF Gate، Human Gate، 100% Evidence، المصدر، machine-readable، القرار، المحلي. |
-| `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` | تعريف الرحلة، الطوبولوجيا، حدود الملكية، DSH/WLT، المانح، وحدود الكيانات Partner/Store. |
-| `04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md` | project_area، entity_boundary_matrix، surfaces، surface_entity_language_matrix، control-panel sections، binding chain. |
-| `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` | backend/database/API client/SSOT/visibility/auth/risk matrices، partner_store_database_truth_matrix، store_client_visibility_gate_matrix. |
-| `06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md` | topic organization، consolidation، sequence، performance، cleanup، zero_defect_closure_matrix (تدقيق نهائي شامل ضد الأخطاء/النقص/التناقض/التبعثر/التكرار/المحتوى الميت/التسرب المعمّم)، external reference. |
-| `07_VERIFICATION_RUNTIME_CI_PR.md` | verification commands، runtime evidence، CI، PR/merge. |
-| `08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md` | implementation rules، Antigravity command، final report schema. |
-| `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | acceptance rule، quick command، closing rule. |
-| `10_EXECUTION_PLAN_NO_SKIP_GATE.md` | Amendment: Execution Plan No-Skip Gate، docker_hosting_runtime_matrix، guards محصودة من `command_old_new`. |
-| `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` | Amendment: إلزامي يقيّد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface. |
-| `LEGACY_SOURCE_TRACE.md` | تتبع مصادر ما قبل الحزمة (`command_old_new`, `command_operational_journey_unified`) وشروط الحذف اللاحقة. |
+| `03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md` | تعريف الرحلة، المسارات السيادية، shared brains vs surfaces، Partner vs Store، والمانح read-only. |
+| `04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md` | matrices إلزامية: project_area, entity_boundary, surfaces, control-panel sections, binding chain. |
+| `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` | matrices إلزامية: backend layers, database truth, API clients, SSOT, visibility gates, auth/permissions, risk-based tests. |
+| `06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md` | topic organization, consolidation, sequence, performance, cleanup, zero_defect_closure_matrix, external reference. |
+| `07_VERIFICATION_RUNTIME_CI_PR.md` | أوامر التحقق المتأثرة، runtime evidence, CI rules, PR/merge review. |
+| `08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md` | قواعد التنفيذ في الكود الحي، Antigravity command output standard, final report schema. |
+| `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | معيار القبول النهائي، الأمر المختصر، وقاعدة الخاتمة. |
+| `10_EXECUTION_PLAN_NO_SKIP_GATE.md` | Amendment: Execution Plan No-Skip Gate, docker_hosting_runtime_matrix, guards محصودة من `command_old_new`. |
+| `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` | Amendment: تقييد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface. |
+| `LEGACY_SOURCE_TRACE.md` | trace-only: تتبع مصادر ما قبل الحزمة (command_old_new, command_operational_journey_unified). |
+
+> قاعدة حاكمة: الملفات القديمة `tools/plan/command_operational_journey_unified` و `tools/plan/command_old_new` مؤرشفة ومحذوفة بالكامل، ولا تُستخدم في التشغيل مطلقًا. الحزمة الحالية هي المصدر الذاتي الوحيد للحوكمة.
+
+---
+
+## 1.1) مصفوفة الكفاية الذاتية (Self-Containment Matrix)
+
+```yaml
+self_containment_matrix:
+  self_contained: true
+  status: PASS
+  evidence: "جميع ملفات الحزمة (00-11) تحكم نفسها ذاتيًا، وتم استخراج كل القيمة الحاكمة والبنود من الملفات القديمة ودمجها داخل الحزمة، ولا يوجد أي استدعاء أو اعتماد تشغيلي على مسارات خارجية محذوفة."
+```
+
+## 1.2) مصفوفة سلامة المراجع الداخلية (Internal Reference Integrity Matrix)
+
+```yaml
+internal_reference_integrity_matrix:
+  broken_references_count: 0
+  status: PASS
+  checked_items:
+    - "تحديث ترقيم الملفات من 09/01 إلى 11/01 وتوحيدها على x/11"
+    - "إزالة عبارات 11 ملفًا وتعديلها لتشمل 12 ملفًا"
+    - "تحديث نطاقات الاستدعاء لتشمل الملف 11"
+    - "تأكيد تعريف zero_defect_closure_matrix والرجوع إليها في 06"
+```
+
+## 1.3) مصفوفة حصاد المصادر التاريخية (Legacy Harvest Matrix)
+
+```yaml
+legacy_harvest_matrix:
+  status: PASS
+  harvested_sources:
+    - path: tools/plan/command_operational_journey_unified
+      status: HARVESTED_AND_DELETED
+      harvested_items:
+        - "طريقة الاستخدام الحاكمة (مدمجة في 01)"
+        - "بوابة REF من Remote (مدمجة في 02)"
+        - "منع default branch fallback و substitution (مدمج في 02)"
+        - "Human-Gated Git/GitHub (مدمج في 02)"
+        - "تعريف النتائج المسموحة (مدمج في 01)"
+        - "تعريف الرحلة قبل التنفيذ (مدمج في 03)"
+        - "Canonical Repository Topology (مدمج في 03)"
+        - "المسارات السيادية الحاكمة والـ shared brains (مدمج في 03)"
+        - "قاعدة العقل الموحد Full-Stack Brain (مدمج في 03)"
+        - "حدود DSH/WLT المالية (مدمج في 03)"
+        - "استخدام المانح Read-Only (مدمج في 03)"
+        - "Matrices المشروع والأسطح ولوحة التحكم وسلسلة الربط (مدمجة في 04 و05)"
+        - "تنظيم الملفات والأداء وحذف/نقل/دمج الملفات (مدمجة في 06)"
+        - "External Reference Rule (مدمج في 06)"
+        - "الفحوصات المستهدفة وأدلة الإغلاق (مدمجة في 07)"
+        - "Antigravity Command Standard والتقرير النهائي (مدمج في 08)"
+        - "Acceptance Rule والأمر المختصر والخاتمة (مدمج في 09)"
+    - path: tools/plan/command_old_new
+      status: HARVESTED_AND_DELETED
+      harvested_items:
+        - "Guards الموحدة الموجهة للبنية والرحلة والأسطح (مدمجة في 10 و 07)"
+        - "Docker / Hosting / Runtime Infrastructure Matrix (مدمج في 10)"
+        - "منع القفز/التجاهل أثناء كتابة خطط التنفيذ (مدمج في 10)"
+        - "قواعد cleanup-policy و UI-kit boundary (مدمجة في 10)"
+  operational_use_of_legacy_files_allowed: false
+```
 
 ---
 
@@ -66,7 +128,7 @@ coverage_result:
 ## 3) مصفوفة تغطية v2 → ملفات الحزمة
 
 | قسم v2 | الملف |
-|---|---|
+| --- | --- |
 | `0) الغرض الحاكم` | `01_COMMAND_INPUTS_RESULTS.md` |
 | `1) قالب الاستخدام الإلزامي` | `01_COMMAND_INPUTS_RESULTS.md` |
 | `2) أمر التنفيذ المباشر` | `01_COMMAND_INPUTS_RESULTS.md` |
@@ -109,7 +171,7 @@ coverage_result:
 ## 4) مصفوفة تغطية v1 الأصلي → ملفات الحزمة
 
 | مستوى | قسم v1 الأصلي | التغطية في الحزمة |
-|---:|---|---|
+| ---: | --- | --- |
 | H2 | `0) طريقة الاستخدام` | `01_COMMAND_INPUTS_RESULTS.md` |
 | H2 | `0.1) بوابة التحكم البشري بالتغييرات` | `02_REMOTE_REF_SOURCE_GIT_GATES.md` |
 | H2 | `0.2) تعريف 100% داخل هذا البروتوكول` | `02_REMOTE_REF_SOURCE_GIT_GATES.md` |
@@ -173,8 +235,8 @@ coverage_result:
 
 ## 5) فحص المصطلحات والبنود الحاكمة
 
-| بند/مصطلح حاكم | حالة التغطية داخل ملفات 01-09 |
-|---|---|
+| بند/مصطلح حاكم | حالة التغطية داخل ملفات 01-11 |
+| --- | --- |
 | `Human-Gated Git/GitHub` | `PASS` |
 | `PROTOCOL_VIOLATION` | `PASS` |
 | `100%` | `PASS` |
@@ -228,20 +290,22 @@ coverage_result:
 5. اقرأ 07 قبل أي حكم تحقق أو CI أو PR.
 6. اقرأ 08 عند التنفيذ أو عند إنتاج أمر Antigravity أو تقرير نهائي.
 7. اقرأ 09 قبل إعلان أي قبول أو قبل استخدام الأمر المختصر.
-8. اقرأ 10 إلزاميًا قبل كتابة أي أمر تنفيذ أو خطة تنفيذ أو تشخيص أو تحليل، ولإكمال docker_hosting_runtime_matrix.
-9. اقرأ 11 إلزاميًا لتقييد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface قبل كتابة أمر تنفيذ أو خطة تنفيذ أو بدء implementation_or_closure.
-10. راجع LEGACY_SOURCE_TRACE.md قبل أي قرار حذف أو أرشفة لملفات ما قبل الحزمة.
+8. اقرأ 10 و11 دائمًا عند command_generation أو implementation_or_closure وإكمال docker_hosting_runtime_matrix.
+9. راجع LEGACY_SOURCE_TRACE.md فقط عند audit/history، لا كمصدر تنفيذ.
 ```
 
 ---
 
 ## 7) منع إسقاط البنود مستقبلًا
 
-أي تعديل لاحق على هذه الحزمة يجب أن يحدث بهذه القاعدة:
+أي تعديل لاحق على هذه الحزمة يجب أن يحدث بهذه قاعدة التغيير:
 
 ```yaml
-change_control_for_protocol_package:
-  current_file_count: 12
+change_control_for_protocol_package_v2:
+  package_file_count: 12
+  amendment_files:
+    - 10_EXECUTION_PLAN_NO_SKIP_GATE.md
+    - 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md
   update_all_impacted_files: required
   update_v1_v2_coverage_mapping: required
   update_manifest: required
@@ -252,8 +316,6 @@ change_control_for_protocol_package:
   result_if_broken: FIX_REQUIRED
 ```
 
-انظر أيضًا: `10_EXECUTION_PLAN_NO_SKIP_GATE.md` قسم 35 لقاعدة التحكم بالتغيير المحدّثة، و`LEGACY_SOURCE_TRACE.md` لشروط حذف المصادر القديمة.
-
 ---
 
 ## 8) سجل تعديل الحزمة
@@ -262,90 +324,21 @@ change_control_for_protocol_package:
 package_changelog:
   - date: 2026-07-01
     change: >-
-      إضافة zero_defect_closure_matrix في 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md (قسم 24.1)
+      إضافة zero_defect_closure_matrix في 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
       كطبقة تدقيق نهائي موحّدة تغطي صراحةً: errors, deficiency_gaps, contradiction,
-      scattering_fragmentation, duplication, dead_content, leakage (معمّم وليس ماليًا فقط),
-      other_defective_state.
-    impacted_files:
-      - 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
-      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
-      - 00_INDEX_AND_COVERAGE.md
-    reason: سد فجوة أن بند "لا تسرب" في القبول النهائي (28) كان مقصورًا على البعد المالي فقط،
-      وتوحيد كل فئات العيوب تحت جدول تدقيق واحد إلزامي بدل توزّعها الضمني بين عدة matrices.
-    file_count_change: false
-    deleted_content: none
-  - date: 2026-07-01
-    change: >-
-      إضافة 06#24.2 (التنفيذ الإلزامي المباشر) لمنع FIX_REQUIRED معلّق: عند
-      task_mode: implementation_or_closure يجب معالجة كل فئة FAIL فعليًا في الكود الحي (بما فيها
-      الحذف المباشر RETIRE_DEAD بعد فحص 24) قبل PASS، إلا إذا تحوّلت لـ BLOCKED_NEEDS_EVIDENCE
-      بدليل حقيقي. عند analysis_only/merge_review يُمنع التنفيذ لكن يُلزم required_action +
-      required_owner + verification_command لكل فئة FAIL لمنع تحوّل التقرير إلى ضجيج بلا قرار.
-      تكرار فئة FAIL غير معالجة عبر رحلات implementation_or_closure متتالية = PROTOCOL_VIOLATION.
-    impacted_files:
-      - 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
-      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
-      - 00_INDEX_AND_COVERAGE.md
-    reason: طلب المستخدم توضيح أن معالجة كل العيوب (بما فيها الحذف المباشر) إلزامية وليست
-      مجرد توصيف/تقرير، مع الحفاظ على Human-Gated Git/GitHub Change Control (02) كما هو —
-      التنفيذ المباشر هنا هو تعديل شجرة العمل المحلية ضمن نطاق مصرّح به، لا commit/push/PR تلقائي.
-    file_count_change: false
-    deleted_content: none
-  - date: 2026-07-01
-    change: >-
-      تعزيز 06#24.2 بمنح full_execution_authority صريحة للوكيل عند task_mode: implementation_or_closure
-      داخل النطاق المعرّف في 03 (بلا تأكيد بشري لكل خطوة على حدة)، وتحديد هدف رقمي ملزم لكل عنصر:
-      صفر أخطاء/تناقض/تكرار/فجوات/ضجيج/ضعف منطقي أو تشغيلي/تشتت/فشل/عيوب. أُضيفت فئة deficiency_gaps
-      وcontradiction إلى قائمة الإجراءات الفعلية الإلزامية في zero_defect_closure_matrix، وأُضيف بند
-      PROTOCOL_VIOLATION صريح لأي تقرير تشخيص بلا تنفيذ عند implementation_or_closure، وحُظر التأجيل
-      بعبارات عامة بلا BLOCKED_NEEDS_EVIDENCE موثق. عُكس هذا في معيار القبول النهائي 09#28.
-    impacted_files:
-      - 06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md
-      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
-      - 00_INDEX_AND_COVERAGE.md
-    reason: طلب المستخدم صراحةً رفض أي مخرج تشخيصي فقط، ومنح الوكيل صلاحية تنفيذ فوري كامل
-      (حذف/نقل/دمج/إضافة/تعديل) بدقة 100% وصفر عيوب من جميع النواحي، مع بقاء Human-Gated Git (02)
-      كما هو لأنه يحكم Git/GitHub لا تعديل شجرة العمل نفسها.
-    file_count_change: false
-    deleted_content: none
+      scattering_fragmentation, duplication, dead_content, leakage.
+    reason: سد فجوة أن بند القبول النهائي كان مقصورًا على البعد المالي وتوحيد فئات العيوب.
   - date: 2026-07-02
     change: >-
-      إضافة Entity Boundary Gate — Partner vs Store كقاعدة دومين حاكمة: قسم 11.1 في
-      03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md (تعريف Partner كـ كيان اعتماد/هوية/وثائق/قرار مقابل
-      Store كـ كيان ظهور/كتالوج/طلبات/اكتشاف، Partner 1->N Stores)، مع توسيع topic_definition بحقل
-      entity_boundary. أُضيفت entity_boundary_matrix (17.1.1) وsurface_entity_language_matrix (17.2.1)
-      في 04، وpartner_store_database_truth_matrix (17.6.1) وstore_client_visibility_gate_matrix (17.9.1)
-      في 05 — الأخيرة تلزم listDshStores/getDshHomeDiscovery/getDshStoreById بنفس بوابات الظهور. عُكس
-      هذا في بنود القبول النهائي 09#28 والنسخة المختصرة 09#29، وفي mandatory_outputs وfailure_conditions
-      في 10#31.
-    impacted_files:
-      - 03_SCOPE_TOPOLOGY_OWNERSHIP_DONOR.md
-      - 04_MATRICES_PROJECT_SURFACE_CONTROL_BINDING.md
-      - 05_MATRICES_BACKEND_DATABASE_API_SECURITY.md
-      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
-      - 10_EXECUTION_PLAN_NO_SKIP_GATE.md
-      - 00_INDEX_AND_COVERAGE.md
-    reason: البروتوكول كان يضبط الطوبولوجيا والملكية العامة (shared brain، UI-only surfaces) لكن
-      لم يعرّف صراحة الفرق بين الشريك (Partner) والمتجر (Store)، مما يسمح بلبس دومين حقيقي
-      (مثال: عرض Store للعميل قبل اكتمال Partner approval، أو self-activation من app-partner).
-      تم التعديل داخل الملفات الست الموجودة دون إضافة ملف جديد، حسب طلب المستخدم واتساقًا مع
-      قاعدة عدم زيادة عدد ملفات الحزمة في 00#7 و10#35.
-    file_count_change: false
-    deleted_content: none
+      إضافة Entity Boundary Gate — Partner vs Store كقاعدة دومين حاكمة في 03 و 04 و 05.
+    reason: منع لبس دومين حقيقي بين الشريك والمتجر.
   - date: 2026-07-03
     change: >-
-      إضافة 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md لتقييد التنفيذ
-      بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface.
-      تم تحديث 00 لزيادة عدد الملفات إلى 12، وتعديل 10 و07 و08 و09 ليتماشى مع
-      الوضع الجديد وتقليل الأدلة المطلوبة والاكتفاء بـ Compact Closure Ledger.
-    impacted_files:
-      - 00_INDEX_AND_COVERAGE.md
-      - 07_VERIFICATION_RUNTIME_CI_PR.md
-      - 08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md
-      - 09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md
-      - 10_EXECUTION_PLAN_NO_SKIP_GATE.md
-    reason: توجيه الحزمة لتكون Code-First / Fix-First وتقليل الأدلة الزائدة (Minimal Evidence) مع ضمان تغطية الأسطح (No Forgotten Surface).
-    file_count_change: true
-    deleted_content: none
-
+      إضافة 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md لتقييد التنفيذ بوضع Code-First / Fix-First.
+    reason: تقليل الأدلة الزائدة وضمان تغطية الأسطح.
+  - date: 2026-07-06
+    change: >-
+      تنفيذ ترميم كامل وعميق للحزمة: توحيد العدّادات والترقيم x/11 في 12 ملفًا، وتوثيق استخراج
+      الملفات التاريخية المحذوفة ودمجها، وإكمال matrices الظهور ولوحة التحكم والتنظيف والتقرير النهائي.
+    reason: إزالة كل الاعتماد على المسارات المحذوفة وجعل الحزمة self-contained بنسبة 100%.
 ```

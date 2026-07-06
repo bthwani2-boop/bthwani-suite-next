@@ -1,16 +1,17 @@
-﻿# 01 — الأمر، القالب، النتائج المسموحة
+# 01 — الأمر، القالب، النتائج المسموحة
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `01/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `01/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** الغرض الحاكم، قالب الاستخدام، الأمر المباشر، والنتائج الوحيدة المسموحة.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 0) الغرض الحاكم
 
 هذا الملف ليس ملاحظة، وليس README، وليس قائمة تذكير. هذا **بروتوكول تنفيذ حاكم** يجب استخدامه عند مراجعة أو تنفيذ أو إغلاق أي رحلة تشغيلية أو Topic داخل `bthwani-suite-next`.
@@ -87,7 +88,7 @@ OUT_OF_SCOPE:
 انسخ الأمر التالي كما هو، ثم املأ القيم:
 
 ```text
-نفّذ مراجعة أو تنفيذًا أو إغلاقًا عمليًا وجنائيًا للرحلة المحددة أدناه، من GitHub Remote فقط، وفق بروتوكول الرحلة التشغيلية الموحدة v2-strict.
+نفّذ مراجعة أو تنفيذًا أو إغلاقًا عمليًا وجنائيًا للرحلة المحددة أدناه، من GitHub Remote فقط، وفق بروتوكول الرحلة التشغيلية الموحدة v3-modular.
 
 REPO_REMOTE: <REPO_REMOTE>
 REPO_LOCAL: <REPO_LOCAL>
@@ -142,7 +143,7 @@ PROTOCOL_VIOLATION
 ### 3.1 معنى كل نتيجة
 
 | النتيجة | متى تستخدم |
-|---|---|
+| --- | --- |
 | `ANALYSIS_PASS` | في مهمة تحليل فقط عندما تكتمل أدلة التحليل داخل النطاق ولا توجد فجوة مانعة. |
 | `IMPLEMENTATION_PASS` | في مهمة تنفيذ/إغلاق عندما يثبت الكود والفحوصات والـ runtime والـ evidence أن الرحلة مكتملة داخل النطاق. |
 | `FIX_REQUIRED` | عند وجود خلل مثبت، نقص مثبت، تكرار، تناقض، فحص فاشل، أو دليل ناقص داخل نطاق قابل للإصلاح. |
@@ -164,5 +165,3 @@ PROTOCOL_VIOLATION
 ```
 
 إلا إذا كانت داخل تقرير مفسر ومربوطة بدليل عملي. أي لفظ نجاح غير مدعوم بدليل = `FIX_REQUIRED`.
-
----

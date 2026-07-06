@@ -1,0 +1,92 @@
+{
+  "_comment": "BTHWANI_PERFORMANCE_GOVERNANCE_GATE — Central performance budgets. All gates and scripts read from this file.",
+  "_version": "1.0.0",
+
+  "api": {
+    "dsh": {
+      "health_p95_ms": 150,
+      "readiness_p95_ms": 150,
+      "catalog_p95_ms": 350,
+      "cart_serviceability_p95_ms": 400,
+      "checkout_p95_ms": 700,
+      "orders_list_p95_ms": 500,
+      "partner_list_p95_ms": 400,
+      "error_rate_max": 0.01,
+      "throughput_min_rps": 20
+    },
+    "wlt": {
+      "read_p95_ms": 300,
+      "mutation_p95_ms": 700,
+      "balance_p95_ms": 200,
+      "error_rate_max": 0.01,
+      "throughput_min_rps": 10
+    },
+    "identity": {
+      "health_p95_ms": 100,
+      "token_refresh_p95_ms": 300,
+      "error_rate_max": 0.01
+    }
+  },
+
+  "bundle": {
+    "control_panel_initial_js_kb": 350,
+    "control_panel_route_chunk_kb": 500,
+    "single_dependency_kb": 200,
+    "mobile_app_initial_js_kb": 1800,
+    "mobile_image_asset_kb": 500
+  },
+
+  "web": {
+    "lighthouse_performance_min": 85,
+    "lighthouse_lcp_max_ms": 2500,
+    "lighthouse_fid_max_ms": 100,
+    "lighthouse_cls_max": 0.1,
+    "lighthouse_accessibility_min": 90
+  },
+
+  "mobile": {
+    "startup_critical_modules_max": 120,
+    "max_image_asset_kb": 500,
+    "max_font_asset_kb": 300
+  },
+
+  "go": {
+    "benchmark_regression_warn_pct": 15,
+    "benchmark_regression_fail_pct": 30,
+    "memory_alloc_increase_warn_pct": 25,
+    "goroutine_leak_fail": true
+  },
+
+  "db": {
+    "max_sequential_scan_on_large_tables": 0,
+    "large_table_row_estimate": 10000,
+    "max_unbounded_limit_queries": 0,
+    "slow_query_warn_ms": 500,
+    "slow_query_fail_ms": 2000
+  },
+
+  "heavyImports": {
+    "forbidden_in_mobile": [
+      "moment",
+      "lodash",
+      "recharts",
+      "chart.js",
+      "react-chartjs-2",
+      "@pdf-lib",
+      "pdfkit",
+      "puppeteer",
+      "playwright"
+    ],
+    "forbidden_full_icon_import": [
+      "lucide-react",
+      "@expo/vector-icons",
+      "react-native-vector-icons",
+      "react-icons"
+    ],
+    "require_subpath_import": [
+      "lodash",
+      "ramda",
+      "date-fns"
+    ]
+  }
+}

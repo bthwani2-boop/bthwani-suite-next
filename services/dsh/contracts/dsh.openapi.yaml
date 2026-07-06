@@ -1164,6 +1164,45 @@ paths:
               schema: { $ref: "#/components/schemas/DshOrdersResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
+  /dsh/operator/orders/{orderId}/cancel:
+    post:
+      operationId: cancelDshOperatorOrder
+      summary: Operator cancels an active order with a mandatory reason.
+      tags: [DshOrders]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Order cancelled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshOrderResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /dsh/operator/dispatch/assignments:
     get:
       operationId: listDshDispatchAssignments
@@ -2167,6 +2206,17 @@ paths:
       x-bthwani-client-generation: DISABLED
       security:
         - bearerAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [wlt]
       requestBody:
         required: true
         content:
@@ -3422,7 +3472,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /dsh/media/{mediaRef}:
+  /dsh/media:
     get:
       operationId: getMedia
       summary: Stream back a previously uploaded document/photo for review.
@@ -3431,17 +3481,20 @@ paths:
         - bearerAuth: []
       parameters:
         - name: mediaRef
-          in: path
+          in: query
           required: true
-          schema: { type: string }
+          schema: { type: string, minLength: 1 }
       responses:
         "200":
           description: Media stream.
           content:
             application/octet-stream:
               schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
 
   /dsh/field/partners/{partnerId}/visits:
     post:

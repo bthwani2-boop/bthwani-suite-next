@@ -1,16 +1,17 @@
-﻿# 03 — النطاق، الطوبولوجيا، الملكية، DSH/WLT، والمانح
+# 03 — النطاق، الطوبولوجيا، الملكية، DSH/WLT، والمانح
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `03/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `03/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** تعريف الرحلة، المسارات السيادية، shared brains، حدود DSH/WLT، واستخدام المانح قراءة فقط.
 
-> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 11 ملفًا (بعد إضافة Amendment). لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md`.
+> قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 11) تعريف الرحلة قبل التنفيذ
 
 قبل أي تعديل، يجب إخراج تعريف الرحلة التالي:
@@ -77,8 +78,6 @@ entity_boundary:
 
 ### 11.1) Entity Boundary Gate — Partner vs Store
 
-قاعدة حاكمة:
-
 لا يجوز استخدام `Partner` و`Store` كمرادفين داخل أي رحلة DSH.
 
 التعريف الملزم:
@@ -112,28 +111,28 @@ Store belongs to zero or one Partner during legacy/backfill, and must belong to 
 
 ## 12) Canonical Repository Topology
 
-هذه المسارات هي المرجع الأولي، لكنها يجب أن تثبت من الريبو عند التنفيذ:
+هذه المسارات هي المرجع الأولي، ويجب إثباتها من الريبو عند التنفيذ:
 
 ```text
-DSH shared:
+DSH shared brain:
 services/dsh/frontend/shared
 
-DSH UI surfaces:
-services/dsh/frontend/control-panel
+DSH UI-only surfaces:
+services/dsh/frontend/app-client
 services/dsh/frontend/app-partner
 services/dsh/frontend/app-field
-services/dsh/frontend/app-client
 services/dsh/frontend/app-captain
+services/dsh/frontend/control-panel
 
-WLT-for-DSH shared:
+WLT-for-DSH shared brain:
 services/wlt/frontend/shared/dsh
 
-WLT UI surfaces:
-services/wlt/frontend/control-panel
+WLT UI-only surfaces:
+services/wlt/frontend/app-client
 services/wlt/frontend/app-partner
 services/wlt/frontend/app-field
-services/wlt/frontend/app-client
 services/wlt/frontend/app-captain
+services/wlt/frontend/control-panel
 
 Apps runtime:
 apps/app-client/runtime
@@ -153,158 +152,98 @@ services/wlt/contracts
 
 ---
 
-## 13) حدود الملكية السيادية
+## 13) المسارات السيادية الحاكمة
 
-### 13.1 DSH Frontend Shared Brain
+### 13.1) DSH Frontend Brain
 
-المسار الحاكم:
+المسار الحاكم: `services/dsh/frontend/shared`
 
-```text
-services/dsh/frontend/shared
-```
+يمتلك ويحكم:
 
-يمتلك:
+- logic / state / policy / API mapping / validation.
+- types, states, state machines, view-models, controllers/hooks.
+- API clients/adapters, permissions, role/view policies, validation rules.
+- transforms, lifecycle rules, registry/config/domain constants.
+- loading/empty/error/success contracts.
+- blocked/disabled/retry/offline contracts.
+- shared providers.
+- DSH-facing WLT read-only integration bindings.
 
-```text
-types
-states
-state machines
-view-models
-controllers/hooks
-API clients/adapters
-permissions
-role/view policies
-validation rules
-transforms
-lifecycle rules
-registry/config/domain constants
-loading/empty/error/success contracts
-blocked/disabled/retry/offline contracts
-shared providers
-DSH-facing WLT read-only integration bindings
-```
-
-### 13.2 DSH UI-only Surfaces
+### 13.2) DSH UI-only surfaces
 
 المسارات:
 
-```text
-services/dsh/frontend/control-panel
-services/dsh/frontend/app-partner
-services/dsh/frontend/app-field
-services/dsh/frontend/app-client
-services/dsh/frontend/app-captain
-```
+- `services/dsh/frontend/app-client`
+- `services/dsh/frontend/app-partner`
+- `services/dsh/frontend/app-field`
+- `services/dsh/frontend/app-captain`
+- `services/dsh/frontend/control-panel`
 
-المسموح:
+المسموح (واجهة فقط):
 
-```text
-rendering
-layout
-labels
-icons
-navigation composition
-role-specific visible rendering
-calling shared controller hooks
-passing UI props
-surface-specific composition
-```
+- rendering, layout, labels, icons.
+- navigation composition.
+- role-specific visible rendering.
+- calling shared controller hooks and passing UI props.
+- surface-specific composition.
 
 الممنوع:
 
-```text
-fetch/axios مباشر
-API adapters/repositories
-state machines
-controller-core
-business lifecycle logic
-domain validation
-permission logic
-role policy
-view policy
-process.env أو URL construction
-storage access كمنطق تشغيلي
-cross-service internal imports
-duplicated domain types/status/view-models
-raw API response mapping
-financial truth أو mutation
-```
+- direct API (fetch/axios مباشر).
+- process.env أو URL construction.
+- raw API response mapping inside UI.
+- local business logic, local state machine, local permission policy.
+- storage access كمنطق تشغيلي.
+- cross-service internal imports.
+- duplicated domain types/status/view-models.
+- financial truth أو mutation.
 
-### 13.3 WLT-for-DSH Shared Brain
+### 13.3) WLT-for-DSH Brain
 
-المسار الحاكم:
-
-```text
-services/wlt/frontend/shared/dsh
-```
+المسار الحاكم: `services/wlt/frontend/shared/dsh`
 
 يمتلك:
 
-```text
-WLT-for-DSH types
-states
-contracts
-view-models
-read-only API adapters/controllers
-financial reference mappings
-commission/COD/payment/refund/settlement status references
-read-only bindings consumed by DSH shared
-```
+- WLT-for-DSH types, states, contracts, view-models.
+- read-only API adapters/controllers.
+- financial reference mappings.
+- commission/COD/payment/refund/settlement status references.
+- read-only bindings consumed by DSH shared.
 
-### 13.4 WLT UI-only Surfaces
+### 13.4) WLT UI-only surfaces
 
 المسارات:
 
-```text
-services/wlt/frontend/control-panel
-services/wlt/frontend/app-partner
-services/wlt/frontend/app-field
-services/wlt/frontend/app-client
-services/wlt/frontend/app-captain
-```
+- `services/wlt/frontend/app-client`
+- `services/wlt/frontend/app-partner`
+- `services/wlt/frontend/app-field`
+- `services/wlt/frontend/app-captain`
+- `services/wlt/frontend/control-panel`
 
 ممنوع فيها:
 
-```text
-financial mutation
-ledger/payment/refund/settlement/commission/payout truth
-API adapter مباشر
-state machine
-controller-core
-financial permission logic
-business lifecycle logic
-```
+- financial mutation.
+- ledger/payment/refund/settlement/commission/payout truth.
+- API adapter مباشر أو state machine or controller-core.
+- financial permission logic or business lifecycle logic.
 
-### 13.5 Apps Runtime
+### 13.5) Apps runtime
 
 المسارات:
 
-```text
-apps/app-client/runtime
-apps/app-partner/runtime
-apps/app-field/runtime
-apps/app-captain/runtime
-apps/control-panel/runtime
-```
+- `apps/app-client/runtime`
+- `apps/app-partner/runtime`
+- `apps/app-field/runtime`
+- `apps/app-captain/runtime`
+- `apps/control-panel/runtime`
 
 المسموح:
 
-```text
-provider wrapping
-navigation entry point
-runtime bootstrap
-surface mounting
-```
+- provider wrapping, navigation entry point, runtime bootstrap, surface mounting.
 
 الممنوع:
 
-```text
-business logic
-API binding
-state machine
-controllers
-financial logic
-```
+- business logic, API binding, state machine, controllers, financial logic.
 
 ---
 
@@ -320,21 +259,7 @@ WLT-for-DSH financial/read-only references:
 services/wlt/frontend/shared/dsh/<topic>
 ```
 
-كل سطح يجب أن يستهلك نفس:
-
-```text
-controller
-state contract
-view-model
-validation
-permissions
-lifecycle
-role/view policy
-API binding
-error/loading/empty/success contract
-blocked/disabled/retry/offline contract
-```
-
+كل سطح يجب أن يستهلك نفس controller و state contract و view-model و validation و permissions و lifecycle و role/view policy و API binding و error/loading/empty/success contract.
 أي اختلاف بين الأسطح يجب أن يكون policy مصرحًا داخل shared، وليس منطقًا منفصلًا داخل surface.
 
 ---
@@ -342,71 +267,23 @@ blocked/disabled/retry/offline contract
 ## 15) حدود DSH/WLT المالية
 
 WLT هو المالك الوحيد للحقيقة المالية.
+DSH لا ينفّذ financial mutation.
 
 ممنوع على DSH امتلاك أو تنفيذ:
 
-```text
-payment mutation
-wallet mutation
-refund finalization
-settlement posting
-commission truth
-COD financial truth
-ledger mutation
-reconciliation
-financial reports truth
-provider direct access
-```
+- payment mutation, wallet mutation, refund finalization, settlement posting, commission truth, COD financial truth, ledger mutation, reconciliation, financial reports truth, provider direct access.
 
 المسموح لـ DSH:
 
-```text
-عرض references/status/metadata المالية للقراءة فقط
-```
+- عرض references/status/metadata المالية للقراءة فقط.
 
-أي mutation مالي خارج WLT:
-
-```yaml
-result: FIX_REQUIRED
-problem: financial mutation outside WLT
-required_action: move truth/mutation to WLT owner and expose read-only reference to DSH if needed
-```
+أي mutation مالي خارج WLT يعتبر `FIX_REQUIRED`.
 
 ---
 
 ## 16) استخدام المانح Read-Only
 
-المانح يستخدم لاستخراج القيمة فقط، وليس لنقل البنية.
-
-مسموح استخراج:
-
-```text
-screen experience
-user flows
-interaction behavior
-visual rhythm
-banners
-carousels
-motion patterns
-state presentation
-cross-surface relationships
-experience assets
-```
-
-ممنوع نقل:
-
-```text
-مسارات المانح
-بنيته كما هي
-كوده الميت
-mock/demo/preview كحقيقة تشغيلية
-ownership خاطئة
-منطق مالي داخل DSH
-تصميم محلي مكرر
-API access مباشر من الشاشات
-أي نمط لا يتوافق مع بنية الريبو الجديد
-```
-
+المانح `bthwani2-boop/bthwani-suite` قراءة فقط لاستخراج القيمة، لا لنقل الفوضى أو البنية.
+مسموح استخراج screen experience, user flows, interaction behavior, visual rhythm, banners, carousels, motion patterns, state presentation, cross-surface relationships, experience assets.
+ممنوع نقل مسارات المانح، بنيته كما هي، كوده الميت، mock/demo/preview كحقيقة تشغيلية، ownership خاطئة، منطق مالي داخل DSH، تصميم مكرر، أو API access مباشر من الشاشات.
 كل قيمة صالحة من المانح يجب أن يعاد بناؤها داخل بنية الريبو الجديد ومالكه الصحيح.
-
----

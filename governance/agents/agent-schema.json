@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BthwaniAgentSchema",
+  "description": "Schema for verifying agent definitions in agent-registry.json",
+  "type": "object",
+  "required": ["entries"],
+  "additionalProperties": false,
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "owner", "scope", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["global", "project", "service", "shared", "tools", "infra"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "primary_file": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

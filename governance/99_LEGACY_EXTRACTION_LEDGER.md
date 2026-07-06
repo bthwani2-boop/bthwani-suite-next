@@ -22,7 +22,7 @@ Record donor extraction decisions without importing old governance history.
 ## Decisions applied
 
 | Target | Decision |
-|---|---|
+| --- | --- |
 | governance/00_DECISION_INDEX.md | ADOPT_AFTER_REWRITE |
 | governance/01_REPO_BOUNDARIES.md | ADOPT_AFTER_REWRITE |
 | governance/02_SERVICES_AND_SURFACES.md | ADOPT_AFTER_REWRITE |

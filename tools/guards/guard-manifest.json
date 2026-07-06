@@ -12,14 +12,16 @@
       "runtime-config",
       "no-broken-imports",
       "cleanup-policy",
-      "api-binding"
+      "api-binding",
+      "backend-api-binding"
     ],
     "journey": [
       "fullstack-boundary",
       "wlt-financial-boundary",
       "runtime-config",
       "no-broken-imports",
-      "api-binding"
+      "api-binding",
+      "backend-api-binding"
     ]
   }
 }

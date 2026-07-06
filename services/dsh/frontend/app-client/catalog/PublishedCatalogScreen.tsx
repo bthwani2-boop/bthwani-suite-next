@@ -184,7 +184,7 @@ export function PublishedCatalogScreen({ storeId, onBack }: PublishedCatalogScre
             <View style={styles.identityRow}>
               {store.logoImageSource ? (
                 <View style={styles.logoContainer}>
-                  <Image source={store.logoImageSource} style={styles.logoImage} />
+                  <Image source={store.logoImageSource} style={styles.logoImage} alt="" />
                 </View>
               ) : null}
 

@@ -10,7 +10,7 @@ export function HeroCover({ coverImage }: Props) {
   return (
     <View style={styles.container}>
       {coverImage ? (
-        <Image source={coverImage} style={styles.image} resizeMode="cover" />
+        <Image source={coverImage} style={styles.image} resizeMode="cover" alt="" />
       ) : (
         <View style={[styles.image, styles.placeholder]} />
       )}

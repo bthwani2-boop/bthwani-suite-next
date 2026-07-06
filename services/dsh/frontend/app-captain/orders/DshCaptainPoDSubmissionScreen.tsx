@@ -142,7 +142,7 @@ export function DshCaptainPoDSubmissionScreen({
             <Pressable onPress={onCapturePhoto} style={[styles.photoContainer, { backgroundColor: theme.surfaceInset }]}>
               {photoUri && proofPreviewVisible ? (
                 <View style={styles.previewWrapper}>
-                  <Image source={{ uri: photoUri }} style={styles.previewImage} />
+                  <Image source={{ uri: photoUri }} style={styles.previewImage} alt="" />
                   <View style={styles.changeOverlay}>
                     <Icon name="camera-outline" size={24} color={colorPalette.white} />
                     <Text role="bodySm" style={{ color: colorPalette.white }}>تغيير الصورة</Text>

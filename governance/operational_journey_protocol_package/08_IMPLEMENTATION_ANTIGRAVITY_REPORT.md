@@ -1,65 +1,42 @@
-﻿# 08 — تنفيذ الإصلاح، Antigravity، والتقرير النهائي
+# 08 — تنفيذ الإصلاح، Antigravity، والتقرير النهائي
 
-**Package:** Unified Operational Journey Protocol — v3 modular strict  
-**File:** `08/09`  
-**Repository:** `<REPO_REMOTE>`  
-**Remote ref:** `<REF>`  
-**Source path:** governance/operational_journey_protocol_package (self-contained)  
-**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`  
+**Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** `08/11`
+**Repository:** `<REPO_REMOTE>`
+**Remote ref:** `<REF>`
+**Source path:** governance/operational_journey_protocol_package (self-contained)
+**GitHub file SHA observed:** `<RESOLVED_COMMIT_SHA>`
 **Scope:** قواعد التنفيذ في الكود الحي، معيار إخراج أوامر Antigravity، والتقرير النهائي الإلزامي.
 
 > قاعدة حاكمة: هذا الملف جزء من حزمة واحدة مكوّنة من 12 ملفًا. لا يُستخدم منفردًا لإعلان PASS. أي قبول يجب أن يرجع إلى `00_INDEX_AND_COVERAGE.md` ثم يطبّق كل الملفات ذات العلاقة، بما فيها `10_EXECUTION_PLAN_NO_SKIP_GATE.md` و`11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`.
 
 ---
+
 ## 23) قواعد تنفيذ الإصلاح في الكود الحي
 
 عند `implementation_or_closure` فقط:
 
-```text
-Backend handlers/services/repositories
-Database tables/migrations/seeds
-OpenAPI/API contracts
-Generated or shared API clients
-Shared frontend brain
-WLT-for-DSH shared brain عند الحاجة
-UI surfaces
-Runtime routes/navigation
-Permissions/states/transitions
-Tests/guards/evidence
-```
+- الباك إند: routes, handlers, services, repositories, database truth, migrations.
+- العقود والمستهلكين: OpenAPI, API clients.
+- الواجهة المشتركة: shared brains (DSH and WLT-for-DSH).
+- الواجهات السطحية: UI surfaces, routes, navigation.
+- الصلاحيات والحالات: permissions, states, transitions.
+- التحقق: tests, guards, evidence.
 
 قواعد التنفيذ:
 
-```text
-* قاعدة Code First: الأولوية دائمًا للكود الحي: تعديل، تصحيح، تنظيف، تنظيم، نقل، دمج، حذف، إضافة، ثم تحقق مختصر وحاسم. ممنوع تحويل التنفيذ إلى كتابة أدلة وتقارير طويلة.
-* قاعدة No report instead of fix: أي نقص مثبت داخل النطاق لا يترك كـ TODO أو blocker أو مجرد تقرير، بل يتحول فورًا إلى تعديل كود حي.
-* الدليل النهائي المختصر: يجب أن يكون الدليل حاسمًا ومختصرًا (Minimal Sufficient Evidence) كدليل حاسم واحد (مثل diff أو مخرج أمر أو نتيجة اختبار)، ولا يجوز إنشاء ملفات أدلة (evidence files) كثيرة ومكررة.
-لا تعتمد على mock/demo/preview كحقيقة تشغيلية.
-لا تنشئ نظام تصميم موازٍ.
-استخدم @bthwani/ui-kit و @bthwani/app-shell حيث يلزم.
-لا تفتح نطاقًا جديدًا إلا إذا كان blocker مباشرًا للرحلة.
-لا تنقل ملفًا أو تحذفه قبل إثبات علاقاته.
-لا تعدل المانح.
-لا تغيّر API أو migration أو route بلا فحص أثر.
-لا تترك نقصًا مثبتًا كتعليق أو TODO داخل النطاق، بل يجب إصلاحه في الكود الحي.
-```
+- **قاعدة Code First:** الأولوية دائمًا للكود الحي: تعديل، تصحيح، تنظيف، تنظيم، نقل، دمج، حذف، إضافة، ثم تحقق مختصر وحاسم. ممنوع تحويل التنفيذ إلى كتابة أدلة وتقارير طويلة.
+- **قاعدة No report instead of fix:** أي نقص مثبت داخل النطاق لا يترك كـ TODO أو blocker أو مجرد تقرير، بل يتحول فورًا إلى تعديل كود حي.
+- **الدليل النهائي المختصر:** يجب أن يكون الدليل حاسمًا ومختصرًا (Minimal Sufficient Evidence) كدليل حاسم واحد (مثل diff أو مخرج أمر أو نتيجة اختبار)، ولا يجوز إنشاء ملفات أدلة (evidence files) كثيرة ومكررة.
+- لا تعتمد على mock/demo/preview كحقيقة تشغيلية.
+- لا تنشئ نظام تصميم موازٍ. استخدم `@bthwani/ui-kit` و `@bthwani/app-shell` حيث يلزم.
+- لا تفتح نطاقًا جديدًا إلا إذا كان blocker مباشرًا للرحلة.
+- لا تنقل ملفًا أو تحذفه قبل إثبات علاقاته.
+- لا تعدل المانح.
+- لا تغيّر API أو migration أو route بلا فحص أثر.
 
 حالات الواجهة المطلوب تغطيتها عند العلاقة:
-
-```text
-loading
-empty
-error
-success
-blocked
-disabled
-retry
-offline
-forbidden
-not_found
-conflict
-invalid_transition
-```
+`loading` | `empty` | `error` | `success` | `blocked` | `disabled` | `retry` | `offline` | `forbidden` | `not_found` | `conflict` | `invalid_transition`.
 
 ---
 
@@ -172,7 +149,7 @@ antigravity_command:
 
 ## 27) التقرير النهائي الإلزامي
 
-اكتب نتيجة واحدة فقط، ثم التقرير التالي:
+اكتب نتيجة واحدة فقط، ثم التقرير بالتنسيق المعتمد التالي:
 
 ```yaml
 result:
@@ -188,6 +165,11 @@ out_of_scope:
 topic_definition:
 ref_resolution_gate:
 remote_evidence_reviewed:
+legacy_sources_harvested:
+  - tools/plan/command_operational_journey_unified: deleted_and_harvested
+  - tools/plan/command_old_new: deleted_and_harvested
+self_containment_status: PASS
+internal_reference_integrity_status: PASS
 human_change_control_status:
 project_area_matrix:
 ssot_status:
@@ -196,7 +178,9 @@ auth_permission_status:
 what_is_correct:
 what_is_wrong:
 what_is_missing:
-files_changed_or_required:
+files_changed:
+files_rebuilt_from_legacy_history:
+files_not_restored_as_active:
 donor_value_used:
 donor_value_rejected:
 backend_api_database_status:
@@ -210,11 +194,11 @@ tests_status:
 ci_status:
 evidence_status:
 merge_decision:
-remaining_blockers:
+remaining_blockers: []
 next_required_action:
 ```
 
-صيغة كل blocker:
+صيغة كل blocker نهائي:
 
 ```yaml
 - path:
@@ -223,9 +207,8 @@ next_required_action:
   impact:
   priority: P0 | P1 | P2 | P3
   required_action:
+  owner:
   verification_command:
-  owner_layer:
-  blocks_result: true | false
+  evidence:
+  status_after_fix:
 ```
-
----

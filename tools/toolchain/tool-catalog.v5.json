@@ -1,0 +1,577 @@
+{
+  "entries": [
+    {
+      "id": "codeql",
+      "category": "Security/SCA",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "sonarqube",
+      "category": "Quality/SAST",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "semgrep",
+      "category": "Security/SAST",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "gitleaks",
+      "category": "Security/Secrets",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "package_script": "guard:secrets",
+      "binary": "gitleaks",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "trivy",
+      "category": "Security/Container/SBOM",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "active",
+      "package_script": "security:trivy",
+      "binary": "trivy",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "osv-scanner",
+      "category": "Security/SCA",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "active",
+      "package_script": "security:osv",
+      "binary": "osv-scanner",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "opa",
+      "category": "Policy/Governance",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "partial",
+      "fulfilled_by": "guard:opa-policies",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "conftest",
+      "category": "Policy/Governance",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "package_script": "guard:opa-policies",
+      "binary": "conftest",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "regal",
+      "category": "Policy/Linter",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "package_script": "guard:rego-lint",
+      "binary": "regal",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "ajv",
+      "category": "Governance/Schema",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "fulfilled_by": "guard:governance-schema",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "markdownlint-cli2",
+      "category": "Linter/Documentation",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "package_script": "guard:markdown-governance",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "actionlint",
+      "category": "Governance/Workflows",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "package_script": "guard:workflow-lint",
+      "binary": "actionlint",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "zizmor",
+      "category": "Governance/Workflows/Security",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "package_script": "guard:workflow-security",
+      "binary": "zizmor",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "pinact",
+      "category": "Governance/Workflows/Supply-Chain",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "package_script": "guard:actions-pin",
+      "binary": "pinact",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "shellcheck",
+      "category": "Quality/Linter",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "package_script": "guard:shellcheck",
+      "binary": "shellcheck",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "ls-lint",
+      "category": "Quality/Structure",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "fulfilled_by": "guard:ls-lint",
+      "package_script": "guard:ls-lint",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "eslint",
+      "category": "Quality/Linter",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "typescript",
+      "category": "Quality/Compiler",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "knip",
+      "category": "Quality/Dead-Code",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "jscpd",
+      "category": "Quality/Duplication",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "dependency-cruiser",
+      "category": "Quality/Structure",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "madge",
+      "category": "Quality/Structure",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "nx",
+      "category": "Tools/Build/Monorepo",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "active",
+      "package_script": "nx:projects",
+      "failure_policy": "fail"
+    },
+    {
+      "id": "sherif",
+      "category": "Quality/Monorepo",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "spectral",
+      "category": "API/Contract/Linter",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "openapi-typescript",
+      "category": "API/Contract/Generator",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "graphify",
+      "category": "Architecture/Map",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "playwright",
+      "category": "Testing/E2E/Web",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "fulfilled_by": "e2e:web:smoke",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "axe",
+      "category": "Testing/A11y",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "fulfilled_by": "guard:a11y-runtime",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "xstate",
+      "category": "Modeling/State",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "cucumber",
+      "category": "Testing/BDD",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "storybook",
+      "category": "UI-Kit/Documentation",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "fulfilled_by": "diagnostics:storybook",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "loki",
+      "category": "Testing/Visual",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "reg-suit",
+      "category": "Testing/Visual",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "opentelemetry",
+      "category": "Observability/Tracing",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "jaeger",
+      "category": "Observability/Tracing",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "prometheus",
+      "category": "Observability/Metrics",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "grafana",
+      "category": "Observability/Metrics",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "k6",
+      "category": "Performance/Load",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "autocannon",
+      "category": "Performance/Quick-Load",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "lighthouse-ci",
+      "category": "Performance/Web",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "size-limit",
+      "category": "Performance/Bundle",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "tamagui",
+      "category": "UI-Kit/Styles",
+      "priority": "P0",
+      "oss_free": true,
+      "decision": "keep",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "cue",
+      "category": "Policy/Schema",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "checkov",
+      "category": "Security/IaC",
+      "priority": "P2",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "renovate",
+      "category": "Governance/Dependencies",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "hadolint",
+      "category": "Quality/Linter/Docker",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "fulfilled_by": "guard:dockerfile-lint",
+      "package_script": "guard:dockerfile-lint",
+      "binary": "hadolint",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "yamllint",
+      "category": "Quality/Linter/YAML",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "partial",
+      "fulfilled_by": "guard:yaml-lint",
+      "package_script": "guard:yaml-lint",
+      "binary": "yamllint",
+      "failure_policy": "warn"
+    },
+    {
+      "id": "go-pprof",
+      "category": "Performance/Go-Profiling",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "expo-atlas",
+      "category": "Performance/Mobile-Bundle",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "style-dictionary",
+      "category": "UI-Kit/Tokens",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "maestro",
+      "category": "Testing/E2E/Mobile",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "detox",
+      "category": "Testing/E2E/Mobile",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "lint-staged",
+      "category": "Governance/Workflows",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "husky",
+      "category": "Governance/Workflows",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "lefthook",
+      "category": "Governance/Workflows",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "git-sizer",
+      "category": "Quality/Structure",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "syft",
+      "category": "Security/Container/SBOM",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "cyclonedx",
+      "category": "Security/Container/SBOM",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    },
+    {
+      "id": "next-bundle",
+      "category": "Performance/Bundle",
+      "priority": "P1",
+      "oss_free": true,
+      "decision": "add",
+      "activation": "optional",
+      "failure_policy": "manual"
+    }
+  ]
+}

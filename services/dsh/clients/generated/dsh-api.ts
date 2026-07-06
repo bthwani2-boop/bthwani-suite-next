@@ -775,6 +775,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/orders/{orderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator cancels an active order with a mandatory reason. */
+        post: operations["cancelDshOperatorOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/dispatch/assignments": {
         parameters: {
             query?: never;
@@ -2126,7 +2143,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dsh/media/{mediaRef}": {
+    "/dsh/media": {
         parameters: {
             query?: never;
             header?: never;
@@ -5180,6 +5197,38 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
+    cancelDshOperatorOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Order cancelled successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOrderResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listDshDispatchAssignments: {
         parameters: {
             query?: never;
@@ -6356,7 +6405,10 @@ export interface operations {
     reportWltPaymentSessionEvent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "wlt";
+            };
             path?: never;
             cookie?: never;
         };
@@ -7856,11 +7908,11 @@ export interface operations {
     };
     getMedia: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query: {
                 mediaRef: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -7874,8 +7926,11 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     createFieldPartnerVisit: {

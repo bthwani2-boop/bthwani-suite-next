@@ -1,0 +1,27 @@
+# trivy.yaml
+# BThwani Trivy vulnerability scanner configuration
+
+scan:
+  file-systems: true
+  secrets: true
+  skip-dirs:
+    - node_modules
+    - dist
+    - build
+    - .next
+    - .nx
+    - .expo
+    - .cache
+    - coverage
+    - services/dsh/evidence
+    - services/wlt/evidence
+    - .diagnostics
+
+severity:
+  - CRITICAL
+  - HIGH
+
+security-checks:
+  - vuln
+  - config
+  - secret

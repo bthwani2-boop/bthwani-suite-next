@@ -5,7 +5,7 @@ permissions:
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "implementing" ]
   pull_request:
     branches: [ "master" ]
   schedule:

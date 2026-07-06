@@ -111,10 +111,10 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       </Pressable>
 
       <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: spacing[3] }}>
-        <Pressable onPress={openOrdersSearch}>
+        <Pressable accessibilityLabel="البحث عن الطلبات" onPress={openOrdersSearch}>
           <Icon name="search-outline" size={24} tone="brand" />
         </Pressable>
-        <Pressable onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>
+        <Pressable accessibilityLabel="الإشعارات" onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>
           <Icon name="notifications-outline" size={24} tone="brand" />
         </Pressable>
       </View>

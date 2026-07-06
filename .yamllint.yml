@@ -1,0 +1,16 @@
+# .yamllint.yml
+# yamllint configuration for BThwani workflows and configs
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  indentation:
+    spaces: 2
+  comments:
+    level: warning
+  truthiness:
+    level: warning

@@ -4,6 +4,13 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - implementing
+      - begin
+      - branch-validation
+      - starting
+      - front-backend
 
 permissions:
   contents: read
@@ -129,6 +136,12 @@ jobs:
 
       - name: Guard — API binding
         run: pnpm run guard:api-binding
+
+      - name: Guard — Backend API binding
+        run: pnpm run guard:backend-api-binding
+
+      - name: Guard — Service manifest drift
+        run: pnpm run guard:service-manifest-drift
 
       - name: OpenAPI client drift check
         run: |
