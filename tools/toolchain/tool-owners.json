@@ -1,62 +1,244 @@
 {
   "owners": {
-    "codeql": { "team": "BThwani Security Team", "scope": "ci" },
-    "sonarqube": { "team": "BThwani Platform Team", "scope": "ci" },
-    "semgrep": { "team": "BThwani Security Team", "scope": "local/ci" },
-    "gitleaks": { "team": "BThwani Security Team", "scope": "local/ci" },
-    "trivy": { "team": "BThwani Security Team", "scope": "ci" },
-    "osv-scanner": { "team": "BThwani Security Team", "scope": "local/ci" },
-    "opa": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "conftest": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "regal": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "ajv": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "markdownlint-cli2": { "team": "BThwani Documentation Team", "scope": "local/ci" },
-    "actionlint": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "zizmor": { "team": "BThwani Security Team", "scope": "local/ci" },
-    "pinact": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "shellcheck": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "hadolint": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "yamllint": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "ls-lint": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "eslint": { "team": "BThwani UI Team", "scope": "local/ci" },
-    "typescript": { "team": "BThwani UI/Backend Teams", "scope": "local/ci" },
-    "knip": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "jscpd": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "dependency-cruiser": { "team": "BThwani Core Team", "scope": "local/ci" },
-    "madge": { "team": "BThwani Core Team", "scope": "local/ci" },
-    "nx": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "sherif": { "team": "BThwani Platform Team", "scope": "local/ci" },
-    "spectral": { "team": "BThwani Backend Team", "scope": "local/ci" },
-    "openapi-typescript": { "team": "BThwani Core Team", "scope": "local/ci" },
-    "graphify": { "team": "BThwani Core Team", "scope": "local" },
-    "playwright": { "team": "BThwani QA Team", "scope": "local/ci" },
-    "axe": { "team": "BThwani QA Team", "scope": "local/ci" },
-    "storybook": { "team": "BThwani UI Team", "scope": "local" },
-    "loki": { "team": "BThwani UI Team", "scope": "local/ci" },
-    "reg-suit": { "team": "BThwani UI Team", "scope": "ci" },
-    "opentelemetry": { "team": "BThwani Observability Team", "scope": "runtime" },
-    "jaeger": { "team": "BThwani Observability Team", "scope": "runtime" },
-    "prometheus": { "team": "BThwani Observability Team", "scope": "runtime" },
-    "grafana": { "team": "BThwani Observability Team", "scope": "runtime" },
-    "k6": { "team": "BThwani QA Team", "scope": "local/ci" },
-    "autocannon": { "team": "BThwani Core Team", "scope": "local" },
-    "lighthouse-ci": { "team": "BThwani QA Team", "scope": "ci" },
-    "size-limit": { "team": "BThwani UI Team", "scope": "local/ci" },
-    "tamagui": { "team": "BThwani UI Team", "scope": "local" },
-    "cue": { "team": "BThwani Platform Team", "scope": "local" },
-    "checkov": { "team": "BThwani Security Team", "scope": "local" },
-    "renovate": { "team": "BThwani Platform Team", "scope": "ci" },
-    "go-pprof": { "team": "BThwani Backend Team", "scope": "local" },
-    "expo-atlas": { "team": "BThwani UI Team", "scope": "local" },
-    "style-dictionary": { "team": "BThwani UI Team", "scope": "local" },
-    "maestro": { "team": "BThwani QA Team", "scope": "local" },
-    "detox": { "team": "BThwani QA Team", "scope": "local" },
-    "lint-staged": { "team": "BThwani Platform Team", "scope": "local" },
-    "husky": { "team": "BThwani Platform Team", "scope": "local" },
-    "lefthook": { "team": "BThwani Platform Team", "scope": "local" },
-    "git-sizer": { "team": "BThwani Platform Team", "scope": "local" },
-    "syft": { "team": "BThwani Security Team", "scope": "local" },
-    "cyclonedx": { "team": "BThwani Security Team", "scope": "local" },
-    "next-bundle": { "team": "BThwani UI Team", "scope": "local" }
+    "codeql": {
+      "team": "BThwani Security Team",
+      "scope": "ci"
+    },
+    "sonarqube": {
+      "team": "BThwani Platform Team",
+      "scope": "ci"
+    },
+    "semgrep": {
+      "team": "BThwani Security Team",
+      "scope": "local/ci"
+    },
+    "gitleaks": {
+      "team": "BThwani Security Team",
+      "scope": "local/ci"
+    },
+    "trivy": {
+      "team": "BThwani Security Team",
+      "scope": "ci"
+    },
+    "osv-scanner": {
+      "team": "BThwani Security Team",
+      "scope": "local/ci"
+    },
+    "opa": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "conftest": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "regal": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "ajv": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "markdownlint-cli2": {
+      "team": "BThwani Documentation Team",
+      "scope": "local/ci"
+    },
+    "actionlint": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "zizmor": {
+      "team": "BThwani Security Team",
+      "scope": "local/ci"
+    },
+    "pinact": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "shellcheck": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "hadolint": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "yamllint": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "ls-lint": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "eslint": {
+      "team": "BThwani UI Team",
+      "scope": "local/ci"
+    },
+    "typescript": {
+      "team": "BThwani UI/Backend Teams",
+      "scope": "local/ci"
+    },
+    "knip": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "jscpd": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "dependency-cruiser": {
+      "team": "BThwani Core Team",
+      "scope": "local/ci"
+    },
+    "madge": {
+      "team": "BThwani Core Team",
+      "scope": "local/ci"
+    },
+    "nx": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "sherif": {
+      "team": "BThwani Platform Team",
+      "scope": "local/ci"
+    },
+    "spectral": {
+      "team": "BThwani Backend Team",
+      "scope": "local/ci"
+    },
+    "openapi-typescript": {
+      "team": "BThwani Core Team",
+      "scope": "local/ci"
+    },
+    "graphify": {
+      "team": "BThwani Core Team",
+      "scope": "local"
+    },
+    "playwright": {
+      "team": "BThwani QA Team",
+      "scope": "local/ci"
+    },
+    "axe": {
+      "team": "BThwani QA Team",
+      "scope": "local/ci"
+    },
+    "storybook": {
+      "team": "BThwani UI Team",
+      "scope": "local"
+    },
+    "loki": {
+      "team": "BThwani UI Team",
+      "scope": "local/ci"
+    },
+    "reg-suit": {
+      "team": "BThwani UI Team",
+      "scope": "ci"
+    },
+    "opentelemetry": {
+      "team": "BThwani Observability Team",
+      "scope": "runtime"
+    },
+    "jaeger": {
+      "team": "BThwani Observability Team",
+      "scope": "runtime"
+    },
+    "prometheus": {
+      "team": "BThwani Observability Team",
+      "scope": "runtime"
+    },
+    "grafana": {
+      "team": "BThwani Observability Team",
+      "scope": "runtime"
+    },
+    "k6": {
+      "team": "BThwani QA Team",
+      "scope": "local/ci"
+    },
+    "autocannon": {
+      "team": "BThwani Core Team",
+      "scope": "local"
+    },
+    "lighthouse-ci": {
+      "team": "BThwani QA Team",
+      "scope": "ci"
+    },
+    "size-limit": {
+      "team": "BThwani UI Team",
+      "scope": "local/ci"
+    },
+    "tamagui": {
+      "team": "BThwani UI Team",
+      "scope": "local"
+    },
+    "cue": {
+      "team": "BThwani Platform Team",
+      "scope": "local"
+    },
+    "checkov": {
+      "team": "BThwani Security Team",
+      "scope": "local"
+    },
+    "renovate": {
+      "team": "BThwani Platform Team",
+      "scope": "ci"
+    },
+    "go-pprof": {
+      "team": "BThwani Backend Team",
+      "scope": "local"
+    },
+    "expo-atlas": {
+      "team": "BThwani UI Team",
+      "scope": "local"
+    },
+    "style-dictionary": {
+      "team": "BThwani UI Team",
+      "scope": "local"
+    },
+    "maestro": {
+      "team": "BThwani QA Team",
+      "scope": "local"
+    },
+    "detox": {
+      "team": "BThwani QA Team",
+      "scope": "local"
+    },
+    "lint-staged": {
+      "team": "BThwani Platform Team",
+      "scope": "local"
+    },
+    "husky": {
+      "team": "BThwani Platform Team",
+      "scope": "local"
+    },
+    "lefthook": {
+      "team": "BThwani Platform Team",
+      "scope": "local"
+    },
+    "git-sizer": {
+      "team": "BThwani Platform Team",
+      "scope": "local"
+    },
+    "syft": {
+      "team": "BThwani Security Team",
+      "scope": "local"
+    },
+    "cyclonedx": {
+      "team": "BThwani Security Team",
+      "scope": "local"
+    },
+    "next-bundle": {
+      "team": "BThwani UI Team",
+      "scope": "local"
+    },
+    "xstate": {
+      "team": "BThwani Platform Team",
+      "scope": "local"
+    },
+    "cucumber": {
+      "team": "BThwani QA Team",
+      "scope": "local"
+    }
   }
 }

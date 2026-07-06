@@ -24,7 +24,7 @@ ls:
   tools:
     .dir: kebabcase
     guards:
-      .mjs: regex:[a-z0-9-]+-gate
+      .mjs: regex:^(_[a-z0-9-]+|[a-z0-9-]+-gate|[a-z0-9-]+)\.mjs$
     scripts:
       .mjs: kebabcase
       .ps1: kebabcase
@@ -47,3 +47,6 @@ ignore:
   - shared/ui-kit/src/tamagui-config.js.map
   - shared/ui-kit/src/theme/index.js.map
   - shared/ui-kit/src/tokens/colors.js.map
+  - tools/guards/_guard-utils.mjs
+  - tools/guards/_openapi-utils.mjs
+  - tools/guards/_openapi-utils.test.mjs

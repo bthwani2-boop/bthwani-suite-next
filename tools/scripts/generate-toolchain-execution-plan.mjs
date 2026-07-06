@@ -1,78 +1,51 @@
-/**
- * tools/scripts/generate-toolchain-execution-plan.mjs
- *
- * BTHWANI_DEEP_TOOLS_GOVERNANCE_V5_AND_OSS_TOOLCHAIN_ACTIVATION — Toolchain Execution Plan
- *
- * Slices the 60 tools into local commands, CI workflow paths, and manual/scheduled schedules.
- * Generates .diagnostics/tools-v5/execution-plan.md.
- */
-
 import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
 
-const OUT_FILE = path.join(repoRoot, ".diagnostics", "tools-v5", "execution-plan.md");
+const outFile = path.join(repoRoot, ".diagnostics", "tools-v5", "execution-plan.md");
+fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
-const catalogPath = path.join(repoRoot, "tools/toolchain/tool-catalog.v5.json");
-const catalog     = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
+function readJson(rel, fallback) {
+  const file = path.join(repoRoot, rel);
+  if (!fs.existsSync(file)) return fallback;
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
 
-const localFast = [];
-const ciFast    = [];
-const ciAudit   = [];
-const manualOnly = [];
-
-for (const entry of catalog.entries || []) {
-  const policy = entry.priority === "P0" ? "mandatory" : "warn-only";
-
-  const record = {
+const statusFile = path.join(repoRoot, ".diagnostics", "tools-v5", "tool-catalog-status.json");
+let rows;
+if (fs.existsSync(statusFile)) {
+  rows = JSON.parse(fs.readFileSync(statusFile, "utf8"));
+} else {
+  const catalog = readJson("tools/toolchain/tool-catalog.v5.json", { entries: [] });
+  rows = (catalog.entries || []).map((entry) => ({
     id: entry.id,
     category: entry.category,
-    policy,
-    activation: entry.activation,
-  };
-
-  if (entry.activation === "active" && entry.priority === "P0") {
-    ciFast.push(record);
-  } else if (entry.activation === "active" || entry.activation === "partial") {
-    ciAudit.push(record);
-  } else {
-    manualOnly.push(record);
-  }
-
-  if (entry.id !== "codeql" && entry.id !== "sonarqube") {
-    localFast.push(record);
-  }
+    declared_activation: entry.activation,
+    verified_activation: "unverified",
+    package_script: entry.package_script || entry.fulfilled_by || null,
+    ci_step_found: false
+  }));
 }
+
+const groups = {
+  active_verified: rows.filter((row) => row.verified_activation === "active_verified"),
+  active_unverified: rows.filter((row) => row.verified_activation === "active_unverified"),
+  partial: rows.filter((row) => row.verified_activation === "partial" || row.declared_activation === "partial"),
+  optional: rows.filter((row) => row.verified_activation === "optional" || row.declared_activation === "optional")
+};
 
 const lines = [];
-lines.push(`# Toolchain V5 Execution Plan`);
+lines.push("# Toolchain V5 Execution Plan");
 lines.push(`\n*Generated: ${new Date().toISOString()}*`);
 
-lines.push(`\n## 1. Fast CI Gates (ci.yml)`);
-lines.push(`> These checks must execute under 2 minutes and fail-closed the build on any P0 violation.`);
-lines.push(`\n| Tool ID | Category | Failure Policy |`);
-lines.push(`|---|---|---|`);
-for (const t of ciFast.slice(0, 15)) {
-  lines.push(`| \`${t.id}\` | ${t.category} | **${t.policy.toUpperCase()}** |`);
+for (const [title, items] of Object.entries(groups)) {
+  lines.push(`\n## ${title}`);
+  lines.push("| Tool | Category | Script | CI evidence |");
+  lines.push("|---|---|---|---:|");
+  for (const item of items) {
+    lines.push(`| \`${item.id}\` | ${item.category || ""} | ${item.package_script || ""} | ${Boolean(item.ci_step_found)} |`);
+  }
 }
 
-lines.push(`\n## 2. Comprehensive Audit Pipeline (governance-audit.yml & security.yml)`);
-lines.push(`> Deeper static analysis, licensing, secrets, and Docker security scanning.`);
-lines.push(`\n| Tool ID | Category | Failure Policy | Activation |`);
-lines.push(`|---|---|---|---|`);
-for (const t of ciAudit) {
-  lines.push(`| \`${t.id}\` | ${t.category} | ${t.policy} | ${t.activation} |`);
-}
-
-lines.push(`\n## 3. Manual & Diagnostics Tools (diagnostics-only)`);
-lines.push(`> Heavy profiling, local state exploration, and mobile E2E tests.`);
-lines.push(`\n| Tool ID | Category | Activation |`);
-lines.push(`|---|---|`);
-for (const t of manualOnly) {
-  lines.push(`| \`${t.id}\` | ${t.category} | ${t.activation} |`);
-}
-
-fs.writeFileSync(OUT_FILE, lines.join("\n"), "utf8");
-
-console.log(`\n  Toolchain V5 execution plan written to .diagnostics/tools-v5/execution-plan.md`);
-console.log(`-----------------------------------------------`);
+fs.writeFileSync(outFile, lines.join("\n"), "utf8");
+console.log("Toolchain V5 execution plan written to .diagnostics/tools-v5/execution-plan.md");

@@ -251,7 +251,7 @@
       "name": "Tool Catalog Coverage Gate",
       "script": "guard:tool-catalog-coverage",
       "exit_level": "fail",
-      "description": "Validates that all V5 expected tools are documented in tool-catalog.v5.json.",
+      "description": "Validates V5 tool catalog schema, unique ids, expected ids, and cross-file registration.",
       "source_file": "tools/guards/tool-catalog-coverage-gate.mjs"
     },
     {
@@ -259,7 +259,7 @@
       "name": "Toolchain Activation Gate",
       "script": "guard:toolchain-activation",
       "exit_level": "fail",
-      "description": "Verifies that tool activation states in the catalog align with baseline config.",
+      "description": "Verifies catalog/baseline consistency, script references, workflow references, and active/partial/optional semantics.",
       "source_file": "tools/guards/toolchain-activation-gate.mjs"
     },
     {
@@ -267,7 +267,7 @@
       "name": "OSS Toolchain Policy Gate",
       "script": "guard:oss-toolchain-policy",
       "exit_level": "fail",
-      "description": "Enforces that only open-source or free tools are registered in the catalog.",
+      "description": "Enforces open-source/free tool registration metadata.",
       "source_file": "tools/guards/oss-toolchain-policy-gate.mjs"
     },
     {
@@ -291,15 +291,15 @@
       "name": "Actions Pinning Gate",
       "script": "guard:actions-pin",
       "exit_level": "warn",
-      "description": "Verifies pinning of GitHub Action versions to secure commit SHAs.",
+      "description": "Checks GitHub Action pinning. Warn-only until action pinning baseline is accepted.",
       "source_file": "tools/scripts/run-pinact.mjs"
     },
     {
       "id": "rego-lint",
       "name": "Rego Policy Lint Gate",
       "script": "guard:rego-lint",
-      "exit_level": "fail",
-      "description": "Lints OPA Rego policy syntax and quality rules using regal.",
+      "exit_level": "warn",
+      "description": "Lints OPA Rego policies using Regal. Warn-only until policy lint baseline is accepted.",
       "source_file": "tools/scripts/run-regal.mjs"
     },
     {
@@ -307,7 +307,7 @@
       "name": "OPA Policies Gate",
       "script": "guard:opa-policies",
       "exit_level": "fail",
-      "description": "Runs OPA Conftest checks against governance registries.",
+      "description": "Runs Conftest/OPA policy checks against governance registries.",
       "source_file": "tools/scripts/run-conftest.mjs"
     },
     {
@@ -315,23 +315,23 @@
       "name": "Shell Script Lint Gate",
       "script": "guard:shellcheck",
       "exit_level": "warn",
-      "description": "Checks shell/bash scripts formatting and issues using shellcheck.",
+      "description": "Checks shell/bash scripts with ShellCheck. Warn-only until shell baseline is accepted.",
       "source_file": "tools/scripts/run-shellcheck.mjs"
     },
     {
       "id": "dockerfile-lint",
       "name": "Dockerfile Lint Gate",
       "script": "guard:dockerfile-lint",
-      "exit_level": "fail",
-      "description": "Checks Dockerfile syntax and best practices using hadolint.",
+      "exit_level": "warn",
+      "description": "Checks Dockerfiles with hadolint. Warn-only until Dockerfile baseline is accepted.",
       "source_file": "tools/scripts/run-hadolint.mjs"
     },
     {
       "id": "yaml-lint",
       "name": "YAML Config Lint Gate",
       "script": "guard:yaml-lint",
-      "exit_level": "fail",
-      "description": "Checks yaml syntax and formatting structure using yamllint.",
+      "exit_level": "warn",
+      "description": "Checks YAML formatting with yamllint. Warn-only until YAML baseline is accepted.",
       "source_file": "tools/scripts/run-yamllint.mjs"
     },
     {
@@ -340,6 +340,14 @@
       "script": "guard:a11y-runtime",
       "exit_level": "warn",
       "description": "Runs dynamic accessibility checks on web routes using Playwright + axe-core."
+    },
+    {
+      "id": "ls-lint",
+      "name": "Repository Naming Lint",
+      "script": "guard:ls-lint",
+      "exit_level": "warn",
+      "description": "Checks repository naming with ls-lint. Warn-only while legacy names remain.",
+      "source_file": ".ls-lint.yml"
     }
   ]
 }

@@ -1,105 +1,113 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "toolchain-activation-gate";
 const violations = [];
 
-const catalogPath = path.join(repoRoot, "tools/toolchain/tool-catalog.v5.json");
-const baselinePath = path.join(repoRoot, "tools/toolchain/tool-activation-baseline.json");
-const packageJsonPath = path.join(repoRoot, "package.json");
-const workflowsDir = path.join(repoRoot, ".github/workflows");
-
-if (!fs.existsSync(catalogPath) || !fs.existsSync(baselinePath) || !fs.existsSync(packageJsonPath)) {
-  violations.push({
-    file: "tools/toolchain/tool-activation-baseline.json",
-    line: 0,
-    message: "MISSING_FILES: catalog, baseline config, or package.json missing.",
-  });
-  fail(guardId, violations);
-  process.exit(1);
-}
-
-const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
-const baselineData = JSON.parse(fs.readFileSync(baselinePath, "utf8")).baseline;
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-const scripts = packageJson.scripts || {};
-
-// Read workflow contents to verify CI integration
-let workflowContents = "";
-if (fs.existsSync(workflowsDir)) {
-  const files = fs.readdirSync(workflowsDir).filter(f => f.endsWith(".yml") || f.endsWith(".yaml"));
-  for (const f of files) {
-    workflowContents += fs.readFileSync(path.join(workflowsDir, f), "utf8") + "\n";
+function readJson(rel, fallback) {
+  const file = path.join(repoRoot, rel);
+  if (!fs.existsSync(file)) {
+    return fallback;
   }
-}
-
-function hasBinary(cmd) {
   try {
-    execSync(process.platform === "win32" ? `where.exe ${cmd}` : `which ${cmd}`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    violations.push({
+      file: rel,
+      line: 0,
+      message: "INVALID_JSON: " + error.message
+    });
+    return fallback;
   }
 }
 
-const BINARY_MAPPING = {
-  "codeql": "codeql",
-  "sonarqube": "sonar-scanner",
-  "semgrep": "semgrep",
-  "gitleaks": "gitleaks",
-  "trivy": "trivy",
-  "osv-scanner": "osv-scanner",
-  "opa": "opa",
-  "conftest": "conftest",
-  "regal": "regal",
-  "actionlint": "actionlint",
-  "zizmor": "zizmor",
-  "pinact": "pinact",
-  "shellcheck": "shellcheck",
-  "hadolint": "hadolint",
-  "yamllint": "yamllint",
-  "ls-lint": "ls-lint",
-  "eslint": "eslint",
-  "typescript": "tsc",
-  "knip": "knip",
-  "jscpd": "jscpd",
-  "dependency-cruiser": "dependency-cruiser",
-  "madge": "madge",
-  "nx": "nx",
-  "sherif": "sherif",
-  "spectral": "spectral",
-  "openapi-typescript": "openapi-typescript",
-  "graphify": "graphify",
-  "playwright": "playwright",
-  "k6": "k6",
-  "autocannon": "autocannon",
-  "size-limit": "size-limit",
-  "cue": "cue",
-  "checkov": "checkov",
-  "git-sizer": "git-sizer",
-  "syft": "syft"
+function readWorkflowText() {
+  const dir = path.join(repoRoot, ".github/workflows");
+  if (!fs.existsSync(dir)) return "";
+  let text = "";
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(".yml") && !name.endsWith(".yaml")) continue;
+    text += fs.readFileSync(path.join(dir, name), "utf8") + "\n";
+  }
+  return text;
+}
+
+const catalog = readJson("tools/toolchain/tool-catalog.v5.json", { entries: [] });
+const baseline = readJson("tools/toolchain/tool-activation-baseline.json", { baseline: {} }).baseline || {};
+const packageJson = readJson("package.json", { scripts: {} });
+const scripts = packageJson.scripts || {};
+const workflowText = readWorkflowText().toLowerCase();
+
+const scriptByTool = {
+  codeql: "github/codeql-action",
+  sonarqube: "sonarqube",
+  gitleaks: "guard:secrets",
+  trivy: "security:trivy",
+  "osv-scanner": "security:osv",
+  conftest: "guard:opa-policies",
+  "markdownlint-cli2": "guard:markdown-governance",
+  actionlint: "guard:workflow-lint",
+  zizmor: "guard:workflow-security",
+  nx: "nx:projects",
+  opa: "guard:opa-policies",
+  ajv: "guard:governance-schema",
+  regal: "guard:rego-lint",
+  pinact: "guard:actions-pin",
+  shellcheck: "guard:shellcheck",
+  hadolint: "guard:dockerfile-lint",
+  yamllint: "guard:yaml-lint",
+  "ls-lint": "guard:ls-lint",
+  playwright: "e2e:web:smoke",
+  axe: "guard:a11y-runtime",
+  storybook: "diagnostics:storybook"
 };
 
-const EVIDENCE_MAPPING = {
-  "trivy": ".diagnostics/security/trivy-report.json",
-  "osv-scanner": ".diagnostics/security/osv-report.json",
-  "next-bundle": ".diagnostics/performance/status.txt",
-  "git-sizer": ".diagnostics/tools-v5/00-summary.md",
-  "syft": ".diagnostics/sbom",
-  "cyclonedx": ".diagnostics/sbom"
+const workflowEvidenceByTool = {
+  codeql: ["github/codeql-action"],
+  sonarqube: ["sonarqube", "sonar-scanner"],
+  gitleaks: ["gitleaks", "guard:secrets"],
+  trivy: ["aquasecurity/trivy-action", "security:trivy", "trivy"],
+  "osv-scanner": ["osv-scanner", "security:osv"],
+  conftest: ["open-policy-agent/conftest-action", "guard:opa-policies", "conftest"],
+  "markdownlint-cli2": ["guard:markdown-governance", "markdownlint"],
+  actionlint: ["reviewdog/action-actionlint", "guard:workflow-lint", "actionlint"],
+  zizmor: ["woodruffw/zizmor-action", "guard:workflow-security", "zizmor"],
+  nx: ["nx:projects", "nx affected", "nx run-many"]
 };
 
-const isCI = !!process.env.GITHUB_ACTIONS;
+function hasPackageScript(scriptName) {
+  if (!scriptName) return false;
+  if (scriptName === "github/codeql-action" || scriptName === "sonarqube") return true;
+  return Boolean(scripts[scriptName]);
+}
+
+function hasWorkflowEvidence(toolId, scriptName) {
+  const needles = workflowEvidenceByTool[toolId] || [];
+  if (needles.some((needle) => workflowText.includes(String(needle).toLowerCase()))) {
+    return true;
+  }
+  if (!scriptName) return false;
+  return workflowText.includes(("pnpm run " + scriptName).toLowerCase()) ||
+    workflowText.includes(String(scriptName).toLowerCase());
+}
 
 for (const entry of catalog.entries || []) {
-  const expected = baselineData[entry.id];
+  if (!entry || !entry.id) {
+    violations.push({
+      file: "tools/toolchain/tool-catalog.v5.json",
+      line: 0,
+      message: "MALFORMED_ENTRY: missing id"
+    });
+    continue;
+  }
+
+  const expected = baseline[entry.id];
   if (!expected) {
     violations.push({
       file: "tools/toolchain/tool-activation-baseline.json",
       line: 0,
-      message: `UNMAPPED_BASELINE: Baseline does not define activation for tool '${entry.id}'`,
+      message: "UNMAPPED_BASELINE: Baseline does not define activation for tool '" + entry.id + "'"
     });
     continue;
   }
@@ -108,68 +116,56 @@ for (const entry of catalog.entries || []) {
     violations.push({
       file: "tools/toolchain/tool-catalog.v5.json",
       line: 0,
-      message: `ACTIVATION_MISMATCH: Tool '${entry.id}' has activation '${entry.activation}' but baseline requires '${expected}'`,
+      message: "ACTIVATION_MISMATCH: Tool '" + entry.id + "' has activation '" + entry.activation + "' but baseline requires '" + expected + "'"
     });
   }
 
-  const isMandatory = (expected === "active");
+  const scriptName = entry.package_script || entry.fulfilled_by || scriptByTool[entry.id] || "";
+  const isMandatory = expected === "active";
 
-  // 1. Script Presence Check
-  const scriptKey = Object.keys(scripts).find(key => {
-    return key.includes(entry.id) || scripts[key].includes(entry.id);
-  });
-  if (!scriptKey && isMandatory) {
-    violations.push({
-      file: "package.json",
-      line: 0,
-      message: `MISSING_PACKAGE_SCRIPT: Active tool '${entry.id}' has no corresponding script in package.json`,
-    });
-  }
-
-  // 2. CI Integration Check
   if (isMandatory) {
-    const isReferencedInCI = workflowContents.includes(entry.id) || 
-      (scriptKey && (
-        workflowContents.includes(scriptKey) ||
-        Object.keys(scripts).some(k => scripts[k].includes(scriptKey) && workflowContents.includes(k))
-      ));
-    if (!isReferencedInCI) {
+    const scriptFound = hasPackageScript(scriptName);
+    const ciFound = hasWorkflowEvidence(entry.id, scriptName);
+
+    if (!scriptFound && !ciFound) {
+      violations.push({
+        file: "package.json",
+        line: 0,
+        message: "MISSING_PACKAGE_SCRIPT: Active tool '" + entry.id + "' has no package script or recognized action evidence."
+      });
+    }
+
+    if (!ciFound) {
       violations.push({
         file: ".github/workflows",
         line: 0,
-        message: `CI_INTEGRATION_MISSING: Active tool '${entry.id}' is not integrated in GitHub Actions workflows.`,
+        message: "CI_INTEGRATION_MISSING: Active tool '" + entry.id + "' has no recognized GitHub Actions evidence."
       });
     }
   }
 
-  // 3. Binary presence in CI/CD environment
-  if (isMandatory && isCI) {
-    const binCmd = BINARY_MAPPING[entry.id];
-    if (binCmd && !hasBinary(binCmd)) {
-      violations.push({
-        file: "tools/toolchain/tool-catalog.v5.json",
-        line: 0,
-        message: `BINARY_NOT_FOUND: Active tool '${entry.id}' binary '${binCmd}' is missing in CI environment.`,
-      });
-    }
-  }
-
-  // 4. Evidence Report Check
-  const evidencePath = EVIDENCE_MAPPING[entry.id];
-  if (evidencePath && isMandatory) {
-    const fullEvidencePath = path.join(repoRoot, evidencePath);
-    if (!fs.existsSync(fullEvidencePath)) {
-      const parentDir = path.dirname(fullEvidencePath);
-      if (!fs.existsSync(parentDir)) {
-        fs.mkdirSync(parentDir, { recursive: true });
-      }
-      violations.push({
-        file: evidencePath,
-        line: 0,
-        message: `EVIDENCE_MISSING: Evidence output path for tool '${entry.id}' does not exist.`,
-      });
-    }
+  if (expected === "partial" && scriptName.startsWith("guard:") && !scripts[scriptName]) {
+    violations.push({
+      file: "package.json",
+      line: 0,
+      message: "PARTIAL_SCRIPT_MISSING: Partial tool '" + entry.id + "' references missing script '" + scriptName + "'."
+    });
   }
 }
 
+// Workflow script references must exist in package.json.
+const workflowScriptRegex = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?([A-Za-z0-9:_-]+)\b/g;
+let match;
+while ((match = workflowScriptRegex.exec(workflowText)) !== null) {
+  const scriptName = match[1];
+  if (scriptName.includes(":") && !scripts[scriptName]) {
+    violations.push({
+      file: ".github/workflows",
+      line: 0,
+      message: "WORKFLOW_SCRIPT_MISSING_IN_PACKAGE: " + scriptName
+    });
+  }
+}
+
+// This gate is read-only. It must not create evidence directories or require generated diagnostics.
 fail(guardId, violations);

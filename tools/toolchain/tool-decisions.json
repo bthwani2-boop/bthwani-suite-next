@@ -1,62 +1,244 @@
 {
   "decisions": {
-    "codeql": { "action": "keep", "reason": "Official GitHub security and vulnerability analysis pipeline." },
-    "sonarqube": { "action": "keep", "reason": "Standard code quality metrics and code smell analysis." },
-    "semgrep": { "action": "keep", "reason": "SAST engine for fast customizable local security rules." },
-    "gitleaks": { "action": "keep", "reason": "Secrets and key leaks detection." },
-    "trivy": { "action": "add", "reason": "Vulnerability scanning, misconfiguration checks, and SBOM reporting." },
-    "osv-scanner": { "action": "add", "reason": "Dependency vulnerabilities scanner against Google OSV database." },
-    "opa": { "action": "keep", "reason": "Central policy-as-code evaluation engine." },
-    "conftest": { "action": "keep", "reason": "Structured configs OPA policy runner." },
-    "regal": { "action": "add", "reason": "Linter for Rego policy language." },
-    "ajv": { "action": "keep", "reason": "Declarative JSON schema verification." },
-    "markdownlint-cli2": { "action": "keep", "reason": "Checks markdown styling consistency." },
-    "actionlint": { "action": "keep", "reason": "Validates syntax of GitHub Actions workflows." },
-    "zizmor": { "action": "keep", "reason": "Security audits GitHub Actions workflows." },
-    "pinact": { "action": "add", "reason": "Pins GitHub actions to commit SHAs for supply-chain safety." },
-    "shellcheck": { "action": "add", "reason": "Linter for shell/bash scripts." },
-    "hadolint": { "action": "add", "reason": "Dockerfile linter." },
-    "yamllint": { "action": "add", "reason": "YAML linter for configs and workflows." },
-    "ls-lint": { "action": "add", "reason": "Directory structure and naming linter." },
-    "eslint": { "action": "keep", "reason": "JavaScript/TypeScript code style linter." },
-    "typescript": { "action": "keep", "reason": "Type checker and compiler." },
-    "knip": { "action": "keep", "reason": "Dead code and unused file finder." },
-    "jscpd": { "action": "keep", "reason": "Code duplication finder." },
-    "dependency-cruiser": { "action": "keep", "reason": "Imports layering and structure boundaries validator." },
-    "madge": { "action": "keep", "reason": "Visual dependency map and circular import finder." },
-    "nx": { "action": "keep", "reason": "Monorepo and task scheduling build engine." },
-    "sherif": { "action": "keep", "reason": "Workspace package.json consistency checker." },
-    "spectral": { "action": "keep", "reason": "OpenAPI YAML API contract linter." },
-    "openapi-typescript": { "action": "keep", "reason": "Type generator for API contracts." },
-    "graphify": { "action": "keep", "reason": "Architecture graph generator." },
-    "playwright": { "action": "add", "reason": "Web E2E smoke tests." },
-    "axe": { "action": "add", "reason": "Statically/dynamically checks accessibility rules." },
-    "storybook": { "action": "add", "reason": "Catalog and workshop for visual components." },
-    "loki": { "action": "add", "reason": "Visual regression tests for Storybook." },
-    "reg-suit": { "action": "add", "reason": "Visual regression comparisons." },
-    "opentelemetry": { "action": "keep", "reason": "Application instrumentation tracing." },
-    "jaeger": { "action": "keep", "reason": "Distributed tracing visualization." },
-    "prometheus": { "action": "add", "reason": "Infrastructure metrics scraper." },
-    "grafana": { "action": "keep", "reason": "Observability charts and metrics dashboard." },
-    "k6": { "action": "keep", "reason": "Load testing framework." },
-    "autocannon": { "action": "add", "reason": "Quick local load tests." },
-    "lighthouse-ci": { "action": "keep", "reason": "Web performance metrics auditor." },
-    "size-limit": { "action": "keep", "reason": "JavaScript bundle size checker." },
-    "tamagui": { "action": "keep", "reason": "Cross-platform design token styling library." },
-    "cue": { "action": "add", "reason": "Validation of structured configs." },
-    "checkov": { "action": "add", "reason": "Docker/IaC security scanner." },
-    "renovate": { "action": "add", "reason": "Automated dependency updates." },
-    "go-pprof": { "action": "add", "reason": "Profiling of CPU and memory inside Go services." },
-    "expo-atlas": { "action": "add", "reason": "Bundle visualizer for React Native / Expo." },
-    "style-dictionary": { "action": "add", "reason": "Design token dictionary builder." },
-    "maestro": { "action": "add", "reason": "Mobile UI smoke E2E testing." },
-    "detox": { "action": "add", "reason": "Mobile native E2E test suite." },
-    "lint-staged": { "action": "add", "reason": "Lints staged files before commit." },
-    "husky": { "action": "add", "reason": "Configures git hooks easily." },
-    "lefthook": { "action": "add", "reason": "Fast and powerful git hooks manager." },
-    "git-sizer": { "action": "add", "reason": "Analyzes size and structure of a git repository." },
-    "syft": { "action": "add", "reason": "Generates a Software Bill of Materials (SBOM)." },
-    "cyclonedx": { "action": "add", "reason": "CycloneDX SBOM generation formatting." },
-    "next-bundle": { "action": "add", "reason": "Next.js bundle size analyzer." }
+    "codeql": {
+      "action": "keep",
+      "reason": "Official GitHub security and vulnerability analysis pipeline."
+    },
+    "sonarqube": {
+      "action": "keep",
+      "reason": "Standard code quality metrics and code smell analysis."
+    },
+    "semgrep": {
+      "action": "keep",
+      "reason": "SAST engine for fast customizable local security rules."
+    },
+    "gitleaks": {
+      "action": "keep",
+      "reason": "Secrets and key leaks detection."
+    },
+    "trivy": {
+      "action": "add",
+      "reason": "Vulnerability scanning, misconfiguration checks, and SBOM reporting."
+    },
+    "osv-scanner": {
+      "action": "add",
+      "reason": "Dependency vulnerabilities scanner against Google OSV database."
+    },
+    "opa": {
+      "action": "keep",
+      "reason": "Central policy-as-code evaluation engine."
+    },
+    "conftest": {
+      "action": "keep",
+      "reason": "Structured configs OPA policy runner."
+    },
+    "regal": {
+      "action": "add",
+      "reason": "Linter for Rego policy language."
+    },
+    "ajv": {
+      "action": "keep",
+      "reason": "Declarative JSON schema verification."
+    },
+    "markdownlint-cli2": {
+      "action": "keep",
+      "reason": "Checks markdown styling consistency."
+    },
+    "actionlint": {
+      "action": "keep",
+      "reason": "Validates syntax of GitHub Actions workflows."
+    },
+    "zizmor": {
+      "action": "keep",
+      "reason": "Security audits GitHub Actions workflows."
+    },
+    "pinact": {
+      "action": "add",
+      "reason": "Pins GitHub actions to commit SHAs for supply-chain safety."
+    },
+    "shellcheck": {
+      "action": "add",
+      "reason": "Linter for shell/bash scripts."
+    },
+    "hadolint": {
+      "action": "add",
+      "reason": "Dockerfile linter."
+    },
+    "yamllint": {
+      "action": "add",
+      "reason": "YAML linter for configs and workflows."
+    },
+    "ls-lint": {
+      "action": "add",
+      "reason": "Directory structure and naming linter."
+    },
+    "eslint": {
+      "action": "keep",
+      "reason": "JavaScript/TypeScript code style linter."
+    },
+    "typescript": {
+      "action": "keep",
+      "reason": "Type checker and compiler."
+    },
+    "knip": {
+      "action": "keep",
+      "reason": "Dead code and unused file finder."
+    },
+    "jscpd": {
+      "action": "keep",
+      "reason": "Code duplication finder."
+    },
+    "dependency-cruiser": {
+      "action": "keep",
+      "reason": "Imports layering and structure boundaries validator."
+    },
+    "madge": {
+      "action": "keep",
+      "reason": "Visual dependency map and circular import finder."
+    },
+    "nx": {
+      "action": "keep",
+      "reason": "Monorepo and task scheduling build engine."
+    },
+    "sherif": {
+      "action": "keep",
+      "reason": "Workspace package.json consistency checker."
+    },
+    "spectral": {
+      "action": "keep",
+      "reason": "OpenAPI YAML API contract linter."
+    },
+    "openapi-typescript": {
+      "action": "keep",
+      "reason": "Type generator for API contracts."
+    },
+    "graphify": {
+      "action": "keep",
+      "reason": "Architecture graph generator."
+    },
+    "playwright": {
+      "action": "add",
+      "reason": "Web E2E smoke tests."
+    },
+    "axe": {
+      "action": "add",
+      "reason": "Statically/dynamically checks accessibility rules."
+    },
+    "storybook": {
+      "action": "add",
+      "reason": "Catalog and workshop for visual components."
+    },
+    "loki": {
+      "action": "add",
+      "reason": "Visual regression tests for Storybook."
+    },
+    "reg-suit": {
+      "action": "add",
+      "reason": "Visual regression comparisons."
+    },
+    "opentelemetry": {
+      "action": "keep",
+      "reason": "Application instrumentation tracing."
+    },
+    "jaeger": {
+      "action": "keep",
+      "reason": "Distributed tracing visualization."
+    },
+    "prometheus": {
+      "action": "add",
+      "reason": "Infrastructure metrics scraper."
+    },
+    "grafana": {
+      "action": "keep",
+      "reason": "Observability charts and metrics dashboard."
+    },
+    "k6": {
+      "action": "keep",
+      "reason": "Load testing framework."
+    },
+    "autocannon": {
+      "action": "add",
+      "reason": "Quick local load tests."
+    },
+    "lighthouse-ci": {
+      "action": "keep",
+      "reason": "Web performance metrics auditor."
+    },
+    "size-limit": {
+      "action": "keep",
+      "reason": "JavaScript bundle size checker."
+    },
+    "tamagui": {
+      "action": "keep",
+      "reason": "Cross-platform design token styling library."
+    },
+    "cue": {
+      "action": "add",
+      "reason": "Validation of structured configs."
+    },
+    "checkov": {
+      "action": "add",
+      "reason": "Docker/IaC security scanner."
+    },
+    "renovate": {
+      "action": "add",
+      "reason": "Automated dependency updates."
+    },
+    "go-pprof": {
+      "action": "add",
+      "reason": "Profiling of CPU and memory inside Go services."
+    },
+    "expo-atlas": {
+      "action": "add",
+      "reason": "Bundle visualizer for React Native / Expo."
+    },
+    "style-dictionary": {
+      "action": "add",
+      "reason": "Design token dictionary builder."
+    },
+    "maestro": {
+      "action": "add",
+      "reason": "Mobile UI smoke E2E testing."
+    },
+    "detox": {
+      "action": "add",
+      "reason": "Mobile native E2E test suite."
+    },
+    "lint-staged": {
+      "action": "add",
+      "reason": "Lints staged files before commit."
+    },
+    "husky": {
+      "action": "add",
+      "reason": "Configures git hooks easily."
+    },
+    "lefthook": {
+      "action": "add",
+      "reason": "Fast and powerful git hooks manager."
+    },
+    "git-sizer": {
+      "action": "add",
+      "reason": "Analyzes size and structure of a git repository."
+    },
+    "syft": {
+      "action": "add",
+      "reason": "Generates a Software Bill of Materials (SBOM)."
+    },
+    "cyclonedx": {
+      "action": "add",
+      "reason": "CycloneDX SBOM generation formatting."
+    },
+    "next-bundle": {
+      "action": "add",
+      "reason": "Next.js bundle size analyzer."
+    },
+    "xstate": {
+      "action": "add",
+      "reason": "Registered in V5 catalog as Modeling/State; activation=optional."
+    },
+    "cucumber": {
+      "action": "add",
+      "reason": "Registered in V5 catalog as Testing/BDD; activation=optional."
+    }
   }
 }

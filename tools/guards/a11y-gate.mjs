@@ -135,10 +135,11 @@ for (const file of files) {
 }
 
 if (violations.length > 0) {
-  console.log(`\n${guardId} WARNINGS (${violations.length}):`);
+  console.error(`\n${guardId}: FAIL (${violations.length})`);
   for (const v of violations) {
-    console.log(`  - ${v.file}:${v.line ? v.line : ""} ${v.message}`);
+    console.error(`  - ${v.file}:${v.line ? v.line : ""} ${v.message}`);
   }
+  process.exit(1);
 }
 
 console.log(`\n${guardId}: PASS`);

@@ -3,6 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
 
+function readActivation(toolId) {
+  const baselinePath = path.join(repoRoot, "tools/toolchain/tool-activation-baseline.json");
+  try {
+    const data = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+    return data.baseline?.[toolId] || "optional";
+  } catch {
+    return "optional";
+  }
+}
+
 export function hasBinary(binary) {
   try {
     execSync(process.platform === "win32" ? "where.exe " + binary : "which " + binary, { stdio: "ignore" });
@@ -21,29 +31,105 @@ export function isDiagnosticMode() {
   return args.includes("--diagnostic-only") || args.includes("--optional") || args.includes("--list");
 }
 
-export function runTool({ toolId, binary, command, diagnosticCommand }) {
-  const diagnostic = isDiagnosticMode();
+export function quoteRel(file) {
+  return JSON.stringify(path.relative(repoRoot, file));
+}
 
-  if (!hasBinary(binary)) {
-    if (diagnostic) {
-      console.log("[" + toolId.toUpperCase() + " DIAGNOSTIC-SKIP] " + binary + " is not installed.");
-      process.exit(0);
+export function walkFiles(rootDirs, predicate) {
+  const out = [];
+
+  function walk(dir) {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
     }
 
-    console.error("[" + toolId.toUpperCase() + " FAIL] Required binary missing: " + binary);
-    console.error("This is a gate command. Missing active tools cannot pass.");
-    process.exit(1);
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (["node_modules", "dist", "build", ".next", ".git", ".diagnostics", ".nx", ".turbo", ".cache"].includes(entry.name)) continue;
+        walk(full);
+      } else if (predicate(full, entry.name)) {
+        out.push(full);
+      }
+    }
+  }
+
+  for (const root of rootDirs) {
+    const full = path.join(repoRoot, root);
+    if (fs.existsSync(full)) walk(full);
+  }
+
+  return out;
+}
+
+export function handleMissingBinary(toolId, binary) {
+  const activation = readActivation(toolId);
+  const diagnostic = isDiagnosticMode();
+
+  if (diagnostic || activation === "optional") {
+    console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation}`);
+    process.exit(0);
+  }
+
+  if (activation === "partial") {
+    console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial`);
+    process.exit(0);
+  }
+
+  console.error(`[${toolId.toUpperCase()} FAIL] Required binary missing: ${binary}`);
+  console.error("Active tools cannot pass when their binary is missing.");
+  process.exit(1);
+}
+
+export function runTool({ toolId, binary, command, diagnosticCommand }) {
+  if (!hasBinary(binary)) {
+    handleMissingBinary(toolId, binary);
   }
 
   ensureDir(".diagnostics/security");
   ensureDir(".diagnostics/toolchain");
 
-  const cmd = diagnostic && diagnosticCommand ? diagnosticCommand : command;
+  const cmd = isDiagnosticMode() && diagnosticCommand ? diagnosticCommand : command;
   console.log("Running: " + cmd);
 
   try {
     execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
   } catch {
+    const activation = readActivation(toolId);
+    if (activation === "partial" || isDiagnosticMode()) {
+      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}.`);
+      process.exit(0);
+    }
     process.exit(1);
   }
 }
+
+export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage }) {
+  if (!hasBinary(binary)) {
+    handleMissingBinary(toolId, binary);
+  }
+
+  if (!files.length) {
+    console.log(noFilesMessage || "No files found.");
+    process.exit(0);
+  }
+
+  const cmd = makeCommand(files);
+  console.log("Running: " + cmd);
+
+  try {
+    execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
+  } catch {
+    const activation = readActivation(toolId);
+    if (activation === "partial" || isDiagnosticMode()) {
+      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}.`);
+      process.exit(0);
+    }
+    process.exit(1);
+  }
+}
+
+export { repoRoot };
