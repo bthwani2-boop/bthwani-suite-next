@@ -3,7 +3,7 @@
  *
  * BTHWANI_DEEP_TOOLS_GOVERNANCE_V5_AND_OSS_TOOLCHAIN_ACTIVATION — Toolchain Execution Plan
  *
- * Slices the 53 tools into local commands, CI workflow paths, and manual/scheduled schedules.
+ * Slices the 60 tools into local commands, CI workflow paths, and manual/scheduled schedules.
  * Generates .diagnostics/tools-v5/execution-plan.md.
  */
 

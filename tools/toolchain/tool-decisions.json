@@ -50,6 +50,13 @@
     "expo-atlas": { "action": "add", "reason": "Bundle visualizer for React Native / Expo." },
     "style-dictionary": { "action": "add", "reason": "Design token dictionary builder." },
     "maestro": { "action": "add", "reason": "Mobile UI smoke E2E testing." },
-    "detox": { "action": "add", "reason": "Mobile native E2E test suite." }
+    "detox": { "action": "add", "reason": "Mobile native E2E test suite." },
+    "lint-staged": { "action": "add", "reason": "Lints staged files before commit." },
+    "husky": { "action": "add", "reason": "Configures git hooks easily." },
+    "lefthook": { "action": "add", "reason": "Fast and powerful git hooks manager." },
+    "git-sizer": { "action": "add", "reason": "Analyzes size and structure of a git repository." },
+    "syft": { "action": "add", "reason": "Generates a Software Bill of Materials (SBOM)." },
+    "cyclonedx": { "action": "add", "reason": "CycloneDX SBOM generation formatting." },
+    "next-bundle": { "action": "add", "reason": "Next.js bundle size analyzer." }
   }
 }

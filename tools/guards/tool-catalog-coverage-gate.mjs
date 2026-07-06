@@ -4,7 +4,7 @@
  * BTHWANI_DEEP_TOOLS_GOVERNANCE_V5_AND_OSS_TOOLCHAIN_ACTIVATION — Catalog Coverage Gate
  *
  * Validates that:
- *   1. tool-catalog.v5.json exists and contains all 53 registered V5 tools.
+ *   1. tool-catalog.v5.json exists and contains all 60 registered V5 tools.
  *   2. Each tool entry has required schema keys: id, category, priority, oss_free, decision, activation.
  *
  * FAIL: missing tools from catalog, malformed entries, or missing files.
@@ -44,7 +44,7 @@ try {
 
 const REQUIRED_KEYS = ["id", "category", "priority", "oss_free", "decision", "activation"];
 
-// 53 tools that must be documented in catalog
+// 60 tools that must be documented in catalog
 const EXPECTED_TOOLS = new Set([
   // Security/SCA/SAST
   "codeql", "sonarqube", "semgrep", "gitleaks", "trivy", "osv-scanner",
@@ -57,13 +57,14 @@ const EXPECTED_TOOLS = new Set([
   // Architecture
   "graphify",
   // Testing/QA
-  "playwright", "axe", "storybook", "loki", "reg-suit",
+  "playwright", "axe", "storybook", "loki", "reg-suit", "xstate", "cucumber",
   // Observability
   "opentelemetry", "jaeger", "prometheus", "grafana",
   // Performance
   "k6", "autocannon", "lighthouse-ci", "size-limit", "tamagui",
   // V5 newly covered
-  "cue", "checkov", "renovate", "go-pprof", "expo-atlas", "style-dictionary", "maestro", "detox"
+  "cue", "checkov", "renovate", "go-pprof", "expo-atlas", "style-dictionary", "maestro", "detox",
+  "lint-staged", "husky", "lefthook", "git-sizer", "syft", "cyclonedx", "next-bundle"
 ]);
 
 const foundTools = new Set();

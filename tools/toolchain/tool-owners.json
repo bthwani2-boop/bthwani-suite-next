@@ -50,6 +50,13 @@
     "expo-atlas": { "team": "BThwani UI Team", "scope": "local" },
     "style-dictionary": { "team": "BThwani UI Team", "scope": "local" },
     "maestro": { "team": "BThwani QA Team", "scope": "local" },
-    "detox": { "team": "BThwani QA Team", "scope": "local" }
+    "detox": { "team": "BThwani QA Team", "scope": "local" },
+    "lint-staged": { "team": "BThwani Platform Team", "scope": "local" },
+    "husky": { "team": "BThwani Platform Team", "scope": "local" },
+    "lefthook": { "team": "BThwani Platform Team", "scope": "local" },
+    "git-sizer": { "team": "BThwani Platform Team", "scope": "local" },
+    "syft": { "team": "BThwani Security Team", "scope": "local" },
+    "cyclonedx": { "team": "BThwani Security Team", "scope": "local" },
+    "next-bundle": { "team": "BThwani UI Team", "scope": "local" }
   }
 }

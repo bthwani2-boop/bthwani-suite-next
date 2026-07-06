@@ -52,6 +52,13 @@
     "expo-atlas": "optional",
     "style-dictionary": "optional",
     "maestro": "optional",
-    "detox": "optional"
+    "detox": "optional",
+    "lint-staged": "optional",
+    "husky": "optional",
+    "lefthook": "optional",
+    "git-sizer": "optional",
+    "syft": "optional",
+    "cyclonedx": "optional",
+    "next-bundle": "optional"
   }
 }

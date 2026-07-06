@@ -52,6 +52,13 @@
     { "id": "expo-atlas", "category": "Performance/Mobile-Bundle", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
     { "id": "style-dictionary", "category": "UI-Kit/Tokens", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
     { "id": "maestro", "category": "Testing/E2E/Mobile", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
-    { "id": "detox", "category": "Testing/E2E/Mobile", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" }
+    { "id": "detox", "category": "Testing/E2E/Mobile", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "lint-staged", "category": "Governance/Workflows", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "husky", "category": "Governance/Workflows", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "lefthook", "category": "Governance/Workflows", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "git-sizer", "category": "Quality/Structure", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "syft", "category": "Security/Container/SBOM", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "cyclonedx", "category": "Security/Container/SBOM", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" },
+    { "id": "next-bundle", "category": "Performance/Bundle", "priority": "P1", "oss_free": true, "decision": "add", "activation": "optional" }
   ]
 }
