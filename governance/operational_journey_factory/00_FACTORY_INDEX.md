@@ -3,7 +3,7 @@
 ## Repository Truth
 
 - repo: `bthwani2-boop/bthwani-suite-next`
-- ref: `implementing`
+- ref: current Git branch at generation time; branch names must not be hardcoded in factory files.
 - head_sha: generated inventories must record the current HEAD SHA.
 - status: `TEMPLATE_FACTORY_ONLY`
 - implementation_started: `false`
