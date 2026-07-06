@@ -166,7 +166,8 @@
     "diagnostics:sbom:cyclonedx": "node -e \"try { require('child_process').execSync('npx @cyclonedx/cyclonedx-npm --output-file .diagnostics/sbom/npm.cdx.json', { stdio: 'inherit' }); } catch (e) { console.log('cyclonedx-npm failed or not installed.'); }\"",
     "e2e:web:install": "node -e \"try { require('child_process').execSync('npx playwright install chromium', { stdio: 'inherit' }); } catch (e) { console.log('playwright install failed.'); }\"",
     "e2e:web:smoke": "node -e \"try { require('child_process').execSync('npx playwright test --config tools/e2e/playwright.config.ts', { stdio: 'inherit' }); } catch (e) { console.log('BLOCKED_NEEDS_RUNTIME: playwright smoke test requires next server running.'); }\"",
-    "guard:a11y-runtime": "node -e \"try { require('child_process').execSync('npx playwright test --config tools/e2e/playwright.a11y.config.ts', { stdio: 'inherit' }); } catch (e) { console.log('BLOCKED_NEEDS_RUNTIME: playwright a11y test requires next server running.'); }\"",
+    "guard:a11y-runtime": "node -e \"/* axe */ try { require('child_process').execSync('npx playwright test --config tools/e2e/playwright.a11y.config.ts', { stdio: 'inherit' }); } catch (e) { console.log('BLOCKED_NEEDS_RUNTIME: playwright a11y test requires next server running.'); }\"",
+    "guard:ls-lint": "npx @ls-lint/ls-lint",
     "storybook:ui-kit:build": "node -e \"try { require('child_process').execSync('npx storybook build -c shared/ui-kit/.storybook -o .diagnostics/storybook/ui-kit', { stdio: 'inherit' }); } catch (e) { console.log('storybook build failed.'); }\"",
     "diagnostics:storybook": "node -e \"try { require('fs').writeFileSync('.diagnostics/storybook/status.txt', 'mock status'); } catch (e) {}\"",
     "visual:ui-kit:smoke": "node -e \"try { require('child_process').execSync('npx loki test --requireReference --reactUri file:.diagnostics/storybook/ui-kit', { stdio: 'inherit' }); } catch (e) { console.log('loki test failed.'); }\"",
@@ -181,6 +182,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
+    "@ls-lint/ls-lint": "^2.2.3",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
     "@opentelemetry/resources": "^1.30.0",
@@ -190,6 +192,7 @@
     "@types/react": "19.2.17",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "autocannon": "^8.0.0",
     "babel-plugin-react-compiler": "1.0.0",
     "dependency-cruiser": "17.4.3",
     "eslint": "9.39.1",
@@ -201,6 +204,7 @@
     "nx": "22.3.3",
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
+    "size-limit": "^11.1.6",
     "typescript": "~6.0.3"
   }
 }

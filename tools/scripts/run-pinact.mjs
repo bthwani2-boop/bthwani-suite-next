@@ -7,7 +7,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { repoRoot } from "../guards/_guard-utils.mjs";
+import { repoRoot, assertActiveOrWarn } from "../guards/_guard-utils.mjs";
 
 function hasBinary(cmd) {
   try {
@@ -22,9 +22,7 @@ const args = process.argv.slice(2);
 const verifyMode = args.includes("--verify");
 
 if (!hasBinary("pinact")) {
-  console.log(`\n[PINACT SKIP] 'pinact' binary not installed. Skipping local GitHub actions version pinning checks.`);
-  console.log(`              (This check runs as a warnings job in GitHub Actions CI)\n`);
-  process.exit(0);
+  assertActiveOrWarn("pinact", "pinact");
 }
 
 try {

@@ -16,6 +16,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "repository-naming-gate";
@@ -216,6 +217,19 @@ if (warnings.length > 0) {
   for (const w of warnings) {
     console.log(`  ⚠  ${w.file} — ${w.message}`);
   }
+}
+
+// Run ls-lint naming checks
+try {
+  console.log("Running ls-lint naming checks...");
+  const cmd = process.platform === "win32" ? "npx.cmd @ls-lint/ls-lint" : "npx @ls-lint/ls-lint";
+  execSync(cmd, { stdio: "inherit", cwd: repoRoot });
+} catch (e) {
+  violations.push({
+    file: ".ls-lint.yml",
+    line: 0,
+    message: "LS_LINT_FAILED: Directory structure naming conventions violated. Run 'npx @ls-lint/ls-lint' for details."
+  });
 }
 
 fail(guardId, violations);

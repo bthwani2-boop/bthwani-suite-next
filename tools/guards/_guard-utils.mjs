@@ -209,3 +209,27 @@ export function loadTsconfigAliases() {
 
   return aliases;
 }
+
+export function assertActiveOrWarn(toolId, binaryName) {
+  const baselinePath = path.join(repoRoot, "tools/toolchain/tool-activation-baseline.json");
+  let activation = "optional";
+  if (fs.existsSync(baselinePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+      activation = data.baseline[toolId] || "optional";
+    } catch {}
+  }
+
+  const mustFail = (activation === "active" || activation === "partial");
+
+  if (mustFail) {
+    console.error(`\n[${toolId.toUpperCase()} ERROR] Required active/partial toolchain binary '${binaryName}' is not installed!`);
+    console.error(`                     This check is mandatory. Please install the binary.\n`);
+    process.exit(1);
+  } else {
+    console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' binary not installed. Skipping local check.`);
+    console.log(`             (This tool is optional or disabled in baseline)\n`);
+    process.exit(0);
+  }
+}
+

@@ -9,7 +9,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { repoRoot } from "../guards/_guard-utils.mjs";
+import { repoRoot, assertActiveOrWarn } from "../guards/_guard-utils.mjs";
 
 function hasBinary(cmd) {
   try {
@@ -21,9 +21,7 @@ function hasBinary(cmd) {
 }
 
 if (!hasBinary("yamllint")) {
-  console.log(`\n[YAMLLINT SKIP] 'yamllint' binary not installed. Skipping local YAML file formatting checks.`);
-  console.log(`                 (This check runs as a mandatory job in GitHub Actions CI)\n`);
-  process.exit(0);
+  assertActiveOrWarn("yamllint", "yamllint");
 }
 
 // Check files in .github, governance, infra, tools directories

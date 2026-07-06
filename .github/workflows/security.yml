@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - master
+      - implementing
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
@@ -152,6 +156,7 @@ jobs:
             if grep -qE "^\s+write-all" "$f"; then
               VIOLATIONS="$VIOLATIONS\n  FORBIDDEN write-all: $f"
             fi
+          done
           if [ -n "$VIOLATIONS" ]; then
             echo -e "ERROR: Workflow permission violations found:$VIOLATIONS"
             exit 1
@@ -169,22 +174,40 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Trivy vulnerability scan (filesystem)
-        uses: aquasecurity/trivy-action@master
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
-          scan-type: "fs"
-          ignore-unfixed: true
-          format: "table"
-          exit-code: "1"
-          severity: "CRITICAL,HIGH"
+          version: 10.34.2
 
-      - name: Run OSV-Scanner (dependencies)
-        uses: google/osv-scanner-action/bootstrap@v1
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          scan-args: "source -r ."
+          node-version: 24.17.0
+          cache: 'pnpm'
 
-      - name: Run Gitleaks secrets scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
+      - name: Install security scan binaries
+        run: |
+          # Install Trivy
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.deb
+          sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
+          
+          # Install OSV-Scanner
+          go install github.com/google/osv-scanner/cmd/osv-scanner@v1.9.0
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+          
+          # Install Gitleaks
+          wget https://github.com/gitleaks/gitleaks/releases/download/v8.23.0/gitleaks_8.23.0_linux_x64.tar.gz
+          tar -zxvf gitleaks_8.23.0_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Trivy filesystem scan
+        run: pnpm run security:trivy
+
+      - name: OSV dependency scan
+        run: pnpm run security:osv
+
+      - name: Gitleaks secrets scan
+        run: pnpm run guard:secrets

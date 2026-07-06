@@ -7,7 +7,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { repoRoot } from "../guards/_guard-utils.mjs";
+import { repoRoot, assertActiveOrWarn } from "../guards/_guard-utils.mjs";
 
 function hasBinary(cmd) {
   try {
@@ -19,9 +19,7 @@ function hasBinary(cmd) {
 }
 
 if (!hasBinary("actionlint")) {
-  console.log(`\n[ACTIONLINT SKIP] 'actionlint' binary not installed. Skipping local workflow linting.`);
-  console.log(`                  (This check runs as a mandatory job in GitHub Actions CI)\n`);
-  process.exit(0);
+  assertActiveOrWarn("actionlint", "actionlint");
 }
 
 try {

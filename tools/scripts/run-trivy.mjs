@@ -9,7 +9,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { repoRoot } from "../guards/_guard-utils.mjs";
+import { repoRoot, assertActiveOrWarn } from "../guards/_guard-utils.mjs";
 
 const outDir = path.join(repoRoot, ".diagnostics", "security");
 fs.mkdirSync(outDir, { recursive: true });
@@ -27,9 +27,7 @@ const args = process.argv.slice(2);
 const isDiagnosticOnly = args.includes("--diagnostic-only");
 
 if (!hasBinary("trivy")) {
-  console.log(`\n[TRIVY SKIP] 'trivy' binary not installed. Skipping local filesystem security scan.`);
-  console.log(`             (This check runs as a mandatory job in GitHub Actions CI)\n`);
-  process.exit(0);
+  assertActiveOrWarn("trivy", "trivy");
 }
 
 try {

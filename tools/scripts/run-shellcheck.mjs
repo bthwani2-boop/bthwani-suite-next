@@ -9,7 +9,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { repoRoot } from "../guards/_guard-utils.mjs";
+import { repoRoot, assertActiveOrWarn } from "../guards/_guard-utils.mjs";
 
 function hasBinary(cmd) {
   try {
@@ -21,9 +21,7 @@ function hasBinary(cmd) {
 }
 
 if (!hasBinary("shellcheck")) {
-  console.log(`\n[SHELLCHECK SKIP] 'shellcheck' binary not installed. Skipping local shell scripts linting.`);
-  console.log(`                  (This check runs as a mandatory job in GitHub Actions CI)\n`);
-  process.exit(0);
+  assertActiveOrWarn("shellcheck", "shellcheck");
 }
 
 // Find all shell files (*.sh) in project folders (apps, services, shared, tools, infra, core)

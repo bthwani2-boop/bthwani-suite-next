@@ -43,8 +43,44 @@ jobs:
           node-version: 24.17.0
           cache: 'pnpm'
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install non-npm toolchain binaries
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck yamllint
+          
+          # Hadolint
+          sudo wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          sudo chmod +x /usr/local/bin/hadolint
+          
+          # OSV-Scanner, pinact, actionlint
+          go install github.com/google/osv-scanner/cmd/osv-scanner@v1.9.0
+          go install github.com/suzuki-shunsuke/pinact/cmd/pinact@v0.1.2
+          go install github.com/rhysd/actionlint/cmd/actionlint@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+          
+          # Regal
+          curl -L -o regal https://github.com/StyraInc/regal/releases/download/v0.25.0/regal_Linux_x86_64
+          chmod +x regal
+          sudo mv regal /usr/local/bin/
+          
+          # Zizmor
+          pip install zizmor
+          
+          # Conftest
+          wget https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz
+          tar -zxvf conftest_0.55.0_Linux_x86_64.tar.gz
+          sudo mv conftest /usr/local/bin/
+
+      - name: Verify Nx Workspace
+        run: pnpm run nx:projects
 
       - name: Lint
         run: pnpm run lint

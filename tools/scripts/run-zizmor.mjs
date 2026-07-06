@@ -7,7 +7,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { repoRoot } from "../guards/_guard-utils.mjs";
+import { repoRoot, assertActiveOrWarn } from "../guards/_guard-utils.mjs";
 
 function hasBinary(cmd) {
   try {
@@ -19,9 +19,7 @@ function hasBinary(cmd) {
 }
 
 if (!hasBinary("zizmor")) {
-  console.log(`\n[ZIZMOR SKIP] 'zizmor' binary not installed. Skipping local workflow security scanning.`);
-  console.log(`               (This check runs as a mandatory job in GitHub Actions CI)\n`);
-  process.exit(0);
+  assertActiveOrWarn("zizmor", "zizmor");
 }
 
 try {
