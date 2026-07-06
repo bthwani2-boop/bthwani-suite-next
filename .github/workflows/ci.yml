@@ -46,32 +46,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install non-npm toolchain binaries
-        run: |
-          sudo apt-get update && sudo apt-get install -y shellcheck yamllint
-          
-          # Hadolint
-          sudo wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
-          sudo chmod +x /usr/local/bin/hadolint
-          
-          # OSV-Scanner, pinact, actionlint
-          go install github.com/google/osv-scanner/cmd/osv-scanner@v1.9.0
-          go install github.com/suzuki-shunsuke/pinact/cmd/pinact@v0.1.2
-          go install github.com/rhysd/actionlint/cmd/actionlint@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-          
-          # Regal
-          curl -L -o regal https://github.com/StyraInc/regal/releases/download/v0.25.0/regal_Linux_x86_64
-          chmod +x regal
-          sudo mv regal /usr/local/bin/
-          
-          # Zizmor
-          pip install zizmor
-          
-          # Conftest
-          wget https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz
-          tar -zxvf conftest_0.55.0_Linux_x86_64.tar.gz
-          sudo mv conftest /usr/local/bin/
+      - name: Install OSS toolchain binaries
+        run: bash tools/scripts/install-oss-toolchain-binaries.sh governance
 
       - name: Verify Nx Workspace
         run: pnpm run nx:projects
@@ -131,7 +107,7 @@ jobs:
         run: pnpm run guard:guard-registry
 
       - name: Guard — Toolchain V5 fast gate (FAIL)
-        run: pnpm run guard:tools-v5-all
+        run: pnpm run guard:tools-v5-registry
 
       - name: Guard — API binding
         run: pnpm run guard:api-binding

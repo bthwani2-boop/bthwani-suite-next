@@ -8,3 +8,5 @@ ignored:
   - DL3013
   # Use WORKDIR instead of multiple cd commands
   - DL3003
+
+# NOTE: ignored rules are a temporary baseline and must be reviewed before making hadolint mandatory.

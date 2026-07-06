@@ -220,16 +220,19 @@ export function assertActiveOrWarn(toolId, binaryName) {
     } catch {}
   }
 
-  const mustFail = (activation === "active" || activation === "partial");
-
-  if (mustFail) {
-    console.error(`\n[${toolId.toUpperCase()} ERROR] Required active/partial toolchain binary '${binaryName}' is not installed!`);
-    console.error(`                     This check is mandatory. Please install the binary.\n`);
+  if (activation === "active") {
+    console.error(`\n[${toolId.toUpperCase()} ERROR] Required active toolchain binary '${binaryName}' is not installed.`);
+    console.error("Active checks must fail closed.\n");
     process.exit(1);
-  } else {
-    console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' binary not installed. Skipping local check.`);
-    console.log(`             (This tool is optional or disabled in baseline)\n`);
+  }
+
+  if (activation === "partial") {
+    console.warn(`\n[${toolId.toUpperCase()} WARN] Partial toolchain binary '${binaryName}' is not installed.`);
+    console.warn("Partial checks are warn-only until their baseline is accepted.\n");
     process.exit(0);
   }
+
+  console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' binary not installed. Tool is optional.\n`);
+  process.exit(0);
 }
 

@@ -188,20 +188,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install security scan binaries
-        run: |
-          # Install Trivy
-          wget https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.deb
-          sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
-          
-          # Install OSV-Scanner
-          go install github.com/google/osv-scanner/cmd/osv-scanner@v1.9.0
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-          
-          # Install Gitleaks
-          wget https://github.com/gitleaks/gitleaks/releases/download/v8.23.0/gitleaks_8.23.0_linux_x64.tar.gz
-          tar -zxvf gitleaks_8.23.0_linux_x64.tar.gz
-          sudo mv gitleaks /usr/local/bin/
+      - name: Install OSS security scan binaries
+        run: bash tools/scripts/install-oss-toolchain-binaries.sh security
 
       - name: Trivy filesystem scan
         run: pnpm run security:trivy
