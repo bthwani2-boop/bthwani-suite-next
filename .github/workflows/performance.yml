@@ -1,0 +1,172 @@
+name: Performance Governance
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_k6:
+        description: "Run k6 API load tests (requires runtime)"
+        type: boolean
+        default: false
+      run_lighthouse:
+        description: "Run Lighthouse CI (requires build)"
+        type: boolean
+        default: false
+  push:
+    branches: [implementing, main]
+    paths:
+      - "tools/performance/**"
+      - "tools/guards/heavy-import-gate.mjs"
+      - "tools/guards/bundle-budget-gate.mjs"
+      - "tools/guards/performance-budget-gate.mjs"
+      - "services/**/backend/**/*.go"
+      - "apps/control-panel/**"
+  schedule:
+    - cron: "0 4 * * 1"   # Every Monday at 04:00 UTC — weekly performance baseline
+
+jobs:
+  # ── Static performance gates (always run) ──────────────────────────────────
+  static-perf-gates:
+    name: Static Performance Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Guard — Performance budget config (FAIL)
+        run: pnpm run guard:performance-budget
+
+      - name: Guard — Heavy imports (FAIL)
+        run: pnpm run guard:heavy-imports
+
+      - name: Guard — Bundle budget analysis (WARN)
+        run: pnpm run guard:bundle-budget
+        continue-on-error: true
+
+      - name: Generate performance report
+        run: pnpm run diagnostics:performance
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-report
+          path: .diagnostics/performance/performance-summary.md
+          retention-days: 30
+
+  # ── Go benchmarks (always run — for baseline tracking) ─────────────────────
+  go-benchmarks:
+    name: Go Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "services/dsh/backend/go.mod"
+          cache: true
+
+      - name: Go benchmarks — DSH
+        run: |
+          cd services/dsh/backend
+          go test -bench=. -benchmem -benchtime=2s -count=1 ./... 2>&1 | tee /tmp/dsh-benchmarks.txt || true
+
+      - name: Go benchmarks — WLT
+        run: |
+          cd services/wlt/backend
+          go test -bench=. -benchmem -benchtime=2s -count=1 ./... 2>&1 | tee /tmp/wlt-benchmarks.txt || true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: go-benchmarks
+          path: /tmp/*-benchmarks.txt
+          retention-days: 30
+
+  # ── k6 API load tests (manual only — requires runtime) ────────────────────
+  k6-api-smoke:
+    name: k6 API Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event.inputs.run_k6 == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start runtime (DSH + WLT)
+        run: echo "Runtime start would go here — requires docker compose"
+        # In real usage: docker compose -f infra/docker/docker-compose.yml up -d
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: k6 — DSH API smoke
+        run: k6 run tools/performance/k6/dsh-smoke.js
+        env:
+          BASE_URL: http://localhost:58080
+
+      - name: k6 — WLT API smoke
+        run: k6 run tools/performance/k6/wlt-smoke.js
+        env:
+          BASE_URL: http://localhost:58090
+
+      - name: k6 — Identity smoke
+        run: k6 run tools/performance/k6/identity-smoke.js
+        env:
+          BASE_URL: http://localhost:58000
+
+  # ── Lighthouse CI (manual only — requires Next.js build) ──────────────────
+  lighthouse-ci:
+    name: Lighthouse CI — Control Panel
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event.inputs.run_lighthouse == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build control-panel
+        run: pnpm --dir apps/control-panel/runtime run build
+        env:
+          NODE_ENV: production
+
+      - name: Run Lighthouse CI
+        run: pnpm exec lhci autorun --config=tools/performance/web/lighthouserc.cjs
+        working-directory: apps/control-panel/runtime
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14

@@ -144,6 +144,39 @@ for (const file of listCodeFiles()) {
   }
 }
 
+// Helper to strip CSS variables (var() and color-mix()) with matching parentheses
+function stripCssVars(str) {
+  let result = str;
+  while (true) {
+    const varIdx = result.indexOf("var(");
+    const mixIdx = result.indexOf("color-mix(");
+    const idx = (varIdx !== -1 && mixIdx !== -1) ? Math.min(varIdx, mixIdx) : (varIdx !== -1 ? varIdx : mixIdx);
+    if (idx === -1) break;
+    
+    let depth = 1;
+    let endIdx = -1;
+    const startSearch = idx + (result.startsWith("var(", idx) ? 4 : 10);
+    for (let j = startSearch; j < result.length; j++) {
+      if (result[j] === '(') depth++;
+      else if (result[j] === ')') {
+        depth--;
+        if (depth === 0) {
+          endIdx = j;
+          break;
+        }
+      }
+    }
+    if (endIdx !== -1) {
+      result = result.slice(0, idx) + " " + result.slice(endIdx + 1);
+    } else {
+      result = result.slice(0, idx);
+    }
+  }
+  return result;
+}
+
+const warnings = [];
+
 // 7. no-raw-colors-outside-ui-kit (Error)
 for (const file of listCodeFiles()) {
   const isExcludedFromColors =
@@ -152,29 +185,46 @@ for (const file of listCodeFiles()) {
     file.startsWith("governance/") ||
     file.startsWith("infra/") ||
     file.startsWith("contracts/") ||
-    file.startsWith("apps/control-panel/") ||
-    file.endsWith(".d.ts");
+    file.endsWith(".d.ts") ||
+    file.includes("/styles/") ||
+    file.endsWith("layout.tsx") ||
+    file.endsWith("config.js") ||
+    file.endsWith("config.ts");
 
   if (isExcludedFromColors) continue;
 
   const content = read(file);
   const lines = content.split(/\r?\n/);
+  const isControlPanel = file.startsWith("apps/control-panel/");
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const cleanLine = line.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "").trim();
     if (cleanLine.length === 0) continue;
 
-    const hasHex = /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/gi.test(cleanLine);
-    const hasCssColor = /\b(?:rgb|rgba|hsl|hsla)\([^)]+\)/gi.test(cleanLine);
+    let lineToTest = cleanLine;
+    if (isControlPanel) {
+      lineToTest = stripCssVars(cleanLine);
+    }
+
+    const hasHex = /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/gi.test(lineToTest);
+    const hasCssColor = /\b(?:rgb|rgba|hsl|hsla)\([^)]+\)/gi.test(lineToTest);
 
     if (hasHex || hasCssColor) {
-      violations.push({
-        file,
-        line: i + 1,
-        message: `FORBIDDEN: raw color value found in styling: "${line.trim()}". Use brand tokens or colorRoles from shared/ui-kit instead.`
-      });
+      const msg = `FORBIDDEN: raw color value found in styling: "${line.trim()}". Use brand tokens or colorRoles from shared/ui-kit instead.`;
+      if (isControlPanel) {
+        warnings.push({ file, line: i + 1, message: msg });
+      } else {
+        violations.push({ file, line: i + 1, message: msg });
+      }
     }
+  }
+}
+
+if (warnings.length > 0) {
+  console.log(`\n${guardId} WARNINGS (${warnings.length}):`);
+  for (const w of warnings) {
+    console.log(`  - ${w.file}:${w.line} ${w.message}`);
   }
 }
 

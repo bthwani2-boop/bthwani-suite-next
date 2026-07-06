@@ -81,6 +81,16 @@ jobs:
         run: pnpm run guard:repo-structure
         continue-on-error: true
 
+      - name: Guard — heavy imports (FAIL)
+        run: pnpm run guard:heavy-imports
+
+      - name: Guard — performance budget config (FAIL)
+        run: pnpm run guard:performance-budget
+
+      - name: Guard — bundle budget analysis (WARN)
+        run: pnpm run guard:bundle-budget
+        continue-on-error: true
+
       - name: Guard — API binding
         run: pnpm run guard:api-binding
 

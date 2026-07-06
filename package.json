@@ -126,7 +126,17 @@
     "guard:repo-naming": "node tools/guards/repository-naming-gate.mjs",
     "guard:repo-structure": "node tools/guards/repository-structure-gate.mjs",
     "guard:repo-all": "node tools/guards/repository-size-gate.mjs && node tools/guards/repository-naming-gate.mjs && node tools/guards/repository-structure-gate.mjs",
-    "diagnostics:repo-structure": "node tools/scripts/generate-repository-structure-report.mjs"
+    "diagnostics:repo-structure": "node tools/scripts/generate-repository-structure-report.mjs",
+    "guard:heavy-imports": "node tools/guards/heavy-import-gate.mjs",
+    "guard:bundle-budget": "node tools/guards/bundle-budget-gate.mjs",
+    "guard:performance-budget": "node tools/guards/performance-budget-gate.mjs",
+    "guard:performance-all": "node tools/guards/heavy-import-gate.mjs && node tools/guards/performance-budget-gate.mjs && node tools/guards/bundle-budget-gate.mjs",
+    "performance:api:k6:dsh": "k6 run tools/performance/k6/dsh-smoke.js",
+    "performance:api:k6:wlt": "k6 run tools/performance/k6/wlt-smoke.js",
+    "performance:api:k6:identity": "k6 run tools/performance/k6/identity-smoke.js",
+    "performance:go:bench:dsh": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service dsh",
+    "performance:go:bench:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service wlt",
+    "diagnostics:performance": "node tools/scripts/generate-performance-report.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
