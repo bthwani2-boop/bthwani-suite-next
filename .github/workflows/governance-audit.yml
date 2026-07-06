@@ -43,6 +43,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Guard — Tool catalog coverage (FAIL)
+        run: pnpm run guard:tool-catalog-coverage
+
+      - name: Guard — Toolchain activation (FAIL)
+        run: pnpm run guard:toolchain-activation
+
+      - name: Guard — OSS toolchain policy (FAIL)
+        run: pnpm run guard:oss-toolchain-policy
+
       - name: Guard — Governance registry schema validation (Ajv)
         run: pnpm run guard:governance-schema
 
@@ -82,9 +91,16 @@ jobs:
           policy: governance/policies
           file: governance/guards/guard-registry.json
 
+      - name: Guard — Rego policy lint (FAIL)
+        run: pnpm run guard:rego-lint
+
+      - name: Guard — Markdown governance formatting (WARN)
+        run: pnpm run guard:markdown-governance
+
       # ── 4. Gitleaks Secrets Scanning ────────────────────────────────────────
       - name: Gitleaks scan
         uses: gitleaks/gitleaks-action@v2
         env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # optional for open source repos
-        continue-on-error: true # set to true if first execution to prevent breaking initial runs
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        continue-on-error: true
+

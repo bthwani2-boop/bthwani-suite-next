@@ -245,6 +245,101 @@
       "script": "guard:secrets",
       "exit_level": "fail",
       "description": "Audits the codebase for exposed passwords, keys, tokens, or configuration leaks using Gitleaks."
+    },
+    {
+      "id": "tool-catalog-coverage",
+      "name": "Tool Catalog Coverage Gate",
+      "script": "guard:tool-catalog-coverage",
+      "exit_level": "fail",
+      "description": "Validates that all V5 expected tools are documented in tool-catalog.v5.json.",
+      "source_file": "tools/guards/tool-catalog-coverage-gate.mjs"
+    },
+    {
+      "id": "toolchain-activation",
+      "name": "Toolchain Activation Gate",
+      "script": "guard:toolchain-activation",
+      "exit_level": "fail",
+      "description": "Verifies that tool activation states in the catalog align with baseline config.",
+      "source_file": "tools/guards/toolchain-activation-gate.mjs"
+    },
+    {
+      "id": "oss-toolchain-policy",
+      "name": "OSS Toolchain Policy Gate",
+      "script": "guard:oss-toolchain-policy",
+      "exit_level": "fail",
+      "description": "Enforces that only open-source or free tools are registered in the catalog.",
+      "source_file": "tools/guards/oss-toolchain-policy-gate.mjs"
+    },
+    {
+      "id": "workflow-lint",
+      "name": "Workflow Syntax Lint",
+      "script": "guard:workflow-lint",
+      "exit_level": "fail",
+      "description": "Lints GitHub Actions workflow syntax using actionlint.",
+      "source_file": "tools/scripts/run-actionlint.mjs"
+    },
+    {
+      "id": "workflow-security",
+      "name": "Workflow Security Audit",
+      "script": "guard:workflow-security",
+      "exit_level": "fail",
+      "description": "Audits GitHub Actions workflow security using zizmor.",
+      "source_file": "tools/scripts/run-zizmor.mjs"
+    },
+    {
+      "id": "actions-pin",
+      "name": "Actions Pinning Gate",
+      "script": "guard:actions-pin",
+      "exit_level": "warn",
+      "description": "Verifies pinning of GitHub Action versions to secure commit SHAs.",
+      "source_file": "tools/scripts/run-pinact.mjs"
+    },
+    {
+      "id": "rego-lint",
+      "name": "Rego Policy Lint Gate",
+      "script": "guard:rego-lint",
+      "exit_level": "fail",
+      "description": "Lints OPA Rego policy syntax and quality rules using regal.",
+      "source_file": "tools/scripts/run-regal.mjs"
+    },
+    {
+      "id": "opa-policies",
+      "name": "OPA Policies Gate",
+      "script": "guard:opa-policies",
+      "exit_level": "fail",
+      "description": "Runs OPA Conftest checks against governance registries.",
+      "source_file": "tools/scripts/run-conftest.mjs"
+    },
+    {
+      "id": "shellcheck",
+      "name": "Shell Script Lint Gate",
+      "script": "guard:shellcheck",
+      "exit_level": "warn",
+      "description": "Checks shell/bash scripts formatting and issues using shellcheck.",
+      "source_file": "tools/scripts/run-shellcheck.mjs"
+    },
+    {
+      "id": "dockerfile-lint",
+      "name": "Dockerfile Lint Gate",
+      "script": "guard:dockerfile-lint",
+      "exit_level": "fail",
+      "description": "Checks Dockerfile syntax and best practices using hadolint.",
+      "source_file": "tools/scripts/run-hadolint.mjs"
+    },
+    {
+      "id": "yaml-lint",
+      "name": "YAML Config Lint Gate",
+      "script": "guard:yaml-lint",
+      "exit_level": "fail",
+      "description": "Checks yaml syntax and formatting structure using yamllint.",
+      "source_file": "tools/scripts/run-yamllint.mjs"
+    },
+    {
+      "id": "a11y-runtime",
+      "name": "Accessibility Runtime Gate",
+      "script": "guard:a11y-runtime",
+      "exit_level": "warn",
+      "description": "Runs dynamic accessibility checks on web routes using Playwright + axe-core."
     }
   ]
 }

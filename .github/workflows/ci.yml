@@ -100,6 +100,9 @@ jobs:
       - name: Guard — guard registry alignment (FAIL)
         run: pnpm run guard:guard-registry
 
+      - name: Guard — Toolchain V5 fast gate (FAIL)
+        run: pnpm run guard:tools-v5-all
+
       - name: Guard — API binding
         run: pnpm run guard:api-binding
 

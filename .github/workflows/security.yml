@@ -152,9 +152,39 @@ jobs:
             if grep -qE "^\s+write-all" "$f"; then
               VIOLATIONS="$VIOLATIONS\n  FORBIDDEN write-all: $f"
             fi
-          done
           if [ -n "$VIOLATIONS" ]; then
             echo -e "ERROR: Workflow permission violations found:$VIOLATIONS"
             exit 1
           fi
           echo "OK: All workflows have explicit permissions blocks."
+
+  oss-security-scans:
+    name: OSS Security & SCA Audits
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Trivy vulnerability scan (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          ignore-unfixed: true
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+
+      - name: Run OSV-Scanner (dependencies)
+        uses: google/osv-scanner-action/bootstrap@v1
+        with:
+          scan-args: "source -r ."
+
+      - name: Run Gitleaks secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+

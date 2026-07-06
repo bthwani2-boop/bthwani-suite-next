@@ -69,7 +69,7 @@ const guardScriptsInPkgJson = Object.keys(scripts).filter((s) => s.startsWith("g
 
 for (const script of guardScriptsInPkgJson) {
   // Skip custom aggregate scripts if needed, but they should ideally be registered
-  if (script === "guard:logic-all" || script === "guard:repo-all" || script === "guard:performance-all" || script === "guard:governance-all") {
+  if (script === "guard:logic-all" || script === "guard:repo-all" || script === "guard:performance-all" || script === "guard:governance-all" || script === "guard:tools-v5-all") {
     continue;
   }
   if (!registeredScripts.has(script)) {
@@ -95,7 +95,7 @@ if (fs.existsSync(workflowsDir)) {
     while ((match = runGuardRegex.exec(content)) !== null) {
       const scriptName = match[1];
       // Skip compound aggregate scripts
-      if (scriptName === "guard:logic-all" || scriptName === "guard:repo-all" || scriptName === "guard:performance-all" || scriptName === "guard:governance-all") {
+      if (scriptName === "guard:logic-all" || scriptName === "guard:repo-all" || scriptName === "guard:performance-all" || scriptName === "guard:governance-all" || scriptName === "guard:tools-v5-all") {
         continue;
       }
       if (!registeredScripts.has(scriptName)) {
