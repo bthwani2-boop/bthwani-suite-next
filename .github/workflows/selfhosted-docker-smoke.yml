@@ -3,8 +3,12 @@ name: Self-hosted Docker Smoke
 on:
   workflow_dispatch:
   push:
-    branches:
-      - slicing
+    paths:
+      - ".github/workflows/**"
+      - "docker-compose*.yml"
+      - "**/docker-compose*.yml"
+      - "Dockerfile"
+      - "**/Dockerfile"
 
 permissions:
   contents: read
@@ -12,7 +16,7 @@ permissions:
 jobs:
   docker-smoke:
     name: Docker smoke on Lenovo WSL
-    runs-on: [self-hosted, bthwani-lenovo]
+    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
     timeout-minutes: 20
 
     steps:
