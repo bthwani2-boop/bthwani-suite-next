@@ -1,0 +1,42 @@
+name: Self-hosted Docker Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/**"
+      - "docker-compose*.yml"
+      - "**/docker-compose*.yml"
+      - "Dockerfile"
+      - "**/Dockerfile"
+
+permissions:
+  contents: read
+
+jobs:
+  docker-smoke:
+    name: Docker smoke on Lenovo WSL
+    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: System info
+        run: |
+          echo "=== SYSTEM ==="
+          uname -a
+          echo "=== USER ==="
+          whoami
+          echo "=== PATH ==="
+          pwd
+
+      - name: Docker check
+        run: |
+          echo "=== DOCKER VERSION ==="
+          docker version
+          echo "=== DOCKER COMPOSE ==="
+          docker compose version
+          echo "=== DOCKER HELLO WORLD ==="
+          docker run --rm hello-world

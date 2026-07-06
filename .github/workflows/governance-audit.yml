@@ -1,18 +1,10 @@
 name: Governance As Code Audit
 
 on:
-  push:
-    branches: [implementing, main]
-    paths:
-      - "governance/**"
-      - ".github/workflows/**"
-      - "tools/guards/*-gate.mjs"
-      - "tools/guards/governance-schema-gate.mjs"
-      - "tools/guards/agent-governance-gate.mjs"
-      - "tools/guards/guard-registry-gate.mjs"
-  pull_request:
-    branches: [implementing, main]
   workflow_dispatch:
+  pull_request:
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -21,7 +13,7 @@ permissions:
 jobs:
   governance-audit:
     name: Governance Compliance Verification
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
     timeout-minutes: 15
 
     steps:
@@ -109,3 +101,5 @@ jobs:
       - name: Diagnostics â€” Gitleaks scan (security.yml is authoritative)
         run: pnpm run guard:secrets
         continue-on-error: true
+
+

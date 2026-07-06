@@ -1,22 +1,10 @@
 name: Design System Governance
 
 on:
-  push:
-    branches: [implementing, main]
-    paths:
-      - "shared/ui-kit/**"
-      - "apps/**/src/**"
-      - "services/**/frontend/**"
-      - "tools/guards/design-tokens-gate.mjs"
-      - "tools/guards/ui-provider-required-gate.mjs"
-      - "tools/guards/icon-contract-gate.mjs"
-      - "tools/guards/brand-identity-report.mjs"
-      - "tools/guards/ui-kit-boundary-gate.mjs"
-  pull_request:
-    branches: [implementing, main]
   workflow_dispatch:
-  schedule:
-    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+  pull_request:
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -24,7 +12,7 @@ permissions:
 jobs:
   ui-kit-governance:
     name: UI Kit Governance Report
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
     timeout-minutes: 15
 
     steps:
@@ -65,3 +53,5 @@ jobs:
           name: brand-identity-report
           path: .diagnostics/tools/brand-identity-report.md
           retention-days: 30
+
+

@@ -87,3 +87,14 @@ node-gates*.log
 
 # Explicitly track diagnostic scripts
 !tools/diagnostics/scripts/*.mjs
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+*credentials*.json
+service-account*.json
+secrets.local.*
+passwords.local.*
+credentials.local.*

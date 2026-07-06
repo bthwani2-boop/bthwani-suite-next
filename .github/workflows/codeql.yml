@@ -4,23 +4,22 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches: [ "master", "implementing" ]
-  pull_request:
-    branches: [ "master" ]
-  schedule:
-    - cron: '30 18 * * 1'
   workflow_dispatch:
     inputs:
       reason:
         description: 'Manual trigger reason'
         required: false
-        default: 'manual master baseline verification'
+        default: 'manual CodeQL verification'
+  schedule:
+    - cron: '30 18 * * 1'
+  pull_request:
+    branches:
+      - master
 
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
     permissions:
       actions: read
       contents: read
@@ -46,3 +45,5 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
+
+
