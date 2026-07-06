@@ -13,7 +13,6 @@
     "**/.next/**": true,
     "**/coverage/**": true
   },
-
   "search.exclude": {
     "**/node_modules/**": true,
     "**/.nx/**": true,
@@ -24,21 +23,21 @@
     "**/.next/**": true,
     "**/coverage/**": true
   },
-
   "typescript.tsserver.maxTsServerMemory": 4096,
-
   "eslint.workingDirectories": [
-    { "mode": "auto" }
+    {
+      "mode": "auto"
+    }
   ],
-
   "eslint.validate": [
     "javascript",
     "javascriptreact",
     "typescript",
     "typescriptreact"
   ],
-
   "gitlens.blame.line.enabled": false,
   "gitlens.currentLine.enabled": false,
-  "gitlens.statusBar.enabled": false
+  "gitlens.statusBar.enabled": false,
+  "terminal.integrated.scrollback": 5000,
+  "terminal.integrated.persistentSessionScrollback": 5000
 }
