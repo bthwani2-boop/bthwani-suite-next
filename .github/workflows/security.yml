@@ -191,7 +191,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26.x'
+          go-version-file: services/dsh/backend/go.mod
 
       - name: Install OSS security scan binaries
         run: bash tools/scripts/install-oss-toolchain-binaries.sh security
