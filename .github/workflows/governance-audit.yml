@@ -70,30 +70,13 @@ jobs:
         with:
           fail_level: error
 
-      - name: zizmor (FAIL on Actions security vulnerabilities)
-        uses: woodruffw/zizmor-action@v1
-        with:
-          scan-ref: ".github/workflows"
+      - name: Guard — Actions security vulnerabilities (zizmor)
+        run: pnpm run guard:workflow-security
+
+      - name: Guard — OPA policies validation (Conftest)
+        run: pnpm run guard:opa-policies
 
       # ── 3. OPA/Conftest Validation (FAIL on policy violations) ─────────────
-      - name: Conftest — Validate Agent Registry
-        uses: open-policy-agent/conftest-action@v1
-        with:
-          policy: governance/policies
-          file: governance/agents/agent-registry.json
-
-      - name: Conftest — Validate Skills Registry
-        uses: open-policy-agent/conftest-action@v1
-        with:
-          policy: governance/policies
-          file: governance/skills/skills-registry.json
-
-      - name: Conftest — Validate Guard Registry
-        uses: open-policy-agent/conftest-action@v1
-        with:
-          policy: governance/policies
-          file: governance/guards/guard-registry.json
-
       - name: Guard — Rego policy lint (FAIL)
         run: pnpm run guard:rego-lint
         continue-on-error: true

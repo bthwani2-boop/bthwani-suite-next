@@ -48,7 +48,8 @@ if (SCAN_DIRS.length === 0) {
 }
 
 // Find ast-grep binary
-const astGrepBin = path.join(repoRoot, "node_modules/.bin/ast-grep");
+const isWin = process.platform === "win32";
+const astGrepBin = path.join(repoRoot, "node_modules/.bin/ast-grep" + (isWin ? ".cmd" : ""));
 if (!fs.existsSync(astGrepBin)) {
   console.error(`${guardId}: FAIL — @ast-grep/cli not found. Run pnpm install.`);
   process.exit(1);
@@ -64,7 +65,7 @@ for (const ruleFile of ruleFiles) {
     const result = spawnSync(
       astGrepBin,
       ["scan", "--rule", ruleFile, "--json", scanDir],
-      { encoding: "utf8", cwd: repoRoot, maxBuffer: 10 * 1024 * 1024 }
+      { encoding: "utf8", cwd: repoRoot, maxBuffer: 10 * 1024 * 1024, shell: isWin }
     );
 
     let matches = [];
