@@ -2,6 +2,9 @@ name: Self-hosted Docker Smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - slicing
 
 permissions:
   contents: read
