@@ -20,16 +20,16 @@ function loadVerifiedCapabilityIds() {
   return ids;
 }
 
-// ─── Slice definitions ────────────────────────────────────────────────────────
+// ─── Segment definitions ────────────────────────────────────────────────────────
 // For each screen:
 //   path        – relative repo path to screen file
 //   controller  – relative repo path to shared controller/hook
 //   openapi     – exact operationId from dsh.openapi.yaml
 //   route       – exact pattern from DSH server.go
 //   capabilityId – must appear as state="verified" in runtime-map.ts
-const SLICES = [
+const SEGMENTS = [
   {
-    name: "Slice A: app-client checkout / orders / tracking",
+    name: "Segment A: app-client checkout / orders / tracking",
     screens: [
       {
         name: "checkout",
@@ -58,7 +58,7 @@ const SLICES = [
     ],
   },
   {
-    name: "Slice B: app-partner orders / catalog / store",
+    name: "Segment B: app-partner orders / catalog / store",
     screens: [
       {
         name: "orders inbox",
@@ -103,7 +103,7 @@ const SLICES = [
     ],
   },
   {
-    name: "Slice C: app-captain assignment / pickup / dropoff / POD",
+    name: "Segment C: app-captain assignment / pickup / dropoff / POD",
     screens: [
       {
         name: "assignments list",
@@ -140,7 +140,7 @@ const SLICES = [
     ],
   },
   {
-    name: "Slice D: app-field onboarding / media / visits",
+    name: "Segment D: app-field onboarding / media / visits",
     screens: [
       {
         name: "partner onboarding",
@@ -177,7 +177,7 @@ const SLICES = [
     ],
   },
   {
-    name: "Slice E: control-panel operations / support / analytics",
+    name: "Segment E: control-panel operations / support / analytics",
     screens: [
       {
         name: "operations hub",
@@ -269,14 +269,14 @@ const verifiedCapabilities = loadVerifiedCapabilityIds();
 console.log("=== FRONTEND FEATURE BINDING GATE ===");
 console.log(`Verified capability count: ${verifiedCapabilities.size}`);
 
-let passedSlices = 0;
-const totalSlices = SLICES.length;
+let passedSegments = 0;
+const totalSegments = SEGMENTS.length;
 
-for (const slice of SLICES) {
-  console.log(`\n${slice.name}`);
-  let sliceOk = true;
+for (const segment of SEGMENTS) {
+  console.log(`\n${segment.name}`);
+  let segmentOk = true;
 
-  for (const screen of slice.screens) {
+  for (const screen of segment.screens) {
     const screenExists = fs.existsSync(path.join(repoRoot, screen.path));
     const controllerExists = fs.existsSync(path.join(repoRoot, screen.controller));
     const openapiBound = openapiContent.includes(screen.openapi);
@@ -307,14 +307,14 @@ for (const slice of SLICES) {
     console.log(`  ${icon} [${status}] ${screen.name}`);
 
     if (status !== "BOUND_ACTIVE") {
-      sliceOk = false;
+      segmentOk = false;
       violations.push({ file: screen.path, message: `${status}: ${reason}` });
     }
   }
 
-  if (sliceOk) passedSlices++;
+  if (segmentOk) passedSegments++;
 }
 
-console.log(`\nSlices Passed: ${passedSlices}/${totalSlices}`);
+console.log(`\nSegments Passed: ${passedSegments}/${totalSegments}`);
 
 fail(guardId, violations);

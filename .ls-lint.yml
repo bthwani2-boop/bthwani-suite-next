@@ -50,3 +50,18 @@ ignore:
   - tools/guards/_guard-utils.mjs
   - tools/guards/_openapi-utils.mjs
   - tools/guards/_openapi-utils.test.mjs
+  - "**/node_modules"
+  - "**/dist"
+  - "**/build"
+  - "**/.next"
+  - "**/.nx"
+  - "**/.cache"
+  - "**/.expo"
+  - "tools/registry/runs"
+  - "tools/guards"
+  - "tools/scripts"
+  - "apps/control-panel/runtime/src/app/dsh/partners/[partnerId]"
+  - "services/dsh/backend/graphify-out"
+  - "services/dsh/frontend/app-partner/Catalog"
+  - "services/dsh/frontend/shared/_kernel"
+  - "services/wlt/frontend/control-panel/_skeleton-proof"
