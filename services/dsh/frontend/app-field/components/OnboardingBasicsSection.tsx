@@ -1,4 +1,4 @@
-// app-field — Step 1: بيانات المتجر الأساسية
+// app-field — OnboardingBasicsSection
 // Presentational step for the field onboarding wizard. No business logic here.
 import React from 'react';
 import { View } from 'react-native';
@@ -12,7 +12,7 @@ type Props = {
   readonly onChange: (patch: Partial<FieldPartnerDraftForm>) => void;
 };
 
-export function StepBasicsProfile({ form, errors, readOnly, onChange }: Props) {
+export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Props) {
   return (
     <View style={{ gap: spacing[4] }}>
       <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold', color: colorRoles.textPrimary }}>

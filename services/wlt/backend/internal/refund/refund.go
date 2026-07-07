@@ -116,17 +116,18 @@ func GetRefund(db *sql.DB, refundID string) (*Refund, error) {
 
 func ListRefunds(db *sql.DB, orderID, clientID string) ([]*Refund, error) {
 	var q string
-	var arg string
+	var rows *sql.Rows
+	var err error
 	if orderID != "" {
 		q = `SELECT ` + refundCols + ` FROM wlt_refunds WHERE order_id = $1 ORDER BY created_at DESC`
-		arg = orderID
+		rows, err = db.Query(q, orderID)
 	} else if clientID != "" {
 		q = `SELECT ` + refundCols + ` FROM wlt_refunds WHERE client_id = $1 ORDER BY created_at DESC`
-		arg = clientID
+		rows, err = db.Query(q, clientID)
 	} else {
-		return nil, fmt.Errorf("orderId or clientId query parameter is required")
+		q = `SELECT ` + refundCols + ` FROM wlt_refunds ORDER BY created_at DESC LIMIT 50`
+		rows, err = db.Query(q)
 	}
-	rows, err := db.Query(q, arg)
 	if err != nil {
 		return nil, err
 	}

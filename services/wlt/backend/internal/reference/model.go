@@ -29,3 +29,18 @@ type WalletStatusRef struct {
 	Currency  string `json:"currency"`
 	UpdatedAt string `json:"updatedAt"`
 }
+
+type FieldCommissionRef struct {
+	ID               string  `json:"id"`
+	PartnerID        string  `json:"partnerId"`
+	PartnerName      string  `json:"partnerName"`
+	AmountMinorUnits int     `json:"amountMinorUnits"`
+	Currency         string  `json:"currency"`
+	Status           string  `json:"status"`
+	Description      string  `json:"description"`
+	EvidenceRequired bool    `json:"evidenceRequired"`
+	SettledAt        *string `json:"settledAt"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
+}
+

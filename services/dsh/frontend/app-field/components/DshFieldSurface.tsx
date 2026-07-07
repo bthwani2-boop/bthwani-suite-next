@@ -4,14 +4,14 @@ import React from 'react';
 import { BackHandler, Platform, Pressable, View, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
-import { useDshFieldSurfaceModel } from './field.surface-model';
-import type { DshFieldSurfaceProps } from './dsh-field.routes';
+import { useDshFieldSurfaceModel } from '../field.surface-model';
+import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import { useIdentitySession, devBypassLogin, configureIdentitySession } from '@bthwani/core-identity';
-import { AuthLoginCard } from '../shared/auth/AuthLoginCard';
-import { useAndroidBackHandler } from '../shared/runtime/useAndroidBackHandler';
-import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
-import { useFieldPartnerOnboardingController } from '../shared/field-onboarding';
+import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
+import { useAndroidBackHandler } from '../../shared/runtime/useAndroidBackHandler';
+import { resolveIdentityApiBaseUrl } from '../../shared/_kernel/identity-api-base-url';
+import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
 
 configureIdentitySession(resolveIdentityApiBaseUrl());
 

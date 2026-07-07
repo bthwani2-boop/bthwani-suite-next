@@ -17,7 +17,7 @@ import {
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
 import { ActorNotificationsPanel, useNotificationsController } from '../../shared/notifications';
-import { FieldPartnerCard } from './FieldPartnerCard';
+import { DshFieldPartnerCard } from '../components/DshFieldPartnerCard';
 
 type DshFieldPartnersScreenProps = {
   readonly onOpenPartner: (partnerId: string, activationStatus: string) => void;
@@ -428,7 +428,7 @@ export function DshFieldPartnersScreen({
         <View style={{ paddingHorizontal: spacing[4] }}>
           {filteredPartners.length > 0 ? (
             filteredPartners.map((partner) => (
-              <FieldPartnerCard
+              <DshFieldPartnerCard
                 key={partner.id}
                 partner={partner}
                 onPress={() => onOpenPartner(partner.id, partner.activationStatus)}

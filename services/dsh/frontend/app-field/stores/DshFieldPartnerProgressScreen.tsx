@@ -26,6 +26,7 @@ import {
 export type DshFieldPartnerProgressScreenProps = {
   readonly partnerId: string;
   readonly onBack: () => void;
+  readonly onOpenProducts?: (partnerId: string) => void;
 };
 
 const DOCUMENT_STATUS_LABELS: Record<string, string> = {

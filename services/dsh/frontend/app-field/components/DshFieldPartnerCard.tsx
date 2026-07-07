@@ -1,4 +1,4 @@
-// app-field — FieldPartnerCard
+// app-field — DshFieldPartnerCard
 // نسخة طبق الأصل من مانح dsh-suite — بطاقة ملف انضمام شريك
 // ملتزم بالكامل بالمسار السيادي shared كحاكم وعقل للواجهات
 import React from 'react';
@@ -8,7 +8,7 @@ import { buildPartnerListRowViewModel, getDshPartnerActivationProgress } from '.
 import type { DshPartnerSummary } from '../../shared/partner';
 import type { DshPartnerActivationStatus } from '../../shared/partner';
 
-type FieldPartnerCardProps = {
+type DshFieldPartnerCardProps = {
   readonly partner: DshPartnerSummary;
   readonly onPress: () => void;
 };
@@ -42,7 +42,7 @@ function InlineBadge({ label, bg, fg }: { label: string; bg: string; fg: string 
 }
 
 // ── Main card ──────────────────────────────────────────────────────────────
-export function FieldPartnerCard({ partner, onPress }: FieldPartnerCardProps) {
+export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardProps) {
   // Leverage the shared brain to build the view model
   const vm = buildPartnerListRowViewModel(partner);
   

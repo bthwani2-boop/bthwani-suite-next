@@ -1,4 +1,4 @@
-// app-field — FieldPartnerOnboardingScreen
+// app-field — DshFieldOnboardingScreen
 // 4-group wizard with vertical timeline, missing-count badges, escalation footer.
 // Rules of Hooks: ALL hooks called unconditionally before any early return.
 
@@ -31,11 +31,11 @@ import {
 } from '../../shared/field-onboarding';
 import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
-import { StepBasicsProfile } from './StepBasicsProfile';
-import { StepLocationAndPhotos } from './StepLocationAndPhotos';
-import { StepEvidence } from './StepEvidence';
-import { StepAgreementReview } from './StepAgreementReview';
-import type { EvidenceItem } from './StepEvidence';
+import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
+import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
+import { OnboardingEvidenceSection } from '../components/OnboardingEvidenceSection';
+import { OnboardingAgreementSection } from '../components/OnboardingAgreementSection';
+import type { EvidenceItem } from '../components/OnboardingEvidenceSection';
 
 type DocumentKind = 'commercial_registration' | 'identity_proof';
 type BranchPhotoKey = 'storefrontPhotoRef' | 'interiorPhotoRef' | 'signagePhotoRef';
@@ -72,15 +72,17 @@ const PHOTO_LABELS: Record<BranchPhotoKey, string> = {
   signagePhotoRef: 'صورة اللوحة التجارية المطابقة للترخيص',
 };
 
-export type FieldPartnerOnboardingScreenProps = {
+export type DshFieldOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
   readonly onBack?: () => void;
+  readonly onOpenProducts?: (partnerId: string) => void;
 };
 
-export function FieldPartnerOnboardingScreen({
+export function DshFieldOnboardingScreen({
   controller: controllerProp,
   onBack,
-}: FieldPartnerOnboardingScreenProps = {}) {
+  onOpenProducts,
+}: DshFieldOnboardingScreenProps = {}) {
   const identity = useIdentitySession();
   const ownController = useFieldPartnerOnboardingController();
   const controller = controllerProp ?? ownController;
@@ -227,7 +229,7 @@ export function FieldPartnerOnboardingScreen({
   const renderGroupContent = (groupId: GroupId) => {
     if (groupId === 'basics_profile') {
       return (
-        <StepBasicsProfile
+        <OnboardingBasicsSection
           form={form}
           errors={validationErrors}
           readOnly={false}
@@ -237,7 +239,7 @@ export function FieldPartnerOnboardingScreen({
     }
     if (groupId === 'location_media') {
       return (
-        <StepLocationAndPhotos
+        <OnboardingLocationSection
           form={form}
           errors={validationErrors}
           readOnly={false}
@@ -250,7 +252,7 @@ export function FieldPartnerOnboardingScreen({
     }
     if (groupId === 'evidence') {
       return (
-        <StepEvidence
+        <OnboardingEvidenceSection
           items={evidenceItems}
           loadingMap={evidenceLoading}
           onPick={(item, source) => void handlePickEvidence(item, source)}
@@ -260,7 +262,7 @@ export function FieldPartnerOnboardingScreen({
     if (groupId === 'agreement_review') {
       return (
         <View style={{ gap: spacing[3] }}>
-          <StepAgreementReview
+          <OnboardingAgreementSection
             form={form}
             readOnly={false}
             onChange={updateForm}

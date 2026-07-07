@@ -129,11 +129,16 @@ func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 }
 
 func ListPartnerSettlements(db *sql.DB, partnerID string) ([]*Settlement, error) {
+	var q string
+	var rows *sql.Rows
+	var err error
 	if partnerID == "" {
-		return nil, fmt.Errorf("partnerId query parameter is required")
+		q = `SELECT ` + settlementCols + ` FROM wlt_settlements ORDER BY period_start DESC LIMIT 50`
+		rows, err = db.Query(q)
+	} else {
+		q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE partner_id = $1 ORDER BY period_start DESC`
+		rows, err = db.Query(q, partnerID)
 	}
-	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE partner_id = $1 ORDER BY period_start DESC`
-	rows, err := db.Query(q, partnerID)
 	if err != nil {
 		return nil, err
 	}

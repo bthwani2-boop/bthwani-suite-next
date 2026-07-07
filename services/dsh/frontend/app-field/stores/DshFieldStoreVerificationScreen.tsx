@@ -19,7 +19,7 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-export function FieldStoreVerificationScreen() {
+export function DshFieldStoreVerificationScreen() {
   const identity = useIdentitySession();
   const controller = useStoreRoleContextController("field", identity.state.kind);
   const [notes, setNotes] = React.useState("");

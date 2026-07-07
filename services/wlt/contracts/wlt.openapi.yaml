@@ -147,6 +147,31 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wlt/references/field-commission:
+    get:
+      operationId: getWltFieldCommissionRef
+      summary: Return field commission reference for a given partner. Read-only display surface for DSH.
+      tags:
+        - WltReferences
+      parameters:
+        - name: partnerId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Field commission reference found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltFieldCommissionRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
   /wlt/payment-sessions:
     post:
       operationId: createWltPaymentSessionReference
@@ -1261,11 +1286,66 @@ components:
             - suspended
             - frozen
             - closed
-        currency:
-          type: string
         updatedAt:
           type: string
           format: date-time
+
+    WltFieldCommissionRef:
+      type: object
+      required:
+        - id
+        - partnerId
+        - partnerName
+        - amountMinorUnits
+        - currency
+        - status
+        - description
+        - evidenceRequired
+        - settledAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        partnerId:
+          type: string
+        partnerName:
+          type: string
+        amountMinorUnits:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        status:
+          type: string
+          enum:
+            - eligible_pending_review
+            - approved_pending_settlement
+            - settled
+            - held_for_evidence
+            - rejected
+        description:
+          type: string
+        evidenceRequired:
+          type: boolean
+        settledAt:
+          type: [string, 'null']
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WltFieldCommissionRefResponse:
+      type: object
+      required:
+        - reference
+      properties:
+        reference:
+          $ref: "#/components/schemas/WltFieldCommissionRef"
+
 
     WltPaymentSession:
       type: object

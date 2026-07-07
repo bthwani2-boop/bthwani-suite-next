@@ -1,4 +1,4 @@
-// app-field — Step 2: الموقع والصور الميدانية
+// app-field — OnboardingLocationSection
 // Presentational step for the field onboarding wizard. No business logic here.
 import React, { useState } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
@@ -24,7 +24,7 @@ const LANDMARKS = [
   { lat: 15.3700, lng: 44.1900, name: "صنعاء، حي معين، شارع الستين", x: 120, y: 60 },
 ];
 
-export function StepLocationAndPhotos({
+export function OnboardingLocationSection({
   form,
   errors,
   readOnly,

@@ -135,6 +135,28 @@ export type DshFieldPartnerStoreDraftInput = Partial<Pick<
   | 'signagePhotoRef'
 >>;
 
+export type DshFieldPartnerProduct = {
+  readonly id: string;
+  readonly storeId: string;
+  readonly categoryId: string | null;
+  readonly name: string;
+  readonly description: string;
+  readonly sku: string;
+  readonly priceReference: string;
+  readonly isActive: boolean;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type DshFieldPartnerProductInput = {
+  readonly name: string;
+  readonly description?: string;
+  readonly priceReference: string;
+  readonly isActive?: boolean;
+  readonly expectedVersion?: number;
+};
+
 export type DshCreatePartnerInput = {
   readonly legalNameAr: string;
   readonly legalNameEn?: string;

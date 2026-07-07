@@ -1,4 +1,4 @@
-// app-field — Step 4: الاتفاق والمراجعة النهائية
+// app-field — OnboardingAgreementSection
 // Presentational step for the field onboarding wizard. No business logic here.
 import React from 'react';
 import { View } from 'react-native';
@@ -14,7 +14,7 @@ type Props = {
   readonly onFieldNotesChange: (v: string) => void;
 };
 
-export function StepAgreementReview({
+export function OnboardingAgreementSection({
   form,
   readOnly,
   onChange,

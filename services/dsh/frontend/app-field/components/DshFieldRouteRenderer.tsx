@@ -1,19 +1,20 @@
 // app-field — DshFieldRouteRenderer
 // Routes renderer that maps the current route state to the correct screen component.
 import React from 'react';
-import { FieldPartnerOnboardingScreen } from './onboarding/FieldPartnerOnboardingScreen';
-import { DshFieldVisitScreen } from './escalation/DshFieldVisitScreen';
-import { DshFieldReadinessChecklistScreen } from './escalation/DshFieldReadinessChecklistScreen';
-import { DshFieldEscalationScreen } from './escalation/DshFieldEscalationScreen';
-import { DshFieldPartnersScreen } from './stores/DshFieldPartnersScreen';
-import { FieldStoreVerificationScreen } from './stores/FieldStoreVerificationScreen';
-import { DshFieldPartnerProgressScreen } from './stores/DshFieldPartnerProgressScreen';
-import { DshFieldProfileHomeScreen } from './account/DshFieldProfileHomeScreen';
-import { DshFieldProfileScreen } from './account/DshFieldProfileScreen';
-import { DshFieldStoresHistoryScreen } from './stores/DshFieldStoresHistoryScreen';
-import { DshFieldFinanceScreen } from './finance/DshFieldFinanceScreen';
-import type { useDshFieldSurfaceModel } from './field.surface-model';
-import type { FieldOnboardingController } from '../shared/field-onboarding';
+import { DshFieldOnboardingScreen } from '../onboarding/DshFieldOnboardingScreen';
+import { DshFieldVisitScreen } from '../escalation/DshFieldVisitScreen';
+import { DshFieldReadinessChecklistScreen } from '../escalation/DshFieldReadinessChecklistScreen';
+import { DshFieldEscalationScreen } from '../escalation/DshFieldEscalationScreen';
+import { DshFieldPartnersScreen } from '../stores/DshFieldPartnersScreen';
+import { DshFieldStoreVerificationScreen } from '../stores/DshFieldStoreVerificationScreen';
+import { DshFieldPartnerProgressScreen } from '../stores/DshFieldPartnerProgressScreen';
+import { DshFieldProfileHomeScreen } from '../account/DshFieldProfileHomeScreen';
+import { DshFieldProfileScreen } from '../account/DshFieldProfileScreen';
+import { DshFieldStoresHistoryScreen } from '../stores/DshFieldStoresHistoryScreen';
+import { DshFieldFinanceScreen } from '../finance/DshFieldFinanceScreen';
+import { DshFieldPartnerProductsScreen } from './DshFieldPartnerProductsScreen';
+import type { useDshFieldSurfaceModel } from '../field.surface-model';
+import type { FieldOnboardingController } from '../../shared/field-onboarding';
 
 type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
 
@@ -28,9 +29,10 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
 
   if (route.kind === 'onboarding') {
     return (
-      <FieldPartnerOnboardingScreen
+      <DshFieldOnboardingScreen
         controller={onboardingController}
         onBack={actions.popRoute}
+        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
     );
   }
@@ -51,7 +53,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
     );
   }
   if (route.kind === 'verification') {
-    return <FieldStoreVerificationScreen />;
+    return <DshFieldStoreVerificationScreen />;
   }
 
   if (route.kind === 'partner-progress') {
@@ -59,6 +61,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
       <DshFieldPartnerProgressScreen
         partnerId={route.partnerId}
         onBack={actions.popRoute}
+        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
     );
   }
@@ -102,6 +105,15 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
       <DshFieldEscalationScreen
         storeId={route.storeId}
         {...(route.visitId ? { visitId: route.visitId } : {})}
+      />
+    );
+  }
+
+  if (route.kind === 'products-upload') {
+    return (
+      <DshFieldPartnerProductsScreen
+        partnerId={route.partnerId}
+        onBack={actions.popRoute}
       />
     );
   }

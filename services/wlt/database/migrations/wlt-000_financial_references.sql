@@ -56,3 +56,23 @@ CREATE TABLE IF NOT EXISTS wlt_wallet_refs (
 
 CREATE INDEX IF NOT EXISTS wlt_wallet_refs_actor_idx
   ON wlt_wallet_refs (actor_id, actor_type, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS wlt_field_commission_refs (
+  id                  text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  partner_id          text NOT NULL,
+  partner_name        text NOT NULL,
+  amount_minor_units  integer NOT NULL,
+  currency            text NOT NULL DEFAULT 'YER',
+  status              text NOT NULL,
+  description         text NOT NULL,
+  evidence_required   boolean NOT NULL DEFAULT false,
+  settled_at          timestamptz,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT wlt_field_commission_refs_status_chk
+    CHECK (status IN ('eligible_pending_review', 'approved_pending_settlement', 'settled', 'held_for_evidence', 'rejected'))
+);
+
+CREATE INDEX IF NOT EXISTS wlt_field_commission_refs_partner_id_idx
+  ON wlt_field_commission_refs (partner_id, updated_at DESC);
+

@@ -37,3 +37,11 @@ VALUES
   ('wlt-wr-0005', 'field-dev-0001',   'field',    'active',    'YER'),
   ('wlt-wr-0006', 'client-dev-0001',  'client',   'active',    'YER')
 ON CONFLICT (id) DO NOTHING;
+
+-- Field commission status references
+INSERT INTO wlt_field_commission_refs (id, partner_id, partner_name, amount_minor_units, currency, status, description, evidence_required, settled_at)
+VALUES
+  ('wlt-fcr-0001', 'partner-dev-0001', 'متجر النور التجاري', 1500000, 'YER', 'eligible_pending_review', 'عمولة تأهيل شريك ميداني معلقة المراجعة', false, NULL),
+  ('wlt-fcr-0002', 'partner-dev-0002', 'مخبز البركة الحديث', 2000000, 'YER', 'settled', 'تم تسوية عمولة تأهيل الشريك الميداني بالكامل بنجاح', false, '2026-07-01 12:00:00+03')
+ON CONFLICT (id) DO NOTHING;
+

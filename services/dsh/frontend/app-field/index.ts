@@ -1,5 +1,5 @@
 // app-field public API
-export { DshFieldSurface } from './DshFieldSurface';
+export { DshFieldSurface } from './components/DshFieldSurface';
 
 export type {
   DshFieldRoute,

@@ -15,7 +15,8 @@ export type DshFieldRoute =
   | 'profile'
   | 'history'
   | 'finance'
-  | 'escalation';
+  | 'escalation'
+  | 'products-upload';
 
 export type DshFieldRouteState =
   | { kind: 'stores' }
@@ -28,7 +29,8 @@ export type DshFieldRouteState =
   | { kind: 'profile' }
   | { kind: 'history' }
   | { kind: 'finance' }
-  | { kind: 'escalation'; storeId: string; visitId?: string };
+  | { kind: 'escalation'; storeId: string; visitId?: string }
+  | { kind: 'products-upload'; partnerId: string };
 
 export type DshFieldNavigationCommand = {
   token: number;

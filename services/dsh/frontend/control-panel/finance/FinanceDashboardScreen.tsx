@@ -15,7 +15,10 @@ import {
   colorPalette,
   alpha,
 } from "@bthwani/ui-kit";
-import { useFinanceController } from "../../shared/finance-wlt-link/finance";
+import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
+import type { WltDshFinanceCenterViewModel, WltDshFinanceSectionViewModel, WltDshFinanceSectionLineViewModel } from "@bthwani/wlt";
+
+type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 
 
 export function FinanceDashboardScreen() {
@@ -55,10 +58,10 @@ export function FinanceDashboardScreen() {
     return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
   }
 
-  const renderFinancialCenterPosition = (center: any) => {
+  const renderFinancialCenterPosition = (center: WltDshFinanceCenterViewModel) => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
-        {center.sections.map((section: any) => (
+        {center.sections.map((section: WltDshFinanceSectionViewModel) => (
           <Card key={section.sectionType} style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `2px solid ${lightThemeColors.borderColor}`, paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
               <Text role="titleMd" style={{ fontWeight: 'bold' }}>{section.sectionLabel}</Text>
@@ -66,7 +69,7 @@ export function FinanceDashboardScreen() {
             </div>
             {section.lines && section.lines.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {section.lines.map((line: any) => (
+                {section.lines.map((line: WltDshFinanceSectionLineViewModel) => (
                   <div key={line.accountCode} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
                     <Text role="body">{line.accountLabel} ({line.accountCode})</Text>
                     <Text role="body" style={{ fontWeight: 'bold' }}>{line.totalLabel}</Text>
@@ -206,7 +209,7 @@ export function FinanceDashboardScreen() {
 
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap' }}>
-          {tabItems.map((tab: any) => (
+          {tabItems.map((tab: FinanceTabItem) => (
             <Button
               key={tab.id}
               label={tab.label}
@@ -219,7 +222,7 @@ export function FinanceDashboardScreen() {
         {/* Sub tabs (filters) */}
         {subTabItems && subTabItems.length > 0 && (
           <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem 0', flexWrap: 'wrap', background: alpha(colorPalette.black, 0.02), borderRadius: '4px', paddingLeft: '0.5rem' }}>
-            {subTabItems.map((subTab: any) => (
+            {subTabItems.map((subTab: FinanceTabItem) => (
               <Button
                 key={subTab.id}
                 label={subTab.label}

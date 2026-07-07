@@ -1,4 +1,4 @@
-// app-field — Step 3: المستندات والصور المرفقة
+// app-field — OnboardingEvidenceSection
 // Merged documents + branch photos into one optional evidence step. The field
 // agent first picks (via chips) which item to attach, then uploads each
 // required document/photo via camera or gallery.
@@ -22,7 +22,7 @@ type Props = {
   readonly onPick?: (item: EvidenceItem, source: 'camera' | 'library') => void;
 };
 
-export function StepEvidence({ items, loadingMap, onPick }: Props) {
+export function OnboardingEvidenceSection({ items, loadingMap, onPick }: Props) {
   const [manuallyRevealed, setManuallyRevealed] = React.useState<Set<string>>(new Set());
 
   const toggleRevealed = (key: string) => {

@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/references/field-commission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return field commission reference for a given partner. Read-only display surface for DSH. */
+        get: operations["getWltFieldCommissionRef"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payment-sessions": {
         parameters: {
             query?: never;
@@ -591,9 +608,29 @@ export interface components {
             actorType: "client" | "partner" | "captain" | "field";
             /** @enum {string} */
             status: "active" | "suspended" | "frozen" | "closed";
-            currency: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        WltFieldCommissionRef: {
+            id: string;
+            partnerId: string;
+            partnerName: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            status: "eligible_pending_review" | "approved_pending_settlement" | "settled" | "held_for_evidence" | "rejected";
+            description: string;
+            evidenceRequired: boolean;
+            /** Format: date-time */
+            settledAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WltFieldCommissionRefResponse: {
+            reference: components["schemas"]["WltFieldCommissionRef"];
         };
         WltPaymentSession: {
             id: string;
@@ -1068,6 +1105,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WltWalletStatusRefResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getWltFieldCommissionRef: {
+        parameters: {
+            query: {
+                partnerId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Field commission reference found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltFieldCommissionRefResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
