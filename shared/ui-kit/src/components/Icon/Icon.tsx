@@ -12,9 +12,10 @@ export type IconProps = {
   color?: string;
   style?: any;
   mirrored?: boolean;
+  accessibilityLabel?: string;
 };
 
-export function Icon({ name, size = 24, tone, color, style, mirrored }: IconProps) {
+export function Icon({ name, size = 24, tone, color, style, mirrored, accessibilityLabel, ...props }: IconProps) {
   let resolvedColor = color;
   if (!resolvedColor && tone) {
     if (tone === 'brand' || tone === 'action') resolvedColor = colorRoles.brandAction;
@@ -35,6 +36,8 @@ export function Icon({ name, size = 24, tone, color, style, mirrored }: IconProp
       size={size}
       color={resolvedColor}
       style={[transform ? { transform } : null, style]}
+      accessibilityLabel={accessibilityLabel}
+      {...props}
     />
   );
 }

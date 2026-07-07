@@ -1,4 +1,6 @@
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
+import { amountToArabicText } from "@bthwani/ui-kit";
+import { getUiKitCommon } from "@bthwani/ui-kit";
 
 export type CpButtonProps = {
   readonly type?: "button" | "submit" | "reset";
@@ -222,4 +224,38 @@ export function CpDescriptionRow({ label, children }: { readonly label: string; 
 
 export function CpExternalLink({ href, children }: { readonly href: string; readonly children: ReactNode }) {
   return <a href={href} target="_blank" rel="noopener noreferrer" style={{ wordBreak: "break-all", fontSize: "0.8rem" }}>{children}</a>;
+}
+
+/**
+ * CpAmountDisplay — renders a monetary amount using the shared ui-kit
+ * `amountToArabicText` formatter. Ensures consistent amount display
+ * across the control-panel, driven by the shared design system.
+ */
+export function CpAmountDisplay({
+  amountMinorUnits,
+  currencyCode = "SAR",
+  locale = "ar",
+}: {
+  readonly amountMinorUnits: number;
+  readonly currencyCode?: string;
+  readonly locale?: "ar" | "en";
+}) {
+  const formatted = amountToArabicText(amountMinorUnits, { currencyCode, locale });
+  return (
+    <span
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      style={{ fontVariantNumeric: "tabular-nums", fontFeatureSettings: '"tnum"' }}
+      aria-label={`${amountMinorUnits / 100} ${currencyCode}`}
+    >
+      {formatted}
+    </span>
+  );
+}
+
+/**
+ * CpCommonLabels — exposes the ui-kit i18n common labels for the given locale.
+ * Ensures the control-panel uses the same shared label strings as the apps.
+ */
+export function getCpCommonLabels(locale: "ar" | "en" = "ar") {
+  return getUiKitCommon(locale);
 }

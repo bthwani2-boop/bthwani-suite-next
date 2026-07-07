@@ -421,6 +421,8 @@ function ActiveOrderTracker({
                 ]}
                 onPress={handleRingCaptainBell}
                 disabled={customerBellRung}
+                accessibilityLabel={customerBellRung ? "تم رن جرس الكابتن" : "قرع جرس الكابتن"}
+                accessibilityRole="button"
               >
                 <Icon name="notifications-active" size={18} color={colorRoles.surfaceBase} />
                 <Text role="body" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>
@@ -612,7 +614,7 @@ function ActiveOrderTracker({
                       <Text role="caption" style={{ color: colorRoles.textSecondary }}>دراجة نارية · لوحة: 9548-صنعاء</Text>
                     </View>
                   </View>
-                  <TouchableOpacity style={styles.callButton}>
+                  <TouchableOpacity style={styles.callButton} accessibilityLabel="اتصال هاتفي بالكابتن أحمد" accessibilityRole="button">
                     <Text style={styles.callButtonText}>اتصال 📞</Text>
                   </TouchableOpacity>
                 </View>
@@ -684,7 +686,7 @@ function ActiveOrderTracker({
                   <Text style={styles.attachmentBadgeText}>
                     {att === "camera" ? "📸 صورة جاهزة للإرفاق" : att === "video" ? "🎥 فيديو جاهز للإرفاق" : "🎙️ تسجيل صوتي"}
                   </Text>
-                  <TouchableOpacity onPress={() => toggleAttachment(att)}>
+                  <TouchableOpacity onPress={() => toggleAttachment(att)} accessibilityLabel="إزالة المرفق" accessibilityRole="button">
                     <Icon name="close" size={14} color={colorRoles.brandAction} />
                   </TouchableOpacity>
                 </View>
@@ -701,6 +703,8 @@ function ActiveOrderTracker({
                     key={action.id}
                     disabled={action.disabled}
                     onPress={action.onPress}
+                    accessibilityLabel={action.label}
+                    accessibilityRole="button"
                     style={[
                       styles.chatQuickAction,
                       action.selected && styles.chatQuickActionSelected,
@@ -733,6 +737,8 @@ function ActiveOrderTracker({
               <Pressable
                 disabled={status === "delivered" || (!chatInputValue.trim() && chatAttachments.length === 0)}
                 onPress={handleSendMessage}
+                accessibilityLabel="إرسال الرسالة للكابتن"
+                accessibilityRole="button"
                 style={[
                   styles.chatSendButton,
                   (chatInputValue.trim() || chatAttachments.length > 0) && styles.chatSendButtonActive
@@ -758,7 +764,7 @@ function ActiveOrderTracker({
               <Text role="bodySm" style={{ color: colorRoles.textPrimary }}>تقييم المنتجات والمتجر:</Text>
               <View style={{ flexDirection: "row-reverse", gap: 4 }}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} onPress={() => { setStoreRating(star); setRatingsSubmitted(false); }}>
+                  <TouchableOpacity key={star} onPress={() => { setStoreRating(star); setRatingsSubmitted(false); }} accessibilityLabel={`تقييم المتجر بـ ${star} نجوم`} accessibilityRole="button">
                     <Icon name={star <= storeRating ? "star" : "star-outline"} size={22} color={colorRoles.brandAction} />
                   </TouchableOpacity>
                 ))}
@@ -770,7 +776,7 @@ function ActiveOrderTracker({
                 <Text role="bodySm" style={{ color: colorRoles.textPrimary }}>تقييم كابتن التوصيل:</Text>
                 <View style={{ flexDirection: "row-reverse", gap: 4 }}>
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity key={star} onPress={() => { setCaptainRating(star); setRatingsSubmitted(false); }}>
+                    <TouchableOpacity key={star} onPress={() => { setCaptainRating(star); setRatingsSubmitted(false); }} accessibilityLabel={`تقييم الكابتن بـ ${star} نجوم`} accessibilityRole="button">
                       <Icon name={star <= captainRating ? "star" : "star-outline"} size={22} color={colorRoles.brandAction} />
                     </TouchableOpacity>
                   ))}
@@ -790,7 +796,7 @@ function ActiveOrderTracker({
 
         {/* 7. Help, Dispute and Support Escalation center */}
         <Surface tone="default" style={styles.cardFrame}>
-          <TouchableOpacity onPress={() => setIsSupportExpanded(!isSupportExpanded)} style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <TouchableOpacity onPress={() => setIsSupportExpanded(!isSupportExpanded)} style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }} accessibilityLabel="توسيع قائمة الدعم والإبلاغ عن مشكلة بالطلب" accessibilityRole="button">
             <Text role="bodySm" weight="bold" style={styles.cardLabel}>الدعم والمساعدة بالإبلاغ عن مشكلة</Text>
             <Icon name={isSupportExpanded ? "chevron-up" : "chevron-down"} size={18} color={colorRoles.textSecondary} />
           </TouchableOpacity>

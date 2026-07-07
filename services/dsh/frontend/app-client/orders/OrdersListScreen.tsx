@@ -59,7 +59,7 @@ function OrderCard({ order, onOpenOrder }: { order: DshOrder; onOpenOrder?: (id:
 
   return (
     <Surface style={styles.card}>
-      <Pressable onPress={() => setExpanded(!expanded)} style={styles.cardHeader}>
+      <Pressable onPress={() => setExpanded(!expanded)} style={styles.cardHeader} accessibilityLabel="توسيع تفاصيل الطلب وعرض المحتويات" accessibilityRole="button">
         <View style={styles.cardHeaderMain}>
           <View style={styles.iconContainer}>
             <Icon name={isActive ? "bicycle-outline" : "receipt-outline"} size={22} color={colorRoles.brandAction} />

@@ -63,7 +63,8 @@ if (fs.existsSync(reconciliationReportPath)) {
       /gap-burndown-report\.(json|md)$/,
       /dsh-order-ui-binding-inventory\.(json|md)$/,
       /dsh-order-backend-binding-proof\.json$/,
-      /dsh-wlt-finance-boundary-proof\.json$/
+      /dsh-wlt-finance-boundary-proof\.json$/,
+      /live-product-code-change-report\.json$/
     ];
 
     for (const file of trackedFiles) {

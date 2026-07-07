@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useBThwaniAppearance, getBThwaniGlassRecipe, useBThwaniAppearanceContext } from "@bthwani/ui-kit";
 
 export type ControlPanelShellSlots = {
   readonly navigation: ReactNode;
@@ -22,6 +23,21 @@ export function ControlPanelShell({
   statusBar,
   dir = "rtl",
 }: ControlPanelShellProps) {
+  // Appearance-driven glass recipe for the top bar chrome
+  const appearance = useBThwaniAppearance();
+  const appearanceCtx = useBThwaniAppearanceContext();
+  const glassMode = appearanceCtx?.mode ?? appearance.mode;
+  const glass = getBThwaniGlassRecipe(glassMode, "surface");
+
+  const topBarStyle: CSSProperties = {
+    flexShrink: 0,
+    zIndex: 40,
+    backdropFilter: glass.backdropFilter ?? undefined,
+    WebkitBackdropFilter: glass.backdropFilter ?? undefined,
+    background: glass.background ?? "var(--topbar-bg, rgb(255, 255, 255))",
+    borderBottom: `1px solid ${glass.borderColor ?? "var(--topbar-border, rgb(226, 232, 243))"}`,
+  };
+
   return (
     <div
       dir={dir}
@@ -37,8 +53,8 @@ export function ControlPanelShell({
     >
       {serviceContext}
 
-      {/* Top Bar */}
-      <div style={{ flexShrink: 0, zIndex: 40 }}>{topBar}</div>
+      {/* Top Bar — appearance-driven glass chrome */}
+      <div style={topBarStyle}>{topBar}</div>
 
       <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
 

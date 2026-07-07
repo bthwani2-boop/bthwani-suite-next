@@ -329,6 +329,7 @@ function InlineOrderActionPanel({
           label={item.nextActionLabel}
           size="sm"
           fullWidth={false}
+          accessibilityLabel={`تأكيد إجراء: ${item.nextActionLabel}`}
           onPress={() => {
             onPrimaryAction();
             onClose();
@@ -340,6 +341,7 @@ function InlineOrderActionPanel({
             size="sm"
             fullWidth={false}
             tone="danger"
+            accessibilityLabel="إبلاغ عن مشكلة أو اعتراض تشغيلي في الطلب"
             onPress={() => {
               onIssueAction();
               onClose();
@@ -351,6 +353,7 @@ function InlineOrderActionPanel({
           size="sm"
           fullWidth={false}
           tone="ghost"
+          accessibilityLabel="إلغاء خيارات المعالجة"
           onPress={onClose}
         />
       </View>

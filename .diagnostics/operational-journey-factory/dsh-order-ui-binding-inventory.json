@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-07T14:58:21.200Z",
+  "generated_at": "2026-07-07T15:18:22.587Z",
   "head_sha": "unknown",
   "inventory_count": 1280,
   "discovered_gaps_count": 0,
@@ -2619,7 +2619,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": "detected",
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -2659,7 +2659,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": "detected",
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -2679,7 +2679,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": "detected",
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -2719,7 +2719,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": "detected",
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -2739,7 +2739,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": "detected",
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -4059,7 +4059,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -10119,7 +10119,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -10139,7 +10139,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -10159,7 +10159,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -10179,7 +10179,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -12639,7 +12639,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -12659,7 +12659,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -12679,7 +12679,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -12699,7 +12699,7 @@
       "api_operation": null,
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null
@@ -18959,7 +18959,7 @@
       "api_operation": "direct_api",
       "backend_binding": null,
       "wlt_boundary": null,
-      "a11y_label": null,
+      "a11y_label": "detected",
       "runtime_status": "verified_static",
       "decision": "discovered",
       "gap_if_unbound": null

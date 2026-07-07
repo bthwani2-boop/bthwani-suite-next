@@ -1,6 +1,6 @@
 # Operational Surface Inventory
 
-head_sha: `50221e30d81cb65879671ba47198d94f3d054db1`
+head_sha: `18c3a3ab8e964f0d5c850370e7db27a0d29f5058`
 status: `DISCOVERY_ONLY`
 
 | Kind | Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |

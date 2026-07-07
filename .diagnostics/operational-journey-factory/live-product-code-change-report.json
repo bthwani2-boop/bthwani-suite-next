@@ -1,0 +1,19 @@
+{
+  "product_files_modified": 14,
+  "modified_files": [
+    "apps/control-panel/runtime/src/app/providers.tsx",
+    "apps/control-panel/runtime/src/components/CpPrimitives.tsx",
+    "apps/control-panel/runtime/src/shell/ControlPanelShell.tsx",
+    "apps/control-panel/runtime/src/styles/dsh-colors.ts",
+    "services/dsh/frontend/app-captain/DshOperationScreen.tsx",
+    "services/dsh/frontend/app-captain/orders/OrderChatSection.tsx",
+    "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+    "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+    "services/dsh/frontend/app-field/stores/FieldPartnerCard.tsx",
+    "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
+    "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+    "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
+    "shared/ui-kit/src/components/Icon/Icon.tsx",
+    "shared/ui-kit/src/index.ts"
+  ]
+}

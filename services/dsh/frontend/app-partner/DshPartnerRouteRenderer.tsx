@@ -29,6 +29,21 @@ import { CategoryManagementScreen } from './Catalog/CategoryManagementScreen';
 import { ProductMediaScreen } from './Catalog/ProductMediaScreen';
 import { ProductOverridesScreen } from './Catalog/ProductOverridesScreen';
 import { defaultServiceModes } from '../shared/delivery';
+import { DSH_PARTNER_BINDING_CONTRACTS } from './dsh-partner-binding.contracts';
+
+// Dev-mode binding contract guard: validates that every rendered surface
+// has a corresponding registered binding contract. Fails fast in development.
+function assertRouteHasBindingContract(route: DshPartnerRoute): void {
+  if (process.env.NODE_ENV !== 'development') return;
+  const surfaceId = route as string;
+  const registered = DSH_PARTNER_BINDING_CONTRACTS.some(c => c.surfaceId === surfaceId);
+  if (!registered) {
+    console.warn(
+      `[DshPartnerRouteRenderer] Route "${surfaceId}" has no registered binding contract. ` +
+      `Add an entry to DSH_PARTNER_BINDING_CONTRACTS in dsh-partner-binding.contracts.ts.`
+    );
+  }
+}
 
 import type { PartnerOrderItem } from '../shared/orders/orders.contract';
 
@@ -85,6 +100,9 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   } = props;
 
   const activeStoreRuntimeId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
+
+  // Validate binding contract for the current route in development
+  assertRouteHasBindingContract(route);
 
   if (route === 'home') {
     return renderSurfaceShell(

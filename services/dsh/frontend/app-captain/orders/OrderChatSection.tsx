@@ -229,4 +229,3 @@ export const OrderChatSection = React.memo(function OrderChatSection({
 		/>
 	);
 });
-export default OrderChatSection;

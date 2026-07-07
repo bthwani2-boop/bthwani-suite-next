@@ -162,5 +162,3 @@ export function FieldPartnerCard({ partner, onPress }: FieldPartnerCardProps) {
     </Pressable>
   );
 }
-
-export default FieldPartnerCard;

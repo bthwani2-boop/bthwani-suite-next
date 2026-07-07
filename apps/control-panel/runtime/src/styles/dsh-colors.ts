@@ -15,6 +15,10 @@
  * shift the exact hue slightly.
  */
 import { alpha, brandScale, colorRoles, darkThemeColors, neutralScale, statusScale } from "@bthwani/ui-kit/tokens";
+import { themeByMode, tokenCssVariables } from "@bthwani/ui-kit";
+
+// Re-export for control-panel runtime use: theme-by-mode + CSS variable map
+export { themeByMode, tokenCssVariables };
 
 /* ── Navy family (sidebar / dark chrome backgrounds) ────────────────────
  * Sourced from ui-kit's neutral slate scale, which was designed as a

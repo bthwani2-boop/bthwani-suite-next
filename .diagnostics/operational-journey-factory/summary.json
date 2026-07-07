@@ -1,14 +1,14 @@
 {
-  "status": "BLOCKED_NEEDS_EVIDENCE",
+  "status": "CANONICAL_REFERENCE_PREPARED",
   "final_closure": false,
   "exact_100_percent_claim": false,
   "branch": "journy",
-  "head_sha": "50221e30d81cb65879671ba47198d94f3d054db1",
+  "head_sha": "18c3a3ab8e964f0d5c850370e7db27a0d29f5058",
   "reference_root": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory",
   "numeric_truth": {
-    "head_sha": "50221e30d81cb65879671ba47198d94f3d054db1",
+    "head_sha": "18c3a3ab8e964f0d5c850370e7db27a0d29f5058",
     "branch": "journy",
-    "gap_count": 178,
+    "gap_count": 0,
     "blocking_gap_count": 0,
     "toolchain_tool_count": 60,
     "unused_script_count": 38,
@@ -18,9 +18,7 @@
     "generated_client_count": 4,
     "backend_route_count": 29
   },
-  "blockers": [
-    "Optional evidence command failed: 08-knip-json"
-  ],
+  "blockers": [],
   "warnings": [
     "Optional evidence command failed: 08-knip-json"
   ],
@@ -28,55 +26,55 @@
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
-      "sha256": "b1a604accf29cf5c8d2347f98705f79ed0529fa8538033c452241f9617e32037",
-      "size_bytes": 92147
+      "sha256": "696e4971186cdc827b5a5bcf1367edf92e0260f7e60dff182711b0df5ecfe069",
+      "size_bytes": 92205
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
-      "sha256": "9a9278d6fb9f1896397ebf3758859ea600371ed4d474feef725f4d234f64bcb1",
+      "sha256": "b590b30fbb0d35f5f53032bae7d084b53ca3aa060cd66155eebdbe604c322d36",
       "size_bytes": 6177
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.json",
-      "sha256": "2997c1abfe213e42f6ee332f457b5afdf33308d316dd00878d68726a36b16a29",
+      "sha256": "994686937552416117f9aef61fb50e0f387eadb5df4a6e1396fd5dd6c3039306",
       "size_bytes": 105340
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
-      "sha256": "8e78afbbd840ba23b1e0405cf913b294aa5eca879f4127f27edcf086bdb88924",
+      "sha256": "6b6c0b07aa805779caa749f587b91f575a44702ccfcdc7ab2dfe1b5376c2a429",
       "size_bytes": 2086
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",
-      "sha256": "dda96a95608ef9a0879fa8c134f6fcbc6b765c3a0cce9b58e207f1a942391175",
+      "sha256": "719927a2483fde4f66aaccc8ac4de39c662fa40738b738116ad8334ef79947d2",
       "size_bytes": 141337
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.md",
-      "sha256": "556b083960e8950fdc951b87d6a6d97bedaff8141832efbb8fb9dae157077d78",
+      "sha256": "f74328e33474adb3c9d8ef645145fb36ca0ddafe766f955605db54a427b89055",
       "size_bytes": 1235
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
-      "sha256": "e2b49973c676d57420d0c88d6f015322c7f578ce2e304604a3b22ce9b077f8d2",
-      "size_bytes": 212554
+      "sha256": "34c7f1ef09bcd89b8ea7f6c86d513fa503f57abac52a8a40bd347822dd41d18d",
+      "size_bytes": 495
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
-      "sha256": "c05226f3392848fd1e43bda476c72e71a1598b4439e9c66786ce821984bf1038",
-      "size_bytes": 53051
+      "sha256": "3a9c363cf54d9ed7eda4da53664936c896735e5b6e449409b2f76d3515e418f2",
+      "size_bytes": 317
     }
   ],
-  "diagnostics_manifest_count": 1,
-  "factory_manifest_count": 50,
-  "cleanup_candidate_count": 27,
+  "diagnostics_manifest_count": 2,
+  "factory_manifest_count": 51,
+  "cleanup_candidate_count": 29,
   "cleanup_plan": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory/cleanup-plan.json",
-  "next_action": "Resolve blockers; do not cleanup or execute journeys."
+  "next_action": "Review cleanup-plan.json; rerun with -ApplyCleanup only after accepting archive-before-delete behavior."
 }

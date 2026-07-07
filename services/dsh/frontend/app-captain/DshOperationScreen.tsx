@@ -74,9 +74,9 @@ export function DshOperationScreen({
           <Divider />
           <SectionHeader title="الإجراء" subtitle="زر رئيسي واحد مع مسار رجوع صغير وواضح." />
           <Box gap={2}>
-            {primaryActionLabel ? <Button label={primaryActionLabel} onPress={onPrimaryAction} disabled={primaryActionDisabled} loading={primaryActionLoading} /> : null}
-            {secondaryActionLabel ? <Button label={secondaryActionLabel} tone="secondary" onPress={onSecondaryAction} /> : null}
-            {tertiaryActionLabel ? <Button label={tertiaryActionLabel} tone="ghost" onPress={onTertiaryAction} /> : null}
+            {primaryActionLabel ? <Button label={primaryActionLabel} onPress={onPrimaryAction} disabled={primaryActionDisabled} loading={primaryActionLoading} accessibilityLabel={`تأكيد: ${primaryActionLabel}`} /> : null}
+            {secondaryActionLabel ? <Button label={secondaryActionLabel} tone="secondary" onPress={onSecondaryAction} accessibilityLabel={`إجراء ثانوي: ${secondaryActionLabel}`} /> : null}
+            {tertiaryActionLabel ? <Button label={tertiaryActionLabel} tone="ghost" onPress={onTertiaryAction} accessibilityLabel={`رجوع: ${tertiaryActionLabel}`} /> : null}
           </Box>
         </Box>
       ) : null}
