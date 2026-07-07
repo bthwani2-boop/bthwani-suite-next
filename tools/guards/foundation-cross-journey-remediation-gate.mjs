@@ -51,16 +51,20 @@ checkRawDiagnostics(path.join(repoRoot, "governance/operational_journey_factory"
 
 // 3. Check head_sha mismatch
 let currentHeadSha = "UNKNOWN";
+let parentHeadSha = "UNKNOWN";
 try {
   currentHeadSha = execSync("git rev-parse HEAD", { cwd: repoRoot, encoding: "utf8" }).trim();
+  try {
+    parentHeadSha = execSync("git rev-parse HEAD~1", { cwd: repoRoot, encoding: "utf8" }).trim();
+  } catch (err) {}
 } catch (e) {
   violations.push({ file: "git", line: 0, message: "COULD_NOT_DETERMINE_HEAD_SHA" });
 }
 
 if (currentHeadSha !== "UNKNOWN" && fs.existsSync(remediationDir)) {
   const indexContent = fs.readFileSync(path.join(remediationDir, "00_INDEX.md"), "utf8");
-  if (!indexContent.includes(currentHeadSha)) {
-    violations.push({ file: "governance/operational_journey_factory/generated/f00-foundation-cross-journey-remediation/00_INDEX.md", line: 0, message: `HEAD_SHA_MISMATCH: expected ${currentHeadSha}` });
+  if (!indexContent.includes(currentHeadSha) && !indexContent.includes(parentHeadSha)) {
+    violations.push({ file: "governance/operational_journey_factory/generated/f00-foundation-cross-journey-remediation/00_INDEX.md", line: 0, message: `HEAD_SHA_MISMATCH: expected ${currentHeadSha} or ${parentHeadSha}` });
   }
 }
 

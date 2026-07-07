@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CompactOrderChatMessage } from '../delivery';
+import type { CompactOrderChatMessage } from '../delivery/captain.contract';
 
 export function useCaptainChatModel() {
   const [activeOrderDraft, setActiveOrderDraft] = React.useState('');

@@ -11,7 +11,7 @@ import type {
   ApprovalSourceSurface,
   ApprovalStage,
   PartnerQueueRecord,
-} from './partner.workflow';
+} from './partner.types';
 
 function resolveBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl');
