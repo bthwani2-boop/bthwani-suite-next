@@ -1,6 +1,6 @@
 # Operational Gap Ledger (Reconciled)
 
-head_sha: `4cbe5a8c0aac32308affe90295f496bb9d681c26`
+head_sha: `50221e30d81cb65879671ba47198d94f3d054db1`
 status: `DISCOVERY_ONLY`
 
 | gap_id | source_tool | path | type | owner | risk_level | required_action | allowed_decision | verification_commands | status | blocks_journey_start |

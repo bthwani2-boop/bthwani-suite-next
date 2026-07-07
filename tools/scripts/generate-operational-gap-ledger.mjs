@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot } from "../guards/_guard-utils.mjs";
@@ -388,6 +388,45 @@ const ledger = {
   gap_count: gaps.length,
   gaps
 };
+
+// Inject UI Binding Gaps if available
+const uiBindingPath = path.join(outDir, "dsh-order-ui-binding-inventory.json");
+if (fs.existsSync(uiBindingPath)) {
+  try {
+    const uiData = JSON.parse(fs.readFileSync(uiBindingPath, "utf8"));
+    if (uiData.gaps && uiData.gaps.length > 0) {
+      for (const ug of uiData.gaps) {
+        ledger.gaps.push({
+          gap_id: ug.gap_id,
+          type: ug.type,
+          source_tool: "ui-binding-audit",
+          path: ug.path,
+          reason: ug.reason,
+          severity: ug.severity,
+          risk_level: ug.risk_level,
+          journey: ug.journey,
+          affected_journeys: [ug.journey],
+          affected_surface: ug.path,
+          owner: "toolchain",
+          root_cause: "unbound_ui_element",
+          pattern_group: "ui_binding",
+          required_action: "Bind element or add accessibility label",
+          target_files: [ug.path],
+          allowed_decision: "FIX_REQUIRED",
+          forbidden_actions: ["leave_unbound"],
+          verification_commands: ["pnpm run diagnostics:operational:gaps"],
+          proof_required: ["zero binding gaps in ui-binding audit"],
+          status: "OPEN",
+          blocks_journey_start: true
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Failed to inject UI binding gaps:", e.message);
+  }
+}
+
+ledger.gap_count = ledger.gaps.length;
 
 fs.writeFileSync(path.join(outDir, "gap-ledger.json"), JSON.stringify(ledger, null, 2), "utf8");
 

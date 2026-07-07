@@ -387,7 +387,8 @@
       "script": "guard:dsh-order-lifecycle-execution",
       "exit_level": "fail",
       "description": "Verifies execution status, checks for open blocking gaps, and checks transition capabilities.",
-      "source_file": "tools/guards/dsh-order-lifecycle-execution-gate.mjs"
+      "source_file": "tools/guards/dsh-order-lifecycle-execution-gate.mjs",
+      "scope": "dsh-order-lifecycle-journey"
     }
   ]
 }

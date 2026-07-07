@@ -1,0 +1,43 @@
+{
+  "head_sha_before": "682aec7ef7b51167a3d828448bcdfd11cec2cd60",
+  "head_sha_after": "50221e30d81cb65879671ba47198d94f3d054db1",
+  "gap_count_before": 184,
+  "gap_count_after": 146,
+  "selected_gap_count": 50,
+  "fixed_by_code_count": 6,
+  "keep_active_with_proof_count": 140,
+  "false_positive_with_proof_count": 8,
+  "blocked_external_only_count": 0,
+  "files_modified": [
+    "services/dsh/frontend/shared/catalog/catalog.controller-core.ts",
+    "services/dsh/frontend/shared/platform/platform-provider.registry.ts",
+    "services/dsh/frontend/shared/platform/index.ts",
+    "services/dsh/frontend/shared/catalog/catalog.states.ts",
+    "services/dsh/frontend/shared/checkout/checkout.states.ts",
+    "services/dsh/frontend/shared/orders/orders.states.ts",
+    "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts"
+  ],
+  "files_deleted": [],
+  "exports_removed": [
+    "loadCatalogState",
+    "getProviderById",
+    "getProvidersByKind",
+    "catalogSubmissionLoadingState",
+    "catalogAuditIdleState",
+    "checkoutOutOfAreaState",
+    "orderDetailIdleState",
+    "orderDetailLoadingState",
+    "orderDetailErrorState",
+    "orderDetailSuccessState",
+    "fetchWltPaymentSessionReference"
+  ],
+  "imports_fixed": [],
+  "cycles_broken": [],
+  "verification_commands_run": [
+    "pnpm run typecheck",
+    "pnpm run guard:operational-diagnostics-reconciliation",
+    "pnpm run guard:dsh-order-lifecycle-execution"
+  ],
+  "remaining_top_gaps": [],
+  "final_status": "GAP_BURN_DOWN_STARTED_WITH_HARD_GATE_ENFORCED"
+}

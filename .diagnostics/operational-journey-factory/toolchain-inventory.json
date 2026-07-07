@@ -1,9 +1,9 @@
 {
-  "head_sha": "4cbe5a8c0aac32308affe90295f496bb9d681c26",
+  "head_sha": "50221e30d81cb65879671ba47198d94f3d054db1",
   "status": "DISCOVERY_ONLY",
   "output_policy": ".diagnostics/operational-journey-factory",
   "sources": {
-    "package_json_scripts": 185,
+    "package_json_scripts": 188,
     "guard_registry_entries": 49,
     "guard_files": [
       "tools/guards/a11y-gate.mjs",
@@ -64,6 +64,7 @@
       "tools/scripts/docker-context-status.ps1",
       "tools/scripts/gate-run-step.ps1",
       "tools/scripts/generate-deep-tools-diagnostics-v5.mjs",
+      "tools/scripts/generate-dsh-order-lifecycle-ui-binding-inventory.mjs",
       "tools/scripts/generate-operational-gap-ledger.mjs",
       "tools/scripts/generate-operational-journey-inventory.mjs",
       "tools/scripts/generate-operational-surface-inventory.mjs",
@@ -92,6 +93,8 @@
       "tools/scripts/smoke-wiremock-financial-provider.ps1",
       "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
       "tools/scripts/sync-mobile-apps.mjs",
+      "tools/scripts/verify-dsh-order-lifecycle-backend-binding.mjs",
+      "tools/scripts/verify-dsh-wlt-finance-boundary.mjs",
       "tools/scripts/_external-tool-runner.mjs"
     ],
     "workflow_files": [
@@ -2787,6 +2790,75 @@
           "id": "guard:foundation-cross-journey-closure:package-script",
           "command": "guard:foundation-cross-journey-closure",
           "tool": "guard:foundation-cross-journey-closure",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:knip",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:knip",
+      "commands": [
+        {
+          "id": "diagnostics:knip:package-script",
+          "command": "diagnostics:knip",
+          "tool": "diagnostics:knip",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:jscpd",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:jscpd",
+      "commands": [
+        {
+          "id": "diagnostics:jscpd:package-script",
+          "command": "diagnostics:jscpd",
+          "tool": "diagnostics:jscpd",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:madge",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:madge",
+      "commands": [
+        {
+          "id": "diagnostics:madge:package-script",
+          "command": "diagnostics:madge",
+          "tool": "diagnostics:madge",
           "expected_exit_code": 0,
           "actual_exit_code": null,
           "blocking": false,

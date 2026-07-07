@@ -4,13 +4,13 @@ This document evaluates the gating rules to declare the DSH Order Lifecycle jour
 
 ## Gating Checklist
 
-- [ ] **No Open Blocking Gaps**: `gap-ledger.json` contains 184 open gaps.
+- [ ] **No Open Blocking Gaps**: `gap-ledger.json` contains 178 open gaps.
 - [x] **Shared Order Layer Split**: Decoupled transport, adapter, types, policies, view-model, and controller.
-- [x] **UI Surfaces Cleaned**: Verification proves all screens render via shared controllers without inline API calls.
-- [x] **Database & Route Binding Proven**: Mapped all 22 operations to Go handlers and SQL schemas.
-- [x] **WLT Financial Boundary Defined**: WLT boundary interfaces and refund handshakes verified.
+- [ ] **UI Surfaces Cleaned**: Verification proves all screens render via shared controllers without inline API calls.
+- [ ] **Database & Route Binding Proven**: Mapped all 22 operations to Go handlers and SQL schemas.
+- [ ] **WLT Financial Boundary Defined**: WLT boundary interfaces and refund handshakes verified.
 - [x] **Typecheck & Lint Passed**: Workspace typecheck compiles successfully.
-- [x] **Automated Verification Passed**: All cross-journey remediation gates and tests pass.
+- [ ] **Automated Verification Passed**: All cross-journey remediation gates and tests pass.
 
 ## Declaration
 We hereby declare the **DSH Order Lifecycle Journey** as **PARTIAL_EXECUTION_PACKAGE_WITH_OPEN_BLOCKERS**.

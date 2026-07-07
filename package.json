@@ -192,7 +192,10 @@
     "guard:foundation-cross-journey-closure": "node tools/guards/foundation-cross-journey-closure-gate.mjs",
     "guard:foundation-cross-journey-remediation": "node tools/guards/foundation-cross-journey-remediation-gate.mjs",
     "guard:dsh-order-lifecycle-execution": "node tools/guards/dsh-order-lifecycle-execution-gate.mjs",
-    "guard:dsh-order-lifecycle-all": "pnpm run diagnostics:operational:reconcile && pnpm run guard:operational-diagnostics-reconciliation && pnpm run guard:dsh-order-lifecycle-execution"
+    "diagnostics:knip": "knip --reporter json",
+    "diagnostics:jscpd": "jscpd --reporters json --output .diagnostics/operational-journey-factory/tool-evidence/jscpd .",
+    "diagnostics:madge": "madge services/dsh/frontend services/wlt/frontend apps/control-panel/runtime/src --extensions ts,tsx --circular",
+    "guard:dsh-order-lifecycle-all": "pnpm run graphify:code && pnpm run diagnostics:knip && pnpm run diagnostics:jscpd && pnpm run diagnostics:madge && pnpm run diagnostics:operational:toolchain && pnpm run diagnostics:operational:surfaces && pnpm run diagnostics:operational:inventory && pnpm run diagnostics:operational:gaps && pnpm run diagnostics:operational:reconcile && pnpm run guard:operational-diagnostics-reconciliation && pnpm run guard:dsh-order-lifecycle-execution"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

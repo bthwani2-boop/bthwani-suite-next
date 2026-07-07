@@ -348,7 +348,15 @@ async function runReconciliation() {
   const blockers = [];
 
   const burndownReportPath = path.join(diagnosticsDir, "gap-burndown-report.json");
+  const uiBindingPath = path.join(diagnosticsDir, "dsh-order-ui-binding-inventory.json");
+  const backendBindingPath = path.join(diagnosticsDir, "dsh-order-backend-binding-proof.json");
+  const financeBoundaryPath = path.join(diagnosticsDir, "dsh-wlt-finance-boundary-proof.json");
+
   const hasBurndownReport = fs.existsSync(burndownReportPath);
+  const hasUiBinding = fs.existsSync(uiBindingPath);
+  const hasBackendBinding = fs.existsSync(backendBindingPath);
+  const hasFinanceBoundary = fs.existsSync(financeBoundaryPath);
+
   let burndown = null;
   if (hasBurndownReport) {
     try {
@@ -360,6 +368,10 @@ async function runReconciliation() {
     blockers.push("Gap burndown report is missing.");
   }
 
+  if (!hasUiBinding) blockers.push("UI binding inventory is missing.");
+  if (!hasBackendBinding) blockers.push("Backend binding proof is missing.");
+  if (!hasFinanceBoundary) blockers.push("WLT/DSH finance boundary proof is missing.");
+
   const hasGraphify = commandResults.some(r => r && r.name && r.name.includes("graphify"));
   const hasDepGraph = commandResults.some(r => r && r.name && r.name.includes("dependency-graph"));
   const hasHardGate = commandResults.some(r => r && r.name && r.name.includes("lifecycle-execution"));
@@ -368,6 +380,38 @@ async function runReconciliation() {
   if (!hasGraphify) blockers.push("Graphify execution proof is missing.");
   if (!hasDepGraph) blockers.push("Dependency graph execution proof is missing.");
   if (!hasHardGate) blockers.push("Hard gate (lifecycle-execution) execution proof is missing.");
+
+  // Parse UI binding gaps
+  let uiGapsCount = 0;
+  if (hasUiBinding) {
+    try {
+      const uiData = JSON.parse(fs.readFileSync(uiBindingPath, "utf8"));
+      uiGapsCount = uiData.discovered_gaps_count || 0;
+      if (uiData.gaps && uiData.gaps.length > 0) {
+        for (const g of uiData.gaps) {
+          blockers.push(`UI Binding Gap: ${g.reason} in ${g.path}`);
+        }
+      }
+    } catch (e) {
+      blockers.push(`Failed to parse UI binding inventory: ${e.message}`);
+    }
+  }
+
+  // Parse financial boundary violations
+  let financeViolationsCount = 0;
+  if (hasFinanceBoundary) {
+    try {
+      const finData = JSON.parse(fs.readFileSync(financeBoundaryPath, "utf8"));
+      financeViolationsCount = finData.violations_count || 0;
+      if (finData.violations && finData.violations.length > 0) {
+        for (const v of finData.violations) {
+          blockers.push(`Finance Boundary Violation: ${v.reason} in ${v.file}`);
+        }
+      }
+    } catch (e) {
+      blockers.push(`Failed to parse finance boundary proof: ${e.message}`);
+    }
+  }
 
   // Rule A: Gap count comparison
   if (updatedSummary.numeric_truth.gap_count !== updatedLedger.gap_count) {
@@ -422,6 +466,9 @@ async function runReconciliation() {
     remaining_open_gaps: burndown ? burndown.gap_count_after : gapCountAfter,
     graphify_used: hasGraphify,
     dependency_graph_used: hasDepGraph,
+    ui_binding_elements_audited: hasUiBinding ? JSON.parse(fs.readFileSync(uiBindingPath, "utf8")).inventory_count : 0,
+    ui_binding_gaps: uiGapsCount,
+    finance_boundary_violations: financeViolationsCount,
     verification_commands_run: burndown ? burndown.verification_commands_run : [],
     blockers,
     status: blockers.length > 0 ? "STILL_BLOCKED_WITH_EXACT_UNRESOLVED_EVIDENCE_GAPS" : "EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED"
@@ -443,6 +490,8 @@ async function runReconciliation() {
     `- Circular graph warnings: \`${reconciliationReport.graph_warnings_classified}\``,
     `- JSCPD duplication findings: \`${reconciliationReport.jscpd_findings_classified}\``,
     `- Knip dead code findings: \`${reconciliationReport.knip_findings_classified}\``,
+    `- UI binding gaps: \`${reconciliationReport.ui_binding_gaps}\``,
+    `- Finance boundary violations: \`${reconciliationReport.finance_boundary_violations}\``,
     "",
     "## Blockers and Contradictions",
     "",

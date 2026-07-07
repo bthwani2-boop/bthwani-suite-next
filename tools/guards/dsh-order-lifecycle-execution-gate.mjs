@@ -60,11 +60,11 @@ if (reconReport && reconReport.status !== 'EVIDENCE_RECONCILED_AND_HARD_GATES_EN
 // 3. Gap count checks on execution gate md
 const gapCount = gapLedger ? gapLedger.gap_count : 0;
 if (gapCount > 0) {
-  if (executionGateMd.includes('EXECUTION_READY')) {
+  if (executionGateMd.includes('EXECUTION_READY') || executionGateMd.includes('100%') || executionGateMd.includes('CLOSED')) {
     addViolation(
       executionGateMdPath,
-      'Journey marked as EXECUTION_READY, but gap-ledger contains open gaps.',
-      'Change status declaration to PARTIAL_EXECUTION_PACKAGE_WITH_OPEN_BLOCKERS.',
+      'Journey declared ready/closed/100% but gap-ledger contains open gaps.',
+      'Ensure execution gate declares status as PARTIAL_EXECUTION_PACKAGE_WITH_OPEN_BLOCKERS.',
       'Edit 15_EXECUTION_GATE.md'
     );
   }
@@ -78,7 +78,7 @@ if (gapCount > 0) {
   }
 }
 
-// 4. File URLs check
+// 4. Local path leakage and File URLs check
 const allJourneyFiles = fs.readdirSync(journeyDir);
 for (const file of allJourneyFiles) {
   const filePath = path.join(journeyDir, file);
@@ -89,7 +89,15 @@ for (const file of allJourneyFiles) {
         filePath,
         'Local file:/// link detected inside journey directory.',
         'Replace all file:/// links with repository-relative paths.',
-        'node C:\\Users\\Administrator\\.gemini\\antigravity-ide\\brain\\fed1682f-176e-4a56-a594-774ee492a5f6\\scratch\\remove_local_links.js'
+        'Edit the markdown file to clean references.'
+      );
+    }
+    if (content.includes('C:\\Users') || content.includes('.gemini') || content.includes('Administrator')) {
+      addViolation(
+        filePath,
+        'Leakage of local environment path details detected.',
+        'Clean path references to use repo-relative syntax.',
+        'Edit the markdown file to remove leaked path details.'
       );
     }
   }
@@ -97,7 +105,7 @@ for (const file of allJourneyFiles) {
 
 // 5. Open blocking gaps validation
 if (gapLedger && gapLedger.gaps) {
-  const blockingTypes = ['UNRESOLVED_IMPORT', 'CIRCULAR_DEPENDENCY', 'DIRECT_API_IN_SURFACE', 'BUSINESS_LOGIC_IN_SURFACE', 'SHARED_API_LOGIC_MIXED'];
+  const blockingTypes = ['UNRESOLVED_IMPORT', 'CIRCULAR_DEPENDENCY', 'DIRECT_API_IN_SURFACE', 'BUSINESS_LOGIC_IN_SURFACE', 'SHARED_API_LOGIC_MIXED', 'UNBOUND_UI_ACTION', 'UNBOUND_ICON', 'UNBOUND_TAB', 'UNBOUND_STATE', 'MISSING_SHARED_CONTROLLER', 'MISSING_PERMISSION_GUARD', 'MISSING_API_BACKEND_BINDING', 'WLT_DSH_FINANCE_BOUNDARY_VIOLATION'];
   for (const gap of gapLedger.gaps) {
     if (gap.status === 'OPEN' && blockingTypes.includes(gap.type)) {
       addViolation(
@@ -151,22 +159,32 @@ if (fs.existsSync(transportPath) && fs.existsSync(policyPath)) {
 }
 
 // 7. Checkboxes and verification proofs
-  const hasSuccessfulReconcile = reconReport && (reconReport.status === 'EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED' || reconReport.status === 'STILL_BLOCKED_WITH_EXACT_UNRESOLVED_EVIDENCE_GAPS');
-  if (!hasSuccessfulReconcile) {
-    // If reconciliation gate hasn't passed successfully in command results
-    addViolation(
-      executionGateMdPath,
-      'Typecheck/Lint or Automated Verification checked as passed, but reconciliation report shows failure or missing execution.',
-      'Run guard:operational-diagnostics-reconciliation and ensure it passes.',
-      'pnpm run guard:operational-diagnostics-reconciliation'
-    );
-  }
+const hasSuccessfulReconcile = reconReport && (reconReport.status === 'EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED' || reconReport.status === 'STILL_BLOCKED_WITH_EXACT_UNRESOLVED_EVIDENCE_GAPS');
+if (!hasSuccessfulReconcile) {
+  addViolation(
+    executionGateMdPath,
+    'Typecheck/Lint or Automated Verification checked as passed, but reconciliation report shows failure or missing execution.',
+    'Run guard:operational-diagnostics-reconciliation and ensure it passes.',
+    'pnpm run guard:operational-diagnostics-reconciliation'
+  );
+}
 
 if (gapCount > 0 && executionGateMd.includes('- [x] **No Open Blocking Gaps**')) {
   addViolation(
     executionGateMdPath,
     'No Open Blocking Gaps is checked [x] but there are open gaps in the ledger.',
     'Uncheck No Open Blocking Gaps checkbox.',
+    'Edit 15_EXECUTION_GATE.md'
+  );
+}
+
+// Check gaps number consistency
+const matchGapsCount = executionGateMd.match(/gap-ledger\.json contains (\d+) open gaps/);
+if (matchGapsCount && parseInt(matchGapsCount[1], 10) !== gapCount) {
+  addViolation(
+    executionGateMdPath,
+    `Gaps count inconsistency: markdown says ${matchGapsCount[1]} but gap-ledger says ${gapCount}`,
+    `Update 15_EXECUTION_GATE.md to state exactly ${gapCount} open gaps.`,
     'Edit 15_EXECUTION_GATE.md'
   );
 }
@@ -182,7 +200,6 @@ if (violations.length > 0) {
   process.exit(1);
 } else {
   console.log('dsh-order-lifecycle-execution-gate: PASS');
-  // Update command-results.json with passing result
   if (fs.existsSync(commandResultsPath)) {
     try {
       const results = JSON.parse(fs.readFileSync(commandResultsPath, 'utf8'));
