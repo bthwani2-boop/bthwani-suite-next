@@ -1,5 +1,5 @@
 {
-  "head_sha": "18c3a3ab8e964f0d5c850370e7db27a0d29f5058",
+  "head_sha": "a10f04911786c1478a2f286d73c4b6110d82ed16",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -208,6 +208,8 @@
       "shared_imports": [
         "apps/control-panel/runtime/src/app/layout.tsx",
         "apps/control-panel/runtime/src/app/providers.tsx",
+        "apps/control-panel/runtime/src/components/CpPrimitives.tsx",
+        "apps/control-panel/runtime/src/shell/ControlPanelShell.tsx",
         "apps/control-panel/runtime/src/styles/dsh-colors.ts"
       ],
       "direct_api_signs": [],
@@ -558,8 +560,12 @@
         "services/dsh/frontend/app-partner/teammanagement/PartnerTeamManagementScreen.tsx",
         "services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts"
       ],
-      "direct_api_signs": [],
-      "process_env_usage": [],
+      "direct_api_signs": [
+        "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx"
+      ],
+      "process_env_usage": [
+        "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx"
+      ],
       "local_business_logic_candidates": [],
       "icons_components_actions_candidates": 243,
       "states_candidates": 348
@@ -1421,6 +1427,8 @@
     "apps/app-partner/runtime/src/index.ts",
     "apps/control-panel/runtime/src/app/layout.tsx",
     "apps/control-panel/runtime/src/app/providers.tsx",
+    "apps/control-panel/runtime/src/components/CpPrimitives.tsx",
+    "apps/control-panel/runtime/src/shell/ControlPanelShell.tsx",
     "apps/control-panel/runtime/src/styles/dsh-colors.ts",
     "services/dsh/frontend/app-captain/account/CaptainAccountNavRow.tsx",
     "services/dsh/frontend/app-captain/account/DshCaptainAccountSettingsContent.tsx",
@@ -1656,6 +1664,7 @@
     "shared/ui-kit/src/components/Toolbar/Toolbar.tsx"
   ],
   "direct_api_signs": [
+    "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
     "services/dsh/frontend/shared/catalog/catalog.api.ts",
     "services/dsh/frontend/shared/catalog/dsh-product-api.transport.ts",
     "services/dsh/frontend/shared/finance-wlt-link/finance/finance-hub-runtime.api.ts",
@@ -1686,6 +1695,7 @@
     "services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts"
   ],
   "process_env_usage": [
+    "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
     "services/dsh/frontend/shared/platform/feature-flags.ts",
     "services/dsh/frontend/shared/platform/platform-vars.ts",
     "services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts",

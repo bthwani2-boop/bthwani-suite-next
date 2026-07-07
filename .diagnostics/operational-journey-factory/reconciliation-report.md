@@ -1,10 +1,10 @@
 # Diagnostics Reconciliation Report
 
 - Branch: `journy`
-- Head SHA: `18c3a3ab8e964f0d5c850370e7db27a0d29f5058`
+- Head SHA: `a10f04911786c1478a2f286d73c4b6110d82ed16`
 - Status: `EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED`
-- Gap count before: `0`
-- Gap count after: `0`
+- Gap count before: `1`
+- Gap count after: `1`
 - Circular graph warnings: `0`
 - JSCPD duplication findings: `0`
 - Knip dead code findings: `0`
