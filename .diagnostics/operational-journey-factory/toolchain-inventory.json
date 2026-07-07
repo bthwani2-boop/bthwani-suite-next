@@ -1,0 +1,2774 @@
+{
+  "head_sha": "e279cc922241e3ee4f5b9f9ab12bb08b4cfb1497",
+  "status": "DISCOVERY_ONLY",
+  "output_policy": ".diagnostics/operational-journey-factory",
+  "sources": {
+    "package_json_scripts": 181,
+    "guard_registry_entries": 47,
+    "guard_files": [
+      "tools/guards/a11y-gate.mjs",
+      "tools/guards/agent-governance-gate.mjs",
+      "tools/guards/api-binding-gate.mjs",
+      "tools/guards/ast-grep-rules-gate.mjs",
+      "tools/guards/backend-api-binding-gate.mjs",
+      "tools/guards/brand-identity-report.mjs",
+      "tools/guards/bundle-budget-gate.mjs",
+      "tools/guards/cleanup-policy-gate.mjs",
+      "tools/guards/dependency-graph-gate.mjs",
+      "tools/guards/design-tokens-gate.mjs",
+      "tools/guards/extract_routes.go",
+      "tools/guards/foundation-cross-journey-closure-gate.mjs",
+      "tools/guards/foundation-cross-journey-remediation-gate.mjs",
+      "tools/guards/frontend-feature-binding-gate.mjs",
+      "tools/guards/fullstack-boundary-gate.mjs",
+      "tools/guards/go-routes-ci.mjs",
+      "tools/guards/governance-schema-gate.mjs",
+      "tools/guards/guard-registry-gate.mjs",
+      "tools/guards/heavy-import-gate.mjs",
+      "tools/guards/icon-contract-gate.mjs",
+      "tools/guards/logic-coverage-gate.mjs",
+      "tools/guards/no-broken-imports.mjs",
+      "tools/guards/operational-journey-template-factory-gate.mjs",
+      "tools/guards/oss-toolchain-policy-gate.mjs",
+      "tools/guards/performance-budget-gate.mjs",
+      "tools/guards/repository-naming-gate.mjs",
+      "tools/guards/repository-size-gate.mjs",
+      "tools/guards/repository-structure-gate.mjs",
+      "tools/guards/runtime-config-gate.mjs",
+      "tools/guards/service-manifest-drift-gate.mjs",
+      "tools/guards/tool-catalog-coverage-gate.mjs",
+      "tools/guards/toolchain-activation-gate.mjs",
+      "tools/guards/ui-kit-boundary-gate.mjs",
+      "tools/guards/ui-provider-required-gate.mjs",
+      "tools/guards/wlt-financial-boundary-gate.mjs",
+      "tools/guards/_guard-utils.mjs",
+      "tools/guards/_openapi-utils.mjs",
+      "tools/guards/_openapi-utils.test.mjs"
+    ],
+    "script_files": [
+      "tools/scripts/check-codeql-local.ps1",
+      "tools/scripts/check-codespaces-runtime.ps1",
+      "tools/scripts/check-diagnostic-tools.ps1",
+      "tools/scripts/check-expo-atlas-readiness.mjs",
+      "tools/scripts/check-frontend-binding-readiness.mjs",
+      "tools/scripts/check-go-ast-extractor.ps1",
+      "tools/scripts/check-journey-scenarios.mjs",
+      "tools/scripts/check-sonarqube-config.ps1",
+      "tools/scripts/check-state-machines.mjs",
+      "tools/scripts/check-storybook-readiness.mjs",
+      "tools/scripts/check-style-dictionary-readiness.mjs",
+      "tools/scripts/docker-context-local.ps1",
+      "tools/scripts/docker-context-remote.ps1",
+      "tools/scripts/docker-context-status.ps1",
+      "tools/scripts/gate-run-step.ps1",
+      "tools/scripts/generate-deep-tools-diagnostics-v5.mjs",
+      "tools/scripts/generate-operational-gap-ledger.mjs",
+      "tools/scripts/generate-operational-journey-inventory.mjs",
+      "tools/scripts/generate-operational-surface-inventory.mjs",
+      "tools/scripts/generate-operational-toolchain-inventory.mjs",
+      "tools/scripts/generate-performance-report.mjs",
+      "tools/scripts/generate-repository-structure-report.mjs",
+      "tools/scripts/generate-toolchain-execution-plan.mjs",
+      "tools/scripts/guard-mobile-apps.mjs",
+      "tools/scripts/install-oss-toolchain-binaries.sh",
+      "tools/scripts/replace-opstheme.mjs",
+      "tools/scripts/run-actionlint.mjs",
+      "tools/scripts/run-conftest.mjs",
+      "tools/scripts/run-foundation-gate.ps1",
+      "tools/scripts/run-hadolint.mjs",
+      "tools/scripts/run-journey-gate.ps1",
+      "tools/scripts/run-osv-scanner.mjs",
+      "tools/scripts/run-pinact.mjs",
+      "tools/scripts/run-regal.mjs",
+      "tools/scripts/run-shellcheck.mjs",
+      "tools/scripts/run-trivy.mjs",
+      "tools/scripts/run-yagni-diagnostics.ps1",
+      "tools/scripts/run-yamllint.mjs",
+      "tools/scripts/run-zizmor.mjs",
+      "tools/scripts/serve-swagger.mjs",
+      "tools/scripts/smoke-wiremock-financial-provider.ps1",
+      "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
+      "tools/scripts/sync-mobile-apps.mjs",
+      "tools/scripts/_external-tool-runner.mjs"
+    ],
+    "workflow_files": [
+      ".github/workflows/ci-pr-fast.yml",
+      ".github/workflows/ci.yml",
+      ".github/workflows/codeql.yml",
+      ".github/workflows/design-system.yml",
+      ".github/workflows/governance-audit.yml",
+      ".github/workflows/logic-coverage.yml",
+      ".github/workflows/observability-smoke.yml",
+      ".github/workflows/performance.yml",
+      ".github/workflows/security.yml",
+      ".github/workflows/selfhosted-docker-smoke.yml",
+      ".github/workflows/sonarqube.yml"
+    ]
+  },
+  "tools": [
+    {
+      "tool_id": "codeql",
+      "category": "Security/SCA",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_filename",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "WORKFLOW_ONLY",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "codeql:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "codeql",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "EXTERNAL_CI_WORKFLOW_ONLY",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "collect_external_ci_run_evidence_for_closure"
+        }
+      ]
+    },
+    {
+      "tool_id": "sonarqube",
+      "category": "Quality/SAST",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_filename",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "WORKFLOW_ONLY",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "sonarqube:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "sonarqube",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "EXTERNAL_CI_WORKFLOW_ONLY",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "collect_external_ci_run_evidence_for_closure"
+        }
+      ]
+    },
+    {
+      "tool_id": "semgrep",
+      "category": "Security/SAST",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "semgrep:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "semgrep",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "gitleaks",
+      "category": "Security/Secrets",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "guard:secrets",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command",
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "gitleaks:primary",
+          "command": "guard:secrets",
+          "tool": "gitleaks",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "trivy",
+      "category": "Security/Container/SBOM",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "security:trivy",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command",
+        "workflow_name"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "trivy:primary",
+          "command": "security:trivy",
+          "tool": "trivy",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "osv-scanner",
+      "category": "Security/SCA",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "security:osv",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "osv-scanner:primary",
+          "command": "security:osv",
+          "tool": "osv-scanner",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "opa",
+      "category": "Policy/Governance",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:opa-policies",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "opa:primary",
+          "command": "guard:opa-policies",
+          "tool": "opa",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "conftest",
+      "category": "Policy/Governance",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "guard:opa-policies",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command",
+        "workflow_action_or_step"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "conftest:primary",
+          "command": "guard:opa-policies",
+          "tool": "conftest",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "regal",
+      "category": "Policy/Linter",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:rego-lint",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "regal:primary",
+          "command": "guard:rego-lint",
+          "tool": "regal",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "ajv",
+      "category": "Governance/Schema",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "guard:governance-schema",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "ajv:primary",
+          "command": "guard:governance-schema",
+          "tool": "ajv",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "markdownlint-cli2",
+      "category": "Linter/Documentation",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "guard:markdown-governance",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "markdownlint-cli2:primary",
+          "command": "guard:markdown-governance",
+          "tool": "markdownlint-cli2",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "actionlint",
+      "category": "Governance/Workflows",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "guard:workflow-lint",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_name"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "actionlint:primary",
+          "command": "guard:workflow-lint",
+          "tool": "actionlint",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "zizmor",
+      "category": "Governance/Workflows/Security",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "guard:workflow-security",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "zizmor:primary",
+          "command": "guard:workflow-security",
+          "tool": "zizmor",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "pinact",
+      "category": "Governance/Workflows/Supply-Chain",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:actions-pin",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "pinact:primary",
+          "command": "guard:actions-pin",
+          "tool": "pinact",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "shellcheck",
+      "category": "Quality/Linter",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:shellcheck",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "shellcheck:primary",
+          "command": "guard:shellcheck",
+          "tool": "shellcheck",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "ls-lint",
+      "category": "Quality/Structure",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:ls-lint",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "ls-lint:primary",
+          "command": "guard:ls-lint",
+          "tool": "ls-lint",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "eslint",
+      "category": "Quality/Linter",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "eslint:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "eslint",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "typescript",
+      "category": "Quality/Compiler",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "typescript:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "typescript",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "knip",
+      "category": "Quality/Dead-Code",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "knip:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "knip",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "jscpd",
+      "category": "Quality/Duplication",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "jscpd:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "jscpd",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "dependency-cruiser",
+      "category": "Quality/Structure",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "dependency-cruiser:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "dependency-cruiser",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "madge",
+      "category": "Quality/Structure",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "madge:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "madge",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "nx",
+      "category": "Tools/Build/Monorepo",
+      "activation": "active",
+      "failure_policy": "fail",
+      "command": "nx:projects",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "nx:primary",
+          "command": "nx:projects",
+          "tool": "nx",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "sherif",
+      "category": "Quality/Monorepo",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "sherif:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "sherif",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "spectral",
+      "category": "API/Contract/Linter",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "spectral:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "spectral",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "openapi-typescript",
+      "category": "API/Contract/Generator",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "openapi-typescript:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "openapi-typescript",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "graphify",
+      "category": "Architecture/Map",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "graphify:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "graphify",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "playwright",
+      "category": "Testing/E2E/Web",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "e2e:web:smoke",
+      "script_found": true,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "playwright:primary",
+          "command": "e2e:web:smoke",
+          "tool": "playwright",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "axe",
+      "category": "Testing/A11y",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:a11y-runtime",
+      "script_found": true,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "axe:primary",
+          "command": "guard:a11y-runtime",
+          "tool": "axe",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "xstate",
+      "category": "Modeling/State",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "xstate:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "xstate",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "cucumber",
+      "category": "Testing/BDD",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "cucumber:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "cucumber",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "storybook",
+      "category": "UI-Kit/Documentation",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "diagnostics:storybook",
+      "script_found": true,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "storybook:primary",
+          "command": "diagnostics:storybook",
+          "tool": "storybook",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "loki",
+      "category": "Testing/Visual",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "loki:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "loki",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "reg-suit",
+      "category": "Testing/Visual",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "reg-suit:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "reg-suit",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "opentelemetry",
+      "category": "Observability/Tracing",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "opentelemetry:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "opentelemetry",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "jaeger",
+      "category": "Observability/Tracing",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_name"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "WORKFLOW_ONLY",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "jaeger:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "jaeger",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "EXTERNAL_CI_WORKFLOW_ONLY",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "collect_external_ci_run_evidence_for_closure"
+        }
+      ]
+    },
+    {
+      "tool_id": "prometheus",
+      "category": "Observability/Metrics",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "prometheus:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "prometheus",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "grafana",
+      "category": "Observability/Metrics",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "grafana:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "grafana",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "k6",
+      "category": "Performance/Load",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_name",
+        "workflow_action_or_step"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "WORKFLOW_ONLY",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "k6:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "k6",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "EXTERNAL_CI_WORKFLOW_ONLY",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "collect_external_ci_run_evidence_for_closure"
+        }
+      ]
+    },
+    {
+      "tool_id": "autocannon",
+      "category": "Performance/Quick-Load",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "autocannon:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "autocannon",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "lighthouse-ci",
+      "category": "Performance/Web",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "lighthouse-ci:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "lighthouse-ci",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "size-limit",
+      "category": "Performance/Bundle",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "size-limit:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "size-limit",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "tamagui",
+      "category": "UI-Kit/Styles",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "tamagui:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "tamagui",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "cue",
+      "category": "Policy/Schema",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "cue:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "cue",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "checkov",
+      "category": "Security/IaC",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "checkov:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "checkov",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "renovate",
+      "category": "Governance/Dependencies",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "renovate:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "renovate",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "hadolint",
+      "category": "Quality/Linter/Docker",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:dockerfile-lint",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "hadolint:primary",
+          "command": "guard:dockerfile-lint",
+          "tool": "hadolint",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "yamllint",
+      "category": "Quality/Linter/YAML",
+      "activation": "partial",
+      "failure_policy": "warn",
+      "command": "guard:yaml-lint",
+      "script_found": true,
+      "workflow_found": true,
+      "workflow_evidence": [
+        "workflow_command"
+      ],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "PARTIAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "yamllint:primary",
+          "command": "guard:yaml-lint",
+          "tool": "yamllint",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "DISCOVERY_ONLY_NOT_EXECUTED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "go-pprof",
+      "category": "Performance/Go-Profiling",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "go-pprof:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "go-pprof",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "expo-atlas",
+      "category": "Performance/Mobile-Bundle",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "expo-atlas:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "expo-atlas",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "style-dictionary",
+      "category": "UI-Kit/Tokens",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "style-dictionary:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "style-dictionary",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "maestro",
+      "category": "Testing/E2E/Mobile",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "maestro:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "maestro",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "detox",
+      "category": "Testing/E2E/Mobile",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "detox:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "detox",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "lint-staged",
+      "category": "Governance/Workflows",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "lint-staged:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "lint-staged",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "husky",
+      "category": "Governance/Workflows",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "husky:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "husky",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "lefthook",
+      "category": "Governance/Workflows",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "lefthook:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "lefthook",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "git-sizer",
+      "category": "Quality/Structure",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "git-sizer:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "git-sizer",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "syft",
+      "category": "Security/Container/SBOM",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "syft:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "syft",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "cyclonedx",
+      "category": "Security/Container/SBOM",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "cyclonedx:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "cyclonedx",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    },
+    {
+      "tool_id": "next-bundle",
+      "category": "Performance/Bundle",
+      "activation": "optional",
+      "failure_policy": "manual",
+      "command": "NO_COMMAND_DECLARED",
+      "script_found": false,
+      "workflow_found": false,
+      "workflow_evidence": [],
+      "detected_from": [
+        "tools/toolchain/tool-catalog.v5.json",
+        "tools/toolchain/tool-activation-baseline.json"
+      ],
+      "classification": [
+        "OPTIONAL",
+        "NEEDS_OWNER"
+      ],
+      "commands": [
+        {
+          "id": "next-bundle:primary",
+          "command": "NO_COMMAND_DECLARED",
+          "tool": "next-bundle",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "NOT_REQUIRED_NO_COMMAND",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "no_execution_required_for_discovery_inventory"
+        }
+      ]
+    }
+  ],
+  "unused_scripts": [
+    {
+      "tool_id": "diagnostics:codeql:local",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:codeql:local",
+      "commands": [
+        {
+          "id": "diagnostics:codeql:local:package-script",
+          "command": "diagnostics:codeql:local",
+          "tool": "diagnostics:codeql:local",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:sonarqube:config",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:sonarqube:config",
+      "commands": [
+        {
+          "id": "diagnostics:sonarqube:config:package-script",
+          "command": "diagnostics:sonarqube:config",
+          "tool": "diagnostics:sonarqube:config",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:go-routes",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:go-routes",
+      "commands": [
+        {
+          "id": "diagnostics:go-routes:package-script",
+          "command": "diagnostics:go-routes",
+          "tool": "diagnostics:go-routes",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:otel:smoke",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:otel:smoke",
+      "commands": [
+        {
+          "id": "diagnostics:otel:smoke:package-script",
+          "command": "diagnostics:otel:smoke",
+          "tool": "diagnostics:otel:smoke",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:tools",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:tools",
+      "commands": [
+        {
+          "id": "diagnostics:tools:package-script",
+          "command": "diagnostics:tools",
+          "tool": "diagnostics:tools",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:logic-all",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:logic-all",
+      "commands": [
+        {
+          "id": "guard:logic-all:package-script",
+          "command": "guard:logic-all",
+          "tool": "guard:logic-all",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:ui-kit",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:ui-kit",
+      "commands": [
+        {
+          "id": "diagnostics:ui-kit:package-script",
+          "command": "diagnostics:ui-kit",
+          "tool": "diagnostics:ui-kit",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:repo-all",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:repo-all",
+      "commands": [
+        {
+          "id": "guard:repo-all:package-script",
+          "command": "guard:repo-all",
+          "tool": "guard:repo-all",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:repo-structure",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:repo-structure",
+      "commands": [
+        {
+          "id": "diagnostics:repo-structure:package-script",
+          "command": "diagnostics:repo-structure",
+          "tool": "diagnostics:repo-structure",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:performance-all",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:performance-all",
+      "commands": [
+        {
+          "id": "guard:performance-all:package-script",
+          "command": "guard:performance-all",
+          "tool": "guard:performance-all",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:performance",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:performance",
+      "commands": [
+        {
+          "id": "diagnostics:performance:package-script",
+          "command": "diagnostics:performance",
+          "tool": "diagnostics:performance",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:governance-all",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:governance-all",
+      "commands": [
+        {
+          "id": "guard:governance-all:package-script",
+          "command": "guard:governance-all",
+          "tool": "guard:governance-all",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:tools:v5",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:tools:v5",
+      "commands": [
+        {
+          "id": "diagnostics:tools:v5:package-script",
+          "command": "diagnostics:tools:v5",
+          "tool": "diagnostics:tools:v5",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:operational:toolchain",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:operational:toolchain",
+      "commands": [
+        {
+          "id": "diagnostics:operational:toolchain:package-script",
+          "command": "diagnostics:operational:toolchain",
+          "tool": "diagnostics:operational:toolchain",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:operational:surfaces",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:operational:surfaces",
+      "commands": [
+        {
+          "id": "diagnostics:operational:surfaces:package-script",
+          "command": "diagnostics:operational:surfaces",
+          "tool": "diagnostics:operational:surfaces",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:operational:inventory",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:operational:inventory",
+      "commands": [
+        {
+          "id": "diagnostics:operational:inventory:package-script",
+          "command": "diagnostics:operational:inventory",
+          "tool": "diagnostics:operational:inventory",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:operational:gaps",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:operational:gaps",
+      "commands": [
+        {
+          "id": "diagnostics:operational:gaps:package-script",
+          "command": "diagnostics:operational:gaps",
+          "tool": "diagnostics:operational:gaps",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:trivy",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:trivy",
+      "commands": [
+        {
+          "id": "diagnostics:trivy:package-script",
+          "command": "diagnostics:trivy",
+          "tool": "diagnostics:trivy",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:osv",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:osv",
+      "commands": [
+        {
+          "id": "diagnostics:osv:package-script",
+          "command": "diagnostics:osv",
+          "tool": "diagnostics:osv",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:actions-pin",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:actions-pin",
+      "commands": [
+        {
+          "id": "diagnostics:actions-pin:package-script",
+          "command": "diagnostics:actions-pin",
+          "tool": "diagnostics:actions-pin",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:iac-security",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:iac-security",
+      "commands": [
+        {
+          "id": "diagnostics:iac-security:package-script",
+          "command": "diagnostics:iac-security",
+          "tool": "diagnostics:iac-security",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:git-sizer",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:git-sizer",
+      "commands": [
+        {
+          "id": "diagnostics:git-sizer:package-script",
+          "command": "diagnostics:git-sizer",
+          "tool": "diagnostics:git-sizer",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:sbom",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:sbom",
+      "commands": [
+        {
+          "id": "diagnostics:sbom:package-script",
+          "command": "diagnostics:sbom",
+          "tool": "diagnostics:sbom",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:sbom:cyclonedx",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:sbom:cyclonedx",
+      "commands": [
+        {
+          "id": "diagnostics:sbom:cyclonedx:package-script",
+          "command": "diagnostics:sbom:cyclonedx",
+          "tool": "diagnostics:sbom:cyclonedx",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:next-bundle",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:next-bundle",
+      "commands": [
+        {
+          "id": "diagnostics:next-bundle:package-script",
+          "command": "diagnostics:next-bundle",
+          "tool": "diagnostics:next-bundle",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:tools-v5-all",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:tools-v5-all",
+      "commands": [
+        {
+          "id": "guard:tools-v5-all:package-script",
+          "command": "guard:tools-v5-all",
+          "tool": "guard:tools-v5-all",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:state-machines",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:state-machines",
+      "commands": [
+        {
+          "id": "diagnostics:state-machines:package-script",
+          "command": "diagnostics:state-machines",
+          "tool": "diagnostics:state-machines",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:journey-scenarios",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:journey-scenarios",
+      "commands": [
+        {
+          "id": "diagnostics:journey-scenarios:package-script",
+          "command": "diagnostics:journey-scenarios",
+          "tool": "diagnostics:journey-scenarios",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:expo-atlas:client",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:expo-atlas:client",
+      "commands": [
+        {
+          "id": "diagnostics:expo-atlas:client:package-script",
+          "command": "diagnostics:expo-atlas:client",
+          "tool": "diagnostics:expo-atlas:client",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "diagnostics:style-dictionary",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:style-dictionary",
+      "commands": [
+        {
+          "id": "diagnostics:style-dictionary:package-script",
+          "command": "diagnostics:style-dictionary",
+          "tool": "diagnostics:style-dictionary",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:tools-v5-registry",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:tools-v5-registry",
+      "commands": [
+        {
+          "id": "guard:tools-v5-registry:package-script",
+          "command": "guard:tools-v5-registry",
+          "tool": "guard:tools-v5-registry",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:tools-v5-ci",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:tools-v5-ci",
+      "commands": [
+        {
+          "id": "guard:tools-v5-ci:package-script",
+          "command": "guard:tools-v5-ci",
+          "tool": "guard:tools-v5-ci",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:foundation-cross-journey-closure",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:foundation-cross-journey-closure",
+      "commands": [
+        {
+          "id": "guard:foundation-cross-journey-closure:package-script",
+          "command": "guard:foundation-cross-journey-closure",
+          "tool": "guard:foundation-cross-journey-closure",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    }
+  ]
+}

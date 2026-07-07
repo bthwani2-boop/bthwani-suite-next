@@ -28,12 +28,20 @@ const requiredTemplates = [
 ];
 
 const requiredScripts = [
+  "tools/scripts/generate-operational-journey-inventory.mjs",
+  "tools/scripts/generate-operational-toolchain-inventory.mjs",
+  "tools/scripts/generate-operational-surface-inventory.mjs",
+  "tools/scripts/generate-operational-gap-ledger.mjs",
   "tools/guards/operational-journey-template-factory-gate.mjs"
 ];
 
 const requiredChecklist = "tools/checklist/operational-journey-factory-checklist.md";
 
 const requiredPackageScripts = {
+  "diagnostics:operational:inventory": "node tools/scripts/generate-operational-journey-inventory.mjs",
+  "diagnostics:operational:toolchain": "node tools/scripts/generate-operational-toolchain-inventory.mjs",
+  "diagnostics:operational:surfaces": "node tools/scripts/generate-operational-surface-inventory.mjs",
+  "diagnostics:operational:gaps": "node tools/scripts/generate-operational-gap-ledger.mjs",
   "guard:operational-journey-factory": "node tools/guards/operational-journey-template-factory-gate.mjs"
 };
 
@@ -105,7 +113,39 @@ function validateCommandRecord(command, file, index) {
   }
 }
 
+function validateGeneratedOutputs() {
+  const diagnosticDir = ".diagnostics/operational-journey-factory";
+  const gapLedgerPath = `${diagnosticDir}/gap-ledger.json`;
+  const toolchainPath = `${diagnosticDir}/toolchain-inventory.json`;
 
+  const gapLedger = readJson(gapLedgerPath, null);
+  if (gapLedger) {
+    for (const [index, gap] of (gapLedger.gaps || []).entries()) {
+      for (const field of requiredGapFields) {
+        if (!(field in gap) || isEmptyRequiredValue(gap[field])) {
+          violations.push({ file: gapLedgerPath, line: 0, message: `INVALID_GAP:${index}:MISSING_${field}` });
+        }
+      }
+      if (gap.owner === "unassigned") {
+        violations.push({ file: gapLedgerPath, line: 0, message: `INVALID_GAP:${index}:UNASSIGNED_OWNER` });
+      }
+    }
+  }
+
+  const toolchain = readJson(toolchainPath, null);
+  if (toolchain) {
+    for (const [toolIndex, tool] of (toolchain.tools || []).entries()) {
+      for (const [commandIndex, command] of (tool.commands || []).entries()) {
+        validateCommandRecord(command, toolchainPath, `${toolIndex}.${commandIndex}`);
+      }
+    }
+    for (const [scriptIndex, script] of (toolchain.unused_scripts || []).entries()) {
+      for (const [commandIndex, command] of (script.commands || []).entries()) {
+        validateCommandRecord(command, toolchainPath, `unused.${scriptIndex}.${commandIndex}`);
+      }
+    }
+  }
+}
 
 if (!fs.existsSync(factoryDir)) {
   violations.push({ file: "governance/operational_journey_factory", line: 0, message: "MISSING_FACTORY_DIR" });
@@ -187,6 +227,6 @@ for (const [toolId, activation] of Object.entries(baseline)) {
   }
 }
 
-
+validateGeneratedOutputs();
 
 fail(guardId, violations);
