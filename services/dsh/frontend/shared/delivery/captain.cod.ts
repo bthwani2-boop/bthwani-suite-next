@@ -36,25 +36,6 @@ export const DSH_CAPTAIN_COD_STATE_META: Record<DshCaptainCodState, {
   cod_settled:          { label: 'COD مُسوَّى — مكتمل',            actionRequired: false, actionLabel: '',                              wltIntentLabel: 'WLT أكّد التسوية' },
 };
 
-export function buildCaptainCodEntry(
-  orderId: string,
-  amountLabel: string,
-  state: DshCaptainCodState,
-): DshCaptainCodEntry {
-  const meta = DSH_CAPTAIN_COD_STATE_META[state];
-  return {
-    orderId,
-    amountLabel,
-    state,
-    label: meta.label,
-    actionRequired: meta.actionRequired,
-    actionLabel: meta.actionLabel,
-    wltIntentLabel: meta.wltIntentLabel,
-    wltReadOnly: true,
-    contractState: 'DSH_WLT_READ_ONLY_REFERENCE',
-  };
-}
-
 /** Empty order summary model for captain surface initialization */
 export const EMPTY_CAPTAIN_ORDER_SUMMARY = {
   orderId: '',

@@ -24,6 +24,8 @@ import { PreferencesHubScreen } from "./account/PreferencesHubScreen";
 import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
 import { NotificationCenterScreen } from "./notifications/NotificationCenterScreen";
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
+import { SupportTicketScreen } from "./support/SupportTicketScreen";
+import { TicketDetailScreen } from "./support/TicketDetailScreen";
 
 const ICON_SIZE = 22;
 const ICON_COLOR_ACTIVE = colorRoles.brandAction;
@@ -163,6 +165,7 @@ export function DshClientSurface() {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = useState<string>("lightPremium");
 
   const commerceStoreId = selectedStoreId ?? "store-1001";
@@ -182,6 +185,10 @@ export function DshClientSurface() {
     }
     if ((activeTab as string) === "stores" && selectedStoreId === null) {
       setActiveTab("home");
+      return true;
+    }
+    if (activeTicketId) {
+      setActiveTicketId(null);
       return true;
     }
     if (activeTab === "profile" && subroute !== "profile") {
@@ -206,7 +213,7 @@ export function DshClientSurface() {
     );
 
     return () => backHandler.remove();
-  }, [showNotifications, activeOrderId, activeTab, selectedStoreId, subroute]);
+  }, [showNotifications, activeOrderId, activeTab, selectedStoreId, subroute, activeTicketId]);
 
   // Determine header and navigation bar visibility
   const showHeader = activeTab === "home" && !showNotifications && !activeOrderId;
@@ -297,6 +304,12 @@ export function DshClientSurface() {
             <PreferencesHubScreen />
           ) : subroute === "benefits" ? (
             <BenefitsHubScreen />
+          ) : subroute === "support" ? (
+            activeTicketId ? (
+              <TicketDetailScreen ticketId={activeTicketId} />
+            ) : (
+              <SupportTicketScreen onOpenTicket={setActiveTicketId} />
+            )
           ) : (
             <MySpaceScreen
               appearanceMode={appearanceMode as any}
@@ -308,6 +321,7 @@ export function DshClientSurface() {
               onOpenIdentity={() => setSubroute("identity")}
               onOpenAppearance={() => setSubroute("appearance")}
               onOpenPreferences={() => setSubroute("preferences")}
+              onOpenSupport={() => setSubroute("support")}
             />
           )
         ) : (

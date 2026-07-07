@@ -59,6 +59,4 @@ export const DSH_CAPTAIN_SUPPORT_ESCALATION_MAP: readonly DshCaptainSupportEscal
   },
 ] as const;
 
-export function getCaptainEscalationContext(reason: string): DshCaptainSupportEscalationContext | undefined {
-  return DSH_CAPTAIN_SUPPORT_ESCALATION_MAP.find((e) => e.escalationReason === reason);
-}
+

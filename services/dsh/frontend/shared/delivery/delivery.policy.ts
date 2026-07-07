@@ -4,7 +4,6 @@
 import type { DshCaptainRoute, DshCaptainCommandTarget } from './captain.contract';
 import type { DshCaptainOrderStage } from '../orders/orders.contract';
 import type { DshFulfillmentDeliveryMode } from './delivery.contract';
-import { getHandoffsForSurface, type DshOrderLifecycleHandoff } from '../orders/dsh-order-lifecycle-handoffs';
 
 // ─── Captain lifecycle state ──────────────────────────────────────────────────
 
@@ -52,10 +51,6 @@ export const DSH_CAPTAIN_ROUTE_MAP: readonly DshCaptainRouteMapping[] = [
   { lifecycleState: 'store_courier',     primaryRoute: 'inbox',          label: 'وضع موصل المتجر — قائمة التوصيلات',      canReceiveNewOffers: true,  isBlocked: false },
 ] as const;
 
-export function getCaptainRouteForLifecycle(state: DshCaptainLifecycleState): DshCaptainRouteMapping {
-  return DSH_CAPTAIN_ROUTE_MAP.find((m) => m.lifecycleState === state) ?? DSH_CAPTAIN_ROUTE_MAP[0]!;
-}
-
 // ─── Order stage → captain lifecycle ──────────────────────────────────────────
 
 export type DshCaptainOrderStageMapping = {
@@ -101,10 +96,6 @@ export const DSH_CAPTAIN_INBOX_MODE_FILTERS: readonly DshCaptainInboxModeFilter[
   { mode: 'pickup',           visibleInInbox: false, hiddenReason: 'الاستلام الذاتي لا يُسند للكابتن — العميل يستلم من المتجر', modeLabel: 'استلم بنفسك' },
 ] as const;
 
-export function isCaptainInboxVisibleForMode(mode: DshFulfillmentDeliveryMode): boolean {
-  return DSH_CAPTAIN_INBOX_MODE_FILTERS.find((f) => f.mode === mode)?.visibleInInbox ?? false;
-}
-
 // ─── Command target → route policy ────────────────────────────────────────────
 
 export function getRouteForCommandTarget(target: DshCaptainCommandTarget): DshCaptainRoute {
@@ -116,10 +107,3 @@ export function getRouteForCommandTarget(target: DshCaptainCommandTarget): DshCa
   return map[target] ?? 'home';
 }
 
-// ─── Captain lifecycle handoffs ────────────────────────────────────────────────
-
-export function getCaptainActionableHandoffs(): readonly DshOrderLifecycleHandoff[] {
-  return getHandoffsForSurface('app-captain').filter((h) =>
-    h.surfaceObservations.some((o) => o.surfaceId === 'app-captain' && o.actionRequired),
-  );
-}

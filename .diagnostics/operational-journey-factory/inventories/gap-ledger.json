@@ -1,5 +1,5 @@
 {
-  "head_sha": "a44aa80ef66ac838c83141b6e793a90f0dd343d0",
+  "head_sha": "62945c2a88d495e43baa9605d9e3c2e6ae57a49e",
   "status": "DISCOVERY_ONLY",
   "required_gap_fields": [
     "gap_id",
@@ -20,7 +20,7 @@
     "status",
     "blocks_journey_start"
   ],
-  "gap_count": 30,
+  "gap_count": 27,
   "gaps": [
     {
       "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
@@ -452,44 +452,11 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/support/use-support-controller.tsx",
-      "type": "UNUSED_EXPORT",
-      "source_tool": "knip",
-      "path": "services/dsh/frontend/shared/support/use-support-controller.tsx",
-      "reason": "Unused exports: useSupportTicketController, useTicketDetailController",
-      "severity": "MEDIUM",
-      "risk_level": "P2",
-      "journey": "dsh-order-lifecycle-journey",
-      "affected_journeys": [
-        "dsh-order-lifecycle-journey"
-      ],
-      "affected_surface": "services/dsh/frontend/shared/support/use-support-controller.tsx",
-      "owner": "toolchain",
-      "root_cause": "dead_code",
-      "pattern_group": "knip",
-      "required_action": "Remove dead exports",
-      "target_files": [
-        "services/dsh/frontend/shared/support/use-support-controller.tsx"
-      ],
-      "allowed_decision": "REMOVE_OR_KEEP",
-      "forbidden_actions": [
-        "leave_dead_code"
-      ],
-      "verification_commands": [
-        "pnpm run diagnostics:operational:reconcile"
-      ],
-      "proof_required": [
-        "exports removed or resolved"
-      ],
-      "status": "OPEN",
-      "blocks_journey_start": false
-    },
-    {
       "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/support/support.captain-escalation.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
       "path": "services/dsh/frontend/shared/support/support.captain-escalation.ts",
-      "reason": "Unused exports: getCaptainEscalationContext",
+      "reason": "Unused exports: DSH_CAPTAIN_SUPPORT_ESCALATION_MAP",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
@@ -503,39 +470,6 @@
       "required_action": "Remove dead exports",
       "target_files": [
         "services/dsh/frontend/shared/support/support.captain-escalation.ts"
-      ],
-      "allowed_decision": "REMOVE_OR_KEEP",
-      "forbidden_actions": [
-        "leave_dead_code"
-      ],
-      "verification_commands": [
-        "pnpm run diagnostics:operational:reconcile"
-      ],
-      "proof_required": [
-        "exports removed or resolved"
-      ],
-      "status": "OPEN",
-      "blocks_journey_start": false
-    },
-    {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/support/support-registry.ts",
-      "type": "UNUSED_EXPORT",
-      "source_tool": "knip",
-      "path": "services/dsh/frontend/shared/support/support-registry.ts",
-      "reason": "Unused exports: SUPPORT_CLIENT_CATEGORIES",
-      "severity": "MEDIUM",
-      "risk_level": "P2",
-      "journey": "dsh-order-lifecycle-journey",
-      "affected_journeys": [
-        "dsh-order-lifecycle-journey"
-      ],
-      "affected_surface": "services/dsh/frontend/shared/support/support-registry.ts",
-      "owner": "toolchain",
-      "root_cause": "dead_code",
-      "pattern_group": "knip",
-      "required_action": "Remove dead exports",
-      "target_files": [
-        "services/dsh/frontend/shared/support/support-registry.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -588,7 +522,7 @@
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
       "path": "services/dsh/frontend/shared/delivery/delivery.policy.ts",
-      "reason": "Unused exports: getCaptainRouteForLifecycle, isCaptainInboxVisibleForMode, getCaptainActionableHandoffs",
+      "reason": "Unused exports: DSH_CAPTAIN_ROUTE_MAP, DSH_CAPTAIN_INBOX_MODE_FILTERS",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
@@ -621,7 +555,7 @@
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
       "path": "services/dsh/frontend/shared/delivery/captain.cod.ts",
-      "reason": "Unused exports: buildCaptainCodEntry",
+      "reason": "Unused exports: DSH_CAPTAIN_COD_STATE_META",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
@@ -635,39 +569,6 @@
       "required_action": "Remove dead exports",
       "target_files": [
         "services/dsh/frontend/shared/delivery/captain.cod.ts"
-      ],
-      "allowed_decision": "REMOVE_OR_KEEP",
-      "forbidden_actions": [
-        "leave_dead_code"
-      ],
-      "verification_commands": [
-        "pnpm run diagnostics:operational:reconcile"
-      ],
-      "proof_required": [
-        "exports removed or resolved"
-      ],
-      "status": "OPEN",
-      "blocks_journey_start": false
-    },
-    {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/media/captain-pod-downstream.ts",
-      "type": "UNUSED_EXPORT",
-      "source_tool": "knip",
-      "path": "services/dsh/frontend/shared/media/captain-pod-downstream.ts",
-      "reason": "Unused exports: DSH_CAPTAIN_POD_DOWNSTREAM",
-      "severity": "MEDIUM",
-      "risk_level": "P2",
-      "journey": "dsh-order-lifecycle-journey",
-      "affected_journeys": [
-        "dsh-order-lifecycle-journey"
-      ],
-      "affected_surface": "services/dsh/frontend/shared/media/captain-pod-downstream.ts",
-      "owner": "toolchain",
-      "root_cause": "dead_code",
-      "pattern_group": "knip",
-      "required_action": "Remove dead exports",
-      "target_files": [
-        "services/dsh/frontend/shared/media/captain-pod-downstream.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [

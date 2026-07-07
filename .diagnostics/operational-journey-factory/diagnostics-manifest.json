@@ -4,7 +4,7 @@
     "path": ".diagnostics/operational-journey-factory",
     "type": "directory",
     "file_count": 40,
-    "size_bytes": 5437959,
+    "size_bytes": 5423228,
     "decision": "KEEP_CANONICAL_FACTORY_ROOT",
     "quote": "Core operational inventory root; only core inventory files are canonical. Old package folders remain raw evidence unless archived."
   },

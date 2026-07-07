@@ -1,5 +1,5 @@
 {
-  "head_sha": "a44aa80ef66ac838c83141b6e793a90f0dd343d0",
+  "head_sha": "62945c2a88d495e43baa9605d9e3c2e6ae57a49e",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -254,7 +254,7 @@
     {
       "surface": "services/dsh/frontend/app-captain",
       "kind": "ui_surface",
-      "files": 40,
+      "files": 39,
       "screens": [
         "services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx",
         "services/dsh/frontend/app-captain/account/DshCaptainEntryScreen.tsx",
@@ -274,12 +274,10 @@
       "pages": [],
       "route_bindings": [
         "services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx",
-        "services/dsh/frontend/app-captain/dsh-captain.navigation-bridge.ts",
         "services/dsh/frontend/app-captain/dsh-captain.routes.ts",
         "services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx"
       ],
       "navigation_bindings": [
-        "services/dsh/frontend/app-captain/dsh-captain.navigation-bridge.ts",
         "services/dsh/frontend/app-captain/dsh-captain.types.ts",
         "services/dsh/frontend/app-captain/index.ts",
         "services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx",
@@ -297,7 +295,6 @@
         "services/dsh/frontend/app-captain/components/ModernPremiumHeader.tsx",
         "services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
         "services/dsh/frontend/app-captain/dsh-captain-binding.contracts.ts",
-        "services/dsh/frontend/app-captain/dsh-captain.navigation-bridge.ts",
         "services/dsh/frontend/app-captain/dsh-captain.routes.ts",
         "services/dsh/frontend/app-captain/dsh-captain.screen-registry.ts",
         "services/dsh/frontend/app-captain/dsh-captain.types.ts",
@@ -421,7 +418,7 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 365,
+      "icons_components_actions_candidates": 369,
       "states_candidates": 132
     },
     {
@@ -749,7 +746,7 @@
     {
       "surface": "services/dsh/frontend/shared",
       "kind": "shared_brain",
-      "files": 294,
+      "files": 293,
       "screens": [
         "services/dsh/frontend/shared/cart/cart-screen-domain.ts"
       ],
@@ -1202,7 +1199,6 @@
     "apps/control-panel/runtime/src/shell/ControlPanelNavigation.tsx",
     "apps/control-panel/runtime/src/shell/useDshNavigation.ts",
     "services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx",
-    "services/dsh/frontend/app-captain/dsh-captain.navigation-bridge.ts",
     "services/dsh/frontend/app-captain/dsh-captain.routes.ts",
     "services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx",
     "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
@@ -1238,7 +1234,6 @@
     "apps/control-panel/runtime/src/shell/DataTablePageFrame.tsx",
     "apps/control-panel/runtime/src/shell/index.ts",
     "apps/control-panel/runtime/src/shell/useDshNavigation.ts",
-    "services/dsh/frontend/app-captain/dsh-captain.navigation-bridge.ts",
     "services/dsh/frontend/app-captain/dsh-captain.types.ts",
     "services/dsh/frontend/app-captain/index.ts",
     "services/dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx",
@@ -1434,7 +1429,6 @@
     "services/dsh/frontend/app-captain/components/ModernPremiumHeader.tsx",
     "services/dsh/frontend/app-captain/dispatch/DshCaptainOrdersScreen.tsx",
     "services/dsh/frontend/app-captain/dsh-captain-binding.contracts.ts",
-    "services/dsh/frontend/app-captain/dsh-captain.navigation-bridge.ts",
     "services/dsh/frontend/app-captain/dsh-captain.routes.ts",
     "services/dsh/frontend/app-captain/dsh-captain.screen-registry.ts",
     "services/dsh/frontend/app-captain/dsh-captain.types.ts",

@@ -24,6 +24,7 @@ export type MySpaceScreenProps = {
   onOpenIdentity?: () => void;
   onOpenAppearance?: () => void;
   onOpenPreferences?: () => void;
+  onOpenSupport?: () => void;
   onBack?: () => void;
 };
 
@@ -37,7 +38,8 @@ type MySpaceTab =
   | 'identity'
   | 'appearance'
   | 'language'
-  | 'preferences';
+  | 'preferences'
+  | 'support';
 
 type TabConfig = {
   id: MySpaceTab;
@@ -57,6 +59,7 @@ const TABS: TabConfig[] = [
   { id: 'appearance', label: 'المظهر', summary: 'فاتح أبيض أو داكن زجاجي', iconName: 'color-palette-outline' },
   { id: 'language', label: 'اللغة', summary: 'العربية أو الإنجليزية', iconName: 'globe-outline' },
   { id: 'preferences', label: 'تفضيلات التوصيل', summary: 'إعدادات خاصة بالتسليم والاستبدال', iconName: 'options-outline' },
+  { id: 'support', label: 'الدعم والمساعدة', summary: 'تذاكر الدعم ومتابعة المشاكل', iconName: 'help-buoy-outline' },
 ];
 
 function MySpaceRow({
@@ -104,6 +107,7 @@ export function MySpaceScreen({
   onOpenIdentity,
   onOpenAppearance,
   onOpenPreferences,
+  onOpenSupport,
   onBack,
 }: MySpaceScreenProps) {
   const [lang, setLang] = useState<string>("ar");
@@ -119,6 +123,7 @@ export function MySpaceScreen({
       case 'identity':     return onOpenIdentity?.();
       case 'appearance':   return onOpenAppearance?.();
       case 'preferences':  return onOpenPreferences?.();
+      case 'support':      return onOpenSupport?.();
       default:             break;
     }
   };

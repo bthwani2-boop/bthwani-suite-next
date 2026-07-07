@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
@@ -20,7 +20,11 @@ import {
   type DshTicketCategory,
 } from "../../shared/support";
 
-export function SupportTicketScreen() {
+export type SupportTicketScreenProps = {
+  readonly onOpenTicket?: (ticketId: string) => void;
+};
+
+export function SupportTicketScreen({ onOpenTicket }: SupportTicketScreenProps = {}) {
   const identity = useIdentitySession();
   const { listState, actionState, reload, submitTicket, resetAction } =
     useSupportTicketController(identity.state.kind);
@@ -81,14 +85,21 @@ export function SupportTicketScreen() {
           const vm = buildSupportTicketViewModel(t);
           return (
             <Card key={vm.id}>
-              <View style={styles.ticketRow}>
-                <View style={styles.ticketInfo}>
-                  <Text role="titleSm">{vm.subject}</Text>
-                  <Text role="caption" tone="muted">{vm.categoryLabel}</Text>
-                  <Text role="caption" tone="muted">{vm.createdAt}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`فتح التذكرة ${vm.subject}`}
+                testID={`support-ticket-${vm.id}`}
+                onPress={() => onOpenTicket?.(vm.id)}
+              >
+                <View style={styles.ticketRow}>
+                  <View style={styles.ticketInfo}>
+                    <Text role="titleSm">{vm.subject}</Text>
+                    <Text role="caption" tone="muted">{vm.categoryLabel}</Text>
+                    <Text role="caption" tone="muted">{vm.createdAt}</Text>
+                  </View>
+                  <Badge label={vm.statusLabel} tone={vm.statusTone} />
                 </View>
-                <Badge label={vm.statusLabel} tone={vm.statusTone} />
-              </View>
+              </Pressable>
             </Card>
           );
         })}

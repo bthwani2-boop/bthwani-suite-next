@@ -1,6 +1,6 @@
 # Operational Gap Ledger (Reconciled)
 
-head_sha: `a44aa80ef66ac838c83141b6e793a90f0dd343d0`
+head_sha: `62945c2a88d495e43baa9605d9e3c2e6ae57a49e`
 status: `DISCOVERY_ONLY`
 
 | gap_id | source_tool | path | type | owner | risk_level | required_action | allowed_decision | verification_commands | status | blocks_journey_start |
@@ -18,13 +18,10 @@ status: `DISCOVERY_ONLY`
 | `UNUSED_EXPORT:services/dsh/frontend/shared/orders/use-orders-controller.ts` | knip | `services/dsh/frontend/shared/orders/use-orders-controller.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner.types.ts` | knip | `services/dsh/frontend/shared/partner/partner.types.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner-activation.model.ts` | knip | `services/dsh/frontend/shared/partner/partner-activation.model.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/support/use-support-controller.tsx` | knip | `services/dsh/frontend/shared/support/use-support-controller.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/support/support.captain-escalation.ts` | knip | `services/dsh/frontend/shared/support/support.captain-escalation.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/support/support-registry.ts` | knip | `services/dsh/frontend/shared/support/support-registry.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner.flow-maps.ts` | knip | `services/dsh/frontend/shared/partner/partner.flow-maps.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/delivery/delivery.policy.ts` | knip | `services/dsh/frontend/shared/delivery/delivery.policy.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/delivery/captain.cod.ts` | knip | `services/dsh/frontend/shared/delivery/captain.cod.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/media/captain-pod-downstream.ts` | knip | `services/dsh/frontend/shared/media/captain-pod-downstream.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx` | knip | `services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx` | knip | `services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts` | knip | `services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
