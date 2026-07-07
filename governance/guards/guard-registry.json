@@ -364,6 +364,14 @@
       "exit_level": "warn",
       "description": "Checks repository naming with ls-lint. Warn-only while legacy names remain.",
       "source_file": ".ls-lint.yml"
+    },
+    {
+      "id": "foundation-cross-journey-remediation",
+      "name": "Foundation Cross-Journey Remediation Gate",
+      "script": "guard:foundation-cross-journey-remediation",
+      "exit_level": "fail",
+      "description": "Verifies that cross-journey gaps are fully remediated or triaged.",
+      "source_file": "tools/guards/foundation-cross-journey-remediation-gate.mjs"
     }
   ]
 }
