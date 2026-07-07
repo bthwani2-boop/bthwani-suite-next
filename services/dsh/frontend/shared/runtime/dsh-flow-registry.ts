@@ -1012,7 +1012,7 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
     actor: 'operator',
     domain: 'control-panel-support',
     routeHint: '/support?workspace=customer-360',
-    screenOwner: 'SupportHubScreens.tsx + Customer360Workspace.tsx',
+    screenOwner: 'SupportDashboardScreen.tsx',
     primaryAction: 'Open a unified customer support view, then route to assisted order, rescue, ticket, order, or WLT visibility.',
     requiredStates: ['loading', 'empty', 'error', 'success', 'blocked'],
     evidenceStatus: 'needs-visual-evidence',
@@ -1365,7 +1365,7 @@ function getDshFlowRegistryValidationSummary(): DshFlowRegistryValidationResult 
 /**
  * Translates a DshOnDemandPolicy value to a human-readable Arabic label.
  * Centralizes the label map that was previously duplicated in
- * SupportEscalationQueueScreen, SupportHubScreens, DshFieldReadinessEscalationScreen,
+ * SupportEscalationQueueScreen, SupportDashboardScreen, DshFieldReadinessEscalationScreen,
  * DshFieldStoreOnboardingScreen, and similar screens.
  */
 export function resolveDshOnDemandPolicyLabel(policy?: string): string {

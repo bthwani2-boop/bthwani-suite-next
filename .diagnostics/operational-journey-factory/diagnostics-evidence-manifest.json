@@ -1,18 +1,18 @@
 [
   {
     "path": ".diagnostics/operational-journey-factory/tool-evidence/jscpd/jscpd-report.json",
-    "sha256": "0d2dd6fed625b211cf6a548076025e56a7dcbad37f9d7ea5e5cd7b3fc850d557",
-    "size": 3177487,
-    "generated_at": "2026-07-07T19:38:08.456Z",
-    "head_sha": "e45f83ae051822efef4de56cac4d0a06bdc056fc",
+    "sha256": "07fc8982352477492b40500df658fd330aba79148e47a5dfaa31838167a543dc",
+    "size": 3176312,
+    "generated_at": "2026-07-07T19:53:49.100Z",
+    "head_sha": "cc7e86fa73ad32e4d46da8991222be5690abaf3b",
     "classification": "RAW_DUPLICATION_REPORT"
   },
   {
     "path": ".diagnostics/operational-journey-factory/tool-evidence/knip-report.json",
-    "sha256": "6873567d7bf6444687bb66df73b78d86fa21532e035bd0285d951535e4b321c7",
-    "size": 92079,
-    "generated_at": "2026-07-07T19:38:13.621Z",
-    "head_sha": "e45f83ae051822efef4de56cac4d0a06bdc056fc",
+    "sha256": "259c168a0f0cfd7f317e8a70d86eed27abd1e3790ed2d3371a28a5d61bdc9149",
+    "size": 89962,
+    "generated_at": "2026-07-07T19:53:55.268Z",
+    "head_sha": "cc7e86fa73ad32e4d46da8991222be5690abaf3b",
     "classification": "RAW_DEAD_CODE_REPORT"
   }
 ]

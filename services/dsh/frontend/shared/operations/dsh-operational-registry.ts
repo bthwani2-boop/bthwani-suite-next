@@ -305,7 +305,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/control-panel/support/SupportHubScreens.tsx',
+    currentEvidencePath: 'dsh/frontend/control-panel/support/SupportDashboardScreen.tsx',
     notes: 'Support must stay linked to order/trip/exception context instead of becoming detached ticket data.',
   },
   {

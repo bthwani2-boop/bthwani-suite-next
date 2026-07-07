@@ -6,6 +6,31 @@
 - gap_count_after_iteration_1: 30
 - gap_count_after_iteration_2: 27
 - head_sha_iteration_2: 0fe91251c693f9bec0f8ba4f01397469dee68c4d
+- gap_count_after_iteration_4: 23
+
+## Iteration 4 — resolved all 6 previously-deferred unbound-screen items
+
+Per explicit user direction, these were decided and implemented directly rather than deferred:
+
+- [x] BOUND — `PartnerListScreen` + `FieldReadinessQueueScreen` had real controllers (`usePartnerAdminController`, `useFieldEscalationController`) but zero route consumers
+  - action: added a 3-tab switcher to `apps/control-panel/runtime/src/app/dsh/partners/page.tsx` (طلبات المراجعة / كل الشركاء / جاهزية الميدان), wiring `PartnerListScreen.onSelectPartner` and the review queue to the same `/dsh/partners/{id}` route
+  - verification: `pnpm run typecheck` PASS
+- [x] RETIRE_DEAD_WITH_PROOF — `SupportHubScreen.tsx` (166 lines) confirmed a strict subset of the already-bound `SupportDashboardScreen.tsx` (529 lines) — both wrap the identical two controllers (`useOperatorTicketController`, `useSupportIncidentController`); zero route/nav consumer
+  - also found: 3 shared registries (`dsh-operational-registry.ts`, `dsh-cross-surface-closure-map.ts`, `dsh-flow-registry.ts`) cited a nonexistent file `SupportHubScreens.tsx` (plural) and described routing to `Customer360Workspace`/`ManualCallIntakeWorkspace` — verified via repo-wide search that neither component exists anywhere. This was a `CONTRADICTORY_GATE_CLAIM` (fabricated evidence).
+  - action: deleted `SupportHubScreen.tsx` + its barrel export; corrected all 3 registries to reference the real, bound `SupportDashboardScreen.tsx`; replaced the two fabricated `routeProof` claims with explicit `PENDING_IMPLEMENTATION` / `FIX_REQUIRED` markers so the gap is honestly tracked instead of silently claimed-closed
+  - verification: `pnpm run typecheck` PASS
+- [x] RETIRE_DEAD_WITH_PROOF — `ControlPanelDshActionQueue.tsx` — typed, well-formed component with zero non-barrel consumers; checked its one plausible mount point (`ControlPanelDshClosureDashboardScreen`'s journey-recommendation list) and found that screen — and every other control-panel screen surveyed — already uses a different, actually-adopted shared pattern (`WebControlPanelRecommendation` / `WebControlPanelActionCluster`) with an incompatible prop shape. Never adopted anywhere.
+  - action: deleted file + barrel export
+  - verification: `pnpm run typecheck` PASS
+- [x] BOUND — `PartnerCatalogReadinessPanel.tsx` — real per-product readiness checklist (publish stage, stock, availability gates) with zero consumers; confirmed `InventoryCatalogScreen.tsx` had no equivalent per-product readiness UI (only a store-level gate)
+  - action: added a "الجاهزية للنشر" button to each product card in `InventoryCatalogScreen.tsx`, wired to existing item fields (`item.id`, `item.name`, `item.publishStage`, `item.available`, `item.stockCount`) via new `readinessOpenId` state mirroring the screen's existing `expandedDetailsId` pattern — additive only, no existing behavior touched
+  - verification: `pnpm run typecheck` PASS (2 type errors surfaced and fixed: `Button` has no `testID` prop, used `accessibilityLabel` instead; `exactOptionalPropertyTypes` required a spread guard for optional `publishStage`)
+- [x] RETIRE_DEAD_WITH_PROOF — `PublishedCatalogScreen.tsx` — confirmed identical prop contract (`storeId`, `onBack`) to the live, bound `StoreDetailRoute → StoreDetailShell` path; zero consumers of the screen or its barrel anywhere in the repo
+  - action: deleted the entire `app-client/catalog/` directory (screen + barrel, its only contents)
+  - note: did NOT delete the 7 local UI components it referenced (FilterRail, FloatingActionCircle, HeroCover, MetricChip, ProductCard, ServiceModeSegment, StatusBadge) — prior evidence showed several have real consumers elsewhere (`HomeFilterRailSection.tsx`, `StoreHero.tsx`, `ModernPremiumHeader.tsx`); re-run diagnostics will show their true remaining state now that this screen is gone
+  - verification: `pnpm run typecheck` PASS
+
+gap_count 27 → 23 (guard: `operational-diagnostics-reconciliation-gate: PASS`)
 
 ## Completed items (proof-backed)
 

@@ -38,6 +38,7 @@ type DshCanonicalProductCard = {
 };
 import { getDshProductRuntimeClient } from '../../shared/runtime/ui-only-runtime-clients';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
+import { PartnerCatalogReadinessPanel } from './PartnerCatalogReadinessPanel';
 // The hierarchy filter below (domain/main-category/subcategory/facet) has no
 // backing taxonomy anywhere in shared/catalog or the backend product API --
 // GET /stores/{store_id}/products never returns these fields (see the
@@ -782,8 +783,10 @@ function InventoryCatalogCardPanel({
   detail,
   expanded,
   showDetails,
+  showReadiness,
   onToggleEdit,
   onToggleDetails,
+  onToggleReadiness,
   override,
   onOverrideChange,
   onApplyOverride,
@@ -797,8 +800,10 @@ function InventoryCatalogCardPanel({
   detail?: InventoryCatalogItemDetail | undefined;
   expanded: boolean;
   showDetails: boolean;
+  showReadiness: boolean;
   onToggleEdit: () => void;
   onToggleDetails: () => void;
+  onToggleReadiness: () => void;
   override: PartnerLocalOverride;
   onOverrideChange: (field: keyof PartnerLocalOverride, value: string | boolean) => void;
   onApplyOverride: () => void;
@@ -916,6 +921,14 @@ function InventoryCatalogCardPanel({
               fullWidth={false}
               onPress={onToggleDetails}
             />
+            <Button
+              label="الجاهزية للنشر"
+              size="sm"
+              tone="secondary"
+              fullWidth={false}
+              accessibilityLabel={`عرض جاهزية النشر لـ ${item.name}`}
+              onPress={onToggleReadiness}
+            />
             {onEditIdentity ? (
               <Button
                 label="تعديل الهوية"
@@ -961,6 +974,16 @@ function InventoryCatalogCardPanel({
             />
           ) : null}
 
+          {showReadiness ? (
+            <PartnerCatalogReadinessPanel
+              productId={item.id}
+              productName={item.name}
+              {...(item.publishStage !== undefined ? { publishStage: item.publishStage } : {})}
+              available={item.available}
+              stockCount={item.stockCount}
+              onClose={onToggleReadiness}
+            />
+          ) : null}
           {showDetails && detail ? (
             <Surface tone="default" padding={2} gap={1} border={false}>
               <KeyValueList dense items={detailItems} />
@@ -1034,6 +1057,7 @@ function InventoryCatalogContent({
 
   const [expandedEditId, setExpandedEditId] = React.useState<string | null>(null);
   const [expandedDetailsId, setExpandedDetailsId] = React.useState<string | null>(null);
+  const [readinessOpenId, setReadinessOpenId] = React.useState<string | null>(null);
   const [overrides, setOverrides] = React.useState<Record<string, PartnerLocalOverride>>({});
   const [lastSavedLabel, setLastSavedLabel] = React.useState<string | null>(null);
   const [toolMessage, setToolMessage] = React.useState<string | null>(null);
@@ -1263,6 +1287,8 @@ function InventoryCatalogContent({
                 showDetails={isShowingDetails}
                 onToggleEdit={() => setExpandedEditId((prev) => (prev === item.id ? null : item.id))}
                 onToggleDetails={() => setExpandedDetailsId((prev) => (prev === item.id ? null : item.id))}
+                showReadiness={readinessOpenId === item.id}
+                onToggleReadiness={() => setReadinessOpenId((prev) => (prev === item.id ? null : item.id))}
                 override={getOverride(item)}
                 onOverrideChange={(field, value) => handleOverrideChange(item.id, field, value)}
                 onApplyOverride={() => handleApplyOverride(item)}

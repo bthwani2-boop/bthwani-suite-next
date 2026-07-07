@@ -1,5 +1,5 @@
 {
-  "head_sha": "e45f83ae051822efef4de56cac4d0a06bdc056fc",
+  "head_sha": "cc7e86fa73ad32e4d46da8991222be5690abaf3b",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -218,7 +218,7 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 37,
+      "icons_components_actions_candidates": 38,
       "states_candidates": 18
     },
     {
@@ -329,7 +329,7 @@
     {
       "surface": "services/dsh/frontend/app-client",
       "kind": "ui_surface",
-      "files": 61,
+      "files": 59,
       "screens": [
         "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx",
         "services/dsh/frontend/app-client/account/AppearanceHubScreen.tsx",
@@ -338,7 +338,6 @@
         "services/dsh/frontend/app-client/account/MySpaceScreen.tsx",
         "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
         "services/dsh/frontend/app-client/cart/CartScreen.tsx",
-        "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
         "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
         "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx",
         "services/dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx",
@@ -375,7 +374,6 @@
         "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
         "services/dsh/frontend/app-client/cart/CartScreen.tsx",
         "services/dsh/frontend/app-client/cart/PaymentDecisionSection.tsx",
-        "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
         "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
         "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
         "services/dsh/frontend/app-client/DshClientSurface.tsx",
@@ -418,8 +416,8 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 369,
-      "states_candidates": 132
+      "icons_components_actions_candidates": 359,
+      "states_candidates": 117
     },
     {
       "surface": "services/dsh/frontend/app-field",
@@ -563,13 +561,13 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 243,
+      "icons_components_actions_candidates": 244,
       "states_candidates": 353
     },
     {
       "surface": "services/dsh/frontend/control-panel",
       "kind": "ui_surface",
-      "files": 80,
+      "files": 78,
       "screens": [
         "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
         "services/dsh/frontend/control-panel/analytics/AnalyticsDashboardScreen.tsx",
@@ -604,8 +602,7 @@
         "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
         "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
         "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
-        "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-        "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx"
+        "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx"
       ],
       "pages": [],
       "route_bindings": [],
@@ -652,7 +649,6 @@
         "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
         "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
         "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-        "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
         "services/dsh/frontend/control-panel/support/SupportWorkspaces.tsx"
       ],
       "shared_imports": [
@@ -714,19 +710,17 @@
         "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
         "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
         "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
-        "services/dsh/frontend/control-panel/shared/ControlPanelDshActionQueue.tsx",
         "services/dsh/frontend/control-panel/shared/ControlPanelDshDecisionBoard.tsx",
         "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
         "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
         "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-        "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
         "services/dsh/frontend/control-panel/support/SupportWorkspaces.tsx"
       ],
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 270,
-      "states_candidates": 444
+      "icons_components_actions_candidates": 256,
+      "states_candidates": 426
     },
     {
       "surface": "services/dsh/frontend/css-modules.d.ts",
@@ -1090,7 +1084,6 @@
     "services/dsh/frontend/app-client/account/MySpaceScreen.tsx",
     "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
     "services/dsh/frontend/app-client/cart/CartScreen.tsx",
-    "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
     "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryScreen.tsx",
     "services/dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx",
@@ -1164,7 +1157,6 @@
     "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
     "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
     "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-    "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
     "services/dsh/frontend/shared/cart/cart-screen-domain.ts",
     "shared/ui-kit/src/components/Screen/index.d.ts",
     "shared/ui-kit/src/components/Screen/index.js",
@@ -1304,7 +1296,6 @@
     "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
     "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
     "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-    "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
     "services/dsh/frontend/control-panel/support/SupportWorkspaces.tsx",
     "services/dsh/frontend/shared/administration/administration-registry.ts",
     "services/dsh/frontend/shared/catalog/catalog-registry.ts",
@@ -1461,7 +1452,6 @@
     "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
     "services/dsh/frontend/app-client/cart/CartScreen.tsx",
     "services/dsh/frontend/app-client/cart/PaymentDecisionSection.tsx",
-    "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
     "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
     "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
@@ -1614,12 +1604,10 @@
     "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
     "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
     "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
-    "services/dsh/frontend/control-panel/shared/ControlPanelDshActionQueue.tsx",
     "services/dsh/frontend/control-panel/shared/ControlPanelDshDecisionBoard.tsx",
     "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
     "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
     "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-    "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
     "services/dsh/frontend/control-panel/support/SupportWorkspaces.tsx",
     "services/dsh/frontend/shared/auth/AuthLoginCard.tsx",
     "services/dsh/frontend/shared/finance-wlt-link/field-commission/index.ts",

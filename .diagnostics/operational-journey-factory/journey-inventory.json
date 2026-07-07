@@ -1,5 +1,5 @@
 {
-  "head_sha": "e45f83ae051822efef4de56cac4d0a06bdc056fc",
+  "head_sha": "cc7e86fa73ad32e4d46da8991222be5690abaf3b",
   "status": "DISCOVERY_ONLY",
   "source_files": {
     "service_blueprint": {
@@ -113,7 +113,6 @@
     "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
     "services/dsh/frontend/app-client/cart/CartScreen.tsx",
     "services/dsh/frontend/app-client/cart/PaymentDecisionSection.tsx",
-    "services/dsh/frontend/app-client/catalog/PublishedCatalogScreen.tsx",
     "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
     "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
     "services/dsh/frontend/app-client/home-discovery/HomeCategorySection.tsx",
@@ -209,12 +208,10 @@
     "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
     "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
     "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
-    "services/dsh/frontend/control-panel/shared/ControlPanelDshActionQueue.tsx",
     "services/dsh/frontend/control-panel/shared/ControlPanelDshDecisionBoard.tsx",
     "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
     "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
     "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
-    "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
     "services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx"
   ],
   "package_scripts_source": "package.json",
