@@ -1,8 +1,8 @@
 # Canonical Operational Journey Reference
 
 - branch: journy
-- head_sha: 5da17eac9e1287f499f97cea6a7a1bd7a786f537
-- generated_at: 2026-07-07T16:28:13.636Z
+- head_sha: 8a316bd9659257b400681ef5f65f4c466d3707eb
+- generated_at: 2026-07-07T16:29:13.205Z
 - implementation_started: false
 - closure_claim: false
 
@@ -10,7 +10,7 @@
 
 | Metric | Value |
 |---|---:|
-| head_sha | 5da17eac9e1287f499f97cea6a7a1bd7a786f537 |
+| head_sha | 8a316bd9659257b400681ef5f65f4c466d3707eb |
 | branch | journy |
 | gap_count | 169 |
 | blocking_gap_count | 0 |
@@ -26,20 +26,20 @@
 
 | Source | Reference copy | sha256 | Size |
 |---|---|---|---:|
-| `.diagnostics/operational-journey-factory/toolchain-inventory.json` | `.diagnostics/operational-journey-factory/inventories/toolchain-inventory.json` | `04eb4b43b8331e063fc152528f69541ca07ef1401dded76c6a928b51747d5465` | 92147 |
-| `.diagnostics/operational-journey-factory/toolchain-inventory.md` | `.diagnostics/operational-journey-factory/inventories/toolchain-inventory.md` | `7142eca2611d8148aab0e88d9c04c431d6053eab2de870a3697bd431771073ff` | 6177 |
-| `.diagnostics/operational-journey-factory/surface-inventory.json` | `.diagnostics/operational-journey-factory/inventories/surface-inventory.json` | `8ccadb6573bcbbc9bd278cb806598f0e6148224003bda7c8d09b484b7b72fd9d` | 105612 |
-| `.diagnostics/operational-journey-factory/surface-inventory.md` | `.diagnostics/operational-journey-factory/inventories/surface-inventory.md` | `c174aa4d70ceac8ce6fd3dba1d14dddc1f37a11e7213473a23006154ed0c06ad` | 2086 |
-| `.diagnostics/operational-journey-factory/journey-inventory.json` | `.diagnostics/operational-journey-factory/inventories/journey-inventory.json` | `234e91f5d61bf102a3d4de12830bffb74fd2ec48655dadf40a2566197d766e39` | 141337 |
-| `.diagnostics/operational-journey-factory/journey-inventory.md` | `.diagnostics/operational-journey-factory/inventories/journey-inventory.md` | `f5f2d27378ae7f2b6748d3d61341a64dd00d879964bf4bea36844c1fc3d13bb2` | 1235 |
-| `.diagnostics/operational-journey-factory/gap-ledger.json` | `.diagnostics/operational-journey-factory/inventories/gap-ledger.json` | `adcadacaed0846c3e31df6d1e5bb4db5cf5f4b8768c102faf2372be061ca8734` | 202081 |
-| `.diagnostics/operational-journey-factory/gap-ledger.md` | `.diagnostics/operational-journey-factory/inventories/gap-ledger.md` | `f98a53d7a7bec0178dcadf89e1797204e5b5ce4f0cd857e5dd128ced87eba46a` | 50754 |
+| `.diagnostics/operational-journey-factory/toolchain-inventory.json` | `.diagnostics/operational-journey-factory/inventories/toolchain-inventory.json` | `cbca2334d6d63220f0925c9921ec5f40cd846d77f09bf88fb39a31d559c8b1b4` | 92147 |
+| `.diagnostics/operational-journey-factory/toolchain-inventory.md` | `.diagnostics/operational-journey-factory/inventories/toolchain-inventory.md` | `297a10d25768209b757b3994e591fc3eb657c2380236e1e7f4193871c24f1f28` | 6177 |
+| `.diagnostics/operational-journey-factory/surface-inventory.json` | `.diagnostics/operational-journey-factory/inventories/surface-inventory.json` | `947a8949b4bb42b8e8d987cfa98998fba7111cb7e8b787624384635482d98e61` | 105612 |
+| `.diagnostics/operational-journey-factory/surface-inventory.md` | `.diagnostics/operational-journey-factory/inventories/surface-inventory.md` | `1056fdb265e94f8e31677b582a7b0351bad3a0dc864dba0bf5aad18d57c9ba1d` | 2086 |
+| `.diagnostics/operational-journey-factory/journey-inventory.json` | `.diagnostics/operational-journey-factory/inventories/journey-inventory.json` | `447074149891e85709d2808fe1fb2b2ce56877e7d20dd2cbda262dfba6557108` | 141337 |
+| `.diagnostics/operational-journey-factory/journey-inventory.md` | `.diagnostics/operational-journey-factory/inventories/journey-inventory.md` | `d0e30e92f8821ed9874fd5ca0da64eba700153267f3bd1693c902e723b470a61` | 1235 |
+| `.diagnostics/operational-journey-factory/gap-ledger.json` | `.diagnostics/operational-journey-factory/inventories/gap-ledger.json` | `a09e033dfd6c55d21a26a7f8925e5b6655b2326fd56a26bbaf3cd4054ba22890` | 202081 |
+| `.diagnostics/operational-journey-factory/gap-ledger.md` | `.diagnostics/operational-journey-factory/inventories/gap-ledger.md` | `9c5445acf427d31cf8d466a76c2d06d410a3ee685cf147e9e6e4dc4cdde0228d` | 50754 |
 
 ## Diagnostics Folder Decisions
 
 | Entry | Type | Files | Size | Decision | Quote |
 |---|---|---:|---:|---|---|
-| .diagnostics/operational-journey-factory | directory | 51 | 6502589 | KEEP_CANONICAL_FACTORY_ROOT | Core operational inventory root; only core inventory files are canonical. Old package folders remain raw evidence unless archived. |
+| .diagnostics/operational-journey-factory | directory | 51 | 6502593 | KEEP_CANONICAL_FACTORY_ROOT | Core operational inventory root; only core inventory files are canonical. Old package folders remain raw evidence unless archived. |
 | .diagnostics/tools | directory | 2 | 18100 | QUOTE_TO_TOOLCHAIN_REFERENCE_THEN_ARCHIVE | Useful for tool ownership, failures, and optional/manual tool classification. |
 
 ## Extracted Evidence Candidates

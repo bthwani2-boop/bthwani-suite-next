@@ -1,7 +1,7 @@
 {
   "apply_cleanup": false,
   "archive_required_before_delete": true,
-  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/5da17eac9e1287f499f97cea6a7a1bd7a786f537-2026-07-07T16-28-13-632Z.zip",
+  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/8a316bd9659257b400681ef5f65f4c466d3707eb-2026-07-07T16-29-13-201Z.zip",
   "cleanup_candidate_count": 29,
   "cleanup_candidates": [
     ".diagnostics/tools",
