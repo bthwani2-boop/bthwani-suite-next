@@ -194,6 +194,7 @@ function Wait-ForDshApi {
     } catch { }
     Start-Sleep -Seconds 4
   }
+  Write-RuntimeDoctor -Reason "DSH API health check failed after $max attempts" -Service "dsh-api"
   throw "DSH API did not become healthy after $max attempts"
 }
 
@@ -214,6 +215,7 @@ function Wait-ForIdentityApi {
     } catch { }
     Start-Sleep -Seconds 4
   }
+  Write-RuntimeDoctor -Reason "Identity API health check failed after $max attempts" -Service "identity-api"
   throw "Identity API did not become healthy after $max attempts"
 }
 
@@ -301,6 +303,7 @@ function Wait-ForWltApi {
     } catch { }
     Start-Sleep -Seconds 4
   }
+  Write-RuntimeDoctor -Reason "WLT API health check failed after $max attempts" -Service "wlt-api"
   throw "WLT API did not become healthy after $max attempts"
 }
 
@@ -315,6 +318,7 @@ function Wait-ForWireMockFinancialProvider {
     } catch { }
     Start-Sleep -Seconds 3
   }
+  Write-RuntimeDoctor -Reason "WireMock financial provider health check failed after $max attempts" -Service "wiremock-financial-provider"
   throw "WireMock financial provider did not become healthy after $max attempts"
 }
 
@@ -336,6 +340,7 @@ function Wait-ForMailpit {
     } catch { }
     Start-Sleep -Seconds 3
   }
+  Write-RuntimeDoctor -Reason "Mailpit health check failed after $max attempts" -Service "mailpit"
   throw "Mailpit did not become healthy after $max attempts"
 }
 
@@ -353,6 +358,7 @@ function Wait-ForValkey {
     if ($LASTEXITCODE -eq 0) { Write-Host "Valkey: healthy"; return }
     Start-Sleep -Seconds 3
   }
+  Write-RuntimeDoctor -Reason "Valkey health check failed after $max attempts" -Service "valkey"
   throw "Valkey did not become healthy after $max attempts"
 }
 
