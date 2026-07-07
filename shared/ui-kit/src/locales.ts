@@ -460,7 +460,7 @@ export const uiKitLocales = {
 } as const;
 
 export type UiKitLocale = keyof typeof uiKitLocales;
-export type UiKitLocaleNamespace = keyof typeof uiKitLocales.ar;
+type UiKitLocaleNamespace = keyof typeof uiKitLocales.ar;
 
 export function getUiKitLocale(locale: UiKitLocale) {
 	return uiKitLocales[locale];

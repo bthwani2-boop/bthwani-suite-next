@@ -1,5 +1,5 @@
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
-import { amountToArabicText } from "@bthwani/ui-kit";
+import { amountToArabicText, useI18n } from "@bthwani/ui-kit";
 import { getUiKitCommon } from "@bthwani/ui-kit";
 
 export type CpButtonProps = {
@@ -240,7 +240,8 @@ export function CpAmountDisplay({
   readonly currencyCode?: string;
   readonly locale?: "ar" | "en";
 }) {
-  const formatted = amountToArabicText(amountMinorUnits, { currencyCode, locale });
+  const { t } = useI18n();
+  const formatted = amountToArabicText(amountMinorUnits, t);
   return (
     <span
       dir={locale === "ar" ? "rtl" : "ltr"}

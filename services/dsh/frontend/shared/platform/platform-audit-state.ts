@@ -1,3 +1,5 @@
+"use client";
+
 // Canonical location: dsh/frontend/shared/view-models/control-panel/platform/platform-audit-state.ts
 // Authority: dsh/frontend/shared — moved from control-panel/platform/usePlatformAuditState.tsx
 // Note: Uses React context — kept as .ts (no JSX in this file directly).

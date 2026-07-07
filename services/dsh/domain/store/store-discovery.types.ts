@@ -73,7 +73,7 @@ export type DshPagination = {
   readonly total: number;
 };
 
-export type DshStoreListResult = {
+type DshStoreListResult = {
   readonly stores: readonly DshStoreSummary[];
   readonly pagination: DshPagination;
 };

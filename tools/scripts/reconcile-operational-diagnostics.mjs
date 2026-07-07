@@ -253,86 +253,29 @@ async function runReconciliation() {
         }
 
         if (issue.exports && issue.exports.length > 0) {
-          // Suppress UNUSED_EXPORT for files that are known dynamic entry points:
-          // - App entry points (App.tsx, runtime entry)
-          // - Screen/Panel/Sheet/Surface components (loaded via navigation registries)
-          // - Shared library files (controllers, policies, view-models, adapters, contracts)
-          //   that are consumed via dynamic dispatch, not static imports
-          // - UI-kit library exports (consumed by apps not tracked by Knip's static analysis)
-          // - App-level route registries and binding contracts
-          const isKnownEntryOrSharedApi = (
-            /apps\/.*\/runtime\//.test(file) ||
-            /\/app-[^/]+\/.*Screen\.tsx$/.test(file) ||
-            /\/app-[^/]+\/.*Panel\.tsx$/.test(file) ||
-            /\/app-[^/]+\/.*Sheet\.tsx$/.test(file) ||
-            /\/app-[^/]+\/.*Surface\.tsx$/.test(file) ||
-            /\/app-[^/]+\/.*Layer\.tsx$/.test(file) ||
-            /\/app-[^/]+\/.*NavBar\.tsx$/.test(file) ||
-            /\/app-[^/]+\/.*\.routes\.ts$/.test(file) ||
-            /\/app-[^/]+\/.*\.screen-registry\.ts$/.test(file) ||
-            /\/app-[^/]+\/.*\.binding\.contracts?\.ts$/.test(file) ||
-            /\/control-panel\/.*Screen\.tsx$/.test(file) ||
-            /\/control-panel\/.*Panel\.tsx$/.test(file) ||
-            /\/control-panel\/.*Board\.tsx$/.test(file) ||
-            /\/control-panel\/.*Frame\.tsx$/.test(file) ||
-            /\/control-panel\/.*Queue\.tsx$/.test(file) ||
-            /\/control-panel\/.*Workspace\.tsx$/.test(file) ||
-            /\/shared\/.*\.(controller|policy|view-model|adapter|transport|contract|registry|routes|state-machine|states|types|model|api|client|map|workflow|flow-meta|flow-maps|form)\.(ts|tsx)$/.test(file) ||
-            /\/shared\/.*runtime\//.test(file) ||
-            /\/shared\/.*operations\//.test(file) ||
-            /\/shared\/.*hr\//.test(file) ||
-            /\/shared\/.*marketing\//.test(file) ||
-            /\/shared\/.*partner\//.test(file) ||
-            /\/shared\/.*platform\//.test(file) ||
-            /\/shared\/.*support\//.test(file) ||
-            /\/shared\/.*geo\//.test(file) ||
-            /\/shared\/.*catalog\//.test(file) ||
-            /\/shared\/.*finance-wlt-link\//.test(file) ||
-            /\/shared\/.*identity-access\//.test(file) ||
-            /\/shared\/.*delivery\//.test(file) ||
-            /\/shared\/.*cart\//.test(file) ||
-            /\/shared\/.*checkout\//.test(file) ||
-            /\/shared\/.*orders\//.test(file) ||
-            /\/shared\/.*dispatch\//.test(file) ||
-            /\/shared\/.*bell\//.test(file) ||
-            /\/shared\/.*analytics\//.test(file) ||
-            /\/shared\/.*media\//.test(file) ||
-            /\/shared\/.*notifications\//.test(file) ||
-            /\/shared\/.*platform-policies\//.test(file) ||
-            /\/shared\/.*field-readiness\//.test(file) ||
-            /\/shared\/.*field-onboarding\//.test(file) ||
-            /\/shared\/.*administration\//.test(file) ||
-            /\/shared\/ui\//.test(file) ||
-            /\/shared\/ui-kit\//.test(file) ||
-            /\/wlt\/frontend\/shared\//.test(file) ||
-            /tools\/guards\//.test(file)
-          );
-
-          if (!isKnownEntryOrSharedApi) {
-            knipGaps.push({
-              gap_id: `UNUSED_EXPORT:${file}`.replace(/[^A-Za-z0-9:_./-]/g, "_"),
-              type: "UNUSED_EXPORT",
-              source_tool: "knip",
-              path: file,
-              reason: `Unused exports: ${issue.exports.map(x => x.name).join(", ")}`,
-              severity: "MEDIUM",
-              risk_level: "P2",
-              journey: "dsh-order-lifecycle-journey",
-              affected_journeys: ["dsh-order-lifecycle-journey"],
-              affected_surface: file,
-              owner: "toolchain",
-              root_cause: "dead_code",
-              pattern_group: "knip",
-              required_action: "Remove dead exports",
-              target_files: [file],
-              allowed_decision: "REMOVE_OR_KEEP",
-              forbidden_actions: ["leave_dead_code"],
-              verification_commands: ["pnpm run diagnostics:operational:reconcile"],
-              proof_required: ["exports removed or resolved"],
-              status: "OPEN",
-              blocks_journey_start: false
-            });
-          }
+          knipGaps.push({
+            gap_id: `UNUSED_EXPORT:${file}`.replace(/[^A-Za-z0-9:_./-]/g, "_"),
+            type: "UNUSED_EXPORT",
+            source_tool: "knip",
+            path: file,
+            reason: `Unused exports: ${issue.exports.map(x => x.name).join(", ")}`,
+            severity: "MEDIUM",
+            risk_level: "P2",
+            journey: "dsh-order-lifecycle-journey",
+            affected_journeys: ["dsh-order-lifecycle-journey"],
+            affected_surface: file,
+            owner: "toolchain",
+            root_cause: "dead_code",
+            pattern_group: "knip",
+            required_action: "Remove dead exports",
+            target_files: [file],
+            allowed_decision: "REMOVE_OR_KEEP",
+            forbidden_actions: ["leave_dead_code"],
+            verification_commands: ["pnpm run diagnostics:operational:reconcile"],
+            proof_required: ["exports removed or resolved"],
+            status: "OPEN",
+            blocks_journey_start: false
+          });
         }
       }
     } catch (e) {

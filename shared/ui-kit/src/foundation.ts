@@ -351,17 +351,17 @@ export const rawTypographyScale = {
 
 export const typographyRoles = rawTypographyScale.textRoles;
 
-export type PaletteKey = keyof typeof colorPalette;
-export type SpacingToken = keyof typeof spacing;
-export type RadiusToken = keyof typeof radius;
-export type ElevationToken = keyof typeof elevation;
-export type MotionToken = keyof typeof motion;
-export type BreakpointToken = keyof typeof breakpoints;
-export type SafeAreaToken = keyof typeof safeArea;
-export type BorderToken = keyof typeof borders;
+type PaletteKey = keyof typeof colorPalette;
+type SpacingToken = keyof typeof spacing;
+type RadiusToken = keyof typeof radius;
+type ElevationToken = keyof typeof elevation;
+type MotionToken = keyof typeof motion;
+type BreakpointToken = keyof typeof breakpoints;
+type SafeAreaToken = keyof typeof safeArea;
+type BorderToken = keyof typeof borders;
 export type TextRole = keyof typeof textRoles;
 export type FontFamilyToken = keyof typeof fontFamilies;
-export type FontWeightToken = keyof typeof fontWeights;
+type FontWeightToken = keyof typeof fontWeights;
 export type Direction = 'rtl' | 'ltr';
 export type Language = 'ar' | 'en' | string;
 export type LogicalTextAlign = 'start' | 'center' | 'end';

@@ -3,12 +3,12 @@
   "final_closure": false,
   "exact_100_percent_claim": false,
   "branch": "journy",
-  "head_sha": "445a4ba97250e96cc3aab9bdf3950311802a8094",
+  "head_sha": "5da17eac9e1287f499f97cea6a7a1bd7a786f537",
   "reference_root": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory",
   "numeric_truth": {
-    "head_sha": "445a4ba97250e96cc3aab9bdf3950311802a8094",
+    "head_sha": "5da17eac9e1287f499f97cea6a7a1bd7a786f537",
     "branch": "journy",
-    "gap_count": 0,
+    "gap_count": 169,
     "blocking_gap_count": 0,
     "toolchain_tool_count": 60,
     "unused_script_count": 38,
@@ -26,50 +26,50 @@
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
-      "sha256": "fe176a7bb09fd2aa1869ddd420ac76e5cc3d20e073360d3506ffedc4f83458d5",
+      "sha256": "04eb4b43b8331e063fc152528f69541ca07ef1401dded76c6a928b51747d5465",
       "size_bytes": 92147
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
-      "sha256": "358eae2358c2a8409931e711c61a5c6cec2737ca65d4147feba05a11fe69e4ab",
+      "sha256": "7142eca2611d8148aab0e88d9c04c431d6053eab2de870a3697bd431771073ff",
       "size_bytes": 6177
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.json",
-      "sha256": "f7d1e4480b6899e1ac2192fe59049fa60490f8ed731ae6f5f8cadf15aa4bfd97",
+      "sha256": "8ccadb6573bcbbc9bd278cb806598f0e6148224003bda7c8d09b484b7b72fd9d",
       "size_bytes": 105612
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
-      "sha256": "a1596e4755ac20c08598a669ccfb5a2f57e57ee7957dbed68bbd9075459ac701",
+      "sha256": "c174aa4d70ceac8ce6fd3dba1d14dddc1f37a11e7213473a23006154ed0c06ad",
       "size_bytes": 2086
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",
-      "sha256": "fd3993fd0b687f9ebff09f83586543f69e827d2eb07ab33bace2adca2a992f8c",
+      "sha256": "234e91f5d61bf102a3d4de12830bffb74fd2ec48655dadf40a2566197d766e39",
       "size_bytes": 141337
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.md",
-      "sha256": "896edb17686a3fd225b1214c414418c48a0dbecf3acd650d2c775c69bdedbb8b",
+      "sha256": "f5f2d27378ae7f2b6748d3d61341a64dd00d879964bf4bea36844c1fc3d13bb2",
       "size_bytes": 1235
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
-      "sha256": "001fe7bc58d95395c001bb5d3d221c3541fdab99438c53b4500a067fca413d8b",
-      "size_bytes": 495
+      "sha256": "adcadacaed0846c3e31df6d1e5bb4db5cf5f4b8768c102faf2372be061ca8734",
+      "size_bytes": 202081
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
-      "sha256": "9691f0197ef71f7449b4dfec5bdd9f1e0f035e641c745ea3d33fd0905a06e1bd",
-      "size_bytes": 317
+      "sha256": "f98a53d7a7bec0178dcadf89e1797204e5b5ce4f0cd857e5dd128ced87eba46a",
+      "size_bytes": 50754
     }
   ],
   "diagnostics_manifest_count": 2,

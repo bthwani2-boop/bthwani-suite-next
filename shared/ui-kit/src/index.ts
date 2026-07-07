@@ -51,7 +51,6 @@ export {
   resolveLogicalMargin,
   resolveLogicalBorderRadius,
   resolveTextAlign,
-  resolveRowDirection,
   tamaguiBridge,
 } from "./foundation";
 

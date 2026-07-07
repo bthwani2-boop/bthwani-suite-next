@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Spinner } from "tamagui";
 import { Block } from "../_shared";

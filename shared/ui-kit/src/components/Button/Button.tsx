@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Spinner } from "tamagui";
 import { StyledButton } from "../_shared";

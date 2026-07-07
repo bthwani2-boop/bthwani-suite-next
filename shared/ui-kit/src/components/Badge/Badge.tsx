@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { XStack } from "tamagui";
 import { createUiStyled } from "../../internal/tamagui-compat";

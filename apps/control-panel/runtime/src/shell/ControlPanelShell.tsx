@@ -32,9 +32,9 @@ export function ControlPanelShell({
   const topBarStyle: CSSProperties = {
     flexShrink: 0,
     zIndex: 40,
-    backdropFilter: glass.backdropFilter ?? undefined,
-    WebkitBackdropFilter: glass.backdropFilter ?? undefined,
-    background: glass.background ?? "var(--topbar-bg, rgb(255, 255, 255))",
+    backdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
+    WebkitBackdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
+    background: glass.backgroundColor ?? "var(--topbar-bg, rgb(255, 255, 255))",
     borderBottom: `1px solid ${glass.borderColor ?? "var(--topbar-border, rgb(226, 232, 243))"}`,
   };
 

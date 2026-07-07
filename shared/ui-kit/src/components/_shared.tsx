@@ -1,3 +1,5 @@
+"use client";
+
 import { Button as TamaguiButton, Input, Text as TamaguiText, XStack, YStack } from "tamagui";
 import { createUiStyled } from "../internal/tamagui-compat";
 import { sizing, spacing, typography } from "../tokens";

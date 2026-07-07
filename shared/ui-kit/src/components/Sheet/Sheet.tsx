@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Sheet as TamaguiSheet } from "tamagui";
 import { asUiCompoundComponent } from "../../internal/tamagui-compat";

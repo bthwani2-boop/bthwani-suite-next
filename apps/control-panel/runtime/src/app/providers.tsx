@@ -10,7 +10,7 @@ configureIdentitySession(resolveIdentityApiBaseUrl());
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <BthwaniUiProvider defaultTheme="light">
-      <BThwaniAppearanceProvider mode="light" syncThemeMode>
+      <BThwaniAppearanceProvider mode="lightPremium" syncThemeMode>
         <PortalLayer>
           {children}
         </PortalLayer>

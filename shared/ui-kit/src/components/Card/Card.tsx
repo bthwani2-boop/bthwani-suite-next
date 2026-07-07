@@ -1,3 +1,5 @@
+"use client";
+
 import React, { memo, type ReactNode } from "react";
 import { YStack, XStack, Image } from "tamagui";
 import { colorRoles, colorPalette } from "../../tokens/colors";

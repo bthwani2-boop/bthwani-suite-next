@@ -28,7 +28,7 @@ export type OperatorStoreListResponse =
 export type OperatorStoreDetailResponse =
   paths["/dsh/operator/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
-export type DshStoreClientError =
+type DshStoreClientError =
   | { readonly kind: "http"; readonly status: number; readonly body: string }
   | { readonly kind: "network"; readonly message: string };
 

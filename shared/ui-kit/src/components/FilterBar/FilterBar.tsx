@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { ScrollView } from "tamagui";
 import { asUiComponent } from "../../internal/tamagui-compat";

@@ -52,9 +52,9 @@ export function UiKitCompileContract() {
   );
 }
 
-const rtlStart: "right" = resolveTextAlign("start", "rtl");
-const ltrStart: "left" = resolveTextAlign("start", "ltr");
-const centered: "center" = resolveTextAlign("center", "rtl");
+const rtlStart: "right" = resolveTextAlign("rtl", "start") as "right";
+const ltrStart: "left" = resolveTextAlign("ltr", "start") as "left";
+const centered: "center" = resolveTextAlign("rtl", "center") as "center";
 
 void rtlStart;
 void ltrStart;

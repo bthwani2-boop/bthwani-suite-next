@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Dialog as TamaguiDialog } from "tamagui";
 import { asUiCompoundComponent } from "../../internal/tamagui-compat";

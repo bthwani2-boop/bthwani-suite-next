@@ -16,7 +16,7 @@ function AppContent() {
   );
 }
 
-export function App() {
+function App() {
   return (
     <BthwaniUiProvider>
       <SafeAreaProvider>
