@@ -3,7 +3,7 @@
 // Promotion candidates, catalog queue, stage/owner translation utilities.
 
 
-import type {
+export type {
   ApprovalStage,
   ApprovalEntityType,
   ApprovalSourceSurface,
@@ -12,7 +12,14 @@ import type {
   ApprovalRecord,
   DshPromotionCandidate,
   PartnerQueueRecord,
-  UiAuditRow,
+} from './partner.types';
+
+import type {
+  ApprovalStage,
+  ApprovalEntityType,
+  DshPromotionCandidate,
+  PartnerQueueRecord,
+  ApprovalRecord,
 } from './partner.types';
 
 export const MARKETING_SIGNAL_ENTITY_TYPES: ReadonlyArray<ApprovalEntityType> = [

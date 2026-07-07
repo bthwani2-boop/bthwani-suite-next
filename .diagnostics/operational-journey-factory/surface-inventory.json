@@ -1,5 +1,5 @@
 {
-  "head_sha": "e279cc922241e3ee4f5b9f9ab12bb08b4cfb1497",
+  "head_sha": "ddb054583f42e454bca6f680823e8339ffca0785",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -749,7 +749,7 @@
     {
       "surface": "services/dsh/frontend/shared",
       "kind": "shared_brain",
-      "files": 288,
+      "files": 294,
       "screens": [
         "services/dsh/frontend/shared/cart/cart-screen-domain.ts"
       ],
@@ -814,7 +814,8 @@
         "services/dsh/frontend/shared/media/field-document-media.ts",
         "services/dsh/frontend/shared/media/resolve-dev-media-url.ts",
         "services/dsh/frontend/shared/operations/dsh-operational-runtime-adapter.ts",
-        "services/dsh/frontend/shared/orders/dsh-order-lifecycle-client.ts",
+        "services/dsh/frontend/shared/orders/dsh-order-lifecycle.controller.ts",
+        "services/dsh/frontend/shared/orders/dsh-order-lifecycle.transport.ts",
         "services/dsh/frontend/shared/partner/catalog-approval.api.ts",
         "services/dsh/frontend/shared/partner/partner.api.ts",
         "services/dsh/frontend/shared/platform/feature-flags.ts",
@@ -849,7 +850,8 @@
         "services/dsh/frontend/shared/finance-wlt-link/wlt-settlement/use-wlt-settlement-controller.tsx",
         "services/dsh/frontend/shared/finance-wlt-link/wlt-settlement/wlt-settlement.api.ts",
         "services/dsh/frontend/shared/operations/dsh-operational-summary-adapter.ts",
-        "services/dsh/frontend/shared/orders/dsh-order-lifecycle-client.ts",
+        "services/dsh/frontend/shared/orders/dsh-order-lifecycle.adapter.ts",
+        "services/dsh/frontend/shared/orders/dsh-order-lifecycle.view-model.ts",
         "services/dsh/frontend/shared/runtime/dsh-price-format.ts"
       ],
       "icons_components_actions_candidates": 11,
@@ -1662,7 +1664,8 @@
     "services/dsh/frontend/shared/media/field-document-media.ts",
     "services/dsh/frontend/shared/media/resolve-dev-media-url.ts",
     "services/dsh/frontend/shared/operations/dsh-operational-runtime-adapter.ts",
-    "services/dsh/frontend/shared/orders/dsh-order-lifecycle-client.ts",
+    "services/dsh/frontend/shared/orders/dsh-order-lifecycle.controller.ts",
+    "services/dsh/frontend/shared/orders/dsh-order-lifecycle.transport.ts",
     "services/dsh/frontend/shared/partner/catalog-approval.api.ts",
     "services/dsh/frontend/shared/partner/partner.api.ts",
     "services/dsh/frontend/shared/platform/feature-flags.ts",
@@ -1704,7 +1707,8 @@
     "services/dsh/frontend/shared/finance-wlt-link/wlt-settlement/use-wlt-settlement-controller.tsx",
     "services/dsh/frontend/shared/finance-wlt-link/wlt-settlement/wlt-settlement.api.ts",
     "services/dsh/frontend/shared/operations/dsh-operational-summary-adapter.ts",
-    "services/dsh/frontend/shared/orders/dsh-order-lifecycle-client.ts",
+    "services/dsh/frontend/shared/orders/dsh-order-lifecycle.adapter.ts",
+    "services/dsh/frontend/shared/orders/dsh-order-lifecycle.view-model.ts",
     "services/dsh/frontend/shared/runtime/dsh-price-format.ts",
     "services/wlt/frontend/shared/dsh/use-wlt-dsh-field-commission-reference-controller.tsx",
     "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission-reference.api.ts",
