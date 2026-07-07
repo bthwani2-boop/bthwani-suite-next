@@ -100,6 +100,11 @@ node-gates*.log
 
 # Explicitly track diagnostic scripts
 !tools/diagnostics/scripts/*.mjs
+
+# Explicitly track bthwani prompts
+!tools/prompts/
+!tools/prompts/**/*.md
+
 *.pem
 *.key
 *.p8
