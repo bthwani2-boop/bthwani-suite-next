@@ -186,7 +186,8 @@
     "diagnostics:expo-atlas:client": "node tools/scripts/check-expo-atlas-readiness.mjs",
     "diagnostics:style-dictionary": "node tools/scripts/check-style-dictionary-readiness.mjs",
     "guard:tools-v5-registry": "pnpm run guard:tool-catalog-coverage && pnpm run guard:toolchain-activation && pnpm run guard:oss-toolchain-policy",
-    "guard:tools-v5-ci": "pnpm run guard:tools-v5-registry && pnpm run guard:workflow-lint && pnpm run guard:workflow-security && pnpm run guard:opa-policies"
+    "guard:tools-v5-ci": "pnpm run guard:tools-v5-registry && pnpm run guard:workflow-lint && pnpm run guard:workflow-security && pnpm run guard:opa-policies",
+    "guard:foundation-cross-journey-closure": "node tools/guards/foundation-cross-journey-closure-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
