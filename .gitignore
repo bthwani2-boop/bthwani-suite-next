@@ -95,6 +95,8 @@ node-gates*.log
 
 # Explicitly track operational journey checklist
 !tools/checklist/operational-journey-factory-checklist.md
+!tools/checklist/**/
+!tools/checklist/**/*.md
 
 # Explicitly track diagnostic scripts
 !tools/diagnostics/scripts/*.mjs
