@@ -1,5 +1,5 @@
 {
-  "head_sha": "ddb054583f42e454bca6f680823e8339ffca0785",
+  "head_sha": "52a618a26a87033a0a5197af31886029952d8ecc",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -814,8 +814,8 @@
         "services/dsh/frontend/shared/media/field-document-media.ts",
         "services/dsh/frontend/shared/media/resolve-dev-media-url.ts",
         "services/dsh/frontend/shared/operations/dsh-operational-runtime-adapter.ts",
-        "services/dsh/frontend/shared/orders/dsh-order-lifecycle.controller.ts",
         "services/dsh/frontend/shared/orders/dsh-order-lifecycle.transport.ts",
+        "services/dsh/frontend/shared/orders/use-dsh-order-lifecycle-controller.ts",
         "services/dsh/frontend/shared/partner/catalog-approval.api.ts",
         "services/dsh/frontend/shared/partner/partner.api.ts",
         "services/dsh/frontend/shared/platform/feature-flags.ts",
@@ -1664,8 +1664,8 @@
     "services/dsh/frontend/shared/media/field-document-media.ts",
     "services/dsh/frontend/shared/media/resolve-dev-media-url.ts",
     "services/dsh/frontend/shared/operations/dsh-operational-runtime-adapter.ts",
-    "services/dsh/frontend/shared/orders/dsh-order-lifecycle.controller.ts",
     "services/dsh/frontend/shared/orders/dsh-order-lifecycle.transport.ts",
+    "services/dsh/frontend/shared/orders/use-dsh-order-lifecycle-controller.ts",
     "services/dsh/frontend/shared/partner/catalog-approval.api.ts",
     "services/dsh/frontend/shared/partner/partner.api.ts",
     "services/dsh/frontend/shared/platform/feature-flags.ts",

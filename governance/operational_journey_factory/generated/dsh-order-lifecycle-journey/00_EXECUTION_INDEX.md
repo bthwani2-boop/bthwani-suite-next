@@ -1,7 +1,7 @@
 # DSH Order Lifecycle Journey Execution Index
 
 journey_id: `dsh-order-lifecycle-journey`
-status: `EXECUTION_READY_PACKAGE`
+status: `PARTIAL_EXECUTION_PACKAGE_WITH_OPEN_BLOCKERS`
 implementation_started: `true`
 resolved_commit_sha: `ddb054583f42e454bca6f680823e8339ffca0785`
 
