@@ -3,16 +3,16 @@
   "final_closure": false,
   "exact_100_percent_claim": false,
   "branch": "journy",
-  "head_sha": "9c63ba9fea862b0e05016fb0bd0346b91eaec1c4",
+  "head_sha": "a44aa80ef66ac838c83141b6e793a90f0dd343d0",
   "reference_root": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory",
   "numeric_truth": {
-    "head_sha": "9c63ba9fea862b0e05016fb0bd0346b91eaec1c4",
+    "head_sha": "a44aa80ef66ac838c83141b6e793a90f0dd343d0",
     "branch": "journy",
-    "gap_count": 169,
+    "gap_count": 30,
     "blocking_gap_count": 0,
     "toolchain_tool_count": 60,
     "unused_script_count": 38,
-    "surface_inventory_item_count": 630,
+    "surface_inventory_item_count": 627,
     "openapi_file_count": 5,
     "api_operation_count": 206,
     "generated_client_count": 4,
@@ -26,55 +26,55 @@
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
-      "sha256": "adf5e9699608bb02512ced01add6134c41c9baaae4975dfc8d7621fe36e14db7",
+      "sha256": "bb10ec8f7a21fb441c864a0ac61df08902c0a1ed32a6f42a3f6a40d37698c7a3",
       "size_bytes": 92147
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
-      "sha256": "9fe98a1cdcbbc9ec0774253aa16209a75a5b00b58433f2215f5e89962994a758",
+      "sha256": "15c363883b7644b54ed6020ab80d5b5240347231a3c145cba0c67b526d502852",
       "size_bytes": 6177
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.json",
-      "sha256": "7b7e09299a4ec95708a0523adb5f696e6a1e0a2ed5e03d2d5a18d0712dc0e704",
-      "size_bytes": 105612
+      "sha256": "b237417fd951a95967588c4aa34a056180682e63b50c9f5887771b5172f37f9f",
+      "size_bytes": 105175
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
-      "sha256": "c410b4b0a192e3a10fd97c47b9134149616358d0024baf29e07334384e2b8c37",
+      "sha256": "018f98ad16e84a205c487eaebf32933675c523fc353b4d413a31ceca2dc63f5b",
       "size_bytes": 2086
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",
-      "sha256": "5caa4ae1d4e16c911d61e59f0141ece9b13a3193901e41c3975da006ab53b8a5",
-      "size_bytes": 141337
+      "sha256": "c4f6c32a0f92e33089c8e1bb0acedeb7146874b94250ec0eda344383be172119",
+      "size_bytes": 141187
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.md",
-      "sha256": "12ff1d1da5ae6953e6dda3fd1a85cf54635a8f6489d8c1d8e5b4dc41ee7dd2e7",
+      "sha256": "1c55e9a2e58c31e0454735b130d1ec5141d7715a951f9832447b90210cd266d1",
       "size_bytes": 1235
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
-      "sha256": "7a618c66900448724e9aac21824e949c41c2574d3cc4cb249a6d4a4f90ef6f75",
-      "size_bytes": 202081
+      "sha256": "f0e76db350b6af57f3840e868856e67acf0130a0c9a1e5e036687fcd8e0abd01",
+      "size_bytes": 35444
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
-      "sha256": "2cf7499001d28f70645484a022956338cd91e376276caefa8a3aa4310377feec",
-      "size_bytes": 50754
+      "sha256": "644eb41456decec4c1baa9e68745a2141abb0533252624ffcd2fd7530e97728b",
+      "size_bytes": 9033
     }
   ],
   "diagnostics_manifest_count": 2,
-  "factory_manifest_count": 52,
-  "cleanup_candidate_count": 30,
+  "factory_manifest_count": 40,
+  "cleanup_candidate_count": 32,
   "cleanup_plan": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory/cleanup-plan.json",
   "next_action": "Review cleanup-plan.json; rerun with -ApplyCleanup only after accepting archive-before-delete behavior."
 }

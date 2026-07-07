@@ -1,5 +1,5 @@
 {
-  "head_sha": "9c63ba9fea862b0e05016fb0bd0346b91eaec1c4",
+  "head_sha": "a44aa80ef66ac838c83141b6e793a90f0dd343d0",
   "status": "DISCOVERY_ONLY",
   "source_files": {
     "service_blueprint": {
@@ -197,11 +197,9 @@
     "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
     "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-    "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
     "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
-    "services/dsh/frontend/control-panel/partners/PartnerDetailPanel.tsx",
     "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx",
     "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
     "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",

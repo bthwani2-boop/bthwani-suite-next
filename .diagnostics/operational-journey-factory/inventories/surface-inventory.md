@@ -1,6 +1,6 @@
 # Operational Surface Inventory
 
-head_sha: `9c63ba9fea862b0e05016fb0bd0346b91eaec1c4`
+head_sha: `a44aa80ef66ac838c83141b6e793a90f0dd343d0`
 status: `DISCOVERY_ONLY`
 
 | Kind | Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |
@@ -9,16 +9,16 @@ status: `DISCOVERY_ONLY`
 | runtime_shell | `apps/app-client/runtime` | 9 | 0 | 0 | 0 | 0 | 0 | 31 | 1 |
 | runtime_shell | `apps/app-field/runtime` | 7 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
 | runtime_shell | `apps/app-partner/runtime` | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| runtime_shell | `apps/control-panel/runtime` | 40 | 0 | 13 | 2 | 0 | 0 | 37 | 18 |
+| runtime_shell | `apps/control-panel/runtime` | 41 | 0 | 14 | 2 | 0 | 0 | 37 | 18 |
 | runtime_shell | `apps/webapp/runtime` | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
 | runtime_shell | `apps/website/runtime` | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
 | ui_surface | `services/dsh/frontend/app-captain` | 40 | 14 | 0 | 4 | 0 | 0 | 144 | 176 |
 | ui_surface | `services/dsh/frontend/app-client` | 61 | 17 | 0 | 4 | 0 | 0 | 365 | 132 |
 | ui_surface | `services/dsh/frontend/app-field` | 23 | 12 | 0 | 2 | 0 | 0 | 90 | 102 |
-| ui_surface | `services/dsh/frontend/app-partner` | 39 | 18 | 0 | 3 | 0 | 0 | 243 | 348 |
-| ui_surface | `services/dsh/frontend/control-panel` | 82 | 36 | 0 | 0 | 0 | 0 | 276 | 470 |
+| ui_surface | `services/dsh/frontend/app-partner` | 39 | 18 | 0 | 3 | 0 | 0 | 243 | 353 |
+| ui_surface | `services/dsh/frontend/control-panel` | 80 | 35 | 0 | 0 | 0 | 0 | 270 | 444 |
 | other | `services/dsh/frontend/css-modules.d.ts` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| shared_brain | `services/dsh/frontend/shared` | 294 | 1 | 0 | 1 | 22 | 17 | 11 | 1464 |
+| shared_brain | `services/dsh/frontend/shared` | 294 | 1 | 0 | 1 | 22 | 17 | 11 | 1472 |
 | ui_surface | `services/wlt/frontend/app-captain` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | ui_surface | `services/wlt/frontend/app-client` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | ui_surface | `services/wlt/frontend/app-field` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |

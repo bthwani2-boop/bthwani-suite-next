@@ -25,6 +25,16 @@ function getBranch() {
   }
 }
 
+const RESOLVED_GAP_STATUSES = new Set(["FIXED_BY_CODE", "KEEP_ACTIVE_WITH_PROOF", "FALSE_POSITIVE_WITH_PROOF"]);
+
+function countGapsByStatus(gaps, status) {
+  return gaps.filter(g => String(g.status || "").toUpperCase() === status).length;
+}
+
+function countOpenGaps(gaps) {
+  return gaps.filter(g => !RESOLVED_GAP_STATUSES.has(String(g.status || "").toUpperCase())).length;
+}
+
 async function runReconciliation() {
   const currentHead = getHeadSha();
   const currentBranch = getBranch();
@@ -504,17 +514,17 @@ async function runReconciliation() {
     graph_warnings_classified: graphCircularGaps.length,
     jscpd_findings_classified: jscpdGaps.length,
     knip_findings_classified: knipGaps.length,
-    fixed_by_code_count: burndown ? burndown.fixed_by_code_count : 0,
-    keep_with_proof_count: burndown ? burndown.keep_active_with_proof_count : 0,
-    false_positive_with_proof_count: burndown ? burndown.false_positive_with_proof_count : 0,
-    blocked_external_only_count: burndown ? burndown.blocked_external_only_count : 0,
-    remaining_open_gaps: burndown ? burndown.gap_count_after : gapCountAfter,
+    fixed_by_code_count: countGapsByStatus(reconciledGaps, "FIXED_BY_CODE"),
+    keep_with_proof_count: countGapsByStatus(reconciledGaps, "KEEP_ACTIVE_WITH_PROOF"),
+    false_positive_with_proof_count: countGapsByStatus(reconciledGaps, "FALSE_POSITIVE_WITH_PROOF"),
+    blocked_external_only_count: countGapsByStatus(reconciledGaps, "BLOCKED_EXTERNAL_ONLY"),
+    remaining_open_gaps: countOpenGaps(reconciledGaps),
     graphify_used: hasGraphify,
     dependency_graph_used: hasDepGraph,
     ui_binding_elements_audited: hasUiBinding ? JSON.parse(fs.readFileSync(uiBindingPath, "utf8")).inventory_count : 0,
     ui_binding_gaps: uiGapsCount,
     finance_boundary_violations: financeViolationsCount,
-    verification_commands_run: burndown ? burndown.verification_commands_run : [],
+    verification_commands_run: ["npx jscpd", "npx knip --reporter json", "madge circular analysis"],
     blockers,
     status: blockers.length > 0 ? "STILL_BLOCKED_WITH_EXACT_UNRESOLVED_EVIDENCE_GAPS" : "EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED"
   };

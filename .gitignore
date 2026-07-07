@@ -66,6 +66,9 @@ services/dsh/database/seeds/local/media/
 !.diagnostics/operational-journey-factory/*.json
 !.diagnostics/operational-journey-factory/*.md
 !.diagnostics/operational-journey-factory/*.mjs
+# Raw diagnostic outputs must never be tracked (reconciliation gate policy)
+.diagnostics/operational-journey-factory/command-results.json
+.diagnostics/operational-journey-factory/knip-current.json
 tools/diagnostics/graph.json
 tools/diagnostics/*.raw.json
 tools/diagnostics/*.full.json

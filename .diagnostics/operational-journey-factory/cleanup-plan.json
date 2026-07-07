@@ -1,8 +1,8 @@
 {
   "apply_cleanup": false,
   "archive_required_before_delete": true,
-  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/9c63ba9fea862b0e05016fb0bd0346b91eaec1c4-2026-07-07T16-53-22-894Z.zip",
-  "cleanup_candidate_count": 30,
+  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/a44aa80ef66ac838c83141b6e793a90f0dd343d0-2026-07-07T19-11-30-561Z.zip",
+  "cleanup_candidate_count": 32,
   "cleanup_candidates": [
     ".diagnostics/tools",
     ".diagnostics/operational-journey-factory/00_CANONICAL_REFERENCE_INDEX.md",
@@ -28,11 +28,13 @@
     ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
     ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
     ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
+    ".diagnostics/operational-journey-factory/knip-current.json",
     ".diagnostics/operational-journey-factory/live-product-code-change-report.json",
     ".diagnostics/operational-journey-factory/reconciliation-report.json",
     ".diagnostics/operational-journey-factory/reconciliation-report.md",
     ".diagnostics/operational-journey-factory/summary.json",
     ".diagnostics/operational-journey-factory/tool-evidence/jscpd/jscpd-report.json",
-    ".diagnostics/operational-journey-factory/tool-evidence/knip-report.json"
+    ".diagnostics/operational-journey-factory/tool-evidence/knip-report.json",
+    ".diagnostics/operational-journey-factory/typecheck-after-unused-export-burn.log"
   ]
 }

@@ -1,6 +1,6 @@
 # Operational Journey Inventory
 
-head_sha: `9c63ba9fea862b0e05016fb0bd0346b91eaec1c4`
+head_sha: `a44aa80ef66ac838c83141b6e793a90f0dd343d0`
 status: `DISCOVERY_ONLY`
 
 ## Source Files
@@ -18,7 +18,7 @@ status: `DISCOVERY_ONLY`
 - OpenAPI files: 5
 - generated clients: 4
 - backend route candidates: 29
-- frontend surface candidates: 134
+- frontend surface candidates: 132
 - proposed smart journey groups: 5
 - proposed unfilled journeys: 206
 

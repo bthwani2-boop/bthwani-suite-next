@@ -12,7 +12,7 @@ import { DSH_CROSS_SURFACE_CLOSURE_MAP, DSH_CROSS_SURFACE_JOURNEYS, getDshClosur
 
 import styles from '../shared/control-panel-surface.module.css';
 
-export function ControlPanelDshClosureHubScreen() {
+function ControlPanelDshClosureHubScreen() {
   const [activeTab, setActiveTab] = React.useState<string>('readiness');
   const [activeSubTab, setActiveSubTab] = React.useState<string>('all');
 

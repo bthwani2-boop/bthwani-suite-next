@@ -1,4 +1,3 @@
-export { ControlPanelHrScreen } from "./ControlPanelHrScreen";
 export { default } from "./ControlPanelHrScreen";
 export type * from "./hr.types";
 export const HR_WORKSPACE_REGISTRY = [

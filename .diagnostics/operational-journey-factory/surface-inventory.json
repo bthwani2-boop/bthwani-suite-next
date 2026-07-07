@@ -1,5 +1,5 @@
 {
-  "head_sha": "9c63ba9fea862b0e05016fb0bd0346b91eaec1c4",
+  "head_sha": "a44aa80ef66ac838c83141b6e793a90f0dd343d0",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -43,6 +43,7 @@
     "apps/control-panel/runtime/package.json",
     "apps/control-panel/runtime/project.json",
     "apps/control-panel/runtime/src/app/dsh/administration/page.tsx",
+    "apps/control-panel/runtime/src/app/dsh/analytics/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/catalogs/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/dashboard/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/finance/page.tsx",
@@ -163,10 +164,11 @@
     {
       "surface": "apps/control-panel/runtime",
       "kind": "runtime_shell",
-      "files": 40,
+      "files": 41,
       "screens": [],
       "pages": [
         "apps/control-panel/runtime/src/app/dsh/administration/page.tsx",
+        "apps/control-panel/runtime/src/app/dsh/analytics/page.tsx",
         "apps/control-panel/runtime/src/app/dsh/catalogs/page.tsx",
         "apps/control-panel/runtime/src/app/dsh/dashboard/page.tsx",
         "apps/control-panel/runtime/src/app/dsh/finance/page.tsx",
@@ -186,6 +188,7 @@
       ],
       "navigation_bindings": [
         "apps/control-panel/runtime/src/app/dsh/administration/page.tsx",
+        "apps/control-panel/runtime/src/app/dsh/analytics/page.tsx",
         "apps/control-panel/runtime/src/app/dsh/catalogs/page.tsx",
         "apps/control-panel/runtime/src/app/dsh/dashboard/page.tsx",
         "apps/control-panel/runtime/src/app/dsh/finance/page.tsx",
@@ -564,12 +567,12 @@
       "process_env_usage": [],
       "local_business_logic_candidates": [],
       "icons_components_actions_candidates": 243,
-      "states_candidates": 348
+      "states_candidates": 353
     },
     {
       "surface": "services/dsh/frontend/control-panel",
       "kind": "ui_surface",
-      "files": 82,
+      "files": 80,
       "screens": [
         "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
         "services/dsh/frontend/control-panel/analytics/AnalyticsDashboardScreen.tsx",
@@ -594,7 +597,6 @@
         "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
         "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
         "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-        "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
         "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
         "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
         "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
@@ -638,10 +640,8 @@
         "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
         "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
         "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-        "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
         "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
         "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
-        "services/dsh/frontend/control-panel/partners/PartnerDetailPanel.tsx",
         "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx",
         "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
         "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
@@ -698,11 +698,9 @@
         "services/dsh/frontend/control-panel/operations/operations.registry.ts",
         "services/dsh/frontend/control-panel/operations/operations.types.ts",
         "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-        "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
         "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
         "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
         "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
-        "services/dsh/frontend/control-panel/partners/PartnerDetailPanel.tsx",
         "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx",
         "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
         "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
@@ -730,8 +728,8 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 276,
-      "states_candidates": 470
+      "icons_components_actions_candidates": 270,
+      "states_candidates": 444
     },
     {
       "surface": "services/dsh/frontend/css-modules.d.ts",
@@ -857,7 +855,7 @@
         "services/dsh/frontend/shared/runtime/dsh-price-format.ts"
       ],
       "icons_components_actions_candidates": 11,
-      "states_candidates": 1464
+      "states_candidates": 1472
     },
     {
       "surface": "services/wlt/frontend/app-captain",
@@ -1158,7 +1156,6 @@
     "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
     "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-    "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
     "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
@@ -1187,6 +1184,7 @@
   ],
   "pages": [
     "apps/control-panel/runtime/src/app/dsh/administration/page.tsx",
+    "apps/control-panel/runtime/src/app/dsh/analytics/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/catalogs/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/dashboard/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/finance/page.tsx",
@@ -1221,6 +1219,7 @@
   "navigation_bindings": [
     "apps/app-client/runtime/src/shell/BottomNavBar.tsx",
     "apps/control-panel/runtime/src/app/dsh/administration/page.tsx",
+    "apps/control-panel/runtime/src/app/dsh/analytics/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/catalogs/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/dashboard/page.tsx",
     "apps/control-panel/runtime/src/app/dsh/finance/page.tsx",
@@ -1295,10 +1294,8 @@
     "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
     "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-    "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
-    "services/dsh/frontend/control-panel/partners/PartnerDetailPanel.tsx",
     "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx",
     "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
     "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
@@ -1604,11 +1601,9 @@
     "services/dsh/frontend/control-panel/operations/operations.registry.ts",
     "services/dsh/frontend/control-panel/operations/operations.types.ts",
     "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
-    "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
     "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
     "services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx",
-    "services/dsh/frontend/control-panel/partners/PartnerDetailPanel.tsx",
     "services/dsh/frontend/control-panel/partners/PartnerDetailScreen.tsx",
     "services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx",
     "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",

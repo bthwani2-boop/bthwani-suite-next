@@ -7,7 +7,7 @@ import { Box, Surface, Text, Button } from "@bthwani/ui-kit";
 import { WebSectionCard } from "@bthwani/ui-kit/web";
 import styles from "../shared/control-panel-surface.module.css";
 
-export function ControlPanelHrScreen() {
+function ControlPanelHrScreen() {
   return (
     <Box
       paddingX={4}
