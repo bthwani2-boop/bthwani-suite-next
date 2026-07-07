@@ -34,7 +34,8 @@ import { DSH_PARTNER_BINDING_CONTRACTS } from './dsh-partner-binding.contracts';
 // Dev-mode binding contract guard: validates that every rendered surface
 // has a corresponding registered binding contract. Fails fast in development.
 function assertRouteHasBindingContract(route: DshPartnerRoute): void {
-  if (process.env.NODE_ENV !== 'development') return;
+  const isDev = typeof __DEV__ !== 'undefined' && __DEV__;
+  if (!isDev) return;
   const surfaceId = route as string;
   const registered = DSH_PARTNER_BINDING_CONTRACTS.some(c => c.surfaceId === surfaceId);
   if (!registered) {

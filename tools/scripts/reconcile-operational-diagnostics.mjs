@@ -84,6 +84,34 @@ async function runReconciliation() {
     }
   }
 
+  if (staleOutput) {
+    console.log("[RECONCILE] Stale inventories detected. Regenerating inventories automatically to match current HEAD SHA...");
+    try {
+      execSync("node tools/scripts/generate-operational-toolchain-inventory.mjs", { stdio: "inherit", cwd: repoRoot });
+      execSync("node tools/scripts/generate-operational-surface-inventory.mjs", { stdio: "inherit", cwd: repoRoot });
+      execSync("node tools/scripts/generate-operational-journey-inventory.mjs", { stdio: "inherit", cwd: repoRoot });
+      execSync("node tools/scripts/generate-operational-gap-ledger.mjs", { stdio: "inherit", cwd: repoRoot });
+
+      // Reload the regenerated inventories
+      const freshGapLedger = JSON.parse(fs.readFileSync(gapLedgerPath, "utf8"));
+      const freshSummary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+      const freshSurfaceInventory = JSON.parse(fs.readFileSync(surfaceInventoryPath, "utf8"));
+      const freshJourneyInventory = JSON.parse(fs.readFileSync(journeyInventoryPath, "utf8"));
+      const freshToolchainInventory = JSON.parse(fs.readFileSync(toolchainInventoryPath, "utf8"));
+
+      Object.assign(gapLedger, freshGapLedger);
+      if (summary) Object.assign(summary, freshSummary);
+      Object.assign(surfaceInventory, freshSurfaceInventory);
+      Object.assign(journeyInventory, freshJourneyInventory);
+      Object.assign(toolchainInventory, freshToolchainInventory);
+
+      staleOutput = false;
+      console.log("[RECONCILE] Inventories successfully regenerated and reloaded.");
+    } catch (err) {
+      console.warn("[RECONCILE] Failed to automatically regenerate inventories:", err.message);
+    }
+  }
+
   // 4. Gather circular dependencies via madge
   console.log("[RECONCILE] Analyzing circular dependencies using Madge...");
   let madge;

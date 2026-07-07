@@ -1,5 +1,5 @@
 {
-  "head_sha": "a10f04911786c1478a2f286d73c4b6110d82ed16",
+  "head_sha": "445a4ba97250e96cc3aab9bdf3950311802a8094",
   "status": "DISCOVERY_ONLY",
   "required_gap_fields": [
     "gap_id",
@@ -20,48 +20,6 @@
     "status",
     "blocks_journey_start"
   ],
-  "gap_count": 1,
-  "gaps": [
-    {
-      "gap_id": "DIRECT_API_IN_SURFACE:services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
-      "type": "DIRECT_API_IN_SURFACE",
-      "source_tool": "surface-inventory",
-      "path": "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
-      "reason": "UI surface file contains direct API or runtime config signs.",
-      "severity": "HIGH",
-      "risk_level": "P1",
-      "journey": "factory",
-      "affected_journeys": [
-        "partner_onboarding",
-        "store_publication"
-      ],
-      "affected_surface": "services/dsh/frontend/app-partner",
-      "owner": "dsh_frontend_partner_surface",
-      "root_cause": "surface_bypasses_shared_adapter",
-      "pattern_group": "frontend_api_binding",
-      "required_action": "bind_to_shared_controller_or_adapter",
-      "target_files": [
-        "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
-        "services/dsh/frontend/shared/**"
-      ],
-      "allowed_decision": "BIND_TO_ADAPTER",
-      "forbidden_actions": [
-        "inline_api_call",
-        "process_env_in_screen",
-        "direct_wlt_mutation_from_dsh_ui"
-      ],
-      "verification_commands": [
-        "pnpm run diagnostics:operational:surfaces"
-      ],
-      "proof_required": [
-        "screen_has_no_fetch",
-        "screen_has_no_base_url",
-        "adapter_or_controller_import_exists"
-      ],
-      "decision": "BLOCKED_NEEDS_EVIDENCE",
-      "verification": "pnpm run diagnostics:operational:surfaces",
-      "status": "OPEN",
-      "blocks_journey_start": true
-    }
-  ]
+  "gap_count": 0,
+  "gaps": []
 }
