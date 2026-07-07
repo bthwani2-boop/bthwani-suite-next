@@ -14,7 +14,7 @@ type Props = {
   readonly onChange: (id: string) => void;
 };
 
-export function ServiceModeSegment({ options, selectedId, onChange }: Props) {
+function ServiceModeSegment({ options, selectedId, onChange }: Props) {
   return (
     <View style={styles.container}>
       {options.map((opt) => {

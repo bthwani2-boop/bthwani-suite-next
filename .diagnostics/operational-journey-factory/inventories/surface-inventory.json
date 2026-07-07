@@ -1,5 +1,5 @@
 {
-  "head_sha": "c8625cb9b081c1e66d74be7147919fbd99121105",
+  "head_sha": "1806c36e133f76501f2b18f6965d7ea47dbd7e89",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -329,7 +329,7 @@
     {
       "surface": "services/dsh/frontend/app-client",
       "kind": "ui_surface",
-      "files": 59,
+      "files": 52,
       "screens": [
         "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx",
         "services/dsh/frontend/app-client/account/AppearanceHubScreen.tsx",
@@ -389,13 +389,6 @@
         "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
         "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
         "services/dsh/frontend/app-client/shared/ui/BannerCarousel.tsx",
-        "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
-        "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
-        "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
-        "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
-        "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
-        "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
-        "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
         "services/dsh/frontend/app-client/store/StoreCardPremium.tsx",
         "services/dsh/frontend/app-client/store/StoreDetailCarousel.tsx",
         "services/dsh/frontend/app-client/store/StoreDetailCategoryRail.tsx",
@@ -416,8 +409,8 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 359,
-      "states_candidates": 117
+      "icons_components_actions_candidates": 334,
+      "states_candidates": 113
     },
     {
       "surface": "services/dsh/frontend/app-field",
@@ -1467,13 +1460,6 @@
     "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
     "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
     "services/dsh/frontend/app-client/shared/ui/BannerCarousel.tsx",
-    "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
-    "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
-    "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
-    "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
-    "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
-    "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
-    "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
     "services/dsh/frontend/app-client/store/StoreCardPremium.tsx",
     "services/dsh/frontend/app-client/store/StoreDetailCarousel.tsx",
     "services/dsh/frontend/app-client/store/StoreDetailCategoryRail.tsx",

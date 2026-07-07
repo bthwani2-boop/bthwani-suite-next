@@ -25,7 +25,7 @@ const FG: Record<BadgeType, string> = {
   muted: colorRoles.textSecondary,
 };
 
-export function StatusBadge({ label, type = "muted" }: Props) {
+function StatusBadge({ label, type = "muted" }: Props) {
   return (
     <View style={[styles.badge, { backgroundColor: BG[type] }]}>
       <Text style={[styles.label, { color: FG[type] }]}>{label}</Text>

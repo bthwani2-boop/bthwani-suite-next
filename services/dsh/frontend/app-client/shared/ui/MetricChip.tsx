@@ -6,7 +6,7 @@ type Props = {
   readonly label: string;
 };
 
-export function MetricChip({ label }: Props) {
+function MetricChip({ label }: Props) {
   return (
     <View style={styles.chip}>
       <Text style={styles.label}>{label}</Text>

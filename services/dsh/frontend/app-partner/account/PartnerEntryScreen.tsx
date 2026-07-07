@@ -164,6 +164,6 @@ export function PartnerEntryScreen({
   );
 }
 
-export { PartnerEntryScreen as DshEntryScreen };
+// export { PartnerEntryScreen as DshEntryScreen };
 
 // export default PartnerEntryScreen; // Unused default export

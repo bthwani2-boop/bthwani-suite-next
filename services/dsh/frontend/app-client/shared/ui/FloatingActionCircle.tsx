@@ -8,7 +8,7 @@ type Props = {
   readonly onPress?: () => void;
 };
 
-export function FloatingActionCircle({ icon, accessibilityLabel, onPress }: Props) {
+function FloatingActionCircle({ icon, accessibilityLabel, onPress }: Props) {
   return (
     <Pressable
       onPress={onPress}

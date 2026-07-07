@@ -27,7 +27,7 @@ export type DshPartnerRouteRecord = {
   readonly ownerPath: string;
 };
 
-export const dshPartnerRoutes = [
+const dshPartnerRoutes = [
   { routeId: 'dsh-partner-home', legacyRoute: 'home', screenId: 'partner.dsh.home.dashboard', ownerPath: 'dsh/frontend/app-partner/account/PartnerHubScreen.tsx' },
   { routeId: 'dsh-partner-entry', legacyRoute: 'entry', screenId: 'partner.dsh.entry.status', ownerPath: 'dsh/frontend/app-partner/account/PartnerEntryScreen.tsx' },
   { routeId: 'dsh-partner-store-profile', legacyRoute: 'home', screenId: 'partner.dsh.store.profile', ownerPath: 'dsh/frontend/app-partner/store/StoreProfileScreen.tsx' },

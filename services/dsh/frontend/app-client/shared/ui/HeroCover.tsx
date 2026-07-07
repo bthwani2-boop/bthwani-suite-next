@@ -6,7 +6,7 @@ type Props = {
   readonly coverImage?: ImageSourcePropType | null;
 };
 
-export function HeroCover({ coverImage }: Props) {
+function HeroCover({ coverImage }: Props) {
   return (
     <View style={styles.container}>
       {coverImage ? (

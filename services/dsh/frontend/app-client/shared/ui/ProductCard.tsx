@@ -46,7 +46,7 @@ function StockLabel({ status }: { readonly status: "in_stock" | "low_stock" | "o
   );
 }
 
-export function ProductCard({
+function ProductCard({
   title,
   subtitle,
   unitLabel,

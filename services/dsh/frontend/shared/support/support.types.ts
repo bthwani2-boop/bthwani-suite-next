@@ -88,7 +88,7 @@ export type DshUpdateIncidentInput = {
   readonly postmortemUrl?: string | undefined;
 };
 
-export const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {
+const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {
   open: "مفتوحة",
   in_review: "قيد المراجعة",
   pending_user: "بانتظار المستخدم",
@@ -96,7 +96,7 @@ export const TICKET_STATUS_LABELS: Record<DshTicketStatus, string> = {
   closed: "مغلقة",
 };
 
-export const TICKET_PRIORITY_LABELS: Record<DshTicketPriority, string> = {
+const TICKET_PRIORITY_LABELS: Record<DshTicketPriority, string> = {
   low: "منخفضة",
   normal: "عادية",
   high: "مرتفعة",
@@ -113,20 +113,20 @@ export const TICKET_CATEGORY_LABELS: Record<DshTicketCategory, string> = {
   other: "أخرى",
 };
 
-export const INCIDENT_SEVERITY_LABELS: Record<DshIncidentSeverity, string> = {
+const INCIDENT_SEVERITY_LABELS: Record<DshIncidentSeverity, string> = {
   low: "منخفض",
   medium: "متوسط",
   high: "مرتفع",
   critical: "حرج",
 };
 
-export const INCIDENT_STATUS_LABELS: Record<DshIncidentStatus, string> = {
+const INCIDENT_STATUS_LABELS: Record<DshIncidentStatus, string> = {
   open: "مفتوح",
   monitoring: "قيد المراقبة",
   resolved: "محلول",
 };
 
-export const INCIDENT_SCOPE_LABELS: Record<DshIncidentScope, string> = {
+const INCIDENT_SCOPE_LABELS: Record<DshIncidentScope, string> = {
   delivery: "التوصيل",
   stores: "المتاجر",
   payments: "المدفوعات",

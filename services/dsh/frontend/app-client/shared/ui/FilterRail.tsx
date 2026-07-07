@@ -14,7 +14,7 @@ type Props = {
   readonly onChange: (id: string) => void;
 };
 
-export function FilterRail({ items, selectedId, onChange }: Props) {
+function FilterRail({ items, selectedId, onChange }: Props) {
   return (
     <ScrollView
       horizontal

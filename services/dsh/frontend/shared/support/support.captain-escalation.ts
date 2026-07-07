@@ -11,7 +11,7 @@ export type DshCaptainSupportEscalationContext = {
   readonly label: string;
 };
 
-export const DSH_CAPTAIN_SUPPORT_ESCALATION_MAP: readonly DshCaptainSupportEscalationContext[] = [
+const DSH_CAPTAIN_SUPPORT_ESCALATION_MAP: readonly DshCaptainSupportEscalationContext[] = [
   {
     escalationReason: 'pickup_failed',
     captainRoute: 'support-screen',

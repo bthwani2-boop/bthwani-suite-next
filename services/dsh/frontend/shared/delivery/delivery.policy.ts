@@ -34,7 +34,7 @@ export type DshCaptainRouteMapping = {
   readonly blockReason?: string;
 };
 
-export const DSH_CAPTAIN_ROUTE_MAP: readonly DshCaptainRouteMapping[] = [
+const DSH_CAPTAIN_ROUTE_MAP: readonly DshCaptainRouteMapping[] = [
   { lifecycleState: 'offline',           primaryRoute: 'home',           label: 'غير متصل — الصفحة الرئيسية',             canReceiveNewOffers: false, isBlocked: false },
   { lifecycleState: 'available',         primaryRoute: 'home',           label: 'متاح — ينتظر عروض الطلبات',              canReceiveNewOffers: true,  isBlocked: false },
   { lifecycleState: 'offer_received',    primaryRoute: 'bell',           label: 'عرض طلب جديد — شاشة الإشعار',           canReceiveNewOffers: false, isBlocked: false },
@@ -90,7 +90,7 @@ export type DshCaptainInboxModeFilter = {
   readonly modeLabel: string;
 };
 
-export const DSH_CAPTAIN_INBOX_MODE_FILTERS: readonly DshCaptainInboxModeFilter[] = [
+const DSH_CAPTAIN_INBOX_MODE_FILTERS: readonly DshCaptainInboxModeFilter[] = [
   { mode: 'bthwani_delivery', visibleInInbox: true,  modeLabel: 'توصيل بثواني' },
   { mode: 'partner_delivery', visibleInInbox: false, hiddenReason: 'توصيل المتجر لا يحتاج كابتن — موصل الشريك يتولى التوصيل', modeLabel: 'توصيل المتجر' },
   { mode: 'pickup',           visibleInInbox: false, hiddenReason: 'الاستلام الذاتي لا يُسند للكابتن — العميل يستلم من المتجر', modeLabel: 'استلم بنفسك' },

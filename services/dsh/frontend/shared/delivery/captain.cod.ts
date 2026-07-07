@@ -9,7 +9,7 @@ export type DshCaptainCodState =
   | 'cod_deposited'
   | 'cod_settled';
 
-export type DshCaptainCodEntry = {
+type DshCaptainCodEntry = {
   readonly orderId: string;
   readonly amountLabel: string;
   readonly state: DshCaptainCodState;
@@ -22,7 +22,7 @@ export type DshCaptainCodEntry = {
   readonly contractState: 'DSH_WLT_READ_ONLY_REFERENCE';
 };
 
-export const DSH_CAPTAIN_COD_STATE_META: Record<DshCaptainCodState, {
+const DSH_CAPTAIN_COD_STATE_META: Record<DshCaptainCodState, {
   label: string;
   actionRequired: boolean;
   actionLabel: string;

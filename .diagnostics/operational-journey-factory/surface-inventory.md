@@ -1,6 +1,6 @@
 # Operational Surface Inventory
 
-head_sha: `c8625cb9b081c1e66d74be7147919fbd99121105`
+head_sha: `1806c36e133f76501f2b18f6965d7ea47dbd7e89`
 status: `DISCOVERY_ONLY`
 
 | Kind | Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |
@@ -13,7 +13,7 @@ status: `DISCOVERY_ONLY`
 | runtime_shell | `apps/webapp/runtime` | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
 | runtime_shell | `apps/website/runtime` | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
 | ui_surface | `services/dsh/frontend/app-captain` | 39 | 14 | 0 | 3 | 0 | 0 | 144 | 176 |
-| ui_surface | `services/dsh/frontend/app-client` | 59 | 16 | 0 | 4 | 0 | 0 | 359 | 117 |
+| ui_surface | `services/dsh/frontend/app-client` | 52 | 16 | 0 | 4 | 0 | 0 | 334 | 113 |
 | ui_surface | `services/dsh/frontend/app-field` | 23 | 12 | 0 | 2 | 0 | 0 | 90 | 102 |
 | ui_surface | `services/dsh/frontend/app-partner` | 39 | 18 | 0 | 3 | 0 | 0 | 244 | 353 |
 | ui_surface | `services/dsh/frontend/control-panel` | 78 | 34 | 0 | 0 | 0 | 0 | 256 | 426 |

@@ -41,7 +41,7 @@ const baseStates = ['loading', 'empty', 'error', 'success', 'offline'] as const 
 const blockedStates = ['loading', 'empty', 'error', 'success', 'offline', 'blocked'] as const satisfies readonly DshPartnerScreenState[];
 const retryStates = ['loading', 'empty', 'error', 'success', 'offline', 'retry'] as const satisfies readonly DshPartnerScreenState[];
 
-export const dshPartnerScreenRegistry = [
+const dshPartnerScreenRegistry = [
   {
     screenId: 'partner.dsh.home.dashboard',
     routeId: 'dsh-partner-home',

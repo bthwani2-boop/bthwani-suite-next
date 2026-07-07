@@ -1011,7 +1011,7 @@ export function DshPartnerOrdersScreen(props: PartnerOrdersHomeScreenProps) {
   );
 }
 
-export { DshPartnerOrdersScreen as PartnerOrdersHomeScreen };
+// export { DshPartnerOrdersScreen as PartnerOrdersHomeScreen };
 
 export type PartnerOrdersInboxScreenState = PartnerOrdersHomeScreenState;
 export type PartnerOrdersInboxListItem = PartnerOrderItem;
