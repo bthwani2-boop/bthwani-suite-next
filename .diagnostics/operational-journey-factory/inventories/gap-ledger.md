@@ -1,19 +1,14 @@
 # Operational Gap Ledger (Reconciled)
 
-head_sha: `682aec7ef7b51167a3d828448bcdfd11cec2cd60`
+head_sha: `4cbe5a8c0aac32308affe90295f496bb9d681c26`
 status: `DISCOVERY_ONLY`
 
 | gap_id | source_tool | path | type | owner | risk_level | required_action | allowed_decision | verification_commands | status | blocks_journey_start |
 |---|---|---|---|---|---|---|---|---|---|---:|
-| `UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog.controller-core.ts` | knip | `services/dsh/frontend/shared/catalog/catalog.controller-core.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/platform/platform-provider.registry.ts` | knip | `services/dsh/frontend/shared/platform/platform-provider.registry.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:apps/control-panel/runtime/src/styles/dsh-colors.ts` | knip | `apps/control-panel/runtime/src/styles/dsh-colors.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx` | knip | `services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:apps/app-partner/runtime/src/App.tsx` | knip | `apps/app-partner/runtime/src/App.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:apps/app-field/runtime/src/App.tsx` | knip | `apps/app-field/runtime/src/App.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog.states.ts` | knip | `services/dsh/frontend/shared/catalog/catalog.states.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/checkout/checkout.states.ts` | knip | `services/dsh/frontend/shared/checkout/checkout.states.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/dsh/frontend/shared/orders/orders.states.ts` | knip | `services/dsh/frontend/shared/orders/orders.states.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/control-panel/dashboard/ControlPanelDshClosureDashboardScreen.tsx` | knip | `services/dsh/frontend/control-panel/dashboard/ControlPanelDshClosureDashboardScreen.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx` | knip | `services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx` | knip | `services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
@@ -22,7 +17,6 @@ status: `DISCOVERY_ONLY`
 | `UNUSED_EXPORT:shared/ui-kit/src/providers.tsx` | knip | `shared/ui-kit/src/providers.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:shared/ui-kit/src/foundation.ts` | knip | `shared/ui-kit/src/foundation.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:shared/ui-kit/src/appearance.ts` | knip | `shared/ui-kit/src/appearance.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
-| `UNUSED_EXPORT:services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts` | knip | `services/wlt/frontend/shared/dsh/wlt-dsh-reference.api.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/identity-access/dsh-role-permission.model.ts` | knip | `services/dsh/frontend/shared/identity-access/dsh-role-permission.model.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/catalog/use-catalog-controller.tsx` | knip | `services/dsh/frontend/shared/catalog/use-catalog-controller.tsx` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |
 | `UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog-registry.ts` | knip | `services/dsh/frontend/shared/catalog/catalog-registry.ts` | UNUSED_EXPORT | toolchain | P2 | Remove dead exports | REMOVE_OR_KEEP | `pnpm run diagnostics:operational:reconcile` | OPEN | false |

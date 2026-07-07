@@ -17,16 +17,6 @@ export async function fetchWltPaymentStatusRef(
   );
 }
 
-export async function fetchWltPaymentSessionReference(
-  baseUrl: string,
-  paymentSessionId: string,
-) {
-  return wltFetchJson<WltDshPaymentSessionReference>(
-    `${baseUrl}/wlt/payment-sessions/${encodeURIComponent(paymentSessionId)}`,
-    (body: any) => body.paymentSession as WltDshPaymentSessionReference,
-  );
-}
-
 export async function fetchWltSettlementStatusRef(
   baseUrl: string,
   orderId: string

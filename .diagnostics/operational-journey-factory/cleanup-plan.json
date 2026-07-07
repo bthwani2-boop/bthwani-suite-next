@@ -1,8 +1,8 @@
 {
   "apply_cleanup": false,
   "archive_required_before_delete": true,
-  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/682aec7ef7b51167a3d828448bcdfd11cec2cd60-2026-07-07T14-12-49-438Z.zip",
-  "cleanup_candidate_count": 21,
+  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/4cbe5a8c0aac32308affe90295f496bb9d681c26-2026-07-07T14-40-49-616Z.zip",
+  "cleanup_candidate_count": 23,
   "cleanup_candidates": [
     ".diagnostics/operational-journey-factory/00_CANONICAL_REFERENCE_INDEX.md",
     ".diagnostics/operational-journey-factory/build-canonical-reference.mjs",
@@ -12,6 +12,8 @@
     ".diagnostics/operational-journey-factory/diagnostics-evidence-manifest.json",
     ".diagnostics/operational-journey-factory/diagnostics-manifest.json",
     ".diagnostics/operational-journey-factory/factory-file-manifest.json",
+    ".diagnostics/operational-journey-factory/gap-burndown-report.json",
+    ".diagnostics/operational-journey-factory/gap-burndown-report.md",
     ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
     ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
     ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",

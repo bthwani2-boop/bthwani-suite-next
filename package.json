@@ -190,7 +190,9 @@
     "guard:tools-v5-registry": "pnpm run guard:tool-catalog-coverage && pnpm run guard:toolchain-activation && pnpm run guard:oss-toolchain-policy",
     "guard:tools-v5-ci": "pnpm run guard:tools-v5-registry && pnpm run guard:workflow-lint && pnpm run guard:workflow-security && pnpm run guard:opa-policies",
     "guard:foundation-cross-journey-closure": "node tools/guards/foundation-cross-journey-closure-gate.mjs",
-    "guard:foundation-cross-journey-remediation": "node tools/guards/foundation-cross-journey-remediation-gate.mjs"
+    "guard:foundation-cross-journey-remediation": "node tools/guards/foundation-cross-journey-remediation-gate.mjs",
+    "guard:dsh-order-lifecycle-execution": "node tools/guards/dsh-order-lifecycle-execution-gate.mjs",
+    "guard:dsh-order-lifecycle-all": "pnpm run diagnostics:operational:reconcile && pnpm run guard:operational-diagnostics-reconciliation && pnpm run guard:dsh-order-lifecycle-execution"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

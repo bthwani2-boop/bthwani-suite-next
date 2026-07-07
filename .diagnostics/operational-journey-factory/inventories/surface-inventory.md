@@ -1,6 +1,6 @@
 # Operational Surface Inventory
 
-head_sha: `682aec7ef7b51167a3d828448bcdfd11cec2cd60`
+head_sha: `4cbe5a8c0aac32308affe90295f496bb9d681c26`
 status: `DISCOVERY_ONLY`
 
 | Kind | Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |
@@ -18,7 +18,7 @@ status: `DISCOVERY_ONLY`
 | ui_surface | `services/dsh/frontend/app-partner` | 39 | 18 | 0 | 3 | 0 | 0 | 243 | 348 |
 | ui_surface | `services/dsh/frontend/control-panel` | 82 | 36 | 0 | 0 | 0 | 0 | 276 | 470 |
 | other | `services/dsh/frontend/css-modules.d.ts` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| shared_brain | `services/dsh/frontend/shared` | 294 | 1 | 0 | 1 | 22 | 17 | 11 | 1468 |
+| shared_brain | `services/dsh/frontend/shared` | 294 | 1 | 0 | 1 | 22 | 17 | 11 | 1464 |
 | ui_surface | `services/wlt/frontend/app-captain` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | ui_surface | `services/wlt/frontend/app-client` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | ui_surface | `services/wlt/frontend/app-field` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |

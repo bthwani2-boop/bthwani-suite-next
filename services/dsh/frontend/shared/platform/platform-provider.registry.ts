@@ -92,11 +92,3 @@ export const PLATFORM_PROVIDER_REGISTRY: readonly PlatformProviderRecord[] = [
     rollbackTarget: null,
   },
 ];
-
-export function getProviderById(id: string): PlatformProviderRecord | undefined {
-  return PLATFORM_PROVIDER_REGISTRY.find((p) => p.id === id);
-}
-
-export function getProvidersByKind(kind: PlatformProviderRecord["kind"]): readonly PlatformProviderRecord[] {
-  return PLATFORM_PROVIDER_REGISTRY.filter((p) => p.kind === kind);
-}

@@ -20,22 +20,6 @@ export function ordersSuccessState(orders: readonly DshOrder[]): DshOrdersListSt
   return { kind: "success", orders };
 }
 
-export function orderDetailIdleState(): DshOrderDetailState {
-  return { kind: "idle" };
-}
-
-export function orderDetailLoadingState(): DshOrderDetailState {
-  return { kind: "loading" };
-}
-
-export function orderDetailErrorState(message: string): DshOrderDetailState {
-  return { kind: "error", message };
-}
-
-export function orderDetailSuccessState(order: DshOrder): DshOrderDetailState {
-  return { kind: "success", order };
-}
-
 export function orderActionIdleState(): DshOrderActionState {
   return { kind: "idle" };
 }

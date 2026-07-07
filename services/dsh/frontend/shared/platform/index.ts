@@ -29,7 +29,7 @@ export type { AllowedProviderConsumerSurface, ForbiddenProviderConsumerSurface }
 export type { MapsProviderPublicConfig } from "./platform-provider-public-config";
 export { DEFAULT_MAPS_PUBLIC_CONFIG } from "./platform-provider-public-config";
 
-export { PLATFORM_PROVIDER_REGISTRY, getProviderById, getProvidersByKind } from "./platform-provider.registry";
+export { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
 
 export * from './feature-flags';
 export * from './platform-vars';

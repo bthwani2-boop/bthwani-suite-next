@@ -16,3 +16,4 @@ This document evaluates the gating rules to declare the DSH Order Lifecycle jour
 We hereby declare the **DSH Order Lifecycle Journey** as **PARTIAL_EXECUTION_PACKAGE_WITH_OPEN_BLOCKERS**.
 - **Execution State**: `PARTIAL_EXECUTION_PACKAGE_WITH_OPEN_BLOCKERS`
 - **Verification Hash**: `ddb054583f42e454bca6f680823e8339ffca0785`
+- **Next Required Action**: `continue prioritized gap burn-down from gap-ledger.json`

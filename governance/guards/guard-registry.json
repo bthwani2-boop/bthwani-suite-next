@@ -380,6 +380,14 @@
       "exit_level": "fail",
       "description": "Enforces reconciliation of gaps and checks stale outputs and raw reports.",
       "source_file": "tools/guards/operational-diagnostics-reconciliation-gate.mjs"
+    },
+    {
+      "id": "dsh-order-lifecycle-execution",
+      "name": "DSH Order Lifecycle Execution Gate",
+      "script": "guard:dsh-order-lifecycle-execution",
+      "exit_level": "fail",
+      "description": "Verifies execution status, checks for open blocking gaps, and checks transition capabilities.",
+      "source_file": "tools/guards/dsh-order-lifecycle-execution-gate.mjs"
     }
   ]
 }

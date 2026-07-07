@@ -1,6 +1,6 @@
 # Operational Toolchain Inventory
 
-head_sha: `682aec7ef7b51167a3d828448bcdfd11cec2cd60`
+head_sha: `4cbe5a8c0aac32308affe90295f496bb9d681c26`
 status: `DISCOVERY_ONLY`
 
 | Tool | Activation | Command | Classification |
@@ -84,6 +84,7 @@ status: `DISCOVERY_ONLY`
 - `diagnostics:operational:surfaces`: UNUSED_SCRIPT
 - `diagnostics:operational:inventory`: UNUSED_SCRIPT
 - `diagnostics:operational:gaps`: UNUSED_SCRIPT
+- `diagnostics:operational:reconcile`: UNUSED_SCRIPT
 - `diagnostics:trivy`: UNUSED_SCRIPT
 - `diagnostics:osv`: UNUSED_SCRIPT
 - `diagnostics:actions-pin`: UNUSED_SCRIPT
@@ -100,3 +101,4 @@ status: `DISCOVERY_ONLY`
 - `guard:tools-v5-registry`: UNUSED_SCRIPT
 - `guard:tools-v5-ci`: UNUSED_SCRIPT
 - `guard:foundation-cross-journey-closure`: UNUSED_SCRIPT
+- `guard:dsh-order-lifecycle-all`: UNUSED_SCRIPT

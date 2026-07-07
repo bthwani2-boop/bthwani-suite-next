@@ -347,6 +347,28 @@ async function runReconciliation() {
   // 10. Perform validation checks
   const blockers = [];
 
+  const burndownReportPath = path.join(diagnosticsDir, "gap-burndown-report.json");
+  const hasBurndownReport = fs.existsSync(burndownReportPath);
+  let burndown = null;
+  if (hasBurndownReport) {
+    try {
+      burndown = JSON.parse(fs.readFileSync(burndownReportPath, "utf8"));
+    } catch (e) {
+      blockers.push(`Failed to parse gap-burndown-report.json: ${e.message}`);
+    }
+  } else {
+    blockers.push("Gap burndown report is missing.");
+  }
+
+  const hasGraphify = commandResults.some(r => r && r.name && r.name.includes("graphify"));
+  const hasDepGraph = commandResults.some(r => r && r.name && r.name.includes("dependency-graph"));
+  const hasHardGate = commandResults.some(r => r && r.name && r.name.includes("lifecycle-execution"));
+
+  if (commandResults.length === 0) blockers.push("Command results are missing.");
+  if (!hasGraphify) blockers.push("Graphify execution proof is missing.");
+  if (!hasDepGraph) blockers.push("Dependency graph execution proof is missing.");
+  if (!hasHardGate) blockers.push("Hard gate (lifecycle-execution) execution proof is missing.");
+
   // Rule A: Gap count comparison
   if (updatedSummary.numeric_truth.gap_count !== updatedLedger.gap_count) {
     blockers.push(`Gap count mismatch: summary says ${updatedSummary.numeric_truth.gap_count}, ledger says ${updatedLedger.gap_count}`);
@@ -393,6 +415,14 @@ async function runReconciliation() {
     graph_warnings_classified: graphCircularGaps.length,
     jscpd_findings_classified: jscpdGaps.length,
     knip_findings_classified: knipGaps.length,
+    fixed_by_code_count: burndown ? burndown.fixed_by_code_count : 0,
+    keep_with_proof_count: burndown ? burndown.keep_active_with_proof_count : 0,
+    false_positive_with_proof_count: burndown ? burndown.false_positive_with_proof_count : 0,
+    blocked_external_only_count: burndown ? burndown.blocked_external_only_count : 0,
+    remaining_open_gaps: burndown ? burndown.gap_count_after : gapCountAfter,
+    graphify_used: hasGraphify,
+    dependency_graph_used: hasDepGraph,
+    verification_commands_run: burndown ? burndown.verification_commands_run : [],
     blockers,
     status: blockers.length > 0 ? "STILL_BLOCKED_WITH_EXACT_UNRESOLVED_EVIDENCE_GAPS" : "EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED"
   };

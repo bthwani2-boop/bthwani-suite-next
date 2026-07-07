@@ -1,5 +1,5 @@
 {
-  "head_sha": "682aec7ef7b51167a3d828448bcdfd11cec2cd60",
+  "head_sha": "4cbe5a8c0aac32308affe90295f496bb9d681c26",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -855,7 +855,7 @@
         "services/dsh/frontend/shared/runtime/dsh-price-format.ts"
       ],
       "icons_components_actions_candidates": 11,
-      "states_candidates": 1468
+      "states_candidates": 1464
     },
     {
       "surface": "services/wlt/frontend/app-captain",

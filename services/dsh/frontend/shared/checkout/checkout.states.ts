@@ -30,10 +30,6 @@ export function checkoutBlockedPaymentUnavailableState(): DshCheckoutState {
   return { kind: "blocked_payment_unavailable" };
 }
 
-export function checkoutOutOfAreaState(): DshCheckoutState {
-  return { kind: "out_of_area" };
-}
-
 export function checkoutIntentListLoadState(
   intents: readonly DshCheckoutIntent[],
 ): DshCheckoutIntentListLoadState {

@@ -28,10 +28,6 @@ export function catalogSuccessState(catalog: PartnerCatalog): CatalogState {
   return { kind: "success", catalog };
 }
 
-export function catalogSubmissionLoadingState(): CatalogSubmissionState {
-  return { kind: "loading" };
-}
-
 export function catalogSubmissionPermissionDeniedState(): CatalogSubmissionState {
   return { kind: "permission_denied" };
 }
@@ -68,10 +64,6 @@ export function catalogActionErrorState(): CatalogActionState {
 
 export function catalogActionConflictState(): CatalogActionState {
   return "conflict";
-}
-
-export function catalogAuditIdleState(): CatalogAuditState {
-  return { kind: "idle", entries: [] };
 }
 
 export function catalogAuditLoadingState(

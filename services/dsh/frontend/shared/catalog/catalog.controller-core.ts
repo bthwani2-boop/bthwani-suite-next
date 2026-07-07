@@ -19,14 +19,6 @@ export function shouldLoadAuthenticatedCatalog(authKind: string): boolean {
   return authKind === "authenticated";
 }
 
-export async function loadCatalogState(
-  fetchState: () => Promise<CatalogState>,
-  publish: (state: CatalogState) => void,
-): Promise<void> {
-  publish(catalogLoadingState());
-  publish(await fetchState());
-}
-
 export async function runCatalogAction(
   operation: () => Promise<unknown>,
   reload: () => Promise<void>,

@@ -1,10 +1,10 @@
 {
-  "head_sha": "682aec7ef7b51167a3d828448bcdfd11cec2cd60",
+  "head_sha": "4cbe5a8c0aac32308affe90295f496bb9d681c26",
   "status": "DISCOVERY_ONLY",
   "output_policy": ".diagnostics/operational-journey-factory",
   "sources": {
-    "package_json_scripts": 181,
-    "guard_registry_entries": 47,
+    "package_json_scripts": 185,
+    "guard_registry_entries": 49,
     "guard_files": [
       "tools/guards/a11y-gate.mjs",
       "tools/guards/agent-governance-gate.mjs",
@@ -16,6 +16,7 @@
       "tools/guards/cleanup-policy-gate.mjs",
       "tools/guards/dependency-graph-gate.mjs",
       "tools/guards/design-tokens-gate.mjs",
+      "tools/guards/dsh-order-lifecycle-execution-gate.mjs",
       "tools/guards/extract_routes.go",
       "tools/guards/foundation-cross-journey-closure-gate.mjs",
       "tools/guards/foundation-cross-journey-remediation-gate.mjs",
@@ -28,6 +29,7 @@
       "tools/guards/icon-contract-gate.mjs",
       "tools/guards/logic-coverage-gate.mjs",
       "tools/guards/no-broken-imports.mjs",
+      "tools/guards/operational-diagnostics-reconciliation-gate.mjs",
       "tools/guards/operational-journey-template-factory-gate.mjs",
       "tools/guards/oss-toolchain-policy-gate.mjs",
       "tools/guards/performance-budget-gate.mjs",
@@ -71,6 +73,7 @@
       "tools/scripts/generate-toolchain-execution-plan.mjs",
       "tools/scripts/guard-mobile-apps.mjs",
       "tools/scripts/install-oss-toolchain-binaries.sh",
+      "tools/scripts/reconcile-operational-diagnostics.mjs",
       "tools/scripts/replace-opstheme.mjs",
       "tools/scripts/run-actionlint.mjs",
       "tools/scripts/run-conftest.mjs",
@@ -2403,6 +2406,29 @@
       ]
     },
     {
+      "tool_id": "diagnostics:operational:reconcile",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "diagnostics:operational:reconcile",
+      "commands": [
+        {
+          "id": "diagnostics:operational:reconcile:package-script",
+          "command": "diagnostics:operational:reconcile",
+          "tool": "diagnostics:operational:reconcile",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
       "tool_id": "diagnostics:trivy",
       "classification": [
         "UNUSED_SCRIPT"
@@ -2761,6 +2787,29 @@
           "id": "guard:foundation-cross-journey-closure:package-script",
           "command": "guard:foundation-cross-journey-closure",
           "tool": "guard:foundation-cross-journey-closure",
+          "expected_exit_code": 0,
+          "actual_exit_code": null,
+          "blocking": false,
+          "classification": "FIX_REQUIRED",
+          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+          "remediation_hint": "classify_package_script_or_register_guard"
+        }
+      ]
+    },
+    {
+      "tool_id": "guard:dsh-order-lifecycle-all",
+      "classification": [
+        "UNUSED_SCRIPT"
+      ],
+      "detected_from": [
+        "package.json"
+      ],
+      "command": "guard:dsh-order-lifecycle-all",
+      "commands": [
+        {
+          "id": "guard:dsh-order-lifecycle-all:package-script",
+          "command": "guard:dsh-order-lifecycle-all",
+          "tool": "guard:dsh-order-lifecycle-all",
           "expected_exit_code": 0,
           "actual_exit_code": null,
           "blocking": false,

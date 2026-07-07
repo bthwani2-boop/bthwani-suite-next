@@ -1,6 +1,6 @@
 # Operational Journey Inventory
 
-head_sha: `682aec7ef7b51167a3d828448bcdfd11cec2cd60`
+head_sha: `4cbe5a8c0aac32308affe90295f496bb9d681c26`
 status: `DISCOVERY_ONLY`
 
 ## Source Files

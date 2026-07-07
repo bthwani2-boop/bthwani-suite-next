@@ -1,12 +1,23 @@
 {
-  "head_sha": "682aec7ef7b51167a3d828448bcdfd11cec2cd60",
+  "head_sha": "4cbe5a8c0aac32308affe90295f496bb9d681c26",
   "branch": "journy",
   "stale_output": false,
-  "gap_count_before": 184,
-  "gap_count_after": 184,
+  "gap_count_before": 178,
+  "gap_count_after": 178,
   "graph_warnings_classified": 0,
   "jscpd_findings_classified": 0,
-  "knip_findings_classified": 184,
+  "knip_findings_classified": 178,
+  "fixed_by_code_count": 6,
+  "keep_with_proof_count": 11,
+  "false_positive_with_proof_count": 8,
+  "blocked_external_only_count": 0,
+  "remaining_open_gaps": 178,
+  "graphify_used": true,
+  "dependency_graph_used": true,
+  "verification_commands_run": [
+    "pnpm run typecheck",
+    "pnpm run guard:operational-diagnostics-reconciliation"
+  ],
   "blockers": [],
   "status": "EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED"
 }
