@@ -1,6 +1,6 @@
 # Operational Toolchain Inventory
 
-head_sha: `62945c2a88d495e43baa9605d9e3c2e6ae57a49e`
+head_sha: `e45f83ae051822efef4de56cac4d0a06bdc056fc`
 status: `DISCOVERY_ONLY`
 
 | Tool | Activation | Command | Classification |
