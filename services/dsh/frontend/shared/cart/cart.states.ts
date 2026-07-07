@@ -28,7 +28,7 @@ export function serviceabilityIdleState(): DshServiceabilityState {
   return { kind: "idle" };
 }
 
-export function serviceabilityCheckingState(): DshServiceabilityState {
+function serviceabilityCheckingState(): DshServiceabilityState {
   return { kind: "checking" };
 }
 

@@ -64,7 +64,7 @@ export type WltPaymentSessionHttpError = {
   readonly status: number;
   readonly body: string;
 };
-export type WltPaymentSessionError =
+type WltPaymentSessionError =
   | WltPaymentSessionOfflineError
   | WltPaymentSessionHttpError;
 
@@ -149,7 +149,7 @@ async function wltFetch<T>(
  * @param fetchFn     Fetch implementation (default: globalThis.fetch)
  * @param auth        Auth context: bearer token (preferred) or clientId + actorType
  */
-export function createWltPaymentSessionClient(
+function createWltPaymentSessionClient(
   wltBaseUrl: string,
   fetchFn: WltPaymentSessionFetchFn = globalThis.fetch,
   auth: WltPaymentSessionAuth = {},

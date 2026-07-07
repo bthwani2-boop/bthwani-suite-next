@@ -223,4 +223,4 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
   );
 }
 
-export default DshFieldSurface;
+// export default DshFieldSurface; // Unused default export

@@ -21,7 +21,7 @@ const DELIVERY_SEQUENCE: readonly DshDeliveryStatus[] = [
   "delivered",
 ];
 
-export function toDispatchCardViewModel(assignment: DshDispatchAssignment): DshDispatchCardViewModel {
+function toDispatchCardViewModel(assignment: DshDispatchAssignment): DshDispatchCardViewModel {
   const statusIndex = DELIVERY_SEQUENCE.indexOf(assignment.delivery.status);
   return {
     id: assignment.id,
@@ -52,7 +52,7 @@ export function resolveNextActionLabel(assignment: DshDispatchAssignment): strin
   return "انتظار قبول الكابتن";
 }
 
-export function resolveTrackingTitle(assignment: DshDispatchAssignment): string {
+function resolveTrackingTitle(assignment: DshDispatchAssignment): string {
   return assignment.delivery.status === "delivered"
     ? "تم تسليم طلبك"
     : "طلبك قيد التوصيل";

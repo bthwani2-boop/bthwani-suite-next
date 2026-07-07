@@ -1051,4 +1051,4 @@ export function OrdersInboxScreen(props: OrdersInboxScreenProps) {
   return <PartnerOrdersInboxScreen {...props} />;
 }
 
-export default OrdersInboxScreen;
+// export default OrdersInboxScreen; // Unused default export

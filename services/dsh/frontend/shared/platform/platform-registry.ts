@@ -17,7 +17,8 @@ export type PlatformMainTabId =
   | "canary"
   | "health"
   | "rollback"
-  | "overview";
+  | "overview"
+  | "notifications";
 
 export type PlatformMainTabMeta = {
   readonly id: PlatformMainTabId;
@@ -32,6 +33,7 @@ export const PLATFORM_MAIN_TABS: readonly PlatformMainTabMeta[] = [
   { id: "health",    label: "الصحة والأداء" },
   { id: "rollback",  label: "السجل والتراجع" },
   { id: "overview",  label: "نظرة عامة عن المنصة" },
+  { id: "notifications", label: "إعدادات الإشعارات" },
 ] as const;
 
 // ─── Scope / Layer Tab Registry ───────────────────────────────────────────────

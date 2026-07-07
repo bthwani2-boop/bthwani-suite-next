@@ -26,6 +26,8 @@ import {
 // React.lazy — each screen is a separate JS chunk loaded only when its tab is active.
 // Named-export screens use .then(m => ({ default: m.ScreenName })) to satisfy lazy().
 const CommandCenterScreen = React.lazy(() => import('./CommandCenterScreen').then((m) => ({ default: m.CommandCenterScreen })));
+const CartActivityScreen = React.lazy(() => import('./CartActivityScreen').then((m) => ({ default: m.CartActivityScreen })));
+const CheckoutActivityScreen = React.lazy(() => import('./CheckoutActivityScreen').then((m) => ({ default: m.CheckoutActivityScreen })));
 const LiveOrdersScreen = React.lazy(() => import('./LiveOrdersScreen').then((m) => ({ default: m.LiveOrdersScreen })));
 const AssistedOrderDeskScreen = React.lazy(() => import('./AssistedOrderDeskScreen').then((m) => ({ default: m.AssistedOrderDeskScreen })));
 const OrderRescueScreen = React.lazy(() => import('./OrderRescueScreen').then((m) => ({ default: m.OrderRescueScreen })));
@@ -57,6 +59,10 @@ export type ControlPanelDshOperationsScreenProps = {
 const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = {
   'command-center': {
     default: CommandCenterScreen,
+    bySubGroup: {
+      carts: CartActivityScreen,
+      checkout: CheckoutActivityScreen,
+    },
   },
   'live-orders': {
     default: LiveOrdersScreen,
@@ -338,9 +344,4 @@ export function ControlPanelDshOperationsScreen({
   );
 }
 
-export function DshOperationsHubSurface(props: ControlPanelDshOperationsScreenProps = {}) {
-  return <ControlPanelDshOperationsScreen {...props} />;
-}
-
 export const OperationsHubScreen = ControlPanelDshOperationsScreen;
-export default ControlPanelDshOperationsScreen;

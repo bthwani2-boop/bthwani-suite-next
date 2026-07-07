@@ -1,8 +1,8 @@
 {
   "apply_cleanup": false,
   "archive_required_before_delete": true,
-  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/8a316bd9659257b400681ef5f65f4c466d3707eb-2026-07-07T16-29-13-201Z.zip",
-  "cleanup_candidate_count": 29,
+  "archive_target_suggestion": ".diagnostics/_archive-before-cleanup/9c63ba9fea862b0e05016fb0bd0346b91eaec1c4-2026-07-07T16-53-22-894Z.zip",
+  "cleanup_candidate_count": 30,
   "cleanup_candidates": [
     ".diagnostics/tools",
     ".diagnostics/operational-journey-factory/00_CANONICAL_REFERENCE_INDEX.md",
@@ -15,6 +15,7 @@
     ".diagnostics/operational-journey-factory/dsh-order-backend-binding-proof.json",
     ".diagnostics/operational-journey-factory/dsh-order-ui-binding-inventory.json",
     ".diagnostics/operational-journey-factory/dsh-order-ui-binding-inventory.md",
+    ".diagnostics/operational-journey-factory/dsh-tsc-current.log",
     ".diagnostics/operational-journey-factory/dsh-wlt-finance-boundary-proof.json",
     ".diagnostics/operational-journey-factory/factory-file-manifest.json",
     ".diagnostics/operational-journey-factory/gap-burndown-report.json",

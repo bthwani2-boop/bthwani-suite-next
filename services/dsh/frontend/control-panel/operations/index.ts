@@ -22,11 +22,13 @@ export {
   normalizeOperationsLocation,
   resolveOperationsStateCopy,
 } from './operations.registry';
-export { default as ControlPanelDshOperationsScreen, DshOperationsHubSurface } from './OperationsHubScreen';
+export { ControlPanelDshOperationsScreen, OperationsHubScreen } from './OperationsHubScreen';
 export type { ControlPanelDshOperationsScreenProps } from './OperationsHubScreen';
 export { ControlPanelDshSheinProxyScreen } from './ControlPanelDshSheinProxyScreen';
 export { AwnakScreen } from './AwnakScreen';
 export { CommandCenterScreen } from './CommandCenterScreen';
+export { CartActivityScreen } from './CartActivityScreen';
+export { CheckoutActivityScreen } from './CheckoutActivityScreen';
 export { LiveOrdersScreen } from './LiveOrdersScreen';
 export { AssistedOrderDeskScreen } from './AssistedOrderDeskScreen';
 export { OrderRescueScreen } from './OrderRescueScreen';

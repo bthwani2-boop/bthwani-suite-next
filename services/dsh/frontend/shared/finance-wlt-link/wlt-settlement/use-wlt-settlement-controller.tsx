@@ -5,7 +5,7 @@ import type {
   DshWltSettlementSummaryState,
 } from "./wlt-settlement.types";
 
-export function useWltSettlementController() {
+function useWltSettlementController() {
   const [state, setState] = useState<DshWltSettlementState>({ kind: "idle" });
 
   const loadByPartner = useCallback(async (partnerId: string) => {
@@ -23,7 +23,7 @@ export function useWltSettlementController() {
   return { state, loadByPartner, reset };
 }
 
-export function useWltSettlementSummaryController() {
+function useWltSettlementSummaryController() {
   const [state, setState] = useState<DshWltSettlementSummaryState>({ kind: "idle" });
 
   const loadSummary = useCallback(async (partnerId: string) => {

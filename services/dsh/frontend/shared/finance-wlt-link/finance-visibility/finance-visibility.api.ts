@@ -34,6 +34,6 @@ export async function fetchWltRefundStatus(orderId: string): Promise<WltRefundSt
   return wltGet<WltRefundStatusRef>(`/wlt/references/refund-status?orderId=${encodeURIComponent(orderId)}`);
 }
 
-export async function fetchAnalyticsPlatformKpis(period = "today"): Promise<unknown> {
+async function fetchAnalyticsPlatformKpis(period = "today"): Promise<unknown> {
   return dshRequest<unknown>(`/dsh/operator/analytics/platform?period=${period}`);
 }

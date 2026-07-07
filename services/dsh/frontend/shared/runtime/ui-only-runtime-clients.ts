@@ -2,7 +2,7 @@ import { resolveDshAuthBaseUrl } from './dsh-auth-client';
 import { PlatformVarsRegistry } from '../platform/platform-vars';
 import { createDshProductApiHttpClient } from '../catalog/dsh-product-api.transport';
 
-export function getPartnerStoreOnboardingRuntimeClient(): any {
+function getPartnerStoreOnboardingRuntimeClient(): any {
   return null;
 }
 
@@ -19,7 +19,7 @@ export function getDshMediaRuntimeClient(): any {
   return null;
 }
 
-export function getDshStoreVisibilityRuntimeClient(): any {
+function getDshStoreVisibilityRuntimeClient(): any {
   return null;
 }
 
@@ -27,22 +27,22 @@ export function getDshOrderLifecycleRuntimeClient(auth?: any): any {
   return null;
 }
 
-export function getDshOrderRuntimeBaseUrl() {
+function getDshOrderRuntimeBaseUrl() {
   return PlatformVarsRegistry.get('dshApiBaseUrl');
 }
 
-export function getDshCheckoutRuntimeClient(baseUrl: string, auth?: any): any {
+function getDshCheckoutRuntimeClient(baseUrl: string, auth?: any): any {
   return null;
 }
 
-export function getDshDiscoveryStoresRuntimeClient(config: any): any {
+function getDshDiscoveryStoresRuntimeClient(config: any): any {
   return null;
 }
 
-export function getDshFieldReadinessRuntimeClient(): any {
+function getDshFieldReadinessRuntimeClient(): any {
   return null;
 }
 
-export function getDshAuthRuntimeBaseUrl() {
+function getDshAuthRuntimeBaseUrl() {
   return resolveDshAuthBaseUrl();
 }

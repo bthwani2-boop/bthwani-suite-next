@@ -357,4 +357,4 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
   );
 }
 
-export default PreferencesHubScreen;
+// export default PreferencesHubScreen; // Unused default export

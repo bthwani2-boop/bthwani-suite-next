@@ -7,7 +7,7 @@ import type {
 import type { DshOperationalSurfaceSummary } from '../operations/dsh-operational-summary-adapter';
 import { buildDshOperationalSummaryForSurface } from '../operations/dsh-operational-summary-adapter';
 
-export const dshOperationalSurfaceBindingMeta = {
+const dshOperationalSurfaceBindingMeta = {
   dataKind: 'OPERATIONAL_SURFACE_BINDING_METADATA',
   runtimeTruth: false,
   backendSource: false,
@@ -204,7 +204,7 @@ export const DSH_OPERATIONAL_SCREEN_BINDINGS: readonly DshOperationalScreenBindi
   }),
 ] as const;
 
-export function getDshOperationalScreenBindings(): readonly DshOperationalScreenBinding[] {
+function getDshOperationalScreenBindings(): readonly DshOperationalScreenBinding[] {
   return DSH_OPERATIONAL_SCREEN_BINDINGS;
 }
 
@@ -212,13 +212,13 @@ export function getDshOperationalScreenBindingByScreenId(screenId: string): DshO
   return DSH_OPERATIONAL_SCREEN_BINDINGS.find((bindingRecord) => bindingRecord.screenId === screenId);
 }
 
-export function getDshOperationalScreenBindingsBySurface(
+function getDshOperationalScreenBindingsBySurface(
   surfaceId: DshSurfaceId,
 ): readonly DshOperationalScreenBinding[] {
   return DSH_OPERATIONAL_SCREEN_BINDINGS.filter((bindingRecord) => bindingRecord.surfaceId === surfaceId);
 }
 
-export function getDshOperationalScreenBindingsByRegistryEntry(
+function getDshOperationalScreenBindingsByRegistryEntry(
   registryEntryId: DshOperationalEntityId,
 ): readonly DshOperationalScreenBinding[] {
   return DSH_OPERATIONAL_SCREEN_BINDINGS.filter((bindingRecord) =>
@@ -226,7 +226,7 @@ export function getDshOperationalScreenBindingsByRegistryEntry(
   );
 }
 
-export function getDshOperationalSummariesForScreen(
+function getDshOperationalSummariesForScreen(
   screenId: string,
 ): readonly DshOperationalSurfaceSummary[] {
   const bindingRecord = getDshOperationalScreenBindingByScreenId(screenId);

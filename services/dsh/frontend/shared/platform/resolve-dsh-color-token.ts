@@ -28,6 +28,6 @@ const TOKEN_MAP: Record<string, string | undefined> = {
   'success.600': statusScale.success,
 };
 
-export function resolveDshColorToken(token: string): string {
+function resolveDshColorToken(token: string): string {
   return TOKEN_MAP[token] ?? token;
 }

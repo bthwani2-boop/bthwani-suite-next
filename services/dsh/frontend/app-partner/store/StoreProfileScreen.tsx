@@ -326,4 +326,4 @@ export function StoreProfileScreen({
   );
 }
 
-export default StoreProfileScreen;
+// export default StoreProfileScreen; // Unused default export

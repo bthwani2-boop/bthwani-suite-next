@@ -245,4 +245,4 @@ export function DshCaptainHomeOrderPanel({
     </SurfaceAny>
   );
 }
-export default DshCaptainHomeOrderPanel;
+// export default DshCaptainHomeOrderPanel; // Unused default export

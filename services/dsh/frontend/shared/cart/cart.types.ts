@@ -92,6 +92,6 @@ export const DSH_FULFILLMENT_MODE_META: Readonly<Record<DshFulfillmentMode, DshF
   },
 } as const;
 
-export function isDshFulfillmentMode(value: unknown): value is DshFulfillmentMode {
+function isDshFulfillmentMode(value: unknown): value is DshFulfillmentMode {
   return value === "bthwani_delivery" || value === "partner_delivery" || value === "pickup";
 }

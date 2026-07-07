@@ -24,6 +24,8 @@ export const OPERATIONS_CANONICAL_GROUPS: readonly OperationsGroupMeta[] = [
       { id: 'overview', label: 'نظرة عامة' },
       { id: 'anomalies', label: 'شواذ النظام' },
       { id: 'recommendations', label: 'توصيات ذكية' },
+      { id: 'carts', label: 'نشاط السلال' },
+      { id: 'checkout', label: 'نشاط الدفع' },
     ],
   },
   {

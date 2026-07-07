@@ -14,7 +14,7 @@ export const CUSTOMER_GEO_VISIBILITY_POLICY = {
   canSeeEstimatedTextEta: true,
 } as const;
 
-export type CustomerGeoVisibilityPolicy = typeof CUSTOMER_GEO_VISIBILITY_POLICY;
+type CustomerGeoVisibilityPolicy = typeof CUSTOMER_GEO_VISIBILITY_POLICY;
 
 export const FORBIDDEN_CLIENT_GEO_SYMBOLS = [
   "latitude",
@@ -32,4 +32,4 @@ export const FORBIDDEN_CLIENT_GEO_SYMBOLS = [
   "operationalCheckpoints",
 ] as const;
 
-export type ForbiddenClientGeoSymbol = (typeof FORBIDDEN_CLIENT_GEO_SYMBOLS)[number];
+type ForbiddenClientGeoSymbol = (typeof FORBIDDEN_CLIENT_GEO_SYMBOLS)[number];

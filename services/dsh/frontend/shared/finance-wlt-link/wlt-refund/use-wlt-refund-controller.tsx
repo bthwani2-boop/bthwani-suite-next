@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { fetchDshWltRefundView, fetchDshWltRefundsByOrderView } from "./wlt-refund.api";
 import type { DshWltRefundState, DshWltRefundView } from "./wlt-refund.types";
 
-export function useWltRefundController() {
+function useWltRefundController() {
   const [state, setState] = useState<DshWltRefundState>({ kind: "idle" });
 
   const loadById = useCallback(async (refundId: string) => {
@@ -20,7 +20,7 @@ export function useWltRefundController() {
   return { state, loadById, reset };
 }
 
-export function useWltRefundsByOrderController() {
+function useWltRefundsByOrderController() {
   const [state, setState] = useState<
     | { readonly kind: "idle" }
     | { readonly kind: "loading" }

@@ -198,4 +198,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BottomNavBar;
+// export default BottomNavBar; // Unused default export

@@ -1,7 +1,7 @@
 import { loadingState, type HomeDiscoveryState } from "./home-discovery.states";
 import type { DiscoveryFilterKind } from "./home-discovery.types";
 
-export type HomeDiscoveryControllerModel = {
+type HomeDiscoveryControllerModel = {
   readonly state: HomeDiscoveryState;
   readonly activeFilter: DiscoveryFilterKind;
 };

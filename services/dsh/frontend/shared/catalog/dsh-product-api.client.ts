@@ -369,7 +369,7 @@ export function getDshProductApprovalStatusLabel(
   return APPROVAL_STATUS_LABELS[status as DshProductApprovalStatus] ?? status;
 }
 
-export function getDshProductApprovalStatusTone(
+function getDshProductApprovalStatusTone(
   status: DshProductApprovalStatus | string | undefined,
 ): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
   if (!status) return 'neutral';

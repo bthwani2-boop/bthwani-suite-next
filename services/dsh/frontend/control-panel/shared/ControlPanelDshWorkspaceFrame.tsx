@@ -214,4 +214,4 @@ export function ControlPanelDshWorkspaceFrame({
   );
 }
 
-export default ControlPanelDshWorkspaceFrame;
+// export default ControlPanelDshWorkspaceFrame; // Unused default export

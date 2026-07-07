@@ -68,7 +68,7 @@ export function useCreateOrderController() {
   return { state, submit, reset };
 }
 
-export function usePartnerOrdersController(storeId: string, statusFilter?: string) {
+function usePartnerOrdersController(storeId: string, statusFilter?: string) {
   const [state, setState] = useState<DshOrdersListState>(ordersIdleState());
 
   const load = useCallback(async () => {
@@ -87,7 +87,7 @@ export function usePartnerOrdersController(storeId: string, statusFilter?: strin
   return { state, reload: load };
 }
 
-export function usePartnerOrderActionController() {
+function usePartnerOrderActionController() {
   const [state, setState] = useState<DshOrderActionState>(orderActionIdleState());
 
   const accept = useCallback(async (orderId: string) => {

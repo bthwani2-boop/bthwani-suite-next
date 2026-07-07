@@ -3,7 +3,7 @@ import {
   fetchPartners, fetchPartner, createPartner, transitionPartner,
   fetchPartnerReadiness, fetchPartnerDocuments, addPartnerDocument,
   reviewPartnerDocument, fetchPartnerStores, linkPartnerStore,
-  fetchPartnerAuditEvents,
+  fetchPartnerAuditEvents, fetchPartnerFieldVisits,
 } from "./partner.api";
 import type {
   DshCreatePartnerInput, DshPartnerTransitionInput,
@@ -12,7 +12,7 @@ import type {
 import type {
   DshPartnerListState, DshPartnerDetailState, DshPartnerMutationState,
   DshPartnerDocumentsState, DshPartnerReadinessState, DshPartnerAuditState,
-  DshPartnerStoresState,
+  DshPartnerStoresState, DshPartnerVisitsState,
 } from "./partner.states";
 import { buildPartnerListRowViewModel, buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
 
@@ -322,4 +322,26 @@ export function usePartnerStoresController(partnerId: string, authKind: string) 
   }, [partnerId, load]);
 
   return { state, actionState, reload: load, linkStore };
+}
+
+export function usePartnerVisitsController(partnerId: string, authKind: string) {
+  const [state, setState] = useState<DshPartnerVisitsState>({ kind: "idle" });
+  const isAuth = authKind === "authenticated";
+
+  const load = useCallback(async () => {
+    if (!isAuth || !partnerId) return;
+    setState({ kind: "loading" });
+    try {
+      const { visits } = await fetchPartnerFieldVisits(partnerId);
+      setState(visits.length === 0
+        ? { kind: "empty" }
+        : { kind: "success", visits });
+    } catch (err) {
+      setState({ kind: "error", message: resolveErrorMessage(err) });
+    }
+  }, [isAuth, partnerId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  return { state, reload: load };
 }

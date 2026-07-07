@@ -1416,4 +1416,4 @@ export function InventoryCatalogScreen({ onBack, canonicalStoreId = 'store-1001'
   );
 }
 
-export default InventoryCatalogScreen;
+// export default InventoryCatalogScreen; // Unused default export

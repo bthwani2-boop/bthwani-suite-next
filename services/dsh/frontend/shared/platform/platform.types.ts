@@ -7,7 +7,7 @@ export type AppearanceScope = 'Global' | 'Platform' | 'App' | 'Surface' | 'Servi
 export type AppearanceRisk = 'low' | 'medium' | 'high' | 'visual-identity';
 export type AppearanceOwner = 'Platform' | 'DesignSystem' | 'AppShell' | 'ServiceOwner';
 
-export interface AppearanceRecord {
+interface AppearanceRecord {
   id: string;
   label: string;
   owner: AppearanceOwner;
@@ -29,7 +29,7 @@ export type ProviderEnvironment = 'test' | 'sandbox' | 'production';
 export type ProviderStatus = 'active' | 'inactive' | 'test-only' | 'pending-approval';
 export type ProviderOwner = 'Platform' | 'DesignSystem' | 'ServiceOwner';
 
-export interface ProviderRecord {
+interface ProviderRecord {
   id: string;
   label: string;
   category: string;
@@ -54,7 +54,7 @@ export type ServiceScope = 'Global' | 'Region' | 'City' | 'Zone' | 'Service';
 export type ServiceOwner = 'Platform' | 'Operations' | 'DesignSystem';
 export type ServiceRisk = 'low' | 'medium' | 'high' | 'critical';
 
-export interface ServiceRecord {
+interface ServiceRecord {
   id: string;
   label: string;
   description: string;

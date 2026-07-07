@@ -306,12 +306,12 @@ export function getDshRolePermission(
 }
 
 /** Returns true only for roles authorised to request a platform rollback. */
-export function getDshRollbackAllowed(roleId: DshRoleId): boolean {
+function getDshRollbackAllowed(roleId: DshRoleId): boolean {
   return roleId === 'super-admin' || roleId === 'platform-governor';
 }
 
 /** Returns the auditRequired flag for a section. */
-export function getDshSectionAuditPolicy(section: DshPermissionSection): boolean {
+function getDshSectionAuditPolicy(section: DshPermissionSection): boolean {
   return DSH_ROLE_PERMISSIONS.find((e) => e.section === section)?.auditRequired ?? false;
 }
 
@@ -492,7 +492,7 @@ export const DSH_REASON_EVIDENCE_POLICY: ReadonlyArray<DshReasonEvidencePolicy> 
 
 let _dynamicAuditEntries: DshAuditEntry[] = [];
 
-export function addDshAuditEntry(entry: DshAuditEntry) {
+function addDshAuditEntry(entry: DshAuditEntry) {
   _dynamicAuditEntries.push(entry);
 }
 
@@ -516,7 +516,7 @@ export function getDshAuditEntryById(entryId: string): DshAuditEntry | undefined
   return getDshAuditEntries().find((e) => e.entryId === entryId);
 }
 
-export function getMarketingPermissionResult(action?: string) {
+function getMarketingPermissionResult(action?: string) {
   void action;
   return { allowed: true, reason: '' };
 }

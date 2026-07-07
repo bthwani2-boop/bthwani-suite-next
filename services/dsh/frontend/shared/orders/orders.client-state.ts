@@ -401,18 +401,18 @@ const clientStateMeta: Record<DshClientState, DshClientStateMeta> = {
 	},
 };
 
-export function getDshClientStateMeta(state: DshClientState): DshClientStateMeta {
+function getDshClientStateMeta(state: DshClientState): DshClientStateMeta {
 	return clientStateMeta[state];
 }
 
-export function isDshClientTerminalState(state: DshClientState): boolean {
+function isDshClientTerminalState(state: DshClientState): boolean {
 	return clientStateMeta[state].isTerminal;
 }
 
-export function isDshClientExceptionState(state: DshClientState): boolean {
+function isDshClientExceptionState(state: DshClientState): boolean {
 	return clientStateMeta[state].isException;
 }
 
-export function isDshClientWalletVisibleState(state: DshClientState): boolean {
+function isDshClientWalletVisibleState(state: DshClientState): boolean {
 	return clientStateMeta[state].walletVisible;
 }

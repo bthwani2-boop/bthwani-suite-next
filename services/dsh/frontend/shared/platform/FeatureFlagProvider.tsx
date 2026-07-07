@@ -48,7 +48,7 @@ export function FeatureFlagProvider({ children }: FeatureFlagProviderProps) {
   );
 }
 
-export function useFeatureFlag(flag: string): boolean {
+function useFeatureFlag(flag: string): boolean {
   const flags = React.useContext(FeatureFlagContext);
   return flags[flag] ?? false;
 }

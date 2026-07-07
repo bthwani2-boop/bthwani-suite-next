@@ -355,7 +355,7 @@ export function getDshControlPanelGovernanceEntry(sectionId: DshControlPanelSect
   return DSH_CONTROL_PANEL_GOVERNANCE_MAP[sectionId];
 }
 
-export function getDshControlPanelGovernanceEntries(): readonly DshControlPanelGovernanceEntry[] {
+function getDshControlPanelGovernanceEntries(): readonly DshControlPanelGovernanceEntry[] {
   return DSH_CONTROL_PANEL_GOVERNANCE_LIST;
 }
 
@@ -363,7 +363,7 @@ export function findDshControlPanelGovernanceSectionByFlowId(flowId: string): Ds
   return DSH_CONTROL_PANEL_GOVERNANCE_LIST.find((entry) => entry.relatedRegistryFlowIds.includes(flowId));
 }
 
-export function getDshControlPanelGovernanceSectionsForSurface(surfaceId: DshSurfaceId): readonly DshControlPanelGovernanceEntry[] {
+function getDshControlPanelGovernanceSectionsForSurface(surfaceId: DshSurfaceId): readonly DshControlPanelGovernanceEntry[] {
   return DSH_CONTROL_PANEL_GOVERNANCE_LIST.filter((entry) => entry.relatedMobileSurfaces.includes(surfaceId));
 }
 

@@ -119,7 +119,7 @@ export function useCatalogApprovalController(authKind = "unauthenticated") {
   };
 }
 
-export function useCatalogAuditController(
+function useCatalogAuditController(
   storeId: string,
   authKind = "unauthenticated",
 ) {

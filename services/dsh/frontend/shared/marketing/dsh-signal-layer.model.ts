@@ -400,7 +400,7 @@ export function getDshSignalActorRoute(kind: DshSignalEventKind): DshSignalActor
 }
 
 /** Get route for a signal kind on a specific surface */
-export function getDshSignalRouteForSurface(
+function getDshSignalRouteForSurface(
   kind: DshSignalEventKind,
   _surface: DshSignalRecipientSurface,
 ): string {
@@ -433,12 +433,12 @@ export function getDshSignalSummaries(
 }
 
 /** Get full signal event detail — call only on explicit user open */
-export function getDshSignalDetail(eventId: string): DshSignalEvent | undefined {
+function getDshSignalDetail(eventId: string): DshSignalEvent | undefined {
   return getAllSignalEvents().find((e) => e.eventId === eventId);
 }
 
 /** Count unread signals for a surface+role */
-export function getDshSignalUnreadCount(
+function getDshSignalUnreadCount(
   surface: DshSignalRecipientSurface,
   role: DshSignalRecipientRole,
 ): number {
@@ -446,6 +446,6 @@ export function getDshSignalUnreadCount(
 }
 
 /** Check if a signal kind requires audit logging */
-export function isDshSignalAuditRequired(kind: DshSignalEventKind): boolean {
+function isDshSignalAuditRequired(kind: DshSignalEventKind): boolean {
   return getDshSignalActorRoute(kind)?.auditRequired ?? false;
 }

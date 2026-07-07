@@ -47,7 +47,7 @@ export type DshUnifiedRecommendation = {
   counterpartLinks?: readonly unknown[];
 };
 
-export function getDshRecommendationConfidenceLabel(confidence: DshRecommendationConfidence): string {
+function getDshRecommendationConfidenceLabel(confidence: DshRecommendationConfidence): string {
   if (confidence === 'high') return 'ثقة عالية';
   if (confidence === 'medium') return 'ثقة متوسطة';
   return 'ثقة منخفضة';

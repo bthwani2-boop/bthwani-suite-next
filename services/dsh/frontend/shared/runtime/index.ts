@@ -12,6 +12,4 @@ export * from './control-panel.dashboard';
 export type { SeedEvidenceEntry } from './dev-seeds-isolation-guard';
 export {
   DSH_SEED_EVIDENCE,
-  guardDevSeed,
-  getSeedEvidenceSummary,
 } from './dev-seeds-isolation-guard';

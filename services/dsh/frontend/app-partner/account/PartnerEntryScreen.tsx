@@ -13,7 +13,7 @@ import {
 
 export type DshPartnerEntryScreenState = 'ready' | 'loading' | 'empty';
 
-export type DshEntryScreenState = DshPartnerEntryScreenState;
+type DshEntryScreenState = DshPartnerEntryScreenState;
 
 export type PartnerEntryScreenProps = {
   state?: DshPartnerEntryScreenState;
@@ -26,7 +26,7 @@ export type PartnerEntryScreenProps = {
   onOpenIssueQueuePress?: () => void;
 };
 
-export type DshEntryScreenProps = PartnerEntryScreenProps;
+type DshEntryScreenProps = PartnerEntryScreenProps;
 
 function renderHero(state: DshPartnerEntryScreenState, onOpenOrdersBoardPress?: () => void) {
   if (state === 'loading') {
@@ -166,4 +166,4 @@ export function PartnerEntryScreen({
 
 export { PartnerEntryScreen as DshEntryScreen };
 
-export default PartnerEntryScreen;
+// export default PartnerEntryScreen; // Unused default export

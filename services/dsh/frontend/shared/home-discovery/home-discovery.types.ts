@@ -69,7 +69,7 @@ export type DshHomePaginationDto = {
   total: number;
 };
 
-export type DshHomeDiscoveryDto = {
+type DshHomeDiscoveryDto = {
   banners: DshHomeBannerDto[];
   promos: DshHomePromoDto[];
   filters: DshHomeFilterDto[];

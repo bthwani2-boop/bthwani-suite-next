@@ -439,4 +439,4 @@ export function PromotionsScreen({
   );
 }
 
-export default PromotionsScreen;
+// export default PromotionsScreen; // Unused default export

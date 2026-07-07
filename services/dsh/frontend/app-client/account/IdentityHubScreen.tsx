@@ -267,4 +267,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IdentityHubScreen;
+// export default IdentityHubScreen; // Unused default export

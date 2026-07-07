@@ -456,4 +456,4 @@ export function CategoryManagementScreen({
   );
 }
 
-export default CategoryManagementScreen;
+// export default CategoryManagementScreen; // Unused default export

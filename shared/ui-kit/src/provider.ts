@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { TamaguiProvider, Theme } from "tamagui";
 import { tamaguiConfig } from "./tamagui-config";

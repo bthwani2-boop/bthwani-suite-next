@@ -11,7 +11,7 @@ export type MapsProviderPublicConfig = {
   readonly serverSideKeysLocation: "backend_secret_only";
 };
 
-export const DEFAULT_MAPS_PUBLIC_CONFIG: MapsProviderPublicConfig = {
+const DEFAULT_MAPS_PUBLIC_CONFIG: MapsProviderPublicConfig = {
   mode: "disabled",
   region: "SA",
   language: "ar",

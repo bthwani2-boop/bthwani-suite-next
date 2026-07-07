@@ -107,7 +107,7 @@ export function getFinanceGroupMeta(groupId: CanonicalFinanceGroupId) {
   return FINANCE_CANONICAL_GROUPS.find((group) => group.id === groupId) ?? FINANCE_CANONICAL_GROUPS[0]!;
 }
 
-export function normalizeFinanceLocation(workspace?: string, panel?: string): FinanceNormalizationResult {
+function normalizeFinanceLocation(workspace?: string, panel?: string): FinanceNormalizationResult {
   const resolvedPanel = panel as FinancePanelId | undefined;
   const typedWorkspace = workspace as FinanceWorkspaceInput | undefined;
 

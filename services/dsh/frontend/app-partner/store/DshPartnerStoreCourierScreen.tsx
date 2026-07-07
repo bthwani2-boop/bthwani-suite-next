@@ -268,4 +268,4 @@ export function DshPartnerStoreCourierScreen({ onBack }: { onBack: () => void })
   );
 }
 
-export default DshPartnerStoreCourierScreen;
+// export default DshPartnerStoreCourierScreen; // Unused default export

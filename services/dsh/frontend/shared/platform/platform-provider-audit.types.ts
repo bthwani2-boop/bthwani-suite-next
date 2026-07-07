@@ -8,7 +8,7 @@ export type PlatformProviderAuditAction =
   | "policy_override_applied"
   | "health_check_failed";
 
-export type PlatformProviderAuditRecord = {
+type PlatformProviderAuditRecord = {
   readonly id: string;
   readonly providerId: string;
   readonly kind: PlatformProviderKind;

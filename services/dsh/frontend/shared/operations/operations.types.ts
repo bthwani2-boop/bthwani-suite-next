@@ -49,7 +49,7 @@ export const DSH_FULFILLMENT_OPERATIONAL_MODE_META: Readonly<Record<DshFulfillme
   },
 } as const;
 
-export type DshOperationsOrderRow = {
+type DshOperationsOrderRow = {
   id: string;
   storeName: string;
   customerName: string;

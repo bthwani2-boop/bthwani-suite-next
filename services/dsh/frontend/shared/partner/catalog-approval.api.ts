@@ -45,7 +45,7 @@ export type CreateCatalogApprovalInput = {
   metadata?: ApprovalRecordMetadata;
 };
 
-export async function createCatalogApproval(
+async function createCatalogApproval(
   input: CreateCatalogApprovalInput,
 ): Promise<ApprovalRecord | null> {
   const body = await request<{ record: ApprovalRecord }>('/dsh/catalog-approvals', {
@@ -76,14 +76,14 @@ export async function listPartnerCatalogQueue(): Promise<PartnerQueueRecord[]> {
   return body?.records ?? [];
 }
 
-export async function getCatalogApproval(id: string): Promise<ApprovalRecord | null> {
+async function getCatalogApproval(id: string): Promise<ApprovalRecord | null> {
   const body = await request<{ record: ApprovalRecord }>(
     `/dsh/catalog-approvals/${encodeURIComponent(id)}`,
   );
   return body?.record ?? null;
 }
 
-export async function transitionCatalogApproval(
+async function transitionCatalogApproval(
   id: string,
   toStage: ApprovalStage,
   actionLabel: string,

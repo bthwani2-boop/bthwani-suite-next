@@ -20,11 +20,11 @@ export type DshProductApiHttpError = {
   readonly status: number;
   readonly body: string;
 };
-export type DshProductApiTransportError =
+type DshProductApiTransportError =
   | DshProductApiOfflineError
   | DshProductApiHttpError;
 
-export function isDshProductApiOfflineError(
+function isDshProductApiOfflineError(
   err: unknown,
 ): err is DshProductApiOfflineError {
   return (
@@ -37,7 +37,7 @@ export function isDshProductApiOfflineError(
 /**
  * Resolves the DSH API base URL from PlatformVarsRegistry.
  */
-export function resolveDshProductApiBaseUrl(): string | null {
+function resolveDshProductApiBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl');
 }
 

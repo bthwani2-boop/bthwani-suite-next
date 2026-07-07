@@ -7,7 +7,7 @@ export type MapsUsageSurface =
   | "app-partner"
   | "control-panel";
 
-export type GeoCoordinate = {
+type GeoCoordinate = {
   readonly latitude: number;
   readonly longitude: number;
 };
@@ -16,7 +16,7 @@ export type GeoCoordinate = {
  * Operational location checkpoint — server-controlled interval, system/operations only.
  * Never exposed to app-client.
  */
-export type OperationalLocationCheckpoint = {
+type OperationalLocationCheckpoint = {
   readonly captainId: string;
   readonly recordedAt: string;
   readonly zoneId?: string | null;

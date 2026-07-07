@@ -2203,18 +2203,18 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
 
 export type PartnerHomeScreenProps = Omit<DshPartnerHubSurfaceProps, 'section'>;
 
-export function PartnerHomeScreen(props: PartnerHomeScreenProps) {
+function PartnerHomeScreen(props: PartnerHomeScreenProps) {
   return <DshPartnerHubSurface {...props} section="hub" />;
 }
 
 export type OperationsScreenProps = Omit<DshPartnerHubSurfaceProps, 'section'>;
 
-export function OperationsScreen(props: OperationsScreenProps) {
+function OperationsScreen(props: OperationsScreenProps) {
   return <DshPartnerHubSurface {...props} section="operations" />;
 }
 
 export type PartnerSettingsScreenProps = Omit<DshPartnerHubSurfaceProps, 'section'>;
 
-export function PartnerSettingsScreen(props: PartnerSettingsScreenProps) {
+function PartnerSettingsScreen(props: PartnerSettingsScreenProps) {
   return <DshPartnerHubSurface {...props} section="settings" />;
 }

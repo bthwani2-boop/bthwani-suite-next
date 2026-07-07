@@ -28,14 +28,14 @@ export const DSH_PRODUCT_MEDIA_KEYS = [
   'dsh.product.yogurt.v1',
 ] as const;
 
-export type DshProductMediaKey = (typeof DSH_PRODUCT_MEDIA_KEYS)[number];
+type DshProductMediaKey = (typeof DSH_PRODUCT_MEDIA_KEYS)[number];
 
 /** Category key namespace router — archived keys resolve to undefined. */
 function resolveCategoryKey(key: string): ImageSourcePropType | undefined {
   return dshStaticMediaSources[key];
 }
 
-export function resolveDshImageSource(source?: string | ImageSourcePropType | null): ImageSourcePropType | undefined {
+function resolveDshImageSource(source?: string | ImageSourcePropType | null): ImageSourcePropType | undefined {
   if (!source) return undefined;
   if (typeof source !== 'string') return source;
   // Route category namespace — emoji fallback activates when undefined is returned

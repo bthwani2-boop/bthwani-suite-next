@@ -14,7 +14,7 @@ export type DashboardEvidenceLaneMeta = {
   sourcePolicy: 'summary-only' | 'evidence-on-open';
 };
 
-export const DASHBOARD_EVIDENCE_LANES: readonly DashboardEvidenceLaneMeta[] = [
+const DASHBOARD_EVIDENCE_LANES: readonly DashboardEvidenceLaneMeta[] = [
   { id: 'closure-summary', label: 'ملخص الإغلاق', owner: 'dashboard', sourcePolicy: 'summary-only' },
   { id: 'section-readiness', label: 'جاهزية الأقسام', owner: 'dashboard', sourcePolicy: 'summary-only' },
   { id: 'evidence-stream', label: 'مسار الأدلة', owner: 'dashboard', sourcePolicy: 'evidence-on-open' },

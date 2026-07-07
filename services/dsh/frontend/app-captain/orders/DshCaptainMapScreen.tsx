@@ -390,4 +390,4 @@ export interface DshCaptainMapScreenProps {
   }) => Promise<unknown>;
 }
 
-export default DshCaptainMapScreen;
+// export default DshCaptainMapScreen; // Unused default export

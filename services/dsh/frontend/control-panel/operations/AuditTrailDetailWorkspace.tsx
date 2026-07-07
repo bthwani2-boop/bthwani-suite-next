@@ -220,4 +220,4 @@ export function AuditTrailDetailWorkspace({
   );
 }
 
-export default AuditTrailDetailWorkspace;
+// export default AuditTrailDetailWorkspace; // Unused default export

@@ -21,6 +21,6 @@ export function visitCompletionBlockers(visit: DshFieldVisit, checks: readonly D
   return ALL_CHECK_TYPES.filter((t) => !passed.has(t));
 }
 
-export function isOnboardingComplete(totalCompletedVisits: number, openEscalations: number): boolean {
+function isOnboardingComplete(totalCompletedVisits: number, openEscalations: number): boolean {
   return totalCompletedVisits > 0 && openEscalations === 0;
 }

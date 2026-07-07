@@ -27,7 +27,7 @@ export type UseOperationsControllerProps = {
   };
 };
 
-export function useOperationsController({
+function useOperationsController({
   group = 'command-center',
   orderId,
   panel,

@@ -12,7 +12,7 @@ import type {
   DshWltOwnershipBoundary,
 } from './dsh-operational.contract';
 
-export const dshOperationalRegistryMeta = {
+const dshOperationalRegistryMeta = {
   dataKind: 'OPERATIONAL_REGISTRY_METADATA_ONLY',
   runtimeTruth: false,
   backendSource: false,
@@ -352,7 +352,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
   },
 ];
 
-export function getDshOperationalRegistry(): readonly DshOperationalRegistryEntry[] {
+function getDshOperationalRegistry(): readonly DshOperationalRegistryEntry[] {
   return DSH_OPERATIONAL_REGISTRY;
 }
 
@@ -372,11 +372,11 @@ export function getDshOperationalEntriesByWorkspace(
   return DSH_OPERATIONAL_REGISTRY.filter((entry) => entry.controlPanelWorkspace === workspace);
 }
 
-export function getDshOperationalEntriesWithWltImpact(): readonly DshOperationalRegistryEntry[] {
+function getDshOperationalEntriesWithWltImpact(): readonly DshOperationalRegistryEntry[] {
   return DSH_OPERATIONAL_REGISTRY.filter((entry) => entry.wltImpact !== 'none');
 }
 
-export function assertDshDoesNotOwnFinancialMutation(entry: DshOperationalRegistryEntry): DshOperationalRegistryEntry {
+function assertDshDoesNotOwnFinancialMutation(entry: DshOperationalRegistryEntry): DshOperationalRegistryEntry {
   if (entry.noFinancialMutationInDsh !== true) {
     throw new Error(`DSH operational registry entry ${entry.id} is missing the no-financial-mutation marker.`);
   }

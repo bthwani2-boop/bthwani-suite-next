@@ -1,6 +1,6 @@
 import type { DshOnDemandPolicy, DshSurfaceId } from '../runtime/dsh-flow-registry';
 
-export const dshOperationalContractMeta = {
+const dshOperationalContractMeta = {
   dataKind: 'OPERATIONAL_CONTRACT',
   runtimeTruth: false,
   backendSource: false,
@@ -123,7 +123,7 @@ export type DshControlPanelOperationalWorkspace =
   | 'wlt-finance-bridge'
   | 'audit-rollback';
 
-export type DshOperationalActionPolicy = {
+type DshOperationalActionPolicy = {
   readonly allowedActions: readonly string[];
   readonly forbiddenActions: readonly string[];
 };
@@ -605,7 +605,7 @@ export type DshControlPanelOperationRecord = DshOperationalBaseRecord & {
   readonly ownerService: 'dsh' | 'wlt';
 };
 
-export type DshAnyOperationalRecord =
+type DshAnyOperationalRecord =
   | DshPartnerStoreOperationalRecord
   | DshCatalogOperationalItem
   | DshOrderOperationalRecord

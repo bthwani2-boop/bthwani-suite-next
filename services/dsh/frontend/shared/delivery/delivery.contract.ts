@@ -175,7 +175,7 @@ export function getDshDeliveryModeDefinition(
   return DSH_DELIVERY_MODE_DEFINITIONS.find((d) => d.modeId === mode) as DshDeliveryModeDefinition;
 }
 
-export function getDshDeliveryModeActorLabel(mode: DshFulfillmentDeliveryMode): string {
+function getDshDeliveryModeActorLabel(mode: DshFulfillmentDeliveryMode): string {
   switch (mode) {
     case 'bthwani_delivery': return 'الكابتن';
     case 'partner_delivery': return 'موصل المتجر';
@@ -187,7 +187,7 @@ export function isDshModeDispatchRequired(mode: DshFulfillmentDeliveryMode): boo
   return mode === 'bthwani_delivery';
 }
 
-export function isDshModeCaptainTrackingVisible(mode: DshFulfillmentDeliveryMode): boolean {
+function isDshModeCaptainTrackingVisible(mode: DshFulfillmentDeliveryMode): boolean {
   return mode === 'bthwani_delivery';
 }
 
@@ -202,7 +202,7 @@ export function getDshModeTrackingStageFilter(
   };
 }
 
-export function isDshFulfillmentDeliveryMode(
+function isDshFulfillmentDeliveryMode(
   value: string | null | undefined,
 ): value is DshFulfillmentDeliveryMode {
   return value === 'bthwani_delivery' || value === 'partner_delivery' || value === 'pickup';

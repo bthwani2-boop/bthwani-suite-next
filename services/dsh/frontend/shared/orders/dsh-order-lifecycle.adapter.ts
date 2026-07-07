@@ -12,11 +12,11 @@ import type {
   BackendDispatchAssignment
 } from './dsh-order-lifecycle.types';
 
-export function isDshOrderApiOfflineError(err: unknown): err is DshOrderApiOfflineError {
+function isDshOrderApiOfflineError(err: unknown): err is DshOrderApiOfflineError {
   return typeof err === 'object' && err !== null && (err as { kind?: unknown }).kind === 'offline';
 }
 
-export function isDshOrderApiContractError(err: unknown): err is DshOrderApiContractError {
+function isDshOrderApiContractError(err: unknown): err is DshOrderApiContractError {
   return typeof err === 'object' && err !== null && (err as { kind?: unknown }).kind === 'contract';
 }
 

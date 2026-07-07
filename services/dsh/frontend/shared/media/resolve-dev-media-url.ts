@@ -1,6 +1,6 @@
 import { PlatformVarsRegistry } from '../platform/platform-vars';
 
-export function resolveDevMediaUrl(path: string): string | null {
+function resolveDevMediaUrl(path: string): string | null {
 	const trimmedPath = path.trim();
 
 	if (!trimmedPath) {

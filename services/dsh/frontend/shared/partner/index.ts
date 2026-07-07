@@ -6,13 +6,13 @@ export {
   DSH_PARTNER_ACTIVATION_STATES,
   DSH_PARTNER_DECISION_COMMANDS,
   getDshPartnerActivationStateMetadata,
-  getDshPartnerDecisionCommands,
   isDshPartnerClientVisible,
   isDshPartnerActivationComplete,
   getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
-  formatDshPartnerAuditEventLabel,
   getDshPartnerReadinessChecklist,
+  getDshPartnerDecisionCommands,
+  formatDshPartnerAuditEventLabel,
 } from "./partner-activation.model";
 
 export type {
@@ -26,7 +26,7 @@ export type {
 export type {
   DshPartnerListState, DshPartnerDetailState, DshPartnerMutationState,
   DshPartnerDocumentsState, DshPartnerReadinessState,
-  DshPartnerAuditState, DshPartnerStoresState,
+  DshPartnerAuditState, DshPartnerStoresState, DshPartnerVisitsState,
 } from "./partner.states";
 
 export type { DshPartnerListRowViewModel, DshPartnerDetailViewModel, DshPartnerReadinessViewModel } from "./partner.view-model";
@@ -40,6 +40,7 @@ export {
   usePartnerReadinessController,
   usePartnerAuditController,
   usePartnerStoresController,
+  usePartnerVisitsController,
 } from "./use-partner-admin-controller";
 
 export { usePartnerSelfController } from "./use-partner-self-controller";
@@ -52,15 +53,12 @@ export {
   fieldListDrafts,
   fieldCreateDraft,
   fieldGetPartner,
-  fieldUpdatePartner,
   fieldUploadDocument,
   fieldCreateVisit,
   fieldSubmitPartner,
-  fetchListFieldVisits,
   fieldGetReadiness,
   fieldListDocuments,
   fieldListFieldVisits,
-  fieldGetPartnerStore,
   fieldUpdatePartnerStore,
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";

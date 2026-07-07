@@ -7,4 +7,4 @@ export const DSH_GEO_POLICY = {
   mapsKeysOwnedByPlatformRegistry: true,
 } as const;
 
-export type DshGeoPolicy = typeof DSH_GEO_POLICY;
+type DshGeoPolicy = typeof DSH_GEO_POLICY;

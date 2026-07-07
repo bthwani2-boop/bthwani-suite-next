@@ -30,7 +30,7 @@ export const MARKETING_SIGNAL_STAGES: ReadonlyArray<ApprovalStage> = [
   'marketing-review', 'marketing-approved', 'needs-fix', 'catalog-adopted', 'rejected',
 ];
 
-export function dshPromotionCandidates(
+function dshPromotionCandidates(
   _storeId: string,
 ): readonly DshPromotionCandidate[] {
   return [];
@@ -44,7 +44,7 @@ export async function getAllApprovalRecords(): Promise<ApprovalRecord[]> {
   return listCatalogApprovals();
 }
 
-export async function getPartnerQueueRecords(
+async function getPartnerQueueRecords(
   _storeId?: string,
 ): Promise<readonly PartnerQueueRecord[]> {
   const { listPartnerCatalogQueue } = await import('./catalog-approval.api');

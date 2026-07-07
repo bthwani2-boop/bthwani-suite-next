@@ -92,7 +92,7 @@ import {
 
 // ─── Categories registries for Partner & Client surfaces ─────────────────────
 
-export const SUPPORT_PARTNER_CATEGORIES: readonly DshTicketCategory[] = [
+const SUPPORT_PARTNER_CATEGORIES: readonly DshTicketCategory[] = [
   "store_quality",
   "payment_reference",
   "account_access",
@@ -278,7 +278,7 @@ export const SUPPORT_OWNERSHIP: SupportOwnershipInfo = {
 
 // ─── Approval Stage ───────────────────────────────────────────────────────────
 // Shared type for partner/catalog approval workflow stages
-export type SupportApprovalStage =
+type SupportApprovalStage =
   | 'partner-review'
   | 'partner-approved'
   | 'catalog-review'
@@ -333,7 +333,7 @@ const OPERATIONS_SUPPORT_FLOWS: Record<string, OperationsSupportFlowSpec> = {
   },
 };
 
-export function getOperationsSupportFlowSpec(
+function getOperationsSupportFlowSpec(
   flowId: string,
 ): OperationsSupportFlowSpec | undefined {
   return OPERATIONS_SUPPORT_FLOWS[flowId];

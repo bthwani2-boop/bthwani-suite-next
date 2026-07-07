@@ -8,9 +8,7 @@ export type {
   PlatformProviderRecord,
 } from "./platform-provider.types";
 
-export type { PlatformProviderHealthRecord, PlatformProviderHealthSummary } from "./platform-provider-health.types";
-
-export type { PlatformProviderAuditAction, PlatformProviderAuditRecord } from "./platform-provider-audit.types";
+export type { PlatformProviderAuditAction } from "./platform-provider-audit.types";
 
 export type { ProviderVisibleFields } from "./platform-provider-visibility.policy";
 export { toProviderVisibleFields } from "./platform-provider-visibility.policy";
@@ -24,10 +22,8 @@ export {
   PROVIDER_MUTATION_POLICY,
   WLT_BOUNDARY_PROVIDER_KINDS,
 } from "./platform-provider.policy";
-export type { AllowedProviderConsumerSurface, ForbiddenProviderConsumerSurface } from "./platform-provider.policy";
 
 export type { MapsProviderPublicConfig } from "./platform-provider-public-config";
-export { DEFAULT_MAPS_PUBLIC_CONFIG } from "./platform-provider-public-config";
 
 export { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
 
@@ -36,7 +32,6 @@ export * from './platform-vars';
 export * from './platform-vars.policy';
 export * from './platform-vars.view-model';
 export * from './platform-vars.model';
-export * from './local-temp-id';
 export * from './FeatureFlagProvider';
 export * from './PlatformVarsProvider';
 export * from './resolve-dsh-color-token';

@@ -8,4 +8,4 @@ export const HR_WORKSPACE_REGISTRY = [
   { id: "roles", label: "الأدوار" },
 ] as const;
 export type HrWorkspaceId = (typeof HR_WORKSPACE_REGISTRY)[number]["id"];
-export type HrWorkspaceMeta = { readonly id: HrWorkspaceId; readonly label: string };
+type HrWorkspaceMeta = { readonly id: HrWorkspaceId; readonly label: string };

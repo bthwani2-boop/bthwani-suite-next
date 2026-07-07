@@ -25,10 +25,5 @@ export type {
 } from '../shared/delivery';
 
 export type {
-  DshCaptainFinanceSnapshot,
-  DshCaptainOperationsSnapshot,
-  DshCaptainOrderActionPayload,
-  DshCaptainOrderSnapshot,
   DshCaptainProfileSnapshot,
-  DshCaptainProofPayload,
 } from './dsh-captain-binding.contracts';

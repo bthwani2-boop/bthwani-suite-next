@@ -1056,11 +1056,11 @@ export const DSH_FLOW_CLOSURE_SUMMARY: readonly DshFlowClosureSummary[] = [
   },
 ] as const;
 
-export function getDshFlowClosureSummary(flowId: string): DshFlowClosureSummary | undefined {
+function getDshFlowClosureSummary(flowId: string): DshFlowClosureSummary | undefined {
   return DSH_FLOW_CLOSURE_SUMMARY.find((entry) => entry.flowId === flowId);
 }
 
-export function getDshFlowClosureSummaryForSurface(surfaceId: DshSurfaceId): readonly DshFlowClosureSummary[] {
+function getDshFlowClosureSummaryForSurface(surfaceId: DshSurfaceId): readonly DshFlowClosureSummary[] {
   return DSH_FLOW_CLOSURE_SUMMARY.filter((entry) => entry.surfaceId === surfaceId);
 }
 
@@ -1088,7 +1088,7 @@ export function getDshFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlow
  * Entries that should render visibly on a surface (excludes hidden-compat, internal, disabled).
  * Use this to drive navigation and visible flow lists.
  */
-export function getDshVisibleFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
+function getDshVisibleFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
   return getDshFlowsForSurface(surfaceId).filter(
     (entry) =>
       entry.visibility !== 'hidden-compat' &&
@@ -1121,7 +1121,7 @@ export function getDshRenderableFlowsForSurface(surfaceId: DshSurfaceId): readon
  * Excludes contextual, hidden-compat, internal, and disabled entries.
  * Pure read-only filter — no side effects, no throws.
  */
-export function getDshPrimaryFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
+function getDshPrimaryFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
   return DSH_FLOW_REGISTRY.filter(
     (entry) => entry.ownerSurface === surfaceId && entry.visibility === 'primary',
   );
@@ -1133,7 +1133,7 @@ export function getDshPrimaryFlowsForSurface(surfaceId: DshSurfaceId): readonly 
  * that declare the requested surface in their visibleSurfaces list.
  * Pure read-only filter — no side effects, no throws.
  */
-export function getDshContextualFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
+function getDshContextualFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
   return DSH_FLOW_REGISTRY.filter(
     (entry) => entry.visibleSurfaces.includes(surfaceId) && entry.visibility === 'contextual',
   );
@@ -1263,7 +1263,7 @@ export type DshFlowRegistryStats = {
  * Returns a read-only snapshot of registry aggregate counts.
  * Safe to call at any time; no mutations, no side effects.
  */
-export function getDshFlowRegistryStats(): DshFlowRegistryStats {
+function getDshFlowRegistryStats(): DshFlowRegistryStats {
   return {
     totalEntries: DSH_FLOW_REGISTRY.length,
     primaryCount: DSH_FLOW_REGISTRY.filter((e) => e.visibility === 'primary').length,
@@ -1302,7 +1302,7 @@ export type DshFlowRegistryValidationResult = {
  * Returns a read-only result object; never throws.
  * Use in tests or tooling — not in production render paths.
  */
-export function getDshFlowRegistryValidationSummary(): DshFlowRegistryValidationResult {
+function getDshFlowRegistryValidationSummary(): DshFlowRegistryValidationResult {
   const seenIds = new Set<string>();
   const duplicateIds: string[] = [];
   for (const entry of DSH_FLOW_REGISTRY) {

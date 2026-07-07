@@ -3,10 +3,10 @@
   "final_closure": false,
   "exact_100_percent_claim": false,
   "branch": "journy",
-  "head_sha": "8a316bd9659257b400681ef5f65f4c466d3707eb",
+  "head_sha": "9c63ba9fea862b0e05016fb0bd0346b91eaec1c4",
   "reference_root": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory",
   "numeric_truth": {
-    "head_sha": "8a316bd9659257b400681ef5f65f4c466d3707eb",
+    "head_sha": "9c63ba9fea862b0e05016fb0bd0346b91eaec1c4",
     "branch": "journy",
     "gap_count": 169,
     "blocking_gap_count": 0,
@@ -26,55 +26,55 @@
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
-      "sha256": "cbca2334d6d63220f0925c9921ec5f40cd846d77f09bf88fb39a31d559c8b1b4",
+      "sha256": "adf5e9699608bb02512ced01add6134c41c9baaae4975dfc8d7621fe36e14db7",
       "size_bytes": 92147
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
-      "sha256": "297a10d25768209b757b3994e591fc3eb657c2380236e1e7f4193871c24f1f28",
+      "sha256": "9fe98a1cdcbbc9ec0774253aa16209a75a5b00b58433f2215f5e89962994a758",
       "size_bytes": 6177
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.json",
-      "sha256": "947a8949b4bb42b8e8d987cfa98998fba7111cb7e8b787624384635482d98e61",
+      "sha256": "7b7e09299a4ec95708a0523adb5f696e6a1e0a2ed5e03d2d5a18d0712dc0e704",
       "size_bytes": 105612
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
-      "sha256": "1056fdb265e94f8e31677b582a7b0351bad3a0dc864dba0bf5aad18d57c9ba1d",
+      "sha256": "c410b4b0a192e3a10fd97c47b9134149616358d0024baf29e07334384e2b8c37",
       "size_bytes": 2086
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",
-      "sha256": "447074149891e85709d2808fe1fb2b2ce56877e7d20dd2cbda262dfba6557108",
+      "sha256": "5caa4ae1d4e16c911d61e59f0141ece9b13a3193901e41c3975da006ab53b8a5",
       "size_bytes": 141337
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.md",
-      "sha256": "d0e30e92f8821ed9874fd5ca0da64eba700153267f3bd1693c902e723b470a61",
+      "sha256": "12ff1d1da5ae6953e6dda3fd1a85cf54635a8f6489d8c1d8e5b4dc41ee7dd2e7",
       "size_bytes": 1235
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
-      "sha256": "a09e033dfd6c55d21a26a7f8925e5b6655b2326fd56a26bbaf3cd4054ba22890",
+      "sha256": "7a618c66900448724e9aac21824e949c41c2574d3cc4cb249a6d4a4f90ef6f75",
       "size_bytes": 202081
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
-      "sha256": "9c5445acf427d31cf8d466a76c2d06d410a3ee685cf147e9e6e4dc4cdde0228d",
+      "sha256": "2cf7499001d28f70645484a022956338cd91e376276caefa8a3aa4310377feec",
       "size_bytes": 50754
     }
   ],
   "diagnostics_manifest_count": 2,
-  "factory_manifest_count": 51,
-  "cleanup_candidate_count": 29,
+  "factory_manifest_count": 52,
+  "cleanup_candidate_count": 30,
   "cleanup_plan": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory/cleanup-plan.json",
   "next_action": "Review cleanup-plan.json; rerun with -ApplyCleanup only after accepting archive-before-delete behavior."
 }

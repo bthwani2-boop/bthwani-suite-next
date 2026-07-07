@@ -176,7 +176,7 @@ const runtimeProcess = (globalThis as { process?: DshRuntimeProcessLike }).proce
  * Usage:
  *   guardDevSeed('app-client/screens/HomeScreen.tsx', 'category-tile-fallback');
  */
-export function guardDevSeed(callerFile: string, context: string): void {
+function guardDevSeed(callerFile: string, context: string): void {
   const _devGlobal = (globalThis as Record<string, unknown>).__DEV__;
   const isDevEnv: boolean =
     _devGlobal !== undefined
@@ -199,7 +199,7 @@ export function guardDevSeed(callerFile: string, context: string): void {
 /**
  * Returns evidence summary for diagnostic reporting.
  */
-export function getSeedEvidenceSummary(): {
+function getSeedEvidenceSummary(): {
   devAllowed: number;
   violationsFixed: number;
   violationsPending: number;

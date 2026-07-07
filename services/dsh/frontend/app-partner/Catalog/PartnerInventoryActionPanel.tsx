@@ -40,4 +40,4 @@ export function DshPartnerInventoryActionPanel({ activeFlowId, onSelectFlow }: D
   );
 }
 
-export default DshPartnerInventoryActionPanel;
+// export default DshPartnerInventoryActionPanel; // Unused default export

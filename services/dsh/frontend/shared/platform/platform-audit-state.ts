@@ -66,7 +66,7 @@ export function usePlatformAuditStateHook() {
 type PlatformAuditState = ReturnType<typeof usePlatformAuditStateHook>;
 export const PlatformAuditContext = createContext<PlatformAuditState | null>(null);
 
-export function usePlatformAuditState() {
+function usePlatformAuditState() {
   const ctx = useContext(PlatformAuditContext);
   if (!ctx) throw new Error('Missing PlatformAuditProvider');
   return ctx;

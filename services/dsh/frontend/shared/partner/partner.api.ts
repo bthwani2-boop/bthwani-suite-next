@@ -150,7 +150,7 @@ export function fieldGetPartner(partnerId: string): Promise<DshPartner> {
   return request(`/dsh/field/partners/${partnerId}`);
 }
 
-export function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
+function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
   return request(`/dsh/field/partners/${partnerId}?version=${version}`, { method: "PATCH", body: input });
 }
 
@@ -166,7 +166,7 @@ export function fieldSubmitPartner(partnerId: string): Promise<{ partner: DshPar
   return request(`/dsh/field/partners/${partnerId}/submit`, { method: "POST", body: { reason: "تأكيد من الميداني" } });
 }
 
-export function fetchListFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
+export function fetchPartnerFieldVisits(partnerId: string): Promise<{ visits: DshPartnerFieldVisit[] }> {
   return request(`/dsh/operator/partners/${partnerId}/field-visits`);
 }
 
@@ -183,7 +183,7 @@ export function fieldListFieldVisits(partnerId: string): Promise<{ visits: DshPa
 }
 
 // ── Field: first-store draft ────────────────────────────────────────────────
-export function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft }> {
+function fieldGetPartnerStore(partnerId: string): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft }> {
   return request(`/dsh/field/partners/${partnerId}/store`);
 }
 

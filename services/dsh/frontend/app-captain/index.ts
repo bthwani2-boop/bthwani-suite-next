@@ -17,21 +17,14 @@ export type {
 	DshCaptainState,
 	DshCaptainStateGroup,
 	DshCaptainStateMeta,
-	DshCaptainFinanceSnapshot,
-	DshCaptainOperationsSnapshot,
-	DshCaptainOrderActionPayload,
-	DshCaptainOrderSnapshot,
 	DshCaptainProfileSnapshot,
-	DshCaptainProofPayload,
 } from './dsh-captain.types';
 
 // Routing & Registry
-export { dshCaptainRoutes } from './dsh-captain.routes';
 export type {
 	DshCaptainLegacyRoute,
 	DshCaptainRouteId,
 	DshCaptainRouteRecord,
 } from './dsh-captain.routes';
 
-export { dshCaptainScreenRegistry } from './dsh-captain.screen-registry';
 export type { DshCaptainScreenRegistryItem } from './dsh-captain.screen-registry';

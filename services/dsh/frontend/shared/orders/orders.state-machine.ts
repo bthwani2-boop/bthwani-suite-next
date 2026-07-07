@@ -51,7 +51,7 @@ export type DshOrderJourneyStage = {
 
 export type DshOrderJourneyActor = 'client' | 'store' | 'partner' | 'captain' | 'support' | 'system';
 
-export type DshOrderJourneyEvent = {
+type DshOrderJourneyEvent = {
   eventId: string;
   orderId: string;
   actor: DshOrderJourneyActor;
@@ -145,7 +145,7 @@ export type DshSmartProximityState = 'enroute' | 'near_customer' | 'at_door' | '
  * source: 'captain_heartbeat_demo' remains for explicitly demo-scoped flows only.
  * isLiveMap: false — no map rendered from this data.
  */
-export type DshSmartTrackingSnapshot = {
+type DshSmartTrackingSnapshot = {
   source: 'captain_heartbeat_demo' | 'runtime_unbound';
   cadenceMinutes: 3;
   isLiveMap: false;
@@ -157,7 +157,7 @@ export type DshSmartTrackingSnapshot = {
 
 // ─── Captain heartbeat and bell event ─────────────────────────────────────────
 
-export type DshCaptainHeartbeatSnapshot = {
+type DshCaptainHeartbeatSnapshot = {
   orderId: string;
   captainId: string;
   timestamp: string;
@@ -177,7 +177,7 @@ export type DshCaptainBellEvent = {
 
 export type DshOperationsDecisionKind = 'approve' | 'reject' | 'request_edit';
 
-export type DshOperationsDecisionPayload = {
+type DshOperationsDecisionPayload = {
   orderId: string;
   decision: DshOperationsDecisionKind;
   note?: string;
@@ -185,7 +185,7 @@ export type DshOperationsDecisionPayload = {
   nextLifecycleStatus: DshOrderLifecycleStatus;
 };
 
-export type DshOperationsOrderDetail = {
+type DshOperationsOrderDetail = {
   id: string;
   customerName: string;
   customerPhone: string;
@@ -280,7 +280,7 @@ export type DshOrderLifecycleStateMetadata = {
 
 // ─── DSH_ORDER_JOURNEY_STEPS ───────────────────────────────────────────────────
 
-export const DSH_ORDER_JOURNEY_STEPS: DshOrderJourneyStage[] = [
+const DSH_ORDER_JOURNEY_STEPS: DshOrderJourneyStage[] = [
   // Original 13 entries — unchanged
   { id: 'order_submitted',        title: 'تم تقديم الطلب',           detail: 'الطلب بانتظار مراجعة فريق العمليات.' },
   { id: 'operations_review',      title: 'مراجعة العمليات',           detail: 'يراجع فريق العمليات الطلب قبل التأكيد.' },
@@ -309,7 +309,7 @@ export const DSH_ORDER_JOURNEY_STEPS: DshOrderJourneyStage[] = [
 
 // ─── Mapping functions ─────────────────────────────────────────────────────────
 
-export function mapLifecycleToJourneyStage(status: DshOrderLifecycleStatus): DshOrderJourneyStageId {
+function mapLifecycleToJourneyStage(status: DshOrderLifecycleStatus): DshOrderJourneyStageId {
   switch (status) {
     // ── Original mappings ──────────────────────────────────────────────────
     case 'quote':
@@ -384,7 +384,7 @@ export function mapLifecycleToJourneyStage(status: DshOrderLifecycleStatus): Dsh
  * - reject → cancelled
  * - request_edit → confirmed (order returns to ops review queue pending customer correction)
  */
-export function mapOperationsDecisionToLifecycle(decision: DshOperationsDecisionKind): DshOrderLifecycleStatus {
+function mapOperationsDecisionToLifecycle(decision: DshOperationsDecisionKind): DshOrderLifecycleStatus {
   switch (decision) {
     case 'approve':       return 'operations_approved';
     case 'reject':        return 'cancelled';
@@ -1312,7 +1312,7 @@ export const DSH_ORDER_INTERVENTION_STATES: ReadonlyArray<DshOrderInterventionSt
   },
 ] as const;
 
-export function getDshOrderInterventionState(
+function getDshOrderInterventionState(
   flowId: DshOrderInterventionFlowId,
 ): DshOrderInterventionState | undefined {
   return DSH_ORDER_INTERVENTION_STATES.find((entry) => entry.flowId === flowId);

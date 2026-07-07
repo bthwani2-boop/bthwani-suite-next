@@ -472,4 +472,4 @@ export function ProductEditScreen({
   );
 }
 
-export default ProductEditScreen;
+// export default ProductEditScreen; // Unused default export

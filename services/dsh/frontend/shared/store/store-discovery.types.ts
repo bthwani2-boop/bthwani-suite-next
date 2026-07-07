@@ -20,7 +20,7 @@ export type DshStoreSummaryDto =
 export type DshStoreDetailDto =
   paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"]["store"];
 
-export type DshPaginationDto = {
+type DshPaginationDto = {
   readonly limit: number;
   readonly offset: number;
   readonly total: number;

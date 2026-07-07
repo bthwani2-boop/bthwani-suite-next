@@ -4,5 +4,4 @@ export const fieldStoreVerificationControllerBinding = useStoreRoleContextContro
 
 export {
   FieldStoreVerificationScreen,
-  default,
 } from "../stores/FieldStoreVerificationScreen";

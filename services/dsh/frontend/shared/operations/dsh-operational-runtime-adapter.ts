@@ -16,7 +16,7 @@ import {
   type DshListOrdersQuery,
 } from '../orders/dsh-order-lifecycle-client';
 
-export const dshOperationalRuntimeAdapterMeta = {
+const dshOperationalRuntimeAdapterMeta = {
   dataKind: 'RUNTIME_ADAPTER',
   runtimeTruth: true,
   backendSource: true,
@@ -87,6 +87,6 @@ export async function fetchDshRuntimeOrders(
  * Resolve whether runtime is available.
  * Returns true when NEXT_PUBLIC_DSH_API_BASE_URL or EXPO_PUBLIC_DSH_API_BASE_URL is set.
  */
-export function isDshRuntimeAvailable(): boolean {
+function isDshRuntimeAvailable(): boolean {
   return resolveDshOrderApiBaseUrl() !== null;
 }

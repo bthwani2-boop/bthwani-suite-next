@@ -559,4 +559,4 @@ function resolvePrimaryActionLabel(stage: any): string {
 	}
 }
 
-export default DshCaptainOperationsScreen;
+// export default DshCaptainOperationsScreen; // Unused default export

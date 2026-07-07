@@ -14,7 +14,7 @@ type MarketingTargetFields = {
 export const fetchCampaigns = () => req<{ campaigns: DshCampaign[] }>("/dsh/operator/marketing/campaigns");
 export const createCampaign = (body: { title: string; description?: string; startDate?: string; endDate?: string } & MarketingTargetFields) =>
   req<{ campaign: DshCampaign }>("/dsh/operator/marketing/campaigns", { method: "POST", body: JSON.stringify(body) });
-export const getCampaign = (id: string) => req<{ campaign: DshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`);
+const getCampaign = (id: string) => req<{ campaign: DshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`);
 export const updateCampaign = (id: string, body: { status?: string; title?: string; description?: string } & MarketingTargetFields) =>
   req<{ campaign: DshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 // Archive is a soft archive (status -> cancelled, archivedAt set) — the row is

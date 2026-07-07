@@ -5,4 +5,4 @@ export type {
   DshCaptainScreenState,
   DshCaptainScreenRegistryStatus,
 } from '../shared/delivery';
-export { dshCaptainScreenRegistry } from '../shared/delivery';
+

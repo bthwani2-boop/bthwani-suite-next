@@ -10,7 +10,7 @@ import type { DshSurfaceId } from '../runtime/dsh-flow-registry';
 type DshOperationalSummaryRecord = Record<string, any>;
 const dshOperationalSummaryRecords: readonly DshOperationalSummaryRecord[] = [];
 
-export const dshOperationalSummaryAdapterMeta = {
+const dshOperationalSummaryAdapterMeta = {
   dataKind: 'SCAFFOLD_ADAPTER',
   runtimeTruth: false,
   backendSource: false,
@@ -81,7 +81,7 @@ export function buildDshOperationalSummaryForSurface(surfaceId: DshSurfaceId): r
     .map(toSummary);
 }
 
-export function buildDshControlPanelOperationsSummary(): readonly DshControlPanelOperationsSummary[] {
+function buildDshControlPanelOperationsSummary(): readonly DshControlPanelOperationsSummary[] {
   return [
     { workspace: 'orders-queue', purpose: 'Order status, owner, SLA, exception, support, and settlement input visibility.', records: byWorkspace('orders-queue') },
     { workspace: 'trips-board', purpose: 'Trip status, assignment, pickup/dropoff, proof, failure, and return visibility.', records: byWorkspace('trips-board') },
@@ -98,28 +98,28 @@ export function buildDshControlPanelOperationsSummary(): readonly DshControlPane
   ] as const;
 }
 
-export function buildDshSettlementInputSummary(): readonly DshOperationalSurfaceSummary[] {
+function buildDshSettlementInputSummary(): readonly DshOperationalSurfaceSummary[] {
   return byRegistryEntry('settlement-input-bridge');
 }
 
-export function buildDshTripSummaryForOrder(orderId: string): readonly DshOperationalSurfaceSummary[] {
+function buildDshTripSummaryForOrder(orderId: string): readonly DshOperationalSurfaceSummary[] {
   return dshOperationalSummaryRecords
     .filter((record) => record.orderId === orderId && record.registryEntryId === 'delivery-trip')
     .map(toSummary);
 }
 
-export function buildDshExceptionQueueSummary(): readonly DshOperationalSurfaceSummary[] {
+function buildDshExceptionQueueSummary(): readonly DshOperationalSurfaceSummary[] {
   return byRegistryEntry('operational-exception');
 }
 
-export function buildDshCodQueueSummary(): readonly DshOperationalSurfaceSummary[] {
+function buildDshCodQueueSummary(): readonly DshOperationalSurfaceSummary[] {
   return byRegistryEntry('cod-collection');
 }
 
-export function buildDshPodReviewSummary(): readonly DshOperationalSurfaceSummary[] {
+function buildDshPodReviewSummary(): readonly DshOperationalSurfaceSummary[] {
   return byRegistryEntry('proof-of-delivery');
 }
 
-export function getDshOperationalSummaryRegistryEntry(record: DshOperationalSummaryRecord) {
+function getDshOperationalSummaryRegistryEntry(record: DshOperationalSummaryRecord) {
   return getDshOperationalEntryById(record.registryEntryId);
 }

@@ -119,4 +119,4 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
   );
 }
 
-export default DshFieldFinanceScreen;
+// export default DshFieldFinanceScreen; // Unused default export

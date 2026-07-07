@@ -28,7 +28,7 @@ export type DshUploadMediaRequest = {
   readonly mime_type: string;
 };
 
-export type DshMediaApiClient = {
+type DshMediaApiClient = {
   listAssets: (entityId: string, entityType: string) => Promise<readonly DshMediaAsset[]>;
   uploadAsset: (req: DshUploadMediaRequest) => Promise<DshMediaAsset>;
   deleteAsset: (assetId: string) => Promise<void>;

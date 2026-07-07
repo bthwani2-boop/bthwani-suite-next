@@ -11,7 +11,7 @@ export type HrWorkspaceMeta = {
   disabledReason: string;
 };
 
-export const HR_WORKSPACE_REGISTRY: readonly HrWorkspaceMeta[] = [
+const HR_WORKSPACE_REGISTRY: readonly HrWorkspaceMeta[] = [
   {
     id: 'team',
     label: 'فريق الموظفين',

@@ -77,7 +77,7 @@ export function buildChecklistViewModel(visit: DshFieldVisit, checks: readonly D
   };
 }
 
-export function buildOnboardingStatusViewModel(status: DshOnboardingStatus): DshOnboardingStatusViewModel {
+function buildOnboardingStatusViewModel(status: DshOnboardingStatus): DshOnboardingStatusViewModel {
   return {
     storeId: status.storeId,
     statusLabel: ONBOARDING_STATUS_LABELS[status.status] ?? status.status,

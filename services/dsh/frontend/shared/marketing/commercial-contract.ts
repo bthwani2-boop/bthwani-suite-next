@@ -115,7 +115,7 @@ export type CommercialProjection = {
   readonly isClientVisible: boolean;
 };
 
-export type SubscriptionClientCard = {
+type SubscriptionClientCard = {
   readonly id: string;
   readonly title: string;
   readonly price: string;
@@ -126,7 +126,7 @@ export type SubscriptionClientCard = {
   readonly current: boolean;
 };
 
-export type LoyaltyReward = {
+type LoyaltyReward = {
   readonly id: string;
   readonly title: string;
   readonly pointsCost: number;
@@ -134,13 +134,13 @@ export type LoyaltyReward = {
   readonly description?: string;
 };
 
-export type LoyaltyTier = {
+type LoyaltyTier = {
   readonly name: string;
   readonly minimumPoints: number;
   readonly benefits: ReadonlyArray<{ readonly label: string; readonly description: string }>;
 };
 
-export type LoyaltyClientBenefits = {
+type LoyaltyClientBenefits = {
   readonly title: string;
   readonly subtitle: string;
   readonly note: string;
@@ -148,7 +148,7 @@ export type LoyaltyClientBenefits = {
   readonly sections: ReadonlyArray<{ readonly title: string; readonly subtitle: string; readonly badgeLabel: string; readonly tone: string; readonly items: ReadonlyArray<{ readonly label: string; readonly value: string; readonly helperText: string; readonly tone: string }> }>;
 };
 
-export type LoyaltyClientSection = {
+type LoyaltyClientSection = {
   readonly title: string;
   readonly subtitle: string;
   readonly badgeLabel: string;
@@ -162,7 +162,7 @@ const ALL_LIFECYCLE_STATUSES: readonly CommercialLifecycleStatus[] = [
   "inbound", "review", "marketing-ready", "published", "paused", "archived", "draft", "rejected"
 ];
 
-export function normalizeCommercialStatus(status: string): CommercialLifecycleStatus | undefined {
+function normalizeCommercialStatus(status: string): CommercialLifecycleStatus | undefined {
   return ALL_LIFECYCLE_STATUSES.includes(status as CommercialLifecycleStatus)
     ? (status as CommercialLifecycleStatus)
     : undefined;
@@ -184,7 +184,7 @@ export function evaluateCommercialConflicts(sourceMap: CommercialSourceMap): Com
     }));
 }
 
-export function buildCommercialProjection(input: CommercialProjectionInput): CommercialProjection {
+function buildCommercialProjection(input: CommercialProjectionInput): CommercialProjection {
   const badges: CommercialBadge[] = [];
   const sourceMap: CommercialSourceMap = input.sourceMap ?? {};
 

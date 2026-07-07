@@ -15,7 +15,7 @@ export type PlatformVarStatusBadge = {
   readonly cssClass: string;
 };
 
-export const PLATFORM_VAR_STATUS_BADGE: Record<DshPlatformVarStatus, PlatformVarStatusBadge> = {
+const PLATFORM_VAR_STATUS_BADGE: Record<DshPlatformVarStatus, PlatformVarStatusBadge> = {
   'runtime-bound':       { label: 'مرتبط تشغيلياً', cssClass: 'badgeBinding' },
   'contract-required':   { label: 'يتطلب عقداً',    cssClass: 'badgeContract' },
   'read-only-reference': { label: 'مرجع قراءة',      cssClass: 'badgeReference' },
@@ -24,21 +24,21 @@ export const PLATFORM_VAR_STATUS_BADGE: Record<DshPlatformVarStatus, PlatformVar
 
 // ── Risk display policy ───────────────────────────────────────────────────────
 
-export const PLATFORM_VAR_RISK_CSS_CLASS: Record<DshPlatformVarRisk, string> = {
+const PLATFORM_VAR_RISK_CSS_CLASS: Record<DshPlatformVarRisk, string> = {
   low:       'riskLow',
   medium:    'riskMedium',
   high:      'riskHigh',
   financial: 'riskFinancial',
 };
 
-export const PLATFORM_VAR_RISK_LABEL: Record<DshPlatformVarRisk, string> = {
+const PLATFORM_VAR_RISK_LABEL: Record<DshPlatformVarRisk, string> = {
   low:       'منخفضة',
   medium:    'متوسطة',
   high:      'عالية',
   financial: 'مالية',
 };
 
-export const PLATFORM_VAR_STATUS_LABEL: Record<DshPlatformVarStatus, string> = {
+const PLATFORM_VAR_STATUS_LABEL: Record<DshPlatformVarStatus, string> = {
   'runtime-bound':       'مرتبط بعقد تشغيل موثق',
   'contract-required':   'يتطلب عقد Backend أو Provider',
   'read-only-reference': 'مرجع قراءة فقط',
@@ -70,14 +70,14 @@ export const PLATFORM_VAR_QUICK_PICKS: Record<string, readonly string[]> = {
 
 export type PlatformVarMutationAction = 'save-proposed' | 'apply' | 'rollback' | 'mark-contract-ready';
 
-export const PLATFORM_VAR_MUTATION_DISABLED_REASON: Record<PlatformVarMutationAction, string> = {
+const PLATFORM_VAR_MUTATION_DISABLED_REASON: Record<PlatformVarMutationAction, string> = {
   'save-proposed':       'حفظ القيمة المقترحة (محلي فقط — لا يُطبَّق على الخوادم)',
   'apply':               'تطبيق مقترح يتطلب عقد Backend موثق — غير مفعّل حالياً',
   'rollback':            'الرجوع يتطلب مسار Backend موثق — غير مفعّل حالياً',
   'mark-contract-ready': 'التعليم بالعقد يتطلب مسار Backend موثق — غير مفعّل حالياً',
 };
 
-export function isPlatformVarMutationAllowed(
+function isPlatformVarMutationAllowed(
   action: PlatformVarMutationAction,
   varKey: string,
 ): boolean {
@@ -90,7 +90,7 @@ export function isPlatformDesignVar(varKey: string): boolean {
   return varKey.startsWith('VAR_UI_');
 }
 
-export function isPlatformDesignValValid(varKey: string, proposedValue: string): boolean {
+function isPlatformDesignValValid(varKey: string, proposedValue: string): boolean {
   if (!isPlatformDesignVar(varKey)) return true;
   const picks = PLATFORM_VAR_QUICK_PICKS[varKey];
   return Array.isArray(picks) && picks.includes(proposedValue);

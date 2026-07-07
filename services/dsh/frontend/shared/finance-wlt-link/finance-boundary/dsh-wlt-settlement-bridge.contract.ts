@@ -5,7 +5,7 @@ import type {
   DshSettlementInputStatus,
 } from '../../operations/dsh-operational.contract';
 
-export const dshWltSettlementBridgeContractMeta = {
+const dshWltSettlementBridgeContractMeta = {
   dataKind: 'DSH_WLT_SETTLEMENT_BRIDGE_CONTRACT',
   runtimeTruth: false,
   backendSource: false,
@@ -268,7 +268,7 @@ export const DSH_WLT_SETTLEMENT_BRIDGE_RULES: readonly DshWltSettlementBridgeRul
   },
 ] as const;
 
-export function getDshWltSettlementBridgeRules(): readonly DshWltSettlementBridgeRule[] {
+function getDshWltSettlementBridgeRules(): readonly DshWltSettlementBridgeRule[] {
   return DSH_WLT_SETTLEMENT_BRIDGE_RULES;
 }
 
@@ -278,7 +278,7 @@ export function getDshWltSettlementBridgeRule(
   return DSH_WLT_SETTLEMENT_BRIDGE_RULES.find((rule) => rule.sourceEventType === eventType);
 }
 
-export function classifyWltTargetCapability(
+function classifyWltTargetCapability(
   eventType: DshSettlementInputEventType,
 ): DshWltTargetCapability | undefined {
   return getDshWltSettlementBridgeRule(eventType)?.wltTargetCapability;
@@ -311,7 +311,7 @@ export function buildWltSettlementInputCandidate(
   });
 }
 
-export function buildWltSettlementInputCandidateFromEvent(
+function buildWltSettlementInputCandidateFromEvent(
   event: DshSettlementInputEvent,
 ): DshWltSettlementInputCandidate {
   const rule = getDshWltSettlementBridgeRule(event.eventType);
@@ -336,7 +336,7 @@ export function buildWltSettlementInputCandidateFromEvent(
   });
 }
 
-export function validateDshSettlementInputReadiness(
+function validateDshSettlementInputReadiness(
   candidate: DshWltSettlementInputCandidate,
   availableProof: readonly DshOperationalProofRequirement[],
 ): DshWltSettlementInputValidationResult {

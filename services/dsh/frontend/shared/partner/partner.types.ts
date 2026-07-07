@@ -215,7 +215,7 @@ export const DOCUMENT_TYPE_LABELS: Record<DshPartnerDocumentType, string> = {
   other: "مستند آخر",
 };
 
-export type DshFulfillmentDeliveryMode = 'partner_delivery' | 'bthwani_delivery' | 'pickup';
+type DshFulfillmentDeliveryMode = 'partner_delivery' | 'bthwani_delivery' | 'pickup';
 
 export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
   'order-accept',
@@ -497,7 +497,7 @@ export type PartnerQueueRecord = {
   readonly createdAt: string;
 };
 
-export type UiAuditRow = {
+type UiAuditRow = {
   id: string; who: string; why: string; when: string; permissionResult: string;
   slaBreachReason: string; supportTicketLink: string; proofRequired: string;
   evidenceState: string; resolutionPath: string; note: string; statusTone: string;

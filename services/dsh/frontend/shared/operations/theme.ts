@@ -20,4 +20,4 @@ export const opsTheme = {
   surface: colorRoles.surfaceBase,
 };
 
-export const OpsTheme = opsTheme;
+const OpsTheme = opsTheme;

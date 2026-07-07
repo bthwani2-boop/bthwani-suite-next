@@ -14,7 +14,7 @@ import type {
 
 export type VarsDomainId = 'dsh' | 'wlt' | 'provider' | 'policy' | 'design';
 
-export const DOMAIN_TABS: readonly { id: VarsDomainId; label: string }[] = [
+const DOMAIN_TABS: readonly { id: VarsDomainId; label: string }[] = [
   { id: 'dsh',      label: 'عمليات DSH' },
   { id: 'wlt',      label: 'جسر WLT' },
   { id: 'provider', label: 'المزودين' },
@@ -55,7 +55,7 @@ export function sortPlatformVarsByScope(records: readonly DshPlatformVarRecord[]
 
 export type PlatformVarKpi = { id: string; label: string; value: string; cls: string };
 
-export function resolvePlatformVarsDomainKpis(
+function resolvePlatformVarsDomainKpis(
   domain: VarsDomainId,
   kpiCssClasses: { warning: string; success: string; danger: string },
 ): PlatformVarKpi[] {
@@ -84,7 +84,7 @@ export function resolvePlatformVarsFilteredScopes(
   return DSH_PLATFORM_SCOPE_PRECEDENCE.map((l) => l.scope).filter((s) => scopes.includes(s));
 }
 
-export function isProviderVarRecord(r: DshPlatformVarRecord): r is DshPlatformProviderControlRecord {
+function isProviderVarRecord(r: DshPlatformVarRecord): r is DshPlatformProviderControlRecord {
   return 'providerId' in r;
 }
 

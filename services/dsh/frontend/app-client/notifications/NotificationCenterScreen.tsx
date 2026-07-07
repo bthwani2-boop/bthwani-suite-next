@@ -45,4 +45,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default NotificationCenterScreen;
+// export default NotificationCenterScreen; // Unused default export

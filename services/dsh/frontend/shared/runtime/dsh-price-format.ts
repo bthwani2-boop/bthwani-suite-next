@@ -37,6 +37,6 @@ export function formatDshPrice(majorUnits: number, currency = 'YER'): string {
  * @param minorUnits - Price in minor units (e.g. 1250 = 12.50 YER)
  * @param currency - ISO currency code, defaults to 'YER'
  */
-export function formatDshPriceMinorUnits(minorUnits: number, currency = 'YER'): string {
+function formatDshPriceMinorUnits(minorUnits: number, currency = 'YER'): string {
   return formatDshPrice(minorUnits / 100, currency);
 }

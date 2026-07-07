@@ -178,11 +178,11 @@ export const DSH_SURFACE_RUNTIME_CONTRACTS: Record<DshSurfaceActor, DshSurfaceRu
   },
 };
 
-export function getDshSurfaceRuntimeContract(actor: DshSurfaceActor): DshSurfaceRuntimeContract {
+function getDshSurfaceRuntimeContract(actor: DshSurfaceActor): DshSurfaceRuntimeContract {
   return DSH_SURFACE_RUNTIME_CONTRACTS[actor];
 }
 
-export function getDshSurfaceCapability(
+function getDshSurfaceCapability(
   actor: DshSurfaceActor,
   capabilityId: DshSurfaceCapabilityId,
 ): DshSurfaceCapability | undefined {

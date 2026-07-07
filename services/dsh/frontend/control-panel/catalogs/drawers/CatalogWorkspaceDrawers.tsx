@@ -27,7 +27,7 @@ export type CatalogWorkspaceState = {
   partnerLabel?: string;
 };
 
-export type DuplicatePair = {
+type DuplicatePair = {
   sourceId: string;
   candidateId: string;
   reason: string;

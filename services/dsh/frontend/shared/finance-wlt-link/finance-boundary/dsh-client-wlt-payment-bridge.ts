@@ -121,20 +121,20 @@ export function getClientWltIntentForState(
   return DSH_CLIENT_WLT_INTENT_MAP.find((e) => e.clientState === state);
 }
 
-export function getPaymentMethodWltEntry(
+function getPaymentMethodWltEntry(
   methodId: string,
 ): DshClientPaymentMethodWltEntry | undefined {
   return DSH_CLIENT_PAYMENT_METHOD_WLT_MAP.find((e) => e.methodId === methodId);
 }
 
-export function isCodAllowedForMode(mode: DshFulfillmentDeliveryMode): boolean {
+function isCodAllowedForMode(mode: DshFulfillmentDeliveryMode): boolean {
   return DSH_CLIENT_COD_BY_MODE.find((e) => e.mode === mode)?.codAllowed ?? false;
 }
 
-export function shouldShowWalletBalanceAtState(state: DshClientState): boolean {
+function shouldShowWalletBalanceAtState(state: DshClientState): boolean {
   return getClientWltIntentForState(state)?.walletBalanceVisible ?? false;
 }
 
-export function shouldShowRefundEligibilityAtState(state: DshClientState): boolean {
+function shouldShowRefundEligibilityAtState(state: DshClientState): boolean {
   return getClientWltIntentForState(state)?.refundEligibilityVisible ?? false;
 }

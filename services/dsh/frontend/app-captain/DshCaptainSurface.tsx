@@ -318,4 +318,4 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
   );
 }
 
-export default DshCaptainSurface;
+// export default DshCaptainSurface; // Unused default export

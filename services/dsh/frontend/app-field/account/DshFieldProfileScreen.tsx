@@ -66,4 +66,4 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
   );
 }
 
-export default DshFieldProfileScreen;
+// export default DshFieldProfileScreen; // Unused default export

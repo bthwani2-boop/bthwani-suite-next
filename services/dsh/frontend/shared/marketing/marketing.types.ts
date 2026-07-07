@@ -120,7 +120,7 @@ export type HomePromoStatus =
   | 'archived'
   | 'published';
 
-export type HomePromoRecord = {
+type HomePromoRecord = {
   id: string;
   title: string;
   subtitle: string;
@@ -155,7 +155,7 @@ export type MarketingVideoTargetType =
   | 'custom'
   | 'loyalty';
 
-export type MarketingVideoRecord = {
+type MarketingVideoRecord = {
   id: string;
   title: string;
   subtitle: string;
@@ -195,7 +195,7 @@ export type MarketingGrowthRouteTarget =
   | 'product'
   | 'search';
 
-export type MarketingGrowthRecord = {
+type MarketingGrowthRecord = {
   id: string;
   title: string;
   subtitle: string;
@@ -216,7 +216,7 @@ export type MarketingGrowthRecord = {
 
 // --- Control-Panel Editor Types ---
 
-export type MarketingControlView =
+type MarketingControlView =
   | 'visibility'
   | 'ticker'
   | 'banners'
@@ -231,7 +231,7 @@ export type MarketingControlView =
   | 'approval-queue'
   | 'video-review';
 
-export type MarketingCommandDeckTab =
+type MarketingCommandDeckTab =
   | 'ticker'
   | 'banners'
   | 'promos'
@@ -245,7 +245,7 @@ export type MarketingCommandDeckTab =
 
 export type MarketingReviewStatus = 'pending' | 'approved' | 'rejected' | 'flagged';
 
-export type MarketingReviewItem = {
+type MarketingReviewItem = {
   id: string;
   type: 'banner' | 'video' | 'promo';
   title: string;
@@ -261,7 +261,7 @@ export type SmartBannerTargetType =
   | 'product' | 'offer' | 'subscription' | 'campaign' | 'tracking'
   | 'orders' | 'loyalty' | 'custom';
 
-export type SmartTargetSummary = {
+type SmartTargetSummary = {
   type?: SmartBannerTargetType;
   id?: string;
   label: string;
@@ -272,10 +272,10 @@ export type SmartTargetSummary = {
 
 export type BannerImageFit = 'cover' | 'contain';
 export type BannerLogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-export type EditorTab = 'content' | 'media' | 'target' | 'publish';
-export type SmartTargetStoreFilter = 'all' | 'offers' | 'favorites' | 'available';
+type EditorTab = 'content' | 'media' | 'target' | 'publish';
+type SmartTargetStoreFilter = 'all' | 'offers' | 'favorites' | 'available';
 
-export type BannerDraft = Record<
+type BannerDraft = Record<
   | 'title'
   | 'subtitle'
   | 'imageUrl'
@@ -319,7 +319,7 @@ export type BannerDraft = Record<
   subscriptionId?: string;
 };
 
-export const SMART_TARGET_OPTIONS: ReadonlyArray<{ value: SmartBannerTargetType; label: string; description: string }> = [
+const SMART_TARGET_OPTIONS: ReadonlyArray<{ value: SmartBannerTargetType; label: string; description: string }> = [
   { value: 'home', label: 'الرئيسية', description: 'توجيه المستخدم إلى واجهة DSH الرئيسية.' },
   { value: 'stores', label: 'المتاجر', description: 'فتح قائمة المتاجر المتاحة في نفس تصنيف المتجر.' },
   { value: 'store', label: 'متجر', description: 'توجيه المستخدم لمتجر محدد.' },
@@ -335,21 +335,21 @@ export const SMART_TARGET_OPTIONS: ReadonlyArray<{ value: SmartBannerTargetType;
   { value: 'custom', label: 'مخصص', description: 'رابط خارجي أو مخصص.' },
 ];
 
-export const SUBSCRIPTION_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [];
+const SUBSCRIPTION_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [];
 
-export const BANNER_MOTION_OPTIONS: ReadonlyArray<{ value: MarketingBannerMotionStyle; label: string; description: string }> = [
+const BANNER_MOTION_OPTIONS: ReadonlyArray<{ value: MarketingBannerMotionStyle; label: string; description: string }> = [
   { value: 'slide', label: 'انزلاق', description: 'انتقال البنرات أفقياً بسلاسة.' },
   { value: 'soft-parallax', label: 'تأثير العمق', description: 'حركة بارالاكس خفيفة للبنر عند التمرير.' },
   { value: 'subtle-fade', label: 'تلاشي تدريجي', description: 'تأثير تلاشي ناعم عند تبديل الصور.' },
   { value: 'snap-focus', label: 'تركيز سريع', description: 'انتقال خاطف وسريع يركز على المحتوى.' },
 ];
 
-export const IMAGE_FIT_TAB_ITEMS: ReadonlyArray<{ value: BannerImageFit; label: string }> = [
+const IMAGE_FIT_TAB_ITEMS: ReadonlyArray<{ value: BannerImageFit; label: string }> = [
   { value: 'cover', label: 'تغطية' },
   { value: 'contain', label: 'احتواء' },
 ];
 
-export const LOGO_POSITION_TAB_ITEMS: ReadonlyArray<{ value: BannerLogoPosition; label: string }> = [
+const LOGO_POSITION_TAB_ITEMS: ReadonlyArray<{ value: BannerLogoPosition; label: string }> = [
   { value: 'top-left', label: 'أعلى اليسار' },
   { value: 'top-right', label: 'أعلى اليمين' },
   { value: 'bottom-left', label: 'أسفل اليسار' },
@@ -358,7 +358,7 @@ export const LOGO_POSITION_TAB_ITEMS: ReadonlyArray<{ value: BannerLogoPosition;
 
 // --- Video Editor Types ---
 
-export type VideoDraft = Record<
+type VideoDraft = Record<
   | 'title'
   | 'subtitle'
   | 'videoUrl'
@@ -382,7 +382,7 @@ export type VideoDraft = Record<
   reviewState: 'none' | 'pending' | 'approved' | 'rejected';
 };
 
-export type VideoEditorWorkspaceTab = 'content' | 'media' | 'target' | 'publish';
+type VideoEditorWorkspaceTab = 'content' | 'media' | 'target' | 'publish';
 
 export const VIDEO_TARGET_TYPE_OPTIONS: Array<{
   value: MarketingVideoTargetType;
@@ -410,14 +410,14 @@ export type BannerTemplate = {
   readonly icon: string;
 };
 
-export const BANNER_TEMPLATES: readonly BannerTemplate[] = [
+const BANNER_TEMPLATES: readonly BannerTemplate[] = [
   { id: 'restaurant', label: 'مطعم', accent: 'danger', badge: 'خصم 20%', cta: 'اطلب الآن', icon: '🍕' },
   { id: 'fashion', label: 'أزياء وملابس', accent: 'info', badge: 'وصل حديثاً', cta: 'تسوق الآن', icon: '🛍️' },
   { id: 'tech', label: 'إلكترونيات', accent: 'brandStrong', badge: 'الأكثر مبيعاً', cta: 'اكتشف الآن', icon: '💻' },
   { id: 'pro', label: 'أعضاء برو', accent: 'warning', badge: 'توصيل مجاني', cta: 'اشترك الآن', icon: '👑' },
 ];
 
-export const TARGET_TYPE_OPTIONS = VIDEO_TARGET_TYPE_OPTIONS;
+const TARGET_TYPE_OPTIONS = VIDEO_TARGET_TYPE_OPTIONS;
 
 // --- News Ticker Types ---
 

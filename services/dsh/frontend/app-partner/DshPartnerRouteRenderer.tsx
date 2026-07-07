@@ -19,6 +19,7 @@ import {
   VideoUploadScreen,
 } from './account/OperationScreens';
 import { OrdersInboxScreen } from './orders/OrdersInboxScreen';
+import { DshPartnerOrderRejectionScreen, type DshPartnerOrderRejectionScreenProps } from './orders/DshPartnerOrderRejectionScreen';
 import { DshPartnerStoreCourierScreen } from './store/DshPartnerStoreCourierScreen';
 import { PartnerStoreScreen } from './store/PartnerStoreScreen';
 import { PartnerEntryScreen } from './account/PartnerEntryScreen';
@@ -86,6 +87,32 @@ type Props = {
   handleMarkReady: (orderId: string) => void;
 };
 
+const PARTNER_ORDER_REJECTION_REASONS = [
+  { id: 'out-of-stock', label: 'بعض الأصناف غير متوفرة' },
+  { id: 'busy', label: 'المتجر مزدحم جداً حالياً' },
+  { id: 'closing-soon', label: 'المتجر سيغلق قريباً' },
+  { id: 'technical-issue', label: 'مشكلة تقنية في استقبال الطلبات' },
+  { id: 'other', label: 'سبب آخر' },
+] satisfies DshPartnerOrderRejectionScreenProps['rejectionReasons'];
+
+function getPartnerOrderRejectionState(state: Props['partnerOrdersState']): NonNullable<DshPartnerOrderRejectionScreenProps['state']> {
+  if (state === 'loading') return 'loading';
+  if (state === 'error' || state === 'offline') return 'error';
+  return 'ready';
+}
+
+function getPartnerOrderRejectionItems(
+  order: PartnerOrderItem | undefined,
+  activeOrderId: string,
+  initialOrderId: string,
+): DshPartnerOrderRejectionScreenProps['items'] {
+  return [{
+    id: order?.id ?? (activeOrderId || initialOrderId),
+    name: order?.itemsSummaryLabel ?? order?.itemsCountLabel ?? 'تفاصيل الطلب',
+    quantity: 1,
+  }];
+}
+
 export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   const {
     route, initialOrderId, activeOrderId, ordersSearchMode, accountHubSection,
@@ -101,6 +128,10 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   } = props;
 
   const activeStoreRuntimeId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
+  const activePartnerOrder = React.useMemo(
+    () => partnerOrders.find(order => order.id === activeOrderId) ?? partnerOrders[0],
+    [activeOrderId, partnerOrders],
+  );
 
   // Validate binding contract for the current route in development
   assertRouteHasBindingContract(route);
@@ -193,9 +224,15 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
 
   if (route === 'order-rejection') {
     return renderSurfaceShell(
-      <OrderIssueScreen activeFlowId="order-reject"
-        selectedCategoryId={supportCommandContext.highlightedIssueCategoryId ?? 'partner-reject-request'}
-        onBack={returnToSupportDirectory} onOpenScreen={openSupportScreen} onSecondaryAction={returnToSupportDirectory}
+      <DshPartnerOrderRejectionScreen
+        state={getPartnerOrderRejectionState(partnerOrdersState)}
+        orderCode={activePartnerOrder?.orderCode ?? `#${activeOrderId || initialOrderId}`}
+        amount={activePartnerOrder?.amountLabel ?? '—'}
+        items={getPartnerOrderRejectionItems(activePartnerOrder, activeOrderId, initialOrderId)}
+        rejectionReasons={PARTNER_ORDER_REJECTION_REASONS}
+        onAccept={() => openSupportCommandFromOperationalFlow('order-accept', 'orders')}
+        onReject={() => openSupportCommandFromOperationalFlow('order-reject', 'orders')}
+        onBack={openOrdersBoard}
       />,
     ) as React.ReactElement;
   }

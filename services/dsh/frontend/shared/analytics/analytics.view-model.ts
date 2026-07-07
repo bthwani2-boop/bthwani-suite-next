@@ -106,7 +106,7 @@ export type DshPartnerPerformanceViewModel = {
   readonly healthTone: "success" | "warning" | "danger";
 };
 
-export function buildPartnerPerformanceViewModel(data: DshPartnerPerformance): DshPartnerPerformanceViewModel {
+function buildPartnerPerformanceViewModel(data: DshPartnerPerformance): DshPartnerPerformanceViewModel {
   const total = data.totalOrders;
   const acceptanceRate = total > 0 ? Math.round((data.acceptedOrders / total) * 100) : 0;
   const rejectionRate = total > 0 ? Math.round((data.rejectedOrders / total) * 100) : 0;

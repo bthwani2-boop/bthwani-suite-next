@@ -44,7 +44,7 @@ export type FieldPartnerDraftStep =
   | "visit-notes"
   | "review";
 
-export const FIELD_ONBOARDING_STEPS: FieldPartnerDraftStep[] = [
+const FIELD_ONBOARDING_STEPS: FieldPartnerDraftStep[] = [
   "identity",
   "owner",
   "store",
@@ -54,7 +54,7 @@ export const FIELD_ONBOARDING_STEPS: FieldPartnerDraftStep[] = [
   "review",
 ];
 
-export const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string> = {
+const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string> = {
   identity: "بيانات الهوية التجارية",
   owner: "بيانات المالك",
   store: "بيانات الفرع",

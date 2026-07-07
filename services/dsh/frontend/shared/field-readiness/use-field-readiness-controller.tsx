@@ -150,7 +150,7 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
   return { listState, actionState, loadOperatorEscalations, raiseEscalation, resolveEscalation, resetAction };
 }
 
-export function usePartnerOnboardingStatusController(storeId: string, authKind = "unauthenticated") {
+function usePartnerOnboardingStatusController(storeId: string, authKind = "unauthenticated") {
   const [state, setState] = useState(onboardingStatusIdleState());
 
   const load = useCallback(async () => {

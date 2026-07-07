@@ -102,4 +102,4 @@ export function DshCaptainTierEvaluateScreen(props: Omit<DshCaptainProfileScreen
 	return <DshCaptainProfileScreen {...props} section="tier-evaluate" />;
 }
 
-export default DshCaptainProfileScreen;
+// export default DshCaptainProfileScreen; // Unused default export

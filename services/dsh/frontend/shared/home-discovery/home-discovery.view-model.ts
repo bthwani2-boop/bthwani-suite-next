@@ -40,7 +40,7 @@ export type CategoryViewModel = {
   sortOrder: number;
 };
 
-export type FilterViewModel = {
+type FilterViewModel = {
   id: string;
   label: string;
   kind: string;

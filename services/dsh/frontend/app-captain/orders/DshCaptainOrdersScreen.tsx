@@ -646,5 +646,4 @@ export function CaptainOrderDetailScreen({
 	);
 }
 
-export default DshCaptainOrdersScreen;
-
+// export default DshCaptainOrdersScreen; // Unused default export

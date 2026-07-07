@@ -52,15 +52,15 @@ export function getDshCaptainStateMeta(state: DshCaptainState): DshCaptainStateM
 	return stateMetaMap[state];
 }
 
-export function isDshCaptainOrderState(state: DshCaptainState): boolean {
+function isDshCaptainOrderState(state: DshCaptainState): boolean {
 	return getDshCaptainStateMeta(state).group === 'orders';
 }
 
-export function isDshCaptainFinanceState(state: DshCaptainState): boolean {
+function isDshCaptainFinanceState(state: DshCaptainState): boolean {
 	return getDshCaptainStateMeta(state).group === 'finance';
 }
 
-export function isDshCaptainTerminalState(state: DshCaptainState): boolean {
+function isDshCaptainTerminalState(state: DshCaptainState): boolean {
 	return getDshCaptainStateMeta(state).terminal;
 }
 
@@ -70,8 +70,8 @@ export type DshCaptainFinanceSection = 'cod-liability' | 'earnings' | 'settlemen
 
 // --- Profile screen types ---
 export type DshCaptainProfileScreenState = 'ready' | 'loading' | 'empty' | 'error';
-export type DshCaptainProfileSection = 'profile-get' | 'tier-info' | 'tier-evaluate';
+type DshCaptainProfileSection = 'profile-get' | 'tier-info' | 'tier-evaluate';
 
-export function selectDshCaptainOperationalStatuses(_captainId?: string) {
+function selectDshCaptainOperationalStatuses(_captainId?: string) {
   return Object.values(stateMetaMap);
 }

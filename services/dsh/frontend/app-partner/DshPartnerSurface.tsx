@@ -311,4 +311,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DshPartnerSurface;
+// export default DshPartnerSurface; // Unused default export

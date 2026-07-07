@@ -12,7 +12,7 @@ import {
 } from '../marketing/dsh-signal-layer.model';
 import type { DshOrderJourneyStageId, DshOrderLifecycleStatus } from './orders.state-machine';
 
-export type RecommendationProduct = {
+type RecommendationProduct = {
   id: string;
   title: string;
   priceLabel: string;
@@ -21,7 +21,7 @@ export type RecommendationProduct = {
   description?: string;
 };
 
-export type CartItem = {
+type CartItem = {
   id: string;
   title: string;
   priceLabel?: string;
@@ -144,15 +144,15 @@ export type DshPlaceholderStatus =
   | 'MUST_REPLACE_WITH_PREVIEW_UI';
 
 export type DshLookupFieldId = 'phone' | 'orderId' | 'customerId' | 'ticketId';
-export type DshLookupInput = {
+type DshLookupInput = {
   readonly key: DshLookupFieldId;
   readonly label: string;
   readonly value: string;
   readonly summaryFirst: true;
 };
 
-export type DshVerificationStatus = 'required' | 'verified' | 'blocked';
-export type DshVerificationStep = {
+type DshVerificationStatus = 'required' | 'verified' | 'blocked';
+type DshVerificationStep = {
   readonly stepId: string;
   readonly label: string;
   readonly completed: boolean;
@@ -266,7 +266,7 @@ export type DshOrderRescueCase = {
   readonly decisionSignal: DshSignalRoute;
 };
 
-export const ORDER_RESCUE_REASONS: readonly DshOrderRescueReason[] = [
+const ORDER_RESCUE_REASONS: readonly DshOrderRescueReason[] = [
   'item_unavailable',
   'customer_not_reachable',
   'store_closed_after_order',
@@ -280,7 +280,7 @@ export const ORDER_RESCUE_REASONS: readonly DshOrderRescueReason[] = [
   'wlt_visibility',
 ] as const;
 
-export const ORDER_RESCUE_OWNERS: readonly DshOrderRescueOwner[] = [
+const ORDER_RESCUE_OWNERS: readonly DshOrderRescueOwner[] = [
   'support',
   'operations',
   'partner',
@@ -288,7 +288,7 @@ export const ORDER_RESCUE_OWNERS: readonly DshOrderRescueOwner[] = [
   'wlt_reference_only',
 ] as const;
 
-export const ORDER_RESCUE_ACTIONS: readonly DshOrderRescueNextActionId[] = [
+const ORDER_RESCUE_ACTIONS: readonly DshOrderRescueNextActionId[] = [
   'replace_item',
   'remove_item',
   'wait_customer',
@@ -349,7 +349,7 @@ export const AWNAK_STAGE_LABELS: Record<AwnakStage, string> = {
   escalated: 'مصعّد',
 };
 
-export type DshOpsMonitoringItem = {
+type DshOpsMonitoringItem = {
   readonly entityId: string;
   readonly entityLabel: string;
   readonly lifecycleState: string;
@@ -366,7 +366,7 @@ export type DshOpsMonitoringItem = {
   readonly auditEntryId?: string;
 };
 
-export type DshWltFinanceAlert = {
+type DshWltFinanceAlert = {
   readonly alertId: string;
   readonly domain: 'payment' | 'refund' | 'settlement' | 'payout' | 'commission';
   readonly label: string;
@@ -675,7 +675,7 @@ export function getSurfaceObservation(
   return handoff.surfaceObservations.find((o) => o.surfaceId === surfaceId);
 }
 
-export function getHandoffsForDeliveryMode(
+function getHandoffsForDeliveryMode(
   mode: DshFulfillmentDeliveryMode,
 ): readonly DshOrderLifecycleHandoff[] {
   return DSH_ORDER_LIFECYCLE_HANDOFFS.filter(
@@ -683,11 +683,11 @@ export function getHandoffsForDeliveryMode(
   );
 }
 
-export function getHandoffsWithWltImpact(): readonly DshOrderLifecycleHandoff[] {
+function getHandoffsWithWltImpact(): readonly DshOrderLifecycleHandoff[] {
   return DSH_ORDER_LIFECYCLE_HANDOFFS.filter((h) => h.wltImpact.eventKind !== 'none');
 }
 
-export function getAuditableHandoffs(): readonly DshOrderLifecycleHandoff[] {
+function getAuditableHandoffs(): readonly DshOrderLifecycleHandoff[] {
   return DSH_ORDER_LIFECYCLE_HANDOFFS.filter((h) => h.auditRequired);
 }
 

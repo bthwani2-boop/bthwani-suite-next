@@ -52,7 +52,7 @@ function renderCompletionSection(onOpenProofCapturePress?: () => void) {
 	);
 }
 
-export function DshCaptainEntryScreen({
+function DshCaptainEntryScreen({
 	state = 'ready',
 	isAvailable = false,
 	onToggleAvailability,

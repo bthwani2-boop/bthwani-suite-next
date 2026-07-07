@@ -122,4 +122,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PartnerStoreScreen;
+// export default PartnerStoreScreen; // Unused default export

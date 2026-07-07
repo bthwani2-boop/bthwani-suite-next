@@ -91,4 +91,4 @@ export function DshCaptainMapLayer({
     </Box>
   );
 }
-export default DshCaptainMapLayer;
+// export default DshCaptainMapLayer; // Unused default export

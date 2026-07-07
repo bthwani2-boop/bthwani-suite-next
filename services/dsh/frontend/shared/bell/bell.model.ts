@@ -5,7 +5,7 @@ export type ClientBellModelProps = {
   notificationsModel: any;
 };
 
-export function useDshClientBellModel({
+function useDshClientBellModel({
   notificationsModel,
 }: ClientBellModelProps) {
   const { handleServiceLauncherPress } = notificationsModel;
@@ -21,7 +21,7 @@ export type DshCaptainBellModelProps = {
   onOpenNextOrder?: (orderId: DshCaptainOrderId) => void;
 };
 
-export function useDshCaptainBellModel({
+function useDshCaptainBellModel({
   items,
   onOpenOrder,
   onOpenNextOrder,

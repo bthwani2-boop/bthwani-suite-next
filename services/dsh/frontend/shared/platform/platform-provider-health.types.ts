@@ -1,6 +1,6 @@
 import type { PlatformProviderHealthStatus } from "./platform-provider.types";
 
-export type PlatformProviderHealthRecord = {
+type PlatformProviderHealthRecord = {
   readonly providerId: string;
   readonly status: PlatformProviderHealthStatus;
   readonly checkedAt: string;
@@ -9,7 +9,7 @@ export type PlatformProviderHealthRecord = {
   readonly errorMessage?: string | null;
 };
 
-export type PlatformProviderHealthSummary = {
+type PlatformProviderHealthSummary = {
   readonly totalProviders: number;
   readonly healthy: number;
   readonly degraded: number;

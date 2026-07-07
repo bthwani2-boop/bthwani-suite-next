@@ -10,9 +10,9 @@ export const OPERATIONAL_CHECKPOINT_POLICY = {
   forbiddenConsumers: ["app-client"] as readonly MapsUsageSurface[],
 } as const;
 
-export type OperationalCheckpointPolicy = typeof OPERATIONAL_CHECKPOINT_POLICY;
+type OperationalCheckpointPolicy = typeof OPERATIONAL_CHECKPOINT_POLICY;
 
-export type CheckpointSubmissionResult =
+type CheckpointSubmissionResult =
   | { readonly kind: "accepted"; readonly nextAllowedAt: string }
   | { readonly kind: "throttled"; readonly nextAllowedAt: string }
   | { readonly kind: "forbidden"; readonly reason: string };

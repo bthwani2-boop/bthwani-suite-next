@@ -28,7 +28,7 @@ import { resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-con
 import { DSH_ORDER_LIFECYCLE_HANDOFFS, getHandoffsForSurface, getSurfaceObservation } from '../../shared/orders';
 import { getSurfaceModeCapability } from '../../shared/identity-access/surface-visibility.policy';
 
-export type PartnerSupportRouteId = DshPartnerSupportRouteId;
+type PartnerSupportRouteId = DshPartnerSupportRouteId;
 
 // Read-only metadata label — delegates to central Badge component; no hardcoded colors.
 function ReadOnlyMetaLabel({
@@ -942,4 +942,4 @@ export function PartnerSupportScreen({
   );
 }
 
-export default PartnerSupportScreen;
+// export default PartnerSupportScreen; // Unused default export

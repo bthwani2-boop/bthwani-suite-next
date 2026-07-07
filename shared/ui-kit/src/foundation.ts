@@ -479,7 +479,7 @@ export function resolveTextAlign(direction: Direction, align: LogicalTextAlign =
 	return isRtl(direction) ? 'left' : 'right';
 }
 
-export function resolveRowDirection(direction: Direction, reversed = false) {
+function resolveRowDirection(direction: Direction, reversed = false) {
 	const baseDirection = isRtl(direction) ? 'row-reverse' : 'row';
 
 	if (!reversed) {

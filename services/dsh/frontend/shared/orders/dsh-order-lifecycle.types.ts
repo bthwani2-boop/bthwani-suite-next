@@ -20,7 +20,7 @@ export type DshOrderRecord = {
   readonly updated_at: string;
 };
 
-export type WalletBalance = {
+type WalletBalance = {
   readonly balanceMinorUnits: number;
   readonly currency: string;
   readonly linked: boolean;
@@ -144,7 +144,7 @@ export type DshOrderApiContractError = {
   readonly kind: 'contract';
   readonly message: string;
 };
-export type DshOrderApiError = DshOrderApiOfflineError | DshOrderApiHttpError | DshOrderApiContractError;
+type DshOrderApiError = DshOrderApiOfflineError | DshOrderApiHttpError | DshOrderApiContractError;
 
 export type BackendOrderItem = {
   readonly id?: string;

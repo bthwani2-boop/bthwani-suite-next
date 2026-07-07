@@ -35,4 +35,4 @@ export function DshPartnerOnboardingActionPanel({ activeFlowId, onSelectFlow }: 
   );
 }
 
-export default DshPartnerOnboardingActionPanel;
+// export default DshPartnerOnboardingActionPanel; // Unused default export

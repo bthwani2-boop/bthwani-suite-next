@@ -66,7 +66,7 @@ export function useOperatorAnalyticsDashboardController(authKind = "unauthentica
   return { platformState, orderState, deliveryState, supportState, storeState, reload };
 }
 
-export function usePartnerPerformanceController(authKind = "unauthenticated", period: DshAnalyticsPeriod = "today") {
+function usePartnerPerformanceController(authKind = "unauthenticated", period: DshAnalyticsPeriod = "today") {
   const [state, setState] = useState(partnerPerfIdle());
 
   const load = useCallback(async (p: DshAnalyticsPeriod) => {

@@ -71,7 +71,7 @@ export async function fetchOperatorCarts(state?: string): Promise<readonly DshCa
   return data.carts ?? [];
 }
 
-export function classifyCartError(error: unknown): { kind: "permission_denied" | "offline" | "error"; message?: string } {
+function classifyCartError(error: unknown): { kind: "permission_denied" | "offline" | "error"; message?: string } {
   const typed = error as { kind?: string; status?: number; message?: string };
   if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
     return { kind: "permission_denied" };

@@ -141,4 +141,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AppearanceHubScreen;
+// export default AppearanceHubScreen; // Unused default export

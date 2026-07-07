@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { fetchDshWltLedgerEntries } from "./wlt-ledger.api";
 import type { DshWltLedgerState, DshWltLedgerParams } from "./wlt-ledger.types";
 
-export function useWltLedgerController() {
+function useWltLedgerController() {
   const [state, setState] = useState<DshWltLedgerState>({ kind: "idle" });
 
   const load = useCallback(async (params: DshWltLedgerParams) => {

@@ -233,17 +233,17 @@ export function getSurfaceModeCapability(
 
 // ── Client helpers ─────────────────────────────────────────────────────────
 
-export function shouldShowCaptainTrackingForClient(mode: DshFulfillmentDeliveryMode): boolean {
+function shouldShowCaptainTrackingForClient(mode: DshFulfillmentDeliveryMode): boolean {
   return getSurfaceModeCapability(mode).client.showCaptainTracking;
 }
 
-export function shouldShowDropoffAddressForClient(mode: DshFulfillmentDeliveryMode): boolean {
+function shouldShowDropoffAddressForClient(mode: DshFulfillmentDeliveryMode): boolean {
   return getSurfaceModeCapability(mode).client.showDropoffAddress;
 }
 
 // ── Captain helpers ────────────────────────────────────────────────────────
 
-export function isModeVisibleInCaptainInbox(mode: DshFulfillmentDeliveryMode): boolean {
+function isModeVisibleInCaptainInbox(mode: DshFulfillmentDeliveryMode): boolean {
   return getSurfaceModeCapability(mode).captain.visibleInInbox;
 }
 
@@ -257,7 +257,7 @@ export function isCaptainCodCollectorForMode(mode: DshFulfillmentDeliveryMode): 
 
 // ── Partner helpers ────────────────────────────────────────────────────────
 
-export function isPartnerCourierManagedByPartner(mode: DshFulfillmentDeliveryMode): boolean {
+function isPartnerCourierManagedByPartner(mode: DshFulfillmentDeliveryMode): boolean {
   return getSurfaceModeCapability(mode).partner.manageCourier;
 }
 

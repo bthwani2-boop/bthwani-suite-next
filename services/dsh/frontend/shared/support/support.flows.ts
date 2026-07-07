@@ -80,7 +80,7 @@ export const DSH_SUPPORT_ISSUE_TYPES = [
   'other',
 ] as const;
 
-export type DshSupportIssueType = (typeof DSH_SUPPORT_ISSUE_TYPES)[number];
+type DshSupportIssueType = (typeof DSH_SUPPORT_ISSUE_TYPES)[number];
 
 function visibility(
   surfaceId: DshOperationsSupportSurfaceId,
@@ -474,7 +474,7 @@ export function getOperationsSupportFlowSpec(flowId: DshOperationsSupportFlowId)
   return DSH_OPERATIONS_SUPPORT_FLOWS_BY_ID[flowId];
 }
 
-export function getOperationsSupportSurfaceEntry(
+function getOperationsSupportSurfaceEntry(
   flowId: DshOperationsSupportFlowId,
   surfaceId: DshOperationsSupportSurfaceId,
 ): DshOperationsSupportFlowVisibility | undefined {
@@ -494,6 +494,6 @@ export function getOperationsSupportFlowsForSurface(
   });
 }
 
-export function isOperationsSupportHiddenCompatFlow(flowId: DshOperationsSupportFlowId): boolean {
+function isOperationsSupportHiddenCompatFlow(flowId: DshOperationsSupportFlowId): boolean {
   return DSH_OPERATIONS_SUPPORT_HIDDEN_COMPAT_FLOW_IDS.includes(flowId);
 }

@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { fetchDshWltCodRecordsByCapitain, fetchDshWltCommissionsByOrder } from "./wlt-cod.api";
 import type { DshWltCodState, DshWltCommissionState } from "./wlt-cod.types";
 
-export function useWltCodController() {
+function useWltCodController() {
   const [state, setState] = useState<DshWltCodState>({ kind: "idle" });
 
   const loadByCapitain = useCallback(async (captainId: string) => {
@@ -20,7 +20,7 @@ export function useWltCodController() {
   return { state, loadByCapitain, reset };
 }
 
-export function useWltCommissionController() {
+function useWltCommissionController() {
   const [state, setState] = useState<DshWltCommissionState>({ kind: "idle" });
 
   const loadByOrder = useCallback(async (orderId: string) => {

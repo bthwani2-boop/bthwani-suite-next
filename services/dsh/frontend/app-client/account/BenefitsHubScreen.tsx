@@ -285,4 +285,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BenefitsHubScreen;
+// export default BenefitsHubScreen; // Unused default export

@@ -31,7 +31,7 @@ function msg(err: unknown): string {
   return "تعذّر تحميل البيانات";
 }
 
-export function useRolesController(authKind: string) {
+function useRolesController(authKind: string) {
   const [state, setState] = useState<DshAdminState<DshRole[]>>({ kind: "idle" });
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -45,7 +45,7 @@ export function useRolesController(authKind: string) {
   };
 }
 
-export function usePartnerActivationController(authKind: string, status?: string) {
+function usePartnerActivationController(authKind: string, status?: string) {
   const [state, setState] = useState<DshAdminState<DshPartnerActivation[]>>({ kind: "idle" });
   const load = useCallback(async () => {
     setState({ kind: "loading" });

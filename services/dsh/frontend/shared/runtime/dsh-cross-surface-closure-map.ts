@@ -107,7 +107,7 @@ export type DshCounterpartLink = {
   runtimeBindingStatus: DshRuntimeBindingStatus;
 };
 
-export type DshCrossSurfaceSignal = {
+type DshCrossSurfaceSignal = {
   id: string;
   sourceSurface: DshSurfaceId;
   affectedSurface: DshSurfaceId;
@@ -800,6 +800,6 @@ export function getDshClosureItemsBySurface(surfaceId: DshSurfaceLookupId) {
   return DSH_CROSS_SURFACE_CLOSURE_MAP.filter((item) => item.surfaceId === resolvedSurfaceId);
 }
 
-export function getDshClosureItemsByStatus(status: DshClosureStatus) {
+function getDshClosureItemsByStatus(status: DshClosureStatus) {
   return DSH_CROSS_SURFACE_CLOSURE_MAP.filter((item) => item.status === status);
 }

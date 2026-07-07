@@ -169,4 +169,4 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack }: DshFieldPar
   );
 }
 
-export default DshFieldPartnerProgressScreen;
+// export default DshFieldPartnerProgressScreen; // Unused default export

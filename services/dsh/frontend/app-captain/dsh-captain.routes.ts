@@ -4,5 +4,5 @@ export type {
   DshCaptainLegacyRoute,
   DshCaptainRouteRecord,
 } from '../shared/delivery/captain.contract';
-export { dshCaptainRoutes } from '../shared/delivery/captain.contract';
+
 

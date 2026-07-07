@@ -8,7 +8,7 @@ export type DshZoneHeatCell = {
   readonly updatedAt: string;
 };
 
-export type DshOperationalHeatmap = {
+type DshOperationalHeatmap = {
   readonly cells: readonly DshZoneHeatCell[];
   readonly generatedAt: string;
   readonly aggregatedOnly: true;

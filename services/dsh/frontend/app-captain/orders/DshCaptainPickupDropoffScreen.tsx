@@ -329,4 +329,4 @@ const styles = StyleSheet.create({
   issueText: {
   },
 });
-export default DshCaptainPickupDropoffScreen;
+// export default DshCaptainPickupDropoffScreen; // Unused default export

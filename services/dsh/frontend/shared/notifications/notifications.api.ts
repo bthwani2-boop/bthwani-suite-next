@@ -16,7 +16,7 @@ export async function markAllNotificationsRead(): Promise<{ markedCount: number 
   return request("/dsh/notifications/read-all", { method: "POST" });
 }
 
-export async function updateNotificationPreferences(
+async function updateNotificationPreferences(
   topic: string,
   enabled: boolean
 ): Promise<{ preference: DshNotificationPreference }> {

@@ -148,7 +148,7 @@ export type PartnerCatalogTabMeta = {
   readonly label: string;
 };
 
-export const PARTNER_CATALOG_TABS: readonly PartnerCatalogTabMeta[] = [
+const PARTNER_CATALOG_TABS: readonly PartnerCatalogTabMeta[] = [
   { id: "products",    label: "المنتجات"  },
   { id: "categories",  label: "الفئات"    },
   { id: "submissions", label: "الطلبات"   },
@@ -337,7 +337,7 @@ export type CatalogProductRowViewModel = {
   readonly primaryImageUrl: string | undefined;
 };
 
-export function buildCatalogProductRowViewModel(
+function buildCatalogProductRowViewModel(
   product: CatalogProduct,
 ): CatalogProductRowViewModel {
   const stockMap: Record<
@@ -391,7 +391,7 @@ export type CatalogCategoryViewModel = {
   readonly sortOrder: number;
 };
 
-export function buildCatalogCategoryViewModel(
+function buildCatalogCategoryViewModel(
   category: CatalogCategory,
 ): CatalogCategoryViewModel {
   return {
@@ -416,7 +416,7 @@ export function filterSubmissionsByScope(
   return submissions.filter((s) => !s.storeId.startsWith("central"));
 }
 
-export function filterProductsByQuery(
+function filterProductsByQuery(
   products: readonly CatalogProduct[],
   query: string,
 ): readonly CatalogProduct[] {
@@ -427,7 +427,7 @@ export function filterProductsByQuery(
   );
 }
 
-export function filterCategoriesByQuery(
+function filterCategoriesByQuery(
   categories: readonly CatalogCategory[],
   query: string,
 ): readonly CatalogCategory[] {

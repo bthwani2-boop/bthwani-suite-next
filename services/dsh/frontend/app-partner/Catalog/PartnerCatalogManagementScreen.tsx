@@ -163,4 +163,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PartnerCatalogManagementScreen;
+// export default PartnerCatalogManagementScreen; // Unused default export

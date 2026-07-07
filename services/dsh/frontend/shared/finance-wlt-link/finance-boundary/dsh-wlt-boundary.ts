@@ -54,17 +54,17 @@ const WLT_REFUND_STATUS_TONES: Record<
   refund_rejected_wlt: 'danger',
 };
 
-export function getDshWltRefundStatusLabel(status: DshWltRefundBridgeStatus): string {
+function getDshWltRefundStatusLabel(status: DshWltRefundBridgeStatus): string {
   return WLT_REFUND_STATUS_LABELS[status];
 }
 
-export function getDshWltRefundStatusTone(
+function getDshWltRefundStatusTone(
   status: DshWltRefundBridgeStatus,
 ): 'default' | 'success' | 'danger' | 'warning' {
   return WLT_REFUND_STATUS_TONES[status];
 }
 
-export function buildDshWltFinanceBoundaryRecord(options: {
+function buildDshWltFinanceBoundaryRecord(options: {
   domain: DshWltFinanceBoundaryRecord['domain'];
   contractStatus: DshWltBridgeContractStatus;
   affectedActor: string;

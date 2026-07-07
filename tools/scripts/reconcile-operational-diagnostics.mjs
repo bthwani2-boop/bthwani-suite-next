@@ -287,7 +287,9 @@ async function runReconciliation() {
   const originalGaps = gapLedger.gaps || [];
   const reconciledGapsMap = new Map();
 
+  const dynamicSourceTools = new Set(["graphify", "madge", "jscpd", "knip"]);
   for (const g of originalGaps) {
+    if (dynamicSourceTools.has(g.source_tool)) continue;
     reconciledGapsMap.set(g.gap_id, g);
   }
   for (const g of [...graphCircularGaps, ...jscpdGaps, ...knipGaps]) {

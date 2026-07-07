@@ -29,6 +29,7 @@ import {
   DshPlatformRollbackWorkspace,
   DshPlatformOverviewWorkspace,
 } from "./DshPlatformWorkspaces";
+import { PlatformNotificationConfigScreen } from "../support/PlatformNotificationConfigScreen";
 
 // ─── Main Tab button (underline style) ──────────────────────────────────────────
 
@@ -219,6 +220,8 @@ export function PlatformDashboardScreen() {
       {mainTab === "rollback" && <DshPlatformRollbackWorkspace />}
 
       {mainTab === "overview" && <DshPlatformOverviewWorkspace />}
+
+      {mainTab === "notifications" && <PlatformNotificationConfigScreen />}
 
       {/* ── Status Footer (ownership bar) ────────────────────────────────────── */}
       <div

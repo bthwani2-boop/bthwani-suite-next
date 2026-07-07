@@ -14,7 +14,7 @@ export type DshPartnerFinanceSummary = {
   readonly updatedAt: string;
 };
 
-export type DshOperatorFinanceSummary = {
+type DshOperatorFinanceSummary = {
   readonly paymentRef: WltPaymentStatusRef | null;
   readonly settlementRef: WltSettlementStatusRef | null;
   readonly refundRef: WltRefundStatusRef | null;

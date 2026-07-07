@@ -242,12 +242,12 @@ export function resolveDshStoreClientVisibility(
 
 // ─── Transport Error & Readiness Status ──────────────────────────────────────
 // Used by InventoryCatalogScreen and other catalog surfaces
-export type DshStoreVisibilityTransportError = {
+type DshStoreVisibilityTransportError = {
   readonly code: string;
   readonly message: string;
 };
 
-export type PartnerReadinessStatus =
+type PartnerReadinessStatus =
   | 'ready'
   | 'not_ready'
   | 'pending'

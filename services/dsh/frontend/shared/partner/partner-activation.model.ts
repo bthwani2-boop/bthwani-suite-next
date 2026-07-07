@@ -483,7 +483,7 @@ export function getDshPartnerVisibilityBadgeLabel(badge: DshPartnerVisibilityBad
   }
 }
 
-export function getDshPartnerVisibilityBadgeTone(
+function getDshPartnerVisibilityBadgeTone(
   badge: DshPartnerVisibilityBadge,
 ): 'success' | 'warning' | 'danger' | 'muted' {
   switch (badge) {

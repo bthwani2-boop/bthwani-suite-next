@@ -5,7 +5,7 @@ import type { ImageSourcePropType } from 'react-native';
  * DEV keys stay behind preview/category-specific surfaces and should not
  * leak into cart, store, or checkout rendering.
  */
-export function resolveDshRuntimeImageSource(
+function resolveDshRuntimeImageSource(
   source?: string | ImageSourcePropType | null,
 ): ImageSourcePropType | undefined {
   if (!source) return undefined;

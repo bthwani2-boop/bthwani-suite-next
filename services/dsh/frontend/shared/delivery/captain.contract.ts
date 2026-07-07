@@ -112,7 +112,7 @@ export function getCaptainAvailabilityMeta(status: CaptainAvailabilityStatus): C
   return availabilityStatusMeta[status];
 }
 
-export function getCaptainGpsStatusMeta(status: CaptainGpsStatus): CaptainGpsStatusMeta {
+function getCaptainGpsStatusMeta(status: CaptainGpsStatus): CaptainGpsStatusMeta {
   return gpsStatusMeta[status];
 }
 
@@ -180,7 +180,7 @@ export type DshCaptainRouteRecord = {
   readonly ownerPath: string;
 };
 
-export const dshCaptainRoutes = [
+const dshCaptainRoutes = [
   { routeId: 'dsh-captain-home',             legacyRoute: 'home',             screenId: 'captain.dsh.home.dashboard',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-account',          legacyRoute: 'account',          screenId: 'captain.dsh.account.root',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-account-profile',  legacyRoute: 'account-profile',  screenId: 'captain.dsh.account.profile',      ownerPath: 'dsh/frontend/app-captain/screens/DshCaptainProfileScreen.tsx' },
@@ -203,7 +203,7 @@ export const dshCaptainRoutes = [
 
 // ─── Surface Bindings (Moved from contracts/captain/dsh-captain-binding.contracts.ts) ───
 
-export type DshCaptainOrderSnapshot = {
+type DshCaptainOrderSnapshot = {
   id: DshCaptainOrderId;
   mode: DshCaptainOrderMode;
   stage: DshCaptainOrderStage;
@@ -212,19 +212,19 @@ export type DshCaptainOrderSnapshot = {
   etaLabel: string;
 };
 
-export type DshCaptainOrderActionPayload = {
+type DshCaptainOrderActionPayload = {
   orderId: DshCaptainOrderId;
   action: DshCaptainOrderAction;
   note?: string;
 };
 
-export type DshCaptainProofPayload = {
+type DshCaptainProofPayload = {
   orderId: DshCaptainOrderId;
   status: DshCaptainOrderProofStatus;
   attachmentLabel?: string;
 };
 
-export type DshCaptainFinanceSnapshot = {
+type DshCaptainFinanceSnapshot = {
   codBalanceLabel: string;
   earningsLabel: string;
   settlementLabel: string;
@@ -236,7 +236,7 @@ export type DshCaptainProfileSnapshot = {
   readinessLabel: string;
 };
 
-export type DshCaptainOperationsSnapshot = {
+type DshCaptainOperationsSnapshot = {
   availabilityLabel: string;
   routeReadinessLabel: string;
   safetyLabel: string;
@@ -284,7 +284,7 @@ export type DshCaptainScreenRegistryItem = {
   readonly status: DshCaptainScreenRegistryStatus;
 };
 
-export const dshCaptainScreenRegistry = [
+const dshCaptainScreenRegistry = [
   { screenId: 'captain.dsh.home.dashboard',       routeId: 'dsh-captain-home',             surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx',                    componentName: 'DshCaptainSurface',              screenKind: 'TAB_ROOT',     flowId: 'captain.dsh.home',          requiredStates: ['success', 'offline'],                        analytics: { screenView: 'captain_dsh_home_dashboard_view' },   deepLinkPath: '/captain/dsh',      fallbackRouteId: 'dsh-captain-home',             releaseCriticality: 'P1', status: 'VERIFIED' },
   { screenId: 'captain.dsh.entry',                routeId: 'dsh-captain-entry',            surfaceId: 'app-captain', ownerKind: 'service',     ownerId: 'dsh',         serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/screens/DshCaptainEntryScreen.tsx',        componentName: 'DshEntryScreen',                 screenKind: 'SCREEN_ENTRY', flowId: 'captain.dsh.entry',         requiredStates: ['loading', 'empty', 'error', 'success'],     analytics: { screenView: 'captain_dsh_entry_view' },                                fallbackRouteId: 'dsh-captain-home',             releaseCriticality: 'P1', status: 'VERIFIED' },
   { screenId: 'captain.dsh.orders.inbox',         routeId: 'dsh-captain-inbox',            surfaceId: 'app-captain', ownerKind: 'service',     ownerId: 'dsh',         serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/screens/DshCaptainOrdersScreen.tsx',       componentName: 'CaptainOrdersInboxScreen',       screenKind: 'SCREEN_ENTRY', flowId: 'captain.dsh.orders',        requiredStates: ['loading', 'empty', 'error', 'success'],     analytics: { screenView: 'captain_dsh_orders_inbox_view' },                         fallbackRouteId: 'dsh-captain-entry',            releaseCriticality: 'P0', status: 'VERIFIED' },

@@ -40,7 +40,7 @@ function buildAuthHeaders(config: DshAuthClientConfig): Record<string, string> {
   return headers;
 }
 
-export async function verifyAuthSession(config: DshAuthClientConfig): Promise<DshAuthSessionResponse> {
+async function verifyAuthSession(config: DshAuthClientConfig): Promise<DshAuthSessionResponse> {
   const fetchFn = globalThis.fetch;
   const resp = await fetchFn(`${config.baseUrl}/auth/session`, {
     method: 'GET',
@@ -53,7 +53,7 @@ export async function verifyAuthSession(config: DshAuthClientConfig): Promise<Ds
   return resp.json() as Promise<DshAuthSessionResponse>;
 }
 
-export async function getAuthPermissions(config: DshAuthClientConfig): Promise<DshAuthPermissionsResponse> {
+async function getAuthPermissions(config: DshAuthClientConfig): Promise<DshAuthPermissionsResponse> {
   const fetchFn = globalThis.fetch;
   const resp = await fetchFn(`${config.baseUrl}/auth/permissions`, {
     method: 'GET',

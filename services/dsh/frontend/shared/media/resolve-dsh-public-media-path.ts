@@ -4,7 +4,7 @@
 // Live runtime media must come from DSH API -> PostgreSQL dsh_media_assets +
 // MinIO/S3 public_url values.
 
-export const explicitPublicMediaPathByKey: Record<string, string> = {};
+const explicitPublicMediaPathByKey: Record<string, string> = {};
 
 export function getActualPublicMediaPath(key?: string | null): string {
   if (!key) return '';
@@ -12,10 +12,10 @@ export function getActualPublicMediaPath(key?: string | null): string {
   return '';
 }
 
-export function hasDshPublicMediaPath(key?: string | null): boolean {
+function hasDshPublicMediaPath(key?: string | null): boolean {
   return getActualPublicMediaPath(key).length > 0;
 }
 
-export function getMediaKeyFromPublicPath(path: string): string | null {
+function getMediaKeyFromPublicPath(path: string): string | null {
   return null;
 }

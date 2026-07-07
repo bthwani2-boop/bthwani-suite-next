@@ -22,19 +22,21 @@ import {
   usePartnerReadinessController,
   usePartnerAuditController,
   usePartnerStoresController,
+  usePartnerVisitsController,
 } from "../../shared/partner";
 
-type Tab = "overview" | "documents" | "stores" | "readiness" | "audit";
+type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit";
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: "نظرة عامة",
   documents: "الوثائق",
+  visits: "الزيارات الميدانية",
   stores: "المتاجر",
   readiness: "الجاهزية",
   audit: "سجل التدقيق",
 };
 
-const TABS: Tab[] = ["overview", "documents", "stores", "readiness", "audit"];
+const TABS: Tab[] = ["overview", "documents", "visits", "stores", "readiness", "audit"];
 
 const TONE_COLOR: Record<string, string> = {
   success: statusScale.success,
@@ -92,6 +94,7 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
   const readiness = usePartnerReadinessController(partnerId, authKind);
   const audit = usePartnerAuditController(partnerId, authKind);
   const stores = usePartnerStoresController(partnerId, authKind);
+  const visits = usePartnerVisitsController(partnerId, authKind);
 
   const [tab, setTab] = useState<Tab>("overview");
   const [transitionReason, setTransitionReason] = useState("");
@@ -365,6 +368,40 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
                         </CpButton>
                       </div>
                     </CpTableCell>
+                  </tr>
+                ))}
+              </tbody>
+            </CpTable>
+          ) : null
+        )}
+
+        {/* Field Visits */}
+        {tab === "visits" && (
+          visits.state.kind === "loading" ? (
+            <CpStatePanel role="status" title="جاري تحميل الزيارات الميدانية…" />
+          ) : visits.state.kind === "empty" ? (
+            <CpStatePanel role="status" title="لا توجد زيارات ميدانية مسجلة بعد." />
+          ) : visits.state.kind === "error" ? (
+            <CpStatePanel role="alert" title="تعذر تحميل الزيارات الميدانية" code={visits.state.message} />
+          ) : visits.state.kind === "success" ? (
+            <CpTable aria-label="زيارات الشريك الميدانية">
+              <thead>
+                <tr>
+                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                  <CpTableHeaderCell>ملاحظات</CpTableHeaderCell>
+                  <CpTableHeaderCell>الموقع</CpTableHeaderCell>
+                  <CpTableHeaderCell>تاريخ الرفع</CpTableHeaderCell>
+                </tr>
+              </thead>
+              <tbody>
+                {visits.state.visits.map((v) => (
+                  <tr key={v.id}>
+                    <CpTableCell>{v.visitStatus}</CpTableCell>
+                    <CpTableCell>{v.visitNotes || "—"}</CpTableCell>
+                    <CpTableCell>
+                      {v.locationLatitude !== null ? `${v.locationLatitude}, ${v.locationLongitude}` : "—"}
+                    </CpTableCell>
+                    <CpTableCell>{v.submittedAt ? new Date(v.submittedAt).toLocaleString("ar-SA") : "—"}</CpTableCell>
                   </tr>
                 ))}
               </tbody>

@@ -23,7 +23,7 @@ function classifyError(err: unknown): DshFinanceVisibilityState {
   return financeError("تعذّر تحميل البيانات المالية، يرجى المحاولة مجدداً");
 }
 
-export function usePartnerFinanceVisibilityController(
+function usePartnerFinanceVisibilityController(
   authKind: string,
   orderId: string | null
 ) {
