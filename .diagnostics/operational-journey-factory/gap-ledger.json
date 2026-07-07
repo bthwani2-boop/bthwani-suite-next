@@ -1,0 +1,1763 @@
+{
+  "head_sha": "845e59cb5c0538f64b1ae1ee2b5d395963ea3f3e",
+  "status": "DISCOVERY_ONLY",
+  "required_gap_fields": [
+    "gap_id",
+    "type",
+    "path",
+    "owner",
+    "affected_surface",
+    "affected_journeys",
+    "root_cause",
+    "pattern_group",
+    "risk_level",
+    "required_action",
+    "target_files",
+    "allowed_decision",
+    "forbidden_actions",
+    "verification_commands",
+    "proof_required",
+    "status",
+    "blocks_journey_start"
+  ],
+  "gap_count": 43,
+  "gaps": [
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "order_lifecycle",
+        "checkout"
+      ],
+      "affected_surface": "services/dsh/frontend/app-client",
+      "owner": "dsh_frontend_client_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-client/checkout/CheckoutScreen.tsx",
+        "services/dsh/frontend/app-client/checkout/Checkout.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "order_lifecycle",
+        "checkout"
+      ],
+      "affected_surface": "services/dsh/frontend/app-client",
+      "owner": "dsh_frontend_client_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+        "services/dsh/frontend/app-client/orders/OrdersList.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/dsh/frontend/app-field",
+      "owner": "dsh_frontend_field_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
+        "services/dsh/frontend/app-field/finance/DshFieldFinance.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "DIRECT_API_IN_SURFACE:services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
+      "reason": "UI surface file contains direct API or runtime config signs.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "surface_bypasses_shared_adapter",
+      "pattern_group": "frontend_api_binding",
+      "required_action": "bind_to_shared_controller_or_adapter",
+      "target_files": [
+        "services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
+        "services/dsh/frontend/shared/**"
+      ],
+      "allowed_decision": "BIND_TO_ADAPTER",
+      "forbidden_actions": [
+        "inline_api_call",
+        "process_env_in_screen",
+        "direct_wlt_mutation_from_dsh_ui"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_base_url",
+        "adapter_or_controller_import_exists"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
+        "services/dsh/frontend/app-partner/account/PartnerHub.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/account/PartnerSupportScreen.tsx",
+        "services/dsh/frontend/app-partner/account/PartnerSupport.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts",
+        "services/dsh/frontend/app-partner/dsh-partner-binding.contracts.ts"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "order_lifecycle",
+        "checkout"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
+        "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejection.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "order_lifecycle",
+        "checkout"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
+        "services/dsh/frontend/app-partner/orders/OrdersInbox.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "order_lifecycle",
+        "checkout"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/orders/PartnerOrderAlertsPanel.tsx",
+        "services/dsh/frontend/app-partner/orders/PartnerOrderAlerts.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "order_lifecycle",
+        "checkout"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/orders/PartnerOrderIssuePanel.tsx",
+        "services/dsh/frontend/app-partner/orders/PartnerOrderIssue.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "partner_onboarding",
+        "store_publication"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner",
+      "owner": "dsh_frontend_partner_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
+        "services/dsh/frontend/app-partner/store/DshPartnerStoreCourier.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "DIRECT_API_IN_SURFACE:services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+      "reason": "UI surface file contains direct API or runtime config signs.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_finance_read_proxy_consumer",
+      "root_cause": "surface_bypasses_shared_adapter",
+      "pattern_group": "frontend_api_binding",
+      "required_action": "bind_to_shared_controller_or_adapter",
+      "target_files": [
+        "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+        "services/dsh/frontend/shared/**"
+      ],
+      "allowed_decision": "BIND_TO_ADAPTER",
+      "forbidden_actions": [
+        "inline_api_call",
+        "process_env_in_screen",
+        "direct_wlt_mutation_from_dsh_ui"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_base_url",
+        "adapter_or_controller_import_exists"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_admin_roles_governance",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
+        "services/dsh/frontend/control-panel/administration/AdministrationDashboard.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_catalog_governance",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+        "services/dsh/frontend/control-panel/catalogs/CatalogDashboard.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/catalogs/drawers/CatalogWorkspaceDrawers.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/catalogs/drawers/CatalogWorkspaceDrawers.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_catalog_governance",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/catalogs/drawers/CatalogWorkspaceDrawers.tsx",
+        "services/dsh/frontend/control-panel/catalogs/drawers/CatalogWorkspaceDrawers.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_hr_governance",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/ControlPanelHrScreen.tsx",
+        "services/dsh/frontend/control-panel/hr/ControlPanelHr.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/AreaCapacityScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/AreaCapacity.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AssistedOrderDeskScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/AssistedOrderDeskScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/AssistedOrderDeskScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/AssistedOrderDesk.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/AuditSupportSlaScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/AuditSupportSla.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AuditTrailDetailWorkspace.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/AuditTrailDetailWorkspace.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/AuditTrailDetailWorkspace.tsx",
+        "services/dsh/frontend/control-panel/operations/AuditTrailDetail.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/AwnakScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/AwnakScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/AwnakScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/Awnak.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/CaptainOperationsScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/CaptainOperationsScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/CaptainOperationsScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/CaptainOperations.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/CommandCenterScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/CommandCenterScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/CommandCenterScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/CommandCenter.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxy.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/DispatchAssignment.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/ExceptionsEscalations.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/GeoHeatmap.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/LiveOrders.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/OperationsHub.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/OrderRescue.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_operator_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx",
+        "services/dsh/frontend/control-panel/operations/PartnerStores.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/DshPlatformVarsWorkspace.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/DshPlatformVarsWorkspace.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/DshPlatformVarsWorkspace.tsx",
+        "services/dsh/frontend/control-panel/platform/DshPlatformVars.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/DshPlatformWorkspaces.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/DshPlatformWorkspaces.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/DshPlatformWorkspaces.tsx",
+        "services/dsh/frontend/control-panel/platform/DshPlatformWorkspaces.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/index.ts",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/index.ts",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/index.ts",
+        "services/dsh/frontend/control-panel/platform/index.ts"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/MapsProviderInspector.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/MapsProviderInspector.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/MapsProviderInspector.tsx",
+        "services/dsh/frontend/control-panel/platform/MapsProviderInspector.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
+        "services/dsh/frontend/control-panel/platform/PlatformDashboard.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
+        "services/dsh/frontend/control-panel/platform/PlatformPolicies.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
+        "services/dsh/frontend/control-panel/platform/ProviderRegistry.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_support_incident_operations",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
+        "services/dsh/frontend/control-panel/support/SupportDashboard.controller.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/wlt/frontend/control-panel",
+      "owner": "wlt_frontend_surface",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx",
+        "services/wlt/frontend/control-panel/_skeleton-proof/WltFinanceReadOnlySkeletonProof.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "SHARED_API_LOGIC_MIXED:services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.types.ts",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.types.ts",
+      "reason": "Shared file mixes runtime API access with operational/domain logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/wlt/frontend/shared",
+      "owner": "shared_brain",
+      "root_cause": "shared_file_mixes_transport_and_domain_logic",
+      "pattern_group": "shared_transport_domain_split",
+      "required_action": "split_transport_from_shared_domain_logic",
+      "target_files": [
+        "services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.types.ts"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "keep_mixed_shared_api_logic",
+        "delete_without_reference_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "transport_isolated",
+        "view_model_has_no_fetch",
+        "no_new_circular_dependency"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "SHARED_API_LOGIC_MIXED:services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.view-model.ts",
+      "type": "FALSE_POSITIVE",
+      "source_tool": "surface-inventory",
+      "path": "services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.view-model.ts",
+      "reason": "Shared file mixes runtime API access with operational/domain logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "checkout",
+        "payment_handoff",
+        "settlement_read_projection"
+      ],
+      "affected_surface": "services/wlt/frontend/shared",
+      "owner": "shared_brain",
+      "root_cause": "shared_file_mixes_transport_and_domain_logic",
+      "pattern_group": "shared_transport_domain_split",
+      "required_action": "split_transport_from_shared_domain_logic",
+      "target_files": [
+        "services/wlt/frontend/shared/dsh/wlt-dsh-finance-hub.view-model.ts"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "keep_mixed_shared_api_logic",
+        "delete_without_reference_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "transport_isolated",
+        "view_model_has_no_fetch",
+        "no_new_circular_dependency"
+      ],
+      "decision": "FALSE_POSITIVE_WITH_PROOF",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "FALSE_POSITIVE_WITH_PROOF",
+      "blocks_journey_start": false
+    }
+  ]
+}
