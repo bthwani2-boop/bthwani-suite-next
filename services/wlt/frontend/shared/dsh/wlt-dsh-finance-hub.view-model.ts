@@ -190,7 +190,7 @@ export function buildWltRuntimeFinancialCenter(
     blockingVariances,
     canClose: blockingVariances.length === 0 && runtime.closeStatus?.status !== 'closed',
     contractState: 'WLT_DSH_RUNTIME_BOUND',
-    openingBalanceSource: runtime.baseUrl,
+    openingBalanceSource: runtime.runtimeApiUrl,
     closingBalanceSource: runtime.closeStatus?.id ?? '',
     isPreview: false,
   };

@@ -89,7 +89,7 @@ export type WltCloseStatus = {
 };
 
 export type WltDshFinanceRuntimeReadModel = {
-  readonly baseUrl: string;
+  readonly runtimeApiUrl: string;
   readonly overview: any; // settlements list
   readonly ledgerEntries: readonly any[]; // raw ledger entries
   readonly refunds: readonly any[]; // raw refunds queue
@@ -101,7 +101,7 @@ export type WltDshFinanceRuntimeReadModel = {
 
 export type WltDshFinanceRuntimeResult =
   | { readonly state: 'runtime'; readonly data: WltDshFinanceRuntimeReadModel }
-  | { readonly state: 'blocked'; readonly error: string; readonly baseUrl: string };
+  | { readonly state: 'blocked'; readonly error: string; readonly runtimeApiUrl: string };
 
 export type WltDshFinanceHubViewModel = {
   readonly center: WltFinancialCenter | null;

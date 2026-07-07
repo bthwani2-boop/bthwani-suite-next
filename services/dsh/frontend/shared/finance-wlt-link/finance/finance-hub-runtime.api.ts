@@ -25,7 +25,7 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
   if (!baseUrl) {
     return {
       state: "blocked",
-      baseUrl: "",
+      runtimeApiUrl: "",
       error: "dsh_runtime_base_url_missing",
     };
   }
@@ -44,7 +44,7 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
   if (!overview.ok || !ledger.ok || !refunds.ok) {
     return {
       state: "blocked",
-      baseUrl,
+      runtimeApiUrl: baseUrl,
       error: `${failures.map((f) => f.key).join(", ")}: ${failures[0]?.message ?? "wlt_runtime_unavailable"}`,
     };
   }
@@ -52,7 +52,7 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
   return {
     state: "runtime",
     data: {
-      baseUrl,
+      runtimeApiUrl: baseUrl,
       overview: overview.data,
       ledgerEntries: ledger.data,
       refunds: refunds.data,

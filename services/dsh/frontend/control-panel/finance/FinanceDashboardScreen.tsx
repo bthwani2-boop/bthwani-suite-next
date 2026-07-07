@@ -47,8 +47,8 @@ export function FinanceDashboardScreen() {
   const runtimeSourceLabel = useMemo(() => {
     if (activeState === 'loading') return 'WLT runtime: loading';
     if (!runtimeFinance) return 'WLT runtime: disconnected';
-    if (runtimeFinance.state === 'runtime') return `WLT runtime: ${runtimeFinance.data.baseUrl}`;
-    return `WLT runtime blocked: ${runtimeFinance.baseUrl}`;
+    if (runtimeFinance.state === 'runtime') return `WLT runtime: ${runtimeFinance.data.runtimeApiUrl}`;
+    return `WLT runtime blocked: ${runtimeFinance.runtimeApiUrl}`;
   }, [activeState, runtimeFinance]);
 
   if (identity.state.kind !== "authenticated") {
