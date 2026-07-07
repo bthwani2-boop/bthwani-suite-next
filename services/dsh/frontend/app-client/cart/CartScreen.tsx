@@ -24,7 +24,18 @@ import {
   useDirection,
 } from "@bthwani/ui-kit";
 import { useCartController, useServiceabilityController } from "../../shared/cart";
-import type { DshCart, DshCartItem } from "../../shared/cart";
+import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
+import {
+  QUICK_ACTION_META,
+  RECOMMENDED_ITEMS,
+  STORES_LOCATIONS,
+  buildCartPriceSummary,
+  buildExecutionScheduleOptions,
+  coordinatesToCartMapPosition,
+  findClosestCartLandmark,
+  mapPositionToCartCoordinates,
+} from "../../shared/cart/cart-screen-domain";
+import type { QuickActionKey } from "../../shared/cart/cart-screen-domain";
 import type { DshPaymentMethod } from "../../shared/checkout";
 import { useWltDshPaymentController } from "../../shared/finance-wlt-link";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
@@ -37,95 +48,6 @@ type Props = {
   readonly onBrowseCatalog?: () => void;
   readonly onBack?: () => void;
 };
-
-type QuickActionKey = "coupon" | "address" | "note" | "extra";
-
-type QuickActionMeta = {
-  title: string;
-  placeholder: string;
-  helper?: string;
-  saveLabel: string;
-  multiline?: boolean;
-  icon?: string;
-};
-
-const QUICK_ACTION_META: Record<QuickActionKey, QuickActionMeta> = {
-  coupon: {
-    title: "إضافة قسيمة تخفيض",
-    placeholder: "أدخل رمز التخفيض هنا",
-    helper: "سيتم تطبيق خصم فوري بقيمة 500 د.ي عند إدخال قسيمة صالحة.",
-    saveLabel: "حفظ وتطبيق القسيمة",
-    icon: "pricetag-outline",
-  },
-  address: {
-    title: "موقع التوصيل",
-    placeholder: "اكتب العنوان بالتفصيل (المدينة، الحي، الشارع)",
-    helper: "يمكنك تحديد الموقع تفاعلياً من الخريطة ووصف العنوان بدقة.",
-    saveLabel: "حفظ العنوان الجديد",
-    multiline: true,
-    icon: "location-outline",
-  },
-  note: {
-    title: "ملاحظات الطلب",
-    placeholder: "اكتب ملاحظتك للمتجر أو الكابتن هنا",
-    helper: "يمكنك تحديد تعليمات خاصة بالتحضير أو التوصيل.",
-    saveLabel: "حفظ الملاحظة",
-    multiline: true,
-    icon: "document-text-outline",
-  },
-  extra: {
-    title: "على طريقي",
-    placeholder: "مثال: مناديل، ماء، بسبس...",
-    helper: "اطلب إضافات بسيطة من طريق كابتن التوصيل.",
-    saveLabel: "تأكيد الطلب الإضافي",
-    multiline: true,
-    icon: "add-circle-outline",
-  },
-};
-
-type ExecutionScheduleOption = {
-  value: string;
-  label: string;
-  fullLabel: string;
-};
-
-type ExecutionScheduleOptions = {
-  dateOptions: ExecutionScheduleOption[];
-  timeOptions: ExecutionScheduleOption[];
-};
-
-function padSchedulePart(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function createExecutionScheduleOptions(referenceDate = new Date()): ExecutionScheduleOptions {
-  const dateOptions = Array.from({ length: 4 }, (_, index) => {
-    const date = new Date(referenceDate);
-    date.setDate(referenceDate.getDate() + index + 1);
-    const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-    const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-    const label = index === 0 ? "غدًا" : index === 1 ? "بعد غد" : `${dayNames[date.getDay()]}، ${date.getDate()}`;
-    const fullLabel = `${dayNames[date.getDay()]}، ${date.getDate()} ${monthNames[date.getMonth()]}`;
-    return {
-      value: `${date.getFullYear()}-${padSchedulePart(date.getMonth() + 1)}-${padSchedulePart(date.getDate())}`,
-      label,
-      fullLabel,
-    };
-  });
-
-  const timeOptions = [9, 11, 13, 15, 17, 19].map((hour) => {
-    const period = hour >= 12 ? "م" : "ص";
-    const displayHour = hour > 12 ? hour - 12 : hour;
-    const label = `${displayHour}:00 ${period}`;
-    return {
-      value: `${padSchedulePart(hour)}:00`,
-      label,
-      fullLabel: label,
-    };
-  });
-
-  return { dateOptions, timeOptions };
-}
 
 function PromoBanner({ onPress }: { onPress: () => void }) {
   return (
@@ -164,25 +86,6 @@ function PromoBanner({ onPress }: { onPress: () => void }) {
 
 
 
-const RECOMMENDED_ITEMS = [
-  { id: "rec-1", name: "كعك بلدي فاخر", price: 1200, icon: "🍪" },
-  { id: "rec-2", name: "عصير مانجو طازج", price: 800, icon: "🥤" },
-  { id: "rec-3", name: "جبن بلدي طازج", price: 2500, icon: "🧀" },
-];
-
-const STORES_LOCATIONS = [
-  { id: "store-1001", name: "أسواق حدة", lat: 15.3400, lng: 44.1900, x: 220, y: 190 },
-  { id: "store-1005", name: "مطعم المدينة", lat: 15.3560, lng: 44.1800, x: 160, y: 120 },
-];
-
-const LANDMARKS = [
-  { lat: 15.3560, lng: 44.1800, name: "صنعاء، المدينة القديمة، باب اليمن", x: 160, y: 120 },
-  { lat: 15.3400, lng: 44.1900, name: "صنعاء، حي حدة، شارع بيروت", x: 220, y: 190 },
-  { lat: 15.3300, lng: 44.2000, name: "صنعاء، حي السبعين، ميدان السبعين", x: 240, y: 210 },
-  { lat: 15.3200, lng: 44.1800, name: "صنعاء، شارع تعز، جولة تعز", x: 160, y: 230 },
-  { lat: 15.3700, lng: 44.1900, name: "صنعاء، حي معين، شارع الستين", x: 120, y: 60 },
-];
-
 export function CartScreen({
   storeId,
   serviceAreaCode = "",
@@ -196,7 +99,7 @@ export function CartScreen({
   const { direction, isRTL } = useDirection();
 
   // Local state replicas from donor
-  const [selectedFulfillmentMode, setSelectedFulfillmentMode] = useState<string>("bthwani_delivery");
+  const [selectedFulfillmentMode, setSelectedFulfillmentMode] = useState<DshFulfillmentMode>("bthwani_delivery");
   const [deliveryModePickerOpen, setDeliveryModePickerOpen] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [clientAddress, setClientAddress] = useState("صنعاء، حي الأصبحي، شارع المقالح");
@@ -207,7 +110,7 @@ export function CartScreen({
 
   // Scheduling states
   const [scheduling, setScheduling] = useState<"now" | "later">("now");
-  const executionScheduleOptions = useMemo(() => createExecutionScheduleOptions(), []);
+  const executionScheduleOptions = useMemo(() => buildExecutionScheduleOptions(), []);
   const [scheduledDate, setScheduledDate] = useState(() => executionScheduleOptions.dateOptions[0]?.value ?? "");
   const [scheduledTime, setScheduledTime] = useState(() => executionScheduleOptions.timeOptions[0]?.value ?? "");
 
@@ -312,16 +215,11 @@ export function CartScreen({
 
   const { cart } = controller.state;
 
-  // Pricing Logic
-  const subtotal = cart.items.reduce((acc, item) => {
-    const priceStr = item.priceReference ? item.priceReference.replace(/[^\d.]/g, "") : "0";
-    const priceVal = parseFloat(priceStr) || 0;
-    return acc + priceVal * item.quantity;
-  }, 0);
-
-  const deliveryFee = selectedFulfillmentMode === "pickup" ? 0 : 950;
-  const discount = couponCode ? 500 : 0;
-  const grandTotal = Math.max(subtotal + deliveryFee - discount, 0);
+  const { subtotal, deliveryFee, discount, grandTotal } = buildCartPriceSummary(
+    cart.items,
+    selectedFulfillmentMode,
+    couponCode
+  );
 
   const wltPayment = useWltDshPaymentController(grandTotal);
 
@@ -350,73 +248,48 @@ export function CartScreen({
 
   const handleMapPress = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
-    const x = Math.max(10, Math.min(310, locationX));
-    const y = Math.max(10, Math.min(210, locationY));
-    
-    setUserPinPos({ x, y });
+    const nextPosition = {
+      x: Math.max(10, Math.min(310, locationX)),
+      y: Math.max(10, Math.min(210, locationY)),
+    };
 
-    // Map SVG coordinates to latitude/longitude
-    const lat = 15.3800 - (y / 220.0) * 0.0800;
-    const lng = 44.1500 + (x / 320.0) * 0.0600;
-
-    // Find closest landmark
-    let closestLandmark = LANDMARKS[0]!;
-    let minDistance = 999999.0;
-    for (const lm of LANDMARKS) {
-      const dx = lm.x - x;
-      const dy = lm.y - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestLandmark = lm;
-      }
-    }
-
-    setQuickActionDraft(closestLandmark.name);
+    setUserPinPos(nextPosition);
+    setQuickActionDraft(findClosestCartLandmark(nextPosition).name);
   };
 
   const handleLocateMe = () => {
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const x = Math.max(10, Math.min(310, Math.round((longitude - 44.1500) * 320.0 / 0.0600)));
-          const y = Math.max(10, Math.min(210, Math.round((15.3800 - latitude) * 220.0 / 0.0800)));
-          setUserPinPos({ x, y });
-          
-          let closestLandmark = LANDMARKS[0];
-          let minDistance = 999999.0;
-          for (const lm of LANDMARKS) {
-            const dx = lm.x - x;
-            const dy = lm.y - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDistance) {
-              minDistance = dist;
-              closestLandmark = lm;
-            }
-          }
-          setQuickActionDraft(closestLandmark!.name);
+          const nextPosition = coordinatesToCartMapPosition(pos.coords);
+          setUserPinPos(nextPosition);
+          setQuickActionDraft(findClosestCartLandmark(nextPosition).name);
         },
         () => {
-          setUserPinPos({ x: 160, y: 140 });
-          setQuickActionDraft(LANDMARKS[0]!.name);
+          const fallbackPosition = { x: 160, y: 140 };
+          setUserPinPos(fallbackPosition);
+          setQuickActionDraft(findClosestCartLandmark(fallbackPosition).name);
         }
       );
     } else {
-      setUserPinPos({ x: 160, y: 140 });
-      setQuickActionDraft(LANDMARKS[0]!.name);
+      const fallbackPosition = { x: 160, y: 140 };
+      setUserPinPos(fallbackPosition);
+      setQuickActionDraft(findClosestCartLandmark(fallbackPosition).name);
     }
   };
 
   const applyAddressMapAction = () => {
-    const lat = 15.3800 - (userPinPos.y / 220.0) * 0.0800;
-    const lng = 44.1500 + (userPinPos.x / 320.0) * 0.0600;
-    setClientCoordinates({ latitude: lat, longitude: lng });
+    const nextCoordinates = mapPositionToCartCoordinates(userPinPos);
+    setClientCoordinates(nextCoordinates);
     setClientAddress(quickActionDraft);
     setQuickActionKey(null);
 
-    // Call serviceability controller check with new coordinates!
-    void serviceabilityController.check(storeId, serviceAreaCode, lat, lng);
+    void serviceabilityController.check(
+      storeId,
+      serviceAreaCode,
+      nextCoordinates.latitude,
+      nextCoordinates.longitude
+    );
   };
 
   const handleProceed = () => {
@@ -442,15 +315,15 @@ export function CartScreen({
         <PromoBanner onPress={() => alert("تم الاشتراك في بثواني برو!")} />
 
         {/* سياسة تأكيد الطلب */}
-        <Surface tone="inset" style={styles.policyBanner}>
-          <View style={styles.policyHeader}>
-            <View style={styles.policyHeaderText}>
-              <Text role="bodySm" weight="bold" style={styles.policyTitle}>سياسة تأكيد الطلب</Text>
-              <Text role="caption" style={styles.policyDesc}>
+        <Surface tone="inset" style={styles.confirmationBanner}>
+          <View style={styles.confirmationHeader}>
+            <View style={styles.confirmationHeaderText}>
+              <Text role="bodySm" weight="bold" style={styles.confirmationTitle}>سياسة تأكيد الطلب</Text>
+              <Text role="caption" style={styles.confirmationDesc}>
                 هذه الشاشة تعرض الملخص أولاً، وتفتح المراجعة التفصيلية عند الطلب فقط. الأثر المالي والتسويات يتبع WLT وFinance.
               </Text>
             </View>
-            <Text role="caption" weight="black" style={styles.policyBadge}>سيادي</Text>
+            <Text role="caption" weight="black" style={styles.confirmationBadge}>سيادي</Text>
           </View>
         </Surface>
 
@@ -491,7 +364,7 @@ export function CartScreen({
                   <Pressable
                     key={option.value}
                     onPress={() => {
-                      setSelectedFulfillmentMode(option.value);
+                      setSelectedFulfillmentMode(option.value as DshFulfillmentMode);
                       setDeliveryModePickerOpen(false);
                     }}
                     style={[styles.pickerItem, isSelected && styles.pickerItemActive]}
@@ -1019,33 +892,33 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     gap: 12,
   },
-  policyBanner: {
+  confirmationBanner: {
     backgroundColor: colorRoles.surfaceBase,
     borderWidth: 1,
     borderColor: colorRoles.surfaceBase,
     borderRadius: radius.md,
     padding: 12,
   },
-  policyHeader: {
+  confirmationHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  policyHeaderText: {
+  confirmationHeaderText: {
     flex: 1,
     alignItems: "flex-end",
     paddingLeft: 8,
   },
-  policyTitle: {
+  confirmationTitle: {
     color: colorRoles.textPrimary,
     marginBottom: 4,
   },
-  policyDesc: {
+  confirmationDesc: {
     color: colorRoles.textSecondary,
     textAlign: "right",
     lineHeight: 16,
   },
-  policyBadge: {
+  confirmationBadge: {
     color: colorRoles.brandAction,
     fontWeight: "800",
   },
