@@ -1,0 +1,12 @@
+{
+  "head_sha": "682aec7ef7b51167a3d828448bcdfd11cec2cd60",
+  "branch": "journy",
+  "stale_output": false,
+  "gap_count_before": 184,
+  "gap_count_after": 184,
+  "graph_warnings_classified": 0,
+  "jscpd_findings_classified": 0,
+  "knip_findings_classified": 184,
+  "blockers": [],
+  "status": "EVIDENCE_RECONCILED_AND_HARD_GATES_ENFORCED"
+}

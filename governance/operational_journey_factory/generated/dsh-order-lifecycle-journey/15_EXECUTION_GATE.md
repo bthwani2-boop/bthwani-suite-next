@@ -4,7 +4,7 @@ This document evaluates the gating rules to declare the DSH Order Lifecycle jour
 
 ## Gating Checklist
 
-- [x] **No Open Blocking Gaps**: `gap-ledger.json` contains 0 gaps.
+- [ ] **No Open Blocking Gaps**: `gap-ledger.json` contains 184 open gaps.
 - [x] **Shared Order Layer Split**: Decoupled transport, adapter, types, policies, view-model, and controller.
 - [x] **UI Surfaces Cleaned**: Verification proves all screens render via shared controllers without inline API calls.
 - [x] **Database & Route Binding Proven**: Mapped all 22 operations to Go handlers and SQL schemas.

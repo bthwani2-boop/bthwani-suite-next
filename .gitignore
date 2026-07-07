@@ -55,9 +55,17 @@ services/dsh/database/seeds/local/media/
 .aider*
 !.aiderignore
 
-# Logs and evidence
-tools/registry/runs/
-.diagnostics/
+# Allow only bounded summaries/inventories/manifests inside .diagnostics
+!.diagnostics/
+.diagnostics/*
+!.diagnostics/operational-journey-factory/
+.diagnostics/operational-journey-factory/*
+.diagnostics/operational-journey-factory/tool-evidence/
+!.diagnostics/operational-journey-factory/inventories/
+!.diagnostics/operational-journey-factory/inventories/*
+!.diagnostics/operational-journey-factory/*.json
+!.diagnostics/operational-journey-factory/*.md
+!.diagnostics/operational-journey-factory/*.mjs
 tools/diagnostics/graph.json
 tools/diagnostics/*.raw.json
 tools/diagnostics/*.full.json

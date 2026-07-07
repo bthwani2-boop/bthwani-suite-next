@@ -32,7 +32,9 @@ const requiredScripts = [
   "tools/scripts/generate-operational-toolchain-inventory.mjs",
   "tools/scripts/generate-operational-surface-inventory.mjs",
   "tools/scripts/generate-operational-gap-ledger.mjs",
-  "tools/guards/operational-journey-template-factory-gate.mjs"
+  "tools/guards/operational-journey-template-factory-gate.mjs",
+  "tools/scripts/reconcile-operational-diagnostics.mjs",
+  "tools/guards/operational-diagnostics-reconciliation-gate.mjs"
 ];
 
 const requiredChecklist = "tools/checklist/operational-journey-factory-checklist.md";
@@ -42,7 +44,9 @@ const requiredPackageScripts = {
   "diagnostics:operational:toolchain": "node tools/scripts/generate-operational-toolchain-inventory.mjs",
   "diagnostics:operational:surfaces": "node tools/scripts/generate-operational-surface-inventory.mjs",
   "diagnostics:operational:gaps": "node tools/scripts/generate-operational-gap-ledger.mjs",
-  "guard:operational-journey-factory": "node tools/guards/operational-journey-template-factory-gate.mjs"
+  "guard:operational-journey-factory": "node tools/guards/operational-journey-template-factory-gate.mjs",
+  "diagnostics:operational:reconcile": "node tools/scripts/reconcile-operational-diagnostics.mjs",
+  "guard:operational-diagnostics-reconciliation": "node tools/guards/operational-diagnostics-reconciliation-gate.mjs"
 };
 
 const requiredGapFields = [

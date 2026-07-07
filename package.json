@@ -149,6 +149,8 @@
     "diagnostics:operational:surfaces": "node tools/scripts/generate-operational-surface-inventory.mjs",
     "diagnostics:operational:inventory": "node tools/scripts/generate-operational-journey-inventory.mjs",
     "diagnostics:operational:gaps": "node tools/scripts/generate-operational-gap-ledger.mjs",
+    "diagnostics:operational:reconcile": "node tools/scripts/reconcile-operational-diagnostics.mjs",
+    "guard:operational-diagnostics-reconciliation": "node tools/guards/operational-diagnostics-reconciliation-gate.mjs",
     "guard:operational-journey-factory": "node tools/guards/operational-journey-template-factory-gate.mjs",
     "guard:tool-catalog-coverage": "node tools/guards/tool-catalog-coverage-gate.mjs",
     "guard:toolchain-activation": "node tools/guards/toolchain-activation-gate.mjs",

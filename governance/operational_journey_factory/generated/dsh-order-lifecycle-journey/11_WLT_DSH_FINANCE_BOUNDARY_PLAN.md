@@ -15,5 +15,5 @@ This document governs the operational boundary between the DSH Order Lifecycle a
    - Captain COD collections are logged in WLT. The captain cannot mark a COD order as delivered without completing WLT's remittance handshake.
 
 ## Integration Bridges
-- [dsh-client-wlt-payment-bridge.ts](file:///c:/bthwani-suite-next/services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-client-wlt-payment-bridge.ts)
-- [dsh-wlt-boundary.ts](file:///c:/bthwani-suite-next/services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-boundary.ts)
+- [dsh-client-wlt-payment-bridge.ts](services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-client-wlt-payment-bridge.ts)
+- [dsh-wlt-boundary.ts](services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-boundary.ts)

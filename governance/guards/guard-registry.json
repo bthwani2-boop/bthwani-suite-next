@@ -372,6 +372,14 @@
       "exit_level": "fail",
       "description": "Verifies that cross-journey gaps are fully remediated or triaged.",
       "source_file": "tools/guards/foundation-cross-journey-remediation-gate.mjs"
+    },
+    {
+      "id": "operational-diagnostics-reconciliation",
+      "name": "Operational Diagnostics Reconciliation Gate",
+      "script": "guard:operational-diagnostics-reconciliation",
+      "exit_level": "fail",
+      "description": "Enforces reconciliation of gaps and checks stale outputs and raw reports.",
+      "source_file": "tools/guards/operational-diagnostics-reconciliation-gate.mjs"
     }
   ]
 }

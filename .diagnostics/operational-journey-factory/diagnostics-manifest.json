@@ -3,27 +3,9 @@
     "name": "operational-journey-factory",
     "path": ".diagnostics/operational-journey-factory",
     "type": "directory",
-    "file_count": 35,
-    "size_bytes": 2904852,
+    "file_count": 44,
+    "size_bytes": 4058076,
     "decision": "KEEP_CANONICAL_FACTORY_ROOT",
     "quote": "Core operational inventory root; only core inventory files are canonical. Old package folders remain raw evidence unless archived."
-  },
-  {
-    "name": "security",
-    "path": ".diagnostics/security",
-    "type": "directory",
-    "file_count": 0,
-    "size_bytes": 0,
-    "decision": "QUOTE_AS_SPECIALIST_EVIDENCE_THEN_ARCHIVE",
-    "quote": "Useful specialist evidence; must be linked into operational gap ledger before controlling journeys."
-  },
-  {
-    "name": "toolchain",
-    "path": ".diagnostics/toolchain",
-    "type": "directory",
-    "file_count": 0,
-    "size_bytes": 0,
-    "decision": "QUOTE_TO_TOOLCHAIN_REFERENCE_THEN_ARCHIVE",
-    "quote": "Useful for tool ownership, failures, and optional/manual tool classification."
   }
 ]
