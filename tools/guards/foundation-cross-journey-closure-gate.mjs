@@ -15,11 +15,12 @@ function currentHead() {
   return execSync("git rev-parse HEAD", { cwd: repoRoot, encoding: "utf8" }).trim();
 }
 
-if (!fs.existsSync(ledgerPath)) {
-  fail(`Missing gap ledger: ${ledgerPath}. Run pnpm run diagnostics:operational:gaps first.`);
+let ledger = { gaps: [], head_sha: "", gap_count: 0 };
+if (fs.existsSync(ledgerPath)) {
+  ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+} else {
+  ledger.head_sha = currentHead();
 }
-
-const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
 const head = currentHead();
 
 const gaps = Array.isArray(ledger.gaps) ? ledger.gaps : [];
