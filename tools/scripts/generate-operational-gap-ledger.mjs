@@ -20,7 +20,143 @@ function readJson(name, fallback) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
+const REQUIRED_GAP_FIELDS = [
+  "gap_id",
+  "type",
+  "path",
+  "owner",
+  "affected_surface",
+  "affected_journeys",
+  "root_cause",
+  "pattern_group",
+  "risk_level",
+  "required_action",
+  "target_files",
+  "allowed_decision",
+  "forbidden_actions",
+  "verification_commands",
+  "proof_required",
+  "status",
+  "blocks_journey_start"
+];
+
+function ownerForPath(sourcePath, fallback = "foundation") {
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/finance")) return "dsh_finance_read_proxy_consumer";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/platform")) return "dsh_platform_configuration";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/operations")) return "dsh_operator_operations";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/support")) return "dsh_support_incident_operations";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/catalogs")) return "dsh_catalog_governance";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/administration")) return "dsh_admin_roles_governance";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/hr")) return "dsh_hr_governance";
+  if (sourcePath.startsWith("services/dsh/frontend/control-panel/partners")) return "dsh_partner_governance";
+  if (sourcePath.startsWith("services/dsh/frontend/app-client")) return "dsh_frontend_client_surface";
+  if (sourcePath.startsWith("services/dsh/frontend/app-partner")) return "dsh_frontend_partner_surface";
+  if (sourcePath.startsWith("services/dsh/frontend/app-field")) return "dsh_frontend_field_surface";
+  if (sourcePath.startsWith("services/dsh/frontend/app-captain")) return "dsh_frontend_captain_surface";
+  if (sourcePath.startsWith("services/dsh/frontend/shared/finance-wlt-link")) return "dsh_wlt_finance_boundary";
+  if (sourcePath.startsWith("services/dsh/frontend/shared")) return "dsh_frontend_shared_brain";
+  if (sourcePath.startsWith("services/wlt/frontend/shared/dsh")) return "wlt_dsh_boundary_projection";
+  if (sourcePath.startsWith("services/wlt/frontend")) return "wlt_frontend_surface";
+  if (sourcePath.startsWith("tools/")) return "toolchain";
+  if (sourcePath.includes("openapi") || sourcePath.includes("clients/generated")) return "api-contracts";
+  return fallback;
+}
+
+function affectedJourneysFor(type, sourcePath) {
+  if (sourcePath.includes("finance") || sourcePath.includes("wlt") || sourcePath.includes("commission")) {
+    return ["checkout", "payment_handoff", "settlement_read_projection"];
+  }
+  if (sourcePath.includes("orders") || sourcePath.includes("checkout")) return ["order_lifecycle", "checkout"];
+  if (sourcePath.includes("partner") || sourcePath.includes("store")) return ["partner_onboarding", "store_publication"];
+  if (sourcePath.includes("platform")) return ["platform_configuration"];
+  if (sourcePath.includes("runtime")) return ["runtime_foundation"];
+  if (type.startsWith("CI_") || type.includes("TOOL")) return ["operational_foundation"];
+  return ["cross_journey_foundation"];
+}
+
+function defaultsForType(type, sourcePath) {
+  const common = {
+    root_cause: "unclassified_foundation_gap",
+    pattern_group: "foundation_classification",
+    allowed_decision: "FIX_REQUIRED",
+    target_files: [sourcePath],
+    forbidden_actions: ["delete_without_proof", "move_without_import_proof", "merge_without_duplication_proof"],
+    proof_required: ["current_head_sha", "targeted_guard_exit_code"]
+  };
+
+  if (type === "BUSINESS_LOGIC_IN_SURFACE") {
+    return {
+      ...common,
+      root_cause: "screen_owns_operational_logic",
+      pattern_group: "frontend_surface_logic_extraction",
+      allowed_decision: "SPLIT_REFACTOR",
+      target_files: [sourcePath, sourcePath.replace(/(?:Screen|Panel|Workspace)\.(tsx|ts)$/, ".controller.$1")],
+      forbidden_actions: ["direct_fetch_in_screen", "process_env_in_screen", "business_constants_in_screen"],
+      proof_required: ["screen_has_no_fetch", "screen_has_no_process_env", "controller_or_pure_render_proof"]
+    };
+  }
+
+  if (type === "DIRECT_API_IN_SURFACE") {
+    return {
+      ...common,
+      root_cause: "surface_bypasses_shared_adapter",
+      pattern_group: "frontend_api_binding",
+      allowed_decision: "BIND_TO_ADAPTER",
+      target_files: [sourcePath, "services/dsh/frontend/shared/**"],
+      forbidden_actions: ["inline_api_call", "process_env_in_screen", "direct_wlt_mutation_from_dsh_ui"],
+      proof_required: ["screen_has_no_fetch", "screen_has_no_base_url", "adapter_or_controller_import_exists"]
+    };
+  }
+
+  if (type === "SHARED_API_LOGIC_MIXED") {
+    return {
+      ...common,
+      root_cause: "shared_file_mixes_transport_and_domain_logic",
+      pattern_group: "shared_transport_domain_split",
+      allowed_decision: "SPLIT_REFACTOR",
+      forbidden_actions: ["keep_mixed_shared_api_logic", "delete_without_reference_proof"],
+      proof_required: ["transport_isolated", "view_model_has_no_fetch", "no_new_circular_dependency"]
+    };
+  }
+
+  if (type === "DIRECT_API_IN_SHARED_UNCLASSIFIED") {
+    return {
+      ...common,
+      root_cause: "shared_direct_api_file_has_unclear_role",
+      pattern_group: "shared_runtime_adapter_classification",
+      allowed_decision: "KEEP_WITH_PROOF_OR_RENAME",
+      forbidden_actions: ["leave_unclassified_direct_api", "delete_without_reference_proof"],
+      proof_required: ["classified_as_adapter_client_transport_or_runtime", "runtime_config_guard_passes"]
+    };
+  }
+
+  if (type === "CI_NOT_PROVEN" || type === "CI_WEAKLY_BOUND") {
+    return {
+      ...common,
+      root_cause: "toolchain_execution_not_proven",
+      pattern_group: "toolchain_binding",
+      allowed_decision: type === "CI_NOT_PROVEN" ? "BLOCKED_NEEDS_TOOL" : "FIX_REQUIRED",
+      target_files: ["package.json", "tools/toolchain/**", "tools/scripts/**", ".github/workflows/**"],
+      forbidden_actions: ["mark_pass_without_command", "ignore_active_fail_policy_tool"],
+      proof_required: ["command_record_has_classification", "tool_activation_policy_respected"]
+    };
+  }
+
+  return common;
+}
+
+function normalizeVerification(command) {
+  if (Array.isArray(command)) return command.filter(Boolean);
+  if (typeof command === "string" && command.trim()) return [command.trim()];
+  return ["pnpm run diagnostics:operational:gaps"];
+}
+
 function gap({ source_tool, path: sourcePath, type, severity = "HIGH", journey = "factory", affected_surface = "multi-surface", owner = "unassigned", reason, suggested_action, verification_command, blocks_journey_start = true }) {
+  const normalizedOwner = owner === "unassigned" ? ownerForPath(sourcePath) : owner;
+  const typeDefaults = defaultsForType(type, sourcePath);
+  const verificationCommands = normalizeVerification(verification_command);
+  const riskLevel = severity === "CRITICAL" ? "P0" : severity === "HIGH" ? "P1" : "P2";
+
   return {
     gap_id: `${type}:${sourcePath}`.replace(/[^A-Za-z0-9:_./-]/g, "_"),
     type,
@@ -28,19 +164,35 @@ function gap({ source_tool, path: sourcePath, type, severity = "HIGH", journey =
     path: sourcePath,
     reason,
     severity,
+    risk_level: riskLevel,
     journey,
+    affected_journeys: affectedJourneysFor(type, sourcePath),
     affected_surface,
-    owner,
+    owner: normalizedOwner,
+    root_cause: typeDefaults.root_cause,
+    pattern_group: typeDefaults.pattern_group,
     required_action: suggested_action,
+    target_files: typeDefaults.target_files,
+    allowed_decision: typeDefaults.allowed_decision,
+    forbidden_actions: typeDefaults.forbidden_actions,
+    verification_commands: verificationCommands,
+    proof_required: typeDefaults.proof_required,
     decision: blocks_journey_start ? "BLOCKED_NEEDS_EVIDENCE" : "FIX_REQUIRED",
-    verification: verification_command,
+    verification: verificationCommands.join(" && "),
     status: "OPEN",
     blocks_journey_start
   };
 }
 
 function isAllowedSharedDirectApiFile(file) {
-  return /\.(api|client|transport)\.(ts|tsx|js|jsx)$/.test(file)
+  return /\.(api|client|transport|adapter|runtime)\.(ts|tsx|js|jsx)$/.test(file)
+    || /-(client|transport|adapter|runtime-adapter)\.(ts|tsx|js|jsx)$/.test(file)
+    || /\/use-[^/]*controller\.(ts|tsx|js|jsx)$/.test(file)
+    || /(http|request|http-request)\.(ts|tsx|js|jsx)$/.test(file)
+    || /api-base-url\.(ts|tsx|js|jsx)$/.test(file)
+    || /\/shared\/platform\/(feature-flags|platform-vars)\.(ts|tsx|js|jsx)$/.test(file)
+    || /\/shared\/runtime\/.*\.(ts|tsx|js|jsx)$/.test(file)
+    || /\/shared\/media\/(field-document-media|resolve-dev-media-url)\.(ts|tsx|js|jsx)$/.test(file)
     || /\/_kernel\/.*(http|request|api-base-url).*\.(ts|tsx|js|jsx)$/.test(file);
 }
 
@@ -49,10 +201,10 @@ function assessTool(tool) {
   const activation = tool.activation || "optional";
   const failurePolicy = tool.failure_policy || "manual";
 
-  const hasActiveFail = classification.includes("ACTIVE_FAIL");
+  const hasActiveFail = classification.includes("ACTIVE_FAIL") || classification.includes("BLOCKED_NEEDS_TOOL");
   const hasMissingScript = classification.includes("MISSING_SCRIPT");
   const hasUnmapped = classification.includes("UNMAPPED_TOOL");
-  const hasActiveWarn = classification.includes("ACTIVE_WARN");
+  const hasActiveWarn = classification.includes("ACTIVE_WARN") || classification.includes("FIX_REQUIRED");
 
   if (hasActiveFail || hasMissingScript || (activation === "active" && failurePolicy === "fail" && hasUnmapped)) {
     return {
@@ -167,7 +319,7 @@ if (!surfaces) {
 
     if (surface.kind === "shared_brain") {
       for (const file of directApiFiles) {
-        if (isAllowedSharedDirectApiFile(file) && !localLogicSet.has(file)) continue;
+        if (isAllowedSharedDirectApiFile(file)) continue;
 
         gaps.push(gap({
           source_tool: "surface-inventory",
@@ -232,6 +384,7 @@ if (!journeys) {
 const ledger = {
   head_sha: headSha(),
   status: "DISCOVERY_ONLY",
+  required_gap_fields: REQUIRED_GAP_FIELDS,
   gap_count: gaps.length,
   gaps
 };
@@ -244,10 +397,10 @@ lines.push("");
 lines.push(`head_sha: \`${ledger.head_sha}\``);
 lines.push("status: `DISCOVERY_ONLY`");
 lines.push("");
-lines.push("| gap_id | source_tool | path | type | severity | required_action | verification | status | blocks_journey_start |");
-lines.push("|---|---|---|---|---|---|---|---|---:|");
+lines.push("| gap_id | source_tool | path | type | owner | risk_level | required_action | allowed_decision | verification_commands | status | blocks_journey_start |");
+lines.push("|---|---|---|---|---|---|---|---|---|---|---:|");
 for (const item of gaps) {
-  lines.push(`| \`${item.gap_id}\` | ${item.source_tool} | \`${item.path}\` | ${item.type} | ${item.severity} | ${item.required_action} | \`${item.verification}\` | ${item.status} | ${item.blocks_journey_start} |`);
+  lines.push(`| \`${item.gap_id}\` | ${item.source_tool} | \`${item.path}\` | ${item.type} | ${item.owner} | ${item.risk_level} | ${item.required_action} | ${item.allowed_decision} | \`${item.verification_commands.join("; ")}\` | ${item.status} | ${item.blocks_journey_start} |`);
 }
 
 fs.writeFileSync(path.join(outDir, "gap-ledger.md"), lines.join("\n"), "utf8");

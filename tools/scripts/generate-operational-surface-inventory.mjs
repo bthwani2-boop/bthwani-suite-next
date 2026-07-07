@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot, isExcluded, toPosix } from "../guards/_guard-utils.mjs";
@@ -80,16 +80,49 @@ function listFiles(relRoot, files = []) {
   return files;
 }
 
+function stripCommentsAndStrings(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/\/\/[^\r\n]*/g, " ")
+    .replace(/`(?:\\[\s\S]|[^`\\])*`/g, " ")
+    .replace(/"(?:\\.|[^"\\])*"/g, " ")
+    .replace(/'(?:\\.|[^'\\])*'/g, " ");
+}
+
+function hasDirectApiSigns(code) {
+  return /\bfetch\s*\(|\baxios\b|XMLHttpRequest|process\.env|API_BASE|\bbaseUrl\b/.test(code);
+}
+
+function hasRuntimeTransportSigns(code) {
+  return /\bfetch\s*\(|\baxios\b|XMLHttpRequest|process\.env|API_BASE/.test(code);
+}
+
+function hasOperationalLogicSigns(code, file) {
+  if (/\.(types|type)\.(ts|tsx)$/.test(file)) return false;
+
+  const codePatterns = [
+    /\bfunction\s+[A-Za-z0-9_]*(?:calculate|price|total|fee(?!d)|commission|settlement|payout|refund|ledger)[A-Za-z0-9_]*\s*\(/i,
+    /\b(?:const|let|var)\s+[A-Za-z0-9_]*(?:calculate|price|total|fee(?!d)|commission|settlement|payout|refund|ledger)[A-Za-z0-9_]*\s*=\s*(?:\([^)]*\)\s*=>|function\b)/i,
+    /\b(?:set|update|apply|approve|reject|resolve|assign)[A-Za-z0-9_]*(?:Commission|Settlement|Payout|Refund|Ledger)\b/,
+    /\b(?:commission|settlement|payout|refund|ledger)\b\s*[+\-*/=]/i
+  ];
+
+  return codePatterns.some((pattern) => pattern.test(code));
+}
+
 function classifyFile(file) {
   const owner = classifyOwner(file);
   const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
+  const code = stripCommentsAndStrings(content);
   const base = path.basename(file);
   const isScreen = /Screen\.(tsx|ts)$/.test(base) || /screen/i.test(file);
   const isPage = /page\.(tsx|ts|jsx|js)$/.test(base);
-  const isRoute = /route|router|navigation|navigator/i.test(file) || /<Route\b|createStackNavigator|createBottomTabNavigator/.test(content);
+  const isRoute = /route|router|navigation|navigator/i.test(file) || /<Route\b|createStackNavigator|createBottomTabNavigator/.test(code);
   const isSharedImport = /from ["'][^"']*shared|from ["']@bthwani\/shared|from ["'][^"']*ui-kit/.test(content);
-  const directApiSigns = /\bfetch\s*\(|\baxios\b|XMLHttpRequest|process\.env|API_BASE|baseUrl/.test(content);
-  const localBusinessLogic = /\bcalculate|\bcommission|\bsettlement|\bpayout|\brefund|\bledger|\bpolicy|\bSLA|\bcapacity|\bprovider/i.test(content);
+  const directApiSigns = /\.(types|type|view-model)\.(ts|tsx)$/.test(file)
+    ? hasRuntimeTransportSigns(code)
+    : hasDirectApiSigns(code);
+  const localBusinessLogic = hasOperationalLogicSigns(code, file);
   const iconCandidates = (content.match(/\b[A-Z][A-Za-z0-9]+Icon\b|lucide-react|@expo\/vector-icons/g) || []).length;
   const actionCandidates = (content.match(/\bonPress\b|\bonClick\b|\b<Button\b|\bPressable\b|\bTouchable/g) || []).length;
   const stateCandidates = (content.match(/\bloading\b|\berror\b|\bempty\b|\bsuccess\b|\bblocked\b|\bretry\b|\boffline\b|\bdisabled\b/gi) || []).length;

@@ -58,6 +58,36 @@ function commandFor(entry) {
   return entry.package_script || entry.fulfilled_by || "";
 }
 
+function commandDisplay(command) {
+  return command || "NO_COMMAND_DECLARED";
+}
+
+function commandClassification({ activation, failurePolicy, hasExecutionBinding, command, workflow }) {
+  if (!command) {
+    if (workflow.workflow_found) return "EXTERNAL_CI_WORKFLOW_ONLY";
+    return activation === "active" && failurePolicy === "fail"
+      ? "BLOCKED_NEEDS_TOOL"
+      : "NOT_REQUIRED_NO_COMMAND";
+  }
+  if (!hasExecutionBinding) return "BLOCKED_NEEDS_TOOL";
+  if (!workflow.workflow_found && activation === "active" && failurePolicy === "fail") return "FIX_REQUIRED";
+  return "DISCOVERY_ONLY_NOT_EXECUTED";
+}
+
+function commandRecord({ id, command, tool, blocking, classification, remediationHint }) {
+  return {
+    id,
+    command: commandDisplay(command),
+    tool,
+    expected_exit_code: 0,
+    actual_exit_code: null,
+    blocking,
+    classification,
+    log_path: ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+    remediation_hint: remediationHint
+  };
+}
+
 function workflowEvidenceFor(entry, command) {
   const id = String(entry.id || "").toLowerCase();
   const commandNeedle = String(command || "").toLowerCase();
@@ -83,18 +113,19 @@ function workflowEvidenceFor(entry, command) {
 function classify(entry) {
   const activation = baseline[entry.id] || entry.activation || "optional";
   const command = commandFor(entry);
+  const failurePolicy = entry.failure_policy || "manual";
   const hasPackageScript = command ? scriptValues.has(command) : false;
   const hasVirtualScript = command ? command.startsWith("github/") || command === "sonarqube" : false;
   const workflow = workflowEvidenceFor(entry, command);
   const hasExecutionBinding = hasPackageScript || hasVirtualScript || workflow.workflow_found;
   const statuses = [];
 
-  if (activation === "active" && entry.failure_policy === "fail" && !hasExecutionBinding) {
-    statuses.push("ACTIVE_FAIL");
+  if (activation === "active" && failurePolicy === "fail" && !hasExecutionBinding) {
+    statuses.push("BLOCKED_NEEDS_TOOL");
   }
 
-  if (activation === "active" && entry.failure_policy === "fail" && hasExecutionBinding && command && !workflow.workflow_found) {
-    statuses.push("ACTIVE_WARN");
+  if (activation === "active" && failurePolicy === "fail" && hasExecutionBinding && command && !workflow.workflow_found) {
+    statuses.push("FIX_REQUIRED");
   }
 
   if (activation === "partial") statuses.push("PARTIAL");
@@ -104,18 +135,44 @@ function classify(entry) {
   if (!command && workflow.workflow_found) statuses.push("WORKFLOW_ONLY");
   if (!entry.owner && !entry.team) statuses.push("NEEDS_OWNER");
   if (statuses.length === 0) statuses.push("ACTIVE_BOUND");
+  const primaryClassification = commandClassification({
+    activation,
+    failurePolicy,
+    hasExecutionBinding,
+    command,
+    workflow
+  });
+  const blocking = activation === "active"
+    && failurePolicy === "fail"
+    && !["DISCOVERY_ONLY_NOT_EXECUTED", "EXTERNAL_CI_WORKFLOW_ONLY"].includes(primaryClassification);
 
   return {
     tool_id: entry.id,
     category: entry.category || "unknown",
     activation,
-    failure_policy: entry.failure_policy || "manual",
-    command,
+    failure_policy: failurePolicy,
+    command: commandDisplay(command),
     script_found: hasPackageScript || hasVirtualScript,
     workflow_found: workflow.workflow_found,
     workflow_evidence: workflow.evidence,
     detected_from: ["tools/toolchain/tool-catalog.v5.json", "tools/toolchain/tool-activation-baseline.json"],
-    classification: statuses
+    classification: statuses,
+    commands: [
+      commandRecord({
+        id: `${entry.id}:primary`,
+        command,
+        tool: entry.id,
+        blocking,
+        classification: primaryClassification,
+        remediationHint: primaryClassification === "BLOCKED_NEEDS_TOOL"
+          ? "bind_or_install_required_tool"
+          : primaryClassification === "EXTERNAL_CI_WORKFLOW_ONLY"
+            ? "collect_external_ci_run_evidence_for_closure"
+          : primaryClassification === "FIX_REQUIRED"
+            ? "add_workflow_evidence_or_adjust_activation_policy"
+            : "no_execution_required_for_discovery_inventory"
+      })
+    ]
   };
 }
 
@@ -128,17 +185,27 @@ for (const id of expected) {
       category: "expected",
       activation: baseline[id] || "missing",
       failure_policy: "block journey start",
-      command: "",
+      command: "NO_COMMAND_DECLARED",
       script_found: false,
       workflow_found: false,
       workflow_evidence: [],
       detected_from: ["tools/toolchain/expected-tool-ids.v5.json"],
-      classification: ["UNMAPPED_TOOL"]
+      classification: ["BLOCKED_NEEDS_TOOL"],
+      commands: [
+        commandRecord({
+          id: `${id}:primary`,
+          command: "",
+          tool: id,
+          blocking: true,
+          classification: "BLOCKED_NEEDS_TOOL",
+          remediationHint: "add_tool_catalog_entry_and_package_or_workflow_binding"
+        })
+      ]
     });
   }
 }
 
-const toolCommands = new Set(tools.map((tool) => tool.command).filter(Boolean));
+const toolCommands = new Set(tools.map((tool) => tool.command).filter((command) => command && command !== "NO_COMMAND_DECLARED"));
 const unusedScripts = Object.keys(scripts)
   .filter((name) => !toolCommands.has(name) && !registryScripts.has(name))
   .filter((name) => name.startsWith("guard:") || name.startsWith("diagnostics:"));
@@ -159,7 +226,17 @@ const inventory = {
     tool_id: name,
     classification: ["UNUSED_SCRIPT"],
     detected_from: ["package.json"],
-    command: name
+    command: name,
+    commands: [
+      commandRecord({
+        id: `${name}:package-script`,
+        command: name,
+        tool: name,
+        blocking: false,
+        classification: "FIX_REQUIRED",
+        remediationHint: "classify_package_script_or_register_guard"
+      })
+    ]
   }))
 };
 
@@ -174,7 +251,7 @@ lines.push("");
 lines.push("| Tool | Activation | Command | Classification |");
 lines.push("|---|---|---|---|");
 for (const tool of tools) {
-  lines.push(`| \`${tool.tool_id}\` | ${tool.activation} | \`${tool.command || "none"}\` | ${tool.classification.join(", ")} |`);
+  lines.push(`| \`${tool.tool_id}\` | ${tool.activation} | \`${tool.command}\` | ${tool.classification.join(", ")} |`);
 }
 lines.push("");
 lines.push("## Unused Guard Or Diagnostic Scripts");

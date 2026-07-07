@@ -2,7 +2,7 @@ import { useEffect, useReducer } from "react";
 import type { WltFieldCommissionState } from "./wlt-dsh-field-commission.states";
 import type { WltDshFieldCommissionReference } from "./wlt-dsh-field-commission.types";
 import { getWltApiBaseUrl } from "./wlt-dsh-api-base-url";
-import { wltFetchJson, type WltReferenceApiResult } from "./wlt-dsh-http-request";
+import { fetchWltFieldCommissionRef } from "./wlt-dsh-field-commission-reference.api";
 
 type Action =
   | { type: "LOADING" }
@@ -21,16 +21,6 @@ function reducer(_state: WltFieldCommissionState, action: Action): WltFieldCommi
     case "NOT_AVAILABLE":
       return { kind: "not_available" };
   }
-}
-
-export async function fetchWltFieldCommissionRef(
-  baseUrl: string,
-  partnerId: string,
-): Promise<WltReferenceApiResult<WltDshFieldCommissionReference>> {
-  return wltFetchJson<WltDshFieldCommissionReference>(
-    `${baseUrl}/wlt/references/field-commission?partnerId=${encodeURIComponent(partnerId)}`,
-    (body: any) => body.reference as WltDshFieldCommissionReference,
-  );
 }
 
 export type WltFieldCommissionController = {

@@ -45,6 +45,38 @@ const requiredPackageScripts = {
   "guard:operational-journey-factory": "node tools/guards/operational-journey-template-factory-gate.mjs"
 };
 
+const requiredGapFields = [
+  "gap_id",
+  "type",
+  "path",
+  "owner",
+  "affected_surface",
+  "affected_journeys",
+  "root_cause",
+  "pattern_group",
+  "risk_level",
+  "required_action",
+  "target_files",
+  "allowed_decision",
+  "forbidden_actions",
+  "verification_commands",
+  "proof_required",
+  "status",
+  "blocks_journey_start"
+];
+
+const requiredCommandFields = [
+  "id",
+  "command",
+  "tool",
+  "expected_exit_code",
+  "actual_exit_code",
+  "blocking",
+  "classification",
+  "log_path",
+  "remediation_hint"
+];
+
 function readJson(rel, fallback) {
   const file = path.join(repoRoot, rel);
   if (!fs.existsSync(file)) return fallback;
@@ -61,6 +93,56 @@ function requireText(file, needles) {
   for (const needle of needles) {
     if (!content.includes(needle)) {
       violations.push({ file: `governance/operational_journey_factory/${file}`, line: 0, message: `MISSING_REQUIRED_TEXT: ${needle}` });
+    }
+  }
+}
+
+function isEmptyRequiredValue(value) {
+  if (value === undefined || value === null) return true;
+  if (typeof value === "string") return value.trim() === "" || value === "undefined" || value === "unknown command";
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+function validateCommandRecord(command, file, index) {
+  for (const field of requiredCommandFields) {
+    if (!(field in command) || isEmptyRequiredValue(command[field])) {
+      if (field === "actual_exit_code" && command[field] === null) continue;
+      violations.push({ file, line: 0, message: `INVALID_COMMAND_RECORD:${index}:MISSING_${field}` });
+    }
+  }
+}
+
+function validateGeneratedOutputs() {
+  const diagnosticDir = ".diagnostics/operational-journey-factory";
+  const gapLedgerPath = `${diagnosticDir}/gap-ledger.json`;
+  const toolchainPath = `${diagnosticDir}/toolchain-inventory.json`;
+
+  const gapLedger = readJson(gapLedgerPath, null);
+  if (gapLedger) {
+    for (const [index, gap] of (gapLedger.gaps || []).entries()) {
+      for (const field of requiredGapFields) {
+        if (!(field in gap) || isEmptyRequiredValue(gap[field])) {
+          violations.push({ file: gapLedgerPath, line: 0, message: `INVALID_GAP:${index}:MISSING_${field}` });
+        }
+      }
+      if (gap.owner === "unassigned") {
+        violations.push({ file: gapLedgerPath, line: 0, message: `INVALID_GAP:${index}:UNASSIGNED_OWNER` });
+      }
+    }
+  }
+
+  const toolchain = readJson(toolchainPath, null);
+  if (toolchain) {
+    for (const [toolIndex, tool] of (toolchain.tools || []).entries()) {
+      for (const [commandIndex, command] of (tool.commands || []).entries()) {
+        validateCommandRecord(command, toolchainPath, `${toolIndex}.${commandIndex}`);
+      }
+    }
+    for (const [scriptIndex, script] of (toolchain.unused_scripts || []).entries()) {
+      for (const [commandIndex, command] of (script.commands || []).entries()) {
+        validateCommandRecord(command, toolchainPath, `unused.${scriptIndex}.${commandIndex}`);
+      }
     }
   }
 }
@@ -144,5 +226,7 @@ for (const [toolId, activation] of Object.entries(baseline)) {
     violations.push({ file: "governance/operational_journey_factory/11_TOOLCHAIN_EXECUTION_TEMPLATE.md", line: 0, message: `ACTIVE_TOOL_NOT_REPRESENTED: ${toolId}` });
   }
 }
+
+validateGeneratedOutputs();
 
 fail(guardId, violations);

@@ -13,6 +13,14 @@ function readActivation(toolId) {
   }
 }
 
+function classificationForMissingBinary() {
+  return "BLOCKED_NEEDS_TOOL";
+}
+
+function classificationForFailedCommand() {
+  return "FIX_REQUIRED";
+}
+
 export function hasBinary(binary) {
   try {
     execSync(process.platform === "win32" ? "where.exe " + binary : "which " + binary, { stdio: "ignore" });
@@ -70,16 +78,16 @@ export function handleMissingBinary(toolId, binary) {
   const diagnostic = isDiagnosticMode();
 
   if (diagnostic || activation === "optional") {
-    console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation}`);
+    console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation} classification=${classificationForMissingBinary()}`);
     process.exit(0);
   }
 
   if (activation === "partial") {
-    console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial`);
+    console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial classification=${classificationForMissingBinary()}`);
     process.exit(0);
   }
 
-  console.error(`[${toolId.toUpperCase()} FAIL] Required binary missing: ${binary}`);
+  console.error(`[${toolId.toUpperCase()} FAIL] Required binary missing: ${binary} classification=${classificationForMissingBinary()}`);
   console.error("Active tools cannot pass when their binary is missing.");
   process.exit(1);
 }
@@ -100,7 +108,7 @@ export function runTool({ toolId, binary, command, diagnosticCommand }) {
   } catch {
     const activation = readActivation(toolId);
     if (activation === "partial" || isDiagnosticMode()) {
-      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}.`);
+      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}. classification=${classificationForFailedCommand()}`);
       process.exit(0);
     }
     process.exit(1);
@@ -125,7 +133,7 @@ export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessag
   } catch {
     const activation = readActivation(toolId);
     if (activation === "partial" || isDiagnosticMode()) {
-      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}.`);
+      console.warn(`[${toolId.toUpperCase()} WARN] Command failed but activation=${activation}. classification=${classificationForFailedCommand()}`);
       process.exit(0);
     }
     process.exit(1);

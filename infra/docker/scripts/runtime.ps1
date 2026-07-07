@@ -3,7 +3,7 @@
   Central Docker Runtime Orchestrator for bthwani-suite-next.
 
 .PARAMETER Action
-  up | down | reset | status | logs | migrate | seed | smoke | all
+  up | down | reset | status | logs | migrate | seed | smoke | doctor | all
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
@@ -16,7 +16,7 @@
 
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "all")]
+  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all")]
   [string]$Action,
 
   [string]$Profiles = "",
@@ -95,15 +95,64 @@ function Get-ComposeBase {
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-function Wait-ForPostgres {
-  $max = 30
-
-  $RequiredDatabases = @("bthwani_runtime")
+function Get-RequiredDatabaseNames {
+  $RequiredDatabases = @()
   if ($script:ProfileList -contains "identity") { $RequiredDatabases += "identity_runtime" }
   if ($script:ProfileList -contains "dsh") { $RequiredDatabases += "dsh_runtime" }
   if ($script:ProfileList -contains "wlt") { $RequiredDatabases += "wlt_runtime" }
+  if ($RequiredDatabases.Count -eq 0 -and ($Action -eq "migrate" -or $Action -eq "seed")) {
+    $RequiredDatabases += "dsh_runtime"
+  }
+  return $RequiredDatabases | Select-Object -Unique
+}
 
-  $RequiredDatabases = $RequiredDatabases | Select-Object -Unique
+function Write-RuntimeDoctor {
+  param(
+    [string]$Reason = "runtime doctor",
+    [string]$Service = ""
+  )
+
+  Write-Host "`n=== runtime:doctor ==="
+  Write-Host "reason: $Reason"
+  Write-Host "profiles: $($script:ProfileList -join ',')"
+  Write-Host "compose_file: $script:ComposeFile"
+  if ($script:ProfileList -contains "observability") { Write-Host "observability_compose_file: $script:ObservabilityComposeFile" }
+  if ($script:ProfileList | Where-Object { @("financial-simulators", "mail", "cache") -contains $_ }) { Write-Host "financial_compose_file: $script:FinancialComposeFile" }
+
+  Write-Host "`n--- docker ps ---"
+  docker ps --format "table {{.Names}}`t{{.Image}}`t{{.Status}}`t{{.Ports}}"
+
+  Write-Host "`n--- docker compose ps ---"
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) ps
+
+  $logServices = @()
+  if ($Service -ne "") {
+    $logServices += $Service
+  } else {
+    if ($script:ProfileList -contains "identity") { $logServices += "identity-api" }
+    if ($script:ProfileList -contains "dsh") { $logServices += "dsh-api" }
+    if ($script:ProfileList -contains "wlt") { $logServices += "wlt-api" }
+    if ($script:ProfileList -contains "media") { $logServices += "minio" }
+    if ($script:ProfileList -contains "financial-simulators") { $logServices += "wiremock-financial-provider" }
+    if ($script:ProfileList -contains "mail") { $logServices += "mailpit" }
+    if ($script:ProfileList -contains "cache") { $logServices += "valkey" }
+    if ((Get-RequiredDatabaseNames).Count -gt 0) { $logServices += "postgres" }
+  }
+
+  foreach ($logService in ($logServices | Select-Object -Unique)) {
+    Write-Host "`n--- last 80 log lines: $logService ---"
+    docker compose @(Get-ComposeBase) logs --tail=80 $logService
+  }
+}
+
+function Wait-ForPostgres {
+  $max = 30
+
+  $RequiredDatabases = Get-RequiredDatabaseNames
+  if ($RequiredDatabases.Count -eq 0) {
+    Write-Host "Postgres health skipped: no selected profile requires Postgres."
+    return
+  }
 
   for ($i = 1; $i -le $max; $i++) {
     Write-Host "Waiting for Postgres ($i/$max)..."
@@ -132,7 +181,8 @@ function Wait-ForPostgres {
     Start-Sleep -Seconds 3
   }
 
-  throw "Postgres did not become healthy after $max attempts"
+  Write-RuntimeDoctor -Reason "Postgres health failed after $max attempts. expected_databases=$($RequiredDatabases -join ',')" -Service "postgres"
+  throw "Postgres health failed after $max attempts for profiles [$($script:ProfileList -join ',')] expected_databases=[$($RequiredDatabases -join ',')]"
 }
 function Wait-ForDshApi {
   $max = 20
@@ -849,6 +899,10 @@ elseif ($Action -eq "logs") {
 }
 
 # ── Action: migrate ───────────────────────────────────────────────────────────
+elseif ($Action -eq "doctor") {
+  Write-RuntimeDoctor -Reason "manual doctor action" -Service $Service
+}
+
 elseif ($Action -eq "migrate") {
   Write-Host "=== runtime:migrate"
   Wait-ForPostgres
@@ -873,10 +927,14 @@ elseif ($Action -eq "seed") {
 elseif ($Action -eq "smoke") {
   Write-Host "=== runtime:smoke (profiles: $($ProfileList -join ','))"
 
-  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
-  if ($LASTEXITCODE -ne 0) { throw "Postgres start failed for smoke (exit $LASTEXITCODE)" }
+  if ((Get-RequiredDatabaseNames).Count -gt 0) {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
+    if ($LASTEXITCODE -ne 0) { throw "Postgres start failed for smoke (exit $LASTEXITCODE)" }
 
-  Wait-ForPostgres
+    Wait-ForPostgres
+  } else {
+    Write-Host "Postgres start skipped for smoke: selected profiles do not require Postgres."
+  }
 
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate
