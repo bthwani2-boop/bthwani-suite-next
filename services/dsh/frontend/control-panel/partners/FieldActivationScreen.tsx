@@ -69,7 +69,6 @@ export function FieldActivationScreen() {
             if (error) setError(null);
           }}
           placeholder="مثال: 777123456"
-          keyboardType="phone-pad"
         />
 
         {error && (
