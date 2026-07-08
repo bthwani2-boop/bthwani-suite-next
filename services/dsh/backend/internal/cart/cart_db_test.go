@@ -49,14 +49,33 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
+	var domainID string
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO dsh_catalog_domains (id, slug, name_ar)
+		VALUES ($1, $1, 'Cart Price Test Domain')
+		RETURNING id`,
+		"domain-"+suffix,
+	).Scan(&domainID); err != nil {
+		t.Fatalf("failed to insert test domain: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID) })
+
 	var productID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_catalog_products (id, store_id, name, sku, price_reference, unit_price)
-		VALUES ($1, $2, 'Test Widget', $3, '25.50 YER', 25.50)
+		INSERT INTO dsh_master_products (id, domain_id, canonical_name_ar, sku)
+		VALUES ($1, $2, 'Test Widget', $3)
 		RETURNING id`,
-		"prod-"+suffix, storeID, "sku-"+suffix,
+		"prod-"+suffix, domainID, "sku-"+suffix,
 	).Scan(&productID); err != nil {
-		t.Fatalf("failed to insert test product: %v", err)
+		t.Fatalf("failed to insert test master product: %v", err)
+	}
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, unit_price, available)
+		VALUES ($1, $2, $3, 25.50, true)`,
+		"assortment-"+suffix, storeID, productID,
+	); err != nil {
+		t.Fatalf("failed to insert test store assortment: %v", err)
 	}
 
 	var cartID string
@@ -69,7 +88,7 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 		t.Fatalf("failed to insert test cart: %v", err)
 	}
 
-	item, err := UpsertItem(ctx, db, storeID, cartID, UpsertItemInput{ProductID: productID, Quantity: 3})
+	item, err := UpsertItem(ctx, db, storeID, cartID, UpsertItemInput{MasterProductID: productID, Quantity: 3})
 	if err != nil {
 		t.Fatalf("UpsertItem failed: %v", err)
 	}

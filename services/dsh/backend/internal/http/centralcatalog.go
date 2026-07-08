@@ -9,6 +9,24 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Central-catalog permission actions: granular, additive capabilities that a
+// non-operator actor can be granted via Identity.Permissions
+// -- Permission{Service:"dsh", Surface:"central-catalog", Action:...} --
+// without needing full operator role. Operator role continues to satisfy
+// every one of these checks via the fallbackRoles argument to
+// requireCatalogPermission -- existing operator access is unchanged.
+const (
+	CatalogPermissionTaxonomyManage          = "catalog.taxonomy.manage"
+	CatalogPermissionProductManage           = "catalog.product.manage"
+	CatalogPermissionProposalReview          = "catalog.proposal.review"
+	CatalogPermissionProposalMarketingReview = "catalog.proposal.marketing_review"
+	CatalogPermissionProposalAdopt           = "catalog.proposal.adopt"
+	CatalogPermissionProposalPublish         = "catalog.proposal.publish"
+	CatalogPermissionMediaReview             = "catalog.media.review"
+	CatalogPermissionMediaManage             = "catalog.media.manage"
+	CatalogPermissionPolicyManage            = "catalog.policy.manage"
+)
+
 func (s *protectedStoreServer) writeCentralCatalogError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, centralcatalog.ErrNotFound):
@@ -39,7 +57,7 @@ func (s *protectedStoreServer) handleListCatalogDomains(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.DomainInput
@@ -55,7 +73,7 @@ func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogDomain(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.DomainInput
@@ -85,7 +103,7 @@ func (s *protectedStoreServer) handleListCatalogNodes(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.NodeInput
@@ -101,7 +119,7 @@ func (s *protectedStoreServer) handleCreateCatalogNode(w http.ResponseWriter, r 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogNode(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.NodeInput
@@ -160,7 +178,7 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.MasterProductInput
@@ -176,7 +194,7 @@ func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateMasterProduct(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.MasterProductInput
@@ -209,13 +227,42 @@ func (s *protectedStoreServer) handleListProductProposals(w http.ResponseWriter,
 	store.SendJSON(w, http.StatusOK, map[string]any{"proposals": items})
 }
 
-func (s *protectedStoreServer) handleDecideProductProposal(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
-	if !ok {
-		return
+// decideProposalPermissionAction mirrors legacyDecisionToPipelineStatus's
+// vocabulary (under_review/adopted/rejected/needs_fix -> partner-review/
+// catalog-adopted/rejected/needs-fix) to pick the narrowest permission that
+// still covers every legacy decision: only "adopted" reaches the adopt gate,
+// everything else is a plain proposal review action.
+func decideProposalPermissionAction(decision string) string {
+	if decision == "adopted" {
+		return CatalogPermissionProposalAdopt
 	}
+	return CatalogPermissionProposalReview
+}
+
+// proposalTransitionPermissionAction picks the narrowest permission action
+// for a requested nextStatus so a non-operator can be granted just the
+// capability for one pipeline stage (e.g. media/marketing review) instead of
+// full operator power over the whole proposal pipeline.
+func proposalTransitionPermissionAction(nextStatus string) string {
+	switch nextStatus {
+	case "marketing-review":
+		return CatalogPermissionProposalMarketingReview
+	case "catalog-adopted":
+		return CatalogPermissionProposalAdopt
+	case "client-visible":
+		return CatalogPermissionProposalPublish
+	default:
+		return CatalogPermissionProposalReview
+	}
+}
+
+func (s *protectedStoreServer) handleDecideProductProposal(w http.ResponseWriter, r *http.Request) {
 	var input centralcatalog.ProposalDecisionInput
 	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	actor, ok := s.requireCatalogPermission(w, r, decideProposalPermissionAction(input.Decision), "operator")
+	if !ok {
 		return
 	}
 	p, err := centralcatalog.DecideProposal(r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input)
@@ -227,12 +274,12 @@ func (s *protectedStoreServer) handleDecideProductProposal(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleTransitionProductProposal(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
-	if !ok {
-		return
-	}
 	var input centralcatalog.ProposalTransitionInput
 	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	actor, ok := s.requireCatalogPermission(w, r, proposalTransitionPermissionAction(input.NextStatus), "operator")
+	if !ok {
 		return
 	}
 	p, err := centralcatalog.TransitionProposal(r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input)
@@ -294,7 +341,7 @@ func (s *protectedStoreServer) handleListCatalogPolicies(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogPolicy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage, "operator"); !ok {
 		return
 	}
 	var input centralcatalog.CatalogPolicyInput
@@ -454,7 +501,7 @@ func (s *protectedStoreServer) handleUpdateCatalogAsset(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleReviewCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview, "operator")
 	if !ok {
 		return
 	}

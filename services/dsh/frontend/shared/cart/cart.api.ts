@@ -18,12 +18,12 @@ export async function fetchCart(storeId: string): Promise<DshCart | null> {
 
 // productName/priceReference are accepted here for caller convenience (e.g.
 // optimistic UI updates) but are never sent to the server: DSH derives the
-// authoritative name/price snapshot server-side from the catalog product,
-// never from the client (see dsh-022 migration).
+// authoritative name/price snapshot server-side from the store assortment,
+// never from the client (see dsh-033 migration).
 export async function upsertCartItem(input: {
   readonly storeId: string;
   readonly fulfillmentMode?: DshFulfillmentMode;
-  readonly productId: string;
+  readonly masterProductId: string;
   readonly productName?: string;
   readonly priceReference?: string;
   readonly quantity: number;
@@ -33,7 +33,7 @@ export async function upsertCartItem(input: {
     body: {
       storeId: input.storeId,
       ...(input.fulfillmentMode ? { fulfillmentMode: input.fulfillmentMode } : {}),
-      productId: input.productId,
+      masterProductId: input.masterProductId,
       quantity: input.quantity,
     },
   });

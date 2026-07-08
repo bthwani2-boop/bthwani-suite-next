@@ -5,11 +5,10 @@ import {
   deleteMedia,
   fetchCatalogAudit,
   fetchCatalogSubmissions,
-  fetchPartnerCatalog,
-  fetchPublishedCatalog,
   submitCatalog,
   uploadMediaIntent,
 } from "./catalog.api";
+import { fetchPartnerCatalog, fetchPublishedCatalog } from "./legacy-catalog-compat.api";
 import {
   beginCatalogAuditLoad,
   resolveCatalogAuditError,
@@ -23,11 +22,8 @@ import {
   type CatalogActionState,
   type CatalogAuditState,
 } from "./catalog.states";
-import type {
-  CatalogState,
-  CatalogSubmissionState,
-  MediaUploadIntent,
-} from "./catalog.types";
+import type { CatalogSubmissionState, MediaUploadIntent } from "./catalog.types";
+import type { CatalogState } from "./legacy-catalog-compat.types";
 
 export function usePartnerCatalogController(authKind = "unauthenticated") {
   const [state, setState] = useState<CatalogState>({ kind: "loading" });

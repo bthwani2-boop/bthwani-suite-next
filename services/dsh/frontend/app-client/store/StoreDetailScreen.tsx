@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { LoadingState, StateView } from '@bthwani/ui-kit';
 import { useStoreDetailController } from '../../shared/store';
 import { usePublishedCatalogController } from '../../shared/catalog';
-import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/catalog.types';
+import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/legacy-catalog-compat.types';
 import { StoreDetailShell } from './StoreDetailShell';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useCartController } from '../../shared/cart';
@@ -28,7 +28,7 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
 
   const handleAddToCart = useCallback((product: CatalogProduct, quantity: number, mode: string) => {
     void cartCtrl.addItem({
-      productId: product.id,
+      masterProductId: product.id,
       productName: product.name,
       priceReference: product.priceReference,
       quantity,

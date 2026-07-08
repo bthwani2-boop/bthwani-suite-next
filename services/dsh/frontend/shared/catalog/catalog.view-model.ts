@@ -1,4 +1,5 @@
-import type { CatalogSubmission, PartnerCatalog } from "./catalog.types";
+import type { CatalogSubmission } from "./catalog.types";
+import type { PartnerCatalog } from "./legacy-catalog-compat.types";
 import {
   catalogEmptyState,
   catalogSubmissionEmptyState,

@@ -1,7 +1,11 @@
 // app-field — DshFieldPartnerProductsScreen
-// Trial products the field agent collects for a partner's auto-created draft
-// store while onboarding. Prices here are local reference text for display
-// within the DSH catalog only — never a real WLT financial link.
+// Lets the field agent stock a partner's auto-created draft store from the
+// sovereign central catalog: browse taxonomy + master products, link a
+// chosen master product to the store's assortment (price/availability/stock
+// status only — never a free-form name or price), and propose a new master
+// product when nothing matches. Proposals are submitted for review and are
+// never immediately addable to the store — a proposal only becomes linkable
+// once catalog governance adopts it into a master product.
 import React from 'react';
 import { Pressable, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,63 +21,124 @@ import {
   colorRoles,
   Icon,
 } from '@bthwani/ui-kit';
-import { useFieldPartnerProductsController } from '../../shared/partner';
+import { useFieldCatalogController } from '../../shared/partner';
+import type { MasterProduct } from '../../shared/catalog/central-catalog.types';
 
 export type DshFieldPartnerProductsScreenProps = {
   readonly partnerId: string;
   readonly onBack: () => void;
 };
 
+const STOCK_STATUS_LABELS: Record<'in_stock' | 'low_stock' | 'out_of_stock', string> = {
+  in_stock: 'متوفر',
+  low_stock: 'متوفر بكمية محدودة',
+  out_of_stock: 'غير متوفر',
+};
+
 export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPartnerProductsScreenProps) {
   const insets = useSafeAreaInsets();
-  const { state, actionState, createProduct, updateProduct } = useFieldPartnerProductsController(partnerId);
+  const {
+    storeState,
+    taxonomyState,
+    masterProductsState,
+    actionState,
+    assortmentItems,
+    proposals,
+    searchMasterProducts,
+    linkMasterProduct,
+    proposeNewProduct,
+  } = useFieldCatalogController(partnerId);
 
-  const [newProductName, setNewProductName] = React.useState('');
-  const [newProductPrice, setNewProductPrice] = React.useState('');
-  const [errorName, setErrorName] = React.useState<string | undefined>(undefined);
-  const [errorPrice, setErrorPrice] = React.useState<string | undefined>(undefined);
-  const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [editPrice, setEditPrice] = React.useState('');
+  const [searchText, setSearchText] = React.useState('');
+  const [linkingId, setLinkingId] = React.useState<string | null>(null);
+  const [linkPrice, setLinkPrice] = React.useState('');
+  const [linkNote, setLinkNote] = React.useState('');
+  const [linkStock, setLinkStock] = React.useState<'in_stock' | 'low_stock' | 'out_of_stock'>('in_stock');
+  const [linkError, setLinkError] = React.useState<string | undefined>(undefined);
 
-  const handleAddProduct = async () => {
-    if (!newProductName.trim()) {
-      setErrorName('اسم المنتج مطلوب لإضافته للقائمة');
+  const [showProposeForm, setShowProposeForm] = React.useState(false);
+  const [proposeNameAr, setProposeNameAr] = React.useState('');
+  const [proposeNameEn, setProposeNameEn] = React.useState('');
+  const [proposeBrand, setProposeBrand] = React.useState('');
+  const [proposeError, setProposeError] = React.useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    void searchMasterProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSearch = async () => {
+    await searchMasterProducts(searchText.trim() ? { search: searchText.trim() } : undefined);
+  };
+
+  const startLinking = (product: MasterProduct) => {
+    const existing = assortmentItems.find((a) => a.masterProductId === product.id);
+    setLinkingId(product.id);
+    setLinkPrice(existing ? String(existing.unitPrice) : '');
+    setLinkNote(existing?.localNote ?? '');
+    setLinkStock(existing?.stockStatus ?? 'in_stock');
+    setLinkError(undefined);
+  };
+
+  const handleSaveLink = async (masterProductId: string) => {
+    const priceNumber = Number(linkPrice.trim());
+    if (!linkPrice.trim() || Number.isNaN(priceNumber) || priceNumber < 0) {
+      setLinkError('أدخل سعراً صحيحاً');
       return;
     }
-    setErrorName(undefined);
+    setLinkError(undefined);
 
-    if (!newProductPrice.trim()) {
-      setErrorPrice('السعر المرجعي مطلوب');
+    const ok = await linkMasterProduct(masterProductId, {
+      unitPrice: priceNumber,
+      currency: 'YER',
+      available: linkStock !== 'out_of_stock',
+      stockStatus: linkStock,
+      localNote: linkNote.trim(),
+    });
+    if (ok) setLinkingId(null);
+  };
+
+  const handlePropose = async () => {
+    if (!proposeNameAr.trim()) {
+      setProposeError('اسم المنتج مطلوب لإرسال الاقتراح');
       return;
     }
-    setErrorPrice(undefined);
+    setProposeError(undefined);
 
-    const ok = await createProduct({ name: newProductName.trim(), priceReference: newProductPrice.trim() });
-    if (ok) {
-      setNewProductName('');
-      setNewProductPrice('');
+    const domainId = taxonomyState.kind === 'success' ? taxonomyState.domains[0]?.id : undefined;
+    if (!domainId) {
+      setProposeError('لا يوجد تصنيف متاح حالياً لإرسال الاقتراح');
+      return;
+    }
+
+    const proposal = await proposeNewProduct({
+      proposedNameAr: proposeNameAr.trim(),
+      proposedNameEn: proposeNameEn.trim(),
+      domainId,
+      categoryNodeId: null,
+      brand: proposeBrand.trim(),
+      barcode: null,
+    });
+    if (proposal) {
+      setProposeNameAr('');
+      setProposeNameEn('');
+      setProposeBrand('');
+      setShowProposeForm(false);
     }
   };
 
-  const handleSavePrice = async (productId: string) => {
-    const product = state.kind === 'success' ? state.products.find((p) => p.id === productId) : undefined;
-    if (!product) return;
-    const ok = await updateProduct(productId, { name: product.name, priceReference: editPrice.trim() });
-    if (ok) setEditingId(null);
-  };
-
-  if (state.kind === 'loading' || state.kind === 'idle') {
-    return <StateView loading title="جاري تحميل منتجات الشريك…" />;
+  if (storeState.kind === 'loading' || storeState.kind === 'idle') {
+    return <StateView loading title="جاري تحميل متجر الشريك…" />;
   }
-  if (state.kind === 'error') {
-    return <StateView tone="danger" title="تعذر التحميل" description={state.message} actionLabel="رجوع" onActionPress={onBack} />;
+  if (storeState.kind === 'error') {
+    return <StateView tone="danger" title="تعذر التحميل" description={storeState.message} actionLabel="رجوع" onActionPress={onBack} />;
   }
 
-  const items = state.products;
+  const masterProducts = masterProductsState.kind === 'success' ? masterProductsState.items : [];
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <Header title="المنتجات التجريبية" subtitle="منتجات أوّلية للشريك أثناء الانضمام" />
+      <Header title="منتجات المتجر" subtitle="اختر من كتالوج المنصة الموحّد أو اقترح منتجاً جديداً" />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -82,54 +147,32 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       >
         <View style={{ alignItems: 'flex-end', gap: spacing[1] }}>
           <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-            هذه منتجات تجريبية تدخل ضمن كتالوج الشريك ليراجعه قسم الشركاء لاحقاً، ولن تظهر لدى العميل قبل الاعتماد.
+            اربط منتجات المتجر بكتالوج المنصة الموحّد. لن تظهر هذه المنتجات لدى العميل قبل اعتماد كتالوج المتجر.
           </Text>
         </View>
 
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
 
-        <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[3], borderRadius: radius.md, gap: spacing[3] }}>
-          <Text role="titleSm" style={{ textAlign: 'right', fontWeight: 'bold' }}>إضافة منتج جديد</Text>
-
+        <View style={{ gap: spacing[2] }}>
           <TextField
-            label="اسم المنتج"
-            value={newProductName}
-            onChangeText={(val) => {
-              setNewProductName(val);
-              if (val.trim()) setErrorName(undefined);
-            }}
-            {...(errorName ? { error: errorName } : {})}
-            placeholder="مثال: برجر دجاج كلاسيك، حليب طازج"
+            label="بحث في منتجات الكتالوج"
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="ابحث بالاسم أو الباركود"
           />
-
-          <TextField
-            label="السعر المرجعي (وصفي)"
-            value={newProductPrice}
-            onChangeText={(val) => {
-              setNewProductPrice(val);
-              if (val.trim()) setErrorPrice(undefined);
-            }}
-            {...(errorPrice ? { error: errorPrice } : {})}
-            placeholder="مثال: حوالي 1500 ريال حسب الشريك"
-          />
-
-          <Button
-            label="إضافة المنتج للقائمة"
-            tone="primary"
-            onPress={() => void handleAddProduct()}
-            disabled={actionState.kind === 'submitting'}
-            style={{ marginTop: spacing[2] }}
-          />
+          <Button label="بحث" tone="secondary" onPress={() => void handleSearch()} disabled={masterProductsState.kind === 'loading'} />
         </View>
 
         <View style={{ gap: spacing[3] }}>
           <View style={{ gap: spacing[1], alignItems: 'flex-end' }}>
             <Text role="bodyStrong" style={{ textAlign: 'right' }}>
-              {`المنتجات المضافة (${items.length})`}
+              {`منتجات الكتالوج (${masterProducts.length})`}
             </Text>
           </View>
 
-          {items.length === 0 ? (
+          {masterProductsState.kind === 'loading' ? (
+            <StateView loading title="جاري البحث…" />
+          ) : masterProducts.length === 0 ? (
             <View
               style={{
                 paddingVertical: spacing[4],
@@ -144,52 +187,147 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
             >
               <Icon name="basket-outline" size={32} tone="muted" />
               <Text role="bodyStrong" tone="muted" style={{ textAlign: 'center' }}>
-                لا توجد منتجات مضافة بعد
+                لا توجد نتائج مطابقة
               </Text>
             </View>
           ) : (
             <View style={{ gap: spacing[2] }}>
-              {items.map((item) => (
-                <View
-                  key={item.id}
-                  style={{
-                    padding: spacing[3],
-                    borderWidth: borders.hairline,
-                    borderColor: colorRoles.borderStrong,
-                    borderRadius: radius.sm,
-                    backgroundColor: colorRoles.surfaceBase,
-                    gap: spacing[2],
-                  }}
-                >
-                  <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
-                      {item.name}
-                    </Text>
-                    {editingId !== item.id && (
-                      <Pressable
-                        onPress={() => {
-                          setEditingId(item.id);
-                          setEditPrice(item.priceReference);
-                        }}
-                      >
-                        <Icon name="pencil-outline" size={18} tone="muted" />
-                      </Pressable>
+              {masterProducts.map((product) => {
+                const linked = assortmentItems.find((a) => a.masterProductId === product.id);
+                return (
+                  <View
+                    key={product.id}
+                    style={{
+                      padding: spacing[3],
+                      borderWidth: borders.hairline,
+                      borderColor: colorRoles.borderStrong,
+                      borderRadius: radius.sm,
+                      backgroundColor: colorRoles.surfaceBase,
+                      gap: spacing[2],
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
+                        {product.canonicalNameAr}
+                      </Text>
+                      {linkingId !== product.id && (
+                        <Pressable onPress={() => startLinking(product)}>
+                          <Icon name={linked ? 'pencil-outline' : 'add-circle-outline'} size={18} tone="muted" />
+                        </Pressable>
+                      )}
+                    </View>
+
+                    {linkingId === product.id ? (
+                      <View style={{ gap: spacing[2] }}>
+                        <TextField
+                          label="السعر"
+                          value={linkPrice}
+                          onChangeText={setLinkPrice}
+                          placeholder="مثال: 1500"
+                          {...(linkError ? { error: linkError } : {})}
+                        />
+                        <TextField label="ملاحظة محلية" value={linkNote} onChangeText={setLinkNote} placeholder="اختياري" />
+                        <View style={{ flexDirection: 'row-reverse', gap: spacing[2] }}>
+                          {(['in_stock', 'low_stock', 'out_of_stock'] as const).map((stock) => (
+                            <Pressable key={stock} onPress={() => setLinkStock(stock)}>
+                              <Text
+                                role="bodySm"
+                                tone={linkStock === stock ? 'success' : 'muted'}
+                                style={{ textAlign: 'right', fontWeight: linkStock === stock ? 'bold' : 'normal' }}
+                              >
+                                {STOCK_STATUS_LABELS[stock]}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                        <View style={{ flexDirection: 'row-reverse', gap: spacing[2] }}>
+                          <Button
+                            label="حفظ"
+                            tone="success"
+                            onPress={() => void handleSaveLink(product.id)}
+                            disabled={actionState.kind === 'submitting'}
+                          />
+                          <Button label="إلغاء" tone="ghost" onPress={() => setLinkingId(null)} />
+                        </View>
+                      </View>
+                    ) : linked ? (
+                      <View style={{ gap: spacing[1] }}>
+                        <Text role="bodySm" tone="success" style={{ textAlign: 'right' }}>
+                          {`${linked.unitPrice} ${linked.currency}`}
+                        </Text>
+                        <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+                          {STOCK_STATUS_LABELS[linked.stockStatus]}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+                        غير مضاف لمتجر الشريك بعد
+                      </Text>
                     )}
                   </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
-                  {editingId === item.id ? (
-                    <View style={{ gap: spacing[2] }}>
-                      <TextField value={editPrice} onChangeText={setEditPrice} placeholder="السعر المرجعي" />
-                      <View style={{ flexDirection: 'row-reverse', gap: spacing[2] }}>
-                        <Button label="حفظ" tone="success" onPress={() => void handleSavePrice(item.id)} disabled={actionState.kind === 'submitting'} />
-                        <Button label="إلغاء" tone="ghost" onPress={() => setEditingId(null)} />
-                      </View>
-                    </View>
-                  ) : (
-                    <Text role="bodySm" tone="success" style={{ textAlign: 'right' }}>
-                      {item.priceReference}
-                    </Text>
-                  )}
+        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+
+        <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[3], borderRadius: radius.md, gap: spacing[3] }}>
+          <Pressable onPress={() => setShowProposeForm((v) => !v)}>
+            <Text role="titleSm" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+              {showProposeForm ? 'إلغاء اقتراح منتج جديد' : 'المنتج غير موجود؟ اقترح منتجاً جديداً'}
+            </Text>
+          </Pressable>
+
+          {showProposeForm && (
+            <View style={{ gap: spacing[2] }}>
+              <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+                يُرسل الاقتراح لمراجعة قسم الكتالوج ولا يمكن إضافته للمتجر مباشرة قبل اعتماده.
+              </Text>
+              <TextField
+                label="اسم المنتج (عربي)"
+                value={proposeNameAr}
+                onChangeText={(val) => {
+                  setProposeNameAr(val);
+                  if (val.trim()) setProposeError(undefined);
+                }}
+                {...(proposeError ? { error: proposeError } : {})}
+                placeholder="مثال: برجر دجاج كلاسيك"
+              />
+              <TextField
+                label="اسم المنتج (إنجليزي)"
+                value={proposeNameEn}
+                onChangeText={setProposeNameEn}
+                placeholder="اختياري"
+              />
+              <TextField label="العلامة التجارية" value={proposeBrand} onChangeText={setProposeBrand} placeholder="اختياري" />
+              <Button
+                label="إرسال الاقتراح للمراجعة"
+                tone="primary"
+                onPress={() => void handlePropose()}
+                disabled={actionState.kind === 'submitting'}
+              />
+            </View>
+          )}
+
+          {proposals.length > 0 && (
+            <View style={{ gap: spacing[2] }}>
+              <Text role="bodyStrong" style={{ textAlign: 'right' }}>
+                {`الاقتراحات المرسلة (${proposals.length})`}
+              </Text>
+              {proposals.map((proposal) => (
+                <View
+                  key={proposal.id}
+                  style={{
+                    padding: spacing[2],
+                    borderWidth: borders.hairline,
+                    borderColor: colorRoles.borderSubtle,
+                    borderRadius: radius.sm,
+                  }}
+                >
+                  <Text role="bodySm" style={{ textAlign: 'right' }}>{proposal.proposedNameAr}</Text>
+                  <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>مُرسل للمراجعة</Text>
                 </View>
               ))}
             </View>
@@ -211,4 +349,3 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     </View>
   );
 }
-

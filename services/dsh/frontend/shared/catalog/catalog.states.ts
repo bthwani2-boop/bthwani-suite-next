@@ -1,4 +1,5 @@
-import type { CatalogState, CatalogSubmission, CatalogSubmissionState, PartnerCatalog } from "./catalog.types";
+import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
+import type { CatalogState, PartnerCatalog } from "./legacy-catalog-compat.types";
 
 export type CatalogActionState = "idle" | "submitting" | "success" | "error" | "conflict";
 

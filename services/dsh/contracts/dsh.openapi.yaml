@@ -5119,11 +5119,13 @@ components:
 
     DshCartItem:
       type: object
-      required: [id, cartId, productId, productName, priceReference, unitPrice, quantity, version, createdAt, updatedAt]
+      required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, quantity, version, createdAt, updatedAt]
       properties:
         id: { type: string }
         cartId: { type: string }
         productId: { type: string }
+        masterProductId: { type: string, description: "Sovereign central-catalog master product id (equal to productId today)." }
+        storeAssortmentId: { type: ["string", "null"], description: "The dsh_store_assortments row this cart line resolved against." }
         productName: { type: string, description: "Snapshotted server-side from the catalog product at add-to-cart time." }
         priceReference: { type: string, description: "Display label snapshotted from catalog — not a computed financial amount." }
         unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog product's unitPrice at add-to-cart time." }
@@ -5165,13 +5167,13 @@ components:
     DshUpsertCartItemRequest:
       type: object
       additionalProperties: false
-      required: [storeId, productId, quantity]
+      required: [storeId, masterProductId, quantity]
       properties:
         storeId: { type: string }
         fulfillmentMode:
           type: string
           enum: [bthwani_delivery, partner_delivery, pickup]
-        productId: { type: string }
+        masterProductId: { type: string, description: "Sovereign central-catalog master product id to add/update in the cart." }
         quantity: { type: integer, minimum: 1 }
 
     DshUpsertCartItemResponse:

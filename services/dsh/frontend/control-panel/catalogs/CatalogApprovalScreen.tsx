@@ -1,10 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { CpButton, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import { useCatalogApprovalController } from "../../shared/catalog";
+
+const authSectionStyle: CSSProperties = {
+  maxWidth: "32rem",
+  margin: "4rem auto",
+  display: "grid",
+  gap: "1rem",
+  padding: "1.5rem",
+  border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
+  borderRadius: "1rem",
+  background: "Canvas",
+};
+const authButtonRowStyle: CSSProperties = { display: "flex", gap: "0.75rem" };
+const authButtonFlexStyle: CSSProperties = { flex: 1 };
+const headingStyle: CSSProperties = { margin: 0 };
+const mutedTextStyle: CSSProperties = { opacity: 0.7 };
+const listSectionStyle: CSSProperties = { display: "grid", gap: "1rem" };
+const submissionCardStyle: CSSProperties = {
+  display: "grid",
+  gap: "0.75rem",
+  padding: "1rem",
+  border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
+  borderRadius: "1rem",
+};
+const decisionButtonRowStyle: CSSProperties = { display: "flex", gap: "0.75rem" };
 
 export function CatalogApprovalScreen() {
   const identity = useIdentitySession();
@@ -15,22 +39,10 @@ export function CatalogApprovalScreen() {
 
   if (identity.state.kind !== "authenticated") {
     return (
-      <section
-        dir="rtl"
-        style={{
-          maxWidth: "32rem",
-          margin: "4rem auto",
-          display: "grid",
-          gap: "1rem",
-          padding: "1.5rem",
-          border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-          borderRadius: "1rem",
-          background: "Canvas",
-        }}
-      >
+      <section dir="rtl" style={authSectionStyle}>
         <div>
-          <h1 style={{ margin: 0 }}>مراجعة واعتماد الكتالوجات</h1>
-          <p style={{ opacity: 0.7 }}>يتطلب حساب operator مصرح به لمراجعة الكتالوجات.</p>
+          <h1 style={headingStyle}>مراجعة واعتماد الكتالوجات</h1>
+          <p style={mutedTextStyle}>يتطلب حساب operator مصرح به لمراجعة الكتالوجات.</p>
         </div>
         <CpTextInput
           value={username}
@@ -45,17 +57,17 @@ export function CatalogApprovalScreen() {
           type="password"
           aria-label="كلمة المرور"
         />
-        <div style={{ display: "flex", gap: "0.75rem" }}>
+        <div style={authButtonRowStyle}>
           <CpButton
             disabled={username.trim().length === 0 || password.length < 4 || identity.state.kind === "authenticating"}
             onClick={() => void identity.login(username.trim(), password)}
-            style={{ flex: 1 }}
+            style={authButtonFlexStyle}
           >
             {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}
           </CpButton>
           <CpButton
             onClick={() => devBypassLogin("operator")}
-            style={{ flex: 1 }}
+            style={authButtonFlexStyle}
           >
             تجاوز تسجيل الدخول (مطور)
           </CpButton>
@@ -78,18 +90,9 @@ export function CatalogApprovalScreen() {
       }
     >
       {controller.state.kind === "success" ? (
-        <section style={{ display: "grid", gap: "1rem" }}>
+        <section style={listSectionStyle}>
           {controller.state.submissions.map((submission) => (
-            <article
-              key={submission.id}
-              style={{
-                display: "grid",
-                gap: "0.75rem",
-                padding: "1rem",
-                border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-                borderRadius: "1rem",
-              }}
-            >
+            <article key={submission.id} style={submissionCardStyle}>
               <strong>{submission.storeId} — النسخة {submission.revision}</strong>
               <span>الحالة: {submission.status}</span>
               <CpTextInput
@@ -98,7 +101,7 @@ export function CatalogApprovalScreen() {
                 placeholder="سبب قرار الاعتماد"
                 aria-label={`سبب قرار ${submission.storeId}`}
               />
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={decisionButtonRowStyle}>
                 <CpButton
                   disabled={(reasonByStore[submission.storeId] ?? "").trim().length < 3 || controller.action === "submitting"}
                   onClick={() => void controller.decide({

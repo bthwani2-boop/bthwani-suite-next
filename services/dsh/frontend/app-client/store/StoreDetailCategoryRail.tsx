@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FilterRail, colorRoles } from '@bthwani/ui-kit';
-import type { CatalogCategory } from '../../shared/catalog/catalog.types';
+import type { CatalogCategory } from '../../shared/catalog/legacy-catalog-compat.types';
 
 type Props = Readonly<{
   categories: readonly CatalogCategory[];

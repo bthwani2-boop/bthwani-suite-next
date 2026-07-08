@@ -395,6 +395,43 @@ func (s *protectedStoreServer) requireActor(
 	return store.StoreActor{}, false
 }
 
+// requireCatalogPermission is an additive alternative to requireActor: it
+// keeps 100% of the flat role-based access operators already have (via
+// fallbackRoles), but also grants access to any actor whose identity carries
+// a fine-grained Permission{Service:"dsh", Surface:"central-catalog",
+// Action:action} entry -- letting a non-operator be granted just one narrow
+// capability (e.g. media review) without full operator power, without
+// requiring any new external system: the identity service already parses
+// this into Identity.Permissions from a DB-backed column.
+func (s *protectedStoreServer) requireCatalogPermission(
+	w http.ResponseWriter,
+	r *http.Request,
+	action string,
+	fallbackRoles ...string,
+) (store.StoreActor, bool) {
+	identity, err := s.identity.Resolve(r.Context(), r.Header.Get("Authorization"))
+	if errors.Is(err, auth.ErrUnauthenticated) {
+		store.SendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer session is missing or invalid")
+		return store.StoreActor{}, false
+	}
+	if err != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
+		return store.StoreActor{}, false
+	}
+	for _, role := range fallbackRoles {
+		if identity.HasRole(role) {
+			return store.StoreActor{ID: identity.Subject, Role: role}, true
+		}
+	}
+	for _, p := range identity.Permissions {
+		if p.Service == "dsh" && p.Surface == "central-catalog" && p.Action == action {
+			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action}, true
+		}
+	}
+	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
+	return store.StoreActor{}, false
+}
+
 func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, response store.StoreActionResponse, err error) {
 	if err == nil {
 		store.SendJSON(w, http.StatusOK, response)

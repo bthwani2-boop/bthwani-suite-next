@@ -10,7 +10,6 @@ import (
 	"math"
 	"time"
 
-	"dsh-api/internal/catalog"
 )
 
 var (
@@ -30,12 +29,14 @@ const (
 )
 
 type CartItem struct {
-	ID             string `json:"id"`
-	CartID         string `json:"cartId"`
-	ProductID      string `json:"productId"`
-	ProductName    string `json:"productName"`
-	PriceReference string `json:"priceReference"`
-	// UnitPrice is snapshotted from the catalog product at add-to-cart time,
+	ID                string  `json:"id"`
+	CartID            string  `json:"cartId"`
+	ProductID         string  `json:"productId"`
+	MasterProductID   string  `json:"masterProductId"`
+	StoreAssortmentID *string `json:"storeAssortmentId"`
+	ProductName       string  `json:"productName"`
+	PriceReference    string  `json:"priceReference"`
+	// UnitPrice is snapshotted from the store assortment at add-to-cart time,
 	// so a later catalog price change never retroactively changes an
 	// existing cart/order. It is never taken from client input.
 	UnitPrice float64   `json:"unitPrice"`
@@ -65,11 +66,11 @@ type ServiceabilityResult struct {
 }
 
 type UpsertItemInput struct {
-	// ProductID is the only product identity taken from the caller: name,
+	// MasterProductID is the only product identity taken from the caller: name,
 	// priceReference (display label), and unitPrice are always looked up
-	// server-side from the catalog product, never trusted from the client.
-	ProductID string `json:"productId"`
-	Quantity  int    `json:"quantity"`
+	// server-side from the store assortment row, never trusted from the client.
+	MasterProductID string `json:"masterProductId"`
+	Quantity        int    `json:"quantity"`
 }
 
 func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode FulfillmentMode) (*Cart, error) {
@@ -119,33 +120,45 @@ func GetCart(ctx context.Context, db *sql.DB, clientID, storeID string) (*Cart, 
 }
 
 func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input UpsertItemInput) (*CartItem, error) {
-	if input.ProductID == "" || input.Quantity < 1 {
+	if input.MasterProductID == "" || input.Quantity < 1 {
 		return nil, ErrInvalid
 	}
-	product, err := catalog.GetProduct(ctx, db, storeID, input.ProductID)
-	if errors.Is(err, catalog.ErrNotFound) {
+	var assortmentID, name string
+	var unitPrice float64
+	var available bool
+	err := db.QueryRowContext(ctx,
+		`SELECT a.id, mp.canonical_name_ar, a.unit_price, a.available
+		 FROM dsh_store_assortments a
+		 JOIN dsh_master_products mp ON mp.id = a.master_product_id
+		 WHERE a.store_id = $1 AND a.master_product_id = $2`,
+		storeID, input.MasterProductID,
+	).Scan(&assortmentID, &name, &unitPrice, &available)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
 	}
 	if err != nil {
 		return nil, err
 	}
-	if !product.IsActive {
+	if !available || unitPrice <= 0 {
 		return nil, ErrInvalid
 	}
+	priceReference := fmt.Sprintf("%.2f", unitPrice)
 	var item CartItem
 	err = db.QueryRowContext(ctx,
-		`INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, quantity)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO dsh_cart_items (cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price, quantity)
+		 VALUES ($1, $2, $2, $3, $4, $5, $6, $7)
 		 ON CONFLICT (cart_id, product_id) DO UPDATE
-		   SET quantity        = EXCLUDED.quantity,
-		       product_name    = EXCLUDED.product_name,
-		       price_reference = EXCLUDED.price_reference,
-		       unit_price      = EXCLUDED.unit_price,
-		       version         = dsh_cart_items.version + 1,
-		       updated_at      = NOW()
-		 RETURNING id, cart_id, product_id, product_name, price_reference, unit_price, quantity, version, created_at, updated_at`,
-		cartID, product.ID, product.Name, product.PriceReference, product.UnitPrice, input.Quantity,
-	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt)
+		   SET quantity            = EXCLUDED.quantity,
+		       master_product_id   = EXCLUDED.master_product_id,
+		       store_assortment_id = EXCLUDED.store_assortment_id,
+		       product_name        = EXCLUDED.product_name,
+		       price_reference     = EXCLUDED.price_reference,
+		       unit_price          = EXCLUDED.unit_price,
+		       version             = dsh_cart_items.version + 1,
+		       updated_at          = NOW()
+		 RETURNING id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price, quantity, version, created_at, updated_at`,
+		cartID, input.MasterProductID, assortmentID, name, priceReference, unitPrice, input.Quantity,
+	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +311,7 @@ func createCart(ctx context.Context, db *sql.DB, clientID, storeID string, mode 
 
 func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, error) {
 	rows, err := db.QueryContext(ctx,
-		`SELECT id, cart_id, product_id, product_name, price_reference, unit_price, quantity, version, created_at, updated_at
+		`SELECT id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price, quantity, version, created_at, updated_at
 		 FROM dsh_cart_items WHERE cart_id = $1 ORDER BY created_at`,
 		cartID,
 	)
@@ -309,7 +322,7 @@ func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, erro
 	var items []CartItem
 	for rows.Next() {
 		var item CartItem
-		if err := rows.Scan(&item.ID, &item.CartID, &item.ProductID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPrice, &item.Quantity, &item.Version, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

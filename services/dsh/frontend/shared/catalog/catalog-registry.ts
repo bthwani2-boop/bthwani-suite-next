@@ -6,7 +6,8 @@
  * دون أي hardcode في الواجهة.
  */
 
-import type { CatalogSubmission, CatalogProduct, CatalogCategory } from "./catalog.types";
+import type { CatalogSubmission } from "./catalog.types";
+import type { CatalogProduct, CatalogCategory } from "./legacy-catalog-compat.types";
 
 // ─── Main Tab Registry ────────────────────────────────────────────────────────
 

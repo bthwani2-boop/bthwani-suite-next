@@ -1,4 +1,6 @@
 export * from "./catalog.types";
+export * from "./legacy-catalog-compat.types";
+export * from "./legacy-catalog-compat.api";
 export * from "./catalog.states";
 export * from "./catalog.view-model";
 export * from "./use-catalog-controller";

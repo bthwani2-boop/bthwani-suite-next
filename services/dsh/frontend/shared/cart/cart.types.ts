@@ -4,6 +4,10 @@ export type DshCartItem = {
   readonly id: string;
   readonly cartId: string;
   readonly productId: string;
+  /** Sovereign central-catalog master product id (equal to productId today). */
+  readonly masterProductId: string;
+  /** The store assortment row this cart line resolved against, if any. */
+  readonly storeAssortmentId: string | null;
   readonly productName: string;
   readonly priceReference: string;
   /** Snapshotted server-side from the catalog product at add-to-cart time. */

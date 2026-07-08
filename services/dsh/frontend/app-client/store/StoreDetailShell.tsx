@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { ProductCard, colorRoles } from '@bthwani/ui-kit';
 import type { DshStoreDetailViewModel } from '../../shared/store';
-import type { CatalogCategory, CatalogProduct, CatalogMedia } from '../../shared/catalog/catalog.types';
+import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/legacy-catalog-compat.types';
+import type { CatalogMedia } from '../../shared/catalog/catalog.types';
 import { StoreDetailHeroSection } from './StoreDetailHeroSection';
 import { StoreDetailInfoCard } from './StoreDetailInfoCard';
 import { StoreDetailCarousel } from './StoreDetailCarousel';

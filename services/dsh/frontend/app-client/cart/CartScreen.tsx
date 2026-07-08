@@ -684,7 +684,7 @@ export function CartScreen({
                       tone="ghost"
                       size="sm"
                       fullWidth={false}
-                      onPress={() => void controller.updateItemQuantity(item.productId, item.productName, item.quantity - 1, item.priceReference)}
+                      onPress={() => void controller.updateItemQuantity(item.masterProductId, item.productName, item.quantity - 1, item.priceReference)}
                       style={styles.qtyBtn}
                     />
                     <Text role="bodyStrong" style={styles.qtyNumberText}>{item.quantity}</Text>
@@ -693,7 +693,7 @@ export function CartScreen({
                       tone="primary"
                       size="sm"
                       fullWidth={false}
-                      onPress={() => void controller.updateItemQuantity(item.productId, item.productName, item.quantity + 1, item.priceReference)}
+                      onPress={() => void controller.updateItemQuantity(item.masterProductId, item.productName, item.quantity + 1, item.priceReference)}
                       style={styles.qtyBtn}
                     />
                   </View>

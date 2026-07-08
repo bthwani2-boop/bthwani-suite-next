@@ -66,14 +66,14 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	var body struct {
 		StoreID         string `json:"storeId"`
 		FulfillmentMode string `json:"fulfillmentMode"`
-		ProductID       string `json:"productId"`
+		MasterProductID string `json:"masterProductId"`
 		Quantity        int    `json:"quantity"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if body.StoreID == "" || body.ProductID == "" || body.Quantity < 1 {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId, productId and quantity >= 1 are required")
+	if body.StoreID == "" || body.MasterProductID == "" || body.Quantity < 1 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId, masterProductId and quantity >= 1 are required")
 		return
 	}
 	mode := cart.FulfillmentMode(body.FulfillmentMode)
@@ -86,8 +86,8 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		return
 	}
 	item, err := cart.UpsertItem(r.Context(), s.db, body.StoreID, c.ID, cart.UpsertItemInput{
-		ProductID: body.ProductID,
-		Quantity:  body.Quantity,
+		MasterProductID: body.MasterProductID,
+		Quantity:        body.Quantity,
 	})
 	if errors.Is(err, cart.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid cart item")

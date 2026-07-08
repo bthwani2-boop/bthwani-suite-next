@@ -38,7 +38,7 @@ export function useCartController(storeId: string | undefined, authKind = "unaut
   }, [authKind, load, storeId]);
 
   const addItem = useCallback(
-    async (input: { productId: string; productName: string; priceReference?: string; quantity: number; fulfillmentMode?: DshFulfillmentMode }) => {
+    async (input: { masterProductId: string; productName: string; priceReference?: string; quantity: number; fulfillmentMode?: DshFulfillmentMode }) => {
       if (!storeId) return;
       setAction("submitting");
       try { await upsertCartItem({ storeId, ...input }); setAction("success"); await load(); }
@@ -48,17 +48,17 @@ export function useCartController(storeId: string | undefined, authKind = "unaut
   );
 
   const updateItemQuantity = useCallback(
-    async (productId: string, productName: string, quantity: number, priceReference?: string) => {
+    async (masterProductId: string, productName: string, quantity: number, priceReference?: string) => {
       if (!storeId) return;
       const cart = state.kind === "success" ? state.cart : null;
-      if (resolveQuantityRemoval(cart?.items.find((i) => i.productId === productId)?.quantity ?? 1, quantity) === "remove") {
-        const item = cart?.items.find((i) => i.productId === productId);
+      if (resolveQuantityRemoval(cart?.items.find((i) => i.masterProductId === masterProductId)?.quantity ?? 1, quantity) === "remove") {
+        const item = cart?.items.find((i) => i.masterProductId === masterProductId);
         if (item) await removeItem(cart!.id, item.id);
         return;
       }
       setAction("submitting");
       try {
-        await upsertCartItem({ storeId, productId, productName, quantity, ...(priceReference !== undefined ? { priceReference } : {}) });
+        await upsertCartItem({ storeId, masterProductId, productName, quantity, ...(priceReference !== undefined ? { priceReference } : {}) });
         setAction("success"); await load();
       } catch { setAction("error"); }
     },

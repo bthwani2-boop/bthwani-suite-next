@@ -3270,6 +3270,10 @@ export interface components {
             id: string;
             cartId: string;
             productId: string;
+            /** @description Sovereign central-catalog master product id (equal to productId today). */
+            masterProductId: string;
+            /** @description The dsh_store_assortments row this cart line resolved against. */
+            storeAssortmentId: string | null;
             /** @description Snapshotted server-side from the catalog product at add-to-cart time. */
             productName: string;
             /** @description Display label snapshotted from catalog — not a computed financial amount. */
@@ -3309,7 +3313,8 @@ export interface components {
             storeId: string;
             /** @enum {string} */
             fulfillmentMode?: "bthwani_delivery" | "partner_delivery" | "pickup";
-            productId: string;
+            /** @description Sovereign central-catalog master product id to add/update in the cart. */
+            masterProductId: string;
             quantity: number;
         };
         DshUpsertCartItemResponse: {

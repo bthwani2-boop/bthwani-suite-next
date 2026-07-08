@@ -17,8 +17,6 @@ import type {
   DshReviewDocumentInput,
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
-  DshFieldPartnerProduct,
-  DshFieldPartnerProductInput,
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -194,23 +192,4 @@ export function fieldUpdatePartnerStore(
   input: DshFieldPartnerStoreDraftInput
 ): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft; audit: unknown }> {
   return request(`/dsh/field/partners/${partnerId}/store`, { method: "PATCH", body: input });
-}
-
-export function fieldListPartnerProducts(partnerId: string): Promise<{ products: DshFieldPartnerProduct[] }> {
-  return request(`/dsh/field/partners/${partnerId}/products`);
-}
-
-export function fieldCreatePartnerProduct(
-  partnerId: string,
-  input: DshFieldPartnerProductInput
-): Promise<{ product: DshFieldPartnerProduct }> {
-  return request(`/dsh/field/partners/${partnerId}/products`, { method: "POST", body: input });
-}
-
-export function fieldUpdatePartnerProduct(
-  partnerId: string,
-  productId: string,
-  input: DshFieldPartnerProductInput
-): Promise<{ product: DshFieldPartnerProduct }> {
-  return request(`/dsh/field/partners/${partnerId}/products/${productId}`, { method: "PATCH", body: input });
 }

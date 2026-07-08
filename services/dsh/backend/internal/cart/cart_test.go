@@ -26,7 +26,7 @@ func TestUpsertItemRejectsMissingProductID(t *testing.T) {
 		Quantity: 1,
 	})
 	if err != ErrInvalid {
-		t.Fatalf("expected ErrInvalid for missing productId, got %v", err)
+		t.Fatalf("expected ErrInvalid for missing masterProductId, got %v", err)
 	}
 }
 
@@ -34,8 +34,8 @@ func TestUpsertItemRejectsNonPositiveQuantity(t *testing.T) {
 	cases := []int{0, -1, -100}
 	for _, qty := range cases {
 		_, err := UpsertItem(context.Background(), nil, "store-1", "cart-1", UpsertItemInput{
-			ProductID: "prod-1",
-			Quantity:  qty,
+			MasterProductID: "prod-1",
+			Quantity:        qty,
 		})
 		if err != ErrInvalid {
 			t.Fatalf("expected ErrInvalid for quantity=%d, got %v", qty, err)
@@ -44,10 +44,10 @@ func TestUpsertItemRejectsNonPositiveQuantity(t *testing.T) {
 }
 
 // Product name, price label, and unit price are never taken from the
-// client: UpsertItemInput only carries productId + quantity, and the
-// authoritative snapshot is looked up server-side from the catalog.
+// client: UpsertItemInput only carries masterProductId + quantity, and the
+// authoritative snapshot is looked up server-side from the store assortment.
 func TestUpsertItemInputHasNoClientSuppliedPricingFields(t *testing.T) {
-	input := UpsertItemInput{ProductID: "prod-1", Quantity: 1}
+	input := UpsertItemInput{MasterProductID: "prod-1", Quantity: 1}
 	_ = input
 }
 

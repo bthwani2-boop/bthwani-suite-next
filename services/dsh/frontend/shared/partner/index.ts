@@ -17,7 +17,7 @@ export type {
   DshPartnerAuditEvent, DshPartnerLinkedStore, DshFieldPartnerStoreDraft, DshFieldPartnerStoreDraftInput,
   DshCreatePartnerInput, DshUpdatePartnerRequest, DshPartnerTransitionInput,
   DshAddDocumentInput, DshReviewDocumentInput, DshCreatePartnerFieldVisitRequest,
-  DshPartnerListResponse, DshFieldPartnerProduct, DshFieldPartnerProductInput,
+  DshPartnerListResponse,
 } from "./partner.types";
 
 export type {
@@ -43,8 +43,7 @@ export {
 export { usePartnerSelfController } from "./use-partner-self-controller";
 export { useFieldPartnerProgressController } from "./use-field-partner-progress-controller";
 export type { FieldPartnerProgressState } from "./use-field-partner-progress-controller";
-export { useFieldPartnerProductsController } from "./use-field-partner-products-controller";
-export type { FieldPartnerProductsState } from "./use-field-partner-products-controller";
+export { useFieldCatalogController } from "./use-field-catalog-controller";
 export * from "./partner-registry";
 export * from "./use-partners-controller";
 
@@ -61,9 +60,6 @@ export {
   fieldListFieldVisits,
   fieldGetPartnerStore,
   fieldUpdatePartnerStore,
-  fieldListPartnerProducts,
-  fieldCreatePartnerProduct,
-  fieldUpdatePartnerProduct,
 } from "./partner.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS } from "./partner.types";
