@@ -8,6 +8,8 @@ import type {
   StoreAssortment,
   CatalogPlatformPolicy,
   ClientVisibleCatalogResponse,
+  CatalogAsset,
+  CatalogAssetLink,
 } from "./central-catalog.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -438,4 +440,107 @@ export async function createFieldProductProposal(input: {
 
 export async function fetchPublishedCentralCatalog(storeId: string): Promise<ClientVisibleCatalogResponse> {
   return publicRequest<ClientVisibleCatalogResponse>(`/dsh/stores/${encodeURIComponent(storeId)}/catalog`);
+}
+
+export interface SeedStatus {
+  readonly domainsCount: number;
+  readonly nodesCount: number;
+  readonly manualRequestExists: boolean;
+  readonly shayInExists: boolean;
+  readonly awnakExists: boolean;
+  readonly seedVersion: string;
+  readonly missingSeeds: readonly string[];
+}
+
+export async function fetchSeedStatus(): Promise<SeedStatus> {
+  return request<SeedStatus>("/dsh/operator/catalog/seed-status");
+}
+
+export async function fetchCatalogAssets(query?: { status?: string; limit?: number; offset?: number }): Promise<readonly CatalogAsset[]> {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.limit !== undefined) params.set("limit", String(query.limit));
+  if (query?.offset !== undefined) params.set("offset", String(query.offset));
+  const qs = params.toString();
+  const path = qs ? `/dsh/operator/catalog/assets?${qs}` : "/dsh/operator/catalog/assets";
+  const resp = await request<{ assets: readonly CatalogAsset[] }>(path);
+  return resp.assets;
+}
+
+export async function createAssetUploadIntent(input: {
+  readonly objectKey: string;
+  readonly originalFileName: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly sourceSurface: string;
+}): Promise<CatalogAsset> {
+  const resp = await request<{ asset: CatalogAsset }>("/dsh/operator/catalog/assets/upload-intents", {
+    method: "POST",
+    body: input,
+  });
+  return resp.asset;
+}
+
+export async function updateCatalogAsset(assetId: string, input: {
+  readonly altAr?: string;
+  readonly altEn?: string;
+  readonly dominantColor?: string;
+  readonly width?: number;
+  readonly height?: number;
+}): Promise<CatalogAsset> {
+  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`, {
+    method: "PATCH",
+    body: input,
+  });
+  return resp.asset;
+}
+
+export async function reviewCatalogAsset(assetId: string, input: {
+  readonly status: "approved" | "rejected" | "archived";
+  readonly reviewNote: string;
+}): Promise<CatalogAsset> {
+  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/review`, {
+    method: "POST",
+    body: input,
+  });
+  return resp.asset;
+}
+
+export async function linkCatalogAsset(assetId: string, input: {
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly role: string;
+  readonly sortOrder?: number;
+  readonly isPrimary?: boolean;
+}): Promise<CatalogAssetLink> {
+  const resp = await request<{ link: CatalogAssetLink }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/link`, {
+    method: "POST",
+    body: input,
+  });
+  return resp.link;
+}
+
+export async function unlinkCatalogAsset(assetId: string, linkId: string, query: { entityType: string; entityId: string }): Promise<void> {
+  const params = new URLSearchParams();
+  params.set("entityType", query.entityType);
+  params.set("entityId", query.entityId);
+  await request<void>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/links/${encodeURIComponent(linkId)}?${params.toString()}`, {
+    method: "DELETE",
+  });
+}
+
+export async function fetchCatalogAssetLinks(query: { entityType: string; entityId: string }): Promise<readonly CatalogAssetLink[]> {
+  const params = new URLSearchParams();
+  params.set("entityType", query.entityType);
+  params.set("entityId", query.entityId);
+  const resp = await request<{ links: readonly CatalogAssetLink[] }>(`/dsh/operator/catalog/asset-links?${params.toString()}`);
+  return resp.links;
+}
+
+export async function putEntityImage(entityType: "domains" | "nodes" | "master-products" | "product-proposals", entityId: string, role: string, assetId: string): Promise<CatalogAssetLink> {
+  const resp = await request<{ link: CatalogAssetLink }>(`/dsh/operator/catalog/${entityType}/${encodeURIComponent(entityId)}/images/${encodeURIComponent(role)}`, {
+    method: "PUT",
+    body: { assetId },
+  });
+  return resp.link;
 }

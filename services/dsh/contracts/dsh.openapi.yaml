@@ -931,7 +931,7 @@ paths:
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
       responses:
-        "200": { description: Per-domain/per-node/default commission, fee, and capability policy rows. }
+        "200": { description: "Per-domain/per-node/default commission, fee, and capability policy rows." }
 
   /dsh/operator/catalog/platform-policies/{policyId}:
     put:
@@ -945,6 +945,204 @@ paths:
           schema: { type: string }
       responses:
         "200": { description: Policy updated. }
+
+  /dsh/operator/catalog/seed-status:
+    get:
+      operationId: getCatalogSeedStatus
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Seed status diagnostics.
+
+  /dsh/operator/catalog/assets:
+    get:
+      operationId: listCatalogAssets
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: List of DAM assets.
+
+  /dsh/operator/catalog/assets/upload-intents:
+    post:
+      operationId: createAssetUploadIntent
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201":
+          description: Upload intent created.
+
+  /dsh/operator/catalog/assets/{assetId}:
+    patch:
+      operationId: updateCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Asset metadata updated.
+
+  /dsh/operator/catalog/assets/{assetId}/review:
+    post:
+      operationId: reviewCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Asset reviewed by operator.
+
+  /dsh/operator/catalog/assets/{assetId}/link:
+    post:
+      operationId: linkCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Link established.
+
+  /dsh/operator/catalog/assets/{assetId}/links/{linkId}:
+    delete:
+      operationId: unlinkCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: linkId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: entityType
+          in: query
+          required: true
+          schema: { type: string }
+        - name: entityId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Link removed.
+
+  /dsh/operator/catalog/asset-links:
+    get:
+      operationId: listCatalogAssetLinks
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: entityType
+          in: query
+          required: true
+          schema: { type: string }
+        - name: entityId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of links for the entity.
+
+  /dsh/operator/catalog/domains/{domainId}/images/{role}:
+    put:
+      operationId: putDomainImage
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: domainId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: role
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Domain image updated.
+
+  /dsh/operator/catalog/nodes/{nodeId}/images/{role}:
+    put:
+      operationId: putNodeImage
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: role
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Node image updated.
+
+  /dsh/operator/catalog/master-products/{productId}/images/{role}:
+    put:
+      operationId: putMasterProductImage
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: role
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Product image updated.
+
+  /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}:
+    put:
+      operationId: putProductProposalImage
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: proposalId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: role
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Proposal image updated.
 
   /dsh/operator/stores/{storeId}/assortment:
     get:
@@ -4423,9 +4621,8 @@ components:
         store:
           $ref: "#/components/schemas/DshStoreDetail"
         latestAction:
-          oneOf:
-            - $ref: "#/components/schemas/DshStoreAuditEvent"
-            - type: "null"
+          $ref: "#/components/schemas/DshStoreAuditEvent"
+          nullable: true
 
     PartnerStoreSettingsRequest:
       type: object
@@ -4962,9 +5159,8 @@ components:
       required: [cart]
       properties:
         cart:
-          oneOf:
-            - $ref: "#/components/schemas/DshCart"
-            - type: "null"
+          $ref: "#/components/schemas/DshCart"
+          nullable: true
 
     DshUpsertCartItemRequest:
       type: object
@@ -5167,9 +5363,9 @@ components:
         assignedBy: { type: string }
         status: { $ref: "#/components/schemas/DshAssignmentStatus" }
         responseDeadlineAt: { type: string, format: date-time }
-        acceptedAt: { type: [string, "null"], format: date-time }
-        declinedAt: { type: [string, "null"], format: date-time }
-        completedAt: { type: [string, "null"], format: date-time }
+        acceptedAt: { type: ["string", "null"], format: date-time }
+        declinedAt: { type: ["string", "null"], format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         delivery: { $ref: "#/components/schemas/DshDelivery" }
@@ -5262,7 +5458,7 @@ components:
         status: { $ref: "#/components/schemas/DshVisitStatus" }
         notes: { type: string }
         startedAt: { type: string, format: date-time }
-        completedAt: { type: [string, "null"], format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
@@ -5336,7 +5532,7 @@ components:
         description: { type: string }
         status: { $ref: "#/components/schemas/DshEscalationStatus" }
         resolvedBy: { type: string }
-        resolvedAt: { type: [string, "null"], format: date-time }
+        resolvedAt: { type: ["string", "null"], format: date-time }
         resolutionNote: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -5440,8 +5636,8 @@ components:
         status: { $ref: "#/components/schemas/DshTicketStatus" }
         assignedTo: { type: string }
         orderId: { type: string }
-        resolvedAt: { type: [string, "null"], format: date-time }
-        closedAt: { type: [string, "null"], format: date-time }
+        resolvedAt: { type: ["string", "null"], format: date-time }
+        closedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
@@ -5522,7 +5718,7 @@ components:
         affectedScope: { $ref: "#/components/schemas/DshIncidentScope" }
         raisedBy: { type: string }
         resolvedBy: { type: string }
-        resolvedAt: { type: [string, "null"], format: date-time }
+        resolvedAt: { type: ["string", "null"], format: date-time }
         postmortemUrl: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -5672,7 +5868,7 @@ components:
         actionUrl: { type: string }
         isRead: { type: boolean }
         createdAt: { type: string, format: date-time }
-        readAt: { type: [string, "null"], format: date-time }
+        readAt: { type: ["string", "null"], format: date-time }
 
     DshNotificationsListResponse:
       type: object
@@ -5771,7 +5967,7 @@ components:
         audience: { type: string }
         placement: { type: string }
         createdBy: { type: string }
-        archivedAt: { type: [string, "null"], format: date-time }
+        archivedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
@@ -6117,7 +6313,7 @@ components:
           items: { type: string }
         version: { type: integer }
         createdAt: { type: string, format: date-time }
-        submittedAt: { type: [string, "null"], format: date-time }
+        submittedAt: { type: ["string", "null"], format: date-time }
 
     DshCreatePartnerFieldVisitRequest:
       type: object
@@ -6389,7 +6585,7 @@ components:
         appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
         chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
         actorCharged: { type: string, enum: [partner] }
-        effectiveFrom: { type: [string, "null"], format: date-time }
+        effectiveFrom: { type: ["string", "null"], format: date-time }
         notes: { type: string }
         updatedBy: { type: string }
         updatedAt: { type: string, format: date-time }
@@ -6411,7 +6607,7 @@ components:
         currency: { type: string }
         appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
         chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
-        effectiveFrom: { type: [string, "null"], format: date-time }
+        effectiveFrom: { type: ["string", "null"], format: date-time }
         notes: { type: string }
 
     # ── Administration Schemas ───────────────────────────────────────
@@ -6483,7 +6679,7 @@ components:
         partnerId: { type: string }
         status: { type: string }
         submittedAt: { type: string, format: date-time }
-        reviewedAt: { type: [string, "null"], format: date-time }
+        reviewedAt: { type: ["string", "null"], format: date-time }
         reviewedBy: { type: string }
         rejectionReason: { type: string }
 
@@ -6517,7 +6713,7 @@ components:
         vehicleType: { type: string }
         vehiclePlate: { type: string }
         status: { type: string }
-        verifiedAt: { type: [string, "null"], format: date-time }
+        verifiedAt: { type: ["string", "null"], format: date-time }
 
     DshCaptainCredentialsListResponse:
       type: object

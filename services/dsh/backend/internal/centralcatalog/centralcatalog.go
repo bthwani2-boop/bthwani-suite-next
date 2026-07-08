@@ -16,27 +16,27 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("central catalog entity not found")
-	ErrInvalid  = errors.New("invalid central catalog input")
-	ErrConflict = errors.New("central catalog conflict")
+	ErrNotFound  = errors.New("central catalog entity not found")
+	ErrInvalid   = errors.New("invalid central catalog input")
+	ErrConflict  = errors.New("central catalog conflict")
 	ErrForbidden = errors.New("action not permitted by platform policy")
 )
 
 // ── L1: BUSINESS_DOMAIN ─────────────────────────────────────────────────────
 
 type Domain struct {
-	ID                      string    `json:"id"`
-	Slug                    string    `json:"slug"`
-	NameAr                  string    `json:"nameAr"`
-	NameEn                  string    `json:"nameEn"`
-	Icon                    string    `json:"icon"`
-	SortOrder               int       `json:"sortOrder"`
-	IsActive                bool      `json:"isActive"`
-	IsClientVisible         bool      `json:"isClientVisible"`
-	RequiresProductCatalog  bool      `json:"requiresProductCatalog"`
-	IsManualRequest         bool      `json:"isManualRequest"`
-	CreatedAt               time.Time `json:"createdAt"`
-	UpdatedAt               time.Time `json:"updatedAt"`
+	ID                     string    `json:"id"`
+	Slug                   string    `json:"slug"`
+	NameAr                 string    `json:"nameAr"`
+	NameEn                 string    `json:"nameEn"`
+	Icon                   string    `json:"icon"`
+	SortOrder              int       `json:"sortOrder"`
+	IsActive               bool      `json:"isActive"`
+	IsClientVisible        bool      `json:"isClientVisible"`
+	RequiresProductCatalog bool      `json:"requiresProductCatalog"`
+	IsManualRequest        bool      `json:"isManualRequest"`
+	CreatedAt              time.Time `json:"createdAt"`
+	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
 type DomainInput struct {
@@ -125,24 +125,24 @@ func UpdateDomain(ctx context.Context, db *sql.DB, id string, input DomainInput)
 // ── L2/L3/L4: BUSINESS_SUBDOMAIN / PRODUCT_MAIN_CLASS / PRODUCT_SUB_CLASS ──
 
 type Node struct {
-	ID                             string    `json:"id"`
-	DomainID                       string    `json:"domainId"`
-	ParentID                       *string   `json:"parentId"`
-	Level                          string    `json:"level"`
-	Slug                           string    `json:"slug"`
-	NameAr                         string    `json:"nameAr"`
-	NameEn                         string    `json:"nameEn"`
-	Icon                           string    `json:"icon"`
-	SortOrder                      int       `json:"sortOrder"`
-	IsActive                       bool      `json:"isActive"`
-	IsClientVisible                bool      `json:"isClientVisible"`
-	RequiresBarcode                bool      `json:"requiresBarcode"`
-	AllowsProductProposal          bool      `json:"allowsProductProposal"`
-	AllowsStoreProductCustomImage  bool      `json:"allowsStoreProductCustomImage"`
-	RequiresCatalogReview          bool      `json:"requiresCatalogReview"`
-	RequiresProductCatalog         bool      `json:"requiresProductCatalog"`
-	CreatedAt                      time.Time `json:"createdAt"`
-	UpdatedAt                      time.Time `json:"updatedAt"`
+	ID                            string    `json:"id"`
+	DomainID                      string    `json:"domainId"`
+	ParentID                      *string   `json:"parentId"`
+	Level                         string    `json:"level"`
+	Slug                          string    `json:"slug"`
+	NameAr                        string    `json:"nameAr"`
+	NameEn                        string    `json:"nameEn"`
+	Icon                          string    `json:"icon"`
+	SortOrder                     int       `json:"sortOrder"`
+	IsActive                      bool      `json:"isActive"`
+	IsClientVisible               bool      `json:"isClientVisible"`
+	RequiresBarcode               bool      `json:"requiresBarcode"`
+	AllowsProductProposal         bool      `json:"allowsProductProposal"`
+	AllowsStoreProductCustomImage bool      `json:"allowsStoreProductCustomImage"`
+	RequiresCatalogReview         bool      `json:"requiresCatalogReview"`
+	RequiresProductCatalog        bool      `json:"requiresProductCatalog"`
+	CreatedAt                     time.Time `json:"createdAt"`
+	UpdatedAt                     time.Time `json:"updatedAt"`
 }
 
 var validNodeLevels = map[string]bool{"BUSINESS_SUBDOMAIN": true, "PRODUCT_MAIN_CLASS": true, "PRODUCT_SUB_CLASS": true}
@@ -578,66 +578,53 @@ type ProposalDecisionInput struct {
 // existing AdoptedMasterProductID, it creates a new dsh_master_products row
 // from the proposal fields (status pending_review — an operator must still
 // approve it for client visibility, per rule 4 of the sovereignty decision).
-func DecideProposal(ctx context.Context, db *sql.DB, actorID, id string, input ProposalDecisionInput) (ProductProposal, error) {
-	if !validProposalStatus[input.Decision] {
+// legacyDecisionToPipelineStatus maps the pre-dsh-031 decision vocabulary to
+// the current pipeline status names so old callers of the decision endpoint
+// keep working instead of silently failing validProposalStatus.
+var legacyDecisionToPipelineStatus = map[string]string{
+	"under_review": "partner-review",
+	"adopted":      "catalog-adopted",
+	"rejected":     "rejected",
+	"needs_fix":    "needs-fix",
+}
+
+// DecideProposal is DEPRECATED: kept only as a thin translation wrapper over
+// TransitionProposal for callers still using the pre-dsh-031 decision
+// vocabulary. New code must call TransitionProposal directly.
+func DecideProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id string, input ProposalDecisionInput) (ProductProposal, error) {
+	nextStatus, ok := legacyDecisionToPipelineStatus[input.Decision]
+	if !ok {
+		nextStatus, ok = input.Decision, validProposalStatus[input.Decision]
+	}
+	if !ok {
 		return ProductProposal{}, ErrInvalid
 	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-	defer tx.Rollback()
-
-	proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1 FOR UPDATE`, id))
-	if err != nil {
-		return ProductProposal{}, err
-	}
-
-	adoptedID := input.AdoptedMasterProductID
-	if input.Decision == "adopted" && adoptedID == nil {
-		mpID := entityID("mp")
-		_, err = tx.ExecContext(ctx, `INSERT INTO dsh_master_products
-			(id, domain_id, category_node_id, canonical_name_ar, canonical_name_en, brand, barcode,
-			 approval_status, created_source)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,'pending_review',$8)`,
-			mpID, proposal.DomainID, proposal.CategoryNodeID, proposal.ProposedNameAr, proposal.ProposedNameEn,
-			proposal.Brand, proposal.Barcode, "product-proposal:"+proposal.SourceSurface)
-		if err != nil {
-			return ProductProposal{}, err
-		}
-		adoptedID = &mpID
-	}
-
-	_, err = tx.ExecContext(ctx, `UPDATE dsh_product_proposals SET
-		status=$1, review_note=$2, adopted_master_product_id=$3, updated_at=now() WHERE id=$4`,
-		input.Decision, input.ReviewNote, adoptedID, id)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return ProductProposal{}, err
-	}
-	_ = actorID // reserved for audit trail wiring alongside dsh_catalog_approval_audit_trail
-	return GetProposal(ctx, db, id)
+	createMasterProduct := input.AdoptedMasterProductID == nil
+	return TransitionProposal(ctx, db, actorID, actorRole, id, ProposalTransitionInput{
+		NextStatus:             nextStatus,
+		Note:                   input.ReviewNote,
+		AdoptedMasterProductID: input.AdoptedMasterProductID,
+		CreateMasterProduct:    &createMasterProduct,
+	})
 }
 
 // ── Store assortment (store-local truth: price/availability/stock/note/image) ─
 
 type StoreAssortment struct {
-	ID                    string    `json:"id"`
-	StoreID               string    `json:"storeId"`
-	MasterProductID       string    `json:"masterProductId"`
-	UnitPrice             float64   `json:"unitPrice"`
-	Currency              string    `json:"currency"`
-	Available             bool      `json:"available"`
-	StockStatus           string    `json:"stockStatus"`
-	LocalNote             string    `json:"localNote"`
-	CustomImageObjectKey  *string   `json:"customImageObjectKey"`
-	PublicationStatus     string    `json:"publicationStatus"`
-	SubmittedBy           string    `json:"submittedBy"`
-	ApprovedBy            string    `json:"approvedBy"`
-	CreatedAt             time.Time `json:"createdAt"`
-	UpdatedAt             time.Time `json:"updatedAt"`
+	ID                   string    `json:"id"`
+	StoreID              string    `json:"storeId"`
+	MasterProductID      string    `json:"masterProductId"`
+	UnitPrice            float64   `json:"unitPrice"`
+	Currency             string    `json:"currency"`
+	Available            bool      `json:"available"`
+	StockStatus          string    `json:"stockStatus"`
+	LocalNote            string    `json:"localNote"`
+	CustomImageObjectKey *string   `json:"customImageObjectKey"`
+	PublicationStatus    string    `json:"publicationStatus"`
+	SubmittedBy          string    `json:"submittedBy"`
+	ApprovedBy           string    `json:"approvedBy"`
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
 }
 
 var validStockStatus = map[string]bool{"in_stock": true, "low_stock": true, "out_of_stock": true}
@@ -749,30 +736,41 @@ func scanInto(dst *StoreAssortment, row *sql.Row) error {
 // ── Platform catalog policy (commission/fee/capability flags per category) ─
 
 type CatalogPolicy struct {
-	ID                                          string    `json:"id"`
-	DomainID                                    *string   `json:"domainId"`
-	NodeID                                      *string   `json:"nodeId"`
-	PolicyScope                                 string    `json:"policyScope"`
-	PlatformCommissionRate                      float64   `json:"platformCommissionRate"`
-	FieldPartnerOnboardingCommissionAmount      float64   `json:"fieldPartnerOnboardingCommissionAmount"`
-	FieldPartnerOnboardingCommissionCurrency    string    `json:"fieldPartnerOnboardingCommissionCurrency"`
-	StoreOnboardingFeeAmount                    float64   `json:"storeOnboardingFeeAmount"`
-	StoreOnboardingFeeCurrency                   string    `json:"storeOnboardingFeeCurrency"`
-	AllowsStoreProductCustomImage               bool      `json:"allowsStoreProductCustomImage"`
-	AllowsProductProposal                       bool      `json:"allowsProductProposal"`
-	RequiresBarcode                              bool      `json:"requiresBarcode"`
-	RequiresCatalogReview                        bool      `json:"requiresCatalogReview"`
-	IsActive                                     bool      `json:"isActive"`
-	EffectiveFrom                                time.Time `json:"effectiveFrom"`
-	Notes                                         string    `json:"notes"`
-	CreatedAt                                    time.Time `json:"createdAt"`
-	UpdatedAt                                    time.Time `json:"updatedAt"`
+	ID                                       string    `json:"id"`
+	DomainID                                 *string   `json:"domainId"`
+	NodeID                                   *string   `json:"nodeId"`
+	PolicyScope                              string    `json:"policyScope"`
+	PlatformCommissionRate                   float64   `json:"platformCommissionRate"`
+	FieldPartnerOnboardingCommissionAmount   float64   `json:"fieldPartnerOnboardingCommissionAmount"`
+	FieldPartnerOnboardingCommissionCurrency string    `json:"fieldPartnerOnboardingCommissionCurrency"`
+	StoreOnboardingFeeAmount                 float64   `json:"storeOnboardingFeeAmount"`
+	StoreOnboardingFeeCurrency               string    `json:"storeOnboardingFeeCurrency"`
+	AllowsStoreProductCustomImage            bool      `json:"allowsStoreProductCustomImage"`
+	AllowsProductProposal                    bool      `json:"allowsProductProposal"`
+	RequiresBarcode                          bool      `json:"requiresBarcode"`
+	RequiresCatalogReview                    bool      `json:"requiresCatalogReview"`
+	RequiresMarketingReview                  bool      `json:"requiresMarketingReview"`
+	RequiresProductImage                     bool      `json:"requiresProductImage"`
+	RequiresCategoryImage                    bool      `json:"requiresCategoryImage"`
+	RequiresDescription                      bool      `json:"requiresDescription"`
+	RequiresBrand                            bool      `json:"requiresBrand"`
+	RequiresUnit                             bool      `json:"requiresUnit"`
+	ProductDataQualityMinimumScore           float64   `json:"productDataQualityMinimumScore"`
+	MaxGalleryImages                         int       `json:"maxGalleryImages"`
+	ManualRequestMode                        bool      `json:"manualRequestMode"`
+	IsActive                                 bool      `json:"isActive"`
+	EffectiveFrom                            time.Time `json:"effectiveFrom"`
+	Notes                                    string    `json:"notes"`
+	CreatedAt                                time.Time `json:"createdAt"`
+	UpdatedAt                                time.Time `json:"updatedAt"`
 }
 
 const policyColumns = `id, domain_id, node_id, policy_scope, platform_commission_rate,
 	field_partner_onboarding_commission_amount, field_partner_onboarding_commission_currency,
 	store_onboarding_fee_amount, store_onboarding_fee_currency, allows_store_product_custom_image,
-	allows_product_proposal, requires_barcode, requires_catalog_review, is_active, effective_from, notes,
+	allows_product_proposal, requires_barcode, requires_catalog_review, requires_marketing_review,
+	requires_product_image, requires_category_image, requires_description, requires_brand, requires_unit,
+	product_data_quality_minimum_score, max_gallery_images, manual_request_mode, is_active, effective_from, notes,
 	created_at, updated_at`
 
 func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) {
@@ -780,7 +778,9 @@ func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) 
 	err := scanner.Scan(&p.ID, &p.DomainID, &p.NodeID, &p.PolicyScope, &p.PlatformCommissionRate,
 		&p.FieldPartnerOnboardingCommissionAmount, &p.FieldPartnerOnboardingCommissionCurrency,
 		&p.StoreOnboardingFeeAmount, &p.StoreOnboardingFeeCurrency, &p.AllowsStoreProductCustomImage,
-		&p.AllowsProductProposal, &p.RequiresBarcode, &p.RequiresCatalogReview, &p.IsActive,
+		&p.AllowsProductProposal, &p.RequiresBarcode, &p.RequiresCatalogReview, &p.RequiresMarketingReview,
+		&p.RequiresProductImage, &p.RequiresCategoryImage, &p.RequiresDescription, &p.RequiresBrand, &p.RequiresUnit,
+		&p.ProductDataQualityMinimumScore, &p.MaxGalleryImages, &p.ManualRequestMode, &p.IsActive,
 		&p.EffectiveFrom, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, ErrNotFound
@@ -816,6 +816,15 @@ type CatalogPolicyInput struct {
 	AllowsProductProposal                    bool    `json:"allowsProductProposal"`
 	RequiresBarcode                          bool    `json:"requiresBarcode"`
 	RequiresCatalogReview                    bool    `json:"requiresCatalogReview"`
+	RequiresMarketingReview                  bool    `json:"requiresMarketingReview"`
+	RequiresProductImage                     bool    `json:"requiresProductImage"`
+	RequiresCategoryImage                    bool    `json:"requiresCategoryImage"`
+	RequiresDescription                      bool    `json:"requiresDescription"`
+	RequiresBrand                            bool    `json:"requiresBrand"`
+	RequiresUnit                             bool    `json:"requiresUnit"`
+	ProductDataQualityMinimumScore           float64 `json:"productDataQualityMinimumScore"`
+	MaxGalleryImages                         int     `json:"maxGalleryImages"`
+	ManualRequestMode                        bool    `json:"manualRequestMode"`
 	IsActive                                 bool    `json:"isActive"`
 	Notes                                    string  `json:"notes"`
 }
@@ -828,12 +837,18 @@ func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input Catal
 		platform_commission_rate=$1, field_partner_onboarding_commission_amount=$2,
 		field_partner_onboarding_commission_currency=$3, store_onboarding_fee_amount=$4,
 		store_onboarding_fee_currency=$5, allows_store_product_custom_image=$6, allows_product_proposal=$7,
-		requires_barcode=$8, requires_catalog_review=$9, is_active=$10, notes=$11, updated_at=now()
-		WHERE id=$12`,
+		requires_barcode=$8, requires_catalog_review=$9, requires_marketing_review=$10, requires_product_image=$11,
+		requires_category_image=$12, requires_description=$13, requires_brand=$14, requires_unit=$15,
+		product_data_quality_minimum_score=$16, max_gallery_images=$17, manual_request_mode=$18,
+		is_active=$19, notes=$20, updated_at=now()
+		WHERE id=$21`,
 		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
 		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
 		input.StoreOnboardingFeeCurrency, input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
-		input.RequiresBarcode, input.RequiresCatalogReview, input.IsActive, input.Notes, id)
+		input.RequiresBarcode, input.RequiresCatalogReview, input.RequiresMarketingReview, input.RequiresProductImage,
+		input.RequiresCategoryImage, input.RequiresDescription, input.RequiresBrand, input.RequiresUnit,
+		input.ProductDataQualityMinimumScore, input.MaxGalleryImages, input.ManualRequestMode,
+		input.IsActive, input.Notes, id)
 	if err != nil {
 		return CatalogPolicy{}, err
 	}
@@ -881,10 +896,10 @@ type ClientCatalogNode struct {
 
 type ClientCatalogEntry struct {
 	MasterProduct
-	UnitPrice   float64 `json:"unitPrice"`
-	Currency    string  `json:"currency"`
-	StockStatus string  `json:"stockStatus"`
-	ImageObjectKey string `json:"imageObjectKey"`
+	UnitPrice      float64 `json:"unitPrice"`
+	Currency       string  `json:"currency"`
+	StockStatus    string  `json:"stockStatus"`
+	ImageObjectKey string  `json:"imageObjectKey"`
 }
 
 // GetClientCatalog returns only what rule 4 of the sovereignty decision
@@ -970,7 +985,7 @@ type ProposalTransitionInput struct {
 	CreateMasterProduct    *bool   `json:"createMasterProduct"`
 }
 
-func TransitionProposal(ctx context.Context, db *sql.DB, actorID, id string, input ProposalTransitionInput) (ProductProposal, error) {
+func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id string, input ProposalTransitionInput) (ProductProposal, error) {
 	if !validProposalStatus[input.NextStatus] {
 		return ProductProposal{}, fmt.Errorf("%w: invalid nextStatus", ErrInvalid)
 	}
@@ -1014,17 +1029,95 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, id string, inp
 	var updateQuery string
 	var args []any
 
+	categoryNodeID := ""
+	if proposal.CategoryNodeID != nil {
+		categoryNodeID = *proposal.CategoryNodeID
+	}
+
 	switch input.NextStatus {
 	case "partner-review":
+		// Resolve effective policy and check capabilities
+		policy, err := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
+		if err != nil {
+			return ProductProposal{}, err
+		}
+		if !policy.AllowsProductProposal {
+			return ProductProposal{}, fmt.Errorf("%w: product proposal not allowed for this category", ErrForbidden)
+		}
+		if policy.RequiresBarcode && (proposal.Barcode == nil || *proposal.Barcode == "") {
+			return ProductProposal{}, fmt.Errorf("%w: barcode is required for this category", ErrInvalid)
+		}
+
+		// Check for duplicate candidates (barcode matches or exact name matches in category)
+		if proposal.Barcode != nil && *proposal.Barcode != "" {
+			rows, err := tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1`, *proposal.Barcode)
+			if err == nil {
+				defer rows.Close()
+				for rows.Next() {
+					var mpID string
+					if err := rows.Scan(&mpID); err == nil {
+						dupID := entityID("dup-candidate")
+						_, _ = tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
+							(id, proposal_id, candidate_master_product_id, reason, score, status)
+							VALUES ($1, $2, $3, 'barcode match', 1.0, 'pending')
+							ON CONFLICT DO NOTHING`, dupID, id, mpID)
+					}
+				}
+			}
+		}
+
+		if proposal.CategoryNodeID != nil {
+			rows, err := tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE category_node_id=$1 AND LOWER(canonical_name_ar)=LOWER($2)`, *proposal.CategoryNodeID, proposal.ProposedNameAr)
+			if err == nil {
+				defer rows.Close()
+				for rows.Next() {
+					var mpID string
+					if err := rows.Scan(&mpID); err == nil {
+						dupID := entityID("dup-candidate")
+						_, _ = tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
+							(id, proposal_id, candidate_master_product_id, reason, score, status)
+							VALUES ($1, $2, $3, 'exact name match in category', 0.9, 'pending')
+							ON CONFLICT DO NOTHING`, dupID, id, mpID)
+					}
+				}
+			}
+		}
+
 		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='partner-review', partner_reviewed_by=$3, updated_at=now() WHERE id=$4`
 		args = []any{input.NextStatus, input.Note, actorID, id}
+
 	case "marketing-review":
+		// Verify policy requirements for images, descriptions, etc.
+		policy, err := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
+		if err != nil {
+			return ProductProposal{}, err
+		}
+		if policy.RequiresProductImage {
+			var hasImg bool
+			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_asset_links WHERE entity_type='product_proposal' AND entity_id=$1 AND role='canonical_product_image' AND status IN ('approved', 'pending_review'))`, id).Scan(&hasImg)
+			if err != nil || !hasImg {
+				return ProductProposal{}, fmt.Errorf("%w: product image is required by platform policy", ErrForbidden)
+			}
+		}
+		if policy.RequiresBrand && proposal.Brand == "" {
+			return ProductProposal{}, fmt.Errorf("%w: brand is required for this category", ErrInvalid)
+		}
+
 		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='marketing-review', marketing_reviewed_by=$3, updated_at=now() WHERE id=$4`
 		args = []any{input.NextStatus, input.Note, actorID, id}
+
 	case "catalog-adopted":
 		adoptedID := input.AdoptedMasterProductID
+
+		// Check if there is an accepted duplicate candidate for this proposal
+		var acceptedDupID string
+		err = tx.QueryRowContext(ctx, `SELECT candidate_master_product_id FROM dsh_product_duplicate_candidates WHERE proposal_id=$1 AND status='accepted_existing' LIMIT 1`, id).Scan(&acceptedDupID)
+		if err == nil {
+			adoptedID = &acceptedDupID
+		}
+
 		if (input.CreateMasterProduct != nil && *input.CreateMasterProduct) || (adoptedID == nil && input.AdoptedMasterProductID == nil) {
-			if proposal.Barcode != nil && *proposal.Barcode != "" {
+			if proposal.Barcode != nil && *proposal.Barcode != "" && adoptedID == nil {
 				var existingID string
 				err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1 LIMIT 1`, *proposal.Barcode).Scan(&existingID)
 				if err == nil {
@@ -1080,14 +1173,60 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, id string, inp
 			return ProductProposal{}, fmt.Errorf("%w: cannot transition to client-visible without approved product and store association", ErrInvalid)
 		}
 
+		// Verify master product is approved and active
+		var mpApproved bool
+		var mpActive bool
+		err = tx.QueryRowContext(ctx, `SELECT (approval_status='approved'), is_active FROM dsh_master_products WHERE id=$1`, *proposal.AdoptedMasterProductID).Scan(&mpApproved, &mpActive)
+		if err != nil || !mpApproved || !mpActive {
+			return ProductProposal{}, fmt.Errorf("%w: master product must be approved and active", ErrForbidden)
+		}
+
+		// Verify domain is active and client visible
+		var domActive bool
+		var domVisible bool
+		err = tx.QueryRowContext(ctx, `SELECT is_active, is_client_visible FROM dsh_catalog_domains WHERE id=$1`, proposal.DomainID).Scan(&domActive, &domVisible)
+		if err != nil || !domActive || !domVisible {
+			return ProductProposal{}, fmt.Errorf("%w: domain must be active and client visible", ErrForbidden)
+		}
+
+		// Verify node is active and client visible
+		var nodeActive bool
+		var nodeVisible bool
+		err = tx.QueryRowContext(ctx, `SELECT is_active, is_client_visible FROM dsh_catalog_nodes WHERE id=$1`, proposal.CategoryNodeID).Scan(&nodeActive, &nodeVisible)
+		if err != nil || !nodeActive || !nodeVisible {
+			return ProductProposal{}, fmt.Errorf("%w: category node must be active and client visible", ErrForbidden)
+		}
+
+		// Verify store is active and visible
+		var storeActive bool
+		var storeVisible bool
+		err = tx.QueryRowContext(ctx, `SELECT (status='active'), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storeActive, &storeVisible)
+		if err != nil || !storeActive || !storeVisible {
+			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
+		}
+
+		// Verify store assortment price & availability
 		var available bool
 		var unitPrice float64
 		err = tx.QueryRowContext(ctx, `SELECT available, unit_price FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID).Scan(&available, &unitPrice)
 		if err != nil {
-			return ProductProposal{}, fmt.Errorf("store assortment not found or not active: %w", err)
+			return ProductProposal{}, fmt.Errorf("store assortment not found: %w", err)
 		}
 		if !available || unitPrice <= 0 {
 			return ProductProposal{}, fmt.Errorf("%w: store assortment price must be greater than 0 and available=true", ErrInvalid)
+		}
+
+		// Verify image policy if required
+		policy, err := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
+		if err == nil && policy.RequiresProductImage {
+			var hasApprovedImg bool
+			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_asset_links WHERE entity_type='master_product' AND entity_id=$1 AND role='canonical_product_image' AND status='approved')`, *proposal.AdoptedMasterProductID).Scan(&hasApprovedImg)
+			if err != nil || !hasApprovedImg {
+				err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_asset_links WHERE entity_type='product_proposal' AND entity_id=$1 AND role='canonical_product_image' AND status='approved')`, id).Scan(&hasApprovedImg)
+				if err != nil || !hasApprovedImg {
+					return ProductProposal{}, fmt.Errorf("%w: client visibility requires approved product image", ErrForbidden)
+				}
+			}
 		}
 
 		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now() WHERE store_id=$2 AND master_product_id=$3`,
@@ -1113,16 +1252,13 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, id string, inp
 		return ProductProposal{}, err
 	}
 
-	// Record audit trail
-	storeIDVal := "central"
-	if proposal.SourceStoreID != nil {
-		storeIDVal = *proposal.SourceStoreID
-	}
-	auditID := id + "-transition-" + fmt.Sprint(time.Now().UnixNano())
-	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_catalog_audit
-		(id, store_id, actor_id, actor_role, action, entity_type, entity_id, to_state, reason, correlation_id)
-		VALUES ($1, $2, $3, 'operator', 'proposal.transition', 'proposal', $4, $5::jsonb, $6, '')`,
-		auditID, storeIDVal, actorID, id, `{"status": "`+input.NextStatus+`"}`, input.Note)
+	// Record proposal-specific audit trail (dsh-032)
+	auditID := entityID("proposal-audit")
+	payloadJSON := `{"nextStatus":"` + input.NextStatus + `"}`
+	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_product_proposal_audit
+		(id, proposal_id, from_status, to_status, actor_id, actor_role, note, payload_json)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
+		auditID, id, proposal.Status, input.NextStatus, actorID, actorRole, input.Note, payloadJSON)
 	if err != nil {
 		return ProductProposal{}, err
 	}
@@ -1131,4 +1267,325 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, id string, inp
 		return ProductProposal{}, err
 	}
 	return GetProposal(ctx, db, id)
+}
+
+// ── Catalog assets (DAM) ─────────────────────────────────────────────────────
+
+type CatalogAsset struct {
+	ID               string    `json:"id"`
+	ObjectKey        string    `json:"objectKey"`
+	PublicURL        *string   `json:"publicUrl"`
+	OriginalFileName string    `json:"originalFileName"`
+	MimeType         string    `json:"mimeType"`
+	SizeBytes        int64     `json:"sizeBytes"`
+	Width            *int      `json:"width"`
+	Height           *int      `json:"height"`
+	ChecksumSHA256   *string   `json:"checksumSha256"`
+	AltAr            string    `json:"altAr"`
+	AltEn            string    `json:"altEn"`
+	DominantColor    *string   `json:"dominantColor"`
+	Status           string    `json:"status"`
+	SourceSurface    string    `json:"sourceSurface"`
+	UploadedBy       string    `json:"uploadedBy"`
+	ReviewedBy       *string   `json:"reviewedBy"`
+	ReviewNote       string    `json:"reviewNote"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+}
+
+var validAssetStatus = map[string]bool{
+	"draft": true, "uploaded": true, "pending_review": true, "approved": true, "rejected": true, "archived": true,
+}
+var validAssetSourceSurface = map[string]bool{
+	"control-panel-catalog": true, "control-panel-platform": true, "app-partner": true, "app-field": true, "system": true,
+}
+var validAssetRole = map[string]bool{
+	"icon": true, "cover": true, "thumbnail": true, "gallery": true, "canonical_product_image": true,
+	"partner_custom_product_image": true, "marketing_banner": true, "document": true,
+}
+var validAssetEntityType = map[string]bool{
+	"domain": true, "node": true, "master_product": true, "product_proposal": true,
+	"store_assortment": true, "collection": true, "campaign": true,
+}
+
+const assetColumns = `id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
+	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
+	review_note, created_at, updated_at`
+
+func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
+	var a CatalogAsset
+	err := scanner.Scan(&a.ID, &a.ObjectKey, &a.PublicURL, &a.OriginalFileName, &a.MimeType, &a.SizeBytes,
+		&a.Width, &a.Height, &a.ChecksumSHA256, &a.AltAr, &a.AltEn, &a.DominantColor, &a.Status, &a.SourceSurface,
+		&a.UploadedBy, &a.ReviewedBy, &a.ReviewNote, &a.CreatedAt, &a.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return a, ErrNotFound
+	}
+	return a, err
+}
+
+type AssetUploadIntentInput struct {
+	FileName      string `json:"fileName"`
+	MimeType      string `json:"mimeType"`
+	SourceSurface string `json:"sourceSurface"`
+	AltAr         string `json:"altAr"`
+	AltEn         string `json:"altEn"`
+}
+
+func sanitizeAssetFileName(value string) string {
+	var b strings.Builder
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '-' || r == '_' {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('-')
+		}
+	}
+	if b.Len() == 0 {
+		return "file"
+	}
+	return b.String()
+}
+
+// CreateAssetUploadIntent registers a new DAM asset row in draft state and
+// returns the object key the surface should upload to. Nothing is
+// client-visible until an operator/marketing reviewer runs ReviewAsset.
+func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, actorID string, input AssetUploadIntentInput) (CatalogAsset, error) {
+	if strings.TrimSpace(input.FileName) == "" || !strings.HasPrefix(input.MimeType, "image/") || !validAssetSourceSurface[input.SourceSurface] {
+		return CatalogAsset{}, ErrInvalid
+	}
+	id := entityID("asset")
+	objectKey := fmt.Sprintf("catalog-assets/%s/%s", id, sanitizeAssetFileName(input.FileName))
+	_, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_assets
+		(id, object_key, original_file_name, mime_type, alt_ar, alt_en, status, source_surface, uploaded_by)
+		VALUES ($1,$2,$3,$4,$5,$6,'draft',$7,$8)`,
+		id, objectKey, input.FileName, input.MimeType, input.AltAr, input.AltEn, input.SourceSurface, actorID)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+}
+
+func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset int) ([]CatalogAsset, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := db.QueryContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets
+		WHERE ($1='' OR status=$1) ORDER BY created_at DESC LIMIT $2 OFFSET $3`, status, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []CatalogAsset{}
+	for rows.Next() {
+		a, err := scanAsset(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+type AssetUpdateInput struct {
+	PublicURL      *string `json:"publicUrl"`
+	Width          *int    `json:"width"`
+	Height         *int    `json:"height"`
+	SizeBytes      *int64  `json:"sizeBytes"`
+	ChecksumSHA256 *string `json:"checksumSha256"`
+	AltAr          *string `json:"altAr"`
+	AltEn          *string `json:"altEn"`
+	DominantColor  *string `json:"dominantColor"`
+}
+
+// UpdateAsset lets an uploader complete metadata after the binary lands in
+// object storage; moves draft -> uploaded so it enters the review queue.
+func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateInput) (CatalogAsset, error) {
+	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
+		public_url=COALESCE($1, public_url), width=COALESCE($2, width), height=COALESCE($3, height),
+		size_bytes=COALESCE($4, size_bytes), checksum_sha256=COALESCE($5, checksum_sha256),
+		alt_ar=COALESCE($6, alt_ar), alt_en=COALESCE($7, alt_en), dominant_color=COALESCE($8, dominant_color),
+		status=CASE WHEN status='draft' THEN 'uploaded' ELSE status END, updated_at=now()
+		WHERE id=$9`,
+		input.PublicURL, input.Width, input.Height, input.SizeBytes, input.ChecksumSHA256, input.AltAr, input.AltEn,
+		input.DominantColor, id)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return CatalogAsset{}, ErrNotFound
+	}
+	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+}
+
+type AssetReviewInput struct {
+	Decision   string `json:"decision"` // approved | rejected | pending_review | archived
+	ReviewNote string `json:"reviewNote"`
+}
+
+// ReviewAsset is the only sanctioned way an asset moves into approved (and
+// therefore becomes eligible to satisfy a requires_product_image /
+// requires_category_image platform policy gate).
+func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input AssetReviewInput) (CatalogAsset, error) {
+	if !validAssetStatus[input.Decision] {
+		return CatalogAsset{}, ErrInvalid
+	}
+	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
+		status=$1, reviewed_by=$2, review_note=$3, updated_at=now() WHERE id=$4`,
+		input.Decision, actorID, input.ReviewNote, id)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return CatalogAsset{}, ErrNotFound
+	}
+	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+}
+
+type CatalogAssetLink struct {
+	ID         string    `json:"id"`
+	AssetID    string    `json:"assetId"`
+	EntityType string    `json:"entityType"`
+	EntityID   string    `json:"entityId"`
+	Role       string    `json:"role"`
+	SortOrder  int       `json:"sortOrder"`
+	IsPrimary  bool      `json:"isPrimary"`
+	Status     string    `json:"status"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+const assetLinkColumns = `id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status, created_at, updated_at`
+
+func scanAssetLink(scanner interface{ Scan(...any) error }) (CatalogAssetLink, error) {
+	var l CatalogAssetLink
+	err := scanner.Scan(&l.ID, &l.AssetID, &l.EntityType, &l.EntityID, &l.Role, &l.SortOrder, &l.IsPrimary,
+		&l.Status, &l.CreatedAt, &l.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return l, ErrNotFound
+	}
+	return l, err
+}
+
+type AssetLinkInput struct {
+	AssetID    string `json:"assetId"`
+	EntityType string `json:"entityType"`
+	EntityID   string `json:"entityId"`
+	Role       string `json:"role"`
+	SortOrder  int    `json:"sortOrder"`
+	IsPrimary  bool   `json:"isPrimary"`
+}
+
+// LinkAsset attaches an asset to an entity in a role. A rejected/archived
+// asset can never be linked, and a link to a not-yet-approved asset starts
+// pending_review so it cannot leak onto a client-visible surface early.
+func LinkAsset(ctx context.Context, db *sql.DB, input AssetLinkInput) (CatalogAssetLink, error) {
+	if strings.TrimSpace(input.AssetID) == "" || !validAssetEntityType[input.EntityType] ||
+		strings.TrimSpace(input.EntityID) == "" || !validAssetRole[input.Role] {
+		return CatalogAssetLink{}, ErrInvalid
+	}
+	var assetStatus string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1`, input.AssetID).Scan(&assetStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return CatalogAssetLink{}, ErrNotFound
+		}
+		return CatalogAssetLink{}, err
+	}
+	if assetStatus == "rejected" || assetStatus == "archived" {
+		return CatalogAssetLink{}, fmt.Errorf("%w: asset is %s and cannot be linked", ErrForbidden, assetStatus)
+	}
+	id := entityID("asset-link")
+	linkStatus := "pending_review"
+	if assetStatus == "approved" {
+		linkStatus = "approved"
+	}
+	_, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_asset_links
+		(id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
+		  sort_order=EXCLUDED.sort_order, is_primary=EXCLUDED.is_primary, status=EXCLUDED.status, updated_at=now()`,
+		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder, input.IsPrimary, linkStatus)
+	if err != nil {
+		return CatalogAssetLink{}, err
+	}
+	return scanAssetLink(db.QueryRowContext(ctx, `SELECT `+assetLinkColumns+`
+		FROM dsh_catalog_asset_links WHERE entity_type=$1 AND entity_id=$2 AND role=$3 AND asset_id=$4`,
+		input.EntityType, input.EntityID, input.Role, input.AssetID))
+}
+
+func ListAssetLinks(ctx context.Context, db *sql.DB, entityType, entityID string) ([]CatalogAssetLink, error) {
+	rows, err := db.QueryContext(ctx, `SELECT `+assetLinkColumns+` FROM dsh_catalog_asset_links
+		WHERE entity_type=$1 AND entity_id=$2 ORDER BY role, sort_order`, entityType, entityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []CatalogAssetLink{}
+	for rows.Next() {
+		l, err := scanAssetLink(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID string) error {
+	result, err := db.ExecContext(ctx, `DELETE FROM dsh_catalog_asset_links WHERE id=$1 AND entity_type=$2 AND entity_id=$3`, linkID, entityType, entityID)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ── Seed status (dsh-032 diagnostics) ───────────────────────────────────────
+
+type SeedStatus struct {
+	DomainsCount        int      `json:"domainsCount"`
+	NodesCount          int      `json:"nodesCount"`
+	ManualRequestExists bool     `json:"manualRequestExists"`
+	ShayInExists        bool     `json:"shayInExists"`
+	AwnakExists         bool     `json:"awnakExists"`
+	SeedVersion         string   `json:"seedVersion"`
+	MissingSeeds        []string `json:"missingSeeds"`
+}
+
+// GetSeedStatus lets the control panel show a banner instead of a silently
+// empty taxonomy when a fresh environment hasn't had the central catalog
+// seed applied yet.
+func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
+	var s SeedStatus
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_catalog_domains`).Scan(&s.DomainsCount); err != nil {
+		return SeedStatus{}, err
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_catalog_nodes`).Scan(&s.NodesCount); err != nil {
+		return SeedStatus{}, err
+	}
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_domains WHERE id='domain-manual-request')`).Scan(&s.ManualRequestExists); err != nil {
+		return SeedStatus{}, err
+	}
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_nodes WHERE id='node-shay-in')`).Scan(&s.ShayInExists); err != nil {
+		return SeedStatus{}, err
+	}
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_nodes WHERE id='node-awnak')`).Scan(&s.AwnakExists); err != nil {
+		return SeedStatus{}, err
+	}
+	s.SeedVersion = "dsh-032"
+	s.MissingSeeds = []string{}
+	if s.DomainsCount < 11 {
+		s.MissingSeeds = append(s.MissingSeeds, "domains")
+	}
+	if !s.ManualRequestExists {
+		s.MissingSeeds = append(s.MissingSeeds, "domain-manual-request")
+	}
+	if !s.ShayInExists {
+		s.MissingSeeds = append(s.MissingSeeds, "node-shay-in")
+	}
+	if !s.AwnakExists {
+		s.MissingSeeds = append(s.MissingSeeds, "node-awnak")
+	}
+	return s, nil
 }

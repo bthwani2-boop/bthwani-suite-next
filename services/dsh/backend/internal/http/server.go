@@ -133,6 +133,21 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment", protected.handleOperatorGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}", protected.handleOperatorUpsertStoreAssortment)
 
+	// Central catalog assets, seed status & entity images
+	mux.HandleFunc("GET /dsh/operator/catalog/assets", protected.handleListCatalogAssets)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/upload-intents", protected.handleCreateAssetUploadIntent)
+	mux.HandleFunc("PATCH /dsh/operator/catalog/assets/{assetId}", protected.handleUpdateCatalogAsset)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/review", protected.handleReviewCatalogAsset)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/link", protected.handleLinkCatalogAsset)
+	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}/links/{linkId}", protected.handleUnlinkCatalogAsset)
+	mux.HandleFunc("GET /dsh/operator/catalog/asset-links", protected.handleListCatalogAssetLinks)
+	mux.HandleFunc("GET /dsh/operator/catalog/seed-status", protected.handleCatalogSeedStatus)
+
+	mux.HandleFunc("PUT /dsh/operator/catalog/domains/{domainId}/images/{role}", protected.handlePutDomainImage)
+	mux.HandleFunc("PUT /dsh/operator/catalog/nodes/{nodeId}/images/{role}", protected.handlePutNodeImage)
+	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/images/{role}", protected.handlePutMasterProductImage)
+	mux.HandleFunc("PUT /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}", protected.handlePutProductProposalImage)
+
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", protected.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/partner/catalog/master-products", protected.handleListMasterProducts)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", protected.handlePartnerGetStoreAssortment)

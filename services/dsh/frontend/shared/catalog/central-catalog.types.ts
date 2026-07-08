@@ -154,3 +154,38 @@ export interface ClientVisibleCatalogResponse {
   readonly domains: readonly CentralCatalogDomain[];
   readonly products: readonly ClientVisibleCatalogEntry[];
 }
+
+export interface CatalogAsset {
+  readonly id: string;
+  readonly objectKey: string;
+  readonly publicUrl: string | null;
+  readonly originalFileName: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly width: number | null;
+  readonly height: number | null;
+  readonly checksumSha256: string | null;
+  readonly altAr: string;
+  readonly altEn: string;
+  readonly dominantColor: string | null;
+  readonly status: "draft" | "uploaded" | "pending_review" | "approved" | "rejected" | "archived";
+  readonly sourceSurface: "control-panel-catalog" | "control-panel-platform" | "app-partner" | "app-field" | "system";
+  readonly uploadedBy: string;
+  readonly reviewedBy: string | null;
+  readonly reviewNote: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CatalogAssetLink {
+  readonly id: string;
+  readonly assetId: string;
+  readonly entityType: "domain" | "node" | "master_product" | "product_proposal" | "store_assortment" | "collection" | "campaign";
+  readonly entityId: string;
+  readonly role: "icon" | "cover" | "thumbnail" | "gallery" | "canonical_product_image" | "partner_custom_product_image" | "marketing_banner" | "document";
+  readonly sortOrder: number;
+  readonly isPrimary: boolean;
+  readonly status: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

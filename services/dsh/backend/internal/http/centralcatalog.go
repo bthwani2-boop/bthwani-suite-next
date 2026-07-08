@@ -218,7 +218,7 @@ func (s *protectedStoreServer) handleDecideProductProposal(w http.ResponseWriter
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	p, err := centralcatalog.DecideProposal(r.Context(), s.db, actor.ID, r.PathValue("proposalId"), input)
+	p, err := centralcatalog.DecideProposal(r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -235,7 +235,7 @@ func (s *protectedStoreServer) handleTransitionProductProposal(w http.ResponseWr
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	p, err := centralcatalog.TransitionProposal(r.Context(), s.db, actor.ID, r.PathValue("proposalId"), input)
+	p, err := centralcatalog.TransitionProposal(r.Context(), s.db, actor.ID, actor.Role, r.PathValue("proposalId"), input)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -402,4 +402,197 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortment(w http.ResponseW
 		return
 	}
 	s.upsertStoreAssortment(w, r, actorID, storeID)
+}
+
+// ── Catalog assets (DAM) ─────────────────────────────────────────────────────
+
+func (s *protectedStoreServer) handleListCatalogAssets(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	items, err := centralcatalog.ListAssets(r.Context(), s.db, r.URL.Query().Get("status"), limit, offset)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"assets": items})
+}
+
+func (s *protectedStoreServer) handleCreateAssetUploadIntent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
+		return
+	}
+	var input centralcatalog.AssetUploadIntentInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	a, err := centralcatalog.CreateAssetUploadIntent(r.Context(), s.db, actor.ID, input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"asset": a})
+}
+
+func (s *protectedStoreServer) handleUpdateCatalogAsset(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+		return
+	}
+	var input centralcatalog.AssetUpdateInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	a, err := centralcatalog.UpdateAsset(r.Context(), s.db, r.PathValue("assetId"), input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
+}
+
+func (s *protectedStoreServer) handleReviewCatalogAsset(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	var input centralcatalog.AssetReviewInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	a, err := centralcatalog.ReviewAsset(r.Context(), s.db, actor.ID, r.PathValue("assetId"), input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
+}
+
+func (s *protectedStoreServer) handleLinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+		return
+	}
+	var input centralcatalog.AssetLinkInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	input.AssetID = r.PathValue("assetId")
+	link, err := centralcatalog.LinkAsset(r.Context(), s.db, input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusCreated, map[string]any{"link": link})
+}
+
+func (s *protectedStoreServer) handleUnlinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+		return
+	}
+	err := centralcatalog.UnlinkAsset(r.Context(), s.db, r.URL.Query().Get("entityType"), r.URL.Query().Get("entityId"), r.PathValue("linkId"))
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"unlinked": true})
+}
+
+func (s *protectedStoreServer) handleListCatalogAssetLinks(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+		return
+	}
+	links, err := centralcatalog.ListAssetLinks(r.Context(), s.db, r.URL.Query().Get("entityType"), r.URL.Query().Get("entityId"))
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"links": links})
+}
+
+// ── Seed status diagnostics ──────────────────────────────────────────────────
+
+func (s *protectedStoreServer) handleCatalogSeedStatus(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	status, err := centralcatalog.GetSeedStatus(r.Context(), s.db)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, status)
+}
+
+func (s *protectedStoreServer) handlePutDomainImage(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	domainID := r.PathValue("domainId")
+	role := r.PathValue("role")
+	s.putEntityImage(w, r, "domain", domainID, role)
+}
+
+func (s *protectedStoreServer) handlePutNodeImage(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	nodeID := r.PathValue("nodeId")
+	role := r.PathValue("role")
+	s.putEntityImage(w, r, "node", nodeID, role)
+}
+
+func (s *protectedStoreServer) handlePutMasterProductImage(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	productID := r.PathValue("productId")
+	role := r.PathValue("role")
+	s.putEntityImage(w, r, "master_product", productID, role)
+}
+
+func (s *protectedStoreServer) handlePutProductProposalImage(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator"); !ok {
+		return
+	}
+	proposalID := r.PathValue("proposalId")
+	role := r.PathValue("role")
+	s.putEntityImage(w, r, "product_proposal", proposalID, role)
+}
+
+type EntityImageInput struct {
+	AssetID string `json:"assetId"`
+}
+
+func (s *protectedStoreServer) putEntityImage(w http.ResponseWriter, r *http.Request, entityType, entityID, role string) {
+	var input EntityImageInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+
+	// Reset any existing primary image for this entity & role
+	_, err := s.db.ExecContext(r.Context(), `UPDATE dsh_catalog_asset_links
+		SET is_primary=false, updated_at=now()
+		WHERE entity_type=$1 AND entity_id=$2 AND role=$3`, entityType, entityID, role)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+
+	// Link the new asset as primary
+	link, err := centralcatalog.LinkAsset(r.Context(), s.db, centralcatalog.AssetLinkInput{
+		AssetID:    input.AssetID,
+		EntityType: entityType,
+		EntityID:   entityID,
+		Role:       role,
+		SortOrder:  0,
+		IsPrimary:  true,
+	})
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+
+	store.SendJSON(w, http.StatusOK, map[string]any{"link": link})
 }
