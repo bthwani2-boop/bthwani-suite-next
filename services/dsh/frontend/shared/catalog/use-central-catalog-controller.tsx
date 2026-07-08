@@ -176,6 +176,11 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       void loadProposals();
       return res;
     },
+    transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) => {
+      const res = await api.transitionProductProposal(proposalId, input);
+      void loadProposals();
+      return res;
+    },
 
     // Policies
     updatePolicy: async (policyId: string, input: Parameters<typeof api.updateCatalogPlatformPolicy>[1]) => {

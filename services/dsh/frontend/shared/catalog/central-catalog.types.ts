@@ -55,6 +55,8 @@ export interface MasterProduct {
   readonly updatedAt: string;
 }
 
+import type { ProductProposalPipelineStatus } from "./central-catalog-product-pipeline";
+
 export interface ProductProposal {
   readonly id: string;
   readonly proposedNameAr: string;
@@ -67,11 +69,22 @@ export interface ProductProposal {
   readonly sourceSurface: "app-field" | "app-partner" | "control-panel-catalog" | "control-panel-platform";
   readonly sourceActorId: string;
   readonly sourceStoreId: string | null;
-  readonly status: "submitted" | "under_review" | "adopted" | "rejected" | "needs_fix";
+  readonly status: ProductProposalPipelineStatus;
   readonly reviewNote: string;
   readonly adoptedMasterProductId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
+
+  readonly reviewStage?: string;
+  readonly partnerReviewedBy?: string | null;
+  readonly marketingReviewedBy?: string | null;
+  readonly catalogAdoptedBy?: string | null;
+  readonly catalogApprovedBy?: string | null;
+  readonly clientVisibleAt?: string | null;
+  readonly auditRequired?: boolean;
+  readonly blockedReason?: string | null;
+  readonly resubmissionCount?: number;
+  readonly linkedStoreId?: string | null;
 }
 
 export interface StoreAssortment {

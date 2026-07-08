@@ -68,6 +68,34 @@ export function ProductEditScreen({
       });
   }, []);
 
+  const selectedDomain = React.useMemo(() => {
+    return taxonomy?.domains.find((d) => d.id === selectedDomainId) ?? null;
+  }, [taxonomy, selectedDomainId]);
+
+  const selectedNode = React.useMemo(() => {
+    return taxonomy?.nodes.find((n) => n.id === selectedNodeId) ?? null;
+  }, [taxonomy, selectedNodeId]);
+
+  const isProposalDisallowed = React.useMemo(() => {
+    if (selectedDomain?.isManualRequest) return true;
+    if (selectedNode && !selectedNode.allowsProductProposal) return true;
+    return false;
+  }, [selectedDomain, selectedNode]);
+
+  const proposalDisallowedReason = React.useMemo(() => {
+    if (selectedDomain?.isManualRequest) {
+      return "التصنيف المختار مخصص للطلبات اليدوية فقط ولا يدعم كتالوج المنتجات.";
+    }
+    if (selectedNode && !selectedNode.allowsProductProposal) {
+      return "سياسة المنصة تمنع اقتراح منتجات جديدة لهذا التصنيف الفرعي.";
+    }
+    return null;
+  }, [selectedDomain, selectedNode]);
+
+  const isBarcodeRequired = React.useMemo(() => {
+    return selectedNode?.requiresBarcode ?? false;
+  }, [selectedNode]);
+
   const handleCreateProposal = React.useCallback(async () => {
     if (!proposedNameAr.trim()) {
       setErrorMessage('الاسم العربي المقترح مطلوب.');
@@ -75,6 +103,14 @@ export function ProductEditScreen({
     }
     if (!selectedDomainId) {
       setErrorMessage('يجب اختيار فئة رئيسية.');
+      return;
+    }
+    if (isProposalDisallowed) {
+      setErrorMessage(proposalDisallowedReason ?? 'التقديم غير مسموح لهذه الفئة.');
+      return;
+    }
+    if (isBarcodeRequired && !barcode.trim()) {
+      setErrorMessage('الباركود مطلوب وإلزامي لهذا التصنيف.');
       return;
     }
 
@@ -98,7 +134,7 @@ export function ProductEditScreen({
     } finally {
       setSaving(false);
     }
-  }, [proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, onSaved]);
+  }, [proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
 
   if (loading) {
     return <StateView title="جاري تحميل البيانات..." loading />;
@@ -244,10 +280,22 @@ export function ProductEditScreen({
               </Box>
             )}
 
+            {proposalDisallowedReason && (
+              <Surface tone="warning" padding={3} radiusToken="md">
+                <Text role="bodySm" tone="warning" align="start">{proposalDisallowedReason}</Text>
+              </Surface>
+            )}
+
+            {isBarcodeRequired && !barcode.trim() && (
+              <Surface tone="info" padding={3} radiusToken="md">
+                <Text role="bodySm" tone="info" align="start">الباركود مطلوب وإلزامي لهذا التصنيف الفرعي المختار.</Text>
+              </Surface>
+            )}
+
             <Button
               label={saving ? 'جاري الإرسال...' : 'إرسال الاقتراح للمراجعة'}
               tone="primary"
-              disabled={saving}
+              disabled={saving || isProposalDisallowed || (isBarcodeRequired && !barcode.trim())}
               onPress={handleCreateProposal}
               style={{ marginTop: spacing[4] }}
             />

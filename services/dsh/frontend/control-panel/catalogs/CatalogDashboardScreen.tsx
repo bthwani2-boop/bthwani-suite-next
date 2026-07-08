@@ -17,7 +17,7 @@ import {
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
-import { useCentralCatalogController } from "../../shared/catalog";
+import { useCentralCatalogController, type ProductProposalPipelineStatus, PRODUCT_PROPOSAL_PIPELINE_METADATA } from "../../shared/catalog";
 
 type StatusTone = "warning" | "success" | "danger" | "neutral";
 
@@ -116,12 +116,37 @@ export function CatalogDashboardScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const [selectedProposalStatus, setSelectedProposalStatus] = useState<ProductProposalPipelineStatus>("partner-proposed");
+  const [selectedAdoptedProductId, setSelectedAdoptedProductId] = useState<Record<string, string>>({});
+  const [createProductInsteadOfLink, setCreateProductInsteadOfLink] = useState<Record<string, boolean>>({});
+
   const handleProposalDecision = async (proposalId: string, decision: "adopted" | "rejected" | "needs_fix", note: string) => {
     try {
       await controller.decideProposal(proposalId, { decision, reviewNote: note });
       alert("تم تسجيل القرار بنجاح");
     } catch (e: any) {
       alert("فشل تنفيذ القرار: " + (e.message ?? e.toString()));
+    }
+  };
+
+  const handleProposalTransition = async (
+    proposalId: string,
+    nextStatus: ProductProposalPipelineStatus,
+    note: string,
+    adoptedMasterProductId?: string | null,
+    createMasterProduct?: boolean,
+  ) => {
+    try {
+      await controller.transitionProposal(proposalId, {
+        nextStatus,
+        note,
+        adoptedMasterProductId,
+        createMasterProduct,
+      });
+      alert("تمت ترقية حالة الاقتراح بنجاح");
+      setReasonByProposal((curr) => ({ ...curr, [proposalId]: "" }));
+    } catch (e: any) {
+      alert("فشل ترقية حالة الاقتراح: " + (e.message ?? e.toString()));
     }
   };
 
@@ -187,7 +212,9 @@ export function CatalogDashboardScreen() {
 
   const domainsCount = controller.state.domains.items.length;
   const masterCount = controller.state.masterProducts.items.length;
-  const proposalsPendingCount = controller.state.proposals.items.filter((p) => p.status === "submitted").length;
+  const proposalsPendingCount = controller.state.proposals.items.filter((p) =>
+    ["partner-proposed", "partner-review", "marketing-review", "catalog-adopted", "catalog-approved"].includes(p.status)
+  ).length;
 
   return (
     <DataTablePageFrame
@@ -389,59 +416,213 @@ export function CatalogDashboardScreen() {
         )}
 
         {activeTab === "proposals" && (
-          <CpTable aria-label="جدول اقتراحات المنتجات">
-            <thead>
-              <tr dir="rtl">
-                <CpTableHeaderCell>المعرف</CpTableHeaderCell>
-                <CpTableHeaderCell>الاسم المقترح</CpTableHeaderCell>
-                <CpTableHeaderCell>الماركة / الباركود</CpTableHeaderCell>
-                <CpTableHeaderCell>السطح المصدر</CpTableHeaderCell>
-                <CpTableHeaderCell>حالة الاقتراح</CpTableHeaderCell>
-                <CpTableHeaderCell>ملاحظة المراجعة</CpTableHeaderCell>
-                <CpTableHeaderCell>الإجراءات السيادية</CpTableHeaderCell>
-              </tr>
-            </thead>
-            <tbody dir="rtl">
-              {controller.state.proposals.items
-                .filter((p) => p.proposedNameAr.includes(searchQuery))
-                .map((p) => (
-                  <tr key={p.id}>
-                    <CpTableCell>{p.id}</CpTableCell>
-                    <CpTableCell><strong>{p.proposedNameAr}</strong></CpTableCell>
-                    <CpTableCell>{p.brand || "—"} / {p.barcode || "—"}</CpTableCell>
-                    <CpTableCell><code>{p.sourceSurface}</code></CpTableCell>
-                    <CpTableCell>
-                      <StatusBadge label={p.status} tone={p.status === "adopted" ? "success" : p.status === "rejected" ? "danger" : "warning"} />
-                    </CpTableCell>
-                    <CpTableCell>{p.reviewNote || "—"}</CpTableCell>
-                    <CpTableCell>
-                      {p.status === "submitted" && (
-                        <div style={{ display: "flex", gap: "0.25rem" }}>
-                          <CpTextInput
-                            value={reasonByProposal[p.id] ?? ""}
-                            onChange={(value) => setReasonByProposal((curr) => ({ ...curr, [p.id]: value }))}
-                            placeholder="اكتب سبب القرار..."
-                            aria-label={`سبب القرار لاقتراح ${p.id}`}
-                          />
-                          <CpButton
-                            disabled={!reasonByProposal[p.id]?.trim()}
-                            onClick={() => handleProposalDecision(p.id, "adopted", reasonByProposal[p.id] || "")}
-                          >
-                            قبول واعتماد
-                          </CpButton>
-                          <CpButton
-                            disabled={!reasonByProposal[p.id]?.trim()}
-                            onClick={() => handleProposalDecision(p.id, "rejected", reasonByProposal[p.id] || "")}
-                          >
-                            رفض الاقتراح
-                          </CpButton>
-                        </div>
-                      )}
-                    </CpTableCell>
-                  </tr>
-                ))}
-            </tbody>
-          </CpTable>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", width: "100%" }}>
+            {/* Horizontal Sub-tabs for pipeline stages */}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap", borderBottom: "1px solid color-mix(in srgb, currentColor 10%, transparent)", paddingBottom: "1rem" }}>
+              {(Object.keys(PRODUCT_PROPOSAL_PIPELINE_METADATA) as ProductProposalPipelineStatus[]).map((status) => {
+                const meta = PRODUCT_PROPOSAL_PIPELINE_METADATA[status];
+                const count = controller.state.proposals.items.filter((p) => p.status === status).length;
+                const isSelected = selectedProposalStatus === status;
+                return (
+                  <CpButton
+                    key={status}
+                    style={{
+                      backgroundColor: isSelected ? colorRoles.brandAction : "transparent",
+                      color: isSelected ? "white" : "currentColor",
+                      border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
+                      borderRadius: "0.5rem",
+                      padding: "0.35rem 0.75rem",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setSelectedProposalStatus(status)}
+                  >
+                    {meta.labelAr} ({count})
+                  </CpButton>
+                );
+              })}
+            </div>
+
+            <CpTable aria-label="جدول اقتراحات المنتجات">
+              <thead>
+                <tr dir="rtl">
+                  <CpTableHeaderCell>المعرف</CpTableHeaderCell>
+                  <CpTableHeaderCell>الاسم المقترح</CpTableHeaderCell>
+                  <CpTableHeaderCell>الماركة / الباركود</CpTableHeaderCell>
+                  <CpTableHeaderCell>السطح المصدر</CpTableHeaderCell>
+                  <CpTableHeaderCell>ملاحظة المراجعة</CpTableHeaderCell>
+                  <CpTableHeaderCell>الخيارات والإجراءات السيادية</CpTableHeaderCell>
+                </tr>
+              </thead>
+              <tbody dir="rtl">
+                {controller.state.proposals.items
+                  .filter((p) => p.status === selectedProposalStatus && p.proposedNameAr.includes(searchQuery))
+                  .map((p) => {
+                    const note = reasonByProposal[p.id] ?? "";
+                    const isCreate = createProductInsteadOfLink[p.id] ?? false;
+                    const linkId = selectedAdoptedProductId[p.id] ?? "";
+                    return (
+                      <tr key={p.id}>
+                        <CpTableCell>{p.id}</CpTableCell>
+                        <CpTableCell>
+                          <strong>{p.proposedNameAr}</strong>
+                          {p.proposedNameEn && <div style={{ fontSize: "0.8rem", opacity: 0.7 }}>{p.proposedNameEn}</div>}
+                        </CpTableCell>
+                        <CpTableCell>{p.brand || "—"} / <code>{p.barcode || "—"}</code></CpTableCell>
+                        <CpTableCell><code>{p.sourceSurface}</code></CpTableCell>
+                        <CpTableCell>{p.reviewNote || "—"}</CpTableCell>
+                        <CpTableCell style={{ verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%", maxWidth: "400px" }}>
+                            {/* Option inputs depending on status */}
+                            {selectedProposalStatus === "marketing-review" && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", padding: "0.5rem", background: "color-mix(in srgb, currentColor 4%, transparent)", borderRadius: "0.5rem" }}>
+                                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", cursor: "pointer" }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isCreate}
+                                    onChange={(e) => setCreateProductInsteadOfLink((curr) => ({ ...curr, [p.id]: e.target.checked }))}
+                                  />
+                                  <span>إنشاء منتج مركزي جديد (Master Product)</span>
+                                </label>
+                                {!isCreate && (
+                                  <CpTextInput
+                                    value={linkId}
+                                    onChange={(val) => setSelectedAdoptedProductId((curr) => ({ ...curr, [p.id]: val }))}
+                                    placeholder="معرف المنتج المركزي للربط (L5 id)..."
+                                    aria-label={`ربط بمنتج مركزي موجود للاقتراح ${p.id}`}
+                                  />
+                                )}
+                              </div>
+                            )}
+
+                            <div style={{ display: "flex", gap: "0.25rem" }}>
+                              {/* Reason/Note Input */}
+                              <CpTextInput
+                                value={note}
+                                onChange={(value) => setReasonByProposal((curr) => ({ ...curr, [p.id]: value }))}
+                                placeholder="ملاحظة أو سبب القرار للخطوة التالية..."
+                                aria-label={`ملاحظة القرار للاقتراح ${p.id}`}
+                              />
+
+                              {/* Action Buttons based on status */}
+                              {selectedProposalStatus === "partner-proposed" && (
+                                <>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "partner-review", note)}
+                                  >
+                                    بدء المراجعة
+                                  </CpButton>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "needs-fix", note)}
+                                    style={{ opacity: 0.8 }}
+                                  >
+                                    طلب تعديل
+                                  </CpButton>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "rejected", note)}
+                                    style={{ opacity: 0.8 }}
+                                  >
+                                    رفض
+                                  </CpButton>
+                                </>
+                              )}
+
+                              {selectedProposalStatus === "partner-review" && (
+                                <>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "marketing-review", note)}
+                                  >
+                                    إحالة للتسويق
+                                  </CpButton>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "needs-fix", note)}
+                                    style={{ opacity: 0.8 }}
+                                  >
+                                    طلب تعديل
+                                  </CpButton>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "rejected", note)}
+                                    style={{ opacity: 0.8 }}
+                                  >
+                                    رفض
+                                  </CpButton>
+                                </>
+                              )}
+
+                              {selectedProposalStatus === "marketing-review" && (
+                                <>
+                                  <CpButton
+                                    disabled={!note.trim() || (!isCreate && !linkId.trim())}
+                                    onClick={() => handleProposalTransition(p.id, "catalog-adopted", note, isCreate ? null : linkId, isCreate)}
+                                  >
+                                    اعتماد ودمج
+                                  </CpButton>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "needs-fix", note)}
+                                    style={{ opacity: 0.8 }}
+                                  >
+                                    طلب تعديل
+                                  </CpButton>
+                                  <CpButton
+                                    disabled={!note.trim()}
+                                    onClick={() => handleProposalTransition(p.id, "rejected", note)}
+                                    style={{ opacity: 0.8 }}
+                                  >
+                                    رفض
+                                  </CpButton>
+                                </>
+                              )}
+
+                              {selectedProposalStatus === "catalog-adopted" && (
+                                <CpButton
+                                  disabled={!note.trim()}
+                                  onClick={() => handleProposalTransition(p.id, "catalog-approved", note)}
+                                >
+                                  تفعيل واعتماد الكتالوج
+                                </CpButton>
+                              )}
+
+                              {selectedProposalStatus === "catalog-approved" && (
+                                <CpButton
+                                  disabled={!note.trim()}
+                                  onClick={() => handleProposalTransition(p.id, "client-visible", note)}
+                                >
+                                  نشر ورؤية للعميل
+                                </CpButton>
+                              )}
+
+                              {selectedProposalStatus === "needs-fix" && (
+                                <CpButton
+                                  disabled={!note.trim()}
+                                  onClick={() => handleProposalTransition(p.id, "partner-proposed", note)}
+                                >
+                                  إعادة فتح الاقتراح للمراجعة
+                                </CpButton>
+                              )}
+
+                              {selectedProposalStatus === "rejected" && (
+                                <CpButton
+                                  disabled={!note.trim()}
+                                  onClick={() => handleProposalTransition(p.id, "partner-proposed", note)}
+                                >
+                                  إعادة فتح الاقتراح المرفوض
+                                </CpButton>
+                              )}
+                            </div>
+                          </div>
+                        </CpTableCell>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </CpTable>
+          </div>
         )}
 
         {activeTab === "policies" && (

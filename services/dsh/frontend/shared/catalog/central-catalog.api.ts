@@ -222,6 +222,22 @@ export async function decideProductProposal(
   return resp.proposal;
 }
 
+export async function transitionProductProposal(
+  proposalId: string,
+  input: {
+    readonly nextStatus: string;
+    readonly note: string;
+    readonly adoptedMasterProductId?: string | null | undefined;
+    readonly createMasterProduct?: boolean | undefined;
+  },
+): Promise<ProductProposal> {
+  const resp = await request<{ proposal: ProductProposal }>(`/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/transition`, {
+    method: "POST",
+    body: input,
+  });
+  return resp.proposal;
+}
+
 export async function fetchCatalogPlatformPolicies(): Promise<readonly CatalogPlatformPolicy[]> {
   const resp = await request<{ policies: readonly CatalogPlatformPolicy[] }>("/dsh/operator/catalog/platform-policies");
   return resp.policies;

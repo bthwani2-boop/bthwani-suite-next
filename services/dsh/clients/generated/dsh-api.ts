@@ -618,6 +618,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/catalog/product-proposals/{proposalId}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["transitionProductProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/catalog/platform-policies": {
         parameters: {
             query?: never;
@@ -5380,6 +5396,26 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Proposal moved to under_review/adopted/rejected/needs_fix. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    transitionProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposal transitioned along the multi-stage review pipeline. */
             200: {
                 headers: {
                     [name: string]: unknown;

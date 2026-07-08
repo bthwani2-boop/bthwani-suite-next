@@ -1,18 +1,18 @@
 # Central Catalog Closure Cleanup Checklist
 
-- [ ] decision file verified
-- [ ] central schema verified
-- [ ] old product API client removed/quarantined
-- [ ] shared catalog types centralized
-- [ ] catalog.api rewritten to central API
-- [ ] control-panel catalog bound to central controllers
-- [ ] app-partner catalog screens cleaned/rebound/disabled safely
-- [ ] app-field catalog usage prepared
-- [ ] app-client published catalog shape aligned
-- [ ] legacy local catalog routes blocked/read-only
-- [ ] tabs/buttons/icons/forms audited
-- [ ] cleanup ledger written
-- [ ] typecheck passed
-- [ ] go test passed
-- [ ] go build passed
-- [ ] final report
+- [x] decision file verified
+- [x] central schema verified
+- [x] old product API client removed/quarantined
+- [x] shared catalog types centralized
+- [x] catalog.api rewritten to central API
+- [x] control-panel catalog bound to central controllers
+- [x] app-partner catalog screens cleaned/rebound/disabled safely
+- [x] app-field catalog usage prepared
+- [x] app-client published catalog shape aligned
+- [x] legacy local catalog routes blocked/read-only
+- [x] tabs/buttons/icons/forms audited
+- [x] cleanup ledger written
+- [x] typecheck passed
+- [x] go test passed
+- [x] go build passed
+- [x] final report

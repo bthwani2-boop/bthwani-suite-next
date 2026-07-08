@@ -226,6 +226,23 @@ func (s *protectedStoreServer) handleDecideProductProposal(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
 }
 
+func (s *protectedStoreServer) handleTransitionProductProposal(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	var input centralcatalog.ProposalTransitionInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	p, err := centralcatalog.TransitionProposal(r.Context(), s.db, actor.ID, r.PathValue("proposalId"), input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
+}
+
 // createProductProposal is shared by the partner and field POST endpoints;
 // both are requests-to-add, never a final product (rule 2 of the
 // sovereignty decision).

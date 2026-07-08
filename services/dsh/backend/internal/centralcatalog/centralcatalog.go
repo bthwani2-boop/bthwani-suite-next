@@ -413,29 +413,40 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 // ── Product proposals (request-to-add; never a sellable entity) ────────────
 
 type ProductProposal struct {
-	ID                     string    `json:"id"`
-	ProposedNameAr         string    `json:"proposedNameAr"`
-	ProposedNameEn         string    `json:"proposedNameEn"`
-	DomainID               string    `json:"domainId"`
-	CategoryNodeID         *string   `json:"categoryNodeId"`
-	Brand                  string    `json:"brand"`
-	Barcode                *string   `json:"barcode"`
-	ImageObjectKey         *string   `json:"imageObjectKey"`
-	SourceSurface          string    `json:"sourceSurface"`
-	SourceActorID          string    `json:"sourceActorId"`
-	SourceStoreID          *string   `json:"sourceStoreId"`
-	Status                 string    `json:"status"`
-	ReviewNote             string    `json:"reviewNote"`
-	AdoptedMasterProductID *string   `json:"adoptedMasterProductId"`
-	CreatedAt              time.Time `json:"createdAt"`
-	UpdatedAt              time.Time `json:"updatedAt"`
+	ID                     string     `json:"id"`
+	ProposedNameAr         string     `json:"proposedNameAr"`
+	ProposedNameEn         string     `json:"proposedNameEn"`
+	DomainID               string     `json:"domainId"`
+	CategoryNodeID         *string    `json:"categoryNodeId"`
+	Brand                  string     `json:"brand"`
+	Barcode                *string    `json:"barcode"`
+	ImageObjectKey         *string    `json:"imageObjectKey"`
+	SourceSurface          string     `json:"sourceSurface"`
+	SourceActorID          string     `json:"sourceActorId"`
+	SourceStoreID          *string    `json:"sourceStoreId"`
+	Status                 string     `json:"status"`
+	ReviewNote             string     `json:"reviewNote"`
+	AdoptedMasterProductID *string    `json:"adoptedMasterProductId"`
+	CreatedAt              time.Time  `json:"createdAt"`
+	UpdatedAt              time.Time  `json:"updatedAt"`
+	ReviewStage            string     `json:"reviewStage"`
+	PartnerReviewedBy      *string    `json:"partnerReviewedBy"`
+	MarketingReviewedBy    *string    `json:"marketingReviewedBy"`
+	CatalogAdoptedBy       *string    `json:"catalogAdoptedBy"`
+	CatalogApprovedBy      *string    `json:"catalogApprovedBy"`
+	ClientVisibleAt        *time.Time `json:"clientVisibleAt"`
+	AuditRequired          bool       `json:"auditRequired"`
+	BlockedReason          *string    `json:"blockedReason"`
+	ResubmissionCount      int        `json:"resubmissionCount"`
+	LinkedStoreID          *string    `json:"linkedStoreId"`
 }
 
 var validSourceSurface = map[string]bool{
 	"app-field": true, "app-partner": true, "control-panel-catalog": true, "control-panel-platform": true,
 }
 var validProposalStatus = map[string]bool{
-	"submitted": true, "under_review": true, "adopted": true, "rejected": true, "needs_fix": true,
+	"catalog-draft": true, "partner-proposed": true, "partner-review": true, "marketing-review": true,
+	"catalog-adopted": true, "catalog-approved": true, "client-visible": true, "needs-fix": true, "rejected": true,
 }
 
 type ProductProposalInput struct {
@@ -452,13 +463,17 @@ type ProductProposalInput struct {
 
 const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
 	image_object_key, source_surface, source_actor_id, source_store_id, status, review_note,
-	adopted_master_product_id, created_at, updated_at`
+	adopted_master_product_id, created_at, updated_at, review_stage, partner_reviewed_by,
+	marketing_reviewed_by, catalog_adopted_by, catalog_approved_by, client_visible_at,
+	audit_required, blocked_reason, resubmission_count, linked_store_id`
 
 func scanProposal(scanner interface{ Scan(...any) error }) (ProductProposal, error) {
 	var p ProductProposal
 	err := scanner.Scan(&p.ID, &p.ProposedNameAr, &p.ProposedNameEn, &p.DomainID, &p.CategoryNodeID, &p.Brand,
 		&p.Barcode, &p.ImageObjectKey, &p.SourceSurface, &p.SourceActorID, &p.SourceStoreID, &p.Status,
-		&p.ReviewNote, &p.AdoptedMasterProductID, &p.CreatedAt, &p.UpdatedAt)
+		&p.ReviewNote, &p.AdoptedMasterProductID, &p.CreatedAt, &p.UpdatedAt, &p.ReviewStage, &p.PartnerReviewedBy,
+		&p.MarketingReviewedBy, &p.CatalogAdoptedBy, &p.CatalogApprovedBy, &p.ClientVisibleAt, &p.AuditRequired,
+		&p.BlockedReason, &p.ResubmissionCount, &p.LinkedStoreID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, ErrNotFound
 	}
@@ -508,11 +523,43 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 		!validSourceSurface[input.SourceSurface] {
 		return ProductProposal{}, ErrInvalid
 	}
+
+	// 1. Manual request domains check
+	var isManual bool
+	err := db.QueryRowContext(ctx, `SELECT is_manual_request FROM dsh_catalog_domains WHERE id=$1`, input.DomainID).Scan(&isManual)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+	if isManual {
+		return ProductProposal{}, fmt.Errorf("%w: manual request domains bypass the product catalog", ErrInvalid)
+	}
+
+	// 2. Resolve effective catalog policy
+	var nodeID string
+	if input.CategoryNodeID != nil {
+		nodeID = *input.CategoryNodeID
+	}
+	policy, err := ResolveEffectivePolicy(ctx, db, input.DomainID, nodeID)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+
+	// 3. Enforce policy constraints
+	if !policy.AllowsProductProposal {
+		return ProductProposal{}, fmt.Errorf("%w: PRODUCT_PROPOSAL_NOT_ALLOWED_FOR_CATEGORY", ErrForbidden)
+	}
+	if policy.RequiresBarcode && (input.Barcode == nil || strings.TrimSpace(*input.Barcode) == "") {
+		return ProductProposal{}, fmt.Errorf("%w: BARCODE_REQUIRED_FOR_CATEGORY", ErrInvalid)
+	}
+	if !policy.AllowsStoreProductCustomImage && (input.ImageObjectKey != nil && strings.TrimSpace(*input.ImageObjectKey) != "") {
+		return ProductProposal{}, fmt.Errorf("%w: CUSTOM_IMAGE_NOT_ALLOWED_FOR_CATEGORY", ErrForbidden)
+	}
+
 	id := entityID("proposal")
-	_, err := db.ExecContext(ctx, `INSERT INTO dsh_product_proposals
+	_, err = db.ExecContext(ctx, `INSERT INTO dsh_product_proposals
 		(id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode, image_object_key,
-		 source_surface, source_actor_id, source_store_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		 source_surface, source_actor_id, source_store_id, status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'partner-proposed')`,
 		id, strings.TrimSpace(input.ProposedNameAr), input.ProposedNameEn, input.DomainID, input.CategoryNodeID,
 		input.Brand, input.Barcode, input.ImageObjectKey, input.SourceSurface, actorID, input.SourceStoreID)
 	if err != nil {
@@ -914,4 +961,174 @@ func prefixColumns(alias, columns string) string {
 
 func entityID(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+}
+
+type ProposalTransitionInput struct {
+	NextStatus             string  `json:"nextStatus"`
+	Note                   string  `json:"note"`
+	AdoptedMasterProductID *string `json:"adoptedMasterProductId"`
+	CreateMasterProduct    *bool   `json:"createMasterProduct"`
+}
+
+func TransitionProposal(ctx context.Context, db *sql.DB, actorID, id string, input ProposalTransitionInput) (ProductProposal, error) {
+	if !validProposalStatus[input.NextStatus] {
+		return ProductProposal{}, fmt.Errorf("%w: invalid nextStatus", ErrInvalid)
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+	defer tx.Rollback()
+
+	proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1 FOR UPDATE`, id))
+	if err != nil {
+		return ProductProposal{}, err
+	}
+
+	// Validate transition rules
+	allowed := false
+	switch proposal.Status {
+	case "catalog-draft":
+		allowed = (input.NextStatus == "partner-proposed")
+	case "partner-proposed":
+		allowed = (input.NextStatus == "partner-review" || input.NextStatus == "needs-fix" || input.NextStatus == "rejected")
+	case "partner-review":
+		allowed = (input.NextStatus == "marketing-review" || input.NextStatus == "needs-fix" || input.NextStatus == "rejected")
+	case "marketing-review":
+		allowed = (input.NextStatus == "catalog-adopted" || input.NextStatus == "needs-fix" || input.NextStatus == "rejected")
+	case "catalog-adopted":
+		allowed = (input.NextStatus == "catalog-approved")
+	case "catalog-approved":
+		allowed = (input.NextStatus == "client-visible")
+	case "needs-fix":
+		allowed = (input.NextStatus == "partner-proposed")
+	case "rejected":
+		allowed = (input.NextStatus == "partner-proposed" || input.NextStatus == "partner-review")
+	}
+
+	if !allowed {
+		return ProductProposal{}, fmt.Errorf("%w: transition from %s to %s is not allowed", ErrInvalid, proposal.Status, input.NextStatus)
+	}
+
+	var updateQuery string
+	var args []any
+
+	switch input.NextStatus {
+	case "partner-review":
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='partner-review', partner_reviewed_by=$3, updated_at=now() WHERE id=$4`
+		args = []any{input.NextStatus, input.Note, actorID, id}
+	case "marketing-review":
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='marketing-review', marketing_reviewed_by=$3, updated_at=now() WHERE id=$4`
+		args = []any{input.NextStatus, input.Note, actorID, id}
+	case "catalog-adopted":
+		adoptedID := input.AdoptedMasterProductID
+		if (input.CreateMasterProduct != nil && *input.CreateMasterProduct) || (adoptedID == nil && input.AdoptedMasterProductID == nil) {
+			if proposal.Barcode != nil && *proposal.Barcode != "" {
+				var existingID string
+				err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1 LIMIT 1`, *proposal.Barcode).Scan(&existingID)
+				if err == nil {
+					adoptedID = &existingID
+				} else if !errors.Is(err, sql.ErrNoRows) {
+					return ProductProposal{}, err
+				}
+			}
+
+			if adoptedID == nil {
+				mpID := entityID("mp")
+				_, err = tx.ExecContext(ctx, `INSERT INTO dsh_master_products
+					(id, domain_id, category_node_id, canonical_name_ar, canonical_name_en, brand, barcode,
+					 approval_status, created_source)
+					VALUES ($1,$2,$3,$4,$5,$6,$7,'pending_review',$8)`,
+					mpID, proposal.DomainID, proposal.CategoryNodeID, proposal.ProposedNameAr, proposal.ProposedNameEn,
+					proposal.Brand, proposal.Barcode, "product-proposal:"+proposal.SourceSurface)
+				if err != nil {
+					return ProductProposal{}, err
+				}
+				adoptedID = &mpID
+			}
+		}
+
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-adopted', catalog_adopted_by=$3, adopted_master_product_id=$4, updated_at=now() WHERE id=$5`
+		args = []any{input.NextStatus, input.Note, actorID, adoptedID, id}
+
+	case "catalog-approved":
+		if proposal.AdoptedMasterProductID != nil {
+			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now() WHERE id=$1`, *proposal.AdoptedMasterProductID)
+			if err != nil {
+				return ProductProposal{}, err
+			}
+
+			if proposal.SourceStoreID != nil {
+				assortID := entityID("assort")
+				_, err = tx.ExecContext(ctx, `INSERT INTO dsh_store_assortments
+					(id, store_id, master_product_id, unit_price, currency, available, stock_status, publication_status, submitted_by)
+					VALUES ($1,$2,$3,0.00,'YER',true,'in_stock','approved',$4)
+					ON CONFLICT (store_id, master_product_id) DO NOTHING`,
+					assortID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID, actorID)
+				if err != nil {
+					return ProductProposal{}, err
+				}
+			}
+		}
+
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-approved', catalog_approved_by=$3, updated_at=now() WHERE id=$4`
+		args = []any{input.NextStatus, input.Note, actorID, id}
+
+	case "client-visible":
+		if proposal.AdoptedMasterProductID == nil || proposal.SourceStoreID == nil {
+			return ProductProposal{}, fmt.Errorf("%w: cannot transition to client-visible without approved product and store association", ErrInvalid)
+		}
+
+		var available bool
+		var unitPrice float64
+		err = tx.QueryRowContext(ctx, `SELECT available, unit_price FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID).Scan(&available, &unitPrice)
+		if err != nil {
+			return ProductProposal{}, fmt.Errorf("store assortment not found or not active: %w", err)
+		}
+		if !available || unitPrice <= 0 {
+			return ProductProposal{}, fmt.Errorf("%w: store assortment price must be greater than 0 and available=true", ErrInvalid)
+		}
+
+		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now() WHERE store_id=$2 AND master_product_id=$3`,
+			actorID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID)
+		if err != nil {
+			return ProductProposal{}, err
+		}
+
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='client-visible', client_visible_at=now(), updated_at=now() WHERE id=$3`
+		args = []any{input.NextStatus, input.Note, id}
+
+	case "needs-fix":
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='needs-fix', blocked_reason=$3, resubmission_count=resubmission_count+1, updated_at=now() WHERE id=$4`
+		args = []any{input.NextStatus, input.Note, input.Note, id}
+
+	default:
+		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, updated_at=now() WHERE id=$3`
+		args = []any{input.NextStatus, input.Note, id}
+	}
+
+	_, err = tx.ExecContext(ctx, updateQuery, args...)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+
+	// Record audit trail
+	storeIDVal := "central"
+	if proposal.SourceStoreID != nil {
+		storeIDVal = *proposal.SourceStoreID
+	}
+	auditID := id + "-transition-" + fmt.Sprint(time.Now().UnixNano())
+	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_catalog_audit
+		(id, store_id, actor_id, actor_role, action, entity_type, entity_id, to_state, reason, correlation_id)
+		VALUES ($1, $2, $3, 'operator', 'proposal.transition', 'proposal', $4, $5::jsonb, $6, '')`,
+		auditID, storeIDVal, actorID, id, `{"status": "`+input.NextStatus+`"}`, input.Note)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return ProductProposal{}, err
+	}
+	return GetProposal(ctx, db, id)
 }

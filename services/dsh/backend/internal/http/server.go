@@ -127,6 +127,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PATCH /dsh/operator/catalog/master-products/{productId}", protected.handleUpdateMasterProduct)
 	mux.HandleFunc("GET /dsh/operator/catalog/product-proposals", protected.handleListProductProposals)
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/decision", protected.handleDecideProductProposal)
+	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/transition", protected.handleTransitionProductProposal)
 	mux.HandleFunc("GET /dsh/operator/catalog/platform-policies", protected.handleListCatalogPolicies)
 	mux.HandleFunc("PUT /dsh/operator/catalog/platform-policies/{policyId}", protected.handleUpdateCatalogPolicy)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment", protected.handleOperatorGetStoreAssortment)

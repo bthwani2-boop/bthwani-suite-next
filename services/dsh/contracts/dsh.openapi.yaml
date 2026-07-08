@@ -912,6 +912,19 @@ paths:
       responses:
         "200": { description: Proposal moved to under_review/adopted/rejected/needs_fix. }
 
+  /dsh/operator/catalog/product-proposals/{proposalId}/transition:
+    post:
+      operationId: transitionProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: proposalId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Proposal transitioned along the multi-stage review pipeline. }
+
   /dsh/operator/catalog/platform-policies:
     get:
       operationId: listCatalogPlatformPolicies
