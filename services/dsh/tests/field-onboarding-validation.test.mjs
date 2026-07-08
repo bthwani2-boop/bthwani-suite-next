@@ -10,6 +10,8 @@ const {
 const requiredDocumentTypes = ["national_id", "commercial_register"];
 
 const completeForm = {
+  legalNameAr: "اسم تجاري تجريبي",
+  legalIdentityNumber: "1234567890",
   ownerName: "مالك تجريبي",
   primaryPhone: "770000000",
   city: "sana",

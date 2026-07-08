@@ -2,7 +2,7 @@
 // Presentational step for the field onboarding wizard. No business logic here.
 import React from 'react';
 import { View } from 'react-native';
-import { TextField, Text, spacing, colorRoles } from '@bthwani/ui-kit';
+import { TextField, Text, SegmentedControl, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm } from '../../shared/field-onboarding';
 
 type Props = {
@@ -26,6 +26,28 @@ export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Pr
         {...(errors.legalNameAr ? { error: errors.legalNameAr } : {})}
         onChangeText={(v) => onChange({ legalNameAr: v, displayName: v })}
         placeholder="مثال: أسواق العليا الطازجة"
+      />
+
+      <View style={{ gap: spacing[2] }}>
+        <Text role="bodySm" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>نوع الهوية التجارية</Text>
+        <SegmentedControl
+          items={[
+            { value: 'commercial_register', label: 'سجل تجاري' },
+            { value: 'national_id', label: 'هوية وطنية' },
+            { value: 'freelancer_certificate', label: 'وثيقة عمل حر' },
+          ]}
+          value={form.legalIdentityType ?? 'commercial_register'}
+          onValueChange={(v) => onChange({ legalIdentityType: v as any })}
+        />
+      </View>
+
+      <TextField
+        label="رقم الهوية التجارية"
+        value={form.legalIdentityNumber ?? ''}
+        disabled={readOnly}
+        {...(errors.legalIdentityNumber ? { error: errors.legalIdentityNumber } : {})}
+        onChangeText={(v) => onChange({ legalIdentityNumber: v })}
+        placeholder="رقم السجل التجاري أو الهوية"
       />
 
       <TextField

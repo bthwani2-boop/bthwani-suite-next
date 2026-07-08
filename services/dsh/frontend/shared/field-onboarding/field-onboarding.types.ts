@@ -130,6 +130,8 @@ export function validateOwnerStep(form: Partial<FieldPartnerDraftForm>): FieldOn
 
 export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm>): number {
   let count = 0;
+  if (!form.legalNameAr?.trim()) count++;
+  if (!form.legalIdentityNumber?.trim()) count++;
   if (!form.ownerName?.trim()) count++;
   if (!form.primaryPhone?.trim()) count++;
   return count;
@@ -183,6 +185,8 @@ export function getFieldRequiredMissingItems(
   uploadedDocumentTypes: DshPartnerDocumentType[]
 ): string[] {
   const missing: string[] = [];
+  if (!form.legalNameAr?.trim()) missing.push("الاسم التجاري بالعربية");
+  if (!form.legalIdentityNumber?.trim()) missing.push("رقم الهوية التجارية");
   if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.city?.trim()) missing.push("المدينة");
