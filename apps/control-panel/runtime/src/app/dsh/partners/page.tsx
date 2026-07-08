@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { PartnersReviewQueueScreen, PartnerListScreen, FieldReadinessQueueScreen } from "@dsh-cp/partners";
+import { PartnersReviewQueueScreen, PartnerListScreen, FieldReadinessQueueScreen, FieldActivationScreen } from "@dsh-cp/partners";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
@@ -10,12 +10,13 @@ import {
 } from "../../../shell";
 import { useRouter } from "next/navigation";
 
-type PartnersTab = "queue" | "all" | "field-readiness";
+type PartnersTab = "queue" | "all" | "field-readiness" | "field-activation";
 
 const TABS: { id: PartnersTab; label: string }[] = [
   { id: "queue", label: "طلبات المراجعة" },
   { id: "all", label: "كل الشركاء" },
   { id: "field-readiness", label: "جاهزية الميدان" },
+  { id: "field-activation", label: "تفعيل الميداني" },
 ];
 
 export default function DshPartnersPage() {
@@ -71,8 +72,10 @@ export default function DshPartnersPage() {
             <PartnerListScreen
               onSelectPartner={(partnerId) => router.push(`/dsh/partners/${partnerId}`)}
             />
-          ) : (
+          ) : tab === "field-readiness" ? (
             <FieldReadinessQueueScreen />
+          ) : (
+            <FieldActivationScreen />
           )}
         </Suspense>
       }
