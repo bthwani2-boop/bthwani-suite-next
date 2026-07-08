@@ -2,27 +2,12 @@
   "project": "bthwani-suite-next",
   "contextFileName": "GEMINI.md",
   "instructions": [
-    "AGENTS.md",
-    ".agents/INDEX.md",
-    ".agents/AUTHORITY_BOUNDARY.md"
+    "AGENTS.md"
   ],
   "mcpServers": {
     "lean-ctx": {
       "command": "lean-ctx",
       "trust": true
     }
-  },
-  "hooks": {
-    "BeforeTool": [
-      {
-        "matcher": "read_file|list_directory",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .agents/hooks/graphify-pretool.ps1"
-          }
-        ]
-      }
-    ]
   }
 }

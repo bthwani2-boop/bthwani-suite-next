@@ -36,7 +36,7 @@ type DshCanonicalProductCard = {
   preparationNote?: string;
   internalNote?: string;
 };
-import { getDshProductRuntimeClient } from '../../shared/runtime/ui-only-runtime-clients';
+import { fetchPartnerStoreAssortment, fetchPartnerMasterProducts } from '../../shared/catalog';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
 import { PartnerCatalogReadinessPanel } from './PartnerCatalogReadinessPanel';
 // The hierarchy filter below (domain/main-category/subcategory/facet) has no
@@ -1027,30 +1027,35 @@ function InventoryCatalogContent({
   React.useEffect(() => {
     if (!canonicalStoreId) return;
     let cancelled = false;
-    const apiClient = getDshProductRuntimeClient();
-    apiClient.listProducts(canonicalStoreId, { limit: 100 })
-      .then((resp: any) => {
+    Promise.all([
+      fetchPartnerStoreAssortment(canonicalStoreId),
+      fetchPartnerMasterProducts({ limit: 100 })
+    ])
+      .then(([assortments, masterProducts]) => {
         if (cancelled) return;
-        const liveItems = resp.products.map((p: any): InventoryCatalogListItem => ({
-          id: p.id,
-          name: p.name,
-          categoryLabel: p.category_id ?? 'بدون فئة',
-          isPrivateStoreProduct: false,
-          isCatalogOwned: p.approval_status === 'catalog_adopted' || p.approval_status === 'client_visible',
-          catalogLinked: true,
-          priceLabel: p.base_price_label || '0.00 ر.ي',
-          stockCount: p.stock_override ?? 0,
-          available: p.available_override ?? true,
-          lowStock: (p.stock_override ?? 0) <= 3,
-          publishStage: mapApiStatusToPublishStage(p.approval_status),
-          reviewNeeded: !['catalog_adopted', 'client_visible'].includes(p.approval_status),
-        }));
+        const liveItems = assortments.map((a: any): InventoryCatalogListItem => {
+          const mp = masterProducts.find((p) => p.id === a.masterProductId);
+          return {
+            id: a.masterProductId,
+            name: mp?.canonicalNameAr ?? `منتج مركزي ${a.masterProductId}`,
+            categoryLabel: mp?.categoryNodeId ?? 'بدون تصنيف',
+            isPrivateStoreProduct: false,
+            isCatalogOwned: true,
+            catalogLinked: true,
+            priceLabel: `${a.unitPrice} YER`,
+            stockCount: a.stockStatus === 'in_stock' ? 100 : a.stockStatus === 'low_stock' ? 2 : 0,
+            available: a.available,
+            lowStock: a.stockStatus === 'low_stock',
+            publishStage: a.publicationStatus,
+            reviewNeeded: false,
+          };
+        });
         setItems(liveItems);
       })
       .catch(() => {
         if (cancelled) return;
         setItems([]);
-        setToolMessage('تعذر تحميل كتالوج المنتجات من DSH Runtime.');
+        setToolMessage('تعذر تحميل كتالوج المنتجات المركزي.');
       });
     return () => { cancelled = true; };
   }, [canonicalStoreId]);

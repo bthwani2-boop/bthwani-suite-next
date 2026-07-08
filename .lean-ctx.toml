@@ -7,9 +7,9 @@ cache_policy = "safe"
 response_verbosity = "headers_only"
 tool_profile = "power"
 
-enable_wakeup_ctx = true
-auto_capture = true
-journal_enabled = true
+enable_wakeup_ctx = false
+auto_capture = false
+journal_enabled = false
 update_check_disabled = true
 
 [cloud]

@@ -1,9 +1,8 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
-import { devBypassLogin, useIdentitySession } from "@bthwani/core-identity";
+import { StyleSheet, View, ScrollView } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
-  Button,
   Card,
   ListItem,
   ScrollScreen,
@@ -11,132 +10,112 @@ import {
   Text,
   spacing,
 } from "@bthwani/ui-kit";
-import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
-import { usePartnerCatalogController } from "../../shared/catalog";
+import { fetchPartnerTaxonomy, fetchPartnerStoreAssortment } from "../../shared/catalog";
+import type { CentralCatalogDomain, CentralCatalogNode, StoreAssortment } from "../../shared/catalog";
 
 export function PartnerCatalogManagementScreen() {
   const identity = useIdentitySession();
-  const controller = usePartnerCatalogController(identity.state.kind);
-  const { state, action } = controller;
+  const storeId = identity.state.kind === "authenticated" ? (identity.state as any).storeId || "store-1001" : "store-1001";
+
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [domains, setDomains] = React.useState<readonly CentralCatalogDomain[]>([]);
+  const [nodes, setNodes] = React.useState<readonly CentralCatalogNode[]>([]);
+  const [assortment, setAssortment] = React.useState<readonly StoreAssortment[]>([]);
+
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const taxonomy = await fetchPartnerTaxonomy();
+      const ass = await fetchPartnerStoreAssortment(storeId);
+      setDomains(taxonomy.domains);
+      setNodes(taxonomy.nodes);
+      setAssortment(ass);
+    } catch (err: any) {
+      setError(err.message ?? "فشل تحميل بيانات الكتالوج.");
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
+
+  React.useEffect(() => {
+    if (identity.state.kind === "authenticated") {
+      void loadData();
+    }
+  }, [identity.state.kind, loadData]);
 
   if (identity.state.kind !== "authenticated") {
-    return (
-      <ScrollScreen>
-        <AuthLoginCard
-          title="تسجيل دخول الشريك"
-          subtitle="إدارة الكتالوج مرتبطة بهوية الشريك والمتجر."
-          loading={identity.state.kind === "authenticating"}
-          {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
-          onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => devBypassLogin("partner")}
-        />
-      </ScrollScreen>
-    );
+    return <StateView title="تسجيل الدخول مطلوب" description="يرجى تسجيل الدخول للوصول للكتالوج." tone="warning" />;
   }
 
-  if (state.kind === "loading") {
-    return <StateView title="جاري تحميل الكتالوج" loading />;
+  if (loading) {
+    return <StateView title="جاري تحميل الكتالوج المركزي..." loading />;
   }
 
-  if (state.kind === "permission_denied") {
-    return <StateView title="غير مصرح" description="لا تملك صلاحية إدارة كتالوج هذا المتجر." tone="warning" />;
-  }
-
-  if (state.kind === "error") {
+  if (error) {
     return (
       <StateView
         title="تعذر تحميل الكتالوج"
-        description={state.message}
+        description={error}
         tone="danger"
         actionLabel="إعادة المحاولة"
-        onActionPress={controller.retry}
+        onActionPress={loadData}
       />
     );
   }
-
-  if (state.kind === "empty") {
-    return (
-      <StateView
-        title="لا يوجد كتالوج"
-        description="لم يتم ربط كتالوج بهذا المتجر بعد."
-        actionLabel="إعادة التحميل"
-        onActionPress={controller.retry}
-      />
-    );
-  }
-
-  const { catalog } = state;
-  const activeProducts = catalog.products.filter((product) => product.isActive).length;
-  const activeCategories = catalog.categories.filter((category) => category.isActive).length;
 
   return (
     <ScrollScreen>
       <Card>
         <View style={styles.hero}>
           <View style={styles.headerRow}>
-            <Text role="titleLg" align="start">إدارة الكتالوج</Text>
-            <Badge label={action === "submitting" ? "جاري الحفظ" : "متصل"} tone={action === "error" ? "danger" : "info"} />
+            <Text role="titleLg" align="start">كتالوج الفرع المركزي</Text>
+            <Badge label="متصل" tone="info" />
           </View>
-          <Text tone="secondary" align="start">المتجر: {catalog.storeId}</Text>
+          <Text tone="secondary" align="start">المتجر: {storeId}</Text>
           <View style={styles.metrics}>
-            <Badge label={`${activeCategories}/${catalog.categories.length} فئات نشطة`} tone="neutral" />
-            <Badge label={`${activeProducts}/${catalog.products.length} منتجات نشطة`} tone="neutral" />
+            <Badge label={`${domains.length} أقسام رئيسية معتمدة`} tone="neutral" />
+            <Badge label={`${assortment.length} منتجات في تشكيلة الفرع`} tone="neutral" />
           </View>
         </View>
       </Card>
 
-      {action === "success" && (
-        <StateView title="تم تحديث الكتالوج" tone="success" />
-      )}
-      {action === "error" && (
-        <StateView title="تعذر حفظ الإجراء" tone="danger" />
-      )}
-      {action === "conflict" && (
-        <StateView title="تعارض في نسخة الكتالوج" description="أعد التحميل ثم حاول مجددًا." tone="warning" />
-      )}
-
-      <Text role="titleMd" align="start">الفئات</Text>
+      <Text role="titleMd" align="start">الأقسام المتاحة</Text>
       <Card>
-        {catalog.categories.length === 0 ? (
+        {domains.length === 0 ? (
           <View style={styles.section}>
-            <Text tone="secondary" align="center">لا توجد فئات معرفة.</Text>
+            <Text tone="secondary" align="center">لا توجد أقسام معرفة.</Text>
           </View>
         ) : (
-          catalog.categories.map((category) => (
+          domains.map((dom) => (
             <ListItem
-              key={category.id}
-              title={category.name}
-              subtitle={category.description || `ترتيب العرض ${category.sortOrder}`}
-              trailing={<Badge label={category.isActive ? "نشطة" : "متوقفة"} tone={category.isActive ? "success" : "neutral"} />}
+              key={dom.id}
+              title={dom.nameAr}
+              subtitle={dom.nameEn || "قسم رئيسي معتمد"}
+              trailing={<Badge label={dom.isActive ? "نشط" : "متوقف"} tone={dom.isActive ? "success" : "neutral"} />}
             />
           ))
         )}
       </Card>
 
-      <Text role="titleMd" align="start">المنتجات</Text>
+      <Text role="titleMd" align="start">تشكيلة المنتجات الحالية</Text>
       <Card>
-        {catalog.products.length === 0 ? (
+        {assortment.length === 0 ? (
           <View style={styles.section}>
-            <Text tone="secondary" align="center">لا توجد منتجات في الكتالوج.</Text>
+            <Text tone="secondary" align="center">لا توجد منتجات مضافة لتشكيلة هذا الفرع.</Text>
           </View>
         ) : (
-          catalog.products.map((product) => (
+          assortment.map((item) => (
             <ListItem
-              key={product.id}
-              title={product.name}
-              subtitle={`${product.sku} - ${product.priceReference}`}
-              trailing={<Badge label={product.isActive ? "متاح" : "موقوف"} tone={product.isActive ? "success" : "warning"} />}
+              key={item.id}
+              title={`منتج مركزي: ${item.masterProductId}`}
+              subtitle={`السعر المحلي: ${item.unitPrice} YER`}
+              trailing={<Badge label={item.available ? "متاح للطلب" : "موقوف"} tone={item.available ? "success" : "warning"} />}
             />
           ))
         )}
       </Card>
-
-      <Button
-        label={action === "submitting" ? "جاري الإرسال" : "إرسال الكتالوج للمراجعة"}
-        tone="primary"
-        disabled={action === "submitting"}
-        onPress={() => void controller.submit()}
-      />
     </ScrollScreen>
   );
 }
@@ -162,5 +141,3 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
 });
-
-// export default PartnerCatalogManagementScreen; // Unused default export

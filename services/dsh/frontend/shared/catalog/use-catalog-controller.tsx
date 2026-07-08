@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   completeMedia,
-  createCatalogCategory,
-  createCatalogProduct,
   decideCatalog,
-  deleteCatalogCategory,
-  deleteCatalogProduct,
   deleteMedia,
   fetchCatalogAudit,
   fetchCatalogSubmissions,
   fetchPartnerCatalog,
   fetchPublishedCatalog,
   submitCatalog,
-  updateCatalogCategory,
-  updateCatalogProduct,
   uploadMediaIntent,
 } from "./catalog.api";
 import {
@@ -54,27 +48,7 @@ export function usePartnerCatalogController(authKind = "unauthenticated") {
     action,
     retry: () => void load(),
 
-    createCategory: (input: Parameters<typeof createCatalogCategory>[0]) =>
-      run(() => createCatalogCategory(input)),
 
-    updateCategory: (
-      categoryId: string,
-      input: Parameters<typeof updateCatalogCategory>[1],
-    ) => run(() => updateCatalogCategory(categoryId, input)),
-
-    deleteCategory: (categoryId: string, expectedVersion: number) =>
-      run(() => deleteCatalogCategory(categoryId, expectedVersion)),
-
-    createProduct: (input: Parameters<typeof createCatalogProduct>[0]) =>
-      run(() => createCatalogProduct(input)),
-
-    updateProduct: (
-      productId: string,
-      input: Parameters<typeof updateCatalogProduct>[1],
-    ) => run(() => updateCatalogProduct(productId, input)),
-
-    deleteProduct: (productId: string, expectedVersion: number) =>
-      run(() => deleteCatalogProduct(productId, expectedVersion)),
 
     uploadMedia: (input: Parameters<typeof uploadMediaIntent>[0]): Promise<MediaUploadIntent> =>
       uploadMediaIntent(input),

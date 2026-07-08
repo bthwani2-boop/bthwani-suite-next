@@ -13,6 +13,7 @@ import type {
 import { fetchAdminStoreDetail } from "../store/store-admin.api";
 import { resolveCatalogError, resolveCatalogSubmissionError } from "./catalog.controller-core";
 import { resolveCatalogSubmissionState, resolvePartnerCatalogState, resolvePublishedCatalogState } from "./catalog.view-model";
+import { fetchPublishedCentralCatalog } from "./central-catalog.api";
 
 const baseUrl = resolveDshApiBaseUrl();
 const { request } = createDshHttpClient(baseUrl, "catalog-corr");
@@ -20,10 +21,37 @@ const { request: publicRequest } = createDshPublicHttpClient(baseUrl);
 
 export async function fetchPublishedCatalog(storeId: string): Promise<CatalogState> {
   try {
-    const response = await publicRequest<Omit<PartnerCatalog, "storeId">>(
-      `/dsh/stores/${encodeURIComponent(storeId)}/catalog`,
-    );
-    const catalog: PartnerCatalog = { storeId, ...response };
+    const response = await fetchPublishedCentralCatalog(storeId);
+    const categories: CatalogCategory[] = response.domains.map((d) => ({
+      id: d.id,
+      storeId: storeId,
+      name: d.nameAr,
+      description: d.slug,
+      sortOrder: d.sortOrder,
+      isActive: d.isActive,
+      version: 1,
+    }));
+    const products: CatalogProduct[] = response.products.map((p) => ({
+      id: p.id,
+      storeId: storeId,
+      categoryId: p.domainId,
+      name: p.canonicalNameAr,
+      description: p.brand || "",
+      sku: p.sku || "",
+      priceReference: String(p.unitPrice),
+      isActive: p.isActive,
+      version: 1,
+      media: p.imageObjectKey ? [{
+        id: p.id + "-media",
+        productId: p.id,
+        objectKey: p.imageObjectKey,
+        contentType: "image/webp",
+        state: "complete",
+        publicUrl: p.imageObjectKey.startsWith("http") ? p.imageObjectKey : `${baseUrl}/dsh/media?key=${encodeURIComponent(p.imageObjectKey)}`,
+        version: 1,
+      }] : [],
+    }));
+    const catalog: PartnerCatalog = { storeId, categories, products };
     return resolvePublishedCatalogState(catalog);
   } catch (error) {
     return classifyCatalogError(error);
@@ -39,87 +67,7 @@ export async function fetchPartnerCatalog(): Promise<CatalogState> {
   }
 }
 
-export async function createCatalogCategory(input: {
-  readonly name: string;
-  readonly description: string;
-  readonly sortOrder: number;
-}): Promise<CatalogCategory> {
-  const response = await request<{ category: CatalogCategory }>("/dsh/partner/catalog/categories", {
-    method: "POST",
-    body: { ...input, isActive: true, expectedVersion: 0 },
-  });
-  return response.category;
-}
 
-export async function createCatalogProduct(input: {
-  readonly categoryId: string | null;
-  readonly name: string;
-  readonly description: string;
-  readonly sku: string;
-  readonly priceReference: string;
-}): Promise<CatalogProduct> {
-  const response = await request<{ product: CatalogProduct }>("/dsh/partner/catalog/products", {
-    method: "POST",
-    body: { ...input, isActive: true, expectedVersion: 0 },
-  });
-  return response.product;
-}
-
-export async function updateCatalogCategory(
-  categoryId: string,
-  input: {
-    readonly name?: string | undefined;
-    readonly description?: string | undefined;
-    readonly sortOrder?: number | undefined;
-    readonly isActive?: boolean | undefined;
-    readonly expectedVersion: number;
-  },
-): Promise<CatalogCategory> {
-  const response = await request<{ category: CatalogCategory }>(
-    `/dsh/partner/catalog/categories/${encodeURIComponent(categoryId)}`,
-    { method: "PATCH", body: input },
-  );
-  return response.category;
-}
-
-export async function deleteCatalogCategory(
-  categoryId: string,
-  expectedVersion: number,
-): Promise<void> {
-  await request(
-    `/dsh/partner/catalog/categories/${encodeURIComponent(categoryId)}`,
-    { method: "DELETE", body: { expectedVersion } },
-  );
-}
-
-export async function updateCatalogProduct(
-  productId: string,
-  input: {
-    readonly name?: string | undefined;
-    readonly description?: string | undefined;
-    readonly sku?: string | undefined;
-    readonly priceReference?: string | undefined;
-    readonly categoryId?: string | null | undefined;
-    readonly isActive?: boolean | undefined;
-    readonly expectedVersion: number;
-  },
-): Promise<CatalogProduct> {
-  const response = await request<{ product: CatalogProduct }>(
-    `/dsh/partner/catalog/products/${encodeURIComponent(productId)}`,
-    { method: "PATCH", body: input },
-  );
-  return response.product;
-}
-
-export async function deleteCatalogProduct(
-  productId: string,
-  expectedVersion: number,
-): Promise<void> {
-  await request(
-    `/dsh/partner/catalog/products/${encodeURIComponent(productId)}`,
-    { method: "DELETE", body: { expectedVersion } },
-  );
-}
 
 export async function uploadMediaIntent(input: {
   readonly productId: string | null;

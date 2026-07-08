@@ -1,3 +1,6 @@
+// Package catalog contains legacy store-local catalog structures.
+// DEPRECATED: These are kept for legacy compatibility and DB migrations only.
+// Refer to centralcatalog package for sovereign central catalog operations.
 package catalog
 
 import (

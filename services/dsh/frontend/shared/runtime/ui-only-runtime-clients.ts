@@ -1,14 +1,12 @@
 import { resolveDshAuthBaseUrl } from './dsh-auth-client';
 import { PlatformVarsRegistry } from '../platform/platform-vars';
-import { createDshProductApiHttpClient } from '../catalog/dsh-product-api.transport';
 
 function getPartnerStoreOnboardingRuntimeClient(): any {
   return null;
 }
 
 export function getDshProductRuntimeClient(): any {
-  const baseUrl = getDshProductRuntimeBaseUrl();
-  return baseUrl ? createDshProductApiHttpClient(baseUrl) : null;
+  return null;
 }
 
 export function getDshProductRuntimeBaseUrl() {
