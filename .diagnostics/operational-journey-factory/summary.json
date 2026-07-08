@@ -3,18 +3,18 @@
   "final_closure": false,
   "exact_100_percent_claim": false,
   "branch": "journy",
-  "head_sha": "1806c36e133f76501f2b18f6965d7ea47dbd7e89",
+  "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
   "reference_root": "C:/bthwani-suite-next/.diagnostics/operational-journey-factory",
   "numeric_truth": {
-    "head_sha": "1806c36e133f76501f2b18f6965d7ea47dbd7e89",
+    "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
     "branch": "journy",
-    "gap_count": 7,
-    "blocking_gap_count": 0,
+    "gap_count": 11,
+    "blocking_gap_count": 1,
     "toolchain_tool_count": 60,
     "unused_script_count": 38,
-    "surface_inventory_item_count": 611,
+    "surface_inventory_item_count": 623,
     "openapi_file_count": 5,
-    "api_operation_count": 206,
+    "api_operation_count": 210,
     "generated_client_count": 4,
     "backend_route_count": 29
   },
@@ -26,50 +26,50 @@
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
-      "sha256": "1560c2ef7b8d2eb663f668109b39a67199a1330453902fa71e9a159187f4e4b3",
+      "sha256": "aa2e9423006971837dc1401d38349c36cc57ac9f03c094ea21262e9cb766ee59",
       "size_bytes": 92147
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/toolchain-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
-      "sha256": "8c38b54b393d0ca99e1077a9e227ff9534ecc800d58600c5b66eacd6df70ec96",
+      "sha256": "30e99e70deaa9e583d26d19f7dcc2917480cffdb32b3f8d2a82fb8fba6e7cacd",
       "size_bytes": 6177
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.json",
-      "sha256": "de8413124b3a6e7bb462946de4d0f55afc643f3dcaefb429a99099db3e40378b",
-      "size_bytes": 102825
+      "sha256": "81ef1cb6d76d8436a142f17838335ce53d6b20d61cb5e45907198b196c034cdc",
+      "size_bytes": 104850
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/surface-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
-      "sha256": "78c553366d5b2724c94c55f8e3f1cee53e55e573bbf89621d0a42459847ab5dd",
-      "size_bytes": 2086
+      "sha256": "c8b14f86ccc02975921328e988ae7f19df31a93d0fb0dd1b0515ed75df1fb817",
+      "size_bytes": 2087
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",
-      "sha256": "9638e484ad12c7e85e45cc346ab0d8c054dd6e4e71beaec9422330ddf28a4042",
-      "size_bytes": 140959
+      "sha256": "aa533190d9cbf495076409142c53908767c730e4ff3317ce450882dcca4ca04b",
+      "size_bytes": 144021
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/journey-inventory.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.md",
-      "sha256": "c8106637b26415e789db5ba2cf7ddd16536df5776b23285f67f090e8c9f342c1",
+      "sha256": "0326fcb170a71552f3cbf40669a784b78f871fecf45de3524d26c287bc8e3a26",
       "size_bytes": 1235
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.json",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
-      "sha256": "37058d15c4e265360f0650b1e93d9ea6b4c393516b6b8e614e1ecd1c7cd779e4",
-      "size_bytes": 8481
+      "sha256": "2ec3fccdce2126508ad27705494e17f545a73eace21acbb5fe83368c49426cf9",
+      "size_bytes": 13811
     },
     {
       "source_path": ".diagnostics/operational-journey-factory/gap-ledger.md",
       "reference_path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
-      "sha256": "8f57e57ad736df13590038ca779aa08e4149099841e65cf77eca04752fae32b4",
-      "size_bytes": 2322
+      "sha256": "bd0bc6f7577dc5567733b23022d88e48cf52a7e9e900fc3669828ec79059a866",
+      "size_bytes": 3580
     }
   ],
   "diagnostics_manifest_count": 2,

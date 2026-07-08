@@ -585,13 +585,15 @@ READ_ONLY_WITH_MACHINE_REASON
 REMOVED_DEAD_WITH_PROOF
 
 ممنوع ترك:
-handler بلا shared owner
-icon بلا contract عند الحاجة
-tab بلا route/action/proof
-state بلا source
-direct API داخل surface
-business logic داخل surface
-mock/demo/preview runtime truth
+- handler بلا shared owner
+- icon بلا contract عند الحاجة
+- tab بلا route/action/proof
+- state بلا source
+- direct API داخل surface
+- business logic داخل surface
+- mock/demo/preview runtime truth
+- inline CSS styles (يجب استخدام المكونات الجاهزة أو تعريف التنسيقات عبر StyleSheet.create / WebStyleSheet.create)
+
 
 PHASE 7 — Shared Brain Before UI:
 افحص وعدّل حسب الحاجة:
@@ -1189,16 +1191,17 @@ P0 ثم P1 ثم P2.
 UI → shared controller/view-model → API/generated client → OpenAPI → backend route → handler → service → repository/database → permission/audit/state → runtime smoke عند الحاجة.
 
 ممنوع:
-docs-only closure
-diagnostics-only closure
-governance-only closure
-manual zeroing
-direct API inside UI
-business logic inside UI
-financial mutation outside WLT
-delete without file-decision proof
-PASS بلا دليل
-100% بلا أرقام صفرية
+- docs-only closure
+- diagnostics-only closure
+- governance-only closure
+- manual zeroing
+- direct API inside UI
+- business logic inside UI
+- financial mutation outside WLT
+- delete without file-decision proof
+- PASS بلا دليل
+- 100% بلا أرقام صفرية
+- inline CSS styles (يجب استخدام المكونات الجاهزة أو تعريف التنسيقات عبر StyleSheet.create / WebStyleSheet.create)
 
 أضف/قوّي:
 tools/guards/live-product-code-remediation-gate.mjs

@@ -50,6 +50,29 @@
   WLT shared/dsh هو عقل WLT المرتبط بـ DSH، وWLT هو مالك الحقيقة المالية الوحيد.
   إذا ظهر business logic أو direct API أو permission logic أو state machine أو raw API mapping داخل surface، يجب نقله فورًا إلى shared المناسب والتحقق منه.
 
+* **No Inline CSS Styles (منع التنسيقات السطرية inline CSS):**
+  يُحظر تمامًا استخدام التنسيقات السطرية (inline CSS styles) داخل المكونات وشاشات واجهات المستخدم (UI surfaces) في كامل المشروع لضمان الحفاظ على الهوية البصرية وتسهيل الصيانة.
+  * **الأسلوب الممنوع (Forbidden):**
+    ```tsx
+    // ممنوع كتابة التنسيقات والألوان والأبعاد مباشرة في وسم المكون
+    <View style={{ flex: 1, backgroundColor: '#ffffff', padding: 16 }}>
+    ```
+  * **الأسلوب البديل الصحيح (Correct):**
+    1. استخدام المكونات الجاهزة وتمرير الإعدادات المعتمدة من `@bthwani/ui-kit`.
+    2. أو تعريف التنسيقات خارجيًا أسفل الملف عبر `StyleSheet.create` (أو `WebStyleSheet.create` للويب):
+    ```tsx
+    <View style={styles.container}>
+
+    // أسفل الملف:
+    const styles = StyleSheet.create({
+      container: {
+        flex: 1,
+        backgroundColor: colorRoles.surfaceBase,
+        padding: spacing[4],
+      },
+    });
+    ```
+
 * **Affected-Only Verification:**
   ابدأ بالفحوصات المتأثرة فقط حسب المسارات التي تغيرت.
   لا تشغّل full-suite إلا إذا تغيّر shared brain أو API/database/migration/runtime، أو فشل affected check، أو كانت المنطقة multi-surface عالية الخطورة.

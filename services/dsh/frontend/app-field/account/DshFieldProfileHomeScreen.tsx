@@ -20,6 +20,7 @@ type DshFieldProfileHomeScreenProps = {
   readonly onOpenProfile: () => void;
   readonly onOpenHistory: () => void;
   readonly onOpenFinance: () => void;
+  readonly onOpenVerification: () => void;
   readonly onLogout: () => void;
 };
 
@@ -28,6 +29,7 @@ export function DshFieldProfileHomeScreen({
   onOpenProfile,
   onOpenHistory,
   onOpenFinance,
+  onOpenVerification,
   onLogout,
 }: DshFieldProfileHomeScreenProps) {
   const identity = useIdentitySession();
@@ -93,6 +95,18 @@ export function DshFieldProfileHomeScreen({
                 <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
                   <Text role="bodyStrong">المالية</Text>
                   <Text role="bodySm" tone="muted">المستحقات والملخص المالي بعد اكتمال الاعتماد.</Text>
+                </View>
+                <Icon name="chevron-back" size={20} tone="muted" mirrored />
+              </View>
+            </View>
+          </Pressable>
+
+          <Pressable onPress={onOpenVerification}>
+            <View style={{ paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
+                  <Text role="bodyStrong">التحقق الميداني من المتجر</Text>
+                  <Text role="bodySm" tone="muted">رفع نتيجة التحقق الميداني للمتجر المرتبط بك.</Text>
                 </View>
                 <Icon name="chevron-back" size={20} tone="muted" mirrored />
               </View>

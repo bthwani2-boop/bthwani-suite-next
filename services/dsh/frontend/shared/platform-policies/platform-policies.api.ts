@@ -1,6 +1,9 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
-import type { DshZone, DshSlaRule, DshCapacityConfig, DshZoneServiceability } from "./platform-policies.types";
+import type {
+  DshZone, DshSlaRule, DshCapacityConfig, DshZoneServiceability,
+  DshStoreOnboardingFeePolicy, DshStoreOnboardingFeePolicyInput,
+} from "./platform-policies.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "pp");
 
@@ -22,3 +25,15 @@ const upsertCapacityConfig = (body: { zoneId: string; maxConcurrentOrders: numbe
 
 const fetchZoneServiceability = (zoneId: string) =>
   req<DshZoneServiceability>(`/dsh/operator/platform/serviceability/${zoneId}`);
+
+// ── Store onboarding fee policy ──────────────────────────────────────────────
+export const fetchStoreOnboardingFeePolicy = () =>
+  req<{ policy: DshStoreOnboardingFeePolicy }>("/dsh/operator/platform/store-onboarding-fee");
+export const upsertStoreOnboardingFeePolicy = (body: DshStoreOnboardingFeePolicyInput) =>
+  req<{ policy: DshStoreOnboardingFeePolicy }>("/dsh/operator/platform/store-onboarding-fee", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+// Read-only reference for app-field / app-partner (never app-client).
+export const fetchStoreOnboardingFeeReference = () =>
+  req<{ policy: DshStoreOnboardingFeePolicy }>("/dsh/platform/store-onboarding-fee");

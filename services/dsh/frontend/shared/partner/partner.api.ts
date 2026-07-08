@@ -152,7 +152,7 @@ export function fieldGetPartner(partnerId: string): Promise<DshPartner> {
   return request(`/dsh/field/partners/${partnerId}`);
 }
 
-function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
+export function fieldUpdatePartner(partnerId: string, input: DshUpdatePartnerRequest, version: number): Promise<DshPartner> {
   return request(`/dsh/field/partners/${partnerId}?version=${version}`, { method: "PATCH", body: input });
 }
 

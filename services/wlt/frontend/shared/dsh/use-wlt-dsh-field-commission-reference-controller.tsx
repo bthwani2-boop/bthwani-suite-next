@@ -33,7 +33,7 @@ export function useWltDshFieldCommissionReferenceController(partnerId: string): 
 
   const load = () => {
     const baseUrl = getWltApiBaseUrl();
-    if (!baseUrl) {
+    if (!baseUrl || !partnerId) {
       dispatch({ type: "NOT_AVAILABLE" });
       return;
     }
@@ -44,6 +44,10 @@ export function useWltDshFieldCommissionReferenceController(partnerId: string): 
       .then((res) => {
         if (res.ok) {
           dispatch({ type: "LOADED", reference: res.data });
+        } else if (res.kind === "http" && res.status === 404) {
+          // No commission reference recorded yet for this partner — an
+          // expected pre-approval state, not a failure.
+          dispatch({ type: "NOT_AVAILABLE" });
         } else {
           dispatch({ type: "ERROR", message: res.message });
         }

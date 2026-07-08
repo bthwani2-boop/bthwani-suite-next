@@ -5,6 +5,7 @@ import { Box, Button, Chip, ListItem, Surface, Text, TextField,
   Badge,
 } from '@bthwani/ui-kit';
 import { ActorNotificationsPanel } from '../../shared/notifications';
+import { useStoreOnboardingFeeReferenceController } from '../../shared/platform-policies';
 import {
   mapDshPartnerOperationalFlowToSupportRoute,
   type DshPartnerOperationalFlowId,
@@ -375,6 +376,9 @@ const onboardingFlowCopy: Record<PartnerOnboardingFlowId, { title: string; subti
 
 export function OnboardingActionScreen({ activeFlowId = 'doc-upload', onBack, onOpenScreen, onSecondaryAction }: OnboardingActionScreenProps) {
   const activeCopy = onboardingFlowCopy[activeFlowId];
+  const identity = useIdentitySession();
+  const { state: feeRefState } = useStoreOnboardingFeeReferenceController(identity.state.kind);
+  const feePolicy = feeRefState.kind === 'success' && feeRefState.data.enabled ? feeRefState.data : undefined;
 
   return (
     <Box gap={4}>
@@ -391,6 +395,7 @@ export function OnboardingActionScreen({ activeFlowId = 'doc-upload', onBack, on
 
       <DshPartnerOnboardingActionPanel
         activeFlowId={activeFlowId}
+        {...(feePolicy ? { feePolicy } : {})}
         onSelectFlow={(flowId) => {
           if (flowId === activeFlowId) {
             onSecondaryAction?.();

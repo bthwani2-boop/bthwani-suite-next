@@ -39,7 +39,10 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		          legal_identity_type, legal_identity_number,
 		          owner_name, primary_phone, secondary_phone, email,
 		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes, version, created_at, updated_at`,
+		          notes,
+		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
+		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          version, created_at, updated_at`,
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
 		input.LegalIdentityType, input.LegalIdentityNumber,
 		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
@@ -49,7 +52,10 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes, &p.Version, &p.CreatedAt, &p.UpdatedAt,
+		&p.Notes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
+		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		if isPgUniqueViolation(err) {
@@ -80,14 +86,20 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		       legal_identity_type, legal_identity_number,
 		       owner_name, primary_phone, secondary_phone, email,
 		       category, activation_status, created_by_actor_id, created_by_surface,
-		       notes, version, created_at, updated_at
+		       notes,
+		       beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
+		       payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		       version, created_at, updated_at
 		FROM dsh_partners WHERE id = $1`, partnerID,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes, &p.Version, &p.CreatedAt, &p.UpdatedAt,
+		&p.Notes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
+		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Partner{}, ErrNotFound
@@ -157,14 +169,27 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 
 func UpdatePartner(db *sql.DB, partnerID string, input UpdatePartnerInput, expectedVersion int) (Partner, error) {
 	var p Partner
+	var holderMatchesOwner sql.NullBool
+	if input.BankAccountHolderMatchesOwner != nil {
+		holderMatchesOwner = sql.NullBool{Bool: *input.BankAccountHolderMatchesOwner, Valid: true}
+	}
 	err := db.QueryRow(`
 		UPDATE dsh_partners SET
-			display_name     = COALESCE(NULLIF($2,''), display_name),
-			owner_name       = COALESCE(NULLIF($3,''), owner_name),
-			primary_phone    = COALESCE(NULLIF($4,''), primary_phone),
-			secondary_phone  = COALESCE(NULLIF($5,''), secondary_phone),
-			email            = COALESCE(NULLIF($6,''), email),
-			notes            = COALESCE(NULLIF($7,''), notes),
+			display_name         = COALESCE(NULLIF($2,''), display_name),
+			owner_name           = COALESCE(NULLIF($3,''), owner_name),
+			primary_phone        = COALESCE(NULLIF($4,''), primary_phone),
+			secondary_phone      = COALESCE(NULLIF($5,''), secondary_phone),
+			email                = COALESCE(NULLIF($6,''), email),
+			notes                = COALESCE(NULLIF($7,''), notes),
+			beneficiary_name     = COALESCE(NULLIF($9,''), beneficiary_name),
+			bank_name            = COALESCE(NULLIF($10,''), bank_name),
+			bank_branch          = COALESCE(NULLIF($11,''), bank_branch),
+			bank_account_number  = COALESCE(NULLIF($12,''), bank_account_number),
+			bank_iban            = COALESCE(NULLIF($13,''), bank_iban),
+			payout_mobile_number = COALESCE(NULLIF($14,''), payout_mobile_number),
+			settlement_preference = COALESCE(NULLIF($15,''), settlement_preference),
+			bank_account_holder_matches_owner = COALESCE($16, bank_account_holder_matches_owner),
+			bank_notes           = COALESCE(NULLIF($17,''), bank_notes),
 			version          = version + 1,
 			updated_at       = NOW()
 		WHERE id = $1 AND version = $8
@@ -172,16 +197,24 @@ func UpdatePartner(db *sql.DB, partnerID string, input UpdatePartnerInput, expec
 		          legal_identity_type, legal_identity_number,
 		          owner_name, primary_phone, secondary_phone, email,
 		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes, version, created_at, updated_at`,
+		          notes,
+		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
+		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          version, created_at, updated_at`,
 		partnerID, input.DisplayName, input.OwnerName,
 		input.PrimaryPhone, input.SecondaryPhone, input.Email,
 		input.Notes, expectedVersion,
+		input.BeneficiaryName, input.BankName, input.BankBranch, input.BankAccountNumber, input.BankIBAN,
+		input.PayoutMobileNumber, input.SettlementPreference, holderMatchesOwner, input.BankNotes,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerName, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
 		&p.Category, &p.ActivationStatus, &p.CreatedByActorID, &p.CreatedBySurface,
-		&p.Notes, &p.Version, &p.CreatedAt, &p.UpdatedAt,
+		&p.Notes,
+		&p.BeneficiaryName, &p.BankName, &p.BankBranch, &p.BankAccountNumber, &p.BankIBAN,
+		&p.PayoutMobileNumber, &p.SettlementPreference, &p.BankAccountHolderMatchesOwner, &p.BankNotes,
+		&p.Version, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Partner{}, ErrNotFound
@@ -263,14 +296,20 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		          legal_identity_type, legal_identity_number,
 		          owner_name, primary_phone, secondary_phone, email,
 		          category, activation_status, created_by_actor_id, created_by_surface,
-		          notes, version, created_at, updated_at`,
+		          notes,
+		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
+		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
+		          version, created_at, updated_at`,
 		partnerID, input.ToStatus,
 	).Scan(
 		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
 		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
 		&updated.OwnerName, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
 		&updated.Category, &updated.ActivationStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
-		&updated.Notes, &updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
+		&updated.Notes,
+		&updated.BeneficiaryName, &updated.BankName, &updated.BankBranch, &updated.BankAccountNumber, &updated.BankIBAN,
+		&updated.PayoutMobileNumber, &updated.SettlementPreference, &updated.BankAccountHolderMatchesOwner, &updated.BankNotes,
+		&updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
 	)
 	if err != nil {
 		return Partner{}, ActivationEvent{}, err

@@ -1,5 +1,5 @@
 {
-  "head_sha": "1806c36e133f76501f2b18f6965d7ea47dbd7e89",
+  "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
   "status": "DISCOVERY_ONLY",
   "source_files": {
     "service_blueprint": {
@@ -134,17 +134,22 @@
     "services/dsh/frontend/app-client/support/TicketDetailScreen.tsx",
     "services/dsh/frontend/app-field/account/DshFieldProfileHomeScreen.tsx",
     "services/dsh/frontend/app-field/account/DshFieldProfileScreen.tsx",
-    "services/dsh/frontend/app-field/DshFieldRouteRenderer.tsx",
+    "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
+    "services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx",
+    "services/dsh/frontend/app-field/components/OnboardingAgreementSection.tsx",
+    "services/dsh/frontend/app-field/components/OnboardingBankAccountSection.tsx",
+    "services/dsh/frontend/app-field/components/OnboardingBasicsSection.tsx",
+    "services/dsh/frontend/app-field/components/OnboardingEvidenceSection.tsx",
+    "services/dsh/frontend/app-field/components/OnboardingLocationSection.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
     "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
-    "services/dsh/frontend/app-field/onboarding/FieldPartnerOnboardingScreen.tsx",
-    "services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx",
+    "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
     "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
     "services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx",
     "services/dsh/frontend/app-field/stores/DshFieldStoresHistoryScreen.tsx",
-    "services/dsh/frontend/app-field/stores/FieldStoreVerificationScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldStoreVerificationScreen.tsx",
     "services/dsh/frontend/app-partner/account/OperationScreens.tsx",
     "services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx",
     "services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx",
@@ -208,6 +213,7 @@
     "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
     "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
     "services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx",
+    "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx",
     "services/dsh/frontend/control-panel/shared/ControlPanelDshDecisionBoard.tsx",
     "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
     "services/dsh/frontend/control-panel/support/PlatformNotificationConfigScreen.tsx",
@@ -1089,6 +1095,24 @@
           "source_path": "services/dsh/contracts/dsh.openapi.yaml"
         },
         {
+          "operation_id": "getDshStoreOnboardingFeePolicy",
+          "method": "GET",
+          "path": "/dsh/operator/platform/store-onboarding-fee",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "upsertDshStoreOnboardingFeePolicy",
+          "method": "PUT",
+          "path": "/dsh/operator/platform/store-onboarding-fee",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
+          "operation_id": "getDshStoreOnboardingFeeReference",
+          "method": "GET",
+          "path": "/dsh/platform/store-onboarding-fee",
+          "source_path": "services/dsh/contracts/dsh.openapi.yaml"
+        },
+        {
           "operation_id": "listDshAdminRoles",
           "method": "GET",
           "path": "/dsh/operator/admin/roles",
@@ -1362,6 +1386,12 @@
           "operation_id": "getWltWalletStatusRef",
           "method": "GET",
           "path": "/wlt/references/wallet-status",
+          "source_path": "services/wlt/contracts/wlt.openapi.yaml"
+        },
+        {
+          "operation_id": "getWltFieldCommissionRef",
+          "method": "GET",
+          "path": "/wlt/references/field-commission",
           "source_path": "services/wlt/contracts/wlt.openapi.yaml"
         },
         {
@@ -2882,6 +2912,36 @@
       "journey_group_key": "dsh:dsh"
     },
     {
+      "journey_id": "api:getDshStoreOnboardingFeePolicy",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshStoreOnboardingFeePolicy",
+      "method": "GET",
+      "path": "/dsh/operator/platform/store-onboarding-fee",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:upsertDshStoreOnboardingFeePolicy",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "upsertDshStoreOnboardingFeePolicy",
+      "method": "PUT",
+      "path": "/dsh/operator/platform/store-onboarding-fee",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
+      "journey_id": "api:getDshStoreOnboardingFeeReference",
+      "source_path": "services/dsh/contracts/dsh.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getDshStoreOnboardingFeeReference",
+      "method": "GET",
+      "path": "/dsh/platform/store-onboarding-fee",
+      "journey_group_key": "dsh:dsh"
+    },
+    {
       "journey_id": "api:listDshAdminRoles",
       "source_path": "services/dsh/contracts/dsh.openapi.yaml",
       "status": "PROPOSED_UNFILLED",
@@ -3319,6 +3379,16 @@
       "operation_id": "getWltWalletStatusRef",
       "method": "GET",
       "path": "/wlt/references/wallet-status",
+      "journey_group_key": "wlt:wlt"
+    },
+    {
+      "journey_id": "api:getWltFieldCommissionRef",
+      "source_path": "services/wlt/contracts/wlt.openapi.yaml",
+      "status": "PROPOSED_UNFILLED",
+      "required_action": "classify_multi_surface_bindings",
+      "operation_id": "getWltFieldCommissionRef",
+      "method": "GET",
+      "path": "/wlt/references/field-commission",
       "journey_group_key": "wlt:wlt"
     },
     {

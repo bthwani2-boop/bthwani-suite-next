@@ -1,6 +1,6 @@
 # Operational Journey Inventory
 
-head_sha: `1806c36e133f76501f2b18f6965d7ea47dbd7e89`
+head_sha: `0b89aca02db5dcae60e91264f6d9327abe60a184`
 status: `DISCOVERY_ONLY`
 
 ## Source Files
@@ -18,9 +18,9 @@ status: `DISCOVERY_ONLY`
 - OpenAPI files: 5
 - generated clients: 4
 - backend route candidates: 29
-- frontend surface candidates: 129
+- frontend surface candidates: 135
 - proposed smart journey groups: 5
-- proposed unfilled journeys: 206
+- proposed unfilled journeys: 210
 
 ## Smart Segmentation Policy
 - Unit: business outcome across full-stack multi-surface scope.

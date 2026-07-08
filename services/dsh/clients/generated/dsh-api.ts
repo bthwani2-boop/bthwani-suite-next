@@ -1779,6 +1779,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/platform/store-onboarding-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the store onboarding fee policy (operator edit view). */
+        get: operations["getDshStoreOnboardingFeePolicy"];
+        /** Upsert the store onboarding fee policy. DSH owns the policy definition only — never a WLT financial record. */
+        put: operations["upsertDshStoreOnboardingFeePolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/platform/store-onboarding-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read-only store onboarding fee reference for app-field/app-partner. Never exposed to app-client. */
+        get: operations["getDshStoreOnboardingFeeReference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/admin/roles": {
         parameters: {
             query?: never;
@@ -3271,6 +3306,16 @@ export interface components {
             rejectionReason?: string;
             createdBy?: string;
             assignedFieldAgent?: string;
+            beneficiaryName?: string;
+            bankName?: string;
+            bankBranch?: string;
+            accountNumber?: string;
+            iban?: string;
+            payoutMobileNumber?: string;
+            /** @enum {string} */
+            settlementPreference?: "" | "bank_transfer" | "mobile_wallet";
+            bankAccountHolderMatchesOwner?: boolean;
+            bankNotes?: string;
             version: number;
             /** Format: date-time */
             createdAt: string;
@@ -3437,6 +3482,16 @@ export interface components {
             secondaryPhone?: string;
             email?: string;
             notes?: string;
+            beneficiaryName?: string;
+            bankName?: string;
+            bankBranch?: string;
+            accountNumber?: string;
+            iban?: string;
+            payoutMobileNumber?: string;
+            /** @enum {string} */
+            settlementPreference?: "" | "bank_transfer" | "mobile_wallet";
+            bankAccountHolderMatchesOwner?: boolean;
+            bankNotes?: string;
         };
         DshPartnerFieldVisit: {
             id: string;
@@ -3663,6 +3718,40 @@ export interface components {
             isActive: boolean;
             activeOrders: number;
             capacityPct: number;
+        };
+        DshStoreOnboardingFeePolicy: {
+            enabled: boolean;
+            amount: number;
+            currency: string;
+            /** @enum {string} */
+            appliesTo: "first_store" | "additional_store" | "all_stores";
+            /** @enum {string} */
+            chargeTiming: "on_approval" | "on_publication" | "on_first_order" | "manual";
+            /** @enum {string} */
+            actorCharged: "partner";
+            /** Format: date-time */
+            effectiveFrom?: string | null;
+            notes: string;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+            isConfigured: boolean;
+            blockedReason?: string;
+        };
+        DshStoreOnboardingFeePolicyResponse: {
+            policy: components["schemas"]["DshStoreOnboardingFeePolicy"];
+        };
+        DshUpsertStoreOnboardingFeePolicyRequest: {
+            enabled: boolean;
+            amount: number;
+            currency: string;
+            /** @enum {string} */
+            appliesTo: "first_store" | "additional_store" | "all_stores";
+            /** @enum {string} */
+            chargeTiming: "on_approval" | "on_publication" | "on_first_order" | "manual";
+            /** Format: date-time */
+            effectiveFrom?: string | null;
+            notes?: string;
         };
         DshAdminRole: {
             id: string;
@@ -7153,6 +7242,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DshZoneServiceabilityResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshStoreOnboardingFeePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store onboarding fee policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreOnboardingFeePolicyResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    upsertDshStoreOnboardingFeePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertStoreOnboardingFeePolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Store onboarding fee policy upserted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreOnboardingFeePolicyResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshStoreOnboardingFeeReference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store onboarding fee policy reference. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreOnboardingFeePolicyResponse"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

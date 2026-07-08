@@ -2810,6 +2810,57 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/operator/platform/store-onboarding-fee:
+    get:
+      operationId: getDshStoreOnboardingFeePolicy
+      summary: Get the store onboarding fee policy (operator edit view).
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Store onboarding fee policy.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicyResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: upsertDshStoreOnboardingFeePolicy
+      summary: Upsert the store onboarding fee policy. DSH owns the policy definition only — never a WLT financial record.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpsertStoreOnboardingFeePolicyRequest" }
+      responses:
+        "200":
+          description: Store onboarding fee policy upserted.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicyResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/platform/store-onboarding-fee:
+    get:
+      operationId: getDshStoreOnboardingFeeReference
+      summary: Read-only store onboarding fee reference for app-field/app-partner. Never exposed to app-client.
+      tags: [DshPlatformPolicies]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Store onboarding fee policy reference.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicyResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # ── Administration ────────────────────────────────────────────────
   /dsh/operator/admin/roles:
     get:
@@ -5475,6 +5526,18 @@ components:
         rejectionReason: { type: string }
         createdBy: { type: string }
         assignedFieldAgent: { type: string }
+        # Bank account metadata — Partner-level readiness/metadata captured by
+        # app-field onboarding. Never a WLT mutation; WLT stays the sole owner
+        # of financial truth. Control-panel masks these on display.
+        beneficiaryName: { type: string }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        accountNumber: { type: string }
+        iban: { type: string }
+        payoutMobileNumber: { type: string }
+        settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
+        bankAccountHolderMatchesOwner: { type: boolean }
+        bankNotes: { type: string }
         version: { type: integer }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -5702,6 +5765,16 @@ components:
         secondaryPhone: { type: string }
         email: { type: string }
         notes: { type: string }
+        # Bank account metadata (readiness/metadata only — never a WLT mutation).
+        beneficiaryName: { type: string }
+        bankName: { type: string }
+        bankBranch: { type: string }
+        accountNumber: { type: string }
+        iban: { type: string }
+        payoutMobileNumber: { type: string }
+        settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
+        bankAccountHolderMatchesOwner: { type: boolean }
+        bankNotes: { type: string }
 
     DshPartnerFieldVisit:
       type: object
@@ -5978,6 +6051,44 @@ components:
         isActive: { type: boolean }
         activeOrders: { type: integer }
         capacityPct: { type: number }
+
+    # store_onboarding_fee_policy — DSH owns the policy DEFINITION only.
+    # DSH never records WLT financial truth directly; WLT remains the sole
+    # owner of settlement/payment truth once this fee is actually recorded.
+    DshStoreOnboardingFeePolicy:
+      type: object
+      required: [enabled, amount, currency, appliesTo, chargeTiming, actorCharged, notes, updatedBy, updatedAt, isConfigured]
+      properties:
+        enabled: { type: boolean }
+        amount: { type: number }
+        currency: { type: string }
+        appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
+        chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
+        actorCharged: { type: string, enum: [partner] }
+        effectiveFrom: { type: [string, "null"], format: date-time }
+        notes: { type: string }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+        isConfigured: { type: boolean }
+        blockedReason: { type: string }
+
+    DshStoreOnboardingFeePolicyResponse:
+      type: object
+      required: [policy]
+      properties:
+        policy: { $ref: "#/components/schemas/DshStoreOnboardingFeePolicy" }
+
+    DshUpsertStoreOnboardingFeePolicyRequest:
+      type: object
+      required: [enabled, amount, currency, appliesTo, chargeTiming]
+      properties:
+        enabled: { type: boolean }
+        amount: { type: number, minimum: 0 }
+        currency: { type: string }
+        appliesTo: { type: string, enum: [first_store, additional_store, all_stores] }
+        chargeTiming: { type: string, enum: [on_approval, on_publication, on_first_order, manual] }
+        effectiveFrom: { type: [string, "null"], format: date-time }
+        notes: { type: string }
 
     # ── Administration Schemas ───────────────────────────────────────
     DshAdminRole:

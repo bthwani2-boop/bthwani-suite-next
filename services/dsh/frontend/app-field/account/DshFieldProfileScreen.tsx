@@ -4,7 +4,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { Text, Header, IconButton, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
 import { useIdentitySession } from '@bthwani/core-identity';
-import { usePartnerAdminController } from '../../shared/partner';
+import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
 
 type DshFieldProfileScreenProps = {
   readonly onBack: () => void;
@@ -12,12 +12,15 @@ type DshFieldProfileScreenProps = {
 
 export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
   const identity = useIdentitySession();
-  const partnerAdmin = usePartnerAdminController(identity.state.kind);
+  // Scoped to the calling field actor's own submissions — the operator-wide
+  // partner list (usePartnerAdminController → GET /dsh/operator/partners) is
+  // 403 Forbidden for a field-role session (verified live).
+  const fieldDrafts = useFieldPartnerDraftsController();
 
   const username = identity.state.kind === 'authenticated' ? identity.state.identity.subject : 'ميداني';
   const roleName = identity.state.kind === 'authenticated' ? (identity.state.identity.roles[0] === 'field' ? 'موظف ميداني' : identity.state.identity.roles.join(', ')) : 'عضو فريق الميدان';
-  const activeCount = partnerAdmin.listState.kind === 'success' 
-    ? partnerAdmin.listState.partners.filter(p => p.activationStatus !== 'ops_approved').length.toString() 
+  const activeCount = fieldDrafts.listState.kind === 'success'
+    ? fieldDrafts.listState.partners.filter(p => p.activationStatus !== 'ops_approved').length.toString()
     : '0';
 
   const items = [

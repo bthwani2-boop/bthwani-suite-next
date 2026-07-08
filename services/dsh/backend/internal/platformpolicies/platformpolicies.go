@@ -192,6 +192,129 @@ func UpsertCapacityConfig(db *sql.DB, zoneID string, maxOrders, maxCaptains, thr
 	return c, err
 }
 
+// ── Store onboarding fee policy (singleton) ─────────────────────────────────────
+// DSH owns the policy DEFINITION only. It never creates a ledger entry — WLT
+// remains the sole owner of financial truth once a settlement/payment for
+// this fee is actually recorded.
+
+var validAppliesTo = map[string]bool{"first_store": true, "additional_store": true, "all_stores": true}
+var validChargeTiming = map[string]bool{"on_approval": true, "on_publication": true, "on_first_order": true, "manual": true}
+
+type StoreOnboardingFeePolicy struct {
+	Enabled       bool       `json:"enabled"`
+	Amount        float64    `json:"amount"`
+	Currency      string     `json:"currency"`
+	AppliesTo     string     `json:"appliesTo"`
+	ChargeTiming  string     `json:"chargeTiming"`
+	ActorCharged  string     `json:"actorCharged"`
+	EffectiveFrom *time.Time `json:"effectiveFrom"`
+	Notes         string     `json:"notes"`
+	UpdatedBy     string     `json:"updatedBy"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+	// IsConfigured is false when the policy is enabled but incomplete
+	// (missing amount/currency) — a readiness/blocking signal for
+	// control-panel, never a silent bypass.
+	IsConfigured  bool   `json:"isConfigured"`
+	BlockedReason string `json:"blockedReason,omitempty"`
+}
+
+type StoreOnboardingFeePolicyInput struct {
+	Enabled       bool
+	Amount        float64
+	Currency      string
+	AppliesTo     string
+	ChargeTiming  string
+	EffectiveFrom *time.Time
+	Notes         string
+}
+
+func deriveFeePolicyReadiness(p *StoreOnboardingFeePolicy) {
+	if !p.Enabled {
+		p.IsConfigured = true
+		return
+	}
+	if p.Amount <= 0 || p.Currency == "" {
+		p.IsConfigured = false
+		p.BlockedReason = "الرسم مُفعّل لكن المبلغ أو العملة غير مكتملين"
+		return
+	}
+	p.IsConfigured = true
+}
+
+func GetStoreOnboardingFeePolicy(db *sql.DB) (StoreOnboardingFeePolicy, error) {
+	var p StoreOnboardingFeePolicy
+	var effectiveFrom sql.NullTime
+	err := db.QueryRow(`
+		SELECT enabled, amount, currency, applies_to, charge_timing, actor_charged,
+		       effective_from, notes, COALESCE(updated_by,''), updated_at
+		FROM dsh_platform_store_onboarding_fee_policy WHERE id = 1`).Scan(
+		&p.Enabled, &p.Amount, &p.Currency, &p.AppliesTo, &p.ChargeTiming, &p.ActorCharged,
+		&effectiveFrom, &p.Notes, &p.UpdatedBy, &p.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return p, ErrNotFound
+	}
+	if err != nil {
+		return p, err
+	}
+	if effectiveFrom.Valid {
+		p.EffectiveFrom = &effectiveFrom.Time
+	}
+	deriveFeePolicyReadiness(&p)
+	return p, nil
+}
+
+func UpsertStoreOnboardingFeePolicy(db *sql.DB, input StoreOnboardingFeePolicyInput, updatedBy string) (StoreOnboardingFeePolicy, error) {
+	if input.AppliesTo != "" && !validAppliesTo[input.AppliesTo] {
+		return StoreOnboardingFeePolicy{}, ErrInvalid
+	}
+	if input.ChargeTiming != "" && !validChargeTiming[input.ChargeTiming] {
+		return StoreOnboardingFeePolicy{}, ErrInvalid
+	}
+	if input.Amount < 0 {
+		return StoreOnboardingFeePolicy{}, ErrInvalid
+	}
+	appliesTo := input.AppliesTo
+	if appliesTo == "" {
+		appliesTo = "first_store"
+	}
+	chargeTiming := input.ChargeTiming
+	if chargeTiming == "" {
+		chargeTiming = "on_approval"
+	}
+	var p StoreOnboardingFeePolicy
+	var effectiveFrom sql.NullTime
+	err := db.QueryRow(`
+		INSERT INTO dsh_platform_store_onboarding_fee_policy
+		       (id, enabled, amount, currency, applies_to, charge_timing, effective_from, notes, updated_by)
+		VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (id) DO UPDATE SET
+		    enabled = EXCLUDED.enabled,
+		    amount = EXCLUDED.amount,
+		    currency = EXCLUDED.currency,
+		    applies_to = EXCLUDED.applies_to,
+		    charge_timing = EXCLUDED.charge_timing,
+		    effective_from = EXCLUDED.effective_from,
+		    notes = EXCLUDED.notes,
+		    updated_by = EXCLUDED.updated_by,
+		    updated_at = NOW()
+		RETURNING enabled, amount, currency, applies_to, charge_timing, actor_charged,
+		          effective_from, notes, COALESCE(updated_by,''), updated_at`,
+		input.Enabled, input.Amount, input.Currency, appliesTo, chargeTiming,
+		input.EffectiveFrom, input.Notes, updatedBy,
+	).Scan(
+		&p.Enabled, &p.Amount, &p.Currency, &p.AppliesTo, &p.ChargeTiming, &p.ActorCharged,
+		&effectiveFrom, &p.Notes, &p.UpdatedBy, &p.UpdatedAt,
+	)
+	if err != nil {
+		return p, err
+	}
+	if effectiveFrom.Valid {
+		p.EffectiveFrom = &effectiveFrom.Time
+	}
+	deriveFeePolicyReadiness(&p)
+	return p, nil
+}
+
 // ── Serviceability check ──────────────────────────────────────────────────────
 
 type ZoneServiceabilityResult struct {

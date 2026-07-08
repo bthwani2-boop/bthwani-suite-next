@@ -29,7 +29,7 @@ export type {
   DshPartnerAuditState, DshPartnerStoresState, DshPartnerVisitsState,
 } from "./partner.states";
 
-export type { DshPartnerListRowViewModel, DshPartnerDetailViewModel, DshPartnerReadinessViewModel } from "./partner.view-model";
+export type { DshPartnerListRowViewModel, DshPartnerDetailViewModel, DshPartnerReadinessViewModel, DshPartnerBankAccountViewModel } from "./partner.view-model";
 export { buildPartnerListRowViewModel, buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
 
 export type { DshPartnerListFilters } from "./use-partner-admin-controller";
@@ -55,6 +55,7 @@ export {
   fieldListDrafts,
   fieldCreateDraft,
   fieldGetPartner,
+  fieldUpdatePartner,
   fieldUploadDocument,
   fieldCreateVisit,
   fieldSubmitPartner,

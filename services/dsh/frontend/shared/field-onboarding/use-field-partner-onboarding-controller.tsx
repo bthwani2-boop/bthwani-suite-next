@@ -5,6 +5,7 @@
 import { useCallback, useState } from "react";
 import {
   fieldCreateDraft,
+  fieldUpdatePartner,
   fieldUpdatePartnerStore,
   fieldSubmitPartner,
   fieldUploadDocument,
@@ -49,6 +50,20 @@ function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
     storefrontPhotoRef: form.storefrontPhotoRef ?? "",
     interiorPhotoRef: form.interiorPhotoRef ?? "",
     signagePhotoRef: form.signagePhotoRef ?? "",
+  };
+}
+
+function buildBankAccountInput(form: Partial<FieldPartnerDraftForm>) {
+  return {
+    beneficiaryName: form.beneficiaryName ?? "",
+    bankName: form.bankName ?? "",
+    bankBranch: form.bankBranch ?? "",
+    accountNumber: form.accountNumber ?? "",
+    iban: form.iban ?? "",
+    payoutMobileNumber: form.payoutMobileNumber ?? "",
+    settlementPreference: form.settlementPreference ?? "",
+    bankAccountHolderMatchesOwner: form.bankAccountHolderMatchesOwner ?? false,
+    bankNotes: form.bankNotes ?? "",
   };
 }
 
@@ -170,6 +185,11 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     setState((s) => ({ ...s, isSubmitting: true, submitError: null }));
 
     try {
+      const updatedPartner = await fieldUpdatePartner(
+        state.partnerId,
+        buildBankAccountInput(state.form),
+        state.partnerVersion ?? 0
+      );
       await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
 
       // Create field visit if we have location or notes
@@ -186,7 +206,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
       }
 
       await fieldSubmitPartner(state.partnerId);
-      setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true }));
+      setState((s) => ({ ...s, isSubmitting: false, isSubmitted: true, partnerVersion: updatedPartner.version }));
     } catch (err) {
       const msg = err && typeof err === "object" && "status" in err && (err as any).status === 422
         ? "لا يمكن إرسال الملف في الحالة الحالية — تأكد من استكمال البيانات"

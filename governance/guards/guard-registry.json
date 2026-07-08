@@ -387,8 +387,22 @@
       "script": "guard:dsh-order-lifecycle-execution",
       "exit_level": "fail",
       "description": "Verifies execution status, checks for open blocking gaps, and checks transition capabilities.",
-      "source_file": "tools/guards/dsh-order-lifecycle-execution-gate.mjs",
-      "scope": "dsh-order-lifecycle-journey"
+      "source_file": "tools/guards/dsh-order-lifecycle-execution-gate.mjs"
+    },
+    {
+      "id": "foundation-cross-journey-closure",
+      "name": "Foundation Cross-Journey Closure Gate",
+      "script": "guard:foundation-cross-journey-closure",
+      "exit_level": "fail",
+      "description": "Verifies foundation cross-journey closure status and checks for open gaps.",
+      "source_file": "tools/guards/foundation-cross-journey-closure-gate.mjs"
+    },
+    {
+      "id": "dsh-order-lifecycle-all",
+      "name": "DSH Order Lifecycle All Gate",
+      "script": "guard:dsh-order-lifecycle-all",
+      "exit_level": "fail",
+      "description": "Runs all DSH order lifecycle diagnostic and verification gates."
     }
   ]
 }

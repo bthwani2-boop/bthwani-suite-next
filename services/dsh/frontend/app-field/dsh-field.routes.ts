@@ -23,7 +23,8 @@ export type DshFieldRouteState =
   | { kind: 'onboarding'; partnerId?: string }
   | { kind: 'partner-progress'; partnerId: string }
   | { kind: 'visit'; storeId: string }
-  | { kind: 'verification'; storeId: string }
+  // Self-resolves the field actor's own scoped store — takes no storeId param.
+  | { kind: 'verification' }
   | { kind: 'checklist'; visitId: string; storeId: string }
   | { kind: 'account' }
   | { kind: 'profile' }

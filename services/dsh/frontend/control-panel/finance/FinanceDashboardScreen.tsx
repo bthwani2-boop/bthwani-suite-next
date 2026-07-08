@@ -16,9 +16,42 @@ import {
   alpha,
 } from "@bthwani/ui-kit";
 import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
-import type { WltDshFinanceCenterViewModel, WltDshFinanceSectionViewModel, WltDshFinanceSectionLineViewModel } from "@bthwani/wlt";
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "@bthwani/wlt";
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
+
+const FINANCE_BLOCK_REASON_COPY: Record<string, { readonly title: string; readonly description: string }> = {
+  WLT_NOT_CONFIGURED: {
+    title: 'WLT غير مُهيّأ (WLT_NOT_CONFIGURED)',
+    description: 'لم يتم ضبط تكامل WLT في بيئة DSH الحالية. راجع إعداد رمز خدمة WLT وربط WLT في DSH.',
+  },
+  WLT_UNAVAILABLE: {
+    title: 'تعذر الوصول إلى WLT (WLT_UNAVAILABLE)',
+    description: 'استجاب وكيل DSH المالي لكن فشل الاتصال بخادم WLT. تحقق من أن حاوية WLT تعمل وصحية.',
+  },
+  ROUTE_NOT_FOUND: {
+    title: 'المسار غير مسجّل (ROUTE_NOT_FOUND)',
+    description: 'الخادم المستجيب لا يعرّف هذا المسار. تحقق من أن DSH وWLT يشغّلان أحدث كود من الفرع الحالي.',
+  },
+  AUTH_MISSING: {
+    title: 'الجلسة غير مصادق عليها (AUTH_MISSING)',
+    description: 'لا يوجد رمز دخول صالح لهذا المشغّل. سجّل الدخول من جديد ثم أعد المحاولة.',
+  },
+  RUNTIME_PORT_MISMATCH: {
+    title: 'تعذر الاتصال بالمنفذ (RUNTIME_PORT_MISMATCH)',
+    description: 'فشل الاتصال الشبكي بعنوان/منفذ DSH runtime API. تحقق من تشغيل الخدمة والمنفذ الصحيح.',
+  },
+};
+
+function describeFinanceBlockedReason(error: string | undefined): { readonly title: string; readonly description: string } {
+  if (!error) {
+    return { title: 'WLT runtime غير متاح', description: 'تعذر تحديد سبب دقيق للانقطاع.' };
+  }
+  for (const code of Object.keys(FINANCE_BLOCK_REASON_COPY)) {
+    if (error.includes(code)) return FINANCE_BLOCK_REASON_COPY[code]!;
+  }
+  return { title: 'WLT runtime غير متاح', description: `تعذر الاتصال بخدمات الاستعلام المالي الحية (${error}).` };
+}
 
 
 export function FinanceDashboardScreen() {
@@ -48,20 +81,20 @@ export function FinanceDashboardScreen() {
   } = controller;
 
   const runtimeSourceLabel = useMemo(() => {
-    if (activeState === 'loading') return 'WLT runtime: loading';
-    if (!runtimeFinance) return 'WLT runtime: disconnected';
-    if (runtimeFinance.state === 'runtime') return `WLT runtime: ${runtimeFinance.data.runtimeApiUrl}`;
-    return `WLT runtime blocked: ${runtimeFinance.runtimeApiUrl}`;
+    if (activeState === 'loading') return 'قناة DSH↔WLT: جارٍ التحميل';
+    if (!runtimeFinance) return 'قناة DSH↔WLT: غير متصلة';
+    if (runtimeFinance.state === 'runtime') return `قناة DSH↔WLT عبر: ${runtimeFinance.data.runtimeApiUrl}`;
+    return `قناة DSH↔WLT محجوبة (${describeFinanceBlockedReason(runtimeFinance.error).title}) عبر: ${runtimeFinance.runtimeApiUrl}`;
   }, [activeState, runtimeFinance]);
 
   if (identity.state.kind !== "authenticated") {
     return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
   }
 
-  const renderFinancialCenterPosition = (center: WltDshFinanceCenterViewModel) => {
+  const renderFinancialCenterPosition = (center: WltFinancialCenter) => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
-        {center.sections.map((section: WltDshFinanceSectionViewModel) => (
+        {center.sections.map((section: WltFinancialCenterSection) => (
           <Card key={section.sectionType} style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `2px solid ${lightThemeColors.borderColor}`, paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
               <Text role="titleMd" style={{ fontWeight: 'bold' }}>{section.sectionLabel}</Text>
@@ -69,7 +102,7 @@ export function FinanceDashboardScreen() {
             </div>
             {section.lines && section.lines.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {section.lines.map((line: WltDshFinanceSectionLineViewModel) => (
+                {section.lines.map((line: WltAccountPositionLine) => (
                   <div key={line.accountCode} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0' }}>
                     <Text role="body">{line.accountLabel} ({line.accountCode})</Text>
                     <Text role="body" style={{ fontWeight: 'bold' }}>{line.totalLabel}</Text>
@@ -106,12 +139,15 @@ export function FinanceDashboardScreen() {
     }
 
     if (activeState === 'offline' || activeState === 'empty') {
+      const blockedReason = describeFinanceBlockedReason(
+        runtimeFinance?.state === 'blocked' ? runtimeFinance.error : undefined,
+      );
       return (
         <Card style={{ padding: '3rem', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '1rem' }}>
           <Text role="titleLg" style={{ fontSize: '3rem' }}>🔌</Text>
-          <Text role="titleMd" style={{ color: lightThemeColors.danger }}>WLT runtime غير متاح</Text>
+          <Text role="titleMd" style={{ color: lightThemeColors.danger }}>{blockedReason.title}</Text>
           <Text role="body" tone="muted" style={{ maxWidth: '450px' }}>
-            تعذر الاتصال بـ WLT لخدمات الاستعلام المالي الحية. يرجى التحقق من حالة WLT runtime وإعادة المحاولة.
+            {blockedReason.description}
           </Text>
           <Button
             label="إعادة المحاولة"

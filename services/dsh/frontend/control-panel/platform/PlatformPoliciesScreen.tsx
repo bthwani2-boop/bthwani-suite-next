@@ -13,6 +13,7 @@ import {
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import { useZonesController, useSlaRulesController } from "../../shared/platform-policies";
 import type { DshZone, DshSlaRule } from "../../shared/platform-policies";
+import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
 export function PlatformPoliciesScreen() {
   const identity = useIdentitySession();
@@ -66,6 +67,8 @@ export function PlatformPoliciesScreen() {
           />
         )}
       </View>
+
+      <StoreOnboardingFeePolicySection authKind={identity.state.kind} />
     </ScrollScreen>
   );
 }

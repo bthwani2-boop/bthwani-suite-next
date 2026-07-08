@@ -3,16 +3,17 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
 import { Badge, Text, Header, IconButton, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
-import { useIdentitySession } from '@bthwani/core-identity';
-import { usePartnerAdminController } from '../../shared/partner';
+import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
 
 type DshFieldStoresHistoryScreenProps = {
   readonly onBack: () => void;
 };
 
 export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScreenProps) {
-  const identity = useIdentitySession();
-  const controller = usePartnerAdminController(identity.state.kind);
+  // Scoped to the calling field actor's own submissions — the operator-wide
+  // partner list (usePartnerAdminController → GET /dsh/operator/partners) is
+  // 403 Forbidden for a field-role session (verified live).
+  const controller = useFieldPartnerDraftsController();
 
   const partners = controller.listState.kind === 'success' ? controller.listState.partners : [];
 

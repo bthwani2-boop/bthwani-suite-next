@@ -25,15 +25,18 @@ import {
   getBasicsProfileMissingCount,
   getLocationMediaMissingCount,
   getDocumentsMissingCount,
+  getBankAccountMissingCount,
   getAgreementReviewMissingCount,
   getFieldRequiredMissingItems,
   type FieldOnboardingController,
 } from '../../shared/field-onboarding';
 import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
+import { useStoreOnboardingFeeReferenceController } from '../../shared/platform-policies';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
 import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
 import { OnboardingEvidenceSection } from '../components/OnboardingEvidenceSection';
+import { OnboardingBankAccountSection } from '../components/OnboardingBankAccountSection';
 import { OnboardingAgreementSection } from '../components/OnboardingAgreementSection';
 import type { EvidenceItem } from '../components/OnboardingEvidenceSection';
 
@@ -45,12 +48,13 @@ const DOCUMENT_KIND_TO_PARTNER_TYPE: Record<DocumentKind, DshPartnerDocumentType
   identity_proof: 'national_id',
 };
 
-type GroupId = 'basics_profile' | 'location_media' | 'evidence' | 'agreement_review';
+type GroupId = 'basics_profile' | 'location_media' | 'evidence' | 'bank_account' | 'agreement_review';
 
 const GROUP_ORDER: readonly GroupId[] = [
   'basics_profile',
   'location_media',
   'evidence',
+  'bank_account',
   'agreement_review',
 ];
 
@@ -58,6 +62,7 @@ const GROUP_LABELS: Record<GroupId, string> = {
   basics_profile: 'البيانات الأساسية للمتجر',
   location_media: 'الموقع الجغرافي',
   evidence: 'المستندات والصور المرفقة',
+  bank_account: 'معلومات الحساب البنكي للشريك',
   agreement_review: 'الاتفاق والمراجعة النهائية',
 };
 
@@ -70,6 +75,13 @@ const PHOTO_LABELS: Record<BranchPhotoKey, string> = {
   storefrontPhotoRef: 'صورة الواجهة الخارجية للمحل',
   interiorPhotoRef: 'صورة المتجر من الداخل والرفوف',
   signagePhotoRef: 'صورة اللوحة التجارية المطابقة للترخيص',
+};
+
+const CHARGE_TIMING_REFERENCE_LABELS: Record<string, string> = {
+  on_approval: 'عند الاعتماد',
+  on_publication: 'عند النشر',
+  on_first_order: 'عند أول طلب',
+  manual: 'يدويًا',
 };
 
 export type DshFieldOnboardingScreenProps = {
@@ -88,6 +100,7 @@ export function DshFieldOnboardingScreen({
   const controller = controllerProp ?? ownController;
   const insets = useSafeAreaInsets();
   const { state, validationErrors, updateForm, updateVisitNotes, submitDraft } = controller;
+  const { state: feeRefState } = useStoreOnboardingFeeReferenceController(identity.state.kind);
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
   const [fieldNotes, setFieldNotes] = React.useState('');
@@ -167,6 +180,7 @@ export function DshFieldOnboardingScreen({
     basics_profile: getBasicsProfileMissingCount(form),
     location_media: getLocationMediaMissingCount(form),
     evidence: getDocumentsMissingCount(state.uploadedDocumentTypes, form),
+    bank_account: getBankAccountMissingCount(form),
     agreement_review: getAgreementReviewMissingCount(form, state.uploadedDocumentTypes),
   };
 
@@ -204,7 +218,14 @@ export function DshFieldOnboardingScreen({
           <Text role="caption" tone="muted" style={{ fontFamily: 'monospace' }}>
             رقم الشريك: {state.partnerId}
           </Text>
-          <View style={{ marginTop: 24 }}>
+          <View style={{ marginTop: 24, gap: spacing[2], width: '100%', paddingHorizontal: 24 }}>
+            {onOpenProducts && state.partnerId && (
+              <Button
+                label="إضافة منتجات تجريبية للمتجر"
+                tone="secondary"
+                onPress={() => onOpenProducts(state.partnerId!)}
+              />
+            )}
             <Button label="تسجيل شريك جديد" tone="primary" onPress={controller.reset} />
           </View>
         </View>
@@ -256,6 +277,15 @@ export function DshFieldOnboardingScreen({
           items={evidenceItems}
           loadingMap={evidenceLoading}
           onPick={(item, source) => void handlePickEvidence(item, source)}
+        />
+      );
+    }
+    if (groupId === 'bank_account') {
+      return (
+        <OnboardingBankAccountSection
+          form={form}
+          readOnly={false}
+          onChange={updateForm}
         />
       );
     }
@@ -311,6 +341,61 @@ export function DshFieldOnboardingScreen({
         </View>
 
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+
+        {/* ── Products section ── */}
+        {onOpenProducts && (
+          <View
+            style={{
+              borderWidth: borders.hairline,
+              borderColor: colorRoles.borderSubtle,
+              borderRadius: radius.md,
+              padding: spacing[4],
+              gap: spacing[2],
+            }}
+          >
+            <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+              قسم المنتجات
+            </Text>
+            {state.partnerId ? (
+              <>
+                <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+                  أضف منتجات تجريبية لمتجر الشريك قبل إرسال الملف أو بعده.
+                </Text>
+                <Button
+                  label="إضافة/إدارة منتجات المتجر"
+                  tone="secondary"
+                  onPress={() => onOpenProducts(state.partnerId!)}
+                />
+              </>
+            ) : (
+              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+                أكمل البيانات الأساسية أولًا لإنشاء ملف الشريك قبل إضافة المنتجات.
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* ── Store onboarding fee reference (read-only, control-panel owns the policy) ── */}
+        {feeRefState.kind === 'success' && feeRefState.data.enabled && (
+          <View
+            style={{
+              borderWidth: borders.hairline,
+              borderColor: colorRoles.borderSubtle,
+              borderRadius: radius.md,
+              padding: spacing[4],
+              gap: spacing[1],
+            }}
+          >
+            <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+              رسوم انضمام المتجر (مرجع)
+            </Text>
+            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+              {`${feeRefState.data.amount} ${feeRefState.data.currency} — تُحصَّل ${
+                CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming
+              } من الشريك. هذا مرجع اطّلاع فقط ولا ينشئ أي حركة مالية الآن.`}
+            </Text>
+          </View>
+        )}
 
         {/* ── Vertical timeline accordion ── */}
         <View style={{ gap: spacing[2] }}>

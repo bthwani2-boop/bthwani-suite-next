@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
@@ -164,6 +165,86 @@ func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter,
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": cfg})
+}
+
+// GET /dsh/operator/platform/store-onboarding-fee — operator edit view.
+func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(s.db)
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store onboarding fee policy not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get store onboarding fee policy")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
+}
+
+// PUT /dsh/operator/platform/store-onboarding-fee
+func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator")
+	if !ok {
+		return
+	}
+	var body struct {
+		Enabled       bool    `json:"enabled"`
+		Amount        float64 `json:"amount"`
+		Currency      string  `json:"currency"`
+		AppliesTo     string  `json:"appliesTo"`
+		ChargeTiming  string  `json:"chargeTiming"`
+		EffectiveFrom *string `json:"effectiveFrom"`
+		Notes         string  `json:"notes"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	input := platformpolicies.StoreOnboardingFeePolicyInput{
+		Enabled:      body.Enabled,
+		Amount:       body.Amount,
+		Currency:     body.Currency,
+		AppliesTo:    body.AppliesTo,
+		ChargeTiming: body.ChargeTiming,
+		Notes:        body.Notes,
+	}
+	if body.EffectiveFrom != nil && *body.EffectiveFrom != "" {
+		if t, err := time.Parse(time.RFC3339, *body.EffectiveFrom); err == nil {
+			input.EffectiveFrom = &t
+		}
+	}
+	policy, err := platformpolicies.UpsertStoreOnboardingFeePolicy(s.db, input, actor.ID)
+	if errors.Is(err, platformpolicies.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "invalid appliesTo, chargeTiming, or negative amount")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upsert store onboarding fee policy")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
+}
+
+// GET /dsh/platform/store-onboarding-fee — read-only reference for app-field
+// and app-partner. Never for app-client.
+func (s *protectedStoreServer) handleGetStoreOnboardingFeeReference(w http.ResponseWriter, r *http.Request) {
+	_, ok := s.requireActor(w, r, "field", "partner", "operator")
+	if !ok {
+		return
+	}
+	policy, err := platformpolicies.GetStoreOnboardingFeePolicy(s.db)
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store onboarding fee policy not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get store onboarding fee reference")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
 // GET /dsh/operator/platform/serviceability/{zoneId}

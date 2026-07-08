@@ -273,6 +273,29 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
               "بيانات الشريك"
             )}
 
+            {vm.bankAccount.hasBankAccount &&
+              sectionCard(
+                <>
+                  <CpDescriptionList>
+                    <CpDescriptionRow label="اسم صاحب الحساب">{vm.bankAccount.beneficiaryName}</CpDescriptionRow>
+                    <CpDescriptionRow label="البنك">{vm.bankAccount.bankName}</CpDescriptionRow>
+                    <CpDescriptionRow label="الفرع">{vm.bankAccount.bankBranch}</CpDescriptionRow>
+                    <CpDescriptionRow label="رقم الحساب">{vm.bankAccount.maskedAccountNumber}</CpDescriptionRow>
+                    <CpDescriptionRow label="الآيبان (IBAN)">{vm.bankAccount.maskedIban}</CpDescriptionRow>
+                    <CpDescriptionRow label="طريقة التسوية المفضلة">{vm.bankAccount.settlementPreferenceLabel}</CpDescriptionRow>
+                    <CpDescriptionRow label="صاحب الحساب هو المالك">
+                      {vm.bankAccount.bankAccountHolderMatchesOwner ? "نعم" : "لا"}
+                    </CpDescriptionRow>
+                    <CpDescriptionRow label="ملاحظات">{vm.bankAccount.bankNotes}</CpDescriptionRow>
+                  </CpDescriptionList>
+                  <p style={{ margin: 0, fontSize: "0.75rem", color: neutralScale[500] }}>
+                    بيانات مصرّح بها للمراجعة فقط — رقم الحساب والآيبان معروضان جزئيًا للحماية. هذه البيانات وصفية
+                    ولا تُنشئ أي حركة مالية في WLT.
+                  </p>
+                </>,
+                "بيانات الحساب البنكي"
+              )}
+
             {sectionCard(
               <>
                 <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>

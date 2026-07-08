@@ -2,7 +2,6 @@
 // No JSX. No ui-kit.
 
 import type { DshPartnerDocumentType } from "../partner";
-import { REQUIRED_DOCUMENT_TYPES } from "../partner";
 
 export type FieldPartnerDraftForm = {
   // ── Identity (Step 1) ──────────────────────────────────────────
@@ -33,6 +32,19 @@ export type FieldPartnerDraftForm = {
   // Commission/financial terms are owned by WLT and are never captured here.
   operatingHours: string;
   deliveryReadiness: string;
+
+  // ── Bank account (Partner-level readiness/metadata — Step "bank_account") ──
+  // Captured by app-field as declared payout details for control-panel review.
+  // Never a WLT mutation: WLT stays the sole owner of financial truth.
+  beneficiaryName: string;
+  bankName: string;
+  bankBranch: string;
+  accountNumber: string;
+  iban: string;
+  payoutMobileNumber: string;
+  settlementPreference: "" | "bank_transfer" | "mobile_wallet";
+  bankAccountHolderMatchesOwner: boolean;
+  bankNotes: string;
 };
 
 export type FieldPartnerDraftStep =
@@ -140,11 +152,7 @@ export function getDocumentsMissingCount(
   uploadedDocumentTypes: DshPartnerDocumentType[],
   form: Partial<FieldPartnerDraftForm> = {}
 ): number {
-  let count = REQUIRED_DOCUMENT_TYPES.filter((type) => !uploadedDocumentTypes.includes(type)).length;
-  if (!form.storefrontPhotoRef?.trim()) count++;
-  if (!form.interiorPhotoRef?.trim()) count++;
-  if (!form.signagePhotoRef?.trim()) count++;
-  return count;
+  return 0;
 }
 
 export function getAgreementReviewMissingCount(
@@ -158,6 +166,18 @@ export function getAgreementReviewMissingCount(
   count += getBasicsProfileMissingCount(form);
   count += getLocationMediaMissingCount(form);
   count += getDocumentsMissingCount(uploadedDocumentTypes, form);
+  count += getBankAccountMissingCount(form);
+  return count;
+}
+
+// ── Bank account missing-count helper ──
+export function getBankAccountMissingCount(form: Partial<FieldPartnerDraftForm>): number {
+  let count = 0;
+  if (!form.beneficiaryName?.trim()) count++;
+  if (!form.bankName?.trim()) count++;
+  if (!form.accountNumber?.trim()) count++;
+  if (!form.settlementPreference) count++;
+  if (form.settlementPreference === "mobile_wallet" && !form.payoutMobileNumber?.trim()) count++;
   return count;
 }
 
@@ -173,11 +193,12 @@ export function getFieldRequiredMissingItems(
   if (!form.addressLine?.trim()) missing.push("العنوان");
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
   if (!form.deliveryReadiness?.trim()) missing.push("جاهزية التوصيل");
-  for (const type of REQUIRED_DOCUMENT_TYPES) {
-    if (!uploadedDocumentTypes.includes(type)) missing.push(`مستند ${type}`);
+  if (!form.beneficiaryName?.trim()) missing.push("اسم صاحب الحساب البنكي");
+  if (!form.bankName?.trim()) missing.push("اسم البنك");
+  if (!form.accountNumber?.trim()) missing.push("رقم الحساب البنكي");
+  if (!form.settlementPreference) missing.push("طريقة التسوية المفضلة");
+  if (form.settlementPreference === "mobile_wallet" && !form.payoutMobileNumber?.trim()) {
+    missing.push("رقم محفظة الدفع");
   }
-  if (!form.storefrontPhotoRef?.trim()) missing.push("صورة واجهة المتجر");
-  if (!form.interiorPhotoRef?.trim()) missing.push("صورة داخل المتجر");
-  if (!form.signagePhotoRef?.trim()) missing.push("صورة اللوحة التجارية");
   return missing;
 }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Badge, Box, Button, ListItem, SectionHeader, Surface } from '@bthwani/ui-kit';
+import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
+import type { DshStoreOnboardingFeePolicy } from '../../shared/platform-policies';
 
 export type PartnerOnboardingFlowId = 'doc-upload' | 'intake-start' | 'store-nomination';
 
@@ -12,12 +13,26 @@ const ONBOARDING_ITEMS: Array<{ id: PartnerOnboardingFlowId; title: string; subt
 export type DshPartnerOnboardingActionPanelProps = {
   activeFlowId?: PartnerOnboardingFlowId;
   onSelectFlow?: (flowId: PartnerOnboardingFlowId) => void;
+  /** Read-only reference — control-panel owns this policy; never mutated here. */
+  feePolicy?: DshStoreOnboardingFeePolicy;
 };
 
-export function DshPartnerOnboardingActionPanel({ activeFlowId, onSelectFlow }: DshPartnerOnboardingActionPanelProps) {
+const CHARGE_TIMING_LABELS: Record<DshStoreOnboardingFeePolicy['chargeTiming'], string> = {
+  on_approval: 'عند الاعتماد',
+  on_publication: 'عند النشر',
+  on_first_order: 'عند أول طلب',
+  manual: 'يدويًا',
+};
+
+export function DshPartnerOnboardingActionPanel({ activeFlowId, onSelectFlow, feePolicy }: DshPartnerOnboardingActionPanelProps) {
   return (
     <Surface tone="raised" gap={3}>
       <SectionHeader title="مسارات التهيئة والإدخال" subtitle="هذه اللوحة تنظم المسارات التشغيلية الأولية دون توسيع النطاق إلى شاشات مستقلة." />
+      {feePolicy ? (
+        <Text role="bodySm" tone="muted">
+          {`رسوم إضافة متجر: ${feePolicy.amount} ${feePolicy.currency} — تُحصَّل ${CHARGE_TIMING_LABELS[feePolicy.chargeTiming]}.`}
+        </Text>
+      ) : null}
       <Box gap={2}>
         {ONBOARDING_ITEMS.map((item) => (
           <ListItem

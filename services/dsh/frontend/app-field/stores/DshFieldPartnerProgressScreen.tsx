@@ -61,7 +61,7 @@ function SectionCard({ title, children }: { readonly title: string; readonly chi
   );
 }
 
-export function DshFieldPartnerProgressScreen({ partnerId, onBack }: DshFieldPartnerProgressScreenProps) {
+export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProducts }: DshFieldPartnerProgressScreenProps) {
   const { state, statusLabel, isClientVisible, reload } = useFieldPartnerProgressController(partnerId);
 
   if (state.kind === 'loading' || state.kind === 'idle') {
@@ -163,6 +163,13 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack }: DshFieldPar
           )}
         </SectionCard>
 
+        {onOpenProducts && (
+          <Button
+            label="إدارة منتجات المتجر"
+            tone="secondary"
+            onPress={() => onOpenProducts(partnerId)}
+          />
+        )}
         <Button label="تحديث" tone="secondary" onPress={() => void reload()} />
         <Button label="رجوع" tone="ghost" onPress={onBack} />
       </ScrollView>

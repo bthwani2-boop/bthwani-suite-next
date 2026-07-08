@@ -99,9 +99,21 @@ type Partner struct {
 	CreatedByActorID    string           `json:"createdByActorId"`
 	CreatedBySurface    string           `json:"createdBySurface"`
 	Notes               string           `json:"notes"`
-	Version             int              `json:"version"`
-	CreatedAt           time.Time        `json:"createdAt"`
-	UpdatedAt           time.Time        `json:"updatedAt"`
+	// Bank account metadata — captured by app-field onboarding as
+	// readiness/metadata only. Never mutated in WLT; WLT stays the sole
+	// owner of financial truth. Control-panel masks these on display.
+	BeneficiaryName               string `json:"beneficiaryName"`
+	BankName                      string `json:"bankName"`
+	BankBranch                    string `json:"bankBranch"`
+	BankAccountNumber             string `json:"accountNumber"`
+	BankIBAN                      string `json:"iban"`
+	PayoutMobileNumber            string `json:"payoutMobileNumber"`
+	SettlementPreference          string `json:"settlementPreference"`
+	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
+	BankNotes                     string `json:"bankNotes"`
+	Version                       int       `json:"version"`
+	CreatedAt                     time.Time `json:"createdAt"`
+	UpdatedAt                     time.Time `json:"updatedAt"`
 }
 
 type PartnerSummary struct {
@@ -372,6 +384,16 @@ type UpdatePartnerInput struct {
 	SecondaryPhone string `json:"secondaryPhone"`
 	Email          string `json:"email"`
 	Notes          string `json:"notes"`
+	// Bank account metadata (readiness/metadata only — never a WLT mutation).
+	BeneficiaryName               string `json:"beneficiaryName"`
+	BankName                      string `json:"bankName"`
+	BankBranch                    string `json:"bankBranch"`
+	BankAccountNumber             string `json:"accountNumber"`
+	BankIBAN                      string `json:"iban"`
+	PayoutMobileNumber            string `json:"payoutMobileNumber"`
+	SettlementPreference          string `json:"settlementPreference"`
+	BankAccountHolderMatchesOwner *bool  `json:"bankAccountHolderMatchesOwner"`
+	BankNotes                     string `json:"bankNotes"`
 }
 
 type TransitionInput struct {

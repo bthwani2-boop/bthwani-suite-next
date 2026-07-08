@@ -40,3 +40,33 @@ export type DshPlatformState<T> =
   | { readonly kind: "loading" }
   | { readonly kind: "success"; readonly data: T }
   | { readonly kind: "error"; readonly message: string };
+
+// ── Store onboarding fee policy ──────────────────────────────────────────────
+// DSH owns the policy DEFINITION only — never a WLT ledger entry.
+export type DshStoreOnboardingFeeAppliesTo = "first_store" | "additional_store" | "all_stores";
+export type DshStoreOnboardingFeeChargeTiming = "on_approval" | "on_publication" | "on_first_order" | "manual";
+
+export type DshStoreOnboardingFeePolicy = {
+  readonly enabled: boolean;
+  readonly amount: number;
+  readonly currency: string;
+  readonly appliesTo: DshStoreOnboardingFeeAppliesTo;
+  readonly chargeTiming: DshStoreOnboardingFeeChargeTiming;
+  readonly actorCharged: "partner";
+  readonly effectiveFrom: string | null;
+  readonly notes: string;
+  readonly updatedBy: string;
+  readonly updatedAt: string;
+  readonly isConfigured: boolean;
+  readonly blockedReason?: string;
+};
+
+export type DshStoreOnboardingFeePolicyInput = {
+  readonly enabled: boolean;
+  readonly amount: number;
+  readonly currency: string;
+  readonly appliesTo: DshStoreOnboardingFeeAppliesTo;
+  readonly chargeTiming: DshStoreOnboardingFeeChargeTiming;
+  readonly effectiveFrom?: string | null;
+  readonly notes?: string;
+};

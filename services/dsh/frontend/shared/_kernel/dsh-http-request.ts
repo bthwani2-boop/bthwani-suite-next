@@ -14,7 +14,17 @@ export function corrId(prefix: string): string {
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw { kind: "http", status: response.status, body: await response.text().catch(() => "") };
+    const body = await response.text().catch(() => "");
+    let code: string | undefined;
+    let message: string | undefined;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && typeof parsed.code === "string") code = parsed.code;
+      if (parsed && typeof parsed.message === "string") message = parsed.message;
+    } catch {
+      // body was not a JSON error envelope; code/message stay undefined
+    }
+    throw { kind: "http", status: response.status, body, code, message };
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;

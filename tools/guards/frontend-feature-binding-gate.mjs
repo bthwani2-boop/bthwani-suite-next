@@ -144,7 +144,7 @@ const SEGMENTS = [
     screens: [
       {
         name: "partner onboarding",
-        path: "services/dsh/frontend/app-field/onboarding/FieldPartnerOnboardingScreen.tsx",
+        path: "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
         controller: "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
         openapi: "submitFieldPartnerDraft",
         route: "POST /dsh/field/partners/{partnerId}/submit",
@@ -152,7 +152,7 @@ const SEGMENTS = [
       },
       {
         name: "store verification",
-        path: "services/dsh/frontend/app-field/store/FieldStoreVerificationScreen.tsx",
+        path: "services/dsh/frontend/app-field/stores/DshFieldStoreVerificationScreen.tsx",
         controller: "services/dsh/frontend/shared/field-readiness/field-readiness.controller-core.ts",
         openapi: "submitFieldStoreVerification",
         route: "POST /dsh/field/stores/{storeId}/verifications",
@@ -189,7 +189,7 @@ const SEGMENTS = [
       },
       {
         name: "order queue",
-        path: "services/dsh/frontend/control-panel/operations/OrderQueueScreen.tsx",
+        path: "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
         controller: "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
         openapi: "listDshOperatorOrders",
         route: "GET /dsh/operator/orders",
@@ -237,7 +237,7 @@ const SEGMENTS = [
       },
       {
         name: "support tickets hub",
-        path: "services/dsh/frontend/control-panel/support/SupportHubScreen.tsx",
+        path: "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
         controller: "services/dsh/frontend/shared/support/use-support-controller.tsx",
         openapi: "listDshOperatorTickets",
         route: "GET /dsh/operator/support/tickets",

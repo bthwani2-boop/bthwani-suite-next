@@ -10,13 +10,31 @@ const { request: financeGet } = createDshHttpClient(resolveDshApiBaseUrl(), "fin
 
 type LoadResult<T> = { ok: true; data: T } | { ok: false; message: string };
 
+// Maps the raw transport/backend error into the one of the five diagnostic
+// codes control-panel finance surfaces to operators, so "WLT runtime غير
+// متاح" is never shown for causes it doesn't actually describe.
+function classifyFinanceRuntimeError(err: {
+  readonly kind?: string;
+  readonly status?: number;
+  readonly code?: string;
+  readonly message?: string;
+}): string {
+  if (err.kind === "network") return "RUNTIME_PORT_MISMATCH";
+  if (err.status === 401) return "AUTH_MISSING";
+  if (err.code === "WLT_NOT_CONFIGURED") return "WLT_NOT_CONFIGURED";
+  if (err.code === "WLT_UNAVAILABLE") return "WLT_UNAVAILABLE";
+  if (err.code === "NOT_FOUND" && err.message === "Route not found") return "ROUTE_NOT_FOUND";
+  if (err.code) return err.code;
+  return `HTTP_${err.status ?? "ERROR"}`;
+}
+
 async function tryGet<T>(path: string, extract: (body: any) => T): Promise<LoadResult<T>> {
   try {
     const body = await financeGet<any>(path);
     return { ok: true, data: extract(body) };
   } catch (e) {
-    const err = e as { kind?: string; status?: number; message?: string };
-    return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };
+    const err = e as { kind?: string; status?: number; code?: string; message?: string };
+    return { ok: false, message: classifyFinanceRuntimeError(err) };
   }
 }
 

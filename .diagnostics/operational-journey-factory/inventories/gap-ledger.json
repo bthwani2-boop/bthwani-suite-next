@@ -1,5 +1,5 @@
 {
-  "head_sha": "1806c36e133f76501f2b18f6965d7ea47dbd7e89",
+  "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
   "status": "DISCOVERY_ONLY",
   "required_gap_fields": [
     "gap_id",
@@ -20,27 +20,67 @@
     "status",
     "blocks_journey_start"
   ],
-  "gap_count": 7,
+  "gap_count": 11,
   "gaps": [
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
+      "gap_id": "BUSINESS_LOGIC_IN_SURFACE:services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx",
+      "type": "BUSINESS_LOGIC_IN_SURFACE",
+      "source_tool": "surface-inventory",
+      "path": "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx",
+      "reason": "UI surface file contains operational business logic candidates.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "platform_configuration"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel",
+      "owner": "dsh_platform_configuration",
+      "root_cause": "screen_owns_operational_logic",
+      "pattern_group": "frontend_surface_logic_extraction",
+      "required_action": "move_or_bind_to_shared_or_backend_owner",
+      "target_files": [
+        "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx",
+        "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx"
+      ],
+      "allowed_decision": "SPLIT_REFACTOR",
+      "forbidden_actions": [
+        "direct_fetch_in_screen",
+        "process_env_in_screen",
+        "business_constants_in_screen"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "screen_has_no_fetch",
+        "screen_has_no_process_env",
+        "controller_or_pure_render_proof"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/delivery/delivery.contract.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
-      "reason": "Unused exports: FilterRail",
+      "path": "services/dsh/frontend/shared/delivery/delivery.contract.ts",
+      "reason": "Unused exports: defaultStoreHours, defaultZone",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
+      "affected_surface": "services/dsh/frontend/shared/delivery/delivery.contract.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx"
+        "services/dsh/frontend/shared/delivery/delivery.contract.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -56,24 +96,24 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/operations/operations.flow-meta.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
-      "reason": "Unused exports: FloatingActionCircle",
+      "path": "services/dsh/frontend/shared/operations/operations.flow-meta.ts",
+      "reason": "Unused exports: operationsFlowMeta",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
+      "affected_surface": "services/dsh/frontend/shared/operations/operations.flow-meta.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx"
+        "services/dsh/frontend/shared/operations/operations.flow-meta.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -89,24 +129,24 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/cart/cart.types.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
-      "reason": "Unused exports: HeroCover",
+      "path": "services/dsh/frontend/shared/cart/cart.types.ts",
+      "reason": "Unused exports: DSH_FULFILLMENT_MODE_META",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
+      "affected_surface": "services/dsh/frontend/shared/cart/cart.types.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx"
+        "services/dsh/frontend/shared/cart/cart.types.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -122,24 +162,24 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/orders/use-orders-controller.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
-      "reason": "Unused exports: MetricChip",
+      "path": "services/dsh/frontend/shared/orders/use-orders-controller.ts",
+      "reason": "Unused exports: useOperatorOrdersController",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
+      "affected_surface": "services/dsh/frontend/shared/orders/use-orders-controller.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx"
+        "services/dsh/frontend/shared/orders/use-orders-controller.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -155,24 +195,24 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner.types.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
-      "reason": "Unused exports: ProductCard",
+      "path": "services/dsh/frontend/shared/partner/partner.types.ts",
+      "reason": "Unused exports: DSH_PARTNER_OPERATIONAL_FLOW_IDS_EXPECTED_COUNT",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
+      "affected_surface": "services/dsh/frontend/shared/partner/partner.types.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx"
+        "services/dsh/frontend/shared/partner/partner.types.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -188,24 +228,24 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner-activation.model.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
-      "reason": "Unused exports: ServiceModeSegment",
+      "path": "services/dsh/frontend/shared/partner/partner-activation.model.ts",
+      "reason": "Unused exports: getDshPartnerDecisionCommands, formatDshPartnerAuditEventLabel",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
+      "affected_surface": "services/dsh/frontend/shared/partner/partner-activation.model.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx"
+        "services/dsh/frontend/shared/partner/partner-activation.model.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [
@@ -221,24 +261,123 @@
       "blocks_journey_start": false
     },
     {
-      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner.api.ts",
       "type": "UNUSED_EXPORT",
       "source_tool": "knip",
-      "path": "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
-      "reason": "Unused exports: StatusBadge",
+      "path": "services/dsh/frontend/shared/partner/partner.api.ts",
+      "reason": "Unused exports: fieldGetPartnerStore",
       "severity": "MEDIUM",
       "risk_level": "P2",
       "journey": "dsh-order-lifecycle-journey",
       "affected_journeys": [
         "dsh-order-lifecycle-journey"
       ],
-      "affected_surface": "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
+      "affected_surface": "services/dsh/frontend/shared/partner/partner.api.ts",
       "owner": "toolchain",
       "root_cause": "dead_code",
       "pattern_group": "knip",
       "required_action": "Remove dead exports",
       "target_files": [
-        "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx"
+        "services/dsh/frontend/shared/partner/partner.api.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner.flow-maps.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/partner/partner.flow-maps.ts",
+      "reason": "Unused exports: isDshPartnerHiddenCompatOperationalFlow, isDshPartnerHiddenCompatSupportRoute",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/partner/partner.flow-maps.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/partner/partner.flow-maps.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/app-field/components/DshFieldPartnerProductsScreen.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts",
+      "reason": "Unused exports: fetchDshWltCodRecordsByCapitain, fetchDshWltCommissionsByOrder",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts"
       ],
       "allowed_decision": "REMOVE_OR_KEEP",
       "forbidden_actions": [

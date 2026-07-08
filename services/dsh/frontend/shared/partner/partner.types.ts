@@ -14,6 +14,18 @@ export type DshPartner = {
   readonly category: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly notes: string;
+  // Bank account metadata — Partner-level readiness/metadata captured by
+  // app-field onboarding. Never a WLT mutation; WLT stays the sole owner
+  // of financial truth. Control-panel masks these on display.
+  readonly beneficiaryName: string;
+  readonly bankName: string;
+  readonly bankBranch: string;
+  readonly accountNumber: string;
+  readonly iban: string;
+  readonly payoutMobileNumber: string;
+  readonly settlementPreference: string;
+  readonly bankAccountHolderMatchesOwner: boolean;
+  readonly bankNotes: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -178,6 +190,16 @@ export type DshUpdatePartnerRequest = {
   readonly secondaryPhone?: string;
   readonly email?: string;
   readonly notes?: string;
+  // Bank account metadata (readiness/metadata only — never a WLT mutation).
+  readonly beneficiaryName?: string;
+  readonly bankName?: string;
+  readonly bankBranch?: string;
+  readonly accountNumber?: string;
+  readonly iban?: string;
+  readonly payoutMobileNumber?: string;
+  readonly settlementPreference?: "" | "bank_transfer" | "mobile_wallet";
+  readonly bankAccountHolderMatchesOwner?: boolean;
+  readonly bankNotes?: string;
 };
 
 export type DshPartnerTransitionInput = {

@@ -83,6 +83,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
         onOpenProfile={() => actions.pushRoute({ kind: 'profile' })}
         onOpenHistory={() => actions.pushRoute({ kind: 'history' })}
         onOpenFinance={() => actions.pushRoute({ kind: 'finance' })}
+        onOpenVerification={() => actions.pushRoute({ kind: 'verification' })}
         onLogout={actions.popRoute}
       />
     );

@@ -14,22 +14,40 @@ import {
   Header,
 } from '@bthwani/ui-kit';
 import { useWltDshFieldCommissionReferenceController, toFieldCommissionViewModel } from '../../shared/finance-wlt-link';
-import { useIdentitySession } from '@bthwani/core-identity';
-import { usePartnerAdminController } from '../../shared/partner';
+import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
 
 type DshFieldFinanceScreenProps = {
   readonly onBack: () => void;
 };
 
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
-  const identity = useIdentitySession();
-  const partnerAdmin = usePartnerAdminController(identity.state.kind);
-  
-  const partners = partnerAdmin.listState.kind === 'success' ? partnerAdmin.listState.partners : [];
-  const partnerId = partners[0]?.id ?? 'no-partner';
+  const partnerDrafts = useFieldPartnerDraftsController();
 
-  const controller = useWltDshFieldCommissionReferenceController(partnerId);
+  const partners = partnerDrafts.listState.kind === 'success' ? partnerDrafts.listState.partners : [];
+  const partnerId = partners[0]?.id;
+
+  const controller = useWltDshFieldCommissionReferenceController(partnerId ?? '');
   const state = controller.state;
+
+  if (partnerDrafts.listState.kind === 'loading' || partnerDrafts.listState.kind === 'idle') {
+    return (
+      <StateView
+        loading
+        title="جارٍ تحميل البيانات المالية"
+        description="نحسب المستحقات والعمولات للملفات المعتمدة من خادم العمولات البنكي المالي."
+      />
+    );
+  }
+
+  if (!partnerId) {
+    return (
+      <StateView
+        tone="neutral"
+        title="لا يوجد ملف شريك بعد"
+        description="أنشئ ملف الشريك أولاً من شاشة الانضمام الميدانية لعرض بيانات العمولات."
+      />
+    );
+  }
 
   if (state.kind === 'loading') {
     return (
@@ -118,5 +136,4 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
     </View>
   );
 }
-
 // export default DshFieldFinanceScreen; // Unused default export

@@ -1,0 +1,71 @@
+{
+  "journey_id": "field-app-fullstack-closure",
+  "status": "CLOSED_WITH_ONE_DISCLOSED_GAP",
+  "base_branch": "journy",
+  "base_head_sha_at_start": "0b89aca02db5dcae60e91264f6d9327abe60a184",
+  "sub_journeys": [
+    {
+      "id": "FIELD_ONBOARDING_BANK_ACCOUNT_FULLSTACK",
+      "status": "CLOSED",
+      "checklist": "tools/checklist/JOURNEY-FIELD-ONBOARDING-BANK-ACCOUNT.md"
+    },
+    {
+      "id": "FIELD_FINANCE_WLT_RUNTIME_FIX",
+      "status": "CLOSED",
+      "checklist": "tools/checklist/JOURNEY-FIELD-FINANCE-WLT-RUNTIME.md",
+      "note": "closed in a prior session, re-verified live in this engagement"
+    },
+    {
+      "id": "PLATFORM_STORE_ONBOARDING_FEE_POLICY",
+      "status": "CLOSED",
+      "checklist": "tools/checklist/JOURNEY-PLATFORM-STORE-ONBOARDING-FEE.md"
+    },
+    {
+      "id": "FIELD_TO_PARTNER_TO_CONTROL_PANEL_BINDING",
+      "status": "CLOSED",
+      "checklist": "tools/checklist/JOURNEY-FIELD-MULTI-SURFACE-BINDING.md"
+    },
+    {
+      "id": "FIELD_TO_CLIENT_STORE_VISIBILITY_VALIDATION",
+      "status": "CLOSED",
+      "checklist": "tools/checklist/JOURNEY-FIELD-MULTI-SURFACE-BINDING.md"
+    }
+  ],
+  "real_bugs_found_and_fixed": [
+    "products section never rendered in app-field onboarding (dead prop, never called)",
+    "TransitionStatus (Go) dropped bank fields from every partner transition response",
+    "DshFieldStoresHistoryScreen.tsx called operator-only endpoint from field session (403)",
+    "DshFieldProfileScreen.tsx called operator-only endpoint from field session (403)",
+    "DshFieldStoreVerificationScreen fully unreachable (no navigation path)",
+    "2 stale guard-manifest paths in frontend-feature-binding-gate.mjs pointed at renamed/nonexistent files",
+    "OpenAPI text draft violated the repo's own ledger-entry-phrase boundary test (self-caught by test suite)"
+  ],
+  "disclosed_unfixed_gap": {
+    "description": "visit/checklist/escalation app-field routes have no reachable UI entry point in the running app",
+    "reason_not_fixed": "requires a product decision on the real trigger source (push notification deep-link vs new store-browsing screen) not requested by any journey in scope; fabricating an entry point would invent unauthorized UX/business logic",
+    "backend_status": "fully implemented and contract-documented, not stubbed"
+  },
+  "backend_files_modified": 5,
+  "migrations_added": 2,
+  "contract_operations_added": 3,
+  "frontend_files_modified": 25,
+  "runtime_verified": true,
+  "go_build_test_status": "clean, all 21 packages ok",
+  "frontend_test_status": "216/217, 1 pre-existing unrelated failure",
+  "guards_run": [
+    "guard:fullstack-boundary",
+    "guard:wlt-financial-boundary",
+    "guard:no-broken-imports",
+    "guard:api-binding",
+    "guard:backend-api-binding",
+    "guard:frontend-feature-binding",
+    "guard:ui-kit-boundary",
+    "guard:runtime-config",
+    "guard:cleanup-policy",
+    "guard:go-routes-ci",
+    "guard:dependency-graph",
+    "guard:secrets",
+    "guard:operational-diagnostics-reconciliation"
+  ],
+  "guards_status": "all PASS (frontend-feature-binding required a manifest fix first)"
+}
