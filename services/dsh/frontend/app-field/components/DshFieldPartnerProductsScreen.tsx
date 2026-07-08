@@ -212,4 +212,3 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   );
 }
 
-export default DshFieldPartnerProductsScreen;

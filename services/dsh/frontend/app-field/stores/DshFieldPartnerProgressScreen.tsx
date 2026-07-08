@@ -27,6 +27,8 @@ export type DshFieldPartnerProgressScreenProps = {
   readonly partnerId: string;
   readonly onBack: () => void;
   readonly onOpenProducts?: (partnerId: string) => void;
+  readonly onOpenVisit?: (storeId: string) => void;
+  readonly onOpenEscalation?: (storeId: string) => void;
 };
 
 const DOCUMENT_STATUS_LABELS: Record<string, string> = {
@@ -61,7 +63,7 @@ function SectionCard({ title, children }: { readonly title: string; readonly chi
   );
 }
 
-export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProducts }: DshFieldPartnerProgressScreenProps) {
+export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProducts, onOpenVisit, onOpenEscalation }: DshFieldPartnerProgressScreenProps) {
   const { state, statusLabel, isClientVisible, reload } = useFieldPartnerProgressController(partnerId);
 
   if (state.kind === 'loading' || state.kind === 'idle') {
@@ -77,7 +79,7 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
     return <StateView tone="danger" title="تعذر التحميل" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => void reload()} />;
   }
 
-  const { partner, readiness, documents, fieldVisits } = state;
+  const { partner, readiness, documents, fieldVisits, storeId } = state;
   const lifecycle = getDshPartnerReadinessChecklist(partner.activationStatus);
 
   return (
@@ -161,6 +163,28 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
               </View>
             ))
           )}
+        </SectionCard>
+
+        <SectionCard title="مهام التحقق الميداني">
+          <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+            افتح زيارة المتجر أو ارفع تصعيدًا تشغيليًا باستخدام معرف المتجر المرتبط بهذا الملف.
+          </Text>
+          <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
+            {onOpenVisit && (
+              <Button
+                label="فتح الزيارات"
+                tone="primary"
+                onPress={() => onOpenVisit(storeId)}
+              />
+            )}
+            {onOpenEscalation && (
+              <Button
+                label="رفع تصعيد"
+                tone="danger"
+                onPress={() => onOpenEscalation(storeId)}
+              />
+            )}
+          </View>
         </SectionCard>
 
         {onOpenProducts && (

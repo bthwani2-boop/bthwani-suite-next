@@ -5,7 +5,6 @@ import {
   createOrder,
   fetchClientOrder,
   fetchClientOrders,
-  fetchOperatorOrders,
   fetchPartnerOrders,
   markOrderPreparing,
   markOrderReady,
@@ -140,23 +139,6 @@ function usePartnerOrderActionController() {
   return { state, accept, reject, markPreparing, markReady, reset };
 }
 
-export function useOperatorOrdersController(statusFilter?: string) {
-  const [state, setState] = useState<DshOrdersListState>(ordersIdleState());
-
-  const load = useCallback(async () => {
-    setState(beginOrdersLoad());
-    try {
-      const orders = await fetchOperatorOrders(statusFilter);
-      setState(resolveOrdersLoadSuccess(orders));
-    } catch (error) {
-      setState(resolveOrdersLoadError(classifyOrderError(error), "operator"));
-    }
-  }, [statusFilter]);
-
-  useEffect(() => { load(); }, [load]);
-
-  return { state, reload: load };
-}
 
 export type { DshOrder, DshOrdersListState, DshOrderActionState };
 

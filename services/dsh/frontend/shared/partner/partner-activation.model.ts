@@ -335,13 +335,6 @@ export const DSH_PARTNER_DECISION_COMMANDS: ReadonlyArray<DshPartnerDecisionComm
   },
 ];
 
-export function getDshPartnerDecisionCommands(
-  status: DshPartnerActivationStatus,
-): ReadonlyArray<DshPartnerDecisionCommand> {
-  const meta = getDshPartnerActivationStateMetadata(status);
-  const allowed = new Set(meta.allowedNextStatuses);
-  return DSH_PARTNER_DECISION_COMMANDS.filter((command) => allowed.has(command.targetStatus));
-}
 
 export function isDshPartnerClientVisible(status: DshPartnerActivationStatus): boolean {
   return status === 'client_visible';
@@ -395,29 +388,6 @@ export function getDshPartnerActivationStatusLabel(status: DshPartnerActivationS
   return labels[status] ?? status;
 }
 
-const AUDIT_EVENT_TAG_LABELS: Record<string, string> = {
-  document_uploaded: 'وثيقة مرفوعة',
-  document_reviewed: 'مراجعة وثيقة',
-  field_visit_submitted: 'زيارة ميدانية مسجّلة',
-  store_linked: 'ربط متجر',
-};
-
-/**
- * Formats a partner audit event's from/to status pair for display. Handles
- * both real activation-status transitions and the non-transition audit tags
- * recorded for document upload/review, field visits, and store linking
- * (encoded as `tag` or `tag:detail`, since they share the same audit table).
- */
-export function formatDshPartnerAuditEventLabel(fromStatus: string, toStatus: string): string {
-  const [tag = '', detail] = toStatus.split(':');
-  const tagLabel = AUDIT_EVENT_TAG_LABELS[tag];
-  if (tagLabel) {
-    return detail ? `${tagLabel} — ${detail}` : tagLabel;
-  }
-  const fromLabel = fromStatus ? getDshPartnerActivationStatusLabel(fromStatus as DshPartnerActivationStatus) : '';
-  const toLabel = getDshPartnerActivationStatusLabel(toStatus as DshPartnerActivationStatus);
-  return fromLabel ? `${fromLabel} → ${toLabel}` : toLabel;
-}
 
 export function getDshPartnerReadinessChecklist(
   status: DshPartnerActivationStatus,

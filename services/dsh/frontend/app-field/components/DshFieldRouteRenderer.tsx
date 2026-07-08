@@ -62,6 +62,8 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
         partnerId={route.partnerId}
         onBack={actions.popRoute}
         onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
+        onOpenVisit={(storeId) => actions.pushRoute({ kind: 'visit', storeId })}
+        onOpenEscalation={(storeId) => actions.pushRoute({ kind: 'escalation', storeId })}
       />
     );
   }

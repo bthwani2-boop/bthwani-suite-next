@@ -20,7 +20,6 @@ export type {
 export {
   DSH_PARTNER_OPERATIONAL_FLOW_IDS,
   DSH_PARTNER_HIDDEN_COMPAT_OPERATIONAL_FLOW_IDS,
-  DSH_PARTNER_OPERATIONAL_FLOW_IDS_EXPECTED_COUNT,
   DSH_PARTNER_SUPPORT_ROUTE_IDS,
   DSH_PARTNER_SUPPORT_ISSUE_CATEGORY_IDS,
   DSH_PARTNER_HIDDEN_COMPAT_SUPPORT_ROUTE_IDS,
@@ -30,8 +29,6 @@ export {
 export {
   mapDshPartnerOperationalFlowToSupportRoute,
   mapDshPartnerSupportRouteToOperationalFlow,
-  isDshPartnerHiddenCompatOperationalFlow,
-  isDshPartnerHiddenCompatSupportRoute,
 } from '../shared/partner/partner.flow-maps';
 
 export type DshPartnerSurfaceProps = {

@@ -11,8 +11,6 @@ export {
   getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
   getDshPartnerReadinessChecklist,
-  getDshPartnerDecisionCommands,
-  formatDshPartnerAuditEventLabel,
 } from "./partner-activation.model";
 
 export type {

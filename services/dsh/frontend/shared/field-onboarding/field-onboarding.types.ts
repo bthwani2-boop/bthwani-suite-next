@@ -1,7 +1,7 @@
 // Field onboarding types — for the app-field partner draft creation flow.
 // No JSX. No ui-kit.
 
-import type { DshPartnerDocumentType } from "../partner";
+import { DOCUMENT_TYPE_LABELS, REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from "../partner";
 
 export type FieldPartnerDraftForm = {
   // ── Identity (Step 1) ──────────────────────────────────────────
@@ -48,32 +48,26 @@ export type FieldPartnerDraftForm = {
 };
 
 export type FieldPartnerDraftStep =
-  | "identity"
-  | "owner"
-  | "store"
-  | "location"
-  | "documents"
-  | "visit-notes"
-  | "review";
+  | "basics_profile"
+  | "location_media"
+  | "evidence"
+  | "bank_account"
+  | "agreement_review";
 
-const FIELD_ONBOARDING_STEPS: FieldPartnerDraftStep[] = [
-  "identity",
-  "owner",
-  "store",
-  "location",
-  "documents",
-  "visit-notes",
-  "review",
+export const FIELD_ONBOARDING_STEPS: readonly FieldPartnerDraftStep[] = [
+  "basics_profile",
+  "location_media",
+  "evidence",
+  "bank_account",
+  "agreement_review",
 ];
 
-const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string> = {
-  identity: "بيانات الهوية التجارية",
-  owner: "بيانات المالك",
-  store: "بيانات الفرع",
-  location: "الموقع الجغرافي",
-  documents: "الوثائق",
-  "visit-notes": "ملاحظات الزيارة",
-  review: "المراجعة والإرسال",
+export const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string> = {
+  basics_profile: "البيانات الأساسية للمتجر",
+  location_media: "الموقع الجغرافي",
+  evidence: "المستندات والصور المرفقة",
+  bank_account: "معلومات الحساب البنكي للشريك",
+  agreement_review: "الاتفاق والمراجعة النهائية",
 };
 
 export type FieldOnboardingDraftState = {
@@ -97,7 +91,7 @@ export function initialDraftState(): FieldOnboardingDraftState {
   return {
     partnerId: null,
     partnerVersion: null,
-    step: "identity",
+    step: "basics_profile",
     form: {
       legalIdentityType: "commercial_register",
       category: "default",
@@ -152,7 +146,15 @@ export function getDocumentsMissingCount(
   uploadedDocumentTypes: DshPartnerDocumentType[],
   form: Partial<FieldPartnerDraftForm> = {}
 ): number {
-  return 0;
+  const uploaded = new Set(uploadedDocumentTypes);
+  let count = 0;
+  for (const documentType of REQUIRED_DOCUMENT_TYPES) {
+    if (!uploaded.has(documentType)) count++;
+  }
+  if (!form.storefrontPhotoRef?.trim()) count++;
+  if (!form.interiorPhotoRef?.trim()) count++;
+  if (!form.signagePhotoRef?.trim()) count++;
+  return count;
 }
 
 export function getAgreementReviewMissingCount(
@@ -187,10 +189,17 @@ export function getFieldRequiredMissingItems(
   uploadedDocumentTypes: DshPartnerDocumentType[]
 ): string[] {
   const missing: string[] = [];
+  const uploaded = new Set(uploadedDocumentTypes);
   if (!form.ownerName?.trim()) missing.push("اسم المالك");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");
+  for (const documentType of REQUIRED_DOCUMENT_TYPES) {
+    if (!uploaded.has(documentType)) missing.push(DOCUMENT_TYPE_LABELS[documentType]);
+  }
+  if (!form.storefrontPhotoRef?.trim()) missing.push("صورة واجهة المتجر");
+  if (!form.interiorPhotoRef?.trim()) missing.push("صورة داخل المتجر");
+  if (!form.signagePhotoRef?.trim()) missing.push("صورة اللوحة التجارية");
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
   if (!form.deliveryReadiness?.trim()) missing.push("جاهزية التوصيل");
   if (!form.beneficiaryName?.trim()) missing.push("اسم صاحب الحساب البنكي");

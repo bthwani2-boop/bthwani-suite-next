@@ -16,8 +16,8 @@ import {
   initialDraftState,
   validateIdentityStep,
   validateOwnerStep,
+  FIELD_ONBOARDING_STEPS,
   type FieldOnboardingDraftState,
-  type FieldPartnerDraftStep,
   type FieldPartnerDraftForm,
   type FieldOnboardingValidationErrors,
 } from "./field-onboarding.types";
@@ -89,9 +89,8 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
   const prevStep = useCallback(() => {
     setState((s) => {
-      const steps: FieldPartnerDraftStep[] = ["identity", "owner", "store", "location", "documents", "visit-notes", "review"];
-      const idx = steps.indexOf(s.step);
-      if (idx > 0) return { ...s, step: steps[idx - 1]! };
+      const idx = FIELD_ONBOARDING_STEPS.indexOf(s.step);
+      if (idx > 0) return { ...s, step: FIELD_ONBOARDING_STEPS[idx - 1]! };
       return s;
     });
   }, []);
@@ -158,25 +157,21 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
   }, [state.partnerId]);
 
   const nextStep = useCallback(async () => {
-    const steps: FieldPartnerDraftStep[] = ["identity", "owner", "store", "location", "documents", "visit-notes", "review"];
-    const currentIdx = steps.indexOf(state.step);
+    const currentIdx = FIELD_ONBOARDING_STEPS.indexOf(state.step);
 
-    if (state.step === "identity") {
+    if (state.step === "basics_profile") {
       const created = await ensureDraftCreated();
       if (!created) return;
-    }
-
-    if (state.step === "owner") {
-      const errors = validateOwnerStep(state.form);
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
+      const ownerErrors = validateOwnerStep(state.form);
+      if (Object.keys(ownerErrors).length > 0) {
+        setValidationErrors(ownerErrors);
         return;
       }
       setValidationErrors({});
     }
 
-    if (currentIdx < steps.length - 1) {
-      setState((s) => ({ ...s, step: steps[currentIdx + 1]! }));
+    if (currentIdx >= 0 && currentIdx < FIELD_ONBOARDING_STEPS.length - 1) {
+      setState((s) => ({ ...s, step: FIELD_ONBOARDING_STEPS[currentIdx + 1]! }));
     }
   }, [state, ensureDraftCreated]);
 

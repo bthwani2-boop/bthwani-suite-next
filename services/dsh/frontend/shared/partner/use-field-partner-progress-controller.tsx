@@ -2,7 +2,7 @@
 // draft the field agent owns. Aggregates partner detail + readiness + documents +
 // field visits from the field-scoped (ownership-checked) endpoints only.
 import { useCallback, useEffect, useState } from "react";
-import { fieldGetPartner, fieldGetReadiness, fieldListDocuments, fieldListFieldVisits } from "./partner.api";
+import { fieldGetPartner, fieldGetPartnerStore, fieldGetReadiness, fieldListDocuments, fieldListFieldVisits } from "./partner.api";
 import type { DshPartner, DshPartnerReadiness, DshPartnerDocument, DshPartnerFieldVisit } from "./partner.types";
 import { buildPartnerReadinessViewModel } from "./partner.view-model";
 import { getDshPartnerActivationStatusLabel, isDshPartnerClientVisible } from "./partner-activation.model";
@@ -16,6 +16,7 @@ export type FieldPartnerProgressState =
       readonly readiness: DshPartnerReadiness;
       readonly documents: readonly DshPartnerDocument[];
       readonly fieldVisits: readonly DshPartnerFieldVisit[];
+      readonly storeId: string;
     }
   | { readonly kind: "forbidden" }
   | { readonly kind: "not_found" }
@@ -28,11 +29,12 @@ export function useFieldPartnerProgressController(partnerId: string) {
     if (!partnerId) return;
     setState({ kind: "loading" });
     try {
-      const [partner, readiness, documentsRes, visitsRes] = await Promise.all([
+      const [partner, readiness, documentsRes, visitsRes, storeRes] = await Promise.all([
         fieldGetPartner(partnerId),
         fieldGetReadiness(partnerId),
         fieldListDocuments(partnerId),
         fieldListFieldVisits(partnerId),
+        fieldGetPartnerStore(partnerId),
       ]);
       setState({
         kind: "success",
@@ -40,6 +42,7 @@ export function useFieldPartnerProgressController(partnerId: string) {
         readiness,
         documents: documentsRes.documents,
         fieldVisits: visitsRes.visits,
+        storeId: storeRes.storeId,
       });
     } catch (err) {
       const e = err as { status?: number };

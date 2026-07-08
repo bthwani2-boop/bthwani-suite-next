@@ -293,7 +293,6 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
 
 export type DshPartnerOperationalFlowId = (typeof DSH_PARTNER_OPERATIONAL_FLOW_IDS)[number];
 
-export const DSH_PARTNER_OPERATIONAL_FLOW_IDS_EXPECTED_COUNT = DSH_PARTNER_OPERATIONAL_FLOW_IDS.length;
 
 export const DSH_PARTNER_SUPPORT_ROUTE_IDS = [
   'auction-status-update',
