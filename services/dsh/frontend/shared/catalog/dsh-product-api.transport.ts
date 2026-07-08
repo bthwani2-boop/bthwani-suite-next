@@ -2,6 +2,12 @@
 // Reads base URL from EXPO_PUBLIC_DSH_API_BASE_URL (Expo/React Native)
 // or NEXT_PUBLIC_DSH_API_BASE_URL (Next.js / control-panel).
 // No React. No UI framework imports.
+//
+// BLOCKED as of dsh-030 — see the header comment in dsh-product-api.client.ts.
+// This transport is path-agnostic (it just forwards whatever path the client
+// builds), so it will start working the moment dsh-product-api.client.ts is
+// rewritten onto the real /dsh/partner/catalog/* routes; it needs no changes
+// of its own.
 
 import {
   createDshProductApiClient,

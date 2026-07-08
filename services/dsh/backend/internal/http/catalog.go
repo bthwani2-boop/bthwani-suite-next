@@ -9,14 +9,21 @@ import (
 	"time"
 
 	"dsh-api/internal/catalog"
+	"dsh-api/internal/centralcatalog"
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 )
 
+// handlePublicCatalog is the sole client-facing catalog read. Per
+// governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md rule 4, it reads
+// only from the master catalog + store assortment -- never from the legacy
+// per-store dsh_catalog_categories/dsh_catalog_products tables -- so a
+// product is visible to app-client only when domain, master product, and
+// assortment row are all independently approved/active/visible.
 func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		categories, products, err := catalog.PublicCatalog(r.Context(), db, r.PathValue("storeId"))
-		if errors.Is(err, catalog.ErrNotFound) {
+		domains, products, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
+		if errors.Is(err, centralcatalog.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "approved catalog not found")
 			return
 		}
@@ -24,8 +31,19 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog unavailable")
 			return
 		}
-		store.SendJSON(w, http.StatusOK, map[string]any{"categories": categories, "products": products})
+		store.SendJSON(w, http.StatusOK, map[string]any{"domains": domains, "products": products})
 	}
+}
+
+// legacyCatalogWriteBlocked enforces rule 8 of the sovereignty decision: the
+// per-store dsh_catalog_categories/dsh_catalog_products tables become
+// legacy-read-only as of dsh-030. No surface may create or update a local
+// category/product as ground truth anymore -- use POST
+// /dsh/partner/catalog/product-proposals (or the field equivalent) to request
+// a master-catalog addition instead.
+func legacyCatalogWriteBlocked(w http.ResponseWriter) {
+	store.SendError(w, http.StatusGone, "LEGACY_CATALOG_WRITE_BLOCKED",
+		"local categories/products are no longer writable; submit a product proposal against the central catalog instead")
 }
 
 func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Request) (store.StoreActor, string, bool) {
@@ -126,98 +144,56 @@ func (s *protectedStoreServer) handlePartnerCatalog(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "categories": categories, "products": products})
 }
 
+// handlePartnerCategoryCreate, handlePartnerCategoryUpdate,
+// handlePartnerCategoryDelete, handlePartnerProductCreate,
+// handlePartnerProductUpdate and handlePartnerProductDelete are
+// legacy-read-only as of dsh-030 (governance/catalog/
+// CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md rule 8): a store can no longer
+// originate a category or product as ground truth. Use POST
+// /dsh/partner/catalog/product-proposals to request a central-catalog
+// addition, and PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}
+// to manage price/availability/stock/note/local-image for an existing
+// master product.
 func (s *protectedStoreServer) handlePartnerCategoryCreate(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
+	if _, _, ok := s.partnerStore(w, r); !ok {
 		return
 	}
-	var input catalog.CategoryInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	item, err := catalog.UpsertCategory(r.Context(), s.db, actor.ID, actor.Role, storeID, "", correlationID(r), input)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"category": item})
+	legacyCatalogWriteBlocked(w)
 }
 
 func (s *protectedStoreServer) handlePartnerCategoryUpdate(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
+	if _, _, ok := s.partnerStore(w, r); !ok {
 		return
 	}
-	var input catalog.CategoryInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	item, err := catalog.UpsertCategory(r.Context(), s.db, actor.ID, actor.Role, storeID, r.PathValue("categoryId"), correlationID(r), input)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"category": item})
+	legacyCatalogWriteBlocked(w)
 }
 
 func (s *protectedStoreServer) handlePartnerCategoryDelete(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
+	if _, _, ok := s.partnerStore(w, r); !ok {
 		return
 	}
-	err := catalog.DeleteCategory(r.Context(), s.db, actor.ID, actor.Role, storeID, r.PathValue("categoryId"), correlationID(r), expectedVersion(r))
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	legacyCatalogWriteBlocked(w)
 }
 
 func (s *protectedStoreServer) handlePartnerProductCreate(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
+	if _, _, ok := s.partnerStore(w, r); !ok {
 		return
 	}
-	var input catalog.ProductInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	item, err := catalog.UpsertProduct(r.Context(), s.db, actor.ID, actor.Role, storeID, "", correlationID(r), input)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"product": item})
+	legacyCatalogWriteBlocked(w)
 }
 
 func (s *protectedStoreServer) handlePartnerProductUpdate(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
+	if _, _, ok := s.partnerStore(w, r); !ok {
 		return
 	}
-	var input catalog.ProductInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	item, err := catalog.UpsertProduct(r.Context(), s.db, actor.ID, actor.Role, storeID, r.PathValue("productId"), correlationID(r), input)
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"product": item})
+	legacyCatalogWriteBlocked(w)
 }
 
 func (s *protectedStoreServer) handlePartnerProductDelete(w http.ResponseWriter, r *http.Request) {
-	actor, storeID, ok := s.partnerStore(w, r)
-	if !ok {
+	if _, _, ok := s.partnerStore(w, r); !ok {
 		return
 	}
-	err := catalog.DeleteProduct(r.Context(), s.db, actor.ID, actor.Role, storeID, r.PathValue("productId"), correlationID(r), expectedVersion(r))
-	if err != nil {
-		s.writeCatalogError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	legacyCatalogWriteBlocked(w)
 }
 
 func (s *protectedStoreServer) handleUploadIntent(w http.ResponseWriter, r *http.Request) {

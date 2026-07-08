@@ -534,6 +534,7 @@ paths:
   /dsh/stores/{storeId}/catalog:
     get:
       operationId: getPublishedDshCatalog
+      deprecated: false # response shape changed: now { domains, products } from the master catalog (dsh-030); see CentralCatalog tag.
       summary: Return the approved, active catalog for a publicly eligible store.
       tags: [DshCatalog]
       parameters:
@@ -569,6 +570,7 @@ paths:
   /dsh/partner/catalog/categories:
     post:
       operationId: createPartnerCatalogCategory
+      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use POST /dsh/partner/catalog/product-proposals + PUT .../assortment/{masterProductId}.
       tags: [DshCatalog]
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/CorrelationId" }]
@@ -597,6 +599,7 @@ paths:
       - $ref: "#/components/parameters/CorrelationId"
     patch:
       operationId: updatePartnerCatalogCategory
+      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
       tags: [DshCatalog]
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -609,6 +612,7 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: deletePartnerCatalogCategory
+      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
       tags: [DshCatalog]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -623,6 +627,7 @@ paths:
   /dsh/partner/catalog/products:
     post:
       operationId: createPartnerCatalogProduct
+      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
       tags: [DshCatalog]
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/CorrelationId" }]
@@ -644,6 +649,7 @@ paths:
       - $ref: "#/components/parameters/CorrelationId"
     patch:
       operationId: updatePartnerCatalogProduct
+      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
       tags: [DshCatalog]
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -656,6 +662,7 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
     delete:
       operationId: deletePartnerCatalogProduct
+      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
       tags: [DshCatalog]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -762,6 +769,284 @@ paths:
       parameters: [{ $ref: "#/components/parameters/StoreId" }]
       responses:
         "200": { description: Catalog audit timeline. }
+
+  # ─── Central Catalog Sovereignty ───────────────────────────────────────────
+  # governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md. From dsh-030
+  # forward, dsh_catalog_domains/dsh_catalog_nodes/dsh_master_products are the
+  # only ground truth for categories/products; the legacy
+  # /dsh/partner/catalog/categories and /dsh/partner/catalog/products write
+  # endpoints above are deprecated (legacy-read-only — POST/PATCH/DELETE now
+  # return 410 LEGACY_CATALOG_WRITE_BLOCKED). Use the endpoints below instead.
+  /dsh/operator/catalog/domains:
+    get:
+      operationId: listCatalogDomains
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: BUSINESS_DOMAIN (L1) list. }
+    post:
+      operationId: createCatalogDomain
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Domain created. }
+
+  /dsh/operator/catalog/domains/{domainId}:
+    patch:
+      operationId: updateCatalogDomain
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: domainId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Domain updated. }
+
+  /dsh/operator/catalog/nodes:
+    get:
+      operationId: listCatalogNodes
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: domainId
+          in: query
+          schema: { type: string }
+        - name: parentId
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: BUSINESS_SUBDOMAIN/PRODUCT_MAIN_CLASS/PRODUCT_SUB_CLASS (L2-L4) list. }
+    post:
+      operationId: createCatalogNode
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Node created. }
+
+  /dsh/operator/catalog/nodes/{nodeId}:
+    patch:
+      operationId: updateCatalogNode
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Node updated. }
+
+  /dsh/operator/catalog/master-products:
+    get:
+      operationId: listMasterProductsOperator
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: domainId
+          in: query
+          schema: { type: string }
+        - name: categoryNodeId
+          in: query
+          schema: { type: string }
+        - name: approvalStatus
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer }
+      responses:
+        "200": { description: MASTER_PRODUCT (L5) list. }
+    post:
+      operationId: createMasterProduct
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Master product created. }
+
+  /dsh/operator/catalog/master-products/{productId}:
+    patch:
+      operationId: updateMasterProduct
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Master product updated. }
+
+  /dsh/operator/catalog/product-proposals:
+    get:
+      operationId: listProductProposals
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: storeId
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: Product proposal queue (requests to add to the master catalog). }
+
+  /dsh/operator/catalog/product-proposals/{proposalId}/decision:
+    post:
+      operationId: decideProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: proposalId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Proposal moved to under_review/adopted/rejected/needs_fix. }
+
+  /dsh/operator/catalog/platform-policies:
+    get:
+      operationId: listCatalogPlatformPolicies
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Per-domain/per-node/default commission, fee, and capability policy rows. }
+
+  /dsh/operator/catalog/platform-policies/{policyId}:
+    put:
+      operationId: updateCatalogPlatformPolicy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Policy updated. }
+
+  /dsh/operator/stores/{storeId}/assortment:
+    get:
+      operationId: getOperatorStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/StoreId" }]
+      responses:
+        "200": { description: Store's master-product links (price/availability/stock/note/local image). }
+
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: upsertOperatorStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+        - name: masterProductId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Assortment row created/updated. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/partner/catalog/taxonomy:
+    get:
+      operationId: getPartnerCatalogTaxonomy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Read-only domain+node tree for the partner surface (never hardcode categories in app-partner). }
+
+  /dsh/partner/catalog/master-products:
+    get:
+      operationId: listPartnerMasterProducts
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Searchable master product list for building an assortment. }
+
+  /dsh/partner/stores/{storeId}/assortment:
+    get:
+      operationId: getPartnerStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/StoreId" }]
+      responses:
+        "200": { description: The authenticated partner's own store assortment. }
+
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: upsertPartnerStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+        - name: masterProductId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Assortment row created/updated for the partner's own store. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/partner/catalog/product-proposals:
+    post:
+      operationId: createPartnerProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Product proposal submitted — never a final sellable product. }
+
+  /dsh/field/catalog/taxonomy:
+    get:
+      operationId: getFieldCatalogTaxonomy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Read-only domain+node tree for the field surface (never hardcode categories in app-field). }
+
+  /dsh/field/catalog/master-products:
+    get:
+      operationId: listFieldMasterProducts
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Searchable master product list for the field surface. }
+
+  /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}:
+    put:
+      operationId: fieldUpsertStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/StoreId"
+        - name: masterProductId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Assortment row created/updated on behalf of a field-onboarded partner's store. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/catalog/product-proposals:
+    post:
+      operationId: createFieldProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Product proposal submitted by a field actor — never a final sellable product. }
 
   # ─── Cart & Serviceability Quote ────────────────────────────────
   # Runtime handlers registered in server.go. Client must be authenticated.

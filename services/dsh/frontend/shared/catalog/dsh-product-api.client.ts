@@ -4,6 +4,25 @@
 // No UI. No React. Pure types + factory.
 // Authority: app-partner submits product identity; control-panel owns approval.
 // WLT boundary: price is a label only — no financial mutation inside DSH.
+//
+// BLOCKED as of dsh-030 (governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md):
+// every path below (/stores/{id}/products, /products/{id}, /categories/*,
+// /catalog-overrides, /catalog-conflicts) is unprefixed and was never
+// registered on the DSH backend — calling this client 404s today. It also
+// models exactly what the sovereignty decision forbids: a partner creating a
+// local category/product as ground truth. The real, implemented surface is
+// dsh-api/internal/centralcatalog + the routes registered in
+// services/dsh/backend/internal/http/server.go under "Central catalog
+// sovereignty" (/dsh/partner/catalog/taxonomy, /dsh/partner/catalog/
+// master-products, /dsh/partner/stores/{storeId}/assortment/*,
+// /dsh/partner/catalog/product-proposals). The four screens still importing
+// this client (app-partner/Catalog/CategoryManagementScreen.tsx,
+// InventoryCatalogScreen.tsx, ProductEditScreen.tsx,
+// ProductOverridesScreen.tsx) need a dedicated rewrite onto that surface —
+// left out of this change because it requires redesigning those screens'
+// field mappings (canonical name/price/assortment fields differ from the
+// name/base_price_label shape here) with visual verification, not a
+// mechanical path swap. Do not add new callers of this client.
 
 export type DshProductApprovalStatus =
   | 'field_draft'
