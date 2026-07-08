@@ -908,19 +908,68 @@ type ClientCatalogEntry struct {
 // for a published store. No local product/category can leak in here because
 // the query originates entirely from the master tables joined through the
 // assortment link.
-func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []ClientCatalogEntry, error) {
+func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLink, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
 		SELECT 1 FROM dsh_stores WHERE id=$1 AND status='active' AND is_visible=true
 		  AND serviceability_status IN ('serviceable','limited')
 	)`, storeID).Scan(&storePublished)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	if !storePublished {
-		return nil, nil, ErrNotFound
+		return nil, nil, nil, nil, nil, ErrNotFound
 	}
 
+	// 1. Fetch active policies
+	policies, err := ListCatalogPolicies(ctx, db)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	// Helper to resolve policy from active list
+	resolvePolicy := func(domainID, nodeID string) CatalogPolicy {
+		if nodeID != "" {
+			for _, p := range policies {
+				if p.NodeID != nil && *p.NodeID == nodeID && p.PolicyScope == "node" && p.IsActive {
+					return p
+				}
+			}
+		}
+		if domainID != "" {
+			for _, p := range policies {
+				if p.DomainID != nil && *p.DomainID == domainID && p.PolicyScope == "domain" && p.IsActive {
+					return p
+				}
+			}
+		}
+		for _, p := range policies {
+			if p.PolicyScope == "default" && p.IsActive {
+				return p
+			}
+		}
+		return CatalogPolicy{}
+	}
+
+	// 2. Fetch approved asset links
+	linkRows, err := db.QueryContext(ctx, `
+		SELECT `+assetLinkColumns+` FROM dsh_catalog_asset_links
+		WHERE status = 'approved'
+	`)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	defer linkRows.Close()
+	allLinks := []CatalogAssetLink{}
+	for linkRows.Next() {
+		l, err := scanAssetLink(linkRows)
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+		allLinks = append(allLinks, l)
+	}
+
+	// 3. Fetch candidate products
 	rows, err := db.QueryContext(ctx, `
 		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.unit_price, a.currency, a.stock_status,
 		       COALESCE(a.custom_image_object_key, mp.canonical_image_object_key, '')
@@ -931,39 +980,117 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		WHERE a.store_id = $1
 		  AND a.publication_status = 'client_visible' AND a.available = true
 		  AND mp.approval_status = 'approved' AND mp.is_active = true
-		  AND d.is_active = true AND d.is_client_visible = true
+		  AND d.is_active = true AND d.is_client_visible = true AND d.is_manual_request = false
 		  AND (n.id IS NULL OR (n.is_active = true AND n.is_client_visible = true))
+		  AND NOT EXISTS (
+		      SELECT 1 FROM dsh_catalog_asset_links al
+		      WHERE al.entity_type = 'master_product' AND al.entity_id = mp.id
+		        AND al.role = 'canonical_product_image' AND al.status = 'rejected'
+		  )
 		ORDER BY mp.canonical_name_ar`, storeID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	defer rows.Close()
+
 	entries := []ClientCatalogEntry{}
 	domainIDs := map[string]bool{}
+	nodeIDs := map[string]bool{}
+
 	for rows.Next() {
 		var e ClientCatalogEntry
 		if err := rows.Scan(&e.ID, &e.DomainID, &e.CategoryNodeID, &e.CanonicalNameAr, &e.CanonicalNameEn,
 			&e.Brand, &e.Barcode, &e.GTIN, &e.SKU, &e.Unit, &e.MeasurementType, &e.CanonicalImageObjectKey,
 			&e.ApprovalStatus, &e.IsActive, &e.DuplicateGroupID, &e.CreatedSource, &e.CreatedAt, &e.UpdatedAt,
 			&e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, nil, nil, err
 		}
+
+		// 4. Media policy satisfaction gate
+		catNodeID := ""
+		if e.CategoryNodeID != nil {
+			catNodeID = *e.CategoryNodeID
+		}
+		p := resolvePolicy(e.DomainID, catNodeID)
+		if p.RequiresProductImage {
+			hasApprovedImg := false
+			for _, l := range allLinks {
+				if l.EntityType == "master_product" && l.EntityID == e.ID && l.Role == "canonical_product_image" {
+					hasApprovedImg = true
+					break
+				}
+			}
+			if !hasApprovedImg {
+				continue
+			}
+		}
+
 		entries = append(entries, e)
 		domainIDs[e.DomainID] = true
+		if e.CategoryNodeID != nil {
+			nodeIDs[*e.CategoryNodeID] = true
+		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	domains := []Domain{}
 	for id := range domainIDs {
 		d, err := GetDomain(ctx, db, id)
-		if err != nil {
-			return nil, nil, err
+		if err == nil {
+			domains = append(domains, d)
 		}
-		domains = append(domains, d)
 	}
-	return domains, entries, nil
+
+	nodes := []Node{}
+	for id := range nodeIDs {
+		n, err := GetNode(ctx, db, id)
+		if err == nil {
+			nodes = append(nodes, n)
+		}
+	}
+
+	relevantLinks := []CatalogAssetLink{}
+	for _, l := range allLinks {
+		keep := false
+		switch l.EntityType {
+		case "domain":
+			keep = domainIDs[l.EntityID]
+		case "node":
+			keep = nodeIDs[l.EntityID]
+		case "master_product":
+			for _, e := range entries {
+				if e.ID == l.EntityID {
+					keep = true
+					break
+				}
+			}
+		}
+		if keep {
+			relevantLinks = append(relevantLinks, l)
+		}
+	}
+
+	relevantPolicies := []CatalogPolicy{}
+	for _, p := range policies {
+		if !p.IsActive {
+			continue
+		}
+		keep := false
+		if p.PolicyScope == "default" {
+			keep = true
+		} else if p.PolicyScope == "domain" && p.DomainID != nil && domainIDs[*p.DomainID] {
+			keep = true
+		} else if p.PolicyScope == "node" && p.NodeID != nil && nodeIDs[*p.NodeID] {
+			keep = true
+		}
+		if keep {
+			relevantPolicies = append(relevantPolicies, p)
+		}
+	}
+
+	return domains, nodes, entries, relevantLinks, relevantPolicies, nil
 }
 
 func prefixColumns(alias, columns string) string {

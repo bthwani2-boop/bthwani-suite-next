@@ -22,7 +22,7 @@ import (
 // assortment row are all independently approved/active/visible.
 func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		domains, products, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
+		domains, nodes, products, media, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
 		if errors.Is(err, centralcatalog.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "approved catalog not found")
 			return
@@ -31,7 +31,13 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog unavailable")
 			return
 		}
-		store.SendJSON(w, http.StatusOK, map[string]any{"domains": domains, "products": products})
+		store.SendJSON(w, http.StatusOK, map[string]any{
+			"domains":        domains,
+			"nodes":          nodes,
+			"products":       products,
+			"media":          media,
+			"policySnapshot": policySnapshot,
+		})
 	}
 }
 

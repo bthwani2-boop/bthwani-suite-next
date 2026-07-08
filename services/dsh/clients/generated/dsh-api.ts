@@ -3030,7 +3030,7 @@ export interface components {
             /** @enum {string} */
             scope: "own" | "assigned" | "all";
             store: components["schemas"]["DshStoreDetail"];
-            latestAction?: components["schemas"]["DshStoreAuditEvent"] | null;
+            latestAction?: components["schemas"]["DshStoreAuditEvent"];
         };
         PartnerStoreSettingsRequest: {
             expectedVersion: number;
@@ -3303,7 +3303,7 @@ export interface components {
             updatedAt: string;
         };
         DshCartResponse: {
-            cart: components["schemas"]["DshCart"] | null;
+            cart: components["schemas"]["DshCart"];
         };
         DshUpsertCartItemRequest: {
             storeId: string;
@@ -5625,7 +5625,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Per-domain/per-node/default commission */
+            /** @description Per-domain/per-node/default commission, fee, and capability policy rows. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -118,6 +118,7 @@ export interface CatalogPlatformPolicy {
   readonly allowsProductProposal: boolean;
   readonly requiresBarcode: boolean;
   readonly requiresCatalogReview: boolean;
+  readonly requiresProductImage: boolean;
   readonly isActive: boolean;
   readonly effectiveFrom: string;
   readonly notes: string;
