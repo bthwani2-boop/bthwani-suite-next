@@ -352,19 +352,6 @@ export type DshPartnerSupportCommandContext = {
   source?: 'operations' | 'bell' | 'settings' | 'orders' | 'hub';
 };
 
-export const DSH_PARTNER_HIDDEN_COMPAT_SUPPORT_ROUTE_IDS = [
-  'auction-status-update',
-] as const satisfies readonly DshPartnerSupportRouteId[];
-
-export const DSH_PARTNER_HIDDEN_COMPAT_OPERATIONAL_FLOW_IDS = [
-  'order-alerts',
-  'order-sla-risk',
-  'order-issue-required',
-  'partner-finance-bridge',
-  'partner-settlement-summary',
-  'partner-commission-summary',
-] as const satisfies readonly DshPartnerOperationalFlowId[];
-
 export const DSH_PARTNER_SUPPORT_ROUTE_TO_OPERATIONAL_FLOW: Record<DshPartnerSupportRouteId, DshPartnerOperationalFlowId | null> = {
   'auction-status-update': null,
   'chat-read-ack': 'order-chat-read-ack',

@@ -29,9 +29,9 @@ const canSubmit = (form, uploadedDocumentTypes, partnerId = "prt_test") =>
   Boolean(partnerId) && getFieldRequiredMissingItems(form, uploadedDocumentTypes).length === 0;
 
 describe("field onboarding validation", () => {
-  test("documents and branch photos do not block submission", () => {
-    assert.equal(getDocumentsMissingCount([], {}), 0);
-    assert.equal(canSubmit(completeForm, []), true);
+  test("documents and branch photos block submission", () => {
+    assert.equal(getDocumentsMissingCount([], {}), 5);
+    assert.equal(canSubmit(completeForm, []), false);
   });
 
   test("bank account fields block submission when other required fields are complete but bank is missing", () => {
@@ -39,9 +39,9 @@ describe("field onboarding validation", () => {
     assert.equal(canSubmit(formWithoutBank, []), false);
   });
 
-  test("all required non-document fields and partner id allow submission", () => {
-    assert.equal(getDocumentsMissingCount([], completeForm), 0);
-    assert.equal(canSubmit(completeForm, []), true);
+  test("all required documents, photos, bank data, and partner id allow submission", () => {
+    assert.equal(getDocumentsMissingCount(requiredDocumentTypes, completeForm), 0);
+    assert.equal(canSubmit(completeForm, requiredDocumentTypes), true);
   });
 
   test("controller step order matches the visible wizard groups", () => {

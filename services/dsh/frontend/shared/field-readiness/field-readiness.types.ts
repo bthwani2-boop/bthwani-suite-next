@@ -63,6 +63,10 @@ export type DshReadinessEscalation = {
   readonly updatedAt: string;
 };
 
+export type DshFieldWorkQueue = {
+  readonly visits: readonly DshFieldVisit[];
+  readonly escalations: readonly DshReadinessEscalation[];
+};
 export type DshOnboardingStatus = {
   readonly storeId: string;
   readonly totalVisits: number;

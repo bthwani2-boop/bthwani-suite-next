@@ -146,7 +146,15 @@ export function getDocumentsMissingCount(
   uploadedDocumentTypes: DshPartnerDocumentType[],
   form: Partial<FieldPartnerDraftForm> = {}
 ): number {
-  return 0; // Documents and photos are optional (according to what is available)
+  const uploaded = new Set(uploadedDocumentTypes);
+  let count = 0;
+  for (const documentType of REQUIRED_DOCUMENT_TYPES) {
+    if (!uploaded.has(documentType)) count++;
+  }
+  if (!form.storefrontPhotoRef?.trim()) count++;
+  if (!form.interiorPhotoRef?.trim()) count++;
+  if (!form.signagePhotoRef?.trim()) count++;
+  return count;
 }
 
 export function getAgreementReviewMissingCount(
@@ -187,6 +195,13 @@ export function getFieldRequiredMissingItems(
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");
+  const uploaded = new Set(uploadedDocumentTypes);
+  for (const documentType of REQUIRED_DOCUMENT_TYPES) {
+    if (!uploaded.has(documentType)) missing.push(DOCUMENT_TYPE_LABELS[documentType]);
+  }
+  if (!form.storefrontPhotoRef?.trim()) missing.push("صورة واجهة المتجر");
+  if (!form.interiorPhotoRef?.trim()) missing.push("صورة داخل المتجر");
+  if (!form.signagePhotoRef?.trim()) missing.push("صورة اللوحة التجارية");
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
   if (!form.deliveryReadiness?.trim()) missing.push("جاهزية التوصيل");
   if (!form.beneficiaryName?.trim()) missing.push("اسم صاحب الحساب البنكي");

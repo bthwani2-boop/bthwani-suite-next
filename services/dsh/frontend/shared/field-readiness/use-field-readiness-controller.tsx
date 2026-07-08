@@ -3,7 +3,7 @@ import {
   createFieldVisit, fetchFieldVisits, completeFieldVisit,
   upsertReadinessCheck, fetchVisitChecks,
   createReadinessEscalation, fetchOperatorEscalations, updateEscalation,
-  fetchPartnerOnboardingStatus, classifyFieldReadinessError,
+  fetchPartnerOnboardingStatus, fetchFieldWorkQueue, classifyFieldReadinessError,
 } from "./field-readiness.api";
 import {
   visitIdleState, visitLoadingState, visitSuccessState, visitEmptyState, visitErrorState,
@@ -13,6 +13,7 @@ import {
   escalationIdleState, escalationLoadingState, escalationSuccessState, escalationEmptyState, escalationErrorState,
   escalationActionIdleState, escalationActionSubmittingState, escalationActionSuccessState, escalationActionErrorState,
   onboardingStatusIdleState, onboardingStatusLoadingState, onboardingStatusSuccessState, onboardingStatusErrorState,
+  workQueueIdleState, workQueueLoadingState, workQueueSuccessState, workQueueErrorState,
 } from "./field-readiness.states";
 import type { DshCreateVisitInput, DshUpsertCheckInput, DshCreateEscalationInput, DshUpdateEscalationInput } from "./field-readiness.types";
 
@@ -162,6 +163,26 @@ function usePartnerOnboardingStatusController(storeId: string, authKind = "unaut
       setState(onboardingStatusErrorState(resolveMessage(err)));
     }
   }, [storeId]);
+
+  useEffect(() => {
+    if (isAuthenticated(authKind)) void load();
+  }, [authKind, load]);
+
+  return { state, reload: load };
+}
+
+export function useFieldWorkQueueController(authKind = "unauthenticated") {
+  const [state, setState] = useState(workQueueIdleState());
+
+  const load = useCallback(async () => {
+    setState(workQueueLoadingState());
+    try {
+      const queue = await fetchFieldWorkQueue();
+      setState(workQueueSuccessState(queue));
+    } catch (err) {
+      setState(workQueueErrorState(resolveMessage(err)));
+    }
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated(authKind)) void load();

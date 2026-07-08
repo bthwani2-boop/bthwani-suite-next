@@ -1,10 +1,10 @@
 {
-  "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
+  "head_sha": "1a312031e3f10c07a5f06ff0421d09ba82ffd3f7",
   "status": "DISCOVERY_ONLY",
   "output_policy": ".diagnostics/operational-journey-factory",
   "sources": {
     "package_json_scripts": 188,
-    "guard_registry_entries": 49,
+    "guard_registry_entries": 51,
     "guard_files": [
       "tools/guards/a11y-gate.mjs",
       "tools/guards/agent-governance-gate.mjs",
@@ -2777,29 +2777,6 @@
       ]
     },
     {
-      "tool_id": "guard:foundation-cross-journey-closure",
-      "classification": [
-        "UNUSED_SCRIPT"
-      ],
-      "detected_from": [
-        "package.json"
-      ],
-      "command": "guard:foundation-cross-journey-closure",
-      "commands": [
-        {
-          "id": "guard:foundation-cross-journey-closure:package-script",
-          "command": "guard:foundation-cross-journey-closure",
-          "tool": "guard:foundation-cross-journey-closure",
-          "expected_exit_code": 0,
-          "actual_exit_code": null,
-          "blocking": false,
-          "classification": "FIX_REQUIRED",
-          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "classify_package_script_or_register_guard"
-        }
-      ]
-    },
-    {
       "tool_id": "diagnostics:knip",
       "classification": [
         "UNUSED_SCRIPT"
@@ -2859,29 +2836,6 @@
           "id": "diagnostics:madge:package-script",
           "command": "diagnostics:madge",
           "tool": "diagnostics:madge",
-          "expected_exit_code": 0,
-          "actual_exit_code": null,
-          "blocking": false,
-          "classification": "FIX_REQUIRED",
-          "log_path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-          "remediation_hint": "classify_package_script_or_register_guard"
-        }
-      ]
-    },
-    {
-      "tool_id": "guard:dsh-order-lifecycle-all",
-      "classification": [
-        "UNUSED_SCRIPT"
-      ],
-      "detected_from": [
-        "package.json"
-      ],
-      "command": "guard:dsh-order-lifecycle-all",
-      "commands": [
-        {
-          "id": "guard:dsh-order-lifecycle-all:package-script",
-          "command": "guard:dsh-order-lifecycle-all",
-          "tool": "guard:dsh-order-lifecycle-all",
           "expected_exit_code": 0,
           "actual_exit_code": null,
           "blocking": false,

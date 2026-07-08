@@ -61,6 +61,32 @@ func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusOK, map[string]any{"visits": result})
 }
 
+// GET /dsh/field/work-queue
+func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "field")
+	if !ok {
+		return
+	}
+	visits, err := fieldreadiness.ListAgentVisits(s.db, actor.ID, 50)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field work queue visits")
+		return
+	}
+	escalations, err := fieldreadiness.ListAgentEscalations(s.db, actor.ID, 50)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field work queue escalations")
+		return
+	}
+	visitResult := make([]map[string]any, 0, len(visits))
+	for _, v := range visits {
+		visitResult = append(visitResult, marshalVisit(v))
+	}
+	escalationResult := make([]map[string]any, 0, len(escalations))
+	for _, e := range escalations {
+		escalationResult = append(escalationResult, marshalEscalation(e))
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"visits": visitResult, "escalations": escalationResult})
+}
 // POST /dsh/field/visits/{visitId}/complete
 func (s *protectedStoreServer) handleCompleteFieldVisit(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")

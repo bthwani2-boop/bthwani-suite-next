@@ -23,6 +23,7 @@ type DshFieldPartnersScreenProps = {
   readonly onOpenPartner: (partnerId: string, activationStatus: string) => void;
   readonly onOpenAccount: () => void;
   readonly onCreatePartner: () => void;
+  readonly onOpenWorkQueue: () => void;
 };
 
 type FilterOptionId = 'all' | 'today' | 'ready' | 'follow-up' | 'pending';
@@ -41,6 +42,7 @@ function FieldTopBar({
   onSearchPress,
   onNotificationsPress,
   onAccountPress,
+  onWorkQueuePress,
   unreadCount = 0,
   // Generic label by default — the actual city/route must come from the
   // runtime user scope, never a hardcoded city.
@@ -49,6 +51,7 @@ function FieldTopBar({
   onSearchPress: () => void;
   onNotificationsPress: () => void;
   onAccountPress: () => void;
+  onWorkQueuePress: () => void;
   unreadCount?: number;
   locationLabel?: string;
 }) {
@@ -102,6 +105,13 @@ function FieldTopBar({
 
         {/* Right: bell + person icons */}
         <View style={{ flexDirection: 'row', gap: spacing[1] }}>
+        <Pressable
+          onPress={onWorkQueuePress}
+          style={{ padding: spacing[2] }}
+          accessibilityLabel="مهام التحقق"
+        >
+          <Icon name="list-outline" size={24} color={colorRoles.surfaceBase} />
+        </Pressable>
           <Pressable
             onPress={onNotificationsPress}
             style={{ padding: spacing[2], position: 'relative' }}
@@ -244,6 +254,7 @@ export function DshFieldPartnersScreen({
   onOpenPartner,
   onOpenAccount,
   onCreatePartner,
+  onOpenWorkQueue,
 }: DshFieldPartnersScreenProps) {
   const identity = useIdentitySession();
   const controller = useFieldPartnerDraftsController();
@@ -307,7 +318,8 @@ export function DshFieldPartnersScreen({
           onSearchPress={() => setShowSearch((v) => !v)}
           onNotificationsPress={() => setShowNotifications(true)}
           onAccountPress={onOpenAccount}
-          unreadCount={unreadCount}
+        unreadCount={unreadCount}
+        onWorkQueuePress={onOpenWorkQueue}
         />
         <StateView loading title="التحميل قيد التقدم" description="نقوم بمزامنة أحدث بيانات المتجر والمواقع الآن." />
       </View>
@@ -321,7 +333,8 @@ export function DshFieldPartnersScreen({
           onSearchPress={() => setShowSearch((v) => !v)}
           onNotificationsPress={() => setShowNotifications(true)}
           onAccountPress={onOpenAccount}
-          unreadCount={unreadCount}
+        unreadCount={unreadCount}
+        onWorkQueuePress={onOpenWorkQueue}
         />
         <StateView
           tone="danger"
@@ -341,7 +354,8 @@ export function DshFieldPartnersScreen({
           onSearchPress={() => setShowSearch((v) => !v)}
           onNotificationsPress={() => setShowNotifications(true)}
           onAccountPress={onOpenAccount}
-          unreadCount={unreadCount}
+        unreadCount={unreadCount}
+        onWorkQueuePress={onOpenWorkQueue}
         />
         <ScrollView
           style={{ flex: 1 }}
@@ -367,6 +381,7 @@ export function DshFieldPartnersScreen({
         onNotificationsPress={() => setShowNotifications(true)}
         onAccountPress={onOpenAccount}
         unreadCount={unreadCount}
+        onWorkQueuePress={onOpenWorkQueue}
       />
 
       <ScrollView

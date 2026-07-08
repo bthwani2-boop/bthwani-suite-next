@@ -1135,6 +1135,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/field/work-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Field agent's own open visits and escalations across every store. */
+        get: operations["getDshFieldWorkQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/field/visits/{visitId}/complete": {
         parameters: {
             query?: never;
@@ -2985,6 +3002,10 @@ export interface components {
             escalation: components["schemas"]["DshReadinessEscalation"];
         };
         DshEscalationsResponse: {
+            escalations: components["schemas"]["DshReadinessEscalation"][];
+        };
+        DshFieldWorkQueueResponse: {
+            visits: components["schemas"]["DshFieldVisit"][];
             escalations: components["schemas"]["DshReadinessEscalation"][];
         };
         DshCreateEscalationRequest: {
@@ -5927,6 +5948,27 @@ export interface operations {
                 };
             };
             400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshFieldWorkQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Field agent's open work queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshFieldWorkQueueResponse"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };

@@ -1,5 +1,5 @@
 {
-  "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
+  "head_sha": "1a312031e3f10c07a5f06ff0421d09ba82ffd3f7",
   "status": "DISCOVERY_ONLY",
   "source_files": {
     "service_blueprint": {
@@ -144,6 +144,7 @@
     "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
     "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
     "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
     "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",

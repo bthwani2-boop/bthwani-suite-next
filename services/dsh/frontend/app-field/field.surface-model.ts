@@ -44,6 +44,9 @@ function resolveCommandRoute(command?: DshFieldNavigationCommand): DshFieldRoute
   if (command.target === 'escalation' && command.storeId) {
     return { kind: 'escalation', storeId: command.storeId, ...(command.visitId ? { visitId: command.visitId } : {}) };
   }
+  if (command.target === 'work-queue') {
+    return { kind: 'work-queue' };
+  }
   if (command.target === 'products-upload' && command.partnerId) {
     return { kind: 'products-upload', partnerId: command.partnerId };
   }
@@ -61,7 +64,7 @@ function resolveCommandRoute(command?: DshFieldNavigationCommand): DshFieldRoute
 
 export function resolveFieldBottomActiveId(route: DshFieldRouteState): string {
   if (route.kind === 'stores') return 'tasks';
-  if (['visit', 'checklist', 'escalation'].includes(route.kind)) return 'tasks';
+  if (['visit', 'checklist', 'escalation', 'work-queue'].includes(route.kind)) return 'tasks';
   if (route.kind === 'history') return 'history';
   if (route.kind === 'finance') return 'finance';
   if (['account', 'profile', 'onboarding', 'partner-progress', 'products-upload'].includes(route.kind)) {
@@ -71,7 +74,7 @@ export function resolveFieldBottomActiveId(route: DshFieldRouteState): string {
 }
 
 export function canFieldShowBottomNav(route: DshFieldRouteState): boolean {
-  return route.kind === 'stores' || route.kind === 'history' || route.kind === 'finance' || route.kind === 'account';
+  return route.kind === 'stores' || route.kind === 'history' || route.kind === 'finance' || route.kind === 'account' || route.kind === 'work-queue';
 }
 
 export function useFieldNavigationModel({ command }: { command: DshFieldNavigationCommand | undefined }) {

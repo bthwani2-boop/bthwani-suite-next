@@ -1,8 +1,7 @@
 export type { PartnerStoreScopeOption } from '../shared/partner/partner.types';
 export { storeScopeOptions } from '../shared/partner/partner.types';
 
-export type { PartnerStoreHoursDay } from '../shared/delivery';
-export { defaultServiceModes, defaultZone, defaultStoreHours } from '../shared/delivery';
+export { defaultServiceModes } from '../shared/delivery';
 
 export {
   defaultSupportCommandContext,

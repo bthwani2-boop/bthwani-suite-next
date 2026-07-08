@@ -1723,6 +1723,21 @@ paths:
               schema: { $ref: "#/components/schemas/DshFieldVisitsResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
+  /dsh/field/work-queue:
+    get:
+      operationId: getDshFieldWorkQueue
+      summary: Field agent's own open visits and escalations across every store.
+      tags: [DshFieldReadiness]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Field agent's open work queue.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshFieldWorkQueueResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
   /dsh/field/visits/{visitId}/complete:
     post:
       operationId: completeDshFieldVisit
@@ -5038,6 +5053,17 @@ components:
       type: object
       required: [escalations]
       properties:
+        escalations:
+          type: array
+          items: { $ref: "#/components/schemas/DshReadinessEscalation" }
+
+    DshFieldWorkQueueResponse:
+      type: object
+      required: [visits, escalations]
+      properties:
+        visits:
+          type: array
+          items: { $ref: "#/components/schemas/DshFieldVisit" }
         escalations:
           type: array
           items: { $ref: "#/components/schemas/DshReadinessEscalation" }

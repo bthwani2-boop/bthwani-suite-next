@@ -16,7 +16,6 @@ import {
   initialDraftState,
   validateIdentityStep,
   validateOwnerStep,
-  FIELD_ONBOARDING_STEPS,
   type FieldOnboardingDraftState,
   type FieldPartnerDraftForm,
   type FieldOnboardingValidationErrors,
@@ -29,11 +28,9 @@ export type FieldOnboardingController = {
   updateVisitNotes: (notes: string) => void;
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
-  /** Validates the identity step and creates the partner draft if it doesn't exist yet. Returns false if blocked. */
+  /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns false if blocked. */
   ensureDraftCreated: () => Promise<boolean>;
   uploadDocument: (kind: DshPartnerDocumentType, mediaRef: string) => Promise<boolean>;
-  nextStep: () => Promise<void>;
-  prevStep: () => void;
   submitDraft: () => Promise<void>;
   reset: () => void;
 };
@@ -87,16 +84,8 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     setState((s) => ({ ...s, evidenceMediaRefs: [...s.evidenceMediaRefs, ref], isDirty: true }));
   }, []);
 
-  const prevStep = useCallback(() => {
-    setState((s) => {
-      const idx = FIELD_ONBOARDING_STEPS.indexOf(s.step);
-      if (idx > 0) return { ...s, step: FIELD_ONBOARDING_STEPS[idx - 1]! };
-      return s;
-    });
-  }, []);
-
   const ensureDraftCreated = useCallback(async (): Promise<boolean> => {
-    const errors = validateIdentityStep(state.form);
+    const errors = { ...validateIdentityStep(state.form), ...validateOwnerStep(state.form) };
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return false;
@@ -156,25 +145,6 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }
   }, [state.partnerId]);
 
-  const nextStep = useCallback(async () => {
-    const currentIdx = FIELD_ONBOARDING_STEPS.indexOf(state.step);
-
-    if (state.step === "basics_profile") {
-      const created = await ensureDraftCreated();
-      if (!created) return;
-      const ownerErrors = validateOwnerStep(state.form);
-      if (Object.keys(ownerErrors).length > 0) {
-        setValidationErrors(ownerErrors);
-        return;
-      }
-      setValidationErrors({});
-    }
-
-    if (currentIdx >= 0 && currentIdx < FIELD_ONBOARDING_STEPS.length - 1) {
-      setState((s) => ({ ...s, step: FIELD_ONBOARDING_STEPS[currentIdx + 1]! }));
-    }
-  }, [state, ensureDraftCreated]);
-
   const submitDraft = useCallback(async () => {
     if (!state.partnerId) return;
     setState((s) => ({ ...s, isSubmitting: true, submitError: null }));
@@ -228,8 +198,6 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     addEvidenceRef,
     ensureDraftCreated,
     uploadDocument,
-    nextStep,
-    prevStep,
     submitDraft,
     reset,
   };

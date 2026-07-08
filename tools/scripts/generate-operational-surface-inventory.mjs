@@ -100,14 +100,31 @@ function hasRuntimeTransportSigns(code) {
 function hasOperationalLogicSigns(code, file) {
   if (/\.(types|type)\.(ts|tsx)$/.test(file)) return false;
 
-  const codePatterns = [
-    /\bfunction\s+[A-Za-z0-9_]*(?:calculate|price|total|fee(?!d)|commission|settlement|payout|refund|ledger)[A-Za-z0-9_]*\s*\(/i,
-    /\b(?:const|let|var)\s+[A-Za-z0-9_]*(?:calculate|price|total|fee(?!d)|commission|settlement|payout|refund|ledger)[A-Za-z0-9_]*\s*=\s*(?:\([^)]*\)\s*=>|function\b)/i,
+  // React/UI component identifiers are PascalCase by convention; real business-
+  // logic helpers in this codebase (calculateFee, normalizeStoreOnboardingFeeAmount,
+  // ...) are camelCase. Requiring a lowercase-leading identifier for the
+  // function/const patterns avoids flagging components merely *named* after a
+  // domain term (e.g. StoreOnboardingFeePolicySection) as if they computed it.
+  const BUSINESS_TERM = /(?:calculate|price|total|fee(?!d)|commission|settlement|payout|refund|ledger)/i;
+  const isBusinessLogicIdentifier = (name) => /^[a-z_]/.test(name) && BUSINESS_TERM.test(name);
+
+  const identifierPatterns = [
+    /\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/g,
+    /\b(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:\([^)]*\)\s*=>|function\b)/g,
+  ];
+  for (const pattern of identifierPatterns) {
+    let match;
+    while ((match = pattern.exec(code))) {
+      if (isBusinessLogicIdentifier(match[1])) return true;
+    }
+  }
+
+  const otherPatterns = [
     /\b(?:set|update|apply|approve|reject|resolve|assign)[A-Za-z0-9_]*(?:Commission|Settlement|Payout|Refund|Ledger)\b/,
     /\b(?:commission|settlement|payout|refund|ledger)\b\s*[+\-*/=]/i
   ];
 
-  return codePatterns.some((pattern) => pattern.test(code));
+  return otherPatterns.some((pattern) => pattern.test(code));
 }
 
 function classifyFile(file) {

@@ -1,4 +1,4 @@
-import type { DshFieldVisit, DshReadinessCheck, DshReadinessEscalation, DshOnboardingStatus } from "./field-readiness.types";
+import type { DshFieldVisit, DshReadinessCheck, DshReadinessEscalation, DshOnboardingStatus, DshFieldWorkQueue } from "./field-readiness.types";
 
 export type DshVisitListState =
   | { readonly kind: "idle" }
@@ -80,3 +80,17 @@ export function onboardingStatusIdleState(): DshOnboardingStatusState { return {
 export function onboardingStatusLoadingState(): DshOnboardingStatusState { return { kind: "loading" }; }
 export function onboardingStatusSuccessState(status: DshOnboardingStatus): DshOnboardingStatusState { return { kind: "success", status }; }
 export function onboardingStatusErrorState(message: string): DshOnboardingStatusState { return { kind: "error", message }; }
+
+export type DshWorkQueueState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "loading" }
+  | { readonly kind: "success"; readonly queue: DshFieldWorkQueue }
+  | { readonly kind: "empty" }
+  | { readonly kind: "error"; readonly message: string };
+
+export function workQueueIdleState(): DshWorkQueueState { return { kind: "idle" }; }
+export function workQueueLoadingState(): DshWorkQueueState { return { kind: "loading" }; }
+export function workQueueErrorState(message: string): DshWorkQueueState { return { kind: "error", message }; }
+export function workQueueSuccessState(queue: DshFieldWorkQueue): DshWorkQueueState {
+  return queue.visits.length === 0 && queue.escalations.length === 0 ? { kind: "empty" } : { kind: "success", queue };
+}

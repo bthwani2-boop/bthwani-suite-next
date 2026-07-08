@@ -1,8 +1,8 @@
 [
   {
     "path": ".diagnostics/operational-journey-factory/00_CANONICAL_REFERENCE_INDEX.md",
-    "size_bytes": 3403,
-    "sha256": "1e9dbc021613eca6cf4d70e3c967fe412dd36ee9bb1225d34d59e3be1b224940",
+    "size_bytes": 3399,
+    "sha256": "1f077d213caa1772ba331a5ccea55b546db370883a1ce6c6ed8a664cbd5ef750",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
@@ -14,7 +14,7 @@
   {
     "path": ".diagnostics/operational-journey-factory/cleanup-plan.json",
     "size_bytes": 2707,
-    "sha256": "a3d1da1da34d5b267b7a6335517cc450e3ef1f73ab9592d3c87859d735d79e7e",
+    "sha256": "bb56f424fcfe50a1cd43b1d2feadd691b85033a4f34528b01ba0ff40112ebd71",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
@@ -25,20 +25,20 @@
   },
   {
     "path": ".diagnostics/operational-journey-factory/core-inventory-manifest.json",
-    "size_bytes": 2380,
-    "sha256": "078721b55b5b8f68bfa08ada56674f06f9e1a6a43b71fe9362dca518933ebc88",
+    "size_bytes": 2377,
+    "sha256": "9843492c8cefffa02a4b3ffb06b46de77b6a0451ab789d298e39dda030882b73",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/diagnostics-evidence-manifest.json",
     "size_bytes": 713,
-    "sha256": "e65547952e37c8cb0f3a1810e3b7f2ac2ade0e527832b7feaa7444563d09b596",
+    "sha256": "6e3e6528a2ded864c1678ba7fc09286056bf5ea66a5d4fa60611e355b56ff4a2",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/diagnostics-manifest.json",
     "size_bytes": 666,
-    "sha256": "d1540a80a7a3b5c4202faf18f2901921ac2417a3d3cf8100d52b260c9b255334",
+    "sha256": "b21babe4e6a150b6264ca0bfb5da1d215ce36ff346f611b5bd4e5cd6c6588317",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
@@ -73,8 +73,8 @@
   },
   {
     "path": ".diagnostics/operational-journey-factory/factory-file-manifest.json",
-    "size_bytes": 10399,
-    "sha256": "dfacd191d87ee15b11d48d264289136c730f0317220e057b7c454ed95a20ace1",
+    "size_bytes": 10393,
+    "sha256": "409c7192225a25bd9629c13b5869c0df1e60d24c7d712e1886066465189208fd",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
@@ -91,74 +91,74 @@
   },
   {
     "path": ".diagnostics/operational-journey-factory/gap-ledger.json",
-    "size_bytes": 13811,
-    "sha256": "2ec3fccdce2126508ad27705494e17f545a73eace21acbb5fe83368c49426cf9",
+    "size_bytes": 495,
+    "sha256": "729780ede5809ed9b3b3a7d8658d0feb72fb8b014b180781488352628b65c79f",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/gap-ledger.md",
-    "size_bytes": 3580,
-    "sha256": "bd0bc6f7577dc5567733b23022d88e48cf52a7e9e900fc3669828ec79059a866",
+    "size_bytes": 317,
+    "sha256": "953f01caa2b6ee455ccb335507e6749a5b4007af55e6d056da0832193ee2772d",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.json",
-    "size_bytes": 13811,
-    "sha256": "2ec3fccdce2126508ad27705494e17f545a73eace21acbb5fe83368c49426cf9",
+    "size_bytes": 495,
+    "sha256": "729780ede5809ed9b3b3a7d8658d0feb72fb8b014b180781488352628b65c79f",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/gap-ledger.md",
-    "size_bytes": 3580,
-    "sha256": "bd0bc6f7577dc5567733b23022d88e48cf52a7e9e900fc3669828ec79059a866",
+    "size_bytes": 317,
+    "sha256": "953f01caa2b6ee455ccb335507e6749a5b4007af55e6d056da0832193ee2772d",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.json",
-    "size_bytes": 144021,
-    "sha256": "aa533190d9cbf495076409142c53908767c730e4ff3317ce450882dcca4ca04b",
+    "size_bytes": 144099,
+    "sha256": "7c53ccc68ed360a7e870e5b119337c058c8d59555ea32101e7c5fc31717c7316",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/journey-inventory.md",
     "size_bytes": 1235,
-    "sha256": "0326fcb170a71552f3cbf40669a784b78f871fecf45de3524d26c287bc8e3a26",
+    "sha256": "03df057194b0404d55a9bf40e6fe3c7a5d78a5a1e28acc421721f05fb142bd0b",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.json",
-    "size_bytes": 104850,
-    "sha256": "81ef1cb6d76d8436a142f17838335ce53d6b20d61cb5e45907198b196c034cdc",
+    "size_bytes": 103372,
+    "sha256": "93859d68086b11b625d6fbb79f7cecd39bf5453d99a4b619daf4e2505b7e8ec3",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/surface-inventory.md",
     "size_bytes": 2087,
-    "sha256": "c8b14f86ccc02975921328e988ae7f19df31a93d0fb0dd1b0515ed75df1fb817",
+    "sha256": "a8c05c9fe78910a330b70dbf9f78d6211acf096aebabc4fe485aa60a1dff9700",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.json",
-    "size_bytes": 92147,
-    "sha256": "aa2e9423006971837dc1401d38349c36cc57ac9f03c094ea21262e9cb766ee59",
+    "size_bytes": 90592,
+    "sha256": "c9d120c7ee2bc62ce211f4e9b483c14e3fde084418f6977a78dbf5d60a534aef",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/inventories/toolchain-inventory.md",
-    "size_bytes": 6177,
-    "sha256": "30e99e70deaa9e583d26d19f7dcc2917480cffdb32b3f8d2a82fb8fba6e7cacd",
+    "size_bytes": 6070,
+    "sha256": "aa624d984a8789e3c237393369ad5256c9a336590ed3210b48f9550c73fcb35a",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/journey-inventory.json",
-    "size_bytes": 144021,
-    "sha256": "aa533190d9cbf495076409142c53908767c730e4ff3317ce450882dcca4ca04b",
+    "size_bytes": 144099,
+    "sha256": "7c53ccc68ed360a7e870e5b119337c058c8d59555ea32101e7c5fc31717c7316",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/journey-inventory.md",
     "size_bytes": 1235,
-    "sha256": "0326fcb170a71552f3cbf40669a784b78f871fecf45de3524d26c287bc8e3a26",
+    "sha256": "03df057194b0404d55a9bf40e6fe3c7a5d78a5a1e28acc421721f05fb142bd0b",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
@@ -181,56 +181,56 @@
   },
   {
     "path": ".diagnostics/operational-journey-factory/reconciliation-report.json",
-    "size_bytes": 773,
-    "sha256": "b4cc14b7bed920e3e4d18ca51cfc92f4aea30b737a4d4d9a294699b324572dd0",
+    "size_bytes": 770,
+    "sha256": "96052d7e44117424113d4d42db6db30e0bda0381d4f080eb27bcede4498f4b92",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/reconciliation-report.md",
-    "size_bytes": 526,
-    "sha256": "fceaf14bc7c465d0a5fd61e1bcfb03226a94d04185a488a1d3260bbf1f939b22",
+    "size_bytes": 524,
+    "sha256": "ac4410abe14a7699d84f4655d15c51e6cd98427eb8241f8fe568604ead902f7b",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/summary.json",
-    "size_bytes": 3586,
-    "sha256": "30209da3a0e4da7f371d52d70347f3a8760e723b7295119a22d80fa42da50b64",
+    "size_bytes": 3582,
+    "sha256": "198d4ee022d173664ab09d94275c9f1225e88cd1ef1224e0ab50ce2d6d602ff9",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/surface-inventory.json",
-    "size_bytes": 104850,
-    "sha256": "81ef1cb6d76d8436a142f17838335ce53d6b20d61cb5e45907198b196c034cdc",
+    "size_bytes": 103372,
+    "sha256": "93859d68086b11b625d6fbb79f7cecd39bf5453d99a4b619daf4e2505b7e8ec3",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/surface-inventory.md",
     "size_bytes": 2087,
-    "sha256": "c8b14f86ccc02975921328e988ae7f19df31a93d0fb0dd1b0515ed75df1fb817",
+    "sha256": "a8c05c9fe78910a330b70dbf9f78d6211acf096aebabc4fe485aa60a1dff9700",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/tool-evidence/jscpd/jscpd-report.json",
-    "size_bytes": 3189681,
-    "sha256": "d725218aa88d7895d94986f146a7b7bb0375e82d0eaca3f4cebe0e806e52b615",
+    "size_bytes": 3170263,
+    "sha256": "19314e60fbf5d2b0adeb91a3dbb6bd24ee8b860920bb7addd3ea5742d542dfee",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/tool-evidence/knip-report.json",
-    "size_bytes": 84412,
-    "sha256": "91231baa4d6dc9e3c9b719b06dbc5e39c6211be027b2eb2718ada35661203c39",
+    "size_bytes": 78880,
+    "sha256": "0b5f4dbc8d8df5f0713ba6c5214c9be12be7b8f1d33e76f492a0c0b081affce2",
     "decision": "ARCHIVE_RAW_FACTORY_ARTIFACT_AFTER_REFERENCE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
-    "size_bytes": 92147,
-    "sha256": "aa2e9423006971837dc1401d38349c36cc57ac9f03c094ea21262e9cb766ee59",
+    "size_bytes": 90592,
+    "sha256": "c9d120c7ee2bc62ce211f4e9b483c14e3fde084418f6977a78dbf5d60a534aef",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {
     "path": ".diagnostics/operational-journey-factory/toolchain-inventory.md",
-    "size_bytes": 6177,
-    "sha256": "30e99e70deaa9e583d26d19f7dcc2917480cffdb32b3f8d2a82fb8fba6e7cacd",
+    "size_bytes": 6070,
+    "sha256": "aa624d984a8789e3c237393369ad5256c9a336590ed3210b48f9550c73fcb35a",
     "decision": "KEEP_CANONICAL_INVENTORY_FILE"
   },
   {

@@ -28,6 +28,9 @@ import {
   getBankAccountMissingCount,
   getAgreementReviewMissingCount,
   getFieldRequiredMissingItems,
+  FIELD_ONBOARDING_STEPS,
+  FIELD_ONBOARDING_STEP_LABELS,
+  type FieldPartnerDraftStep,
   type FieldOnboardingController,
 } from '../../shared/field-onboarding';
 import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
@@ -48,23 +51,11 @@ const DOCUMENT_KIND_TO_PARTNER_TYPE: Record<DocumentKind, DshPartnerDocumentType
   identity_proof: 'national_id',
 };
 
-type GroupId = 'basics_profile' | 'location_media' | 'evidence' | 'bank_account' | 'agreement_review';
+type GroupId = FieldPartnerDraftStep;
 
-const GROUP_ORDER: readonly GroupId[] = [
-  'basics_profile',
-  'location_media',
-  'evidence',
-  'bank_account',
-  'agreement_review',
-];
+const GROUP_ORDER: readonly GroupId[] = FIELD_ONBOARDING_STEPS;
 
-const GROUP_LABELS: Record<GroupId, string> = {
-  basics_profile: 'البيانات الأساسية للمتجر',
-  location_media: 'الموقع الجغرافي',
-  evidence: 'المستندات والصور المرفقة',
-  bank_account: 'معلومات الحساب البنكي للشريك',
-  agreement_review: 'الاتفاق والمراجعة النهائية',
-};
+const GROUP_LABELS: Record<GroupId, string> = FIELD_ONBOARDING_STEP_LABELS;
 
 const DOCUMENT_LABELS: Record<DocumentKind, string> = {
   commercial_registration: 'السجل التجاري',
@@ -174,7 +165,7 @@ export function DshFieldOnboardingScreen({
     })),
   ];
   const missingItems = getFieldRequiredMissingItems(form, state.uploadedDocumentTypes);
-  const canSubmit = !!state.partnerId && missingItems.length === 0;
+  const isReadyToSubmit = missingItems.length === 0;
 
   const groupMissingCounts: Record<GroupId, number> = {
     basics_profile: getBasicsProfileMissingCount(form),
@@ -235,12 +226,17 @@ export function DshFieldOnboardingScreen({
 
   // ── Navigation ───────────────────────────────────────────────────────────
   const goToNext = async () => {
-    if (activeGroup === 'basics_profile') {
-      const created = await controller.ensureDraftCreated();
-      if (!created) return;
+    const created = await controller.ensureDraftCreated();
+    if (!created) {
+      // Free navigation via the timeline can land here without ever having
+      // visited basics_profile — jump back so the real blocking errors
+      // (identity/owner validation) are actually visible instead of silently
+      // no-op'ing on whatever group the user happens to be viewing.
+      setActiveGroup('basics_profile');
+      return;
     }
     if (isLastGroup) {
-      if (canSubmit) void submitDraft();
+      if (isReadyToSubmit) void submitDraft();
       return;
     }
     setActiveGroup(GROUP_ORDER[activeGroupIndex + 1] as GroupId);
@@ -320,7 +316,7 @@ export function DshFieldOnboardingScreen({
           <IconButton
             icon={<Icon name="save-outline" size={20} tone="brand" />}
             accessibilityLabel="حفظ المسودة"
-            onPress={() => void controller.nextStep()}
+            onPress={() => void controller.ensureDraftCreated()}
             tone="ghost"
           />
         }
@@ -517,6 +513,20 @@ export function DshFieldOnboardingScreen({
         </View>
       </ScrollView>
 
+      {state.submitError && (
+        <View
+          style={{
+            paddingHorizontal: spacing[4],
+            paddingTop: spacing[2],
+            backgroundColor: colorRoles.surfaceBase,
+          }}
+        >
+          <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>
+            {state.submitError}
+          </Text>
+        </View>
+      )}
+
       {/* ── Footer actions ── */}
       <View
         style={{
@@ -533,9 +543,10 @@ export function DshFieldOnboardingScreen({
       >
         {/* التالي / إرسال */}
         <Button
-          label={isLastGroup ? 'إرسال للمراجعة' : `التالي: ${nextLabel}`}
-          tone={canSubmit && isLastGroup ? 'success' : 'primary'}
-          disabled={isLastGroup ? !canSubmit : false}
+          label={isLastGroup ? (state.isSubmitting ? 'جارٍ الإرسال...' : 'إرسال للمراجعة') : `التالي: ${nextLabel}`}
+          tone={isReadyToSubmit && isLastGroup ? 'success' : 'primary'}
+          disabled={isLastGroup ? !isReadyToSubmit || state.isSubmitting : false}
+          loading={isLastGroup && state.isSubmitting}
           onPress={() => void goToNext()}
           style={{ flex: 1 }}
         />

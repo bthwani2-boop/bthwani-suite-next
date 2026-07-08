@@ -169,6 +169,26 @@ func ListStoreVisits(db *sql.DB, storeID string, limit int) ([]Visit, error) {
 	return list, rows.Err()
 }
 
+func ListAgentVisits(db *sql.DB, agentID string, limit int) ([]Visit, error) {
+	rows, err := db.Query(`
+		SELECT id, store_id, field_agent_id, visit_type, status, COALESCE(notes,''), started_at, completed_at, created_at, updated_at
+		FROM dsh_field_visits WHERE field_agent_id = $1 AND status != 'complete'
+		ORDER BY created_at DESC LIMIT $2`, agentID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []Visit
+	for rows.Next() {
+		v, err := scanVisitRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, v)
+	}
+	return list, rows.Err()
+}
+
 func CompleteVisit(db *sql.DB, visitID, agentID string) (Visit, error) {
 	row := db.QueryRow(`
 		UPDATE dsh_field_visits
@@ -253,6 +273,28 @@ func ListOperatorEscalations(db *sql.DB, statusFilter string, limit int) ([]Esca
 		args = append(args, limit)
 	}
 	rows, err := db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []Escalation
+	for rows.Next() {
+		e, err := scanEscalationRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, e)
+	}
+	return list, rows.Err()
+}
+
+func ListAgentEscalations(db *sql.DB, agentID string, limit int) ([]Escalation, error) {
+	rows, err := db.Query(`
+		SELECT id, COALESCE(visit_id::text,''), store_id, raised_by, severity, category, description,
+		          status, COALESCE(resolved_by,''), resolved_at, COALESCE(resolution_note,''), created_at, updated_at
+		FROM dsh_readiness_escalations
+		WHERE raised_by = $1 AND status IN ('open', 'acknowledged')
+		ORDER BY created_at DESC LIMIT $2`, agentID, limit)
 	if err != nil {
 		return nil, err
 	}

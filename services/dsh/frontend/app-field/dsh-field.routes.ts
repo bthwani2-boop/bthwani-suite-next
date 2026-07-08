@@ -16,6 +16,7 @@ export type DshFieldRoute =
   | 'history'
   | 'finance'
   | 'escalation'
+  | 'work-queue'
   | 'products-upload';
 
 export type DshFieldRouteState =
@@ -31,6 +32,8 @@ export type DshFieldRouteState =
   | { kind: 'history' }
   | { kind: 'finance' }
   | { kind: 'escalation'; storeId: string; visitId?: string }
+  // Self-resolves the field actor's own open visits/escalations across stores.
+  | { kind: 'work-queue' }
   | { kind: 'products-upload'; partnerId: string };
 
 export type DshFieldNavigationCommand = {

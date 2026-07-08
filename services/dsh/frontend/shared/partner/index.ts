@@ -4,7 +4,6 @@
 export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem, DshPartnerDecisionCommand, DshPartnerDecisionCommandId } from "./partner-activation.model";
 export {
   DSH_PARTNER_ACTIVATION_STATES,
-  DSH_PARTNER_DECISION_COMMANDS,
   getDshPartnerActivationStateMetadata,
   isDshPartnerClientVisible,
   isDshPartnerActivationComplete,

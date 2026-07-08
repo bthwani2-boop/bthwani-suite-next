@@ -4,7 +4,7 @@ import test from "node:test";
 
 test("catalog UI roots delegate runtime logic to shared", () => {
   for (const file of [
-    "frontend/app-client/catalog/PublishedCatalogScreen.tsx",
+    "frontend/app-client/store/StoreDetailScreen.tsx",
     "frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx",
     "frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
   ]) {

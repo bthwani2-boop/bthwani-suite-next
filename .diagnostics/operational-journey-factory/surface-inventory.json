@@ -1,5 +1,5 @@
 {
-  "head_sha": "0b89aca02db5dcae60e91264f6d9327abe60a184",
+  "head_sha": "1a312031e3f10c07a5f06ff0421d09ba82ffd3f7",
   "status": "DISCOVERY_ONLY",
   "roots": [
     "apps",
@@ -329,7 +329,7 @@
     {
       "surface": "services/dsh/frontend/app-client",
       "kind": "ui_surface",
-      "files": 59,
+      "files": 52,
       "screens": [
         "services/dsh/frontend/app-client/account/AddressLocationScreen.tsx",
         "services/dsh/frontend/app-client/account/AppearanceHubScreen.tsx",
@@ -389,13 +389,6 @@
         "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
         "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
         "services/dsh/frontend/app-client/shared/ui/BannerCarousel.tsx",
-        "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
-        "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
-        "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
-        "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
-        "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
-        "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
-        "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
         "services/dsh/frontend/app-client/store/StoreCardPremium.tsx",
         "services/dsh/frontend/app-client/store/StoreDetailCarousel.tsx",
         "services/dsh/frontend/app-client/store/StoreDetailCategoryRail.tsx",
@@ -416,13 +409,13 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 359,
-      "states_candidates": 117
+      "icons_components_actions_candidates": 334,
+      "states_candidates": 113
     },
     {
       "surface": "services/dsh/frontend/app-field",
       "kind": "ui_surface",
-      "files": 23,
+      "files": 24,
       "screens": [
         "services/dsh/frontend/app-field/account/DshFieldProfileHomeScreen.tsx",
         "services/dsh/frontend/app-field/account/DshFieldProfileScreen.tsx",
@@ -430,6 +423,7 @@
         "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
         "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
         "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+        "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
         "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
         "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
         "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
@@ -467,6 +461,7 @@
         "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
         "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
         "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+        "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
         "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
         "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
         "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
@@ -477,13 +472,13 @@
       "direct_api_signs": [],
       "process_env_usage": [],
       "local_business_logic_candidates": [],
-      "icons_components_actions_candidates": 108,
-      "states_candidates": 123
+      "icons_components_actions_candidates": 120,
+      "states_candidates": 129
     },
     {
       "surface": "services/dsh/frontend/app-partner",
       "kind": "ui_surface",
-      "files": 39,
+      "files": 37,
       "screens": [
         "services/dsh/frontend/app-partner/account/OperationScreens.tsx",
         "services/dsh/frontend/app-partner/account/PartnerEntryScreen.tsx",
@@ -496,7 +491,6 @@
         "services/dsh/frontend/app-partner/Catalog/ProductEditScreen.tsx",
         "services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
         "services/dsh/frontend/app-partner/Catalog/ProductOverridesScreen.tsx",
-        "services/dsh/frontend/app-partner/dsh-partner.screen-registry.ts",
         "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
         "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
         "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
@@ -507,7 +501,6 @@
       "pages": [],
       "route_bindings": [
         "services/dsh/frontend/app-partner/dsh-partner.navigation-bridge.ts",
-        "services/dsh/frontend/app-partner/dsh-partner.routes.ts",
         "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx"
       ],
       "navigation_bindings": [
@@ -516,7 +509,6 @@
         "services/dsh/frontend/app-partner/account/PromotionsScreen.tsx",
         "services/dsh/frontend/app-partner/Catalog/ProductEditScreen.tsx",
         "services/dsh/frontend/app-partner/dsh-partner.navigation-bridge.ts",
-        "services/dsh/frontend/app-partner/dsh-partner.screen-registry.ts",
         "services/dsh/frontend/app-partner/DshPartnerSurface.tsx",
         "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
         "services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts"
@@ -563,12 +555,12 @@
       "process_env_usage": [],
       "local_business_logic_candidates": [],
       "icons_components_actions_candidates": 244,
-      "states_candidates": 354
+      "states_candidates": 326
     },
     {
       "surface": "services/dsh/frontend/control-panel",
       "kind": "ui_surface",
-      "files": 79,
+      "files": 78,
       "screens": [
         "services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx",
         "services/dsh/frontend/control-panel/analytics/AnalyticsDashboardScreen.tsx",
@@ -685,7 +677,6 @@
         "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
         "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx",
         "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
-        "services/dsh/frontend/control-panel/operations/flow-meta.ts",
         "services/dsh/frontend/control-panel/operations/geo-heatmap.helpers.ts",
         "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
         "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
@@ -720,11 +711,9 @@
       ],
       "direct_api_signs": [],
       "process_env_usage": [],
-      "local_business_logic_candidates": [
-        "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx"
-      ],
+      "local_business_logic_candidates": [],
       "icons_components_actions_candidates": 257,
-      "states_candidates": 437
+      "states_candidates": 436
     },
     {
       "surface": "services/dsh/frontend/css-modules.d.ts",
@@ -744,7 +733,7 @@
     {
       "surface": "services/dsh/frontend/shared",
       "kind": "shared_brain",
-      "files": 294,
+      "files": 292,
       "screens": [
         "services/dsh/frontend/shared/cart/cart-screen-domain.ts"
       ],
@@ -770,7 +759,6 @@
         "services/dsh/frontend/shared/operations/geo-heatmap.helpers.ts",
         "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
         "services/dsh/frontend/shared/orders/orders.contract.ts",
-        "services/dsh/frontend/shared/partner/partner-activation.model.ts",
         "services/dsh/frontend/shared/partner/partner-registry.ts",
         "services/dsh/frontend/shared/partner/partner.api.ts",
         "services/dsh/frontend/shared/partner/use-partners-controller.tsx",
@@ -836,8 +824,6 @@
         "services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-boundary.ts",
         "services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-settlement-bridge.contract.ts",
         "services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.api.ts",
-        "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/use-wlt-cod-controller.tsx",
-        "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts",
         "services/dsh/frontend/shared/finance-wlt-link/wlt-ledger/use-wlt-ledger-controller.tsx",
         "services/dsh/frontend/shared/finance-wlt-link/wlt-ledger/wlt-ledger.api.ts",
         "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/use-wlt-refund-controller.tsx",
@@ -848,11 +834,13 @@
         "services/dsh/frontend/shared/orders/dsh-order-lifecycle.adapter.ts",
         "services/dsh/frontend/shared/orders/dsh-order-lifecycle.view-model.ts",
         "services/dsh/frontend/shared/platform-policies/platform-policies.api.ts",
+        "services/dsh/frontend/shared/platform-policies/store-onboarding-fee-policy.view-model.ts",
         "services/dsh/frontend/shared/platform-policies/use-platform-policies-controller.tsx",
+        "services/dsh/frontend/shared/platform-policies/use-store-onboarding-fee-policy-form-controller.tsx",
         "services/dsh/frontend/shared/runtime/dsh-price-format.ts"
       ],
       "icons_components_actions_candidates": 11,
-      "states_candidates": 1490
+      "states_candidates": 1475
     },
     {
       "surface": "services/wlt/frontend/app-captain",
@@ -1105,6 +1093,7 @@
     "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
     "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
     "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
     "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
@@ -1122,7 +1111,6 @@
     "services/dsh/frontend/app-partner/Catalog/ProductEditScreen.tsx",
     "services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx",
     "services/dsh/frontend/app-partner/Catalog/ProductOverridesScreen.tsx",
-    "services/dsh/frontend/app-partner/dsh-partner.screen-registry.ts",
     "services/dsh/frontend/app-partner/orders/DshPartnerOrderRejectionScreen.tsx",
     "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
     "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx",
@@ -1206,7 +1194,6 @@
     "services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx",
     "services/dsh/frontend/app-field/dsh-field.routes.ts",
     "services/dsh/frontend/app-partner/dsh-partner.navigation-bridge.ts",
-    "services/dsh/frontend/app-partner/dsh-partner.routes.ts",
     "services/dsh/frontend/app-partner/DshPartnerRouteRenderer.tsx",
     "services/dsh/frontend/shared/delivery/captain-navigation.model.ts"
   ],
@@ -1256,7 +1243,6 @@
     "services/dsh/frontend/app-partner/account/PromotionsScreen.tsx",
     "services/dsh/frontend/app-partner/Catalog/ProductEditScreen.tsx",
     "services/dsh/frontend/app-partner/dsh-partner.navigation-bridge.ts",
-    "services/dsh/frontend/app-partner/dsh-partner.screen-registry.ts",
     "services/dsh/frontend/app-partner/DshPartnerSurface.tsx",
     "services/dsh/frontend/app-partner/orders/OrdersInboxScreen.tsx",
     "services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts",
@@ -1320,7 +1306,6 @@
     "services/dsh/frontend/shared/operations/geo-heatmap.helpers.ts",
     "services/dsh/frontend/shared/operations/use-operations-controller.tsx",
     "services/dsh/frontend/shared/orders/orders.contract.ts",
-    "services/dsh/frontend/shared/partner/partner-activation.model.ts",
     "services/dsh/frontend/shared/partner/partner-registry.ts",
     "services/dsh/frontend/shared/partner/partner.api.ts",
     "services/dsh/frontend/shared/partner/use-partners-controller.tsx",
@@ -1473,13 +1458,6 @@
     "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
     "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
     "services/dsh/frontend/app-client/shared/ui/BannerCarousel.tsx",
-    "services/dsh/frontend/app-client/shared/ui/FilterRail.tsx",
-    "services/dsh/frontend/app-client/shared/ui/FloatingActionCircle.tsx",
-    "services/dsh/frontend/app-client/shared/ui/HeroCover.tsx",
-    "services/dsh/frontend/app-client/shared/ui/MetricChip.tsx",
-    "services/dsh/frontend/app-client/shared/ui/ProductCard.tsx",
-    "services/dsh/frontend/app-client/shared/ui/ServiceModeSegment.tsx",
-    "services/dsh/frontend/app-client/shared/ui/StatusBadge.tsx",
     "services/dsh/frontend/app-client/store/StoreCardPremium.tsx",
     "services/dsh/frontend/app-client/store/StoreDetailCarousel.tsx",
     "services/dsh/frontend/app-client/store/StoreDetailCategoryRail.tsx",
@@ -1511,6 +1489,7 @@
     "services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx",
     "services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx",
+    "services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx",
     "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx",
     "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
     "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
@@ -1585,7 +1564,6 @@
     "services/dsh/frontend/control-panel/operations/ControlPanelDshSheinProxyScreen.tsx",
     "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx",
     "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
-    "services/dsh/frontend/control-panel/operations/flow-meta.ts",
     "services/dsh/frontend/control-panel/operations/geo-heatmap.helpers.ts",
     "services/dsh/frontend/control-panel/operations/GeoHeatmapScreen.tsx",
     "services/dsh/frontend/control-panel/operations/LiveOrdersScreen.tsx",
@@ -1682,14 +1660,11 @@
     "services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts"
   ],
   "local_business_logic_candidates": [
-    "services/dsh/frontend/control-panel/platform/StoreOnboardingFeePolicySection.tsx",
     "services/dsh/frontend/shared/cart/cart-screen-domain.ts",
     "services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-client-wlt-payment-bridge.ts",
     "services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-boundary.ts",
     "services/dsh/frontend/shared/finance-wlt-link/finance-boundary/dsh-wlt-settlement-bridge.contract.ts",
     "services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.api.ts",
-    "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/use-wlt-cod-controller.tsx",
-    "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/wlt-cod.api.ts",
     "services/dsh/frontend/shared/finance-wlt-link/wlt-ledger/use-wlt-ledger-controller.tsx",
     "services/dsh/frontend/shared/finance-wlt-link/wlt-ledger/wlt-ledger.api.ts",
     "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/use-wlt-refund-controller.tsx",
@@ -1700,7 +1675,9 @@
     "services/dsh/frontend/shared/orders/dsh-order-lifecycle.adapter.ts",
     "services/dsh/frontend/shared/orders/dsh-order-lifecycle.view-model.ts",
     "services/dsh/frontend/shared/platform-policies/platform-policies.api.ts",
+    "services/dsh/frontend/shared/platform-policies/store-onboarding-fee-policy.view-model.ts",
     "services/dsh/frontend/shared/platform-policies/use-platform-policies-controller.tsx",
+    "services/dsh/frontend/shared/platform-policies/use-store-onboarding-fee-policy-form-controller.tsx",
     "services/dsh/frontend/shared/runtime/dsh-price-format.ts",
     "services/wlt/frontend/shared/dsh/use-wlt-dsh-field-commission-reference-controller.tsx",
     "services/wlt/frontend/shared/dsh/wlt-dsh-field-commission-reference.api.ts",

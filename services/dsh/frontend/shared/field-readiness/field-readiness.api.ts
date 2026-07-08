@@ -9,6 +9,7 @@ import type {
   DshUpsertCheckInput,
   DshCreateEscalationInput,
   DshUpdateEscalationInput,
+  DshFieldWorkQueue,
 } from "./field-readiness.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness");
@@ -79,6 +80,9 @@ export async function fetchPartnerOnboardingStatus(storeId: string): Promise<Dsh
   return request<DshOnboardingStatus>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/onboarding-status`);
 }
 
+export async function fetchFieldWorkQueue(): Promise<DshFieldWorkQueue> {
+  return request<DshFieldWorkQueue>("/dsh/field/work-queue");
+}
 export function classifyFieldReadinessError(error: unknown): {
   kind: "permission_denied" | "offline" | "not_found" | "error";
 } {

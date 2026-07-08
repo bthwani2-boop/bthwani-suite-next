@@ -56,42 +56,6 @@ export type DshServiceabilityState =
 
 export type DshCartActionState = "idle" | "submitting" | "success" | "error";
 
-export type DshFulfillmentModeMeta = {
-  readonly mode: DshFulfillmentMode;
-  readonly label: string;
-  readonly icon: string;
-  readonly requiresCaptain: boolean;
-  readonly requiresPartnerCourier: boolean;
-  readonly requiresCustomerPickup: boolean;
-};
-
-export const DSH_FULFILLMENT_MODE_META: Readonly<Record<DshFulfillmentMode, DshFulfillmentModeMeta>> = {
-  bthwani_delivery: {
-    mode: "bthwani_delivery",
-    label: "توصيل بثواني",
-    icon: "bicycle-outline",
-    requiresCaptain: true,
-    requiresPartnerCourier: false,
-    requiresCustomerPickup: false,
-  },
-  partner_delivery: {
-    mode: "partner_delivery",
-    label: "توصيل المتجر",
-    icon: "storefront-outline",
-    requiresCaptain: false,
-    requiresPartnerCourier: true,
-    requiresCustomerPickup: false,
-  },
-  pickup: {
-    mode: "pickup",
-    label: "استلم بنفسك",
-    icon: "bag-handle-outline",
-    requiresCaptain: false,
-    requiresPartnerCourier: false,
-    requiresCustomerPickup: true,
-  },
-} as const;
-
 function isDshFulfillmentMode(value: unknown): value is DshFulfillmentMode {
   return value === "bthwani_delivery" || value === "partner_delivery" || value === "pickup";
 }

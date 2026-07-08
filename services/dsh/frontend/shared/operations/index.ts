@@ -4,6 +4,5 @@ export * from './dsh-operational.contract';
 export * from './operations.types';
 export * from './operations-registry';
 export * from './use-operations-controller';
-export * from './operations.flow-meta';
 export * from './geo-heatmap.helpers';
 export * from './theme';

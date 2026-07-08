@@ -11,12 +11,6 @@ export type {
   PartnerHubSection,
 } from './dsh-partner.types';
 
-// Route/screen registry
-export type { DshPartnerRouteId, DshPartnerRouteRecord, DshPartnerLegacyRoute } from './dsh-partner.routes';
-export { dshPartnerRoutes } from './dsh-partner.routes';
-export type { DshPartnerRegistryRouteId, DshPartnerScreenRegistryItem } from './dsh-partner.screen-registry';
-export { dshPartnerScreenRegistry } from './dsh-partner.screen-registry';
-
 // Binding contracts (DshPartnerSurfaceId is already exported from dsh-partner.types above)
 export type {
   DshPartnerBindingContract,

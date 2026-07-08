@@ -81,12 +81,6 @@ export async function markOrderReady(orderId: string, token?: string): Promise<D
   return data.order;
 }
 
-export async function fetchOperatorOrders(status?: string): Promise<readonly DshOrder[]> {
-  const params = status ? `?status=${encodeURIComponent(status)}` : "";
-  const data = await request<{ orders: DshOrder[] }>(`/dsh/operator/orders${params}`);
-  return data.orders ?? [];
-}
-
 export function classifyOrderError(error: unknown): {
   kind: "permission_denied" | "offline" | "conflict" | "not_found" | "error";
   message?: string;

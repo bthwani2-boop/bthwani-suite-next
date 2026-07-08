@@ -5,6 +5,7 @@ import { DshFieldOnboardingScreen } from '../onboarding/DshFieldOnboardingScreen
 import { DshFieldVisitScreen } from '../escalation/DshFieldVisitScreen';
 import { DshFieldReadinessChecklistScreen } from '../escalation/DshFieldReadinessChecklistScreen';
 import { DshFieldEscalationScreen } from '../escalation/DshFieldEscalationScreen';
+import { DshFieldWorkQueueScreen } from '../escalation/DshFieldWorkQueueScreen';
 import { DshFieldPartnersScreen } from '../stores/DshFieldPartnersScreen';
 import { DshFieldStoreVerificationScreen } from '../stores/DshFieldStoreVerificationScreen';
 import { DshFieldPartnerProgressScreen } from '../stores/DshFieldPartnerProgressScreen';
@@ -112,6 +113,16 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
     );
   }
 
+  if (route.kind === 'work-queue') {
+    return (
+      <DshFieldWorkQueueScreen
+        onOpenVisit={(storeId) => actions.pushRoute({ kind: 'visit', storeId })}
+        onOpenEscalation={(storeId, visitId) =>
+          actions.pushRoute({ kind: 'escalation', storeId, ...(visitId ? { visitId } : {}) })
+        }
+      />
+    );
+  }
   if (route.kind === 'products-upload') {
     return (
       <DshFieldPartnerProductsScreen
@@ -132,6 +143,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
       }
       onOpenAccount={() => actions.pushRoute({ kind: 'account' })}
       onCreatePartner={() => actions.pushRoute({ kind: 'onboarding' })}
+      onOpenWorkQueue={() => actions.pushRoute({ kind: 'work-queue' })}
     />
   );
 }

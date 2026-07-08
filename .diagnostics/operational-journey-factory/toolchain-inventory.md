@@ -1,6 +1,6 @@
 # Operational Toolchain Inventory
 
-head_sha: `0b89aca02db5dcae60e91264f6d9327abe60a184`
+head_sha: `1a312031e3f10c07a5f06ff0421d09ba82ffd3f7`
 status: `DISCOVERY_ONLY`
 
 | Tool | Activation | Command | Classification |
@@ -100,8 +100,6 @@ status: `DISCOVERY_ONLY`
 - `diagnostics:style-dictionary`: UNUSED_SCRIPT
 - `guard:tools-v5-registry`: UNUSED_SCRIPT
 - `guard:tools-v5-ci`: UNUSED_SCRIPT
-- `guard:foundation-cross-journey-closure`: UNUSED_SCRIPT
 - `diagnostics:knip`: UNUSED_SCRIPT
 - `diagnostics:jscpd`: UNUSED_SCRIPT
 - `diagnostics:madge`: UNUSED_SCRIPT
-- `guard:dsh-order-lifecycle-all`: UNUSED_SCRIPT

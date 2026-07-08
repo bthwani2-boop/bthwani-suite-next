@@ -16,8 +16,6 @@ export * from './finance-visibility/finance-visibility.types';
 export * from './finance-visibility/finance-visibility.states';
 export * from './finance-visibility/finance-visibility.view-model';
 
-export * from './wlt-cod/wlt-cod.types';
-
 export * from './wlt-ledger/wlt-ledger.types';
 
 export * from './wlt-refund/wlt-refund.types';
