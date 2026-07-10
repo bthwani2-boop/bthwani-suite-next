@@ -21,7 +21,7 @@ install_common_go_tools() {
 
 install_hadolint() {
   if command -v hadolint >/dev/null 2>&1; then return 0; fi
-  sudo wget -q -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+  sudo curl -fsSL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
   sudo chmod +x /usr/local/bin/hadolint
 }
 
@@ -34,21 +34,21 @@ install_regal() {
 
 install_conftest() {
   if command -v conftest >/dev/null 2>&1; then return 0; fi
-  wget -q https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz
+  curl -fsSL -O https://github.com/open-policy-agent/conftest/releases/download/v0.55.0/conftest_0.55.0_Linux_x86_64.tar.gz
   tar -zxf conftest_0.55.0_Linux_x86_64.tar.gz
   sudo mv conftest /usr/local/bin/
 }
 
 install_gitleaks() {
   if command -v gitleaks >/dev/null 2>&1; then return 0; fi
-  wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.23.0/gitleaks_8.23.0_linux_x64.tar.gz
+  curl -fsSL -O https://github.com/gitleaks/gitleaks/releases/download/v8.23.0/gitleaks_8.23.0_linux_x64.tar.gz
   tar -zxf gitleaks_8.23.0_linux_x64.tar.gz
   sudo mv gitleaks /usr/local/bin/
 }
 
 install_trivy() {
   if command -v trivy >/dev/null 2>&1; then return 0; fi
-  wget -q https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.deb
+  curl -fsSL -O https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.deb
   sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
 }
 
