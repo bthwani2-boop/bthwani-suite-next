@@ -51,6 +51,11 @@ export function useSupportTicketController(authKind = "unauthenticated") {
   }, [authKind, load]);
 
   const submitTicket = useCallback(async (input: DshCreateTicketInput) => {
+    if (!isAuthenticated(authKind)) {
+      setActionState(ticketActionError("يجب تسجيل الدخول قبل إنشاء تذكرة دعم"));
+      return;
+    }
+
     setActionState(ticketActionSubmitting());
     try {
       const ticket = await createSupportTicket(input);
@@ -59,7 +64,7 @@ export function useSupportTicketController(authKind = "unauthenticated") {
     } catch (err) {
       setActionState(ticketActionError(resolveMessage(err)));
     }
-  }, [load]);
+  }, [authKind, load]);
 
   const resetAction = useCallback(() => setActionState(ticketActionIdle()), []);
 
