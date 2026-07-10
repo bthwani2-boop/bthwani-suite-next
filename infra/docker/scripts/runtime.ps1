@@ -637,6 +637,8 @@ function Invoke-DshSmoke {
   $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001/catalog" -TimeoutSec 10
   if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
 
+  $smokeCatalogProductId = $proposal.proposal.adoptedMasterProductId
+
 
   # Partner Onboarding & Store Publication: partner lifecycle from field draft to client-visible store readiness.
   $fieldToken = Get-LocalActorToken "field"

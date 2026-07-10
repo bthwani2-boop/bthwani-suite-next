@@ -27,7 +27,7 @@ install_hadolint() {
 
 install_regal() {
   if command -v regal >/dev/null 2>&1; then return 0; fi
-  curl -fsSL -o regal https://github.com/StyraInc/regal/releases/download/v0.25.0/regal_Linux_x86_64
+  curl -fsSL -o regal https://github.com/open-policy-agent/regal/releases/download/v0.25.0/regal_Linux_x86_64
   chmod +x regal
   sudo mv regal /usr/local/bin/
 }
