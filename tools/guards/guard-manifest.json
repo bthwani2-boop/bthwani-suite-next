@@ -21,7 +21,8 @@
       "runtime-config",
       "no-broken-imports",
       "api-binding",
-      "backend-api-binding"
+      "backend-api-binding",
+      "live-cross-journey-integrity"
     ]
   }
 }

@@ -211,7 +211,8 @@
     "runtime:wlt:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt",
     "runtime:dev-core:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles dsh",
     "runtime:dev-financial:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action all -Profiles wlt,financial-simulators,mail",
-    "guard:runtime-real-bindings": "node tools/guards/runtime-real-bindings-gate.mjs"
+    "guard:runtime-real-bindings": "node tools/guards/runtime-real-bindings-gate.mjs",
+    "guard:live-cross-journey-integrity": "node tools/guards/live-cross-journey-integrity-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

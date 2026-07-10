@@ -145,6 +145,9 @@ jobs:
       - name: Guard — real runtime bindings
         run: pnpm run guard:runtime-real-bindings
 
+      - name: Guard — live cross-journey integrity
+        run: pnpm run guard:live-cross-journey-integrity
+
       - name: Guard — Icon contract
         run: pnpm run guard:icon-contract
 

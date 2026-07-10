@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, View, Pressable, ScrollView, TextInput, TouchableOpacity } from "react-native";
 import {
   Badge,
@@ -21,8 +21,10 @@ import {
   KeyValueList,
   Box,
 } from "@bthwani/ui-kit";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { useCheckoutToOrderFlow } from "../../shared/checkout";
 import { useClientOrderDetailController } from "../../shared/orders";
+import { useSupportTicketController } from "../../shared/support";
 import type { DshCart } from "../../shared/cart";
 import type { DshCreateIntentInput, DshPaymentMethod } from "../../shared/checkout";
 
@@ -160,9 +162,8 @@ export function CheckoutScreen({ cart, deliveryAddress = "", note = "", paymentM
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Active Order Tracker component (handles real-time order states & tracking)
+// Active Order Tracker component (handles real DSH order states and polling)
 // ─────────────────────────────────────────────────────────────────────────────
-// Active Order Tracker component (handles real-time order states & tracking)
 function ActiveOrderTracker({
   orderId,
   wltSessionId,
@@ -175,51 +176,17 @@ function ActiveOrderTracker({
   readonly fulfillmentMode?: string | undefined;
 }) {
   const detailController = useClientOrderDetailController(orderId);
+  const identity = useIdentitySession();
+  const supportController = useSupportTicketController(identity.state.kind);
   const { direction, isRTL } = useDirection();
 
   // Simulated Proximity and Bell States (for testing & 2026 premium feel)
   const [proximityState, setProximityState] = useState<"enroute" | "near_customer" | "at_door" | "bell_rang">("enroute");
   const [bellRang, setBellRang] = useState(false);
-  const [customerBellRung, setCustomerBellRung] = useState(false);
-
-  const handleRingCaptainBell = () => {
-    setCustomerBellRung(true);
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `sys-client-bell-${Date.now()}`,
-        sender: "تنبيه الجرس",
-        text: "🔔 قمت بقرع جرس الكابتن لتنبيهه بوجودك في موقع الاستلام.",
-        time: "الآن",
-        side: "center",
-      },
-    ]);
-  };
-
-  // Chat UI is local-only until a real DSH support/chat endpoint is connected.
-  const [chatInputValue, setChatInputValue] = useState("");
-  const [chatAttachments, setChatAttachments] = useState<string[]>([]);
-  const [chatMessages, setChatMessages] = useState<Array<{ id: string; sender: string; text: string; time: string; side: "start" | "end" | "center" }>>([
-    {
-      id: "system-1",
-      sender: "نظام المتابعة",
-      text: "المراسلة المباشرة غير متاحة لهذا الطلب حتى يتم ربط قناة دعم تشغيلية حقيقية.",
-      time: "الآن",
-      side: "center"
-    }
-  ]);
 
   const [isSupportExpanded, setIsSupportExpanded] = useState(false);
   const [supportReason, setSupportReason] = useState<string | null>(null);
   const [supportNote, setSupportNote] = useState("");
-  const [supportSubmitted, setSupportSubmitted] = useState(false);
-
-  // Ratings
-  const [storeRating, setStoreRating] = useState(0);
-  const [captainRating, setCaptainRating] = useState(0);
-  const [ratingsSubmitted, setRatingsSubmitted] = useState(false);
-
-  const scrollRef = useRef<ScrollView>(null);
 
   // Determine current active order status from the real backend only.
   const order = detailController.state.kind === "success" ? detailController.state.order : null;
@@ -253,17 +220,6 @@ function ActiveOrderTracker({
     }
   }, [order]);
 
-  // Scroll to bottom when messages update
-  useEffect(() => {
-    if (scrollRef.current) {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-    }
-  }, [chatMessages]);
-
-  if (detailController.state.kind === "loading" || !order) {
-    return <LoadingState title="جاري الاتصال بالنظام وتتبع حالة الطلب..." />;
-  }
-
   if (detailController.state.kind === "error") {
     return (
       <View style={styles.container}>
@@ -278,6 +234,10 @@ function ActiveOrderTracker({
         </ScrollScreen>
       </View>
     );
+  }
+
+  if (detailController.state.kind === "loading" || !order) {
+    return <LoadingState title="جاري الاتصال بالنظام وتتبع حالة الطلب..." />;
   }
 
   // Map status to steps
@@ -318,65 +278,6 @@ function ActiveOrderTracker({
   const isDelivered = status === "delivered";
   const activeNum = parseInt(activeStep);
 
-  const handleSendMessage = () => {
-    if (!chatInputValue.trim() && chatAttachments.length === 0) return;
-    const cleanText = chatInputValue.trim();
-    const attachmentsLabel = chatAttachments.length ? ` [مرفق: ${chatAttachments.join("، ")}]` : "";
-    
-    const clientMsg = {
-      id: `client-${Date.now()}`,
-      sender: "العميل",
-      text: `${cleanText || "أرسل مرفقات تواصل"}${attachmentsLabel}`,
-      time: "الآن",
-      side: "end" as const
-    };
-
-    setChatMessages(prev => [...prev, clientMsg]);
-    setChatInputValue("");
-    setChatAttachments([]);
-
-    setChatMessages(prev => [...prev, {
-      id: `support-unavailable-${Date.now()}`,
-      sender: "نظام المتابعة",
-      text: "لم يتم إرسال الرسالة لأن قناة المحادثة التشغيلية غير مفعلة بعد.",
-      time: "الآن",
-      side: "center" as const
-    }]);
-  };
-
-  const toggleAttachment = (kind: string) => {
-    setChatAttachments(current =>
-      current.includes(kind) ? current.filter(k => k !== kind) : [...current, kind]
-    );
-  };
-
-  const quickActions = [
-    {
-      id: "camera",
-      label: "كاميرا",
-      icon: <Icon name="camera-outline" size={18} color={chatAttachments.includes("camera") ? colorRoles.brandAction : colorRoles.brandStructure} />,
-      selected: chatAttachments.includes("camera"),
-      disabled: status === "delivered",
-      onPress: () => toggleAttachment("camera")
-    },
-    {
-      id: "video",
-      label: "فيديو",
-      icon: <Icon name="videocam-outline" size={18} color={chatAttachments.includes("video") ? colorRoles.brandAction : colorRoles.brandStructure} />,
-      selected: chatAttachments.includes("video"),
-      disabled: status === "delivered",
-      onPress: () => toggleAttachment("video")
-    },
-    {
-      id: "voice",
-      label: "صوت",
-      icon: <Icon name="mic-outline" size={18} color={chatAttachments.includes("voice") ? colorRoles.brandAction : colorRoles.brandStructure} />,
-      selected: chatAttachments.includes("voice"),
-      disabled: status === "delivered",
-      onPress: () => toggleAttachment("voice")
-    }
-  ];
-
   const supportIssues = [
     { id: "delay", label: "تأخر كبير في التوصيل" },
     { id: "wrong_items", label: "الطلب يحتوي أصنافاً خاطئة" },
@@ -385,7 +286,37 @@ function ActiveOrderTracker({
     { id: "other", label: "أخرى" }
   ];
 
-  // Support form quick action toggle
+  const submitOrderSupportTicket = () => {
+    if (!supportReason) return;
+
+    const selectedIssue =
+      supportIssues.find((issue) => issue.id === supportReason)?.label ??
+      "مشكلة أخرى مرتبطة بالطلب";
+
+    const category: "delivery_issue" | "store_quality" | "order_issue" =
+      supportReason === "delay"
+        ? "delivery_issue"
+        : supportReason === "bad_quality"
+          ? "store_quality"
+          : "order_issue";
+
+    const priority: "high" | "normal" =
+      supportReason === "delay" ? "high" : "normal";
+
+    const normalizedNote = supportNote.trim();
+    const description =
+      normalizedNote.length >= 10
+        ? `${selectedIssue}: ${normalizedNote}`
+        : `${selectedIssue} مرتبطة بالطلب #DSH-${orderId.slice(0, 8).toUpperCase()}.`;
+
+    void supportController.submitTicket({
+      subject: `مشكلة في الطلب #DSH-${orderId.slice(0, 8).toUpperCase()}`,
+      description,
+      category,
+      priority,
+      orderId,
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -411,26 +342,6 @@ function ActiveOrderTracker({
             <Badge label={statusText} tone={statusTone === "success" ? "success" : statusTone === "danger" ? "danger" : "action"} />
           </View>
 
-          {/* Smart Bilateral Bell Action inside the hero card */}
-          {status !== "delivered" && status !== "cancelled" && (
-            <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: alpha(colorPalette.white, 0.12), paddingTop: 10 }}>
-              <TouchableOpacity
-                style={[
-                  { height: 44, borderRadius: 10, justifyContent: "center", alignItems: "center", flexDirection: "row-reverse", gap: 8 },
-                  customerBellRung ? { backgroundColor: colorRoles.brandStructure } : { backgroundColor: colorRoles.brandAction }
-                ]}
-                onPress={handleRingCaptainBell}
-                disabled={customerBellRung}
-                accessibilityLabel={customerBellRung ? "تم رن جرس الكابتن" : "قرع جرس الكابتن"}
-                accessibilityRole="button"
-              >
-                <Icon name="notifications-active" size={18} color={colorRoles.surfaceBase} />
-                <Text role="body" style={{ color: colorRoles.surfaceBase, fontWeight: "bold" }}>
-                  {customerBellRung ? "تم رن جرس الكابتن ✓" : "قرع جرس الكابتن 🔔"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </Surface>
 
         {/* 1.1 Doorbell Alert Banner (Rings to catch attention without showing phone number) */}
@@ -580,261 +491,118 @@ function ActiveOrderTracker({
             items={[
               { label: "رقم الطلب الموحد", value: `#DSH-${orderId.slice(0, 8).toUpperCase()}`, tone: "action" },
               { label: "معرّف التتبع الكامل", value: orderId },
-              { label: "الوقت التقريبي للوصول", value: isDelivered ? "تم التسليم" : status === "arrived_customer" ? "عند الباب حالياً" : "تقريباً 15 دقيقة", tone: isDelivered ? "success" : status === "arrived_customer" ? "warning" : "action" },
+              { label: "الوقت التقريبي للوصول", value: isDelivered ? "تم التسليم" : status === "arrived_customer" ? "عند الباب حالياً" : "غير متاح من بيانات التتبع الحالية", tone: isDelivered ? "success" : status === "arrived_customer" ? "warning" : "action" },
               { label: "آلية التتبع", value: "تحديث تلقائي عبر خادم DSH" }
             ]}
           />
         </Surface>
 
-        {/* 5. OrderLinkedChat (Exact Premium Implementation & Unified Communication Box) */}
-        <Surface tone="default" style={styles.chatBoxSurface}>
-          {/* Header section with title and status */}
-          <View style={styles.chatHeader}>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text role="bodySm" weight="bold" style={{ color: colorRoles.textPrimary }}>مراسلة وتتبع الطلب 💬</Text>
-              <Text role="caption" style={{ color: colorRoles.textSecondary }}>صندوق محادثة حي ومفتوح لتوجيه وتعديل التفاصيل.</Text>
-            </View>
-            <Badge
-              label={status === "delivered" ? "الدردشة مقفلة" : "مرتبطة بهذا الطلب"}
-              tone={status === "delivered" ? "warning" : "action"}
-            />
-          </View>
-
-          {/* Captain details built right inside the chat header for a cohesive look */}
-          {!isPickup && (
-            <View style={styles.captainChatHeader}>
-              {status !== "pending" && status !== "store_accepted" && status !== "preparing" ? (
-                <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                  <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "center" }}>
-                    <View style={styles.chatAvatar}>
-                      <Icon name="bicycle" size={20} color={colorRoles.surfaceBase} />
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text role="bodyStrong" style={{ fontSize: 13, color: colorRoles.textPrimary }}>أحمد الكابتن (مكلّف بالتوصيل)</Text>
-                      <Text role="caption" style={{ color: colorRoles.textSecondary }}>دراجة نارية · لوحة: 9548-صنعاء</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.callButton} accessibilityLabel="اتصال هاتفي بالكابتن أحمد" accessibilityRole="button">
-                    <Text style={styles.callButtonText}>اتصال 📞</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "center", width: "100%" }}>
-                  <View style={[styles.chatAvatar, { backgroundColor: colorRoles.surfaceBase }]}>
-                    <Icon name="bicycle" size={20} color={colorRoles.brandStructure} />
-                  </View>
-                  <View style={{ alignItems: "flex-end", flex: 1, marginRight: 8 }}>
-                    <Text role="bodyStrong" style={{ fontSize: 13, color: colorRoles.textSecondary }}>جاري تعيين الكابتن...</Text>
-                    <Text role="caption" style={{ color: colorRoles.textMuted }}>سيتواصل معك الكابتن فور خروجه بالطلب.</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Messages list (full scroll view thread history - replica with improvements) */}
-          <ScrollView
-            ref={scrollRef}
-            style={styles.chatThreadArea}
-            contentContainerStyle={{ gap: 12, paddingVertical: 8 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {chatMessages.map((msg) => {
-              if (msg.side === "center") {
-                return (
-                  <View key={msg.id} style={{ alignItems: "center", marginVertical: 4 }}>
-                    <View style={styles.systemBubble}>
-                      <Text style={styles.systemText}>{msg.text}</Text>
-                    </View>
-                  </View>
-                );
-              }
-              const isClient = msg.side === "end";
-              return (
-                <View 
-                  key={msg.id} 
-                  style={[
-                    styles.messageBubbleWrapper, 
-                    isClient ? styles.messageSelf : styles.messageOther,
-                    // Force the actual alignment based on RTL
-                    { alignSelf: isClient ? (isRTL ? "flex-start" : "flex-end") : (isRTL ? "flex-end" : "flex-start") }
-                  ]}
-                >
-                  <Surface
-                    tone={isClient ? "action" : "inset"}
-                    style={[
-                      styles.messageBubble,
-                      isClient ? styles.messageBubbleSelf : styles.messageBubbleOther
-                    ]}
-                  >
-                    <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                      <Text style={[styles.messageSender, isClient && { color: colorRoles.surfaceBase }]}>{msg.sender}</Text>
-                      <Text style={[styles.messageTime, isClient && { color: alpha(colorPalette.white, 0.7) }]}>{msg.time}</Text>
-                    </View>
-                    <Text style={[styles.messageBody, isClient && { color: colorRoles.surfaceBase }]}>{msg.text}</Text>
-                  </Surface>
-                </View>
-              );
-            })}
-          </ScrollView>
-
-          {/* Attachment preview bar (shows selected quick actions) */}
-          {chatAttachments.length > 0 && (
-            <View style={styles.attachmentPreviewBar}>
-              {chatAttachments.map((att) => (
-                <View key={att} style={styles.attachmentBadge}>
-                  <Text style={styles.attachmentBadgeText}>
-                    {att === "camera" ? "📸 صورة جاهزة للإرفاق" : att === "video" ? "🎥 فيديو جاهز للإرفاق" : "🎙️ تسجيل صوتي"}
-                  </Text>
-                  <TouchableOpacity onPress={() => toggleAttachment(att)} accessibilityLabel="إزالة المرفق" accessibilityRole="button">
-                    <Icon name="close" size={14} color={colorRoles.brandAction} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Composer Input Area (replica with improvements) */}
-          <Surface tone="inset" style={styles.chatInputCard}>
-            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <View style={{ flexDirection: "row-reverse", gap: 8 }}>
-                {quickActions.map((action) => (
-                  <Pressable
-                    key={action.id}
-                    disabled={action.disabled}
-                    onPress={action.onPress}
-                    accessibilityLabel={action.label}
-                    accessibilityRole="button"
-                    style={[
-                      styles.chatQuickAction,
-                      action.selected && styles.chatQuickActionSelected,
-                      action.disabled && { opacity: 0.4 }
-                    ]}
-                  >
-                    {action.icon}
-                  </Pressable>
-                ))}
-              </View>
-              <Text role="bodySm" style={{ color: colorRoles.textSecondary }}>
-                {isPickup ? "مراسلة المتجر" : "رسالة سريعة للكابتن"}
-              </Text>
-            </View>
-
-            <TextInput
-              value={chatInputValue}
-              onChangeText={setChatInputValue}
-              editable={status !== "delivered"}
-              placeholder={status === "delivered" ? "تم إغلاق المحادثة بعد التسليم." : "اكتب رسالة سريعة هنا..."}
-              placeholderTextColor={colorRoles.surfaceBase}
-              multiline
-              numberOfLines={3}
-              textAlign="right"
-              textAlignVertical="top"
-              style={styles.chatTextInput}
-            />
-
-            <View style={{ flexDirection: "row-reverse", justifyContent: "flex-start", marginTop: 8 }}>
-              <Pressable
-                disabled={status === "delivered" || (!chatInputValue.trim() && chatAttachments.length === 0)}
-                onPress={handleSendMessage}
-                accessibilityLabel="إرسال الرسالة للكابتن"
-                accessibilityRole="button"
-                style={[
-                  styles.chatSendButton,
-                  (chatInputValue.trim() || chatAttachments.length > 0) && styles.chatSendButtonActive
-                ]}
-              >
-                <Icon
-                  name={isRTL ? "paper-plane" : "paper-plane-outline"}
-                  size={16}
-                  color={chatInputValue.trim() || chatAttachments.length > 0 ? colorRoles.surfaceBase : colorRoles.surfaceBase}
-                />
-              </Pressable>
-            </View>
-          </Surface>
-        </Surface>
-
-        {/* 6. Ratings and Review section (Becomes visible once delivered) */}
+        {/* 5. Order communication capability */}
+        <StateView
+          tone="warning"
+          title="المحادثة المباشرة غير مفعلة"
+          description="تمت إزالة المحادثة المحلية الوهمية. لا تُعرض رسالة كأنها أُرسلت للكابتن ما لم توجد قناة DSH تشغيلية حقيقية."
+        />
+        {/* 6. Ratings capability */}
         {isDelivered && (
-          <Surface tone="raised" style={[styles.cardFrame, { borderColor: colorRoles.success, borderWidth: 1.5 }]}>
-            <Text role="bodyStrong" style={{ color: colorRoles.success, textAlign: "right" }}>تقييم خدمات الطلب</Text>
-            <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right", marginTop: 2 }}>يسعدنا تقييم المتجر وتجربة التوصيل:</Text>
-            
-            <View style={styles.ratingRow}>
-              <Text role="bodySm" style={{ color: colorRoles.textPrimary }}>تقييم المنتجات والمتجر:</Text>
-              <View style={{ flexDirection: "row-reverse", gap: 4 }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} onPress={() => { setStoreRating(star); setRatingsSubmitted(false); }} accessibilityLabel={`تقييم المتجر بـ ${star} نجوم`} accessibilityRole="button">
-                    <Icon name={star <= storeRating ? "star" : "star-outline"} size={22} color={colorRoles.brandAction} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {!isPickup && (
-              <View style={styles.ratingRow}>
-                <Text role="bodySm" style={{ color: colorRoles.textPrimary }}>تقييم كابتن التوصيل:</Text>
-                <View style={{ flexDirection: "row-reverse", gap: 4 }}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity key={star} onPress={() => { setCaptainRating(star); setRatingsSubmitted(false); }} accessibilityLabel={`تقييم الكابتن بـ ${star} نجوم`} accessibilityRole="button">
-                      <Icon name={star <= captainRating ? "star" : "star-outline"} size={22} color={colorRoles.brandAction} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <Button
-              label={ratingsSubmitted ? "تم حفظ التقويم ✓" : "تثبيت تقييم الخدمة"}
-              tone={ratingsSubmitted ? "secondary" : "primary"}
-              disabled={storeRating === 0 || (!isPickup && captainRating === 0)}
-              onPress={() => setRatingsSubmitted(true)}
-              style={{ marginTop: 8 }}
-            />
-          </Surface>
+          <StateView
+            tone="warning"
+            title="تقييم الطلب غير مفعّل"
+            description="تمت إزالة الحفظ المحلي الوهمي للتقييم. لن يظهر نجاح حفظ حتى يتوفر عقد API وقاعدة بيانات واختبار تكامل للتقييم."
+          />
         )}
-
-        {/* 7. Help, Dispute and Support Escalation center */}
+        {/* 7. Real support ticket binding */}
         <Surface tone="default" style={styles.cardFrame}>
-          <TouchableOpacity onPress={() => setIsSupportExpanded(!isSupportExpanded)} style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }} accessibilityLabel="توسيع قائمة الدعم والإبلاغ عن مشكلة بالطلب" accessibilityRole="button">
-            <Text role="bodySm" weight="bold" style={styles.cardLabel}>الدعم والمساعدة بالإبلاغ عن مشكلة</Text>
-            <Icon name={isSupportExpanded ? "chevron-up" : "chevron-down"} size={18} color={colorRoles.textSecondary} />
+          <TouchableOpacity
+            onPress={() => setIsSupportExpanded((current) => !current)}
+            style={{
+              flexDirection: "row-reverse",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+            accessibilityLabel="توسيع قائمة الدعم والإبلاغ عن مشكلة بالطلب"
+            accessibilityRole="button"
+          >
+            <Text role="bodySm" weight="bold" style={styles.cardLabel}>
+              الدعم والمساعدة بالإبلاغ عن مشكلة
+            </Text>
+            <Icon
+              name={isSupportExpanded ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={colorRoles.textSecondary}
+            />
           </TouchableOpacity>
 
           {isSupportExpanded && (
             <View style={{ marginTop: 12, gap: 10 }}>
-              {supportSubmitted ? (
+              {supportController.actionState.kind === "success" ? (
                 <View style={{ alignItems: "center", paddingVertical: 12 }}>
                   <Icon name="checkmark-circle" size={36} color={colorRoles.success} />
-                  <Text role="bodyStrong" style={{ marginTop: 4, color: colorRoles.textPrimary }}>تم رفع التذكرة للدعم</Text>
-                  <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "center", marginTop: 2 }}>
-                    تلقينا بلاغك وسيقوم فريق الدعم بمراجعة الطلب والتواصل معك في أقرب وقت.
+                  <Text
+                    role="bodyStrong"
+                    style={{ marginTop: 4, color: colorRoles.textPrimary }}
+                  >
+                    تم إنشاء تذكرة الدعم فعلياً
                   </Text>
+                  <Text
+                    role="caption"
+                    style={{
+                      color: colorRoles.textSecondary,
+                      textAlign: "center",
+                      marginTop: 2,
+                    }}
+                  >
+                    رقم التذكرة: {supportController.actionState.ticket.id}
+                  </Text>
+                  <Button
+                    label="إنشاء بلاغ آخر"
+                    tone="ghost"
+                    onPress={() => {
+                      supportController.resetAction();
+                      setSupportReason(null);
+                      setSupportNote("");
+                    }}
+                    style={{ marginTop: 8 }}
+                  />
                 </View>
               ) : (
                 <>
-                  <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: "right" }}>
-                    اختر نوع المشكلة التي تواجهها لمراجعتها فوراً مع الدعم الفني:
+                  <Text
+                    role="caption"
+                    style={{ color: colorRoles.textSecondary, textAlign: "right" }}
+                  >
+                    اختر المشكلة. سيُنشأ سجل حقيقي في نظام دعم DSH مرتبط بهذا الطلب.
                   </Text>
+
                   <View style={styles.supportChips}>
                     {supportIssues.map((issue) => (
                       <TouchableOpacity
                         key={issue.id}
-                        onPress={() => setSupportReason(issue.id)}
+                        onPress={() => {
+                          supportController.resetAction();
+                          setSupportReason(issue.id);
+                        }}
                         style={[
                           styles.supportChip,
-                          supportReason === issue.id && styles.supportChipActive
+                          supportReason === issue.id && styles.supportChipActive,
                         ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={issue.label}
                       >
-                        <Text style={[
-                          styles.supportChipText,
-                          supportReason === issue.id && { color: colorRoles.surfaceBase }
-                        ]}>
+                        <Text
+                          style={[
+                            styles.supportChipText,
+                            supportReason === issue.id && {
+                              color: colorRoles.surfaceBase,
+                            },
+                          ]}
+                        >
                           {issue.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
+
                   <TextInput
                     style={styles.supportInput}
                     placeholder="ملاحظات تفصيلية للدعم الفني..."
@@ -842,25 +610,37 @@ function ActiveOrderTracker({
                     onChangeText={setSupportNote}
                     multiline
                   />
+
+                  {supportController.actionState.kind === "error" && (
+                    <Text tone="danger">
+                      {supportController.actionState.message}
+                    </Text>
+                  )}
+
                   <Button
-                    label="إرسال البلاغ للدعم"
-                    disabled={!supportReason}
-                    onPress={() => setSupportSubmitted(true)}
+                    label={
+                      supportController.actionState.kind === "submitting"
+                        ? "جاري إرسال البلاغ..."
+                        : "إرسال البلاغ للدعم"
+                    }
+                    disabled={
+                      !supportReason ||
+                      supportController.actionState.kind === "submitting"
+                    }
+                    onPress={submitOrderSupportTicket}
                   />
                 </>
               )}
             </View>
           )}
         </Surface>
-
         {/* 8. Action Button */}
         <View style={{ marginVertical: 16 }}>
           {isDelivered ? (
             <Button
               tone="primary"
-              label="تأكيد استلام الطلب وإغلاقه ✓"
-              disabled={storeRating === 0 || (!isPickup && captainRating === 0)}
-              onPress={() => onSuccess && onSuccess(orderId)}
+              label="إغلاق شاشة الطلب"
+              onPress={() => onSuccess?.(orderId)}
               style={styles.primaryBtn}
             />
           ) : (

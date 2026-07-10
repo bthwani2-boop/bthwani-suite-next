@@ -24,7 +24,10 @@ export function AuthLoginCard({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const disabled = username.trim().length === 0 || password.length < 4;
-  const showDevButton = onDevBypass !== undefined;
+  const showDevButton =
+    typeof __DEV__ !== "undefined" &&
+    __DEV__ === true &&
+    onDevBypass !== undefined;
 
   return (
     <Card>

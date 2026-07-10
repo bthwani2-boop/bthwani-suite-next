@@ -5,6 +5,8 @@ import {
   type IdentityClientError,
 } from "./identity-client.ts";
 
+declare const __DEV__: boolean | undefined;
+
 type ActorRole = "client" | "partner" | "captain" | "field" | "operator";
 
 export type IdentitySessionState =
@@ -136,8 +138,19 @@ function emit(): void {
 }
 
 // Dev-only: bypass identity service and auto-authenticate with a fake session.
-// Call this in __DEV__ builds when the identity service is not available.
+// The check is enforced inside the privileged function, not only in the UI.
+function isDevBypassAllowed(): boolean {
+  return typeof __DEV__ !== "undefined" && __DEV__ === true;
+}
+
 export function devBypassLogin(role: ActorRole): void {
+  if (!isDevBypassAllowed()) {
+    stored = null;
+    saveStoredSession(null);
+    state = { kind: "error", message: "DEV_BYPASS_DISABLED" };
+    emit();
+    return;
+  }
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const surface = (role === "operator" ? "control-panel" : `app-${role}`) as ActorIdentity["surfaceAccess"] extends Record<string, boolean> ? string : never;
   const scope = role === "operator" ? "all" : (role === "client" || role === "partner" ? "own" : "assigned");
