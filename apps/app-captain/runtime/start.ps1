@@ -1,5 +1,6 @@
 param(
-    [switch] $ClearCache
+    [switch] $ClearCache,
+    [switch] $MirrorDevice
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,7 @@ $Runner = Join-Path $RepoRoot "tools\scripts\start-mobile-runtime.ps1"
     -AppKey "app-captain" `
     -MetroPort 18103 `
     -NeedsDevStoreId `
-    -ClearCache:$ClearCache
+    -ClearCache:$ClearCache `
+    -MirrorDevice:$MirrorDevice
 
 exit $LASTEXITCODE

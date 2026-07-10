@@ -2,8 +2,14 @@
 import { colorRoles } from '@bthwani/ui-kit';
 import { useMemo, useState } from "react";
 import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
-import type { CentralCatalogDomain, CentralCatalogNode } from "../../../shared/catalog/central-catalog.types";
-import type { createCatalogDomain, updateCatalogDomain, createCatalogNode, updateCatalogNode } from "../../../shared/catalog/central-catalog.api";
+import type {
+  CentralCatalogDomain,
+  CentralCatalogNode,
+  createCatalogDomain,
+  updateCatalogDomain,
+  createCatalogNode,
+  updateCatalogNode,
+} from "../../../shared/catalog";
 
 // ─── Style constants (static/layout styles reused across the tree) ───────────
 const panelStyle: React.CSSProperties = {

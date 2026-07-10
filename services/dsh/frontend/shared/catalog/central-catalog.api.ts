@@ -537,8 +537,36 @@ export async function fetchCatalogAssetLinks(query: { entityType: string; entity
   return resp.links;
 }
 
-export async function putEntityImage(entityType: "domains" | "nodes" | "master-products" | "product-proposals", entityId: string, role: string, assetId: string): Promise<CatalogAssetLink> {
-  const resp = await request<{ link: CatalogAssetLink }>(`/dsh/operator/catalog/${entityType}/${encodeURIComponent(entityId)}/images/${encodeURIComponent(role)}`, {
+export async function putEntityImage(
+  entityType: "domains" | "nodes" | "master-products" | "product-proposals",
+  entityId: string,
+  role: string,
+  assetId: string,
+): Promise<CatalogAssetLink> {
+  const encodedEntityId = encodeURIComponent(entityId);
+  const encodedRole = encodeURIComponent(role);
+  let endpoint: string;
+
+  switch (entityType) {
+    case "domains":
+      endpoint = `/dsh/operator/catalog/domains/${encodedEntityId}/images/${encodedRole}`;
+      break;
+    case "nodes":
+      endpoint = `/dsh/operator/catalog/nodes/${encodedEntityId}/images/${encodedRole}`;
+      break;
+    case "master-products":
+      endpoint = `/dsh/operator/catalog/master-products/${encodedEntityId}/images/${encodedRole}`;
+      break;
+    case "product-proposals":
+      endpoint = `/dsh/operator/catalog/product-proposals/${encodedEntityId}/images/${encodedRole}`;
+      break;
+    default: {
+      const exhaustive: never = entityType;
+      throw new Error(`Unsupported catalog entity type: ${exhaustive}`);
+    }
+  }
+
+  const resp = await request<{ link: CatalogAssetLink }>(endpoint, {
     method: "PUT",
     body: { assetId },
   });

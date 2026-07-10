@@ -5,13 +5,11 @@ const PERMISSION_TEXT = {
   camera: "نحتاج الوصول إلى الكاميرا لالتقاط الصور.",
   microphone: "نحتاج الوصول إلى الميكروفون عند تسجيل فيديو من الكاميرا.",
   locationWhenInUse: "نحتاج الوصول إلى موقعك لعرض أقرب الخدمات وتتبع الطلبات.",
-  locationAlways: "نحتاج الوصول إلى موقعك في الخلفية لمتابعة الطلبات أثناء التنقل.",
-  notifications: "نستخدم الإشعارات لإبلاغك بتحديثات الطلبات والمهام."
 };
 
 function buildInfoPlist(features) {
   const infoPlist = {
-    NSPhotoLibraryUsageDescription: PERMISSION_TEXT.photos
+    NSPhotoLibraryUsageDescription: PERMISSION_TEXT.photos,
   };
 
   if (features.includes("camera")) {
@@ -28,14 +26,14 @@ function buildInfoPlist(features) {
 
 function buildAndroidConfig(app, features) {
   const android = {
-    package: app.androidPackage
+    package: app.androidPackage,
   };
 
   if (features.includes("maps")) {
     android.config = {
       googleMaps: {
-        apiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY || ""
-      }
+        apiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY || "",
+      },
     };
   }
 
@@ -45,12 +43,12 @@ function buildAndroidConfig(app, features) {
 function buildIosConfig(app, features) {
   const ios = {
     bundleIdentifier: app.iosBundleIdentifier,
-    infoPlist: buildInfoPlist(features)
+    infoPlist: buildInfoPlist(features),
   };
 
   if (features.includes("maps")) {
     ios.config = {
-      googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY || ""
+      googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY || "",
     };
   }
 
@@ -58,25 +56,26 @@ function buildIosConfig(app, features) {
 }
 
 function buildPlugins(features) {
+  const hasCamera = features.includes("camera");
   const plugins = [
     [
       "expo-image-picker",
       {
         photosPermission: PERMISSION_TEXT.photos,
-        cameraPermission: PERMISSION_TEXT.camera,
-        microphonePermission: PERMISSION_TEXT.microphone
-      }
+        cameraPermission: hasCamera ? PERMISSION_TEXT.camera : false,
+        microphonePermission: hasCamera ? PERMISSION_TEXT.microphone : false,
+      },
     ],
-    "expo-document-picker"
+    "expo-document-picker",
   ];
 
-  if (features.includes("camera")) {
+  if (hasCamera) {
     plugins.push([
       "expo-camera",
       {
         cameraPermission: PERMISSION_TEXT.camera,
-        microphonePermission: PERMISSION_TEXT.microphone
-      }
+        microphonePermission: PERMISSION_TEXT.microphone,
+      },
     ]);
   }
 
@@ -88,8 +87,8 @@ function buildPlugins(features) {
     plugins.push([
       "expo-location",
       {
-        locationWhenInUsePermission: PERMISSION_TEXT.locationWhenInUse
-      }
+        locationWhenInUsePermission: PERMISSION_TEXT.locationWhenInUse,
+      },
     ]);
   }
 
@@ -108,7 +107,7 @@ function defineBthwaniExpoApp(appKey) {
   const app = manifest.apps[appKey];
 
   if (!app) {
-    throw new Error("Unknown BThwani mobile app: " + appKey);
+    throw new Error(`Unknown BThwani mobile app: ${appKey}`);
   }
 
   const features = app.features || [];
@@ -118,32 +117,25 @@ function defineBthwaniExpoApp(appKey) {
     slug: app.slug,
     entryPoint: "./index.js",
     owner: manifest.global.owner,
-
     platforms: ["ios", "android"],
-
     scheme: app.scheme,
     version: manifest.global.version,
-
     orientation: "portrait",
     userInterfaceStyle: "light",
-
     android: buildAndroidConfig(app, features),
-
     ios: buildIosConfig(app, features),
-
     plugins: buildPlugins(features),
-
     extra: {
       appKey,
       appLine: manifest.global.appLine,
       sourceRepo: manifest.global.sourceRepo,
       eas: {
-        projectId: app.projectId
-      }
-    }
+        projectId: app.projectId,
+      },
+    },
   };
 }
 
 module.exports = {
-  defineBthwaniExpoApp
+  defineBthwaniExpoApp,
 };

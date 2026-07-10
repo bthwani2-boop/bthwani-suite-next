@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, neutralScale, statusScale } from '@bthwani/ui-kit';
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import {
   CpButton,
@@ -58,9 +58,9 @@ const seedWarningBoxStyle: CSSProperties = {
   margin: "0 1rem 1rem",
   padding: "1rem",
   borderRadius: "0.5rem",
-  backgroundColor: "#fff0f0",
-  border: "1px solid #ffcccc",
-  color: "#cc0000",
+  backgroundColor: statusScale.dangerSoft,
+  border: `1px solid ${statusScale.danger}`,
+  color: statusScale.dangerStrong,
   fontWeight: "bold",
   display: "flex",
   flexDirection: "column",
@@ -88,12 +88,12 @@ const filterRowStyle: CSSProperties = { display: "flex", alignItems: "center", g
 const filterLabelStyle: CSSProperties = { fontSize: "0.813rem" };
 const contentWrapperStyle: CSSProperties = { marginTop: "1rem", padding: "0 1rem" };
 const overviewGridStyle: CSSProperties = { display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" };
-const overviewCardStyle: CSSProperties = { padding: "1.5rem", border: "1px solid #e2e8f0", borderRadius: "0.5rem" };
+const overviewCardStyle: CSSProperties = { padding: "1.5rem", border: `1px solid ${neutralScale[200]}`, borderRadius: "0.5rem" };
 const overviewListStyle: CSSProperties = { paddingRight: "1.25rem", lineHeight: "1.8" };
 const sectionHeaderRowStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" };
 const paginationRowStyle: CSSProperties = { display: "flex", gap: "0.5rem", marginTop: "1rem", justifyContent: "center" };
 const paginationPageLabelStyle: CSSProperties = { alignSelf: "center" };
-const qualityWarningsStyle: CSSProperties = { fontSize: "0.7rem", color: "#888", marginRight: "0.5rem" };
+const qualityWarningsStyle: CSSProperties = { fontSize: "0.7rem", color: colorRoles.textMuted, marginRight: "0.5rem" };
 const missingImageBadgeStyle: CSSProperties = {
   display: "inline-block",
   marginRight: "0.35rem",
@@ -101,8 +101,8 @@ const missingImageBadgeStyle: CSSProperties = {
   borderRadius: "999px",
   fontSize: "0.65rem",
   fontWeight: 700,
-  background: "#fdecea",
-  color: "#b3261e",
+  background: statusScale.dangerSoft,
+  color: statusScale.dangerStrong,
 };
 const proposalsColumnStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "1rem", width: "100%" };
 const proposalStatusTabsRowStyle: CSSProperties = {
@@ -132,30 +132,30 @@ const marketingReviewBoxStyle: CSSProperties = {
 const marketingReviewLabelStyle: CSSProperties = { display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", cursor: "pointer" };
 const proposalNoteRowStyle: CSSProperties = { display: "flex", gap: "0.25rem" };
 const damSectionStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "1.25rem" };
-const damPanelStyle: CSSProperties = { padding: "1rem", border: "1px solid #e2e8f0", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" };
+const damPanelStyle: CSSProperties = { padding: "1rem", border: `1px solid ${neutralScale[200]}`, borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" };
 const damPanelTitleStyle: CSSProperties = { margin: 0, fontSize: "0.95rem" };
 const damFormRowStyle: CSSProperties = { display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" };
-const damSelectStyle: CSSProperties = { padding: "0.4rem 0.5rem", borderRadius: "0.375rem", border: "1px solid #ccc" };
+const damSelectStyle: CSSProperties = { padding: "0.4rem 0.5rem", borderRadius: "0.375rem", border: `1px solid ${neutralScale[300]}` };
 const assetPreviewImgStyle: CSSProperties = { width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" };
 const assetReviewRowStyle: CSSProperties = { display: "flex", gap: "0.25rem", maxWidth: "340px", flexWrap: "wrap" };
-const visibilityGateBoxStyle: CSSProperties = { display: "grid", gap: "1rem", maxWidth: "600px", padding: "1rem", border: "1px solid #ddd", borderRadius: "8px" };
-const csvTextareaStyle: CSSProperties = { width: "100%", height: "150px", fontFamily: "monospace", padding: "0.5rem", borderRadius: "4px", border: "1px solid #ccc", direction: "ltr" };
+const visibilityGateBoxStyle: CSSProperties = { display: "grid", gap: "1rem", maxWidth: "600px", padding: "1rem", border: `1px solid ${neutralScale[300]}`, borderRadius: "8px" };
+const csvTextareaStyle: CSSProperties = { width: "100%", height: "150px", fontFamily: "monospace", padding: "0.5rem", borderRadius: "4px", border: `1px solid ${neutralScale[300]}`, direction: "ltr" };
 const csvActionsRowStyle: CSSProperties = { marginTop: "0.5rem", display: "flex", gap: "0.5rem" };
-const csvErrorStyle: CSSProperties = { color: "red", fontWeight: "bold" };
+const csvErrorStyle: CSSProperties = { color: statusScale.danger, fontWeight: "bold" };
 const csvErrorListStyle: CSSProperties = { fontWeight: "normal" };
-const csvSuccessStyle: CSSProperties = { color: "green", fontWeight: "bold" };
-const cleanupBoxStyle: CSSProperties = { padding: "1rem", border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#fafafa" };
-const cleanupResultStyle: CSSProperties = { marginTop: "0.5rem", color: "green" };
+const csvSuccessStyle: CSSProperties = { color: statusScale.success, fontWeight: "bold" };
+const cleanupBoxStyle: CSSProperties = { padding: "1rem", border: `1px solid ${neutralScale[300]}`, borderRadius: "8px", backgroundColor: neutralScale[50] };
+const cleanupResultStyle: CSSProperties = { marginTop: "0.5rem", color: statusScale.success };
 const proposalCellVerticalAlignStyle: CSSProperties = { verticalAlign: "middle" };
 const importPreviewResultBoxStyle: CSSProperties = { marginTop: "1rem" };
 
 function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
   const toneColors: Record<StatusTone, { bg: string; color: string }> = {
-    warning: { bg: colorRoles.surfaceBase, color: 'var(--status-warning-text, #e28743)' },
-    success: { bg: colorRoles.surfaceBase, color: 'var(--status-success-strong, #1f8a70)' },
-    danger:  { bg: colorRoles.surfaceBase, color: 'var(--status-danger-strong, #e2583e)' },
-    neutral: { bg: 'var(--surface-muted, #f4f6f8)', color: '#637381' },
-    info:    { bg: colorRoles.surfaceBase, color: 'var(--status-info-strong, #008cff)' },
+    warning: { bg: statusScale.warningSoft, color: statusScale.warningStrong },
+    success: { bg: statusScale.successSoft, color: statusScale.successStrong },
+    danger: { bg: statusScale.dangerSoft, color: statusScale.dangerStrong },
+    neutral: { bg: colorRoles.surfaceMuted, color: colorRoles.textSecondary },
+    info: { bg: statusScale.infoSoft, color: statusScale.infoStrong },
   };
   const { bg, color } = toneColors[tone]; // dynamic-exception: tone-derived colors computed per badge instance
   return (
@@ -497,7 +497,7 @@ export function CatalogDashboardScreen() {
                 ...tabButtonBaseStyle,
                 // dynamic-exception: active/disabled tone depends on current tab selection
                 background: activeTab === t.id ? colorRoles.brandAction : "transparent",
-                color: t.disabled ? "#ccc" : activeTab === t.id ? colorRoles.surfaceBase : "currentColor",
+                color: t.disabled ? neutralScale[400] : activeTab === t.id ? colorRoles.surfaceBase : "currentColor",
                 border: activeTab === t.id ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
                 fontWeight: activeTab === t.id ? 700 : 500,
                 cursor: t.disabled ? "not-allowed" : "pointer",

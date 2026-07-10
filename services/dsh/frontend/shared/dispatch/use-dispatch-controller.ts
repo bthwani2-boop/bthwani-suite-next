@@ -37,7 +37,7 @@ import type {
   DshTrackingState,
 } from "./dispatch.types";
 
-function useCaptainDeliveryController() {
+export function useCaptainDeliveryController() {
   const [state, setState] = useState<DshDispatchListState>(dispatchIdleState());
   const [actionState, setActionState] = useState<DshDispatchActionState>(dispatchActionIdleState());
 
@@ -110,7 +110,7 @@ function useCaptainDeliveryController() {
   return { state, actionState, reload: load, accept, decline, advance, submitProof };
 }
 
-function useOperatorDispatchController() {
+export function useOperatorDispatchController() {
   const [state, setState] = useState<DshDispatchListState>(dispatchIdleState());
   const [actionState, setActionState] = useState<DshDispatchActionState>(dispatchActionIdleState());
 
@@ -140,7 +140,7 @@ function useOperatorDispatchController() {
   return { state, actionState, reload: load, assign };
 }
 
-function useClientTrackingController(orderId: string) {
+export function useClientTrackingController(orderId: string) {
   const [state, setState] = useState<DshTrackingState>(trackingIdleState());
 
   const load = useCallback(async () => {

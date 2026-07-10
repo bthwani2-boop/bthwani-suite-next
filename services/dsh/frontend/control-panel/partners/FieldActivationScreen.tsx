@@ -10,6 +10,8 @@ import {
   TextField,
   spacing,
   radius,
+  colorRoles,
+  statusScale,
 } from "@bthwani/ui-kit";
 
 type ActiveCode = {
@@ -95,15 +97,15 @@ export function FieldActivationScreen() {
       </Card>
 
       {generatedCode && (
-        <Card style={{ padding: spacing[4], gap: spacing[3], backgroundColor: "#eefdff", borderColor: "#aae5ee", borderWidth: 1 }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold", color: "#006c7a" }}>
+        <Card style={{ padding: spacing[4], gap: spacing[3], backgroundColor: statusScale.infoSoft, borderColor: statusScale.info, borderWidth: 1 }}>
+          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold", color: statusScale.infoStrong }}>
             ✓ تم توليد كود التفعيل بنجاح
           </Text>
           <Box style={{ gap: spacing[1], alignItems: "flex-end" }}>
             <Text role="body" tone="secondary">
               شارك هذا الكود مع الموظف الميداني المرتبط بالرقم:
             </Text>
-            <Text role="titleMd" style={{ fontWeight: "bold", color: "#006c7a" }}>
+            <Text role="titleMd" style={{ fontWeight: "bold", color: statusScale.infoStrong }}>
               {phone}
             </Text>
           </Box>
@@ -111,10 +113,10 @@ export function FieldActivationScreen() {
           <Box
             style={{
               padding: spacing[4],
-              backgroundColor: "#ffffff",
+              backgroundColor: colorRoles.surfaceBase,
               borderRadius: radius.md,
               borderWidth: 1,
-              borderColor: "#d0d5dd",
+              borderColor: colorRoles.borderStrong,
               alignItems: "center",
               justifyContent: "center",
               marginVertical: spacing[2],
@@ -126,7 +128,7 @@ export function FieldActivationScreen() {
                 fontFamily: "monospace",
                 letterSpacing: 2,
                 fontWeight: "bold",
-                color: "#111827",
+                color: colorRoles.textPrimary,
               }}
             >
               {generatedCode}
@@ -154,7 +156,7 @@ export function FieldActivationScreen() {
                   alignItems: "center",
                   paddingVertical: spacing[2],
                   borderBottomWidth: idx < activeCodes.length - 1 ? borders.hairline : 0,
-                  borderBottomColor: "#eaecf0",
+                  borderBottomColor: colorRoles.borderSubtle,
                 }}
               >
                 <Box style={{ alignItems: "flex-end" }}>
@@ -166,8 +168,8 @@ export function FieldActivationScreen() {
                   style={{
                     fontFamily: "monospace",
                     fontWeight: "bold",
-                    color: "#1e5fff",
-                    backgroundColor: "#f4f7ff",
+                    color: colorRoles.info,
+                    backgroundColor: statusScale.infoSoft,
                     paddingHorizontal: spacing[2],
                     paddingVertical: spacing[1],
                     borderRadius: radius.sm,

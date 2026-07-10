@@ -6,6 +6,7 @@ on:
     branches:
       - slicing
       - implementing
+      - journy
       - master
   pull_request:
     branches:
@@ -134,6 +135,15 @@ jobs:
 
       - name: Guard — UI Provider required
         run: pnpm run guard:ui-provider
+
+      - name: Mobile generated contract drift check
+        run: pnpm run mobile:apps:check
+
+      - name: Mobile Expo and EAS configuration
+        run: pnpm run mobile:expo:verify
+
+      - name: Guard — real runtime bindings
+        run: pnpm run guard:runtime-real-bindings
 
       - name: Guard — Icon contract
         run: pnpm run guard:icon-contract
@@ -472,5 +482,3 @@ jobs:
       - name: Docker compose down
         if: always()
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
-
-

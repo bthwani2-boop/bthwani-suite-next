@@ -23,7 +23,7 @@ function writeText(file, content) {
   fs.writeFileSync(
     abs(file),
     content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd() + "\n",
-    "utf8"
+    "utf8",
   );
 }
 
@@ -36,8 +36,9 @@ function writeJson(file, value) {
 }
 
 function sameText(a, b) {
-  return a.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd() + "\n" ===
-    b.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd() + "\n";
+  const normalize = (value) =>
+    value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd() + "\n";
+  return normalize(a) === normalize(b);
 }
 
 function assertSame(file, expected) {
@@ -57,11 +58,16 @@ const appKeys = Object.keys(manifest.apps);
 
 for (const key of appKeys) {
   const app = manifest.apps[key];
-
-  for (const field of ["name", "slug", "scheme", "androidPackage", "iosBundleIdentifier", "projectId"]) {
+  for (const field of [
+    "name",
+    "slug",
+    "scheme",
+    "androidPackage",
+    "iosBundleIdentifier",
+    "projectId",
+  ]) {
     if (!app[field]) throw new Error(`${key}: missing ${field}`);
   }
-
   if (!isUuid(app.projectId)) {
     throw new Error(`${key}: invalid projectId`);
   }
@@ -78,57 +84,8 @@ export default defineBthwaniExpoApp("${key}");
 `;
 }
 
-function factoryJsContent() {
-  return `const manifest = require("./mobile-apps.manifest.json");
-
-function defineBthwaniExpoApp(appKey) {
-  const app = manifest.apps[appKey];
-
-  if (!app) {
-    throw new Error("Unknown BThwani mobile app: " + appKey);
-  }
-
-  return {
-    name: app.name,
-    slug: app.slug,
-    owner: manifest.global.owner,
-
-    platforms: ["ios", "android"],
-
-    scheme: app.scheme,
-    version: manifest.global.version,
-
-    orientation: "portrait",
-    userInterfaceStyle: "light",
-
-    android: {
-      package: app.androidPackage
-    },
-
-    ios: {
-      bundleIdentifier: app.iosBundleIdentifier
-    },
-
-    extra: {
-      appKey,
-      appLine: manifest.global.appLine,
-      sourceRepo: manifest.global.sourceRepo,
-      eas: {
-        projectId: app.projectId
-      }
-    }
-  };
-}
-
-module.exports = {
-  defineBthwaniExpoApp
-};
-`;
-}
-
 function factoryDtsContent() {
   const union = appKeys.map((key) => `"${key}"`).join(" | ");
-
   return `import type { ExpoConfig } from "expo/config";
 
 export type BthwaniMobileAppKey = ${union};
@@ -137,49 +94,32 @@ export declare function defineBthwaniExpoApp(appKey: BthwaniMobileAppKey): ExpoC
 `;
 }
 
-function updateRootScripts() {
-  const pkg = readJson("package.json");
-  pkg.scripts = pkg.scripts ?? {};
+const factoryJs = "tools/mobile/defineBthwaniExpoApp.js";
+if (!fs.existsSync(abs(factoryJs))) {
+  throw new Error(`${factoryJs}: missing sovereign Expo config factory`);
+}
 
-  pkg.scripts["mobile:apps:sync"] = "node tools/scripts/sync-mobile-apps.mjs --apply";
-  pkg.scripts["mobile:expo:verify"] = "node tools/scripts/guard-mobile-apps.mjs";
-  pkg.scripts["mobile:eas:preflight"] = "node tools/scripts/sync-mobile-apps.mjs --check && node tools/scripts/guard-mobile-apps.mjs && pnpm -r --if-present typecheck";
-  pkg.scripts["mobile:eas:build"] = "node tools/scripts/eas-build-mobile.mjs";
-
-  return JSON.stringify(pkg, null, 2) + "\n";
+if (fs.existsSync(abs("tools/mobile/defineBthwaniExpoApp.ts"))) {
+  throw new Error("tools/mobile/defineBthwaniExpoApp.ts must not exist; use the CommonJS .js factory");
 }
 
 if (apply) {
-  writeText("tools/mobile/defineBthwaniExpoApp.js", factoryJsContent());
+  // The executable factory is sovereign and is deliberately never generated here.
   writeText("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
-
-  if (fs.existsSync(abs("tools/mobile/defineBthwaniExpoApp.ts"))) {
-    fs.rmSync(abs("tools/mobile/defineBthwaniExpoApp.ts"), { force: true });
-  }
 
   for (const key of appKeys) {
     writeText(`${appDir(key)}/app.config.ts`, appConfig(key));
     writeJson(`${appDir(key)}/eas.json`, easTemplate);
   }
 
-  writeText("package.json", updateRootScripts());
-
-  console.log("PASS: mobile apps synchronized from tools/mobile");
+  console.log("PASS: generated mobile app configs synchronized without overwriting the Expo factory");
   process.exit(0);
 }
 
-assertSame("tools/mobile/defineBthwaniExpoApp.js", factoryJsContent());
 assertSame("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
-
-if (fs.existsSync(abs("tools/mobile/defineBthwaniExpoApp.ts"))) {
-  throw new Error("tools/mobile/defineBthwaniExpoApp.ts must not exist; use .js CommonJS factory");
-}
-
 for (const key of appKeys) {
   assertSame(`${appDir(key)}/app.config.ts`, appConfig(key));
   assertSame(`${appDir(key)}/eas.json`, JSON.stringify(easTemplate, null, 2) + "\n");
 }
 
-assertSame("package.json", updateRootScripts());
-
-console.log("PASS: mobile central contract is synchronized");
+console.log("PASS: mobile generated contracts are synchronized");

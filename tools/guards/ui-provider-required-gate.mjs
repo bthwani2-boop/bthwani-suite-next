@@ -1,16 +1,3 @@
-/**
- * tools/guards/ui-provider-required-gate.mjs
- *
- * Verifies that all runtime apps wrap their entry point in BthwaniUiProvider
- * to guarantee that theme tokens, styles, and branding are applied.
- *
- * Checks:
- *   - apps/app-name/runtime/src/App.tsx (must contain BthwaniUiProvider and import it)
- *   - apps/control-panel/runtime/src/app/layout.tsx (or providers.tsx) (must use WebThemeStyle or Bthwani providers)
- *
- * Output: UI_PROVIDER_REQUIRED_GATE: PASS / FAIL
- */
-
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot } from "./_guard-utils.mjs";
@@ -19,39 +6,78 @@ const guardId = "ui-provider-required-gate";
 const violations = [];
 
 const MOBILE_APPS = [
-  { name: "app-captain", file: "apps/app-captain/runtime/src/App.tsx" },
-  { name: "app-client",  file: "apps/app-client/runtime/src/App.tsx" },
-  { name: "app-field",   file: "apps/app-field/runtime/src/App.tsx" },
-  { name: "app-partner", file: "apps/app-partner/runtime/src/App.tsx" },
+  "app-client",
+  "app-partner",
+  "app-captain",
+  "app-field",
 ];
 
-for (const app of MOBILE_APPS) {
-  const fullPath = path.join(repoRoot, app.file);
-  if (!fs.existsSync(fullPath)) continue;
+function count(content, pattern) {
+  return [...content.matchAll(pattern)].length;
+}
 
-  const content = fs.readFileSync(fullPath, "utf8");
+for (const name of MOBILE_APPS) {
+  const indexRelative = `apps/${name}/runtime/src/index.ts`;
+  const appRelative = `apps/${name}/runtime/src/App.tsx`;
+  const indexPath = path.join(repoRoot, indexRelative);
+  const appPath = path.join(repoRoot, appRelative);
 
-  const hasImport = content.includes("BthwaniUiProvider");
-  const hasWrapper = /<BthwaniUiProvider\b/.test(content);
+  if (!fs.existsSync(indexPath)) {
+    violations.push({ file: indexRelative, message: "Missing mobile root entry." });
+    continue;
+  }
+  if (!fs.existsSync(appPath)) {
+    violations.push({ file: appRelative, message: "Missing mobile App component." });
+    continue;
+  }
 
-  if (!hasImport || !hasWrapper) {
+  const indexContent = fs.readFileSync(indexPath, "utf8");
+  const appContent = fs.readFileSync(appPath, "utf8");
+
+  const uiProviderRoots =
+    count(indexContent, /React\.createElement\(\s*BthwaniUiProvider\b/g) +
+    count(indexContent, /<BthwaniUiProvider\b/g);
+
+  const safeAreaRoots =
+    count(indexContent, /React\.createElement\(\s*SafeAreaProvider\b/g) +
+    count(indexContent, /<SafeAreaProvider\b/g);
+
+  if (!indexContent.includes('from "@bthwani/ui-kit"') || uiProviderRoots !== 1) {
     violations.push({
-      file: app.file,
-      message: `FORBIDDEN: App entry file does not import or wrap the root component tree in <BthwaniUiProvider> from @bthwani/ui-kit.`,
+      file: indexRelative,
+      message: `Expected exactly one BthwaniUiProvider at the runtime root; found ${uiProviderRoots}.`,
+    });
+  }
+
+  if (!indexContent.includes('from "react-native-safe-area-context"') || safeAreaRoots !== 1) {
+    violations.push({
+      file: indexRelative,
+      message: `Expected exactly one SafeAreaProvider at the runtime root; found ${safeAreaRoots}.`,
+    });
+  }
+
+  if (/\bBthwaniUiProvider\b/.test(appContent)) {
+    violations.push({
+      file: appRelative,
+      message: "Nested BthwaniUiProvider is forbidden; the provider belongs in src/index.ts only.",
+    });
+  }
+
+  if (/\bSafeAreaProvider\b/.test(appContent)) {
+    violations.push({
+      file: appRelative,
+      message: "Nested SafeAreaProvider is forbidden; the provider belongs in src/index.ts only.",
     });
   }
 }
 
-// Check Next.js Control Panel app router (layout or providers)
 const cpLayout = path.join(repoRoot, "apps/control-panel/runtime/src/app/layout.tsx");
 if (fs.existsSync(cpLayout)) {
   const content = fs.readFileSync(cpLayout, "utf8");
-  const hasWebThemeStyle = content.includes("WebThemeStyle");
-  
-  if (!hasWebThemeStyle) {
+  if (!content.includes("WebThemeStyle")) {
     violations.push({
       file: "apps/control-panel/runtime/src/app/layout.tsx",
-      message: "FORBIDDEN: Next.js RootLayout is missing <WebThemeStyle /> import/tag to inject token CSS variables.",
+      message: "Next.js RootLayout is missing WebThemeStyle.",
     });
   }
 }

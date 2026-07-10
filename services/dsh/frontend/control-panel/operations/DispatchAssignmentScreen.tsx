@@ -32,23 +32,6 @@ const DISPATCH_QUEUE_APPLIES_TO_BTHWANI = shouldEnterDispatchQueueForMode('bthwa
 const SHOW_CAPTAIN_ASSIGNMENT_IN_CP = shouldShowCaptainAssignmentInCP('bthwani_delivery');
 const DISPATCH_SCOPE_LABEL = getSurfaceRoleSummaryForMode('control-panel', 'bthwani_delivery');
 
-const alternativesMap: Record<string, Array<{ name: string; distance: string; status: string }>> = {
-  'DA-2001': [
-    { name: 'سعد م.', distance: '1.2 كم', status: 'متاح (موصى به)' },
-    { name: 'خالد أ.', distance: '1.5 كم', status: 'متاح' },
-    { name: 'ماجد س.', distance: '2.1 كم', status: 'متاح' },
-  ],
-  'DA-2002': [
-    { name: 'محمد ع.', distance: '0.8 كم', status: 'متاح (موصى به)' },
-    { name: 'عمر ف.', distance: '1.1 كم', status: 'متاح' },
-    { name: 'علي ي.', distance: '1.8 كم', status: 'متاح' },
-  ],
-  'DA-2003': [
-    { name: 'وليد ع.', distance: '3.4 كم', status: 'متاح (بعيد)' },
-    { name: 'أحمد ر.', distance: '4.2 كم', status: 'متاح (بعيد)' },
-  ],
-};
-
 type DispatchRowState = {
   id: string;
   captain: string;
@@ -136,71 +119,57 @@ export function DispatchAssignmentScreen({ subGroup }: DispatchAssignmentScreenP
     }
   }, [selectedRowId, activeRow]);
 
-  const handleConfirmAssignment = React.useCallback((orderId: string, captainName: string) => {
-    setActionStatus('pending');
-
-    if (client) {
-      client.assignCaptain(orderId, { captain_id: captainName })
-        .then(() => {
-          setActionStatus('success');
-          setTimeout(() => {
-            setRows((prevRows) =>
-              prevRows.map((r) =>
-                r.id === orderId
-                  ? {
-                      ...r,
-                      assignedCaptain: captainName,
-                      customStatus: 'تم الإسناد للكابتن',
-                      customStatusTone: 'success',
-                    }
-                  : r
-              )
-            );
-            setActionStatus('idle');
-            setSelectedRowId(null);
-            router.push(buildOperationsHref('dispatch-assignment'));
-          }, 1000);
-        })
-        .catch((err: unknown) => {
-          console.error('Failed to assign captain via API:', err);
-          setActionStatus('idle');
-        });
-    } else {
-      // Fallback for preview/local dev without active API
-      setTimeout(() => {
-        setActionStatus('success');
-        setTimeout(() => {
-          setRows((prevRows) =>
-            prevRows.map((r) =>
-              r.id === orderId
-                ? {
-                    ...r,
-                    assignedCaptain: captainName,
-                    customStatus: 'تم الإسناد للكابتن',
-                    customStatusTone: 'success',
-                  }
-                : r
-            )
-          );
-          setActionStatus('idle');
-          setSelectedRowId(null);
-          router.push(buildOperationsHref('dispatch-assignment'));
-        }, 1000);
-      }, 1200);
+  const handleConfirmAssignment = React.useCallback(async (orderId: string, captainId: string) => {
+    const normalizedCaptainId = captainId.trim();
+    if (!normalizedCaptainId) {
+      setRuntimeError('معرّف الكابتن مطلوب قبل تأكيد الإسناد.');
+      return;
     }
-  }, [router]);
+
+    setActionStatus('pending');
+    setRuntimeError(null);
+
+    try {
+      const assignment = await client.assignCaptain(orderId, {
+        captain_id: normalizedCaptainId,
+      });
+
+      setRows((prevRows) =>
+        prevRows.map((row) =>
+          row.id === orderId
+            ? {
+                ...row,
+                assignedCaptain: assignment.captainId,
+                customStatus: 'تم إنشاء مهمة الإسناد',
+                customStatusTone: 'success',
+              }
+            : row,
+        ),
+      );
+
+      setActionStatus('success');
+      setSelectedRowId(null);
+      router.push(buildOperationsHref('dispatch-assignment'));
+    } catch (error) {
+      const message =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message)
+          : 'فشل إنشاء مهمة الإسناد في DSH.';
+      setRuntimeError(message);
+      setActionStatus('idle');
+    }
+  }, [client, router]);
 
   const summaryKpi = [
     { id: 'waiting', label: 'بانتظار الإسناد', value: String(rows.filter(r => !r.assignedCaptain && r.statusTone !== 'danger').length), tone: 'danger' as const },
     { id: 'captains', label: 'كباتن متاحون', value: '—', tone: 'success' as const },
-    { id: 'source', label: 'مصدر البيانات', value: runtimeLoaded ? 'DSH Runtime' : 'Preview', tone: runtimeLoaded ? 'success' as const : 'warning' as const },
+    { id: 'source', label: 'مصدر البيانات', value: runtimeLoaded ? 'DSH Runtime' : runtimeOffline ? 'غير متصل' : 'جارٍ التحميل', tone: runtimeLoaded ? 'success' as const : 'warning' as const },
     { id: 'blockers', label: 'معوقات الإسناد', value: String(rows.filter(r => r.statusTone === 'danger').length), tone: 'warning' as const },
   ];
 
   // Inspector component
   let inspectorContent: React.ReactNode = null;
   if (selectedRowId && activeRow) {
-    const captainsList = alternativesMap[activeRow.id] || [];
     const isCompleted = activeRow.customStatus === 'تم الإسناد للكابتن';
 
     inspectorContent = (
@@ -225,43 +194,27 @@ export function DispatchAssignmentScreen({ subGroup }: DispatchAssignmentScreenP
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <span style={{ fontSize: '12px', fontWeight: 800 }}>اختر الكابتن للتعيين:</span>
-            {captainsList.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {captainsList.map((cap) => (
-                  <label
-                    key={cap.name}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 12px',
-                      background: chosenCaptain === cap.name ? 'var(--bthwani-control-panel-brand-surface)' : 'var(--bthwani-control-panel-surface-inset)',
-                      border: chosenCaptain === cap.name ? '1px solid var(--bthwani-control-panel-brand)' : '1px solid var(--bthwani-control-panel-border)',
-                      borderRadius: '8px',
-                      cursor: isCompleted || actionStatus !== 'idle' ? 'not-allowed' : 'pointer',
-                      fontSize: '12px',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="captain-select"
-                      value={cap.name}
-                      checked={chosenCaptain === cap.name}
-                      disabled={isCompleted || actionStatus !== 'idle'}
-                      onChange={() => setChosenCaptain(cap.name)}
-                      style={{ accentColor: 'var(--bthwani-control-panel-brand)' }}
-                    />
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span><strong>{cap.name}</strong> ({cap.status})</span>
-                      <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>{cap.distance}</span>
-                    </div>
-                  </label>
-                ))}
+            {runtimeError && (
+              <div style={{ color: 'var(--bthwani-control-panel-danger)', fontSize: '12px' }}>
+                {runtimeError}
               </div>
-            ) : (
-              <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>لا يوجد كباتن متاحون بالقرب.</span>
             )}
+            <input
+              type="text"
+              value={chosenCaptain}
+              disabled={isCompleted || actionStatus !== 'idle'}
+              onChange={(event) => setChosenCaptain(event.target.value)}
+              placeholder="مثال: captain-local-001"
+              aria-label="معرّف الكابتن"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid var(--bthwani-control-panel-border)',
+                borderRadius: '8px',
+                background: 'var(--bthwani-control-panel-surface-inset)',
+                color: 'var(--bthwani-control-panel-text)',
+              }}
+            />
           </div>
 
           {isCompleted ? (

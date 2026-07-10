@@ -763,7 +763,7 @@ function Invoke-DshSmoke {
     $cartBody = @{
       storeId = "store-1001"
       fulfillmentMode = "bthwani_delivery"
-      productId = $product.product.id
+      productId = $smokeCatalogProductId
       quantity = 1
     } | ConvertTo-Json
     $cartItem = Invoke-RestMethod "http://localhost:58080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
@@ -1083,5 +1083,3 @@ elseif ($Action -eq "all") {
 
   Write-Host "`nruntime:all: PASS"
 }
-
-

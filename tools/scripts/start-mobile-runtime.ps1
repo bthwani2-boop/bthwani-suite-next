@@ -1,11 +1,6 @@
 param(
     [Parameter(Mandatory)]
-    [ValidateSet(
-        "app-client",
-        "app-partner",
-        "app-captain",
-        "app-field"
-    )]
+    [ValidateSet("app-client", "app-partner", "app-captain", "app-field")]
     [string] $AppKey,
 
     [Parameter(Mandatory)]
@@ -13,8 +8,8 @@ param(
     [int] $MetroPort,
 
     [switch] $NeedsDevStoreId,
-
-    [switch] $ClearCache
+    [switch] $ClearCache,
+    [switch] $MirrorDevice
 )
 
 Set-StrictMode -Version Latest
@@ -27,13 +22,11 @@ $AdbHelper = Join-Path $PSScriptRoot "mobile-adb.ps1"
 if (-not (Test-Path -LiteralPath $RuntimeDir)) {
     throw "Runtime directory not found: $RuntimeDir"
 }
-
 if (-not (Test-Path -LiteralPath $AdbHelper)) {
     throw "ADB helper not found: $AdbHelper"
 }
 
 . $AdbHelper
-
 Set-Location -LiteralPath $RuntimeDir
 
 $DefaultRoute = Get-NetRoute `
@@ -62,7 +55,6 @@ if (-not $HostAddress) {
 }
 
 $env:REACT_NATIVE_PACKAGER_HOSTNAME = $HostAddress.IPAddress
-
 $env:EXPO_PUBLIC_DSH_API_BASE_URL      = "http://127.0.0.1:58080"
 $env:NEXT_PUBLIC_DSH_API_BASE_URL      = "http://127.0.0.1:58080"
 $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
@@ -78,22 +70,24 @@ if ($NeedsDevStoreId) {
             -ErrorAction Stop
 
         $StoreId = [string] $StoreResponse.stores[0].id
-
         if ([string]::IsNullOrWhiteSpace($StoreId)) {
-            throw "Store ID was empty."
+            throw "DSH returned an empty store ID."
         }
-
         $env:EXPO_PUBLIC_DEV_STORE_ID = $StoreId
     }
     catch {
-        $env:EXPO_PUBLIC_DEV_STORE_ID = "store-1005"
+        if ($env:BTHWANI_ALLOW_DEV_STORE_FALLBACK -eq "1") {
+            $env:EXPO_PUBLIC_DEV_STORE_ID = "store-1005"
+            Write-Warning "DSH store lookup failed; explicit fallback enabled: $($_.Exception.Message)"
+        }
+        else {
+            throw "DSH store lookup failed. Start the runtime services, or explicitly set BTHWANI_ALLOW_DEV_STORE_FALLBACK=1. Cause: $($_.Exception.Message)"
+        }
     }
 }
 
 $AdbPath = Resolve-BthwaniAdb
-
 & $AdbPath start-server
-
 if ($LASTEXITCODE -ne 0) {
     throw "ADB server failed to start."
 }
@@ -101,22 +95,24 @@ if ($LASTEXITCODE -ne 0) {
 $Devices = Get-BthwaniAndroidDevices -AdbPath $AdbPath
 $SelectedDevice = Select-BthwaniAndroidDevice -Devices $Devices
 $SelectedSerial = $SelectedDevice.Serial
-
-# Force all Android tools launched by this process to use one device only.
 $env:ANDROID_SERIAL = $SelectedSerial
 
-$Ports = @(
-    58080,
-    58082,
-    58083,
-    59000,
-    $MetroPort
-)
-
+$Ports = @(58080, 58082, 58083, 59000, $MetroPort)
 Invoke-BthwaniAdbReverse `
     -AdbPath $AdbPath `
     -Serial $SelectedSerial `
     -Ports $Ports
+
+$ShouldMirror = $MirrorDevice -or $env:BTHWANI_MIRROR_DEVICE -eq "1"
+if ($ShouldMirror) {
+    $Scrcpy = Get-Command scrcpy.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $Scrcpy) {
+        throw "scrcpy.exe was requested but was not found in PATH."
+    }
+    Start-Process -FilePath $Scrcpy.Source -ArgumentList @("-s", $SelectedSerial)
+}
+
+$ShouldClearCache = $ClearCache -or $env:BTHWANI_METRO_CLEAR -eq "1"
 
 Write-Host ""
 Write-Host "=== MOBILE RUNTIME ==="
@@ -126,7 +122,8 @@ Write-Host "Host IP:      $($HostAddress.IPAddress)"
 Write-Host "ADB:          $AdbPath"
 Write-Host "Device:       $SelectedSerial"
 Write-Host "Metro port:   $MetroPort"
-Write-Host "Cache clear:  $($ClearCache -or $env:BTHWANI_METRO_CLEAR -eq '1')"
+Write-Host "Mirror:       $ShouldMirror"
+Write-Host "Cache clear:  $ShouldClearCache"
 Write-Host ""
 
 $ExpoArguments = @(
@@ -141,16 +138,11 @@ $ExpoArguments = @(
     "--android"
 )
 
-$ShouldClearCache =
-    $ClearCache -or
-    $env:BTHWANI_METRO_CLEAR -eq "1"
-
 if ($ShouldClearCache) {
     $ExpoArguments += "--clear"
 }
 
 & pnpm @ExpoArguments
-
 if ($LASTEXITCODE -ne 0) {
     throw "Expo runtime failed for $AppKey."
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, ScrollView, Image, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
 	Box,
 	Button,
@@ -46,11 +47,17 @@ function buildAuthHeaders(partnerId?: string): Record<string, string> {
 }
 
 function isOfflineError(err: unknown): boolean {
-	return typeof err === 'object' && err !== null && (err as DshMediaApiError).code === 'offline';
+	return typeof err === 'object' && err !== null && (
+		(err as DshMediaApiError).code === 'offline' ||
+		(err as { kind?: string }).kind === 'network'
+	);
 }
 
 function isStorageUnavailableError(err: unknown): boolean {
-	return typeof err === 'object' && err !== null && (err as DshMediaApiError).code === 'storage_unavailable';
+	return typeof err === 'object' && err !== null && (
+		(err as DshMediaApiError).code === 'storage_unavailable' ||
+		(err as { status?: number }).status === 503
+	);
 }
 
 function formatMediaLabel(asset: DshMediaAsset): string {
@@ -68,7 +75,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 	const client = React.useMemo(() => getDshMediaRuntimeClient(), []);
 
 	const [screenState, setScreenState] = React.useState<ScreenState>('loading');
-	const [assets, setAssets] = React.useState<DshMediaAsset[]>([]);
+	const [assets, setAssets] = React.useState<readonly DshMediaAsset[]>([]);
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 	const [uploadProgress, setUploadProgress] = React.useState<number>(0);
 
@@ -102,64 +109,101 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 	const handlePickAndUpload = React.useCallback(async () => {
 		if (!client) return;
 
-		if (Platform.OS !== 'web') {
-			setErrorMessage('رفع الملفات من الجهاز متاح فقط عبر واجهة الويب حالياً. (يتطلب expo-image-picker على الجهاز)');
-			setScreenState('error');
-			return;
-		}
+		setErrorMessage(null);
+		setScreenState('picking');
 
-		// Web: use hidden file input
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = 'image/*,video/*';
-		input.onchange = async () => {
-			const file = input.files?.[0];
-			if (!file) return;
+		try {
+			let body: Blob;
+			let filename: string;
+			let mimeType: string;
+			let fileSize: number | undefined;
+
+			if (Platform.OS === 'web') {
+				const file = await new Promise<File | null>((resolve) => {
+					const input = document.createElement('input');
+					let settled = false;
+					const finish = (value: File | null) => {
+						if (settled) return;
+						settled = true;
+						window.removeEventListener('focus', handleWindowFocus);
+						resolve(value);
+					};
+					const handleWindowFocus = () => {
+						setTimeout(() => finish(input.files?.[0] ?? null), 0);
+					};
+
+					input.type = 'file';
+					input.accept = 'image/*,video/*';
+					input.onchange = () => finish(input.files?.[0] ?? null);
+					window.addEventListener('focus', handleWindowFocus, { once: true });
+					input.click();
+				});
+
+				if (!file) {
+					setScreenState('idle');
+					return;
+				}
+
+				body = file;
+				filename = file.name;
+				mimeType = file.type || 'application/octet-stream';
+				fileSize = file.size;
+			} else {
+				const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+				if (!permission.granted) {
+					throw new Error('يلزم السماح بالوصول إلى معرض الصور لاختيار الوسائط.');
+				}
+
+				const result = await ImagePicker.launchImageLibraryAsync({
+					mediaTypes: ['images', 'videos'],
+					quality: 1,
+				});
+
+				if (result.canceled || !result.assets[0]) {
+					setScreenState('idle');
+					return;
+				}
+
+				const asset = result.assets[0];
+				body = await client.readLocalUriAsBlob(asset.uri);
+				filename = asset.fileName || `product-media-${Date.now()}`;
+				mimeType = asset.mimeType || body.type || 'application/octet-stream';
+				fileSize = asset.fileSize ?? body.size;
+			}
 
 			setScreenState('uploading');
-			setUploadProgress(0);
-			setErrorMessage(null);
+			setUploadProgress(10);
 
-			try {
-				// 1. Create upload intent
-				const intentResp = await client.createUploadIntent(
-					{
-						owner_type: 'product',
-						owner_id: productId,
-						media_type: file.type.startsWith('video/') ? 'video' : 'image',
-						purpose: 'primary',
-						filename: file.name,
-						mime_type: file.type,
-						file_size_bytes: file.size,
-					},
-					authHeaders,
-				);
+			const intentResp = await client.createUploadIntent(
+				{
+					owner_type: 'product',
+					owner_id: productId,
+					media_type: mimeType.startsWith('video/') ? 'video' : 'image',
+					purpose: 'primary',
+					filename,
+					mime_type: mimeType,
+					file_size_bytes: fileSize,
+				},
+				authHeaders,
+			);
 
-				setUploadProgress(20);
-
-				// 2. PUT binary to MinIO presigned URL
-				await client.putToPresignedUrl(intentResp.intent.upload_url, file, file.type);
-				setUploadProgress(80);
-
-				// 3. Complete upload — transitions status pending_upload → uploaded
-				await client.completeUpload(intentResp.intent.media_id, {}, authHeaders);
-				setUploadProgress(100);
-
-				// 4. Refresh list
-				await loadAssets();
-			} catch (err) {
-				if (isOfflineError(err)) {
-					setScreenState('offline');
-				} else if (isStorageUnavailableError(err)) {
-					setErrorMessage('خدمة تخزين الوسائط غير متاحة حالياً (MinIO). يرجى التأكد من تشغيل الخدمة.');
-					setScreenState('storage_unavailable');
-				} else {
-					setErrorMessage('فشل رفع الصورة. يرجى التحقق من الاتصال والمحاولة مرة أخرى.');
-					setScreenState('error');
-				}
+			setUploadProgress(25);
+			await client.putToPresignedUrl(intentResp.intent.upload_url, body, mimeType);
+			setUploadProgress(85);
+			await client.completeUpload(intentResp.intent.media_id, {}, authHeaders);
+			setUploadProgress(100);
+			await loadAssets();
+		} catch (err) {
+			if (isOfflineError(err)) {
+				setScreenState('offline');
+			} else if (isStorageUnavailableError(err)) {
+				setErrorMessage('خدمة تخزين الوسائط غير متاحة حالياً (MinIO).');
+				setScreenState('storage_unavailable');
+			} else {
+				setErrorMessage(err instanceof Error ? err.message : 'فشل رفع الوسائط.');
+				setScreenState('error');
 			}
-		};
-		input.click();
+		}
 	}, [client, productId, authHeaders, loadAssets]);
 
 	const handleDelete = React.useCallback(async (mediaId: string) => {
@@ -178,7 +222,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 		}
 	}, [client, authHeaders, loadAssets]);
 
-	const isWorking = screenState === 'loading' || screenState === 'uploading';
+	const isWorking = screenState === 'loading' || screenState === 'picking' || screenState === 'uploading';
 
 	if (screenState === 'loading' && assets.length === 0) {
 		return <StateView title="جارٍ تحميل وسائط المنتج…" loading />;
@@ -313,15 +357,13 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 				<Box gap={2}>
 					<Text role="bodyStrong" align="start">رفع وسائط جديدة</Text>
 					<Text role="bodySm" tone="muted" align="start">
-						{Platform.OS === 'web'
-							? 'اختر صورة أو فيديو من جهازك لرفعه مباشرةً إلى خادم الوسائط.'
-							: 'رفع الملفات من الجهاز يتطلب expo-image-picker (متاح قريباً).'}
+						اختر صورة أو فيديو من جهازك لرفعه مباشرةً إلى خادم الوسائط.
 					</Text>
 
 					<Button
 						label={screenState === 'uploading' ? `جارٍ الرفع… ${uploadProgress}%` : 'اختر ملف ورفعه'}
 						tone="primary"
-						disabled={isWorking || Platform.OS !== 'web'}
+						disabled={isWorking}
 						onPress={handlePickAndUpload}
 						style={{ marginTop: spacing[3] }}
 					/>

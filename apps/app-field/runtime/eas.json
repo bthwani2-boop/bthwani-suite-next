@@ -7,12 +7,12 @@
       "node": "24.17.0",
       "pnpm": "10.34.2",
       "env": {
-        "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
-        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+        "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
       }
     },
     "development": {
       "extends": "base",
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -21,6 +21,7 @@
     },
     "internal": {
       "extends": "base",
+      "environment": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -28,6 +29,7 @@
     },
     "production": {
       "extends": "base",
+      "environment": "production",
       "android": {
         "buildType": "app-bundle"
       }
