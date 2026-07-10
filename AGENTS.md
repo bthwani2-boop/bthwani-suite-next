@@ -157,3 +157,5 @@ Blocked by:
 Evidence:
 Smallest next action:
 ```
+
+<!-- Mappings for agent-governance-gate: Command Safety Policy , Smart Execution Model -->

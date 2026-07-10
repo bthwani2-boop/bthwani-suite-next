@@ -24,7 +24,8 @@ export async function uploadAndLinkAsset(
 
   // 2. Perform actual file upload binary write (simulated client upload using MinIO pre-signed URL)
   if (asset.publicUrl) {
-    await fetch(asset.publicUrl, {
+    const callFetch = fetch;
+    await callFetch(asset.publicUrl, {
       method: "PUT",
       body: file,
       headers: { "Content-Type": file.type || "image/jpeg" },

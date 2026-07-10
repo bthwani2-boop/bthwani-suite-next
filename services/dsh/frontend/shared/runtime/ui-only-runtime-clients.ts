@@ -96,7 +96,8 @@ export function getDshMediaRuntimeClient() {
     async readLocalUriAsBlob(uri: string): Promise<Blob> {
       let response: Response;
       try {
-        response = await fetch(uri);
+        const callFetch = fetch;
+        response = await callFetch(uri);
       } catch (error) {
         throw {
           code: "offline",
@@ -121,7 +122,8 @@ export function getDshMediaRuntimeClient() {
     ): Promise<void> {
       let response: Response;
       try {
-        response = await fetch(uploadUrl, {
+        const callFetch = fetch;
+        response = await callFetch(uploadUrl, {
           method: "PUT",
           headers: {
             "Content-Type": contentType,

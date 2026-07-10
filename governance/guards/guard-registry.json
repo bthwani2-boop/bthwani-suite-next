@@ -403,6 +403,22 @@
       "script": "guard:dsh-order-lifecycle-all",
       "exit_level": "fail",
       "description": "Runs all DSH order lifecycle diagnostic and verification gates."
+    },
+    {
+      "id": "runtime-real-bindings",
+      "name": "Runtime Real Bindings Gate",
+      "script": "guard:runtime-real-bindings",
+      "exit_level": "fail",
+      "description": "Verifies that production environment does not use development or simulated bypass bindings.",
+      "source_file": "tools/guards/runtime-real-bindings-gate.mjs"
+    },
+    {
+      "id": "live-cross-journey-integrity",
+      "name": "Live Cross-Journey Integrity Gate",
+      "script": "guard:live-cross-journey-integrity",
+      "exit_level": "fail",
+      "description": "Enforces integrity constraints across different transaction journeys.",
+      "source_file": "tools/guards/live-cross-journey-integrity-gate.mjs"
     }
   ]
 }
