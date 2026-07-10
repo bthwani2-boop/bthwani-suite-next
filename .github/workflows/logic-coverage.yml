@@ -1,10 +1,11 @@
 name: Logic Coverage
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ "master", "implementing" ]
   pull_request:
-    branches:
-      - master
+    branches: [ "master" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   logic-gates:
     name: Logic Coverage Gates
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
@@ -57,5 +58,3 @@ jobs:
 
       - name: Guard — ast-grep rules
         run: pnpm run guard:ast-grep-rules
-
-

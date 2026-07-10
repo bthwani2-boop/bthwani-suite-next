@@ -2,6 +2,8 @@ name: Observability Smoke
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'   # Every Monday 03:00 UTC
 
 permissions:
   contents: read
@@ -9,7 +11,7 @@ permissions:
 jobs:
   jaeger-otel-smoke:
     name: Jaeger + OTel smoke
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -69,5 +71,3 @@ jobs:
       - name: Stop Jaeger
         if: always()
         run: docker rm -f bthwani-jaeger-ci || true
-
-

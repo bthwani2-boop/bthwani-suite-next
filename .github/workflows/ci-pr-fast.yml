@@ -1,15 +1,16 @@
 name: CI — PR Fast Gate
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - slicing
-      - implementing
-      - master
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - implementing
+      - begin
+      - branch-validation
+      - starting
+      - front-backend
 
 permissions:
   contents: read
@@ -21,7 +22,7 @@ concurrency:
 jobs:
   lockfile-check:
     name: Lockfile integrity
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
@@ -43,7 +44,7 @@ jobs:
 
   node-fast-gate:
     name: Node fast gate (lint / typecheck / test / affected)
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: lockfile-check
 
@@ -90,7 +91,7 @@ jobs:
 
   guards-fast:
     name: Guards (contracts + boundary + policy)
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: lockfile-check
 
@@ -147,5 +148,3 @@ jobs:
           pnpm run openapi:generate
           git diff --exit-code services/dsh/clients/generated/ services/wlt/clients/generated/ core/identity/clients/generated/ || \
             (echo "ERROR: Generated API clients have drifted from OpenAPI specs. Run 'pnpm run openapi:generate' and commit." && exit 1)
-
-

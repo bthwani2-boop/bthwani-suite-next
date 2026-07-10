@@ -1,6 +1,10 @@
 name: SonarQube
 
 on:
+  push:
+    branches: [ "master", "implementing" ]
+  pull_request:
+    branches: [ "master" ]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +14,8 @@ permissions:
 jobs:
   sonarqube:
     name: SonarQube Analysis
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,5 +50,3 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
-
-
