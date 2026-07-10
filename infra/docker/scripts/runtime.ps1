@@ -579,50 +579,64 @@ function Invoke-DshSmoke {
   $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10
   if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
 
-  # DSH-JOURNEY-002: partner writes real catalog rows, submits, and operator approves.
+  # DSH-JOURNEY-002: product proposal, transition pipeline, and assortment management
   $partnerToken = Get-LocalActorToken "bthwani"
   $partnerHeaders = @{
     Authorization = "Bearer $partnerToken"
     "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
   }
-  $categoryBody = @{
-    name = "تصنيف فحص $([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
-    description = "runtime smoke"
-    sortOrder = 90
-    isActive = $true
-    expectedVersion = 0
+  $proposalBody = @{
+    proposedNameAr = "منتج فحص الشريك"
+    proposedNameEn = "Partner Smoke Product"
+    domainId = "domain-groceries"
+    categoryNodeId = "node-supermarket"
+    brand = "بثواني"
+    sourceSurface = "app-partner"
   } | ConvertTo-Json
-  $category = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/categories" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $categoryBody -TimeoutSec 10
-  $productBody = @{
-    categoryId = $category.category.id
-    name = "منتج فحص"
-    description = "runtime smoke"
-    sku = "SMOKE-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
-    priceReference = "wlt-price-ref-smoke"
-    unitPrice = 10
-    isActive = $true
-    expectedVersion = 0
-  } | ConvertTo-Json
-  $product = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/products" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $productBody -TimeoutSec 10
-  if ([string]::IsNullOrWhiteSpace($product.product.id)) { throw "catalog product create did not persist" }
-  $submission = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/submit" -Method Post -Headers $partnerHeaders -TimeoutSec 10
-  if ($submission.revision.status -ne "submitted") { throw "catalog submission was not persisted" }
-  $storeAfterSubmit = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001" -Headers $operatorHeaders -TimeoutSec 10
-  $decisionHeaders = @{
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($proposal.proposal.id)) { throw "product proposal create did not persist" }
+
+  $operatorToken = Get-LocalActorToken "operator"
+  $operatorHeaders = @{
     Authorization = "Bearer $operatorToken"
-    "X-Correlation-ID" = "smoke-approve-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
   }
-  $decisionBody = @{
-    decision = "approved"
-    reason = "runtime catalog approval verification"
-    expectedVersion = $storeAfterSubmit.store.version
+
+  # Transition to partner-review
+  $transBody1 = @{ nextStatus = "partner-review"; note = "smoke partner review" } | ConvertTo-Json
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody1 -TimeoutSec 10
+
+  # Transition to marketing-review
+  $transBody2 = @{ nextStatus = "marketing-review"; note = "smoke marketing review" } | ConvertTo-Json
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody2 -TimeoutSec 10
+
+  # Transition to catalog-adopted
+  $transBody3 = @{ nextStatus = "catalog-adopted"; note = "smoke adopt" } | ConvertTo-Json
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody3 -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { throw "master product was not created during adoption" }
+
+  # Transition to catalog-approved
+  $transBody4 = @{ nextStatus = "catalog-approved"; note = "smoke approve" } | ConvertTo-Json
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody4 -TimeoutSec 10
+
+  # Configure the store assortment price and availability
+  $assortmentBody = @{
+    unitPrice = 10.00
+    currency = "YER"
+    available = $true
+    stockStatus = "in_stock"
+    publicationStatus = "client_visible"
   } | ConvertTo-Json
-  $decision = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/decision" -Method Post -Headers $decisionHeaders -ContentType "application/json" -Body $decisionBody -TimeoutSec 10
-  if ($decision.revision.status -ne "approved") { throw "catalog approval was not persisted" }
+  $assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/assortment/$($proposal.proposal.adoptedMasterProductId)" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
+
+  # Transition to client-visible
+  $transBody5 = @{ nextStatus = "client-visible"; note = "smoke publish" } | ConvertTo-Json
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
+
+  # Verify catalog client exposure
   $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001/catalog" -TimeoutSec 10
   if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
-  $catalogAudit = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/store-1001/audit" -Headers $operatorHeaders -TimeoutSec 10
-  if ($catalogAudit.events.Count -lt 1) { throw "catalog audit evidence is missing" }
+
 
   # Partner Onboarding & Store Publication: partner lifecycle from field draft to client-visible store readiness.
   $fieldToken = Get-LocalActorToken "field"
