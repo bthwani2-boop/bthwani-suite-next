@@ -202,19 +202,6 @@ function ActiveOrderTracker({
     } else if (order.status === "arrived_customer") {
       setProximityState("bell_rang");
       setBellRang(true);
-      setChatMessages((prev) => {
-        if (prev.some((m) => m.id === "bell-real-status")) return prev;
-        return [
-          ...prev,
-          {
-            id: "bell-real-status",
-            sender: "تنبيه الجرس",
-            text: "🔔 وصل الكابتن وقام بقرع جرس الوصول لتنبيهك بالاستلام دون كشف رقم هاتفك حفاظاً على الخصوصية.",
-            time: "الآن",
-            side: "center",
-          },
-        ];
-      });
     } else if (order.status === "delivered") {
       setProximityState("bell_rang");
     }
@@ -386,7 +373,7 @@ function ActiveOrderTracker({
                   : proximityState === "at_door"
                     ? "الكابتن يقف عند الباب الآن. استعد لفتح الباب واستلام الطلب."
                     : proximityState === "near_customer"
-                      ? "الكابتن على بعد أقل من 500 متر. سيصل خلال دقيقتين."
+                      ? "الكابتن قريب جداً من موقعك وسيقوم بتسليم الطلب قريباً."
                       : "انطلق الكابتن بالطلب وهو في طريقه لموقعك المحدد."}
               </Text>
             </Box>
@@ -491,6 +478,7 @@ function ActiveOrderTracker({
             items={[
               { label: "رقم الطلب الموحد", value: `#DSH-${orderId.slice(0, 8).toUpperCase()}`, tone: "action" },
               { label: "معرّف التتبع الكامل", value: orderId },
+              { label: "مرجع جلسة الدفع WLT", value: wltSessionId },
               { label: "الوقت التقريبي للوصول", value: isDelivered ? "تم التسليم" : status === "arrived_customer" ? "عند الباب حالياً" : "غير متاح من بيانات التتبع الحالية", tone: isDelivered ? "success" : status === "arrived_customer" ? "warning" : "action" },
               { label: "آلية التتبع", value: "تحديث تلقائي عبر خادم DSH" }
             ]}

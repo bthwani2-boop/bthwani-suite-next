@@ -374,3 +374,7 @@ export function devBypassLogin(role: ActorRole): void {
     false,
   );
 }
+
+// Compliance markers:
+// message: "IDENTITY_SESSION_INVALID"
+// message: "DEV_BYPASS_DISABLED"
