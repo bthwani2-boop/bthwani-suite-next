@@ -19,6 +19,17 @@ on:
         options:
           - "false"
           - "true"
+  push:
+    branches: [implementing, journy, master]
+    paths:
+      - "tools/performance/**"
+      - "tools/guards/heavy-import-gate.mjs"
+      - "tools/guards/bundle-budget-gate.mjs"
+      - "tools/guards/performance-budget-gate.mjs"
+      - "services/**/backend/**/*.go"
+      - "apps/control-panel/**"
+  schedule:
+    - cron: "0 4 * * 1"
 
 permissions:
   contents: read
@@ -27,7 +38,7 @@ jobs:
   # ── Static performance gates (always run) ──────────────────────────────────
   static-perf-gates:
     name: Static Performance Gates
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -69,7 +80,7 @@ jobs:
   # ── Go benchmarks (always run — for baseline tracking) ─────────────────────
   go-benchmarks:
     name: Go Benchmarks
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -101,7 +112,7 @@ jobs:
   # ── k6 API load tests (manual only — requires runtime) ────────────────────
   k6-api-smoke:
     name: k6 API Smoke Tests
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.event.inputs.run_k6 == 'true'
 
@@ -133,7 +144,7 @@ jobs:
   # ── Lighthouse CI (manual only — requires Next.js build) ──────────────────
   lighthouse-ci:
     name: Lighthouse CI — Control Panel
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event.inputs.run_lighthouse == 'true'
 

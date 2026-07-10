@@ -2,15 +2,19 @@ name: CI — PR Fast Gate
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - slicing
       - implementing
       - journy
       - master
-  pull_request:
-    branches:
-      - master
+      - begin
+      - branch-validation
+      - starting
+      - front-backend
 
 permissions:
   contents: read
@@ -22,7 +26,7 @@ concurrency:
 jobs:
   lockfile-check:
     name: Lockfile integrity
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
@@ -44,7 +48,7 @@ jobs:
 
   node-fast-gate:
     name: Node fast gate (lint / typecheck / test / affected)
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: lockfile-check
 
@@ -91,7 +95,7 @@ jobs:
 
   guards-fast:
     name: Guards (contracts + boundary + policy)
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: lockfile-check
 

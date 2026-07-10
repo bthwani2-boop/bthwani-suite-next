@@ -1,16 +1,21 @@
 name: CI
 
 on:
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - slicing
       - implementing
       - journy
       - master
-  pull_request:
-    branches:
-      - master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual master baseline verification'
 
 permissions:
   contents: read
@@ -22,7 +27,7 @@ concurrency:
 jobs:
   node-gates:
     name: Node / PNPM gates
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
@@ -178,7 +183,7 @@ jobs:
 
   wlt-go:
     name: WLT Go backend
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -201,7 +206,7 @@ jobs:
 
   wlt-go-db:
     name: WLT Go DB integration
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
       postgres:
@@ -264,7 +269,7 @@ jobs:
 
   dsh-go:
     name: DSH Go backend
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -287,7 +292,7 @@ jobs:
 
   dsh-go-db:
     name: DSH Go DB integration
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
       postgres:
@@ -361,7 +366,7 @@ jobs:
 
   identity-go:
     name: Identity Go backend
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -384,7 +389,7 @@ jobs:
 
   docker-runtime-smoke:
     name: Docker runtime smoke
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
@@ -440,7 +445,7 @@ jobs:
   wlt-mutation-lab-smoke:
     name: WLT mutation lab smoke (manual, unapproved mutations)
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, bthwani-lenovo, linux, wsl, docker]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
