@@ -2,7 +2,7 @@ name: Governance As Code Audit
 
 on:
   push:
-    branches: [implementing, main]
+    branches: [implementing, master]
     paths:
       - "governance/**"
       - ".github/workflows/**"
@@ -11,7 +11,7 @@ on:
       - "tools/guards/agent-governance-gate.mjs"
       - "tools/guards/guard-registry-gate.mjs"
   pull_request:
-    branches: [implementing, main]
+    branches: [implementing, master]
   workflow_dispatch:
 
 permissions:

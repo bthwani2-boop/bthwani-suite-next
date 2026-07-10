@@ -12,7 +12,7 @@ on:
         type: boolean
         default: false
   push:
-    branches: [implementing, main]
+    branches: [implementing, master]
     paths:
       - "tools/performance/**"
       - "tools/guards/heavy-import-gate.mjs"
