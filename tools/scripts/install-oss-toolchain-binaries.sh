@@ -48,8 +48,7 @@ install_gitleaks() {
 
 install_trivy() {
   if command -v trivy >/dev/null 2>&1; then return 0; fi
-  curl -fsSL -O https://github.com/aquasecurity/trivy/releases/download/v0.50.1/trivy_0.50.1_Linux-64bit.deb
-  sudo dpkg -i trivy_0.50.1_Linux-64bit.deb
+  curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1
 }
 
 if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
