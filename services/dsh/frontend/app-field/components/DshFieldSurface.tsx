@@ -9,7 +9,6 @@ import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import {
   useIdentitySession,
-  devBypassLogin,
   configureIdentitySession,
   configureIdentitySessionStorage,
 } from '@bthwani/core-identity';
@@ -194,7 +193,6 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
             loading={identity.state.kind === 'authenticating'}
             {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
             onSubmit={(username, password) => void identity.login(username, password)}
-            onDevBypass={() => devBypassLogin('field')}
           />
         </View>
       </View>

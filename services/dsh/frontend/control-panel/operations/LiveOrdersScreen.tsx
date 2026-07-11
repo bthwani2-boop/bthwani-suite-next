@@ -12,6 +12,7 @@ import type { DshFulfillmentOperationalMode } from './operations.types';
 import { DSH_FULFILLMENT_OPERATIONAL_MODE_META } from './operations.types';
 import { fetchDshRuntimeOrders, type DshRuntimeOrderRow } from '../../shared/operations/dsh-operational-runtime-adapter';
 import { resolveRuntimeOrderStatusTone } from '../../shared/runtime';
+import { buildOperationsHref } from './operations.registry';
 import { opsTheme as theme } from '../../shared/operations';
 
 export type LiveOrdersScreenProps = {
@@ -102,12 +103,12 @@ export function LiveOrdersScreen({ state = 'ready', subGroup, onRetry }: LiveOrd
                   status={order.status}
                   statusTone={resolveRuntimeOrderStatusTone(order.status)}
                   sla={`تاريخ الإنشاء: ${new Date(order.createdAt).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`}
-                  onInspect={() => router.push(`/operations?group=exceptions&orderId=${order.id}`)}
+                  onInspect={() => router.push(buildOperationsHref('exceptions', { orderId: order.id }))}
                   {...(order.status === 'pending' ? {
                     primaryAction: {
                       id: `${order.id}-dispatch`,
                       label: 'إسناد كابتن',
-                      onAction: () => router.push(`/operations?group=dispatch-capacity&orderId=${order.id}`),
+                      onAction: () => router.push(buildOperationsHref('dispatch-capacity', { orderId: order.id })),
                     },
                   } : {})}
                 />

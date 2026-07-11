@@ -772,11 +772,11 @@ export function ExceptionsEscalationsScreen({
                   status="FAILED_DELIVERY"
                   statusTone="danger"
                   sla={`تحديث: ${new Date(order.updatedAt).toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit' })}`}
-                  onInspect={() => router.push(`/operations?group=exceptions&orderId=${order.id}`)}
+                  onInspect={() => router.push(buildOperationsHref('exceptions', { orderId: order.id }))}
                   primaryAction={{
                     id: `${order.id}-exc`,
                     label: 'فتح تفاصيل الطلب',
-                    onAction: () => router.push(`/operations?group=exceptions&orderId=${order.id}`),
+                    onAction: () => router.push(buildOperationsHref('exceptions', { orderId: order.id })),
                   }}
                 />
               ))}

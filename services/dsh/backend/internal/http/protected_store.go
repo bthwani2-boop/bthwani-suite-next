@@ -395,17 +395,20 @@ func (s *protectedStoreServer) requireActor(
 	return store.StoreActor{}, false
 }
 
-// requireCatalogPermission is an additive alternative to requireActor: it
-// keeps 100% of the flat role-based access operators already have (via
+// requirePermission is the sovereign fine-grained access check: it keeps
+// 100% of the flat role-based access operators already have (via
 // fallbackRoles), but also grants access to any actor whose identity carries
-// a fine-grained Permission{Service:"dsh", Surface:"central-catalog",
-// Action:action} entry -- letting a non-operator be granted just one narrow
-// capability (e.g. media review) without full operator power, without
-// requiring any new external system: the identity service already parses
-// this into Identity.Permissions from a DB-backed column.
-func (s *protectedStoreServer) requireCatalogPermission(
+// a Permission{Service:"dsh", Surface:surface, Action:action} entry --
+// letting a non-operator be granted just one narrow capability (e.g. media
+// review) without full operator power. surface must be one of Identity's
+// contract-defined surfaces (core/identity/contracts/auth.openapi.yaml);
+// "control-panel" is used for every control-panel-governed domain (catalog,
+// marketing, finance, administration, ...) rather than inventing a
+// domain-specific surface per feature.
+func (s *protectedStoreServer) requirePermission(
 	w http.ResponseWriter,
 	r *http.Request,
+	surface string,
 	action string,
 	fallbackRoles ...string,
 ) (store.StoreActor, bool) {
@@ -424,12 +427,24 @@ func (s *protectedStoreServer) requireCatalogPermission(
 		}
 	}
 	for _, p := range identity.Permissions {
-		if p.Service == "dsh" && p.Surface == "central-catalog" && p.Action == action {
+		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
 			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
 	return store.StoreActor{}, false
+}
+
+// requireCatalogPermission is requirePermission scoped to the control-panel
+// surface, kept as a named wrapper because every centralcatalog.go call site
+// reads more clearly with the surface implied.
+func (s *protectedStoreServer) requireCatalogPermission(
+	w http.ResponseWriter,
+	r *http.Request,
+	action string,
+	fallbackRoles ...string,
+) (store.StoreActor, bool) {
+	return s.requirePermission(w, r, "control-panel", action, fallbackRoles...)
 }
 
 func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, response store.StoreActionResponse, err error) {

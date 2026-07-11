@@ -11,7 +11,7 @@ import (
 
 // Central-catalog permission actions: granular, additive capabilities that a
 // non-operator actor can be granted via Identity.Permissions
-// -- Permission{Service:"dsh", Surface:"central-catalog", Action:...} --
+// -- Permission{Service:"dsh", Surface:"control-panel", Action:...} --
 // without needing full operator role. Operator role continues to satisfy
 // every one of these checks via the fallbackRoles argument to
 // requireCatalogPermission -- existing operator access is unchanged.
@@ -24,7 +24,13 @@ const (
 	CatalogPermissionProposalPublish         = "catalog.proposal.publish"
 	CatalogPermissionMediaReview             = "catalog.media.review"
 	CatalogPermissionMediaManage             = "catalog.media.manage"
+	CatalogPermissionMediaRead               = "catalog.media.read"
 	CatalogPermissionPolicyManage            = "catalog.policy.manage"
+	CatalogPermissionPolicyRead              = "catalog.policy.read"
+	CatalogPermissionProposalRead            = "catalog.proposal.read"
+	CatalogPermissionAssortmentRead          = "catalog.assortment.read"
+	CatalogPermissionAssortmentManage        = "catalog.assortment.manage"
+	CatalogPermissionSeedRead                = "catalog.seed.read"
 )
 
 func (s *protectedStoreServer) writeCentralCatalogError(w http.ResponseWriter, err error) {
@@ -212,7 +218,7 @@ func (s *protectedStoreServer) handleUpdateMasterProduct(w http.ResponseWriter, 
 // ── Product proposals ────────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListProductProposals(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProposalRead, "operator"); !ok {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -329,7 +335,7 @@ func (s *protectedStoreServer) handleFieldCreateProductProposal(w http.ResponseW
 // ── Platform catalog policies ────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogPolicies(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyRead, "operator"); !ok {
 		return
 	}
 	items, err := centralcatalog.ListCatalogPolicies(r.Context(), s.db)
@@ -359,7 +365,7 @@ func (s *protectedStoreServer) handleUpdateCatalogPolicy(w http.ResponseWriter, 
 // ── Store assortment ─────────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleOperatorGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentRead, "operator"); !ok {
 		return
 	}
 	items, err := centralcatalog.ListStoreAssortment(r.Context(), s.db, r.PathValue("storeId"))
@@ -402,7 +408,7 @@ func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *h
 }
 
 func (s *protectedStoreServer) handleOperatorUpsertStoreAssortment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage, "operator")
 	if !ok {
 		return
 	}
@@ -454,7 +460,7 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortment(w http.ResponseW
 // ── Catalog assets (DAM) ─────────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogAssets(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaRead, "operator"); !ok {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -561,7 +567,7 @@ func (s *protectedStoreServer) handleListCatalogAssetLinks(w http.ResponseWriter
 // ── Seed status diagnostics ──────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleCatalogSeedStatus(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionSeedRead, "operator"); !ok {
 		return
 	}
 	status, err := centralcatalog.GetSeedStatus(r.Context(), s.db)
@@ -573,7 +579,7 @@ func (s *protectedStoreServer) handleCatalogSeedStatus(w http.ResponseWriter, r 
 }
 
 func (s *protectedStoreServer) handlePutDomainImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
 		return
 	}
 	domainID := r.PathValue("domainId")
@@ -582,7 +588,7 @@ func (s *protectedStoreServer) handlePutDomainImage(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handlePutNodeImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
 		return
 	}
 	nodeID := r.PathValue("nodeId")
@@ -591,7 +597,7 @@ func (s *protectedStoreServer) handlePutNodeImage(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handlePutMasterProductImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
 		return
 	}
 	productID := r.PathValue("productId")
@@ -600,7 +606,7 @@ func (s *protectedStoreServer) handlePutMasterProductImage(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handlePutProductProposalImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage, "operator"); !ok {
 		return
 	}
 	proposalID := r.PathValue("proposalId")

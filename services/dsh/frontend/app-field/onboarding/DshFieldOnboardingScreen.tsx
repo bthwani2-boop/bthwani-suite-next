@@ -18,7 +18,7 @@ import {
   colorRoles,
   Icon,
 } from '@bthwani/ui-kit';
-import { useIdentitySession, devBypassLogin } from '@bthwani/core-identity';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
 import {
   useFieldPartnerOnboardingController,
@@ -212,7 +212,6 @@ export function DshFieldOnboardingScreen({
           loading={identity.state.kind === 'authenticating'}
           {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
           onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => devBypassLogin('field')}
         />
       </ScrollView>
     );

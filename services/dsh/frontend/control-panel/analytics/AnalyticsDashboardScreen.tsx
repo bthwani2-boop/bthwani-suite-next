@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useIdentitySession } from "@bthwani/core-identity";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import {
   Badge,
   Box,
@@ -29,15 +29,11 @@ const PERIOD_LABELS: Record<DshAnalyticsPeriod, string> = {
 };
 
 export function AnalyticsDashboardScreen() {
-  const identity = useIdentitySession();
+  const { state } = useControlPanelSession();
   const [period, setPeriod] = React.useState<DshAnalyticsPeriod>("today");
 
   const { platformState, orderState, deliveryState, supportState, storeState, reload } =
-    useOperatorAnalyticsDashboardController(identity.state.kind, period);
-
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
+    useOperatorAnalyticsDashboardController(state.kind, period);
 
   const isLoading =
     platformState.kind === "loading" ||

@@ -9,10 +9,6 @@ import {
   type SessionStorageAdapter,
 } from "./identity-session-storage.ts";
 
-declare const __DEV__: boolean | undefined;
-
-type ActorRole = "client" | "partner" | "captain" | "field" | "operator";
-
 export type IdentitySessionState =
   | { readonly kind: "unconfigured" }
   | { readonly kind: "restoring" }
@@ -333,64 +329,5 @@ export async function logoutIdentity(): Promise<void> {
   }
 }
 
-function isDevBypassAllowed(): boolean {
-  return typeof __DEV__ !== "undefined" && __DEV__ === true;
-}
-
-export function devBypassLogin(role: ActorRole): void {
-  if (!isDevBypassAllowed()) {
-    clearSession("DEV_BYPASS_DISABLED");
-    return;
-  }
-
-  const expiresAt = new Date(
-    Date.now() + 60 * 60 * 1000,
-  ).toISOString();
-
-  const surface = (
-    role === "operator"
-      ? "control-panel"
-      : `app-${role}`
-  ) as ActorIdentity["permissions"][number]["surface"];
-
-  const scope: ActorIdentity["permissions"][number]["scope"] =
-    role === "operator"
-      ? "all"
-      : role === "client" || role === "partner"
-        ? "own"
-        : "assigned";
-
-  const fakeIdentity: ActorIdentity = {
-    subject: `${role}-local-001`,
-    tenantId: "tenant-dev-001",
-    roles: [role],
-    permissions: [
-      {
-        service: "dsh",
-        surface,
-        action: "read",
-        scope,
-      },
-    ],
-    authState: "authenticated",
-    surfaceAccess: { [surface]: true },
-    serviceAccess: { dsh: true },
-    sessionId: `dev-session-${Date.now()}`,
-    expiresAt,
-  };
-
-  // Development bypass is intentionally memory-only. It is never persisted.
-  void saveStoredSession(null);
-  commitAuthenticatedSession(
-    {
-      accessToken: `dev-bypass-${role}-${Date.now()}`,
-      refreshToken: `dev-bypass-refresh-${role}`,
-      identity: fakeIdentity,
-    },
-    false,
-  );
-}
-
 // Compliance markers:
 // message: "IDENTITY_SESSION_INVALID"
-// message: "DEV_BYPASS_DISABLED"

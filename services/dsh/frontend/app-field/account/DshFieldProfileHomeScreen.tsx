@@ -34,7 +34,7 @@ export function DshFieldProfileHomeScreen({
 }: DshFieldProfileHomeScreenProps) {
   const identity = useIdentitySession();
   const username = identity.state.kind === 'authenticated' ? identity.state.identity.subject : 'ميداني';
-  const roleName = identity.state.kind === 'authenticated' ? (identity.state.identity.roles[0] === 'field' ? 'موظف ميداني' : identity.state.identity.roles.join(', ')) : 'عضو فريق الميدان';
+  const roleName = identity.state.kind === 'authenticated' ? (identity.state.identity.roles.includes('field') ? 'موظف ميداني' : identity.state.identity.roles.join(', ')) : 'عضو فريق الميدان';
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>

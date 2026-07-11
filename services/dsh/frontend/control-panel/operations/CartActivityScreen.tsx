@@ -2,7 +2,6 @@
 
 import { CpPageHeader } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession } from "@bthwani/core-identity";
 import { DataTable, Text } from "@bthwani/ui-kit";
 import { useOperatorCartsController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
@@ -29,12 +28,7 @@ const CART_COLUMNS = [
 ] as const;
 
 export function CartActivityScreen() {
-  const identity = useIdentitySession();
-  const controller = useOperatorCartsController(identity.state.kind);
-
-  if (identity.state.kind !== "authenticated") {
-    return <Text role="body">سجّل الدخول بحساب operator لمتابعة نشاط السلال.</Text>;
-  }
+  const controller = useOperatorCartsController("authenticated");
 
   return (
     <DataTablePageFrame

@@ -8,6 +8,14 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Marketing permission actions on the control-panel surface. "operator"
+// remains a valid fallback role for all of them during RBAC data migration
+// (see requirePermission).
+const (
+	MarketingPermissionRead   = "marketing.read"
+	MarketingPermissionManage = "marketing.manage"
+)
+
 func marketingCorrelationID(r *http.Request) string {
 	return r.Header.Get("X-Correlation-Id")
 }
@@ -29,7 +37,7 @@ func writeMarketingError(w http.ResponseWriter, err error, notFoundMsg string) {
 
 // GET /dsh/operator/marketing/campaigns
 func (s *protectedStoreServer) handleListCampaigns(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -43,7 +51,7 @@ func (s *protectedStoreServer) handleListCampaigns(w http.ResponseWriter, r *htt
 
 // POST /dsh/operator/marketing/campaigns
 func (s *protectedStoreServer) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -82,7 +90,7 @@ func (s *protectedStoreServer) handleCreateCampaign(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/marketing/campaigns/{campaignId}
 func (s *protectedStoreServer) handleGetCampaign(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -97,7 +105,7 @@ func (s *protectedStoreServer) handleGetCampaign(w http.ResponseWriter, r *http.
 
 // PATCH /dsh/operator/marketing/campaigns/{campaignId}
 func (s *protectedStoreServer) handleUpdateCampaign(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -130,7 +138,7 @@ func (s *protectedStoreServer) handleUpdateCampaign(w http.ResponseWriter, r *ht
 
 // DELETE /dsh/operator/marketing/campaigns/{campaignId} — soft archive, not a hard delete.
 func (s *protectedStoreServer) handleDeleteCampaign(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -144,7 +152,7 @@ func (s *protectedStoreServer) handleDeleteCampaign(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/marketing/tickers
 func (s *protectedStoreServer) handleListTickers(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -158,7 +166,7 @@ func (s *protectedStoreServer) handleListTickers(w http.ResponseWriter, r *http.
 
 // POST /dsh/operator/marketing/tickers
 func (s *protectedStoreServer) handleCreateTicker(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -208,7 +216,7 @@ func (s *protectedStoreServer) handleCreateTicker(w http.ResponseWriter, r *http
 
 // PATCH /dsh/operator/marketing/tickers/{tickerId}
 func (s *protectedStoreServer) handleUpdateTicker(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -258,7 +266,7 @@ func (s *protectedStoreServer) handleUpdateTicker(w http.ResponseWriter, r *http
 
 // DELETE /dsh/operator/marketing/tickers/{tickerId}
 func (s *protectedStoreServer) handleDeleteTicker(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -279,7 +287,7 @@ func writePartnerOfferError(w http.ResponseWriter, err error) {
 
 // GET /dsh/operator/marketing/partner-offers
 func (s *protectedStoreServer) handleListPartnerOffers(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -293,7 +301,7 @@ func (s *protectedStoreServer) handleListPartnerOffers(w http.ResponseWriter, r 
 
 // PATCH /dsh/operator/marketing/partner-offers/{offerId}
 func (s *protectedStoreServer) handleUpdatePartnerOffer(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -331,7 +339,7 @@ func (s *protectedStoreServer) handleUpdatePartnerOffer(w http.ResponseWriter, r
 
 // DELETE /dsh/operator/marketing/partner-offers/{offerId} — soft archive, not a hard delete.
 func (s *protectedStoreServer) handleArchivePartnerOffer(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}

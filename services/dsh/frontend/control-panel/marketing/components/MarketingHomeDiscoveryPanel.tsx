@@ -11,7 +11,7 @@ import {
   CpEmptyTableMessage,
   CpStatePanel,
 } from "@bthwani/control-panel/components";
-import { useIdentitySession } from "@bthwani/core-identity";
+import { useControlPanelSession } from "../../../shared/session/control-panel-session";
 import {
   useHomeDiscoveryAdminController,
   type DshHomeAdminContentInput,
@@ -25,8 +25,8 @@ const KIND_META = {
 } as const;
 
 export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind }) {
-  const identity = useIdentitySession();
-  const controller = useHomeDiscoveryAdminController(kind, identity.state.kind);
+  const { state } = useControlPanelSession();
+  const controller = useHomeDiscoveryAdminController(kind, state.kind);
   const meta = KIND_META[kind];
 
   if (controller.state.kind === "loading") {

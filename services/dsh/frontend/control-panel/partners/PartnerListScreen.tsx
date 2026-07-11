@@ -13,7 +13,6 @@ import {
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   usePartnerAdminController,
   getDshPartnerActivationStatusLabel,
@@ -73,14 +72,7 @@ type Props = {
 };
 
 export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
-  const identity = useIdentitySession();
-  const c = usePartnerAdminController(identity.state.kind);
-
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <CpStatePanel role="alert" title="يجب تسجيل الدخول للوصول لقسم الشركاء." />
-    );
-  }
+  const c = usePartnerAdminController("authenticated");
 
   const stateView =
     c.listState.kind === "loading" ? (

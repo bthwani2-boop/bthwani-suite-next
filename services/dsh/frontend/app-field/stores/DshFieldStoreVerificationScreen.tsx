@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { devBypassLogin } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -53,7 +52,6 @@ export function DshFieldStoreVerificationScreen() {
           loading={identity.state.kind === "authenticating"}
           {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
           onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => devBypassLogin("field")}
         />
       </ScrollScreen>
     );

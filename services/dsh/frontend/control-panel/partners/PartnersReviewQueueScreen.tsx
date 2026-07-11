@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -23,13 +22,12 @@ type Props = {
 export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const identity = useIdentitySession();
 
   const controller = usePartnersController({
     initialWorkspace: 'inbox',
     searchParams: searchParams ?? undefined,
     router: router ?? undefined,
-    authKind: identity.state.kind,
+    authKind: "authenticated",
   });
 
   const {
@@ -51,10 +49,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const activeSubTabMeta = useMemo(() => {
     return subTabItems.find(s => s.id === activeSubTab);
   }, [subTabItems, activeSubTab]);
-
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
 
   const renderInboxContent = () => {
     if (activeSubTab === 'registration') {

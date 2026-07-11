@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CpButton, CpPageHeader, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
+import { CpPageHeader, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { devBypassLogin, useIdentitySession } from "@bthwani/core-identity";
 import { useOperatorCheckoutController } from "../../shared/checkout";
 import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../shared/checkout";
 
@@ -36,50 +34,7 @@ const STATE_STYLES: Record<DshIntentState, { readonly background: string; readon
 };
 
 export function CheckoutActivityScreen() {
-  const identity = useIdentitySession();
-  const controller = useOperatorCheckoutController(identity.state.kind);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <section dir="rtl" style={STATE_PANEL_STYLE}>
-        <h2 style={STATE_TITLE_STYLE}>صلاحية operator مطلوبة</h2>
-        <p style={STATE_BODY_STYLE}>سجّل الدخول بحساب operator لمتابعة نشاط checkout ومرجع WLT.</p>
-        <div style={LOGIN_FORM_STYLE}>
-          <CpTextInput
-            value={username}
-            onChange={setUsername}
-            placeholder="اسم المستخدم"
-            aria-label="اسم المستخدم"
-          />
-          <CpTextInput
-            value={password}
-            onChange={setPassword}
-            placeholder="كلمة المرور"
-            type="password"
-            aria-label="كلمة المرور"
-          />
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <CpButton
-              disabled={username.trim().length === 0 || password.length < 4 || identity.state.kind === "authenticating"}
-              onClick={() => void identity.login(username.trim(), password)}
-              style={PRIMARY_BUTTON_STYLE}
-            >
-              {identity.state.kind === "authenticating" ? "جاري التحقق..." : "تسجيل الدخول"}
-            </CpButton>
-            <CpButton
-              onClick={() => devBypassLogin("operator")}
-              style={SECONDARY_BUTTON_STYLE}
-            >
-              تجاوز تسجيل الدخول (مطور)
-            </CpButton>
-          </div>
-          {identity.state.kind === "error" && <p role="alert" style={ERROR_TEXT_STYLE}>{identity.state.message}</p>}
-        </div>
-      </section>
-    );
-  }
+  const controller = useOperatorCheckoutController("authenticated");
 
   const stateView = controller.loadState === "loading"
     ? <StatePanel title="جاري تحميل نشاط checkout" description="يتم تحميل نوايا الدفع ومرجع WLT من DSH." />
@@ -177,30 +132,6 @@ const STATE_PANEL_STYLE = {
 
 const STATE_TITLE_STYLE = { margin: 0, fontSize: "1.1rem", fontWeight: 700 } as const;
 const STATE_BODY_STYLE = { margin: "0.4rem 0 0", opacity: 0.72 } as const;
-const LOGIN_FORM_STYLE = { display: "grid", gap: "0.75rem", marginTop: "1rem" } as const;
-const PRIMARY_BUTTON_STYLE = {
-  flex: 1,
-  minWidth: "10rem",
-  minHeight: "2.75rem",
-  border: "none",
-  borderRadius: "0.75rem",
-  background: "CanvasText",
-  color: "Canvas",
-  cursor: "pointer",
-  fontWeight: 700,
-} as const;
-const SECONDARY_BUTTON_STYLE = {
-  flex: 1,
-  minWidth: "10rem",
-  minHeight: "2.75rem",
-  border: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
-  borderRadius: "0.75rem",
-  background: "Canvas",
-  color: "CanvasText",
-  cursor: "pointer",
-  fontWeight: 700,
-} as const;
-const ERROR_TEXT_STYLE = { margin: 0, color: "Mark", fontWeight: 700 } as const;
 const BADGE_STYLE = {
   display: "inline-flex",
   alignItems: "center",

@@ -10,7 +10,6 @@ import {
   CpStatePanel,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   PLATFORM_MAIN_TABS,
   PLATFORM_SCOPES,
@@ -98,46 +97,11 @@ function ScopeTabButton({
 }
 
 export function PlatformDashboardScreen() {
-  const identity = useIdentitySession();
-
   const [mainTab, setMainTab] = useState<PlatformMainTabId>("variables");
   const [scopeTab, setScopeTab] = useState<PlatformScopeId>("dsh-ops");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
 
   const metrics = useMemo(() => buildPlatformKpiMetrics(), []);
   const innerStats = useMemo(() => buildPlatformInnerStats(), []);
-
-  // ── Auth gate ──────────────────────────────────────────────────────────────
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <section
-        dir="rtl"
-        style={{
-          maxWidth: "32rem",
-          margin: "4rem auto",
-          display: "grid",
-          gap: "1rem",
-          padding: "1.5rem",
-          border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-          borderRadius: "1rem",
-          background: "Canvas",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0, textAlign: "right" }}>منصة DSH السيادية</h2>
-          <p style={{ opacity: 0.7, textAlign: "right" }}>
-            يتطلب حساب operator مصرح به للوصول إلى لوحة التحكم الفنية للمنصة.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <CpButton onClick={() => devBypassLogin("operator")} style={{ flex: 1 }}>
-            تجاوز تسجيل الدخول (مطور)
-          </CpButton>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <DataTablePageFrame

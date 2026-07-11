@@ -15,7 +15,6 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   usePartnerDetailController,
   usePartnerDocumentsController,
@@ -87,8 +86,7 @@ type Props = {
 };
 
 export function PartnerDetailScreen({ partnerId, onBack }: Props) {
-  const identity = useIdentitySession();
-  const authKind = identity.state.kind;
+  const authKind = "authenticated" as const;
   const detail = usePartnerDetailController(partnerId, authKind);
   const docs = usePartnerDocumentsController(partnerId, authKind);
   const readiness = usePartnerReadinessController(partnerId, authKind);
@@ -99,16 +97,6 @@ export function PartnerDetailScreen({ partnerId, onBack }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
   const [transitionReason, setTransitionReason] = useState("");
   const [showTransitionInput, setShowTransitionInput] = useState<string | null>(null);
-
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <DetailPageFrame
-        stateView={<CpStatePanel role="alert" title="يجب تسجيل الدخول." />}
-      >
-        {null}
-      </DetailPageFrame>
-    );
-  }
 
   if (detail.detailState.kind === "loading" || detail.detailState.kind === "idle") {
     return (

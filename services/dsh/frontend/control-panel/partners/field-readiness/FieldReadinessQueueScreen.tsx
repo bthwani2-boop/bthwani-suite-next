@@ -1,5 +1,4 @@
 import React from "react";
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Box,
@@ -21,16 +20,11 @@ import {
 } from "../../../shared/field-readiness";
 
 export function FieldReadinessQueueScreen() {
-  const identity = useIdentitySession();
   const { listState, actionState, loadOperatorEscalations, resolveEscalation, resetAction } =
-    useFieldEscalationController(identity.state.kind);
+    useFieldEscalationController("authenticated");
   const [activeFilter, setActiveFilter] = React.useState<DshEscalationStatus | "">("");
   const [resolveId, setResolveId] = React.useState<string | null>(null);
   const [resolutionNote, setResolutionNote] = React.useState("");
-
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
 
   const FILTERS: Array<{ label: string; value: DshEscalationStatus | "" }> = [
     { label: "الكل", value: "" },

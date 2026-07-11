@@ -9,7 +9,7 @@ import {
   WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import { Box } from '@bthwani/ui-kit';
-import { useIdentitySession } from '@bthwani/core-identity';
+import { useControlPanelSession } from '../../shared/session/control-panel-session';
 import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
 import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
@@ -63,8 +63,8 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlStoreId = searchParams.get('orderId') ?? null;
-  const identity = useIdentitySession();
-  const c = useStoreAdminController(identity.state.kind);
+  const { state: identity } = useControlPanelSession();
+  const c = useStoreAdminController(identity.kind);
 
   const rows = React.useMemo(() => c.visibleRows.map(mapAdminRowToCpRow), [c.visibleRows]);
 
@@ -290,17 +290,17 @@ export function PartnerStoresScreen({ hubHref: _hubHref, subGroup: _subGroup }: 
     <Box gap={3}>
       <div className={styles.surfaceSectionHeader}>
         <h2 className={styles.surfaceSectionTitle}>المتاجر والشركاء</h2>
-        {c.isNonSuccess && identity.state.kind === 'authenticated' && (
+        {c.isNonSuccess && identity.kind === 'authenticated' && (
           <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-warning)', fontWeight: 700 }}>
             ⚠ تعذر تحميل بيانات المتاجر من API
           </span>
         )}
-        {identity.state.kind === 'authenticated' && !c.isNonSuccess && (
+        {identity.kind === 'authenticated' && !c.isNonSuccess && (
           <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-success)', fontWeight: 700 }}>
             ● مصدر حي — GET /dsh/operator/stores
           </span>
         )}
-        {identity.state.kind !== 'authenticated' && (
+        {identity.kind !== 'authenticated' && (
           <span style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>
             يتطلب تسجيل دخول مشغل
           </span>

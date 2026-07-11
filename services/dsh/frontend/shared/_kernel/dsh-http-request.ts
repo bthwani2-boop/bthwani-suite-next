@@ -31,25 +31,45 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 /**
+ * `baseUrl` values that are same-origin relative paths (e.g. "/api/dsh")
+ * address a same-origin BFF proxy: the browser never holds a bearer token,
+ * and the HttpOnly session cookie rides along via `credentials: "include"`.
+ * Absolute URLs keep the historical direct-to-backend bearer-token mode
+ * used by native apps, which have no browser cookie jar/BFF to rely on.
+ */
+function isRelativeBaseUrl(baseUrl: string): boolean {
+  return baseUrl.startsWith("/");
+}
+
+function resolveRequestUrl(path: string, baseUrl: string): string | URL {
+  return isRelativeBaseUrl(baseUrl)
+    ? `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`
+    : new URL(path, baseUrl);
+}
+
+/**
  * Shared authenticated HTTP client for DSH frontend `.api.ts` modules.
  * Centralizes the fetch/timeout/correlation-ID/error-shape logic that was
  * previously hand-copied per module.
  */
 export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeoutMs = 10000) {
+  const cookieMode = isRelativeBaseUrl(baseUrl);
+
   async function request<T>(path: string, options: DshRequestOptions = {}): Promise<T> {
-    const token = options.token ?? getIdentityAccessToken();
-    if (!token) throw { kind: "http", status: 401 };
+    const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
+    if (!cookieMode && !token) throw { kind: "http", status: 401 };
     let response: Response;
     try {
-      response = await fetch(new URL(path, baseUrl), {
+      response = await fetch(resolveRequestUrl(path, baseUrl), {
         method: options.method ?? "GET",
         headers: {
           Accept: "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           "X-Correlation-ID": corrId(corrPrefix),
           ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
         ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+        ...(cookieMode ? { credentials: "include" as const } : {}),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
