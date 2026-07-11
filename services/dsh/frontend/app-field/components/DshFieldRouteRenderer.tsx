@@ -53,11 +53,23 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
             storeId: route.storeId,
           })
         }
+        onGoToVerification={(visitId: string) =>
+          actions.pushRoute({
+            kind: 'verification',
+            visitId,
+            storeId: route.storeId,
+          })
+        }
       />
     );
   }
   if (route.kind === 'verification') {
-    return <DshFieldStoreVerificationScreen />;
+    return (
+      <DshFieldStoreVerificationScreen
+        storeId={route.storeId}
+        visitId={route.visitId}
+      />
+    );
   }
 
   if (route.kind === 'partner-progress') {
@@ -94,7 +106,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
         onOpenProfile={() => actions.pushRoute({ kind: 'profile' })}
         onOpenHistory={() => actions.pushRoute({ kind: 'history' })}
         onOpenFinance={() => actions.pushRoute({ kind: 'finance' })}
-        onOpenVerification={() => actions.pushRoute({ kind: 'verification' })}
+        onOpenVerification={() => actions.pushRoute({ kind: 'work-queue' })}
         onLogout={() => void handleLogout()}
       />
     );

@@ -33,17 +33,25 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
   const pathname = usePathname();
 
   useEffect(() => {
-    if (state.kind === "signed_out" || state.kind === "error") {
+    if (
+      state.kind === "signed_out" ||
+      state.kind === "error" ||
+      (state.kind === "authenticated" && !state.identity.roles.includes("operator"))
+    ) {
       const returnTo = pathname && pathname.startsWith("/dsh") ? pathname : "/dsh/dashboard";
       router.replace(`/dsh/login?returnTo=${encodeURIComponent(returnTo)}`);
     }
-  }, [state.kind, pathname, router]);
+  }, [state, pathname, router]);
 
   if (state.kind === "restoring" || state.kind === "authenticating") {
     return loadingPanel();
   }
 
-  if (state.kind === "signed_out" || state.kind === "error") {
+  if (
+    state.kind === "signed_out" ||
+    state.kind === "error" ||
+    (state.kind === "authenticated" && !state.identity.roles.includes("operator"))
+  ) {
     return loadingPanel();
   }
 

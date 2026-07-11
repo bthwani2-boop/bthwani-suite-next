@@ -2,7 +2,7 @@
 // No fetch in screens. No env in screens. All API calls here.
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   fieldCreateDraft,
   fieldGetPartner,
@@ -85,6 +85,7 @@ function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>) {
 export function useFieldPartnerOnboardingController(): FieldOnboardingController {
   const [state, setState] = useState<FieldOnboardingDraftState>(initialDraftState);
   const [validationErrors, setValidationErrors] = useState<FieldOnboardingValidationErrors>( {});
+  const activeRouteKeyRef = useRef("new-draft");
 
   const updateForm = useCallback((patch: Partial<FieldPartnerDraftForm>) => {
     setState((s) => ({ ...s, form: { ...s.form, ...patch }, isDirty: true }));
@@ -148,7 +149,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         fieldListDocuments(partnerId),
         fieldListFieldVisits(partnerId),
       ]);
-      const latestVisit = visitsRes.visits[visitsRes.visits.length - 1];
+      const latestVisit = visitsRes.visits[0];
       setState((s) => ({
         ...s,
         partnerId: partner.id,
@@ -208,18 +209,18 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
   }, []);
 
   const switchDraft = useCallback(async (partnerId: string | undefined): Promise<void> => {
+    const routeKey = partnerId ? `partner:${partnerId}` : "new-draft";
+    if (activeRouteKeyRef.current === routeKey) return;
+    activeRouteKeyRef.current = routeKey;
     if (!partnerId) {
-      if (state.partnerId !== null) {
-        setState(initialDraftState());
-        setValidationErrors({});
-      }
+      setState(initialDraftState());
+      setValidationErrors({});
       return;
     }
-    if (state.partnerId === partnerId) return;
     setState(initialDraftState());
     setValidationErrors({});
     await loadDraft(partnerId);
-  }, [state.partnerId, loadDraft]);
+  }, [loadDraft]);
 
   const saveDraft = useCallback(async (): Promise<boolean> => {
     if (!state.partnerId) return false;
@@ -328,6 +329,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
   }, [state]);
 
   const reset = useCallback(() => {
+    activeRouteKeyRef.current = "new-draft";
     setState(initialDraftState());
     setValidationErrors({});
   }, []);

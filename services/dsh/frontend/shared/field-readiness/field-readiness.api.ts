@@ -14,10 +14,22 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness");
 
+function requestId(prefix: string): string {
+  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+}
+
+function mutationHeaders(operation: string) {
+  const correlationId = requestId("field-readiness-corr");
+  return {
+    correlationId,
+    idempotencyKey: `${operation}-${correlationId}`,
+  };
+}
+
 export async function createFieldVisit(storeId: string, input: DshCreateVisitInput): Promise<DshFieldVisit> {
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/visits`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, ...mutationHeaders("create-visit") },
   );
   return data.visit;
 }
@@ -32,7 +44,7 @@ export async function fetchFieldVisits(storeId: string): Promise<readonly DshFie
 export async function completeFieldVisit(visitId: string): Promise<DshFieldVisit> {
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/complete`,
-    { method: "POST" },
+    { method: "POST", ...mutationHeaders("complete-visit") },
   );
   return data.visit;
 }
@@ -40,7 +52,7 @@ export async function completeFieldVisit(visitId: string): Promise<DshFieldVisit
 export async function upsertReadinessCheck(visitId: string, input: DshUpsertCheckInput): Promise<DshReadinessCheck> {
   const data = await request<{ check: DshReadinessCheck }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/checks`,
-    { method: "PUT", body: input },
+    { method: "PUT", body: input, ...mutationHeaders("upsert-check") },
   );
   return data.check;
 }
@@ -55,7 +67,7 @@ export async function fetchVisitChecks(visitId: string): Promise<readonly DshRea
 export async function createReadinessEscalation(storeId: string, input: DshCreateEscalationInput): Promise<DshReadinessEscalation> {
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/escalations`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, ...mutationHeaders("create-escalation") },
   );
   return data.escalation;
 }
@@ -71,7 +83,7 @@ export async function fetchOperatorEscalations(statusFilter?: string): Promise<r
 export async function updateEscalation(escalationId: string, input: DshUpdateEscalationInput): Promise<DshReadinessEscalation> {
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/operator/field-readiness/escalations/${encodeURIComponent(escalationId)}`,
-    { method: "PATCH", body: input },
+    { method: "PATCH", body: input, ...mutationHeaders("update-escalation") },
   );
   return data.escalation;
 }

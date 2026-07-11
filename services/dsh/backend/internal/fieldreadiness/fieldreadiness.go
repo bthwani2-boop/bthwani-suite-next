@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -19,6 +21,7 @@ var (
 	ErrOpenEscalation       = errors.New("visit has an open blocking escalation")
 	ErrVisitAlreadyComplete = errors.New("visit is already complete")
 	ErrConflict             = errors.New("conflicting in-progress visit exists")
+	ErrEvidenceRequired     = errors.New("required readiness evidence is missing")
 )
 
 type VisitStatus string
@@ -184,10 +187,18 @@ func ListStoreVisits(ctx context.Context, db *sql.DB, actor store.StoreActor, st
 	if err := AuthorizeStore(ctx, db, actor, storeID); err != nil {
 		return nil, err
 	}
-	rows, err := db.QueryContext(ctx, `
+	query := `
 		SELECT id, store_id, field_agent_id, visit_type, status, COALESCE(notes,''), started_at, completed_at, created_at, updated_at
 		FROM dsh_field_visits WHERE store_id = $1
-		ORDER BY created_at DESC LIMIT $2`, storeID, limit)
+	`
+	args := []any{storeID}
+	if actor.Role == "field" {
+		query += " AND field_agent_id = $2"
+		args = append(args, actor.ID)
+	}
+	query += " ORDER BY created_at DESC LIMIT $" + strconv.Itoa(len(args)+1)
+	args = append(args, limit)
+	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -266,19 +277,25 @@ func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	}
 
 	checkRows, err := tx.QueryContext(ctx, `
-		SELECT check_type, status FROM dsh_readiness_checks WHERE visit_id = $1`, visitID)
+		SELECT check_type, status, COALESCE(evidence_url,''),
+		       EXISTS (SELECT 1 FROM dsh_media_refs refs WHERE refs.media_ref = dsh_readiness_checks.evidence_url)
+		FROM dsh_readiness_checks
+		WHERE visit_id = $1`, visitID)
 	if err != nil {
 		return Visit{}, err
 	}
 	passed := map[string]bool{}
+	evidence := map[string]bool{}
 	for checkRows.Next() {
-		var ct, st string
-		if err := checkRows.Scan(&ct, &st); err != nil {
+		var ct, st, ev string
+		var evidenceExists bool
+		if err := checkRows.Scan(&ct, &st, &ev, &evidenceExists); err != nil {
 			checkRows.Close()
 			return Visit{}, err
 		}
 		if st == string(CheckPassed) {
 			passed[ct] = true
+			evidence[ct] = strings.TrimSpace(ev) != "" && evidenceExists
 		}
 	}
 	if err := checkRows.Err(); err != nil {
@@ -289,6 +306,9 @@ func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visi
 	for _, required := range RequiredCheckTypes {
 		if !passed[required] {
 			return Visit{}, ErrChecklistIncomplete
+		}
+		if !evidence[required] {
+			return Visit{}, ErrEvidenceRequired
 		}
 	}
 
@@ -326,6 +346,11 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActo
 	}
 	if v.Status == VisitComplete {
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
+	}
+	if input.Status == CheckPassed {
+		if err := validateCheckEvidence(ctx, db, actor, input.EvidenceURL); err != nil {
+			return ReadinessCheck{}, err
+		}
 	}
 	row := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_readiness_checks (visit_id, store_id, check_type, status, evidence_url, notes, verified_by)
@@ -474,7 +499,7 @@ func GetStoreOnboardingStatus(ctx context.Context, db *sql.DB, storeID string) (
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_field_visits WHERE store_id = $1 AND status = 'complete'`, storeID).Scan(&completedVisits); err != nil {
 		return nil, err
 	}
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE store_id = $1 AND status = 'open'`, storeID).Scan(&openEscalations); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE store_id = $1 AND status IN ('open','acknowledged')`, storeID).Scan(&openEscalations); err != nil {
 		return nil, err
 	}
 	onboardingComplete := completedVisits > 0 && openEscalations == 0
@@ -486,6 +511,37 @@ func GetStoreOnboardingStatus(ctx context.Context, db *sql.DB, storeID string) (
 		"onboardingComplete": onboardingComplete,
 		"status":             resolveOnboardingStatus(completedVisits, openEscalations),
 	}, nil
+}
+
+func validateCheckEvidence(ctx context.Context, db *sql.DB, actor store.StoreActor, mediaRef string) error {
+	ref := strings.TrimSpace(mediaRef)
+	if ref == "" {
+		return ErrEvidenceRequired
+	}
+	if actor.Role == "operator" {
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM dsh_media_refs WHERE media_ref = $1)`, ref).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return ErrEvidenceRequired
+		}
+		return nil
+	}
+	var exists bool
+	if err := db.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_media_refs
+			WHERE media_ref = $1
+			  AND owner_actor_id = $2
+			  AND owner_actor_role = $3
+		)`, ref, actor.ID, actor.Role).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrEvidenceRequired
+	}
+	return nil
 }
 
 func resolveOnboardingStatus(completed, openEscalations int) string {

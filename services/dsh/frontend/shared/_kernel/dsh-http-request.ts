@@ -6,6 +6,8 @@ export type DshRequestOptions = {
   readonly method?: DshRequestMethod;
   readonly body?: unknown;
   readonly token?: string;
+  readonly idempotencyKey?: string;
+  readonly correlationId?: string;
 };
 
 export function corrId(prefix: string): string {
@@ -65,7 +67,8 @@ export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeout
         headers: {
           Accept: "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "X-Correlation-ID": corrId(corrPrefix),
+          "X-Correlation-ID": options.correlationId ?? corrId(corrPrefix),
+          ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
           ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
         ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
@@ -98,7 +101,7 @@ export function createDshPublicHttpClient(baseUrl: string, timeoutMs = 10000) {
 }
 
 export type DshMutationAuth = {
-  readonly accessToken: string;
+  readonly accessToken?: string;
   readonly idempotencyKey: string;
   readonly correlationId: string;
 };
@@ -121,16 +124,23 @@ export type DshFlexibleRequestOptions = {
  * sends `Cache-Control`/`Pragma: no-cache` for read-your-writes freshness.
  */
 export function createDshFlexibleHttpClient(baseUrl: string, timeoutMs = 10000) {
+  const cookieMode = isRelativeBaseUrl(baseUrl);
+
   async function request<T>(path: string, options: DshFlexibleRequestOptions = {}): Promise<T> {
-    const url = new URL(path, baseUrl);
+    let requestUrl = resolveRequestUrl(path, baseUrl);
     if (options.query) {
+      const params = requestUrl instanceof URL ? requestUrl.searchParams : new URLSearchParams();
       for (const [key, value] of Object.entries(options.query)) {
-        if (value !== undefined) url.searchParams.set(key, value);
+        if (value !== undefined) params.set(key, value);
+      }
+      if (!(requestUrl instanceof URL)) {
+        const qs = params.toString();
+        requestUrl = qs ? `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${qs}` : requestUrl;
       }
     }
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await fetch(requestUrl, {
         method: options.method ?? "GET",
         headers: {
           Accept: "application/json",
@@ -140,13 +150,14 @@ export function createDshFlexibleHttpClient(baseUrl: string, timeoutMs = 10000) 
           ...(options.token !== undefined ? { Authorization: `Bearer ${options.token}` } : {}),
           ...(options.auth !== undefined
             ? {
-                Authorization: `Bearer ${options.auth.accessToken}`,
+                ...(options.auth.accessToken ? { Authorization: `Bearer ${options.auth.accessToken}` } : {}),
                 "Idempotency-Key": options.auth.idempotencyKey,
                 "X-Correlation-ID": options.auth.correlationId,
               }
             : {}),
         },
         ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+        ...(cookieMode ? { credentials: "include" as const } : {}),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {

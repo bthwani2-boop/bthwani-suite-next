@@ -13,21 +13,42 @@ export type FieldMediaPickResult = {
 };
 
 export async function uploadFieldMedia(partnerId: string, file: FieldMediaPickResult): Promise<string> {
-  const token = getIdentityAccessToken();
-  if (!token) throw { kind: "http", status: 401 };
+  return uploadFieldMediaForOwner({ partnerId }, file);
+}
+
+export async function uploadFieldStoreMedia(storeId: string, file: FieldMediaPickResult): Promise<string> {
+  return uploadFieldMediaForOwner({ storeId }, file);
+}
+
+async function uploadFieldMediaForOwner(
+  owner: { readonly partnerId: string; readonly storeId?: never } | { readonly storeId: string; readonly partnerId?: never },
+  file: FieldMediaPickResult,
+): Promise<string> {
+  const baseUrl = resolveDshApiBaseUrl();
+  const cookieMode = baseUrl.startsWith("/");
+  const token = cookieMode ? undefined : getIdentityAccessToken();
+  if (!cookieMode && !token) throw { kind: "http", status: 401 };
 
   const form = new FormData();
-  form.append("partnerId", partnerId);
+  if (owner.partnerId) form.append("partnerId", owner.partnerId);
+  if (owner.storeId) form.append("storeId", owner.storeId);
   form.append("file", {
     uri: file.uri,
     name: file.name,
     type: file.mimeType,
   } as unknown as Blob);
 
-  const response = await fetch(new URL("/dsh/field/media/uploads", resolveDshApiBaseUrl()), {
+  const url = cookieMode
+    ? `${baseUrl.replace(/\/$/, "")}/dsh/field/media/uploads`
+    : new URL("/dsh/field/media/uploads", baseUrl);
+  const response = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "X-Correlation-ID": `field-media-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+    },
     body: form,
+    ...(cookieMode ? { credentials: "include" as const } : {}),
   });
   if (!response.ok) throw { kind: "http", status: response.status };
   const data = (await response.json()) as { mediaRef: string };

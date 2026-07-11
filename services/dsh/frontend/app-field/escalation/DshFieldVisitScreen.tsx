@@ -23,9 +23,10 @@ type Props = {
   readonly storeId: string;
   readonly onBack?: () => void;
   readonly onGoToChecklist?: (visitId: string) => void;
+  readonly onGoToVerification?: (visitId: string) => void;
 };
 
-export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist }: Props) {
+export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVerification }: Props) {
   const identity = useIdentitySession();
   const { listState, actionState, reload, startVisit, completeVisit, resetAction } =
     useFieldVisitController(storeId, identity.state.kind);
@@ -106,7 +107,16 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist }: Props)
         {actionState.kind === "success" && (
           <Card style={styles.successCard}>
             <View style={styles.noticeRow}>
-              <Text tone="success">✓ تم بدء الزيارة الميدانية بنجاح</Text>
+              <Text tone="success">
+                {actionState.visit.status === "complete" ? "تم إكمال الزيارة الميدانية" : "تم بدء الزيارة الميدانية بنجاح"}
+              </Text>
+              {actionState.visit.status === "complete" && (
+                <Button
+                  label="رفع نتيجة التحقق"
+                  tone="primary"
+                  onPress={() => onGoToVerification?.(actionState.visit.id)}
+                />
+              )}
               <Button label="إغلاق" tone="ghost" onPress={resetAction} />
             </View>
           </Card>
@@ -157,6 +167,14 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist }: Props)
                           onPress={() => void completeVisit(vm.id)}
                         />
                       </View>
+                    )}
+                    {vm.isComplete && (
+                      <Button
+                        label="رفع نتيجة التحقق"
+                        tone="primary"
+                        size="sm"
+                        onPress={() => onGoToVerification?.(vm.id)}
+                      />
                     )}
                   </View>
                 </View>

@@ -28,6 +28,15 @@ type StoreScope struct {
 	Type    string
 }
 
+var requiredFieldVerificationChecks = []string{
+	"location_verified",
+	"documents_uploaded",
+	"product_list_submitted",
+	"equipment_checked",
+	"safety_compliant",
+	"hygiene_compliant",
+}
+
 type StoreAuditEvent struct {
 	ID            string         `json:"id"`
 	ActorID       string         `json:"actorId"`
@@ -162,8 +171,7 @@ func SubmitFieldVerification(
 	ctx context.Context, db *sql.DB, actor StoreActor, storeID, key, correlationID string, input FieldVerificationInput,
 ) (StoreActionResponse, error) {
 	validOutcome := input.Outcome == "verified" || input.Outcome == "needs_follow_up" || input.Outcome == "rejected"
-	validEvidence := input.EvidenceStatus == "complete" || input.EvidenceStatus == "partial" || input.EvidenceStatus == "missing"
-	if input.ExpectedVersion < 1 || strings.TrimSpace(input.VisitID) == "" || !validOutcome || !validEvidence || len(strings.TrimSpace(input.Notes)) < 3 {
+	if input.ExpectedVersion < 1 || strings.TrimSpace(input.VisitID) == "" || !validOutcome || len(strings.TrimSpace(input.Notes)) < 3 {
 		return StoreActionResponse{}, fmt.Errorf("invalid field verification")
 	}
 	return runMutation(ctx, db, actor, storeID, "field.verification.submit", key, correlationID, input, input.Notes,
@@ -172,9 +180,9 @@ func SubmitFieldVerification(
 				return ErrVersionConflict
 			}
 
-			var visitStoreID, visitStatus string
+			var visitStoreID, visitStatus, fieldAgentID string
 			err := tx.QueryRowContext(ctx, `
-				SELECT store_id, status FROM dsh_field_visits WHERE id = $1`, input.VisitID).Scan(&visitStoreID, &visitStatus)
+				SELECT store_id, status, field_agent_id FROM dsh_field_visits WHERE id = $1`, input.VisitID).Scan(&visitStoreID, &visitStatus, &fieldAgentID)
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("visit not found")
 			}
@@ -184,10 +192,21 @@ func SubmitFieldVerification(
 			if visitStoreID != storeID {
 				return fmt.Errorf("visit does not belong to this store")
 			}
+			if actor.Role != "operator" && fieldAgentID != actor.ID {
+				return fmt.Errorf("visit not owned by actor")
+			}
+
+			checklistSnapshot, locationSnapshot, derivedEvidenceStatus, err := buildFieldVerificationSnapshots(ctx, tx, input.VisitID)
+			if err != nil {
+				return err
+			}
 
 			if input.Outcome == "verified" {
 				if visitStatus != "complete" {
 					return fmt.Errorf("cannot verify: linked visit is not complete")
+				}
+				if derivedEvidenceStatus != "complete" {
+					return fmt.Errorf("cannot verify: required evidence is incomplete")
 				}
 				var openCount int
 				if err := tx.QueryRowContext(ctx, `
@@ -203,11 +222,86 @@ func SubmitFieldVerification(
 			id := eventID("field")
 			_, err = tx.ExecContext(ctx, `
 				INSERT INTO dsh_store_field_verifications
-					(id, store_id, actor_id, visit_id, outcome, evidence_status, notes, correlation_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-				id, storeID, actor.ID, input.VisitID, input.Outcome, input.EvidenceStatus, input.Notes, correlationID)
+					(id, store_id, actor_id, visit_id, outcome, evidence_status, notes, correlation_id, checklist_snapshot, location_snapshot)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)`,
+				id, storeID, actor.ID, input.VisitID, input.Outcome, derivedEvidenceStatus, input.Notes, correlationID, checklistSnapshot, locationSnapshot)
 			return err
 		})
+}
+
+func buildFieldVerificationSnapshots(ctx context.Context, tx *sql.Tx, visitID string) (string, string, string, error) {
+	type checkSnapshot struct {
+		CheckType        string `json:"checkType"`
+		Status           string `json:"status"`
+		EvidenceMediaRef string `json:"evidenceMediaRef"`
+		Notes            string `json:"notes"`
+		EvidenceExists   bool   `json:"evidenceExists"`
+	}
+
+	rows, err := tx.QueryContext(ctx, `
+		SELECT c.check_type, c.status, COALESCE(c.evidence_url,''), COALESCE(c.notes,''),
+		       EXISTS (SELECT 1 FROM dsh_media_refs refs WHERE refs.media_ref = c.evidence_url)
+		FROM dsh_readiness_checks c
+		WHERE c.visit_id = $1
+		ORDER BY c.created_at ASC`, visitID)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer rows.Close()
+
+	snapshots := []checkSnapshot{}
+	requiredPassedWithEvidence := map[string]bool{}
+	anyEvidence := false
+	for rows.Next() {
+		var snap checkSnapshot
+		if err := rows.Scan(&snap.CheckType, &snap.Status, &snap.EvidenceMediaRef, &snap.Notes, &snap.EvidenceExists); err != nil {
+			return "", "", "", err
+		}
+		snapshots = append(snapshots, snap)
+		if strings.TrimSpace(snap.EvidenceMediaRef) != "" && snap.EvidenceExists {
+			anyEvidence = true
+		}
+		if snap.Status == "passed" && strings.TrimSpace(snap.EvidenceMediaRef) != "" && snap.EvidenceExists {
+			requiredPassedWithEvidence[snap.CheckType] = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", "", "", err
+	}
+
+	evidenceStatus := "missing"
+	if anyEvidence {
+		evidenceStatus = "partial"
+	}
+	allRequiredComplete := true
+	for _, checkType := range requiredFieldVerificationChecks {
+		if !requiredPassedWithEvidence[checkType] {
+			allRequiredComplete = false
+			break
+		}
+	}
+	if allRequiredComplete {
+		evidenceStatus = "complete"
+	}
+
+	checklistJSON, err := json.Marshal(snapshots)
+	if err != nil {
+		return "", "", "", err
+	}
+	locationSnapshot := map[string]any{
+		"check": nil,
+	}
+	for _, snap := range snapshots {
+		if snap.CheckType == "location_verified" {
+			locationSnapshot["check"] = snap
+			break
+		}
+	}
+	locationJSON, err := json.Marshal(locationSnapshot)
+	if err != nil {
+		return "", "", "", err
+	}
+	return string(checklistJSON), string(locationJSON), evidenceStatus, nil
 }
 
 func ReportCaptainReadiness(

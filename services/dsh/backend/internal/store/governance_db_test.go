@@ -53,7 +53,9 @@ func seedGovernanceStore(t *testing.T, db *sql.DB, storeID, agentID string) {
 		ON CONFLICT (actor_id, actor_role, store_id) DO NOTHING`, agentID, storeID); err != nil {
 		t.Fatalf("seed scope: %v", err)
 	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1 AND store_id = $2`, agentID, storeID) })
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1 AND store_id = $2`, agentID, storeID)
+	})
 }
 
 func seedFieldVisit(t *testing.T, db *sql.DB, storeID, agentID, status string) string {
@@ -67,6 +69,49 @@ func seedFieldVisit(t *testing.T, db *sql.DB, storeID, agentID, status string) s
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visitID) })
 	return visitID
+}
+
+func seedVerificationEvidence(t *testing.T, db *sql.DB, visitID, storeID, agentID string) {
+	t.Helper()
+	ctx := context.Background()
+	partnerID := uniqueID("prt-fv")
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_partners
+			(id, legal_name_ar, display_name, legal_identity_number, primary_phone, created_by_actor_id)
+		VALUES ($1, 'شريك تحقق', 'شريك تحقق', $2, '777000001', $3)`,
+		partnerID, partnerID, agentID); err != nil {
+		t.Fatalf("seed partner: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
+
+	required := []string{
+		"location_verified",
+		"documents_uploaded",
+		"product_list_submitted",
+		"equipment_checked",
+		"safety_compliant",
+		"hygiene_compliant",
+	}
+	for _, checkType := range required {
+		mediaRef := uniqueID("media-fv")
+		if _, err := db.ExecContext(ctx, `
+			INSERT INTO dsh_media_refs
+				(media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id, purpose, content_type, original_filename)
+			VALUES ($1, $2, $3, 'field', $4, 'field_readiness_evidence', 'image/jpeg', 'evidence.jpg')`,
+			mediaRef, mediaRef+"-key", agentID, partnerID); err != nil {
+			t.Fatalf("seed media ref: %v", err)
+		}
+		t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef) })
+		if _, err := db.ExecContext(ctx, `
+			INSERT INTO dsh_readiness_checks (visit_id, store_id, check_type, status, evidence_url, notes, verified_by)
+			VALUES ($1, $2, $3, 'passed', $4, 'ok', $5)
+			ON CONFLICT (visit_id, check_type) DO UPDATE
+			  SET status = EXCLUDED.status, evidence_url = EXCLUDED.evidence_url`,
+			visitID, storeID, checkType, mediaRef, agentID); err != nil {
+			t.Fatalf("seed readiness check: %v", err)
+		}
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_readiness_checks WHERE visit_id = $1`, visitID) })
 }
 
 func TestSubmitFieldVerificationRequiresVisitID(t *testing.T) {
@@ -158,6 +203,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 	actor := StoreActor{ID: agentID, Role: "field"}
 
 	visitID := seedFieldVisit(t, db, storeID, agentID, "complete")
+	seedVerificationEvidence(t, db, visitID, storeID, agentID)
 
 	var escID string
 	if err := db.QueryRowContext(ctx, `

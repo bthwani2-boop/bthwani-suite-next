@@ -17,31 +17,19 @@ import {
   toStoreRoleStatePresentation,
   useStoreRoleContextController,
 } from "../../shared/store";
-import { fetchFieldVisits } from "../../shared/field-readiness";
-import type { DshFieldVisit } from "../../shared/field-readiness";
+import { useFieldVerificationController } from "../../shared/field-readiness";
 
-export function DshFieldStoreVerificationScreen() {
+type Props = {
+  readonly storeId: string;
+  readonly visitId: string;
+};
+
+export function DshFieldStoreVerificationScreen({ storeId, visitId }: Props) {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController("field", identity.state.kind);
+  const controller = useStoreRoleContextController("field", identity.state.kind, storeId);
+  const verification = useFieldVerificationController(storeId, visitId, identity.state.kind);
   const [notes, setNotes] = React.useState("");
-  const [visit, setVisit] = React.useState<DshFieldVisit | null>(null);
   const state = controller.state;
-  const storeId = state.kind === "success" ? controller.experience?.field?.store.id : undefined;
-
-  React.useEffect(() => {
-    if (!storeId) return;
-    let cancelled = false;
-    void fetchFieldVisits(storeId).then((visits) => {
-      if (cancelled) return;
-      // Prefer the latest completed visit (required for outcome=verified);
-      // fall back to the latest visit of any status for needs_follow_up.
-      const latestComplete = [...visits].reverse().find((v) => v.status === "complete");
-      setVisit(latestComplete ?? visits[visits.length - 1] ?? null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [storeId]);
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -73,8 +61,24 @@ export function DshFieldStoreVerificationScreen() {
     );
   }
 
+  if (verification.state.kind === "loading" || verification.state.kind === "idle") {
+    return <StateView title="جاري تحميل زيارة التحقق…" />;
+  }
+
+  if (verification.state.kind === "error") {
+    return (
+      <StateView
+        title="تعذر تحميل زيارة التحقق"
+        description={verification.state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => void verification.reload()}
+      />
+    );
+  }
+
   const field = controller.experience?.field;
   if (!field) return null;
+  const visit = verification.state.visit;
   return (
     <ScrollScreen>
       <Card>
@@ -106,10 +110,8 @@ export function DshFieldStoreVerificationScreen() {
             placeholder="صف الأدلة والنتيجة الميدانية"
             multiline
           />
-          {!visit && (
-            <Text tone="secondary">
-              لا توجد زيارة تحقق مسجلة لهذا المتجر بعد. ابدأ زيارة وأكمل قائمة الفحص قبل رفع نتيجة التحقق.
-            </Text>
+          {visit.status !== "complete" && (
+            <Text tone="secondary">أكمل الزيارة وقائمة الفحص قبل اعتماد التحقق النهائي.</Text>
           )}
           <View style={styles.actions}>
             <Button
@@ -118,10 +120,9 @@ export function DshFieldStoreVerificationScreen() {
               disabled={
                 notes.trim().length < 3 ||
                 controller.actionState.kind === "submitting" ||
-                !visit ||
-                visit.status !== "complete"
+                !verification.state.canVerify
               }
-              onPress={() => visit && void controller.submit({
+              onPress={() => void controller.submit({
                 kind: "field",
                 storeId: field.store.id,
                 input: {
@@ -136,8 +137,8 @@ export function DshFieldStoreVerificationScreen() {
             <Button
               label="يحتاج متابعة"
               tone="secondary"
-              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting" || !visit}
-              onPress={() => visit && void controller.submit({
+              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting"}
+              onPress={() => void controller.submit({
                 kind: "field",
                 storeId: field.store.id,
                 input: {

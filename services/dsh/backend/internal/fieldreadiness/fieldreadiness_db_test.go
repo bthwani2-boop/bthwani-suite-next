@@ -52,11 +52,81 @@ func seedFieldStore(t *testing.T, db *sql.DB, storeID, agentID string) {
 		ON CONFLICT (actor_id, actor_role, store_id) DO NOTHING`, agentID, storeID); err != nil {
 		t.Fatalf("seed scope: %v", err)
 	}
-	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1 AND store_id = $2`, agentID, storeID) })
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1 AND store_id = $2`, agentID, storeID)
+	})
+}
+
+func seedFieldMediaRef(t *testing.T, db *sql.DB, partnerID, agentID string) string {
+	t.Helper()
+	ctx := context.Background()
+	mediaRef := uniqueID("media")
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_media_refs
+			(media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id, purpose, content_type, original_filename)
+		VALUES ($1, $2, $3, 'field', $4, 'field_readiness_evidence', 'image/jpeg', 'evidence.jpg')`,
+		mediaRef, mediaRef+"-key", agentID, partnerID); err != nil {
+		t.Fatalf("seed media ref: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef) })
+	return mediaRef
+}
+
+func seedPartner(t *testing.T, db *sql.DB, agentID string) string {
+	t.Helper()
+	ctx := context.Background()
+	partnerID := uniqueID("prt")
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_partners
+			(id, legal_name_ar, display_name, legal_identity_number, primary_phone, created_by_actor_id)
+		VALUES ($1, 'شريك اختبار', 'شريك اختبار', $2, '777000000', $3)`,
+		partnerID, partnerID, agentID); err != nil {
+		t.Fatalf("seed partner: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
+	return partnerID
 }
 
 func uniqueID(prefix string) string {
 	return prefix + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+}
+
+func TestSameStoreAssignedAgentCannotAccessAnotherAgentsVisit(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+
+	storeA := uniqueID("store-shared")
+	agentA := uniqueID("agent-owner")
+	agentB := uniqueID("agent-peer")
+	seedFieldStore(t, db, storeA, agentA)
+	seedFieldStore(t, db, storeA, agentB)
+
+	actorA := store.StoreActor{ID: agentA, Role: "field"}
+	actorB := store.StoreActor{ID: agentB, Role: "field"}
+
+	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA})
+	if err != nil {
+		t.Fatalf("create owner visit: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
+
+	if _, err := GetOwnedVisit(ctx, db, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden reading same-store peer visit, got %v", err)
+	}
+	if _, err := ListVisitChecks(ctx, db, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden listing same-store peer checks, got %v", err)
+	}
+	if _, err := UpsertReadinessCheck(ctx, db, actorB, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckPassed}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden upserting same-store peer check, got %v", err)
+	}
+	if _, err := CompleteVisit(ctx, db, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden completing same-store peer visit, got %v", err)
+	}
+	if _, err := CreateEscalation(ctx, db, actorB, CreateEscalationInput{
+		VisitID: visit.ID, StoreID: storeA, RaisedBy: agentB, Severity: SeverityLow, Category: CategoryOther, Description: "peer escalation",
+	}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden escalating same-store peer visit, got %v", err)
+	}
 }
 
 func TestActorCannotAccessOtherStoreVisits(t *testing.T) {
@@ -132,6 +202,7 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 
 	storeA := uniqueID("store-cv")
 	agentA := uniqueID("agent-cv")
+	partnerID := seedPartner(t, db, agentA)
 	seedFieldStore(t, db, storeA, agentA)
 	actorA := store.StoreActor{ID: agentA, Role: "field"}
 
@@ -146,7 +217,8 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 	}
 
 	for _, ct := range RequiredCheckTypes {
-		if _, err := UpsertReadinessCheck(ctx, db, actorA, visit.ID, UpdateCheckInput{CheckType: ct, Status: CheckPassed}); err != nil {
+		mediaRef := seedFieldMediaRef(t, db, partnerID, agentA)
+		if _, err := UpsertReadinessCheck(ctx, db, actorA, visit.ID, UpdateCheckInput{CheckType: ct, Status: CheckPassed, EvidenceURL: mediaRef}); err != nil {
 			t.Fatalf("upsert check %s: %v", ct, err)
 		}
 	}

@@ -37,7 +37,7 @@ export type DshStoreClient = {
     params?: ListDshStoresParams,
   ): Promise<ListDshStoresResponse>;
   getStore(storeId: string): Promise<GetDshStoreResponse>;
-  getStoreContext(accessToken: string): Promise<GetDshStoreContextResponse>;
+  getStoreContext(accessToken?: string, storeId?: string): Promise<GetDshStoreContextResponse>;
   updatePartnerSettings(
     storeId: string,
     body: PartnerStoreSettingsRequest,
@@ -58,9 +58,9 @@ export type DshStoreClient = {
     body: OperatorStoreGovernanceRequest,
     auth: MutationAuth,
   ): Promise<StoreActionResponse>;
-  listStoreAudit(storeId: string, accessToken: string): Promise<StoreAuditResponse>;
-  listOperatorStores(accessToken: string): Promise<OperatorStoreListResponse>;
-  getOperatorStore(storeId: string, accessToken: string): Promise<OperatorStoreDetailResponse>;
+  listStoreAudit(storeId: string, accessToken?: string): Promise<StoreAuditResponse>;
+  listOperatorStores(accessToken?: string): Promise<OperatorStoreListResponse>;
+  getOperatorStore(storeId: string, accessToken?: string): Promise<OperatorStoreDetailResponse>;
 };
 
 export type MutationAuth = DshMutationAuth;
@@ -95,8 +95,11 @@ export function createDshStoreClient(baseUrl: string): DshStoreClient {
     getStore(storeId) {
       return request<GetDshStoreResponse>(`/dsh/stores/${encodeURIComponent(storeId)}`);
     },
-    getStoreContext(accessToken) {
-      return request<GetDshStoreContextResponse>("/dsh/store-context", { token: accessToken });
+    getStoreContext(accessToken, storeId) {
+      return request<GetDshStoreContextResponse>("/dsh/store-context", {
+        ...(accessToken ? { token: accessToken } : {}),
+        ...(storeId ? { query: { storeId } } : {}),
+      });
     },
     updatePartnerSettings(storeId, body, auth) {
       return request<StoreActionResponse>(
@@ -125,16 +128,16 @@ export function createDshStoreClient(baseUrl: string): DshStoreClient {
     listStoreAudit(storeId, accessToken) {
       return request<StoreAuditResponse>(
         `/dsh/operator/stores/${encodeURIComponent(storeId)}/audit`,
-        { token: accessToken },
+        { ...(accessToken ? { token: accessToken } : {}) },
       );
     },
     listOperatorStores(accessToken) {
-      return request<OperatorStoreListResponse>("/dsh/operator/stores", { token: accessToken });
+      return request<OperatorStoreListResponse>("/dsh/operator/stores", { ...(accessToken ? { token: accessToken } : {}) });
     },
     getOperatorStore(storeId, accessToken) {
       return request<OperatorStoreDetailResponse>(
         `/dsh/operator/stores/${encodeURIComponent(storeId)}`,
-        { token: accessToken },
+        { ...(accessToken ? { token: accessToken } : {}) },
       );
     },
   };

@@ -105,8 +105,8 @@ export function DshFieldProfileHomeScreen({
             <View style={{ paddingVertical: spacing[3], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
               <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-                  <Text role="bodyStrong">التحقق الميداني من المتجر</Text>
-                  <Text role="bodySm" tone="muted">رفع نتيجة التحقق الميداني للمتجر المرتبط بك.</Text>
+                  <Text role="bodyStrong">مهام التحقق الميداني</Text>
+                  <Text role="bodySm" tone="muted">افتح الزيارة المحددة ثم ارفع نتيجتها بعد الإكمال.</Text>
                 </View>
                 <Icon name="chevron-back" size={20} tone="muted" mirrored />
               </View>

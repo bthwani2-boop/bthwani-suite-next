@@ -228,11 +228,15 @@ func (s *protectedStoreServer) handleUpdateEscalation(w http.ResponseWriter, r *
 
 // GET /dsh/partner/stores/{storeId}/onboarding-status
 func (s *protectedStoreServer) handlePartnerOnboardingStatus(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "partner")
+	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
 		return
 	}
 	storeID := r.PathValue("storeId")
+	if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
+		s.writeFieldReadinessError(w, err)
+		return
+	}
 	status, err := fieldreadiness.GetStoreOnboardingStatus(r.Context(), s.db, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get onboarding status")
@@ -249,6 +253,8 @@ func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store or visit")
 	case errors.Is(err, fieldreadiness.ErrChecklistIncomplete):
 		store.SendError(w, http.StatusConflict, "CHECKLIST_INCOMPLETE", "not all required readiness checks have passed")
+	case errors.Is(err, fieldreadiness.ErrEvidenceRequired):
+		store.SendError(w, http.StatusConflict, "EVIDENCE_REQUIRED", "required readiness evidence is missing")
 	case errors.Is(err, fieldreadiness.ErrOpenEscalation):
 		store.SendError(w, http.StatusConflict, "OPEN_ESCALATION", "visit has an open blocking escalation")
 	case errors.Is(err, fieldreadiness.ErrVisitAlreadyComplete):

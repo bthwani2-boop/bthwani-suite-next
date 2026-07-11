@@ -99,17 +99,15 @@ export function DshFieldOnboardingScreen({
   const ownController = useFieldPartnerOnboardingController();
   const controller = controllerProp ?? ownController;
   const insets = useSafeAreaInsets();
-  const { state, validationErrors, updateForm, updateVisitNotes, submitDraft } = controller;
+  const { state, validationErrors, updateForm, updateVisitNotes, submitDraft, switchDraft } = controller;
   const { state: feeRefState } = useStoreOnboardingFeeReferenceController(identity.state.kind);
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
-  const [fieldNotes, setFieldNotes] = React.useState('');
   const [evidenceLoading, setEvidenceLoading] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
-    void controller.switchDraft(partnerId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partnerId, controller]);
+    void switchDraft(partnerId);
+  }, [partnerId, switchDraft]);
 
   // Evidence (documents + branch photos) uses the same already-working
   // expo-image-picker module (camera + gallery) instead of expo-document-picker,
@@ -344,11 +342,8 @@ export function DshFieldOnboardingScreen({
             readOnly={false}
             onChange={updateForm}
             missingItems={missingItems}
-            fieldNotes={fieldNotes}
-            onFieldNotesChange={(v) => {
-              setFieldNotes(v);
-              updateVisitNotes(v);
-            }}
+            fieldNotes={state.visitNotes}
+            onFieldNotesChange={updateVisitNotes}
           />
         </View>
       );

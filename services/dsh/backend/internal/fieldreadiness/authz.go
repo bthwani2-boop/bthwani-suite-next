@@ -21,12 +21,16 @@ func AuthorizeStore(ctx context.Context, db *sql.DB, actor store.StoreActor, sto
 }
 
 // GetOwnedVisit loads a visit and verifies the actor may access the store it
-// belongs to. Returns ErrNotFound if the visit doesn't exist, ErrForbidden if
-// the actor cannot access its store.
+// belongs to and, for non-operator field actors, owns the visit itself.
+// Returns ErrNotFound if the visit doesn't exist, ErrForbidden if the actor
+// cannot access its store or visit.
 func GetOwnedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string) (Visit, error) {
 	v, err := GetVisit(ctx, db, visitID)
 	if err != nil {
 		return Visit{}, err
+	}
+	if actor.Role != "operator" && v.FieldAgentID != actor.ID {
+		return Visit{}, ErrForbidden
 	}
 	if err := AuthorizeStore(ctx, db, actor, v.StoreID); err != nil {
 		return Visit{}, err

@@ -15,6 +15,9 @@ function isSameRoute(left: DshFieldRouteState, right: DshFieldRouteState): boole
   if (left.kind === 'checklist' && right.kind === 'checklist') {
     return left.visitId === right.visitId;
   }
+  if (left.kind === 'verification' && right.kind === 'verification') {
+    return left.storeId === right.storeId && left.visitId === right.visitId;
+  }
   if (left.kind === 'onboarding' && right.kind === 'onboarding') {
     return left.partnerId === right.partnerId;
   }
@@ -37,6 +40,9 @@ function resolveCommandRoute(command?: DshFieldNavigationCommand): DshFieldRoute
   }
   if (command.target === 'checklist' && command.visitId && command.storeId) {
     return { kind: 'checklist', visitId: command.visitId, storeId: command.storeId };
+  }
+  if (command.target === 'verification' && command.visitId && command.storeId) {
+    return { kind: 'verification', visitId: command.visitId, storeId: command.storeId };
   }
   if (command.target === 'onboarding') {
     return { kind: 'onboarding', ...(command.partnerId ? { partnerId: command.partnerId } : {}) };
@@ -64,7 +70,7 @@ function resolveCommandRoute(command?: DshFieldNavigationCommand): DshFieldRoute
 
 export function resolveFieldBottomActiveId(route: DshFieldRouteState): string {
   if (route.kind === 'stores') return 'tasks';
-  if (['visit', 'checklist', 'escalation', 'work-queue'].includes(route.kind)) return 'tasks';
+  if (['visit', 'checklist', 'verification', 'escalation', 'work-queue'].includes(route.kind)) return 'tasks';
   if (route.kind === 'history') return 'history';
   if (route.kind === 'finance') return 'finance';
   if (['account', 'profile', 'onboarding', 'partner-progress', 'products-upload'].includes(route.kind)) {

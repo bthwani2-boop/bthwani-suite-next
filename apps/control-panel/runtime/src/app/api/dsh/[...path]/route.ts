@@ -21,13 +21,18 @@ async function forward(
   const hasBody = method !== "GET" && method !== "HEAD";
   const body = hasBody ? await request.arrayBuffer() : undefined;
   const contentType = request.headers.get("content-type");
+  const correlationId = request.headers.get("x-correlation-id") ?? `cp-bff-${globalThis.crypto.randomUUID()}`;
+  const idempotencyKey = request.headers.get("idempotency-key");
+  const ifMatch = request.headers.get("if-match");
 
   return fetch(targetUrl, {
     method,
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
-      "X-Correlation-ID": `cp-bff-${globalThis.crypto.randomUUID()}`,
+      "X-Correlation-ID": correlationId,
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      ...(ifMatch ? { "If-Match": ifMatch } : {}),
       ...(contentType ? { "Content-Type": contentType } : {}),
     },
     body: body && body.byteLength > 0 ? body : undefined,

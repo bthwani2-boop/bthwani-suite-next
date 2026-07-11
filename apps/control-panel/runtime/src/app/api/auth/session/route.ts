@@ -19,6 +19,14 @@ export async function GET(): Promise<NextResponse> {
 
   try {
     const resolved = await resolveSession(accessToken, refreshToken);
+    if (!resolved.identity.roles.includes("operator")) {
+      const response = NextResponse.json(
+        { code: "CONTROL_PANEL_FORBIDDEN" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+      clearSessionCookies(response);
+      return response;
+    }
     const response = NextResponse.json(
       { identity: resolved.identity },
       { status: 200, headers: { "Cache-Control": "no-store" } },
