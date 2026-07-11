@@ -25,17 +25,13 @@ func (s *protectedStoreServer) handleCreateFieldVisit(w http.ResponseWriter, r *
 	if body.VisitType != "" {
 		vt = fieldreadiness.VisitType(body.VisitType)
 	}
-	visit, err := fieldreadiness.CreateVisit(s.db, fieldreadiness.CreateVisitInput{
+	visit, err := fieldreadiness.CreateVisit(r.Context(), s.db, actor, fieldreadiness.CreateVisitInput{
 		StoreID:      storeID,
 		FieldAgentID: actor.ID,
 		VisitType:    vt,
 	})
 	if err != nil {
-		if errors.Is(err, fieldreadiness.ErrInvalid) {
-			store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", err.Error())
-			return
-		}
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create field visit")
+		s.writeFieldReadinessError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{"visit": marshalVisit(visit)})
@@ -48,10 +44,9 @@ func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *h
 		return
 	}
 	storeID := r.PathValue("storeId")
-	_ = actor
-	visits, err := fieldreadiness.ListStoreVisits(s.db, storeID, 50)
+	visits, err := fieldreadiness.ListStoreVisits(r.Context(), s.db, actor, storeID, 50)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list visits")
+		s.writeFieldReadinessError(w, err)
 		return
 	}
 	result := make([]map[string]any, 0, len(visits))
@@ -67,12 +62,12 @@ func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	visits, err := fieldreadiness.ListAgentVisits(s.db, actor.ID, 50)
+	visits, err := fieldreadiness.ListAgentVisits(r.Context(), s.db, actor.ID, 50)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field work queue visits")
 		return
 	}
-	escalations, err := fieldreadiness.ListAgentEscalations(s.db, actor.ID, 50)
+	escalations, err := fieldreadiness.ListAgentEscalations(r.Context(), s.db, actor.ID, 50)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field work queue escalations")
 		return
@@ -87,6 +82,7 @@ func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *ht
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"visits": visitResult, "escalations": escalationResult})
 }
+
 // POST /dsh/field/visits/{visitId}/complete
 func (s *protectedStoreServer) handleCompleteFieldVisit(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")
@@ -94,13 +90,9 @@ func (s *protectedStoreServer) handleCompleteFieldVisit(w http.ResponseWriter, r
 		return
 	}
 	visitID := r.PathValue("visitId")
-	visit, err := fieldreadiness.CompleteVisit(s.db, visitID, actor.ID)
-	if errors.Is(err, fieldreadiness.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "visit not found or not owned by this agent")
-		return
-	}
+	visit, err := fieldreadiness.CompleteVisit(r.Context(), s.db, actor, visitID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to complete visit")
+		s.writeFieldReadinessError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"visit": marshalVisit(visit)})
@@ -108,7 +100,7 @@ func (s *protectedStoreServer) handleCompleteFieldVisit(w http.ResponseWriter, r
 
 // PUT /dsh/field/visits/{visitId}/checks
 func (s *protectedStoreServer) handleUpsertReadinessCheck(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "field")
+	actor, ok := s.requireActor(w, r, "field")
 	if !ok {
 		return
 	}
@@ -122,18 +114,14 @@ func (s *protectedStoreServer) handleUpsertReadinessCheck(w http.ResponseWriter,
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	check, err := fieldreadiness.UpsertReadinessCheck(s.db, visitID, fieldreadiness.UpdateCheckInput{
+	check, err := fieldreadiness.UpsertReadinessCheck(r.Context(), s.db, actor, visitID, fieldreadiness.UpdateCheckInput{
 		CheckType:   body.CheckType,
 		Status:      fieldreadiness.CheckStatus(body.Status),
 		EvidenceURL: body.EvidenceURL,
 		Notes:       body.Notes,
 	})
-	if errors.Is(err, fieldreadiness.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "visit not found")
-		return
-	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upsert readiness check")
+		s.writeFieldReadinessError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"check": marshalCheck(check)})
@@ -141,14 +129,14 @@ func (s *protectedStoreServer) handleUpsertReadinessCheck(w http.ResponseWriter,
 
 // GET /dsh/field/visits/{visitId}/checks
 func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "field")
+	actor, ok := s.requireActor(w, r, "field")
 	if !ok {
 		return
 	}
 	visitID := r.PathValue("visitId")
-	checks, err := fieldreadiness.ListVisitChecks(s.db, visitID)
+	checks, err := fieldreadiness.ListVisitChecks(r.Context(), s.db, actor, visitID)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list checks")
+		s.writeFieldReadinessError(w, err)
 		return
 	}
 	result := make([]map[string]any, 0, len(checks))
@@ -174,7 +162,7 @@ func (s *protectedStoreServer) handleCreateReadinessEscalation(w http.ResponseWr
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	esc, err := fieldreadiness.CreateEscalation(s.db, fieldreadiness.CreateEscalationInput{
+	esc, err := fieldreadiness.CreateEscalation(r.Context(), s.db, actor, fieldreadiness.CreateEscalationInput{
 		VisitID:     body.VisitID,
 		StoreID:     storeID,
 		RaisedBy:    actor.ID,
@@ -182,12 +170,8 @@ func (s *protectedStoreServer) handleCreateReadinessEscalation(w http.ResponseWr
 		Category:    fieldreadiness.EscalationCategory(body.Category),
 		Description: body.Description,
 	})
-	if errors.Is(err, fieldreadiness.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "missing required escalation fields")
-		return
-	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create escalation")
+		s.writeFieldReadinessError(w, err)
 		return
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{"escalation": marshalEscalation(esc)})
@@ -200,7 +184,7 @@ func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWrit
 		return
 	}
 	statusFilter := r.URL.Query().Get("status")
-	list, err := fieldreadiness.ListOperatorEscalations(s.db, statusFilter, 100)
+	list, err := fieldreadiness.ListOperatorEscalations(r.Context(), s.db, statusFilter, 100)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list escalations")
 		return
@@ -226,7 +210,7 @@ func (s *protectedStoreServer) handleUpdateEscalation(w http.ResponseWriter, r *
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	esc, err := fieldreadiness.UpdateEscalation(s.db, escalationID, fieldreadiness.UpdateEscalationInput{
+	esc, err := fieldreadiness.UpdateEscalation(r.Context(), s.db, escalationID, fieldreadiness.UpdateEscalationInput{
 		Status:         fieldreadiness.EscalationStatus(body.Status),
 		ResolvedBy:     actor.ID,
 		ResolutionNote: body.ResolutionNote,
@@ -249,12 +233,33 @@ func (s *protectedStoreServer) handlePartnerOnboardingStatus(w http.ResponseWrit
 		return
 	}
 	storeID := r.PathValue("storeId")
-	status, err := fieldreadiness.GetStoreOnboardingStatus(s.db, storeID)
+	status, err := fieldreadiness.GetStoreOnboardingStatus(r.Context(), s.db, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get onboarding status")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, status)
+}
+
+func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, fieldreadiness.ErrNotFound):
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "visit not found or not owned by this agent")
+	case errors.Is(err, fieldreadiness.ErrForbidden):
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store or visit")
+	case errors.Is(err, fieldreadiness.ErrChecklistIncomplete):
+		store.SendError(w, http.StatusConflict, "CHECKLIST_INCOMPLETE", "not all required readiness checks have passed")
+	case errors.Is(err, fieldreadiness.ErrOpenEscalation):
+		store.SendError(w, http.StatusConflict, "OPEN_ESCALATION", "visit has an open blocking escalation")
+	case errors.Is(err, fieldreadiness.ErrVisitAlreadyComplete):
+		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_COMPLETE", "visit is already complete")
+	case errors.Is(err, fieldreadiness.ErrConflict):
+		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_IN_PROGRESS", "store or agent already has an in-progress visit")
+	case errors.Is(err, fieldreadiness.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", err.Error())
+	default:
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "field readiness operation failed")
+	}
 }
 
 func marshalVisit(v fieldreadiness.Visit) map[string]any {

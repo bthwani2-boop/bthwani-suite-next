@@ -519,6 +519,17 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 
 	var storeIDSQL sql.NullString
 	if input.StoreID != "" {
+		var partnerID sql.NullString
+		err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1`, input.StoreID).Scan(&partnerID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return FieldVisit{}, ErrInvalid
+		}
+		if err != nil {
+			return FieldVisit{}, err
+		}
+		if !partnerID.Valid || partnerID.String != input.PartnerID {
+			return FieldVisit{}, ErrInvalid
+		}
 		storeIDSQL = sql.NullString{String: input.StoreID, Valid: true}
 	}
 

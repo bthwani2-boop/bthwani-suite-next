@@ -18,12 +18,31 @@ import {
   toStoreRoleStatePresentation,
   useStoreRoleContextController,
 } from "../../shared/store";
+import { fetchFieldVisits } from "../../shared/field-readiness";
+import type { DshFieldVisit } from "../../shared/field-readiness";
 
 export function DshFieldStoreVerificationScreen() {
   const identity = useIdentitySession();
   const controller = useStoreRoleContextController("field", identity.state.kind);
   const [notes, setNotes] = React.useState("");
+  const [visit, setVisit] = React.useState<DshFieldVisit | null>(null);
   const state = controller.state;
+  const storeId = state.kind === "success" ? controller.experience?.field?.store.id : undefined;
+
+  React.useEffect(() => {
+    if (!storeId) return;
+    let cancelled = false;
+    void fetchFieldVisits(storeId).then((visits) => {
+      if (cancelled) return;
+      // Prefer the latest completed visit (required for outcome=verified);
+      // fall back to the latest visit of any status for needs_follow_up.
+      const latestComplete = [...visits].reverse().find((v) => v.status === "complete");
+      setVisit(latestComplete ?? visits[visits.length - 1] ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId]);
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -89,16 +108,27 @@ export function DshFieldStoreVerificationScreen() {
             placeholder="صف الأدلة والنتيجة الميدانية"
             multiline
           />
+          {!visit && (
+            <Text tone="secondary">
+              لا توجد زيارة تحقق مسجلة لهذا المتجر بعد. ابدأ زيارة وأكمل قائمة الفحص قبل رفع نتيجة التحقق.
+            </Text>
+          )}
           <View style={styles.actions}>
             <Button
               label="اعتماد التحقق"
               tone="success"
-              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting"}
-              onPress={() => void controller.submit({
+              disabled={
+                notes.trim().length < 3 ||
+                controller.actionState.kind === "submitting" ||
+                !visit ||
+                visit.status !== "complete"
+              }
+              onPress={() => visit && void controller.submit({
                 kind: "field",
                 storeId: field.store.id,
                 input: {
                   expectedVersion: field.store.version,
+                  visitId: visit.id,
                   outcome: "verified",
                   evidenceStatus: "complete",
                   notes: notes.trim(),
@@ -108,12 +138,13 @@ export function DshFieldStoreVerificationScreen() {
             <Button
               label="يحتاج متابعة"
               tone="secondary"
-              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting"}
-              onPress={() => void controller.submit({
+              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting" || !visit}
+              onPress={() => visit && void controller.submit({
                 kind: "field",
                 storeId: field.store.id,
                 input: {
                   expectedVersion: field.store.version,
+                  visitId: visit.id,
                   outcome: "needs_follow_up",
                   evidenceStatus: "partial",
                   notes: notes.trim(),

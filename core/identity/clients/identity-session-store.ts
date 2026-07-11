@@ -4,6 +4,10 @@ import {
   type IdentityClient,
   type IdentityClientError,
 } from "./identity-client.ts";
+import {
+  defaultSessionStorageAdapter,
+  type SessionStorageAdapter,
+} from "./identity-session-storage.ts";
 
 declare const __DEV__: boolean | undefined;
 
@@ -11,6 +15,7 @@ type ActorRole = "client" | "partner" | "captain" | "field" | "operator";
 
 export type IdentitySessionState =
   | { readonly kind: "unconfigured" }
+  | { readonly kind: "restoring" }
   | { readonly kind: "signed_out" }
   | { readonly kind: "authenticating" }
   | { readonly kind: "authenticated"; readonly identity: ActorIdentity; readonly accessToken: string }
@@ -27,9 +32,20 @@ let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 const listeners = new Set<() => void>();
 
-const IS_BROWSER =
-  typeof window !== "undefined" &&
-  typeof localStorage !== "undefined";
+let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
+
+/**
+ * Injects a platform-specific session storage adapter (e.g. Expo SecureStore
+ * on React Native). Must be called before configureIdentitySession(); calls
+ * after the identity client is configured are ignored, mirroring
+ * configureIdentitySession's own idempotency guard.
+ */
+export function configureIdentitySessionStorage(
+  adapter: SessionStorageAdapter,
+): void {
+  if (client !== null) return;
+  storageAdapter = adapter;
+}
 
 const STORAGE_KEY = "bthwani-identity-session";
 const ACTOR_ROLES = new Set([
@@ -130,26 +146,22 @@ function parseStoredSession(raw: string): StoredSession | null {
   }
 }
 
-function loadStoredSession(): StoredSession | null {
-  if (!IS_BROWSER) return null;
-
-  const raw = localStorage.getItem(STORAGE_KEY);
+async function loadStoredSession(): Promise<StoredSession | null> {
+  const raw = await storageAdapter.getItem(STORAGE_KEY);
   if (!raw) return null;
 
   const session = parseStoredSession(raw);
   if (!session) {
-    localStorage.removeItem(STORAGE_KEY);
+    await storageAdapter.removeItem(STORAGE_KEY);
   }
   return session;
 }
 
-function saveStoredSession(session: StoredSession | null): void {
-  if (!IS_BROWSER) return;
-
+async function saveStoredSession(session: StoredSession | null): Promise<void> {
   if (session) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    await storageAdapter.setItem(STORAGE_KEY, JSON.stringify(session));
   } else {
-    localStorage.removeItem(STORAGE_KEY);
+    await storageAdapter.removeItem(STORAGE_KEY);
   }
 }
 
@@ -159,7 +171,7 @@ function emit(): void {
 
 function clearSession(message?: string): void {
   stored = null;
-  saveStoredSession(null);
+  void saveStoredSession(null);
   state = message
     ? { kind: "error", message }
     : { kind: "signed_out" };
@@ -177,7 +189,7 @@ function commitAuthenticatedSession(
 
   stored = session;
   if (persist) {
-    saveStoredSession(session);
+    void saveStoredSession(session);
   }
 
   state = {
@@ -240,14 +252,18 @@ export function configureIdentitySession(baseUrl: string): void {
   const configuredClient = createIdentityClient(baseUrl);
   client = configuredClient;
 
-  const saved = loadStoredSession();
-  if (!saved) {
-    state = { kind: "signed_out" };
-    emit();
-    return;
-  }
+  state = { kind: "restoring" };
+  emit();
 
-  void restoreStoredSession(configuredClient, saved);
+  void (async () => {
+    const saved = await loadStoredSession();
+    if (!saved) {
+      state = { kind: "signed_out" };
+      emit();
+      return;
+    }
+    await restoreStoredSession(configuredClient, saved);
+  })();
 }
 
 export function getIdentityAccessToken(): string | null {
@@ -364,7 +380,7 @@ export function devBypassLogin(role: ActorRole): void {
   };
 
   // Development bypass is intentionally memory-only. It is never persisted.
-  saveStoredSession(null);
+  void saveStoredSession(null);
   commitAuthenticatedSession(
     {
       accessToken: `dev-bypass-${role}-${Date.now()}`,

@@ -251,7 +251,7 @@ func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	row, scope, err := store.ResolveActorStore(r.Context(), s.db, actor)
+	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, r.URL.Query().Get("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return

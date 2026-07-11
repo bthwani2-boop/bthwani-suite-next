@@ -5,6 +5,10 @@
 import { useCallback, useState } from "react";
 import {
   fieldCreateDraft,
+  fieldGetPartner,
+  fieldGetPartnerStore,
+  fieldListDocuments,
+  fieldListFieldVisits,
   fieldUpdatePartner,
   fieldUpdatePartnerStore,
   fieldSubmitPartner,
@@ -28,9 +32,17 @@ export type FieldOnboardingController = {
   updateVisitNotes: (notes: string) => void;
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
-  /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns false if blocked. */
-  ensureDraftCreated: () => Promise<boolean>;
+  /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
+  ensureDraftCreated: () => Promise<string | false>;
   uploadDocument: (kind: DshPartnerDocumentType, mediaRef: string) => Promise<boolean>;
+  /** Loads an existing partner draft's full state from the server. Returns false on 403/404/network error. */
+  loadDraft: (partnerId: string) => Promise<boolean>;
+  /** Resets to a blank draft (partnerId undefined) or hydrates a different partner's draft, guarding against stale cross-draft state. */
+  switchDraft: (partnerId: string | undefined) => Promise<void>;
+  /** Persists edits to an already-created draft without triggering submission side-effects. */
+  saveDraft: () => Promise<boolean>;
+  /** Creates the draft if missing, otherwise saves edits to the existing draft. */
+  save: () => Promise<boolean>;
   submitDraft: () => Promise<void>;
   reset: () => void;
 };
@@ -50,8 +62,14 @@ function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
   };
 }
 
-function buildBankAccountInput(form: Partial<FieldPartnerDraftForm>) {
+function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>) {
   return {
+    displayName: form.displayName ?? "",
+    ownerName: form.ownerName ?? "",
+    primaryPhone: form.primaryPhone ?? "",
+    secondaryPhone: form.secondaryPhone ?? "",
+    email: form.email ?? "",
+    notes: form.notes ?? "",
     beneficiaryName: form.beneficiaryName ?? "",
     bankName: form.bankName ?? "",
     bankBranch: form.bankBranch ?? "",
@@ -84,7 +102,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     setState((s) => ({ ...s, evidenceMediaRefs: [...s.evidenceMediaRefs, ref], isDirty: true }));
   }, []);
 
-  const ensureDraftCreated = useCallback(async (): Promise<boolean> => {
+  const ensureDraftCreated = useCallback(async (): Promise<string | false> => {
     const errors = { ...validateIdentityStep(state.form), ...validateOwnerStep(state.form) };
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -92,7 +110,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }
     setValidationErrors({});
 
-    if (state.partnerId) return true;
+    if (state.partnerId) return state.partnerId;
 
     const form = state.form;
     try {
@@ -111,7 +129,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
       });
       await fieldUpdatePartnerStore(res.id, buildStoreDraftInput(form));
       setState((s) => ({ ...s, partnerId: res.id, partnerVersion: res.version, submitError: null }));
-      return true;
+      return res.id;
     } catch (err) {
       const msg = err && typeof err === "object" && "status" in err
         ? `فشل إنشاء مسودة الشريك (رمز الخطأ: ${(err as any).status})`
@@ -120,6 +138,131 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
       return false;
     }
   }, [state]);
+
+  const loadDraft = useCallback(async (partnerId: string): Promise<boolean> => {
+    setState((s) => ({ ...s, loadStatus: "hydrating", loadError: null }));
+    try {
+      const [partner, storeRes, documentsRes, visitsRes] = await Promise.all([
+        fieldGetPartner(partnerId),
+        fieldGetPartnerStore(partnerId),
+        fieldListDocuments(partnerId),
+        fieldListFieldVisits(partnerId),
+      ]);
+      const latestVisit = visitsRes.visits[visitsRes.visits.length - 1];
+      setState((s) => ({
+        ...s,
+        partnerId: partner.id,
+        partnerVersion: partner.version,
+        form: {
+          ...s.form,
+          legalNameAr: partner.legalNameAr,
+          legalNameEn: partner.legalNameEn,
+          displayName: partner.displayName,
+          legalIdentityType: partner.legalIdentityType as FieldPartnerDraftForm["legalIdentityType"],
+          legalIdentityNumber: partner.legalIdentityNumber,
+          ownerName: partner.ownerName,
+          primaryPhone: partner.primaryPhone,
+          secondaryPhone: partner.secondaryPhone,
+          email: partner.email,
+          category: partner.category as FieldPartnerDraftForm["category"],
+          notes: partner.notes,
+          city: storeRes.store.cityCode,
+          serviceAreaCode: storeRes.store.serviceAreaCode,
+          addressLine: storeRes.store.addressLine,
+          coverageSummary: storeRes.store.coverageSummary,
+          storefrontPhotoRef: storeRes.store.storefrontPhotoRef,
+          interiorPhotoRef: storeRes.store.interiorPhotoRef,
+          signagePhotoRef: storeRes.store.signagePhotoRef,
+          operatingHours: storeRes.store.operatingHours,
+          deliveryReadiness: storeRes.store.deliveryReadiness,
+          beneficiaryName: partner.beneficiaryName,
+          bankName: partner.bankName,
+          bankBranch: partner.bankBranch,
+          accountNumber: partner.accountNumber,
+          iban: partner.iban,
+          payoutMobileNumber: partner.payoutMobileNumber,
+          settlementPreference: partner.settlementPreference as FieldPartnerDraftForm["settlementPreference"],
+          bankAccountHolderMatchesOwner: partner.bankAccountHolderMatchesOwner,
+          bankNotes: partner.bankNotes,
+        },
+        uploadedDocumentIds: documentsRes.documents.map((d) => d.id),
+        uploadedDocumentTypes: documentsRes.documents.map((d) => d.documentType) as DshPartnerDocumentType[],
+        visitNotes: latestVisit?.visitNotes ?? "",
+        locationLatitude: latestVisit?.locationLatitude ?? null,
+        locationLongitude: latestVisit?.locationLongitude ?? null,
+        evidenceMediaRefs: latestVisit?.evidenceMediaRefs ?? [],
+        isDirty: false,
+        loadStatus: "ready",
+      }));
+      return true;
+    } catch (err) {
+      const status = err && typeof err === "object" && "status" in err ? (err as any).status : undefined;
+      const msg = status === 403
+        ? "لا تملك صلاحية الوصول إلى ملف هذا الشريك"
+        : status === 404
+          ? "تعذر العثور على ملف الشريك"
+          : "تعذر تحميل بيانات ملف الشريك";
+      setState((s) => ({ ...s, loadStatus: "error", loadError: msg }));
+      return false;
+    }
+  }, []);
+
+  const switchDraft = useCallback(async (partnerId: string | undefined): Promise<void> => {
+    if (!partnerId) {
+      if (state.partnerId !== null) {
+        setState(initialDraftState());
+        setValidationErrors({});
+      }
+      return;
+    }
+    if (state.partnerId === partnerId) return;
+    setState(initialDraftState());
+    setValidationErrors({});
+    await loadDraft(partnerId);
+  }, [state.partnerId, loadDraft]);
+
+  const saveDraft = useCallback(async (): Promise<boolean> => {
+    if (!state.partnerId) return false;
+    setState((s) => ({ ...s, isSaving: true, submitError: null }));
+    try {
+      const updatedPartner = await fieldUpdatePartner(
+        state.partnerId,
+        buildUpdatePartnerInput(state.form),
+        state.partnerVersion ?? 0
+      );
+      await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
+      setState((s) => ({
+        ...s,
+        isSaving: false,
+        isDirty: false,
+        partnerVersion: updatedPartner.version,
+        submitError: null,
+        lastSavedAt: new Date().toISOString(),
+      }));
+      return true;
+    } catch (err) {
+      const status = err && typeof err === "object" && "status" in err ? (err as any).status : undefined;
+      if (status === 409) {
+        setState((s) => ({
+          ...s,
+          isSaving: false,
+          submitError: "تم تعديل بيانات هذا الملف من مكان آخر. أعد تحميل الملف قبل الحفظ مرة أخرى.",
+        }));
+        return false;
+      }
+      setState((s) => ({
+        ...s,
+        isSaving: false,
+        submitError: "فشل حفظ التعديلات. تحقق من اتصال الشبكة وأعد المحاولة.",
+      }));
+      return false;
+    }
+  }, [state]);
+
+  const save = useCallback(async (): Promise<boolean> => {
+    if (state.partnerId) return saveDraft();
+    return (await ensureDraftCreated()) !== false;
+  }, [state.partnerId, saveDraft, ensureDraftCreated]);
 
   const uploadDocument = useCallback(async (kind: DshPartnerDocumentType, mediaRef: string): Promise<boolean> => {
     if (!state.partnerId) {
@@ -152,7 +295,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     try {
       const updatedPartner = await fieldUpdatePartner(
         state.partnerId,
-        buildBankAccountInput(state.form),
+        buildUpdatePartnerInput(state.form),
         state.partnerVersion ?? 0
       );
       await fieldUpdatePartnerStore(state.partnerId, buildStoreDraftInput(state.form));
@@ -198,6 +341,10 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     addEvidenceRef,
     ensureDraftCreated,
     uploadDocument,
+    loadDraft,
+    switchDraft,
+    saveDraft,
+    save,
     submitDraft,
     reset,
   };

@@ -3040,6 +3040,8 @@ export interface components {
         };
         FieldStoreVerificationRequest: {
             expectedVersion: number;
+            /** @description The readiness visit (dsh_field_visits.id) this verification is derived from. */
+            visitId: string;
             /** @enum {string} */
             outcome: "verified" | "needs_follow_up" | "rejected";
             /** @enum {string} */

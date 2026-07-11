@@ -48,6 +48,9 @@
       ],
       "expo-location": [
         "apps/app-field/runtime/node_modules/expo-location"
+      ],
+      "expo-secure-store": [
+        "apps/app-field/runtime/node_modules/expo-secure-store"
       ]
     }
   }

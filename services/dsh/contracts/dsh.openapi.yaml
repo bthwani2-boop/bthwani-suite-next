@@ -4648,11 +4648,14 @@ components:
     FieldStoreVerificationRequest:
       type: object
       additionalProperties: false
-      required: [expectedVersion, outcome, evidenceStatus, notes]
+      required: [expectedVersion, visitId, outcome, evidenceStatus, notes]
       properties:
         expectedVersion:
           type: integer
           minimum: 1
+        visitId:
+          type: string
+          description: The readiness visit (dsh_field_visits.id) this verification is derived from.
         outcome:
           type: string
           enum: [verified, needs_follow_up, rejected]

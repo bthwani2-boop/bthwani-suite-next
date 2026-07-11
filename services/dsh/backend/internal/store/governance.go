@@ -56,6 +56,7 @@ type PartnerSettingsInput struct {
 
 type FieldVerificationInput struct {
 	ExpectedVersion int    `json:"expectedVersion"`
+	VisitID         string `json:"visitId"`
 	Outcome         string `json:"outcome"`
 	EvidenceStatus  string `json:"evidenceStatus"`
 	Notes           string `json:"notes"`
@@ -82,6 +83,31 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshS
 		WHERE actor_id = $1 AND actor_role = $2 AND active = true
 		ORDER BY created_at ASC
 		LIMIT 1`, actor.ID, actor.Role).Scan(&scope.StoreID, &scope.Type)
+	if err == sql.ErrNoRows {
+		return nil, StoreScope{}, ErrScopedStoreNotFound
+	}
+	if err != nil {
+		return nil, StoreScope{}, err
+	}
+	row, err := getStoreByIDContext(ctx, db, scope.StoreID)
+	return row, scope, err
+}
+
+// ResolveActorStoreForID resolves the actor's store scope for a specific
+// storeID when provided, falling back to ResolveActorStore's legacy
+// first-scope behavior when storeID is empty. This lets multi-store actors
+// (e.g. field agents with several assigned stores) disambiguate which store
+// they mean instead of always landing on the oldest scope row.
+func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, storeID string) (*DshStoreRow, StoreScope, error) {
+	if storeID == "" {
+		return ResolveActorStore(ctx, db, actor)
+	}
+	var scope StoreScope
+	err := db.QueryRowContext(ctx, `
+		SELECT store_id, scope_type
+		FROM dsh_store_actor_scopes
+		WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND active = true`,
+		actor.ID, actor.Role, storeID).Scan(&scope.StoreID, &scope.Type)
 	if err == sql.ErrNoRows {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
@@ -137,7 +163,7 @@ func SubmitFieldVerification(
 ) (StoreActionResponse, error) {
 	validOutcome := input.Outcome == "verified" || input.Outcome == "needs_follow_up" || input.Outcome == "rejected"
 	validEvidence := input.EvidenceStatus == "complete" || input.EvidenceStatus == "partial" || input.EvidenceStatus == "missing"
-	if input.ExpectedVersion < 1 || !validOutcome || !validEvidence || len(strings.TrimSpace(input.Notes)) < 3 {
+	if input.ExpectedVersion < 1 || strings.TrimSpace(input.VisitID) == "" || !validOutcome || !validEvidence || len(strings.TrimSpace(input.Notes)) < 3 {
 		return StoreActionResponse{}, fmt.Errorf("invalid field verification")
 	}
 	return runMutation(ctx, db, actor, storeID, "field.verification.submit", key, correlationID, input, input.Notes,
@@ -145,12 +171,41 @@ func SubmitFieldVerification(
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
 			}
+
+			var visitStoreID, visitStatus string
+			err := tx.QueryRowContext(ctx, `
+				SELECT store_id, status FROM dsh_field_visits WHERE id = $1`, input.VisitID).Scan(&visitStoreID, &visitStatus)
+			if errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("visit not found")
+			}
+			if err != nil {
+				return err
+			}
+			if visitStoreID != storeID {
+				return fmt.Errorf("visit does not belong to this store")
+			}
+
+			if input.Outcome == "verified" {
+				if visitStatus != "complete" {
+					return fmt.Errorf("cannot verify: linked visit is not complete")
+				}
+				var openCount int
+				if err := tx.QueryRowContext(ctx, `
+					SELECT COUNT(*) FROM dsh_readiness_escalations
+					WHERE visit_id = $1 AND status IN ('open','acknowledged')`, input.VisitID).Scan(&openCount); err != nil {
+					return err
+				}
+				if openCount > 0 {
+					return fmt.Errorf("cannot verify: visit has an open escalation")
+				}
+			}
+
 			id := eventID("field")
-			_, err := tx.ExecContext(ctx, `
+			_, err = tx.ExecContext(ctx, `
 				INSERT INTO dsh_store_field_verifications
-					(id, store_id, actor_id, outcome, evidence_status, notes, correlation_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				id, storeID, actor.ID, input.Outcome, input.EvidenceStatus, input.Notes, correlationID)
+					(id, store_id, actor_id, visit_id, outcome, evidence_status, notes, correlation_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				id, storeID, actor.ID, input.VisitID, input.Outcome, input.EvidenceStatus, input.Notes, correlationID)
 			return err
 		})
 }

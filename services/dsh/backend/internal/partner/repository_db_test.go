@@ -2,6 +2,7 @@ package partner
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"strconv"
 	"testing"
@@ -117,6 +118,41 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	}
 	if visit.LocationLatitude == nil || visit.LocationLongitude == nil {
 		t.Fatal("expected both coordinates to persist")
+	}
+}
+
+func TestCreateFieldVisitRejectsStoreNotOwnedByPartner(t *testing.T) {
+	db := openRequiredDB(t)
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+
+	p1, err := CreatePartner(db, CreatePartnerInput{
+		LegalNameAr:         "مؤسسة اختبار الملكية " + suffix,
+		LegalNameEn:         "Ownership Smoke " + suffix,
+		DisplayName:         "شريك اختبار الملكية " + suffix,
+		LegalIdentityType:   "commercial_register",
+		LegalIdentityNumber: "YE-OWN-" + suffix,
+		OwnerName:           "مالك اختبار",
+		PrimaryPhone:        "+967772" + suffix[len(suffix)-6:],
+		Category:            "grocery",
+		CreatedByActorID:    "field-local-001",
+		CreatedBySurface:    "app-field",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// store-1002 is already linked to a different partner by
+	// TestPartnerLifecycleDBIntegration (and/or seed data) in this suite;
+	// p1 above is deliberately never linked to it, so CreateFieldVisit must
+	// reject the cross-partner store reference.
+	_, err = CreateFieldVisit(db, CreateFieldVisitInput{
+		PartnerID:    p1.ID,
+		StoreID:      "store-1002",
+		VisitNotes:   "should be rejected",
+		FieldActorID: "field-local-001",
+	})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid for store not owned by partner, got %v", err)
 	}
 }
 

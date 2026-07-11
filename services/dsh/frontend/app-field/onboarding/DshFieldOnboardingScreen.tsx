@@ -68,6 +68,13 @@ const PHOTO_LABELS: Record<BranchPhotoKey, string> = {
   signagePhotoRef: 'صورة اللوحة التجارية المطابقة للترخيص',
 };
 
+function formatSavedAtTime(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
 const CHARGE_TIMING_REFERENCE_LABELS: Record<string, string> = {
   on_approval: 'عند الاعتماد',
   on_publication: 'عند النشر',
@@ -77,12 +84,14 @@ const CHARGE_TIMING_REFERENCE_LABELS: Record<string, string> = {
 
 export type DshFieldOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
+  readonly partnerId?: string;
   readonly onBack?: () => void;
   readonly onOpenProducts?: (partnerId: string) => void;
 };
 
 export function DshFieldOnboardingScreen({
   controller: controllerProp,
+  partnerId,
   onBack,
   onOpenProducts,
 }: DshFieldOnboardingScreenProps = {}) {
@@ -96,6 +105,11 @@ export function DshFieldOnboardingScreen({
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
   const [fieldNotes, setFieldNotes] = React.useState('');
   const [evidenceLoading, setEvidenceLoading] = React.useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    void controller.switchDraft(partnerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnerId, controller]);
 
   // Evidence (documents + branch photos) uses the same already-working
   // expo-image-picker module (camera + gallery) instead of expo-document-picker,
@@ -122,18 +136,23 @@ export function DshFieldOnboardingScreen({
     try {
       const picked = await pickImage(source, item.key);
       if (!picked) return;
+
+      let ownerPartnerId = state.partnerId;
+      if (!ownerPartnerId) {
+        const created = await controller.ensureDraftCreated();
+        if (!created) {
+          setActiveGroup('basics_profile');
+          return;
+        }
+        ownerPartnerId = created;
+      }
+
+      const mediaRef = await uploadFieldMedia(ownerPartnerId, picked);
       if (item.kind === 'document') {
-        if (!state.partnerId) return;
-        const mediaRef = await uploadFieldMedia(state.partnerId, picked);
         await controller.uploadDocument(DOCUMENT_KIND_TO_PARTNER_TYPE[item.key as DocumentKind], mediaRef);
       } else {
-        if (state.partnerId) {
-          const mediaRef = await uploadFieldMedia(state.partnerId, picked);
-          updateForm({ [item.key]: mediaRef });
-          controller.addEvidenceRef(mediaRef);
-        } else {
-          updateForm({ [item.key]: picked.uri });
-        }
+        updateForm({ [item.key]: mediaRef });
+        controller.addEvidenceRef(mediaRef);
       }
     } finally {
       setEvidenceLoading((s) => ({ ...s, [item.key]: false }));
@@ -175,6 +194,11 @@ export function DshFieldOnboardingScreen({
     agreement_review: getAgreementReviewMissingCount(form, state.uploadedDocumentTypes),
   };
 
+  // ── Session restoring (after all hooks) ───────────────────────────────────
+  if (identity.state.kind === 'restoring' || identity.state.kind === 'unconfigured') {
+    return <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }} />;
+  }
+
   // ── Auth guard (after all hooks) ─────────────────────────────────────────
   if (identity.state.kind !== 'authenticated') {
     return (
@@ -191,6 +215,34 @@ export function DshFieldOnboardingScreen({
           onDevBypass={() => devBypassLogin('field')}
         />
       </ScrollView>
+    );
+  }
+
+  // ── Draft hydration state (after all hooks) ───────────────────────────────
+  if (state.loadStatus === 'hydrating') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+        <Header title="جارٍ التحميل" />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text role="bodyMd" tone="secondary">جارٍ تحميل بيانات ملف الشريك…</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (state.loadStatus === 'error') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+        <Header title="تعذر التحميل" />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: spacing[3] }}>
+          <Text role="bodyMd" tone="danger" style={{ textAlign: 'center' }}>
+            {state.loadError ?? 'تعذر تحميل بيانات ملف الشريك'}
+          </Text>
+          {partnerId && (
+            <Button label="إعادة المحاولة" tone="primary" onPress={() => void controller.loadDraft(partnerId)} />
+          )}
+        </View>
+      </View>
     );
   }
 
@@ -316,8 +368,9 @@ export function DshFieldOnboardingScreen({
           <IconButton
             icon={<Icon name="save-outline" size={20} tone="brand" />}
             accessibilityLabel="حفظ المسودة"
-            onPress={() => void controller.ensureDraftCreated()}
+            onPress={() => void controller.save()}
             tone="ghost"
+            loading={state.isSaving}
           />
         }
       />
@@ -334,6 +387,11 @@ export function DshFieldOnboardingScreen({
           <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
             الملف الميداني الموحد لجمع وثائق وإحداثيات الشريك.
           </Text>
+          {state.lastSavedAt && !state.submitError && (
+            <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+              {`آخر حفظ: ${formatSavedAtTime(state.lastSavedAt)}`}
+            </Text>
+          )}
         </View>
 
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
