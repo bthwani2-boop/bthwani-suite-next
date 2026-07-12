@@ -14,6 +14,9 @@ import {
   alpha,
 } from '@bthwani/ui-kit';
 import { usePartnersController } from "../../shared/partner";
+import { PartnerListScreen } from "./PartnerListScreen";
+import { FieldActivationScreen } from "./FieldActivationScreen";
+import { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
 
 type Props = {
   readonly onOpenPartner?: (partnerId: string) => void;
@@ -146,10 +149,32 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
       return renderInboxContent();
     }
 
+    if (activeTab === 'all_partners') {
+      if (activeSubTab === 'partners_list') {
+        return (
+          <PartnerListScreen
+            onSelectPartner={onOpenPartner}
+          />
+        );
+      }
+    }
+
+    if (activeTab === 'activation') {
+      if (activeSubTab === 'field_activation') {
+        return <FieldActivationScreen />;
+      }
+    }
+
+    if (activeTab === 'field_readiness') {
+      if (activeSubTab === 'field_readiness_queue') {
+        return <FieldReadinessQueueScreen />;
+      }
+    }
+
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم ربط تبويب {activeTabMeta?.label || activeTab} بمسار العمليات في شريحة لاحقة.
+          سيتم ربط تبويب {activeSubTabMeta?.label || activeSubTab || activeTabMeta?.label || activeTab} بمسار العمليات في شريحة لاحقة.
         </Text>
       </Card>
     );
