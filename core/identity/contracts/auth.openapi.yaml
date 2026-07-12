@@ -617,11 +617,17 @@ components:
     IssueActivationForActorRequest:
       type: object
       additionalProperties: false
-      required: [issuedByActorId]
+      required: [issuedByActorId, expectedActorType, expectedSurface]
       properties:
         issuedByActorId:
           type: string
           minLength: 1
+        expectedActorType:
+          type: string
+          enum: [field, captain]
+        expectedSurface:
+          type: string
+          enum: [app-field, app-captain]
     ApiError:
       type: object
       additionalProperties: false

@@ -55,6 +55,44 @@ func TestRandomActivationCodeIsSixDigits(t *testing.T) {
 	}
 }
 
+func TestPublicActivationIssueRejectsProviderRoles(t *testing.T) {
+	for _, actorType := range []string{"field", "captain"} {
+		t.Run(actorType, func(t *testing.T) {
+			if publicActivationIssueAllowed(actorType) {
+				t.Fatalf("public activation issue must reject provider role %q", actorType)
+			}
+		})
+	}
+}
+
+func TestValidateExpectedActivationTargetIgnoresRoleOrder(t *testing.T) {
+	actor := Actor{
+		ID:        "actor-1",
+		PhoneE164: "+967777123456",
+		Roles:     []string{"field", "captain"},
+	}
+
+	if err := validateExpectedActivationTarget(actor, "captain", "app-captain"); err != nil {
+		t.Fatalf("captain target should validate even when field is first: %v", err)
+	}
+	if err := validateExpectedActivationTarget(actor, "field", "app-field"); err != nil {
+		t.Fatalf("field target should validate: %v", err)
+	}
+	if err := validateExpectedActivationTarget(actor, "captain", "app-field"); !errors.Is(err, ErrInvalidActivation) {
+		t.Fatalf("wrong surface should be rejected, got %v", err)
+	}
+}
+
+func TestScopedActivationIdempotencyKeyIncludesTypeAndSurface(t *testing.T) {
+	got := scopedActivationIdempotencyKey("request-1", "captain", "app-captain")
+	if got != "captain:app-captain:request-1" {
+		t.Fatalf("unexpected scoped idempotency key %q", got)
+	}
+	if scopedActivationIdempotencyKey("", "captain", "app-captain") != "" {
+		t.Fatal("empty idempotency key must stay empty")
+	}
+}
+
 func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{

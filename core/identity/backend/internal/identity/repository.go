@@ -36,25 +36,26 @@ var (
 )
 
 // activationSurfaceByActorType is the single source for which surface each
-// activatable actor type belongs to. enabledActivationActorTypes gates which
-// of them are accepted on the public activation endpoints today; enabling
-// captain later is a one-line change here, not a rework.
+// activatable actor type belongs to. Public issuance by phone is intentionally
+// disabled for provider roles; Workforce must make a typed actor-bound request.
 var activationSurfaceByActorType = map[string]string{
 	"field":   "app-field",
 	"captain": "app-captain",
 }
 
-var enabledActivationActorTypes = map[string]bool{
-	"field":   true,
-	"captain": true,
-}
-
 func activationSurfaceFor(actorType string) (string, bool) {
-	if !enabledActivationActorTypes[actorType] {
-		return "", false
-	}
 	surface, ok := activationSurfaceByActorType[actorType]
 	return surface, ok
+}
+
+func publicActivationIssueAllowed(actorType string) bool {
+	switch actorType {
+	case "field", "captain":
+		return false
+	default:
+		_, ok := activationSurfaceFor(actorType)
+		return ok
+	}
 }
 
 // Login lockout policy: after loginLockoutThreshold failed attempts for the
@@ -176,6 +177,9 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 	if !ok || strings.TrimSpace(input.Surface) != surface {
 		return IssueActivationResult{}, ErrInvalidActivation
 	}
+	if !publicActivationIssueAllowed(actorType) {
+		return IssueActivationResult{}, ErrForbidden
+	}
 	phone, err := NormalizePhoneE164(input.Phone)
 	if err != nil {
 		return IssueActivationResult{}, err
@@ -208,11 +212,19 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 // id. This is the internal (service-to-service) path used by Workforce: the
 // caller references the provider's actor id and Identity resolves the phone
 // sovereignly, so no phone ever travels from another service as input.
-// issuedByActorID must reference the operator actor on whose behalf the
-// calling service acts (kept for the audit FK on the challenge row).
-func (r *Repository) IssueActivationForActor(ctx context.Context, issuedByActorID, actorID, idempotencyKey, correlationID string) (IssueActivationResult, error) {
+// IssuedByActorID must reference the operator actor on whose behalf the
+// calling service acts (kept for the audit FK on the challenge row). The
+// expected type/surface are mandatory so multi-role actors cannot receive a
+// code for whichever role happens to appear first.
+func (r *Repository) IssueActivationForActor(ctx context.Context, actorID string, input IssueActivationForActorInput, idempotencyKey, correlationID string) (IssueActivationResult, error) {
 	if len(r.activationSecret) < 32 {
 		return IssueActivationResult{}, ErrActivationUnavailable
+	}
+	expectedActorType := strings.TrimSpace(input.ExpectedActorType)
+	expectedSurface := strings.TrimSpace(input.ExpectedSurface)
+	canonicalSurface, ok := activationSurfaceFor(expectedActorType)
+	if !ok || expectedSurface != canonicalSurface || strings.TrimSpace(input.IssuedByActorID) == "" {
+		return IssueActivationResult{}, ErrInvalidActivation
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -227,18 +239,11 @@ func (r *Repository) IssueActivationForActor(ctx context.Context, issuedByActorI
 		}
 		return IssueActivationResult{}, err
 	}
-	actorType := ""
-	surface := ""
-	for _, role := range actor.Roles {
-		if s, ok := activationSurfaceFor(role); ok {
-			actorType, surface = role, s
-			break
-		}
+	if err := validateExpectedActivationTarget(actor, expectedActorType, expectedSurface); err != nil {
+		return IssueActivationResult{}, err
 	}
-	if actorType == "" || strings.TrimSpace(actor.PhoneE164) == "" {
-		return IssueActivationResult{}, ErrInvalidActivation
-	}
-	result, err := r.issueChallengeTx(ctx, tx, actor, actorType, surface, issuedByActorID, idempotencyKey, correlationID)
+	result, err := r.issueChallengeTx(ctx, tx, actor, expectedActorType, expectedSurface,
+		input.IssuedByActorID, scopedActivationIdempotencyKey(idempotencyKey, expectedActorType, expectedSurface), correlationID)
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
@@ -246,6 +251,25 @@ func (r *Repository) IssueActivationForActor(ctx context.Context, issuedByActorI
 		return IssueActivationResult{}, err
 	}
 	return result, nil
+}
+
+func validateExpectedActivationTarget(actor Actor, expectedActorType, expectedSurface string) error {
+	canonicalSurface, ok := activationSurfaceFor(strings.TrimSpace(expectedActorType))
+	if !ok || strings.TrimSpace(expectedSurface) != canonicalSurface {
+		return ErrInvalidActivation
+	}
+	if !hasRole(actor.Roles, strings.TrimSpace(expectedActorType)) || strings.TrimSpace(actor.PhoneE164) == "" {
+		return ErrInvalidActivation
+	}
+	return nil
+}
+
+func scopedActivationIdempotencyKey(idempotencyKey, actorType, surface string) string {
+	key := strings.TrimSpace(idempotencyKey)
+	if key == "" {
+		return ""
+	}
+	return strings.Join([]string{actorType, surface, key}, ":")
 }
 
 // issueChallengeTx enforces the per-phone issue rate limit, revokes any prior

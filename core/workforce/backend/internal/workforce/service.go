@@ -238,10 +238,13 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 // IssueActivation issues a one-time activation code for a ready provider.
 // The phone is never accepted from the caller: Identity resolves it from the
 // actor record, eliminating operator typos and HR/Identity phone drift.
-func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorID string, expectedVersion int, idempotencyKey, correlationID string) (identityclient.ActivationCode, error) {
+func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorID string, expectedVersion int, expectedActorType, expectedSurface, idempotencyKey, correlationID string) (identityclient.ActivationCode, error) {
 	person, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
 		return identityclient.ActivationCode{}, err
+	}
+	if !personHasProviderKind(person, expectedActorType) || expectedSurfaceForProviderKind(expectedActorType) != expectedSurface {
+		return identityclient.ActivationCode{}, identityclient.ErrInvalidActor
 	}
 	if person.Version != expectedVersion {
 		return identityclient.ActivationCode{}, ErrVersionConflict
@@ -257,7 +260,7 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	if !sovereignFieldsComplete(person) {
 		return identityclient.ActivationCode{}, ErrProfileIncomplete
 	}
-	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, idempotencyKey, correlationID)
+	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID)
 	if err != nil {
 		return identityclient.ActivationCode{}, err
 	}
@@ -266,6 +269,28 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 		return identityclient.ActivationCode{}, err
 	}
 	return code, nil
+}
+
+func expectedSurfaceForProviderKind(providerKind string) string {
+	switch providerKind {
+	case "field":
+		return "app-field"
+	case "captain":
+		return "app-captain"
+	default:
+		return ""
+	}
+}
+
+func personHasProviderKind(person Person, providerKind string) bool {
+	switch providerKind {
+	case "field":
+		return person.FieldProfile != nil
+	case "captain":
+		return person.CaptainProfile != nil
+	default:
+		return false
+	}
 }
 
 // RevokeActivation cancels all pending codes for the provider.

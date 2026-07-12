@@ -256,13 +256,27 @@ func (s *server) issueActivation(w http.ResponseWriter, r *http.Request, identit
 		return
 	}
 	code, err := s.service.IssueActivation(r.Context(), operatorOf(identity),
-		r.PathValue("actorId"), input.ExpectedVersion,
+		r.PathValue("actorId"), input.ExpectedVersion, activationActorType(r), activationSurface(r),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
 	}
 	sendJSON(w, http.StatusCreated, code)
+}
+
+func activationActorType(r *http.Request) string {
+	if strings.Contains(r.URL.Path, "/workforce/captains/") {
+		return "captain"
+	}
+	return "field"
+}
+
+func activationSurface(r *http.Request) string {
+	if activationActorType(r) == "captain" {
+		return "app-captain"
+	}
+	return "app-field"
 }
 
 func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

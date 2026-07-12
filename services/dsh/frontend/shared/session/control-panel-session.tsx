@@ -11,6 +11,11 @@ import {
   type ReactNode,
 } from "react";
 import type { ActorIdentity } from "@bthwani/core-identity";
+import {
+  fetchControlPanelSession,
+  loginControlPanelSession,
+  logoutControlPanelSession,
+} from "./control-panel-session.api";
 
 export type ControlPanelSessionState =
   | { readonly kind: "restoring" }
@@ -27,23 +32,6 @@ export type ControlPanelSession = {
 
 const ControlPanelSessionContext = createContext<ControlPanelSession | null>(null);
 
-async function fetchJson<T>(
-  input: string,
-  init?: RequestInit,
-): Promise<{ readonly ok: boolean; readonly status: number; readonly body: T | null }> {
-  const response = await fetch(input, {
-    ...init,
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
-  const body = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, body };
-}
-
 export function ControlPanelSessionProvider({ children }: { readonly children: ReactNode }) {
   const [state, setState] = useState<ControlPanelSessionState>({ kind: "restoring" });
   const mounted = useRef(true);
@@ -58,9 +46,7 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const result = await fetchJson<{ identity: ActorIdentity }>("/api/auth/session", {
-        method: "GET",
-      });
+      const result = await fetchControlPanelSession();
       if (cancelled) return;
       if (result.ok && result.body) {
         setState({ kind: "authenticated", identity: result.body.identity });
@@ -75,10 +61,7 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     setState({ kind: "authenticating" });
-    const result = await fetchJson<{ identity: ActorIdentity; code?: string }>(
-      "/api/auth/login",
-      { method: "POST", body: JSON.stringify({ username, password }) },
-    );
+    const result = await loginControlPanelSession(username, password);
     if (!mounted.current) return false;
     if (result.ok && result.body) {
       setState({ kind: "authenticated", identity: result.body.identity });
@@ -89,7 +72,7 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
-    await fetchJson("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+    await logoutControlPanelSession().catch(() => undefined);
     if (mounted.current) setState({ kind: "signed_out" });
   }, []);
 

@@ -50,6 +50,12 @@ type IssueActivationInput struct {
 	Surface   string
 }
 
+type IssueActivationForActorInput struct {
+	IssuedByActorID   string
+	ExpectedActorType string
+	ExpectedSurface   string
+}
+
 type IssueActivationResult struct {
 	ActivationID string    `json:"activationId"`
 	Code         string    `json:"code"`

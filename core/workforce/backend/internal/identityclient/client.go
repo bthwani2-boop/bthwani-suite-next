@@ -83,7 +83,7 @@ func (c *Client) Reactivate(ctx context.Context, actorID string) error {
 	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, nil, nil)
 }
 
-func (c *Client) IssueActivation(ctx context.Context, actorID, issuedByActorID, idempotencyKey, correlationID string) (ActivationCode, error) {
+func (c *Client) IssueActivation(ctx context.Context, actorID, issuedByActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID string) (ActivationCode, error) {
 	var code ActivationCode
 	headers := map[string]string{}
 	if idempotencyKey != "" {
@@ -93,7 +93,11 @@ func (c *Client) IssueActivation(ctx context.Context, actorID, issuedByActorID, 
 		headers["X-Correlation-ID"] = correlationID
 	}
 	err := c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/activations",
-		map[string]string{"issuedByActorId": issuedByActorID}, &code, headers)
+		map[string]string{
+			"issuedByActorId":   issuedByActorID,
+			"expectedActorType": expectedActorType,
+			"expectedSurface":   expectedSurface,
+		}, &code, headers)
 	return code, err
 }
 

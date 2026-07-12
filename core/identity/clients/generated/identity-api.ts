@@ -340,6 +340,8 @@ export interface components {
         };
         IssueActivationForActorRequest: {
             issuedByActorId: string;
+            expectedActorType: "field" | "captain";
+            expectedSurface: "app-field" | "app-captain";
         };
         ApiError: {
             code: string;

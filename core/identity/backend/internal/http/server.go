@@ -297,7 +297,9 @@ func (s *server) internalActorReactivate(w http.ResponseWriter, r *http.Request)
 
 func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		IssuedByActorID string `json:"issuedByActorId"`
+		IssuedByActorID   string `json:"issuedByActorId"`
+		ExpectedActorType string `json:"expectedActorType"`
+		ExpectedSurface   string `json:"expectedSurface"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
@@ -307,7 +309,11 @@ func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Req
 		return
 	}
 	result, err := s.repository.IssueActivationForActor(
-		r.Context(), request.IssuedByActorID, r.PathValue("actorId"),
+		r.Context(), r.PathValue("actorId"), identity.IssueActivationForActorInput{
+			IssuedByActorID:   request.IssuedByActorID,
+			ExpectedActorType: request.ExpectedActorType,
+			ExpectedSurface:   request.ExpectedSurface,
+		},
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeInternalActorError(w, err)

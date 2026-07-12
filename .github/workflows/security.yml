@@ -57,6 +57,7 @@ jobs:
         with:
           go-version-file: services/wlt/backend/go.mod
           cache: true
+          cache-dependency-path: services/wlt/backend/go.sum
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -79,6 +80,7 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -101,12 +103,36 @@ jobs:
         with:
           go-version-file: core/identity/backend/go.mod
           cache: true
+          cache-dependency-path: core/identity/backend/go.sum
 
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
       - name: Run govulncheck
         working-directory: core/identity/backend
+        run: govulncheck ./...
+
+  govulncheck-workforce:
+    name: govulncheck — Workforce backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/workforce/backend/go.mod
+          cache: true
+          cache-dependency-path: core/workforce/backend/go.sum
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        working-directory: core/workforce/backend
         run: govulncheck ./...
 
   pnpm-audit:
@@ -134,7 +160,6 @@ jobs:
 
       - name: pnpm audit (high severity)
         run: pnpm audit --audit-level=high
-        continue-on-error: true
 
   workflow-permissions-audit:
     name: Workflow permissions audit
@@ -192,6 +217,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
 
       - name: Install OSS security scan binaries
         run: bash tools/scripts/install-oss-toolchain-binaries.sh security
