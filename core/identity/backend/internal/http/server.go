@@ -23,7 +23,6 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /identity/health", s.health)
 	mux.HandleFunc("GET /identity/readiness", s.readiness)
 	mux.HandleFunc("POST /auth/login", s.login)
-	mux.HandleFunc("POST /auth/activations", s.issueActivation)
 	mux.HandleFunc("POST /auth/activate", s.activate)
 	mux.HandleFunc("POST /auth/refresh", s.refresh)
 	mux.HandleFunc("POST /auth/logout", s.logout)
@@ -134,37 +133,6 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, tokenResponse(pair))
-}
-
-func (s *server) issueActivation(w http.ResponseWriter, r *http.Request) {
-	token, ok := bearerToken(r)
-	if !ok {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
-		return
-	}
-	issuer, err := s.repository.ResolveAccessToken(r.Context(), token)
-	if err != nil {
-		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
-		return
-	}
-	var request struct {
-		ActorType string `json:"actorType"`
-		Phone     string `json:"phone"`
-		Surface   string `json:"surface"`
-	}
-	if !decodeJSON(w, r, &request) {
-		return
-	}
-	result, err := s.repository.IssueActivation(r.Context(), issuer, identity.IssueActivationInput{
-		ActorType: request.ActorType,
-		Phone:     request.Phone,
-		Surface:   request.Surface,
-	}, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
-	if err != nil {
-		writeActivationError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusCreated, result)
 }
 
 func (s *server) activate(w http.ResponseWriter, r *http.Request) {

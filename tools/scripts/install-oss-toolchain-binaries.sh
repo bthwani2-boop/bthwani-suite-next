@@ -48,7 +48,7 @@ install_gitleaks() {
 
 install_trivy() {
   if command -v trivy >/dev/null 2>&1; then return 0; fi
-  local version="0.58.2"
+  local version="0.72.0"
   local archive="trivy_${version}_Linux-64bit.tar.gz"
   local checksums="trivy_${version}_checksums.txt"
   local base_url="https://github.com/aquasecurity/trivy/releases/download/v${version}"

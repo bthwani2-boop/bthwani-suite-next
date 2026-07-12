@@ -48,16 +48,6 @@ func activationSurfaceFor(actorType string) (string, bool) {
 	return surface, ok
 }
 
-func publicActivationIssueAllowed(actorType string) bool {
-	switch actorType {
-	case "field", "captain":
-		return false
-	default:
-		_, ok := activationSurfaceFor(actorType)
-		return ok
-	}
-}
-
 // Login lockout policy: after loginLockoutThreshold failed attempts for the
 // same username within loginLockoutWindow, further attempts are rejected
 // without touching bcrypt or the actor row, until the window rolls past the
@@ -163,49 +153,6 @@ func NormalizePhoneE164(raw string) (string, error) {
 		return "", ErrInvalidActivation
 	}
 	return phone, nil
-}
-
-func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, input IssueActivationInput, idempotencyKey, correlationID string) (IssueActivationResult, error) {
-	if len(r.activationSecret) < 32 {
-		return IssueActivationResult{}, ErrActivationUnavailable
-	}
-	if !hasRole(issuer.Roles, "operator") {
-		return IssueActivationResult{}, ErrForbidden
-	}
-	actorType := strings.TrimSpace(input.ActorType)
-	surface, ok := activationSurfaceFor(actorType)
-	if !ok || strings.TrimSpace(input.Surface) != surface {
-		return IssueActivationResult{}, ErrInvalidActivation
-	}
-	if !publicActivationIssueAllowed(actorType) {
-		return IssueActivationResult{}, ErrForbidden
-	}
-	phone, err := NormalizePhoneE164(input.Phone)
-	if err != nil {
-		return IssueActivationResult{}, err
-	}
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return IssueActivationResult{}, err
-	}
-	defer tx.Rollback()
-
-	actor, err := actorByPhoneAndRoleTx(ctx, tx, phone, actorType)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return IssueActivationResult{}, ErrActivationTargetAbsent
-		}
-		return IssueActivationResult{}, err
-	}
-	result, err := r.issueChallengeTx(ctx, tx, actor, actorType, surface, issuer.Subject, idempotencyKey, correlationID)
-	if err != nil {
-		return IssueActivationResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return IssueActivationResult{}, err
-	}
-	return result, nil
 }
 
 // IssueActivationForActor issues an activation challenge for a specific actor
@@ -669,29 +616,6 @@ func (r *Repository) activationCodeHash(actorType, phone, code string) string {
 	_, _ = mac.Write([]byte("|"))
 	_, _ = mac.Write([]byte(code))
 	return hex.EncodeToString(mac.Sum(nil))
-}
-
-func actorByPhoneAndRoleTx(ctx context.Context, tx *sql.Tx, phone, role string) (Actor, error) {
-	var actor Actor
-	var roles pq.StringArray
-	var permissionsJSON []byte
-	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
-		FROM identity_actors
-		WHERE phone_e164 = $1 AND roles @> $2
-		LIMIT 1
-		FOR UPDATE`, phone, pq.Array([]string{role})).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
-		&roles, &permissionsJSON, &actor.Active,
-	)
-	if err != nil {
-		return Actor{}, err
-	}
-	actor.Roles = []string(roles)
-	if err := json.Unmarshal(permissionsJSON, &actor.Permissions); err != nil {
-		return Actor{}, err
-	}
-	return actor, nil
 }
 
 func hasRole(roles []string, expected string) bool {

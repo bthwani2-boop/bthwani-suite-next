@@ -44,12 +44,6 @@ type LocalBootstrap struct {
 	Password string
 }
 
-type IssueActivationInput struct {
-	ActorType string
-	Phone     string
-	Surface   string
-}
-
 type IssueActivationForActorInput struct {
 	IssuedByActorID   string
 	ExpectedActorType string

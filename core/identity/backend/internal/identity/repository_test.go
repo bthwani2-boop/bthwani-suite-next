@@ -55,11 +55,16 @@ func TestRandomActivationCodeIsSixDigits(t *testing.T) {
 	}
 }
 
-func TestPublicActivationIssueRejectsProviderRoles(t *testing.T) {
-	for _, actorType := range []string{"field", "captain"} {
+func TestActivationSurfaceForProviderRoles(t *testing.T) {
+	tests := map[string]string{
+		"field":   "app-field",
+		"captain": "app-captain",
+	}
+	for actorType, expectedSurface := range tests {
 		t.Run(actorType, func(t *testing.T) {
-			if publicActivationIssueAllowed(actorType) {
-				t.Fatalf("public activation issue must reject provider role %q", actorType)
+			surface, ok := activationSurfaceFor(actorType)
+			if !ok || surface != expectedSurface {
+				t.Fatalf("expected %s surface %q, got %q ok=%v", actorType, expectedSurface, surface, ok)
 			}
 		})
 	}

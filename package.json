@@ -61,7 +61,6 @@
     "runtime:wlt:provider:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/smoke-wlt-provider-through-wlt.ps1",
     "runtime:context:status": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/docker-context-status.ps1",
     "runtime:context:local": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/docker-context-local.ps1",
-    "runtime:context:remote": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/docker-context-remote.ps1",
     "graphify": "graphify update . --force",
     "graphify:callflow": "graphify export callflow-html",
     "graphify:version": "graphify --version",
@@ -225,9 +224,9 @@
     "@ast-grep/cli": "0.43.0",
     "@ls-lint/ls-lint": "^2.2.3",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
     "@opentelemetry/resources": "^1.30.0",
-    "@opentelemetry/sdk-node": "^0.57.0",
+    "@opentelemetry/sdk-node": "^0.217.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
     "@stoplight/spectral-cli": "6.16.0",
     "@types/react": "19.2.17",
@@ -247,5 +246,15 @@
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
     "typescript": "~6.0.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "next": "^16.2.6",
+      "minimatch": "^9.0.7",
+      "@opentelemetry/sdk-node": "^0.217.0",
+      "@opentelemetry/exporter-prometheus": "^0.217.0",
+      "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
+      "protobufjs": "^8.4.1"
+    }
   }
 }

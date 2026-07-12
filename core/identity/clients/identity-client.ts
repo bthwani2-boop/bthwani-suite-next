@@ -2,7 +2,6 @@ import type { components, paths } from "./generated/identity-api.ts";
 
 export type ActorIdentity = components["schemas"]["ActorIdentity"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
-export type IssueActivationRequest = components["schemas"]["IssueActivationRequest"];
 export type IssueActivationResponse = components["schemas"]["IssueActivationResponse"];
 export type ActivateRequest = components["schemas"]["ActivateRequest"];
 export type TokenResponse =
@@ -14,11 +13,6 @@ export type IdentityClientError =
 
 export type IdentityClient = {
   login(request: LoginRequest): Promise<TokenResponse>;
-  issueActivation(
-    accessToken: string,
-    request: IssueActivationRequest,
-    options?: { readonly idempotencyKey?: string; readonly correlationId?: string },
-  ): Promise<IssueActivationResponse>;
   activate(request: ActivateRequest): Promise<TokenResponse>;
   session(accessToken: string): Promise<ActorIdentity>;
   refresh(refreshToken: string): Promise<TokenResponse>;
@@ -74,22 +68,6 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
   return {
     login(body) {
       return request("/auth/login", { method: "POST", body });
-    },
-    issueActivation(accessToken, body, options) {
-      const requestOptions: {
-        method: "POST";
-        token: string;
-        body: IssueActivationRequest;
-        idempotencyKey?: string;
-        correlationId?: string;
-      } = {
-        method: "POST",
-        token: accessToken,
-        body,
-      };
-      if (options?.idempotencyKey) requestOptions.idempotencyKey = options.idempotencyKey;
-      if (options?.correlationId) requestOptions.correlationId = options.correlationId;
-      return request("/auth/activations", requestOptions);
     },
     activate(body) {
       return request("/auth/activate", { method: "POST", body });

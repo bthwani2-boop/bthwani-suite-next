@@ -1,5 +1,5 @@
 import type { ActorIdentity } from "@bthwani/core-identity";
-import { createDshSessionHttpClient } from "../_kernel/dsh-session-http-request";
+import { createDshSessionHttpClient } from "../_kernel/dsh-http-request";
 
 export type SessionApiResult<T> = {
   readonly ok: boolean;

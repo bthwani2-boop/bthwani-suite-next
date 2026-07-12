@@ -10,6 +10,14 @@ export type DshRequestOptions = {
   readonly correlationId?: string;
 };
 
+export type DshSessionRequestResult<T> = {
+  readonly ok: boolean;
+  readonly status: number;
+  readonly body: T | null;
+  readonly error?: "network";
+  readonly message?: string;
+};
+
 export function corrId(prefix: string): string {
   return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 }
@@ -80,6 +88,43 @@ export function createDshHttpClient(baseUrl: string, corrPrefix: string, timeout
     }
     return parseResponse<T>(response);
   }
+  return { request };
+}
+
+/**
+ * Same-origin control-panel session client. It lives beside the DSH HTTP
+ * kernel because browser session calls use the same BFF/cookie transport
+ * rules as `/api/dsh` and `/api/workforce` callers.
+ */
+export function createDshSessionHttpClient(corrPrefix = "cp-session", timeoutMs = 10000) {
+  async function request<T>(path: string, init: RequestInit = {}): Promise<DshSessionRequestResult<T>> {
+    try {
+      const response = await fetch(path, {
+        ...init,
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+          "X-Correlation-ID": corrId(corrPrefix),
+          ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+          ...init.headers,
+        },
+        signal: init.signal ?? AbortSignal.timeout(timeoutMs),
+      });
+      const body = await response.json().catch(() => null);
+      return { ok: response.ok, status: response.status, body };
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        body: null,
+        error: "network",
+        message: error instanceof Error ? error.message : "network error",
+      };
+    }
+  }
+
   return { request };
 }
 

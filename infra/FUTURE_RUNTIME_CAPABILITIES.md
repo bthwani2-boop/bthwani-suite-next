@@ -29,7 +29,6 @@
 * Dnsmasq
 * ngrok/LocalTunnel
 * Provider Backend Runtime الكامل
-* Remote Docker الفعلي
 
 ## Global Rules
 
@@ -60,63 +59,56 @@
    Why not now: no exposure layer yet.
    Forbidden: default activation, DB exposure, MinIO Console exposure.
 
-3. DEV-RUNTIME-REMOTE-DOCKER-001 — Remote Docker via SSH
-   Status: future
-   Owner: infra/runtime
-   When: only when a real server exists.
-   Forbidden: tcp://0.0.0.0:2375.
-   Expected later: docs/runtime/remote-docker.md and docker context scripts.
-
-4. DEV-PROVIDER-BACKEND-RUNTIME-001 — Backend Provider Registry
+3. DEV-PROVIDER-BACKEND-RUNTIME-001 — Backend Provider Registry
    Status: future
    Owner: platform/backend
    When: after WLT mock provider and CI are closed.
    Purpose: provider switching from backend governance, not frontend.
 
-5. DEV-RUNTIME-MOCKOON-001 — Mockoon Manual API Design
+4. DEV-RUNTIME-MOCKOON-001 — Mockoon Manual API Design
    Status: future_optional
    Why not now: WireMock is the CI standard.
 
-6. DEV-OBSERVABILITY-001 — Metrics / Logs / Analytics
+5. DEV-OBSERVABILITY-001 — Metrics / Logs / Analytics
    Status: future
    Why not now: event model not stable.
 
-7. DEV-RUNTIME-CACHE-EXPANSION-001 — Valkey Usage Expansion
+6. DEV-RUNTIME-CACHE-EXPANSION-001 — Valkey Usage Expansion
    Status: future_optional
    When: idempotency locks or retry queues are needed.
    Must not become default.
 
-8. DEV-LOCALSTACK-001 — LocalStack
+7. DEV-LOCALSTACK-001 — LocalStack
    Status: deferred_or_rejected_now
    Why not now: heavy and not needed with MinIO.
 
-9. DEV-AI-LOCAL-RUNTIME-001 — Ollama / LocalAI
+8. DEV-AI-LOCAL-RUNTIME-001 — Ollama / LocalAI
    Status: rejected_now
    Why not now: heavy on user device.
 
-10. DEV-OSM-OVERPASS-001 — Local Maps / OSM / Overpass
+9. DEV-OSM-OVERPASS-001 — Local Maps / OSM / Overpass
     Status: rejected_now
     Why not now: heavy.
 
-11. DEV-DNSMASQ-001 — Local Domains
+10. DEV-DNSMASQ-001 — Local Domains
     Status: rejected_now
     Why not now: need public testing, not local domains.
 
-12. DEV-NGROK-LOCALTUNNEL-001 — Tunnel Fallbacks
+11. DEV-NGROK-LOCALTUNNEL-001 — Tunnel Fallbacks
     Status: fallback_only
     When: only if Cloudflare is not available.
 
-13. DSH-RUNTIME-SMOKE-001 — DSH Runtime Smoke
+12. DSH-RUNTIME-SMOKE-001 — DSH Runtime Smoke
     Status: active (integrated in CI/Docker runtime smoke, v2 scope defined in issue #43)
     Owner: dsh/backend
     Why not now: V2 scope defined in issue #43.
 
-14. IDENTITY-RUNTIME-SMOKE-001 — Identity Runtime Smoke
+13. IDENTITY-RUNTIME-SMOKE-001 — Identity Runtime Smoke
     Status: active (integrated in CI/Docker runtime smoke, v2 scope defined in issue #44)
     Owner: identity
     Why not now: V2 scope defined in issue #44.
 
-15. DEV-MULTI-CURRENCY-001 — Multi-currency Support
+14. DEV-MULTI-CURRENCY-001 — Multi-currency Support
     Status: future
     Owner: wlt/platform
     Why not now: default Yemen market requires YER first.
@@ -133,7 +125,6 @@
 7. Add exposure only when public testing is required.
 8. Add proxy only after exposure.
 9. Add analytics only after event model.
-10. Add Remote Docker only when server exists.
 
 ## Prohibited Until Further Notice
 

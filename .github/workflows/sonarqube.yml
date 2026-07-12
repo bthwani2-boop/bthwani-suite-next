@@ -48,8 +48,13 @@ jobs:
       - name: Test
         run: pnpm run test
 
+      - name: Check SonarQube Credentials
+        if: ${{ secrets.SONAR_TOKEN == '' || vars.SONAR_HOST_URL == '' }}
+        run: echo "SonarQube is NOT_CONFIGURED"
+
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        if: ${{ secrets.SONAR_TOKEN != '' && vars.SONAR_HOST_URL != '' }}
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
