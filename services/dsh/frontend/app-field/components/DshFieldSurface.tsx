@@ -7,12 +7,20 @@ import { Text, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
 import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
-import { useIdentitySession, devBypassLogin, configureIdentitySession } from '@bthwani/core-identity';
-import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
+import {
+  useIdentitySession,
+  configureIdentitySession,
+  configureIdentitySessionStorage,
+} from '@bthwani/core-identity';
+import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useAndroidBackHandler } from '../../shared/runtime/useAndroidBackHandler';
+import { createSecureStoreSessionStorageAdapter } from '../../shared/runtime/secure-identity-session-storage';
 import { resolveIdentityApiBaseUrl } from '../../shared/_kernel/identity-api-base-url';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
 
+if (Platform.OS !== 'web') {
+  configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
+}
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
 // ─── Bottom Navigation (exact donor replica) ────────────────────────────────
@@ -155,6 +163,20 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit])
   );
 
+  // Session is being restored from storage (SecureStore/localStorage) — show
+  // a blank brand splash rather than flashing the login card.
+  if (identity.state.kind === 'restoring' || identity.state.kind === 'unconfigured') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+        <StatusBar
+          backgroundColor={colorRoles.brandAction}
+          barStyle="light-content"
+          translucent={false}
+        />
+      </View>
+    );
+  }
+
   // Root authentication guard — prompt for login immediately upon opening
   if (identity.state.kind !== 'authenticated') {
     return (
@@ -165,13 +187,10 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           translucent={false}
         />
         <View style={{ flex: 1, justifyContent: 'center', padding: spacing[4] }}>
-          <AuthLoginCard
-            title="تسجيل دخول الموظف الميداني"
-            subtitle="سجّل دخولك لإضافة وإدارة الشركاء."
+          <DshFieldActivationCard
             loading={identity.state.kind === 'authenticating'}
             {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-            onSubmit={(username, password) => void identity.login(username, password)}
-            onDevBypass={() => devBypassLogin('field')}
+            onSubmit={(phone, code) => void identity.activate(phone, code)}
           />
         </View>
       </View>
@@ -198,6 +217,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           model={fieldSurface.model}
           actions={fieldSurface.actions}
           onboardingController={onboardingController}
+          identity={identity}
         />
       </View>
 
@@ -207,7 +227,9 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           <FieldBottomNavBar
             activeId={fieldSurface.model.bottomNav.activeId}
             onLauncherPress={() => {
-              onboardingController.reset();
+              // No explicit reset here: DshFieldOnboardingScreen's
+              // switchDraft(partnerId) effect resets to a blank draft when
+              // it receives an undefined partnerId (this route).
               fieldSurface.actions.pushRoute({ kind: 'onboarding' });
             }}
             onSelect={(id: string) => {

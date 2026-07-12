@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -57,7 +56,6 @@ function describeFinanceBlockedReason(error: string | undefined): { readonly tit
 export function FinanceDashboardScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const identity = useIdentitySession();
 
   const controller = useFinanceController({
     group: 'financial-command-center',
@@ -86,10 +84,6 @@ export function FinanceDashboardScreen() {
     if (runtimeFinance.state === 'runtime') return `قناة DSH↔WLT عبر: ${runtimeFinance.data.runtimeApiUrl}`;
     return `قناة DSH↔WLT محجوبة (${describeFinanceBlockedReason(runtimeFinance.error).title}) عبر: ${runtimeFinance.runtimeApiUrl}`;
   }, [activeState, runtimeFinance]);
-
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
 
   const renderFinancialCenterPosition = (center: WltFinancialCenter) => {
     return (
@@ -180,7 +174,7 @@ export function FinanceDashboardScreen() {
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم ربط تبويب {activeSubGroupMeta?.label || activeSubGroup} بالخادم المالي في شريحة لاحقة.
+          تبويب {activeSubGroupMeta?.label || activeSubGroup} غير متاح حالياً.
         </Text>
       </Card>
     );

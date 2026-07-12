@@ -15,7 +15,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import {
   useCentralCatalogController,
   type ProductProposalPipelineStatus,
@@ -38,21 +38,6 @@ type StatusTone = "warning" | "success" | "danger" | "neutral" | "info";
 type DamEntityType = "domains" | "nodes" | "master-products" | "product-proposals";
 
 // ─── Style constants (static/layout styles reused across the screen) ────────
-const authSectionStyle: CSSProperties = {
-  maxWidth: "32rem",
-  margin: "4rem auto",
-  display: "grid",
-  gap: "1rem",
-  padding: "1.5rem",
-  border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-  borderRadius: "1rem",
-  background: "Canvas",
-};
-const authHeadingStyle: CSSProperties = { margin: 0, textAlign: "right" };
-const authSubtextStyle: CSSProperties = { opacity: 0.7, textAlign: "right" };
-const authButtonRowStyle: CSSProperties = { display: "flex", gap: "0.75rem" };
-const authButtonFlexStyle: CSSProperties = { flex: 1 };
-const authErrorStyle: CSSProperties = { color: colorRoles.brandAction, textAlign: "right" };
 const pageDescStyle: CSSProperties = { margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" };
 const seedWarningBoxStyle: CSSProperties = {
   margin: "0 1rem 1rem",
@@ -206,15 +191,13 @@ const TABS: { id: TabId; label: string; disabled?: boolean; reason?: string }[] 
 const DAM_ENTITY_TYPES: readonly DamEntityType[] = ["domains", "nodes", "master-products", "product-proposals"];
 
 export function CatalogDashboardScreen() {
-  const identity = useIdentitySession();
-  const controller = useCentralCatalogController(identity.state.kind);
+  const { state } = useControlPanelSession();
+  const controller = useCentralCatalogController(state.kind);
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState("store-1001");
   const [reasonByProposal, setReasonByProposal] = useState<Record<string, string>>({});
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
 
   const [selectedProposalStatus, setSelectedProposalStatus] = useState<ProductProposalPipelineStatus>("partner-proposed");
   const [selectedAdoptedProductId, setSelectedAdoptedProductId] = useState<Record<string, string>>({});
@@ -265,7 +248,7 @@ export function CatalogDashboardScreen() {
   const productsPerPage = 20;
 
   useEffect(() => {
-    if (identity.state.kind === "authenticated") {
+    if (state.kind === "authenticated") {
       fetchSeedStatus()
         .then(setSeedStatus)
         .catch(console.error);
@@ -276,7 +259,7 @@ export function CatalogDashboardScreen() {
         .catch(console.error)
         .finally(() => setAssetsLoading(false));
     }
-  }, [identity.state.kind]);
+  }, [state.kind]);
 
   const visibleMasterProducts = useMemo(
     () =>
@@ -288,7 +271,7 @@ export function CatalogDashboardScreen() {
 
   // Derive "missing image" badges client-side from the asset-links query — no backend "missing" status exists.
   useEffect(() => {
-    if (identity.state.kind !== "authenticated" || activeTab !== "master_products" || visibleMasterProducts.length === 0) {
+    if (state.kind !== "authenticated" || activeTab !== "master_products" || visibleMasterProducts.length === 0) {
       return;
     }
     let cancelled = false;
@@ -311,7 +294,7 @@ export function CatalogDashboardScreen() {
     return () => {
       cancelled = true;
     };
-  }, [identity.state.kind, activeTab, visibleMasterProducts]);
+  }, [state.kind, activeTab, visibleMasterProducts]);
 
   const handleProposalTransition = async (
     proposalId: string,
@@ -393,55 +376,8 @@ export function CatalogDashboardScreen() {
     }
   };
 
-  // Auth gate
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <section dir="rtl" style={authSectionStyle}>
-        <div>
-          <h2 style={authHeadingStyle}>كتالوج DSH المركزي</h2>
-          <p style={authSubtextStyle}>
-            يتطلب حساب operator مصرح به لإدارة الكتالوج المركزي والسياسات.
-          </p>
-        </div>
-        <CpTextInput
-          value={username}
-          onChange={setUsername}
-          placeholder="اسم المستخدم"
-          aria-label="اسم المستخدم"
-        />
-        <CpTextInput
-          value={password}
-          onChange={setPassword}
-          placeholder="كلمة المرور"
-          type="password"
-          aria-label="كلمة المرور"
-        />
-        <div style={authButtonRowStyle}>
-          <CpButton
-            disabled={
-              username.trim().length === 0 ||
-              password.length < 4 ||
-              identity.state.kind === "authenticating"
-            }
-            onClick={() => void identity.login(username.trim(), password)}
-            style={authButtonFlexStyle}
-          >
-            {identity.state.kind === "authenticating" ? "جاري التحقق..." : "تسجيل الدخول"}
-          </CpButton>
-          <CpButton onClick={() => devBypassLogin("operator")} style={authButtonFlexStyle}>
-            تجاوز (مطور)
-          </CpButton>
-        </div>
-        {identity.state.kind === "error" && (
-          <p role="alert" style={authErrorStyle}>
-            {identity.state.message}
-          </p>
-        )}
-      </section>
-    );
-  }
 
-  const currentUserRole = identity.state.kind === "authenticated" ? identity.state.identity.roles[0] : undefined;
+  const currentUserRole = state.kind === "authenticated" ? (state.identity.roles.includes("operator") ? "operator" : state.identity.roles[0]) : undefined;
   const isOperator = hasCatalogPermission(currentUserRole, "catalog.taxonomy.manage");
 
   // KPI Calculations

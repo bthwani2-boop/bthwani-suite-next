@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { devBypassLogin, useIdentitySession } from "@bthwani/core-identity";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -31,7 +31,6 @@ export function PartnerStoreScreen() {
           loading={identity.state.kind === "authenticating"}
           {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
           onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => devBypassLogin("partner")}
         />
       </ScrollScreen>
     );

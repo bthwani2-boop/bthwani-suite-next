@@ -52,6 +52,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activateActor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -116,6 +132,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/actors/provision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Service-to-service only. Creates an inactive actor for a workforce-managed service provider. Idempotent when the phone already belongs to an actor holding the requested role. */
+        post: operations["provisionActor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/actors/{actorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Service-to-service only. Sovereign actor projection including phone. */
+        get: operations["getInternalActor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/actors/{actorId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Service-to-service only. Marks the actor inactive, revokes every live session, and revokes pending activation challenges in one transaction. */
+        post: operations["deactivateActor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/actors/{actorId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Service-to-service only. Restores authentication for a suspended actor. */
+        post: operations["reactivateActor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/actors/{actorId}/activations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Service-to-service only. Issues a one-time activation code for the actor; the phone is resolved sovereignly from the actor record. */
+        post: operations["issueActivationForActor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/actors/{actorId}/activations/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Service-to-service only. Revokes all pending activation codes for the actor. */
+        post: operations["revokeActorActivations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -127,6 +245,20 @@ export interface components {
         LoginRequest: {
             username: string;
             password: string;
+            deviceFingerprint?: string;
+        };
+        IssueActivationResponse: {
+            activationId: string;
+            code: string;
+            maskedPhone: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        ActivateRequest: {
+            /** @enum {string} */
+            actorType: "field" | "captain";
+            phone: string;
+            code: string;
             deviceFingerprint?: string;
         };
         RefreshRequest: {
@@ -169,6 +301,25 @@ export interface components {
             /** @enum {string} */
             scope: "own" | "assigned" | "store" | "zone" | "all" | "none";
         };
+        ProvisionActorRequest: {
+            username: string;
+            phoneE164: string;
+            /** @enum {string} */
+            role: "field" | "captain";
+            tenantId?: string;
+        };
+        ActorAdminView: {
+            actorId: string;
+            username: string;
+            phoneE164: string;
+            roles: ("client" | "partner" | "captain" | "field" | "operator" | "system")[];
+            active: boolean;
+        };
+        IssueActivationForActorRequest: {
+            issuedByActorId: string;
+            expectedActorType: "field" | "captain";
+            expectedSurface: "app-field" | "app-captain";
+        };
         ApiError: {
             code: string;
             message: string;
@@ -193,6 +344,33 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
+        /** @description Authenticated actor is not allowed to perform this action. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Requested identity resource was not found. */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Request was rate limited. */
+        RateLimited: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
         /** @description Identity runtime is unavailable. */
         ServiceUnavailable: {
             headers: {
@@ -203,7 +381,11 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        ActorId: string;
+        Authorization: string;
+        ServiceCaller: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -275,6 +457,33 @@ export interface operations {
             };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    activateActor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateRequest"];
+            };
+        };
+        responses: {
+            /** @description Activation consumed and authenticated session created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     logout: {
@@ -366,6 +575,192 @@ export interface operations {
                 };
             };
             400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    provisionActor: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProvisionActorRequest"];
+            };
+        };
+        responses: {
+            /** @description Actor provisioned (or already provisioned identically). */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActorAdminView"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description Phone or username already bound to a different actor. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getInternalActor: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActorAdminView"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deactivateActor: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor deactivated and sessions revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reactivateActor: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor reactivated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    issueActivationForActor: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "Idempotency-Key"?: string;
+                "X-Correlation-ID"?: string;
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueActivationForActorRequest"];
+            };
+        };
+        responses: {
+            /** @description One-time activation code issued for the actor. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueActivationResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            /** @description Actor has no activatable role or no phone bound. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    revokeActorActivations: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending activation codes revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             401: components["responses"]["Unauthenticated"];
         };
     };

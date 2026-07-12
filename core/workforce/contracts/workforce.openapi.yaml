@@ -1,0 +1,1259 @@
+openapi: 3.1.0
+info:
+  title: BThwani Core Workforce API
+  version: 0.1.0
+  description: >-
+    Sovereign service-provider profiles (field agents today, captains later).
+    Providers are independent contractors, not employees; compensation is
+    owned by WLT. The shared key across all services is actorId (owned by
+    core/identity); phone numbers are never stored or accepted here — they
+    are resolved sovereignly from Identity.
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-owner: core/workforce
+servers:
+  - url: http://localhost:58086
+    description: Local workforce runtime
+paths:
+  /workforce/health:
+    get:
+      operationId: getWorkforceHealth
+      responses:
+        "200":
+          description: Workforce runtime is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeStatus"
+  /workforce/readiness:
+    get:
+      operationId: getWorkforceReadiness
+      responses:
+        "200":
+          description: Workforce database is ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeStatus"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /workforce/field-agents:
+    post:
+      operationId: createFieldAgent
+      description: >-
+        Operator-only. Orchestrates provider creation: provisions an inactive
+        Identity actor (idempotent on phone+role) then writes the sovereign
+        profile. Requires an Idempotency-Key; replays return 200 with the
+        original result.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyRequired"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFieldAgentRequest"
+      responses:
+        "201":
+          description: Provider profile created and Identity actor provisioned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "200":
+          description: Idempotent replay of a previously completed creation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: DUPLICATE_PHONE, DUPLICATE_PROVIDER_CODE, or IDEMPOTENCY_CONFLICT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: INVALID_REFERENCE_CODE — unknown or inactive city/shift.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    get:
+      operationId: listFieldAgents
+      description: Operator-only list with status/city/text filters.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/EngagementStatus"
+        - in: query
+          name: city
+          schema:
+            type: string
+        - in: query
+          name: q
+          description: Matches full name (ar/en) or provider code.
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Matching providers.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [fieldAgents]
+                properties:
+                  fieldAgents:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /workforce/field-agents/{actorId}:
+    get:
+      operationId: getFieldAgent
+      description: Operator-only detail incl. masked phone and auth state from Identity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+      responses:
+        "200":
+          description: Provider detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgentDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateFieldAgent
+      description: Operator-only sovereign edits under optimistic locking (expectedVersion).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFieldAgentRequest"
+      responses:
+        "200":
+          description: Updated provider.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: VERSION_CONFLICT or DUPLICATE_PROVIDER_CODE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: INVALID_REFERENCE_CODE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workforce/field-agents/{actorId}/suspend:
+    post:
+      operationId: suspendFieldAgent
+      description: >-
+        Operator-only. Sets engagement_status=suspended and deactivates the
+        Identity actor: all live sessions are revoked, refresh is blocked,
+        and pending activation codes are revoked atomically on Identity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+      responses:
+        "200":
+          description: Provider suspended.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: VERSION_CONFLICT or STATUS_NOT_ALLOWED.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /workforce/field-agents/{actorId}/reactivate:
+    post:
+      operationId: reactivateFieldAgent
+      description: Operator-only. Restores a suspended provider and reopens authentication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+      responses:
+        "200":
+          description: Provider reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: VERSION_CONFLICT or STATUS_NOT_ALLOWED.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /workforce/field-agents/{actorId}/activation-codes:
+    post:
+      operationId: issueFieldAgentActivation
+      description: >-
+        Operator-only. Issues a one-time activation code. The caller sends
+        only actorId + expectedVersion; the phone is resolved sovereignly by
+        Identity. Blocked for suspended (409) or incomplete (422) profiles.
+        Reissue uses the same endpoint (prior pending codes are superseded).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+      responses:
+        "201":
+          description: One-time activation code issued. The code is returned only here.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivationCode"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: VERSION_CONFLICT, ENGAGEMENT_SUSPENDED, or STATUS_NOT_ALLOWED.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: PROFILE_INCOMPLETE — sovereign minimum not filled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    delete:
+      operationId: revokeFieldAgentActivation
+      description: Operator-only. Revokes all pending activation codes for the provider.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "204":
+          description: Pending activation codes revoked.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /workforce/captains:
+    post:
+      operationId: createCaptain
+      description: Operator-only. Creates or attaches a captain provider profile to the Identity actor for the supplied phone.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyRequired"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCaptainRequest"
+      responses:
+        "201":
+          description: Captain provider profile created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "200":
+          description: Idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    get:
+      operationId: listCaptains
+      description: Operator-only list of captain provider profiles.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/EngagementStatus"
+        - in: query
+          name: city
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Matching captains.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [captains]
+                properties:
+                  captains:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /workforce/captains/{actorId}:
+    get:
+      operationId: getCaptain
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+      responses:
+        "200":
+          description: Captain provider detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgentDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateCaptain
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCaptainRequest"
+      responses:
+        "200":
+          description: Updated captain provider.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /workforce/captains/{actorId}/suspend:
+    post:
+      operationId: suspendCaptain
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+      responses:
+        "200":
+          description: Captain suspended.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /workforce/captains/{actorId}/reactivate:
+    post:
+      operationId: reactivateCaptain
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+      responses:
+        "200":
+          description: Captain reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /workforce/captains/{actorId}/activation-codes:
+    post:
+      operationId: issueCaptainActivation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion]
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+      responses:
+        "201":
+          description: One-time activation code issued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivationCode"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: revokeCaptainActivation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "204":
+          description: Pending activation codes revoked.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /workforce/me:
+    get:
+      operationId: getMyWorkforceProfile
+      description: >-
+        Provider self view. 404 PROFILE_NOT_PROVISIONED when no profile
+        exists for the authenticated actor. A pending_activation profile is
+        lazily transitioned to active (a valid session proves activation).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Own provider profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeView"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateMyWorkforceProfile
+      description: >-
+        Field-provider self edit. Only non-sovereign fields are accepted;
+        anything else fails validation. Suspended providers are rejected.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSelfRequest"
+      responses:
+        "200":
+          description: Updated own profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeView"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: ENGAGEMENT_SUSPENDED.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workforce/reference/cities:
+    get:
+      operationId: listWorkforceCities
+      description: Any authenticated actor. Operators may pass includeInactive=true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IncludeInactive"
+      responses:
+        "200":
+          description: Cities reference list.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [cities]
+                properties:
+                  cities:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/City"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: createWorkforceCity
+      description: Operator-only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/City"
+      responses:
+        "201":
+          description: City created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/City"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: REFERENCE_EXISTS.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workforce/reference/cities/{code}:
+    patch:
+      operationId: updateWorkforceCity
+      description: Operator-only. Deactivation instead of deletion keeps history intact.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ReferenceCode"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/City"
+      responses:
+        "200":
+          description: City updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/City"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /workforce/reference/shifts:
+    get:
+      operationId: listWorkforceShifts
+      description: Any authenticated actor. Operators may pass includeInactive=true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IncludeInactive"
+      responses:
+        "200":
+          description: Shifts reference list.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [shifts]
+                properties:
+                  shifts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Shift"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: createWorkforceShift
+      description: Operator-only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Shift"
+      responses:
+        "201":
+          description: Shift created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: REFERENCE_EXISTS.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workforce/reference/shifts/{code}:
+    patch:
+      operationId: updateWorkforceShift
+      description: Operator-only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ReferenceCode"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Shift"
+      responses:
+        "200":
+          description: Shift updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    ActorId:
+      in: path
+      name: actorId
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ReferenceCode:
+      in: path
+      name: code
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    IdempotencyKeyRequired:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema:
+        type: string
+    CorrelationId:
+      in: header
+      name: X-Correlation-ID
+      required: false
+      schema:
+        type: string
+    IncludeInactive:
+      in: query
+      name: includeInactive
+      required: false
+      description: Operators only; ignored for other roles.
+      schema:
+        type: boolean
+  responses:
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthenticated:
+      description: Authentication failed or the session expired.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Authenticated actor is not allowed to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Requested workforce resource was not found (PROFILE_NOT_PROVISIONED for /me).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    RateLimited:
+      description: Request was rate limited.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Conflict:
+      description: Conflict such as duplicate provider code, stale version, or invalid status transition.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    ServiceUnavailable:
+      description: Workforce runtime or a sovereign dependency is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    RuntimeStatus:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+    EngagementStatus:
+      type: string
+      enum: [pending_activation, active, suspended, terminated]
+    EngagementType:
+      type: string
+      enum: [independent_contractor, agency_contractor]
+    CreateFieldAgentRequest:
+      type: object
+      additionalProperties: false
+      required: [fullNameAr, phoneE164, providerCode]
+      properties:
+        fullNameAr:
+          type: string
+          minLength: 1
+        fullNameEn:
+          type: string
+        phoneE164:
+          type: string
+          minLength: 8
+          maxLength: 20
+        providerCode:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{2,32}$"
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+          format: date
+        cityCode:
+          type: string
+        shiftCode:
+          type: string
+        supervisorActorId:
+          type: string
+        photoMediaRef:
+          type: string
+        documentMediaRefs:
+          type: array
+          items:
+            type: string
+    UpdateFieldAgentRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        fullNameAr:
+          type: string
+        fullNameEn:
+          type: string
+        providerCode:
+          type: string
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+          format: date
+        cityCode:
+          type: string
+        shiftCode:
+          type: string
+        supervisorActorId:
+          type: string
+        photoMediaRef:
+          type: string
+    CreateCaptainRequest:
+      type: object
+      additionalProperties: false
+      required: [fullNameAr, phoneE164, providerCode]
+      properties:
+        fullNameAr:
+          type: string
+          minLength: 1
+        fullNameEn:
+          type: string
+        phoneE164:
+          type: string
+          minLength: 8
+          maxLength: 20
+        providerCode:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{2,32}$"
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+          format: date
+        photoMediaRef:
+          type: string
+        vehicleType:
+          type: string
+        vehicleIdentifier:
+          type: string
+        licenseStatus:
+          type: string
+          enum: [missing, pending_review, valid, expired, rejected]
+        licenseExpiresAt:
+          type: string
+          format: date
+        operatingCityCode:
+          type: string
+        operatingScopeCode:
+          type: string
+        documentMediaRefs:
+          type: array
+          items:
+            type: string
+    UpdateCaptainRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        fullNameAr:
+          type: string
+        fullNameEn:
+          type: string
+        providerCode:
+          type: string
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+          format: date
+        photoMediaRef:
+          type: string
+        vehicleType:
+          type: string
+        vehicleIdentifier:
+          type: string
+        licenseStatus:
+          type: string
+          enum: [missing, pending_review, valid, expired, rejected]
+        licenseExpiresAt:
+          type: string
+          format: date
+        operatingCityCode:
+          type: string
+        operatingScopeCode:
+          type: string
+    StatusChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+    UpdateSelfRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        photoMediaRef:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+        preferredLanguage:
+          type: string
+          enum: [ar, en]
+        policyConsent:
+          type: boolean
+    FieldProfile:
+      type: object
+      required: [documentMediaRefs]
+      properties:
+        cityCode:
+          type: string
+        shiftCode:
+          type: string
+        supervisorActorId:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+        preferredLanguage:
+          type: string
+        policyConsentAt:
+          type: string
+        documentMediaRefs:
+          type: array
+          items:
+            type: string
+    CaptainProfile:
+      type: object
+      required: [documentMediaRefs]
+      properties:
+        vehicleType:
+          type: string
+        vehicleIdentifier:
+          type: string
+        licenseStatus:
+          type: string
+        licenseExpiresAt:
+          type: string
+        operatingCityCode:
+          type: string
+        operatingScopeCode:
+          type: string
+        documentMediaRefs:
+          type: array
+          items:
+            type: string
+    FieldAgent:
+      type: object
+      required: [actorId, fullNameAr, providerCode, engagementType, engagementStatus, version, createdAt, updatedAt]
+      properties:
+        actorId:
+          type: string
+        fullNameAr:
+          type: string
+        fullNameEn:
+          type: string
+        providerCode:
+          type: string
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+        engagementStatus:
+          $ref: "#/components/schemas/EngagementStatus"
+        photoMediaRef:
+          type: string
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        fieldProfile:
+          $ref: "#/components/schemas/FieldProfile"
+        captainProfile:
+          $ref: "#/components/schemas/CaptainProfile"
+    FieldAgentDetail:
+      allOf:
+        - $ref: "#/components/schemas/FieldAgent"
+        - type: object
+          required: [authActive, readyToIssue]
+          properties:
+            phoneMasked:
+              type: string
+            authActive:
+              type: boolean
+            readyToIssue:
+              type: boolean
+    MeView:
+      allOf:
+        - $ref: "#/components/schemas/FieldAgent"
+        - type: object
+          required: [profileComplete]
+          properties:
+            phoneMasked:
+              type: string
+            profileComplete:
+              type: boolean
+    ActivationCode:
+      type: object
+      additionalProperties: false
+      required: [activationId, code, maskedPhone, expiresAt]
+      properties:
+        activationId:
+          type: string
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+        maskedPhone:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    City:
+      type: object
+      additionalProperties: false
+      required: [code, nameAr]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        nameAr:
+          type: string
+          minLength: 1
+        nameEn:
+          type: string
+        active:
+          type: boolean
+          default: true
+    Shift:
+      type: object
+      additionalProperties: false
+      required: [code, nameAr]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        nameAr:
+          type: string
+          minLength: 1
+        nameEn:
+          type: string
+        startsAt:
+          type: string
+        endsAt:
+          type: string
+        active:
+          type: boolean
+          default: true
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - UNAUTHENTICATED
+            - FORBIDDEN
+            - PROFILE_NOT_PROVISIONED
+            - PROFILE_INCOMPLETE
+            - ENGAGEMENT_SUSPENDED
+            - STATUS_NOT_ALLOWED
+            - VERSION_CONFLICT
+            - DUPLICATE_PHONE
+            - DUPLICATE_PROVIDER_CODE
+            - IDEMPOTENCY_CONFLICT
+            - IDEMPOTENCY_KEY_REQUIRED
+            - INVALID_REFERENCE_CODE
+            - REFERENCE_EXISTS
+            - REFERENCE_IN_USE
+            - ACTOR_NOT_FOUND
+            - ACTIVATION_RATE_LIMITED
+            - INVALID_ACTOR_INPUT
+            - IDENTITY_UNAVAILABLE
+            - WORKFORCE_NOT_READY
+            - WORKFORCE_INTERNAL_ERROR
+        message:
+          type: string

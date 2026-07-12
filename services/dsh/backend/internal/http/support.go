@@ -8,6 +8,13 @@ import (
 	"dsh-api/internal/support"
 )
 
+// Support permission actions on the control-panel surface. "operator"
+// remains a valid fallback role during RBAC data migration.
+const (
+	SupportPermissionRead   = "support.read"
+	SupportPermissionManage = "support.manage"
+)
+
 const errTicketNotFound = "ticket not found"
 
 // POST /dsh/support/tickets
@@ -142,7 +149,7 @@ func (s *protectedStoreServer) handleListTicketMessages(w http.ResponseWriter, r
 
 // GET /dsh/operator/support/tickets
 func (s *protectedStoreServer) handleOperatorListTickets(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -161,7 +168,7 @@ func (s *protectedStoreServer) handleOperatorListTickets(w http.ResponseWriter, 
 
 // PATCH /dsh/operator/support/tickets/{ticketId}
 func (s *protectedStoreServer) handleOperatorUpdateTicket(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -194,7 +201,7 @@ func (s *protectedStoreServer) handleOperatorUpdateTicket(w http.ResponseWriter,
 
 // POST /dsh/operator/incidents
 func (s *protectedStoreServer) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -227,7 +234,7 @@ func (s *protectedStoreServer) handleCreateIncident(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/incidents
 func (s *protectedStoreServer) handleListIncidents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -246,7 +253,7 @@ func (s *protectedStoreServer) handleListIncidents(w http.ResponseWriter, r *htt
 
 // PATCH /dsh/operator/incidents/{incidentId}
 func (s *protectedStoreServer) handleUpdateIncident(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
 	if !ok {
 		return
 	}

@@ -29,6 +29,7 @@ Thumbs.db
 
 
 graphify-out/
+.graphify/
 
 .nx/cache/
 .nx/workspace-data/

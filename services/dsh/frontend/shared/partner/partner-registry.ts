@@ -1,15 +1,11 @@
 export type PartnerWorkspaceTabId =
   | 'inbox'
+  | 'all_partners'
   | 'activation'
-  | 'documents'
-  | 'readiness_escalations'
-  | 'readiness_approvals'
-  | 'overrides'
-  | 'performance'
-  | 'eligibility'
-  | 'topology'
-  | 'contracts'
-  | 'deactivation';
+  | 'field_readiness'
+  | 'documents_contracts'
+  | 'governance'
+  | 'performance';
 
 export type PartnerSubTabItem = {
   readonly id: string;
@@ -24,16 +20,12 @@ export type PartnerWorkspaceTabItem = {
 
 export const PARTNER_PRIMARY_TABS: readonly PartnerWorkspaceTabItem[] = [
   { id: 'inbox', label: 'الوارد الجديد' },
-  { id: 'activation', label: 'تفعيل الشريك' },
-  { id: 'documents', label: 'وثائق الشراكة' },
-  { id: 'readiness_escalations', label: 'تصاعد الجاهزية' },
-  { id: 'readiness_approvals', label: 'اعتمادات الجاهزية' },
-  { id: 'overrides', label: 'تجاوزات الكاتالوج' },
-  { id: 'performance', label: 'الأداء والإحصاءات' },
-  { id: 'eligibility', label: 'أهلية الترويج' },
-  { id: 'topology', label: 'مستويات الخدمة' },
-  { id: 'contracts', label: 'إدارة العقود والإحصاءات' },
-  { id: 'deactivation', label: 'إلغاء التفعيل' },
+  { id: 'all_partners', label: 'كل الشركاء' },
+  { id: 'activation', label: 'تفعيل' },
+  { id: 'field_readiness', label: 'جاهزية الميدان' },
+  { id: 'documents_contracts', label: 'العقود والوثائق' },
+  { id: 'governance', label: 'الحوكمة والتجاوزات' },
+  { id: 'performance', label: 'الأداء والعروض' },
 ];
 
 export const PARTNER_SUB_TAB_DEFINITIONS: Readonly<Record<string, readonly PartnerSubTabItem[]>> = {
@@ -42,13 +34,30 @@ export const PARTNER_SUB_TAB_DEFINITIONS: Readonly<Record<string, readonly Partn
     { id: 'modifications', label: 'تعديل البيانات' },
     { id: 'complaints', label: 'شكاوى الشراكة' },
   ],
-  performance: [
-    { id: 'performance', label: 'الأداء والسرعة' },
-    { id: 'disputes', label: 'النزاعات والاستفسار' },
-    { id: 'visibility', label: 'الظهور والتمييز' },
+  all_partners: [
+    { id: 'partners_list', label: 'قائمة الشركاء' },
   ],
-  eligibility: [
-    { id: 'benefits', label: 'المزايا والعروض' },
+  activation: [
+    { id: 'partner_activation', label: 'تفعيل شركاء' },
+    { id: 'field_activation', label: 'تفعيل ميداني' },
+  ],
+  field_readiness: [
+    { id: 'field_readiness_queue', label: 'جاهزية الميدان' },
+    { id: 'readiness_escalations', label: 'تصاعد الجاهزية' },
+    { id: 'readiness_approvals', label: 'اعتمادات الجاهزية' },
+  ],
+  documents_contracts: [
+    { id: 'documents', label: 'وثائق الشراكة' },
+    { id: 'contracts', label: 'إدارة العقود والإحصاءات' },
+  ],
+  governance: [
+    { id: 'overrides', label: 'تجاوزات الكاتالوج' },
+    { id: 'deactivation', label: 'إلغاء التفعيل' },
+  ],
+  performance: [
+    { id: 'performance', label: 'الأداء والإحصاءات' },
+    { id: 'eligibility', label: 'أهلية الترويج' },
+    { id: 'topology', label: 'مستويات الخدمة' },
   ],
 };
 

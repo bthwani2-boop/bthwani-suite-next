@@ -10,7 +10,7 @@ import (
 
 // POST /dsh/operator/dispatch/assignments
 func (s *protectedStoreServer) handleCreateDispatchAssignment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -31,7 +31,7 @@ func (s *protectedStoreServer) handleCreateDispatchAssignment(w http.ResponseWri
 
 // GET /dsh/operator/dispatch/assignments
 func (s *protectedStoreServer) handleListOperatorDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
 	if !ok {
 		return
 	}

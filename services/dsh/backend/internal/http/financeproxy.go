@@ -7,6 +7,10 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Finance permission action on the control-panel surface. "operator"
+// remains a valid fallback role during RBAC data migration.
+const FinancePermissionRead = "finance.read"
+
 // Read-only finance proxy.
 //
 // WLT protects its internal financial read routes with service-caller auth
@@ -45,7 +49,7 @@ func financeQuery(r *http.Request, keys ...string) url.Values {
 
 // GET /dsh/control-panel/finance/settlements
 func (s *protectedStoreServer) handleFinanceSettlements(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/settlements", financeQuery(r, "partnerId", "limit", "cursor"))
@@ -53,7 +57,7 @@ func (s *protectedStoreServer) handleFinanceSettlements(w http.ResponseWriter, r
 
 // GET /dsh/control-panel/finance/settlements/summary
 func (s *protectedStoreServer) handleFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", financeQuery(r, "partnerId"))
@@ -61,7 +65,7 @@ func (s *protectedStoreServer) handleFinanceSettlementSummary(w http.ResponseWri
 
 // GET /dsh/control-panel/finance/refunds
 func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/refunds", financeQuery(r, "orderId", "limit", "cursor"))
@@ -69,7 +73,7 @@ func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *ht
 
 // GET /dsh/control-panel/finance/refunds/{refundId}
 func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/refunds/"+url.PathEscape(r.PathValue("refundId")), nil)
@@ -77,7 +81,7 @@ func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, 
 
 // GET /dsh/control-panel/finance/ledger/entries
 func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/ledger/entries", financeQuery(r, "actorId", "actorType", "orderId", "entryType", "limit", "cursor"))
@@ -85,7 +89,7 @@ func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter,
 
 // GET /dsh/control-panel/finance/cod-records
 func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/cod-records", financeQuery(r, "captainId", "orderId", "limit", "cursor"))
@@ -93,7 +97,7 @@ func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r 
 
 // GET /dsh/control-panel/finance/commissions
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
 		return
 	}
 	s.proxyFinanceRead(w, r, "/wlt/commissions", financeQuery(r, "orderId", "captainId", "limit", "cursor"))

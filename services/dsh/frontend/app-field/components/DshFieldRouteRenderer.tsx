@@ -16,6 +16,7 @@ import { DshFieldFinanceScreen } from '../finance/DshFieldFinanceScreen';
 import { DshFieldPartnerProductsScreen } from './DshFieldPartnerProductsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';
+import type { useIdentitySession } from '@bthwani/core-identity';
 
 type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
 
@@ -23,15 +24,17 @@ type Props = {
   readonly model: FieldSurfaceBinding['model'];
   readonly actions: FieldSurfaceBinding['actions'];
   readonly onboardingController: FieldOnboardingController;
+  readonly identity: ReturnType<typeof useIdentitySession>;
 };
 
-export function DshFieldRouteRenderer({ model, actions, onboardingController }: Props): React.ReactElement {
+export function DshFieldRouteRenderer({ model, actions, onboardingController, identity }: Props): React.ReactElement {
   const { route } = model;
 
   if (route.kind === 'onboarding') {
     return (
       <DshFieldOnboardingScreen
         controller={onboardingController}
+        {...(route.partnerId ? { partnerId: route.partnerId } : {})}
         onBack={actions.popRoute}
         onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
@@ -50,11 +53,23 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
             storeId: route.storeId,
           })
         }
+        onGoToVerification={(visitId: string) =>
+          actions.pushRoute({
+            kind: 'verification',
+            visitId,
+            storeId: route.storeId,
+          })
+        }
       />
     );
   }
   if (route.kind === 'verification') {
-    return <DshFieldStoreVerificationScreen />;
+    return (
+      <DshFieldStoreVerificationScreen
+        storeId={route.storeId}
+        visitId={route.visitId}
+      />
+    );
   }
 
   if (route.kind === 'partner-progress') {
@@ -80,14 +95,19 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController }: 
   }
 
   if (route.kind === 'account') {
+    const handleLogout = async () => {
+      await identity.logout();
+      onboardingController.reset();
+      actions.resetToStores();
+    };
     return (
       <DshFieldProfileHomeScreen
         onBack={actions.popRoute}
         onOpenProfile={() => actions.pushRoute({ kind: 'profile' })}
         onOpenHistory={() => actions.pushRoute({ kind: 'history' })}
         onOpenFinance={() => actions.pushRoute({ kind: 'finance' })}
-        onOpenVerification={() => actions.pushRoute({ kind: 'verification' })}
-        onLogout={actions.popRoute}
+        onOpenVerification={() => actions.pushRoute({ kind: 'work-queue' })}
+        onLogout={() => void handleLogout()}
       />
     );
   }

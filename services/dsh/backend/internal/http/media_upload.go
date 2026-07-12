@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/fieldreadiness"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
@@ -36,22 +37,42 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 		return
 	}
 	partnerID := r.FormValue("partnerId")
-	if partnerID == "" {
-		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partnerId is required")
+	storeID := r.FormValue("storeId")
+	purpose := "partner_document"
+	if partnerID == "" && storeID == "" {
+		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partnerId or storeId is required")
 		return
 	}
-	p, err := partner.GetPartner(s.db, partnerID)
-	if errors.Is(err, partner.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
-		return
-	}
-	if p.CreatedByActorID != actor.ID {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
-		return
+	if partnerID != "" {
+		p, err := partner.GetPartner(s.db, partnerID)
+		if errors.Is(err, partner.ErrNotFound) {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
+			return
+		}
+		if p.CreatedByActorID != actor.ID {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
+			return
+		}
+	} else {
+		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+			return
+		}
+		var linkedPartner sql.NullString
+		if err := s.db.QueryRowContext(r.Context(), `SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&linkedPartner); err != nil {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
+			return
+		}
+		if !linkedPartner.Valid || linkedPartner.String == "" {
+			store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "store has no linked partner")
+			return
+		}
+		partnerID = linkedPartner.String
+		purpose = "field_readiness_evidence"
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
@@ -71,7 +92,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload media")
 		return
 	}
-	mediaRef, err := s.createMediaReference(r.Context(), key, actor, partnerID, "partner_document", contentType, header.Filename)
+	mediaRef, err := s.createMediaReference(r.Context(), key, actor, partnerID, purpose, contentType, header.Filename)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register media reference")
 		return

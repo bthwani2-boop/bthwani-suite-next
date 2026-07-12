@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Identity API
-  version: 0.2.0
-  description: Authentication, rotating sessions, actor identity, roles, and permissions.
+  version: 0.3.0
+  description: Authentication, rotating sessions, actor identity, roles, permissions, and internal actor provisioning.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 servers:
@@ -51,6 +51,28 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /auth/activate:
+    post:
+      operationId: activateActor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateRequest"
+      responses:
+        "200":
+          description: Activation consumed and authenticated session created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /auth/logout:
     post:
       operationId: logout
@@ -115,11 +137,205 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /internal/actors/provision:
+    post:
+      operationId: provisionActor
+      tags: [internal]
+      description: >-
+        Service-to-service only. Creates an inactive actor for a
+        workforce-managed service provider. Idempotent when the phone already belongs
+        to an actor holding the requested role.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProvisionActorRequest"
+      responses:
+        "201":
+          description: Actor provisioned (or already provisioned identically).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorAdminView"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Phone or username already bound to a different actor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /internal/actors/{actorId}:
+    get:
+      operationId: getInternalActor
+      tags: [internal]
+      description: Service-to-service only. Sovereign actor projection including phone.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      responses:
+        "200":
+          description: Actor projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorAdminView"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /internal/actors/{actorId}/deactivate:
+    post:
+      operationId: deactivateActor
+      tags: [internal]
+      description: >-
+        Service-to-service only. Marks the actor inactive, revokes every live
+        session, and revokes pending activation challenges in one transaction.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      responses:
+        "204":
+          description: Actor deactivated and sessions revoked.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /internal/actors/{actorId}/reactivate:
+    post:
+      operationId: reactivateActor
+      tags: [internal]
+      description: Service-to-service only. Restores authentication for a suspended actor.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      responses:
+        "204":
+          description: Actor reactivated.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /internal/actors/{actorId}/activations:
+    post:
+      operationId: issueActivationForActor
+      tags: [internal]
+      description: >-
+        Service-to-service only. Issues a one-time activation code for the
+        actor; the phone is resolved sovereignly from the actor record.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          required: false
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueActivationForActorRequest"
+      responses:
+        "201":
+          description: One-time activation code issued for the actor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueActivationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Actor has no activatable role or no phone bound.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /internal/actors/{actorId}/activations/revoke:
+    post:
+      operationId: revokeActorActivations
+      tags: [internal]
+      description: Service-to-service only. Revokes all pending activation codes for the actor.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      responses:
+        "204":
+          description: Pending activation codes revoked.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+    serviceToken:
+      type: http
+      scheme: bearer
+      description: Workforce service token (IDENTITY_WORKFORCE_SERVICE_TOKEN) for internal actor APIs.
+  parameters:
+    ActorId:
+      in: path
+      name: actorId
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    Authorization:
+      in: header
+      name: Authorization
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ServiceCaller:
+      in: header
+      name: X-Service-Caller
+      required: true
+      schema:
+        type: string
+        minLength: 1
   responses:
     InvalidRequest:
       description: Request validation failed.
@@ -129,6 +345,24 @@ components:
             $ref: "#/components/schemas/ApiError"
     Unauthenticated:
       description: Authentication failed or the session expired.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Authenticated actor is not allowed to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Requested identity resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    RateLimited:
+      description: Request was rate limited.
       content:
         application/json:
           schema:
@@ -158,7 +392,41 @@ components:
           minLength: 1
         password:
           type: string
-          minLength: 12
+          minLength: 6
+        deviceFingerprint:
+          type: string
+          maxLength: 200
+    IssueActivationResponse:
+      type: object
+      additionalProperties: false
+      required: [activationId, code, maskedPhone, expiresAt]
+      properties:
+        activationId:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+        maskedPhone:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ActivateRequest:
+      type: object
+      additionalProperties: false
+      required: [actorType, phone, code]
+      properties:
+        actorType:
+          type: string
+          enum: [field, captain]
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 20
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
         deviceFingerprint:
           type: string
           maxLength: 200
@@ -254,6 +522,56 @@ components:
         scope:
           type: string
           enum: [own, assigned, store, zone, all, none]
+    ProvisionActorRequest:
+      type: object
+      additionalProperties: false
+      required: [username, phoneE164, role]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        phoneE164:
+          type: string
+          minLength: 8
+          maxLength: 20
+        role:
+          type: string
+          enum: [field, captain]
+        tenantId:
+          type: string
+    ActorAdminView:
+      type: object
+      additionalProperties: false
+      required: [actorId, username, phoneE164, roles, active]
+      properties:
+        actorId:
+          type: string
+          minLength: 1
+        username:
+          type: string
+        phoneE164:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [client, partner, captain, field, operator, system]
+        active:
+          type: boolean
+    IssueActivationForActorRequest:
+      type: object
+      additionalProperties: false
+      required: [issuedByActorId, expectedActorType, expectedSurface]
+      properties:
+        issuedByActorId:
+          type: string
+          minLength: 1
+        expectedActorType:
+          type: string
+          enum: [field, captain]
+        expectedSurface:
+          type: string
+          enum: [app-field, app-captain]
     ApiError:
       type: object
       additionalProperties: false

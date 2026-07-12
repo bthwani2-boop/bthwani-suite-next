@@ -8,7 +8,6 @@ import {
   CpPageHeader,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   MARKETING_MAIN_TABS,
   useMarketingKpiMetricsController,
@@ -61,43 +60,10 @@ function MainTabButton({
 }
 
 export function MarketingDashboardScreen() {
-  const identity = useIdentitySession();
-
   const [mainTab, setMainTab] = useState<MarketingMainTabId>("visibility-gates");
   const [sectionTab, setSectionTab] = useState<MarketingSectionTabId>("eligibility");
   const { metrics } = useMarketingKpiMetricsController();
   const deliverySignals = useMarketingDeliverySignalsController();
-
-  // ── Auth gate ────────────────────────────────────────────────────────────
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <section
-        dir="rtl"
-        style={{
-          maxWidth: "32rem",
-          margin: "4rem auto",
-          display: "grid",
-          gap: "1rem",
-          padding: "1.5rem",
-          border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-          borderRadius: "1rem",
-          background: "Canvas",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0, textAlign: "right" }}>تسويق DSH</h2>
-          <p style={{ opacity: 0.7, textAlign: "right" }}>
-            يتطلب حساب operator مصرح به للوصول للحوكمة التسويقية.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <CpButton onClick={() => devBypassLogin("operator")} style={{ flex: 1 }}>
-            تجاوز تسجيل الدخول (مطور)
-          </CpButton>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <DataTablePageFrame

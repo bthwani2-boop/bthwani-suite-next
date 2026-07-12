@@ -1,14 +1,12 @@
 "use client";
 
 import React from "react";
-import { useIdentitySession } from "@bthwani/core-identity";
 import { Badge, Box, Button, DataTable, Header, ScrollScreen, StateView, Text, TextField, spacing } from "@bthwani/ui-kit";
 import { usePlatformNotificationConfigController } from "../../shared/notifications";
 import type { DshPlatformNotificationConfig } from "../../shared/notifications";
 
 export function PlatformNotificationConfigScreen() {
-  const identity = useIdentitySession();
-  const { state, reload, save } = usePlatformNotificationConfigController(identity.state.kind);
+  const { state, reload, save } = usePlatformNotificationConfigController("authenticated");
   const [editingConfig, setEditingConfig] = React.useState<DshPlatformNotificationConfig | null>(null);
   const [topic, setTopic] = React.useState("");
   const [actorTypes, setActorTypes] = React.useState("");
@@ -49,9 +47,6 @@ export function PlatformNotificationConfigScreen() {
     }
   }
 
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
   if (state.kind === "loading" || state.kind === "idle") return <StateView title="جارٍ التحميل…" />;
   if (state.kind === "error") {
     return <StateView title="خطأ" description={state.message} actionLabel="إعادة المحاولة" onActionPress={reload} />;

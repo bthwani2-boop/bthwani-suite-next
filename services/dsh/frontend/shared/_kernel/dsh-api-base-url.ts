@@ -12,6 +12,11 @@ export function resolveDshApiBaseUrl(): string {
 }
 
 export function validateDshApiBaseUrl(url: string): boolean {
+  // A same-origin relative path (e.g. "/api/dsh") addresses the control-panel's
+  // BFF proxy rather than the DSH backend directly; it carries no host/port
+  // to validate against the forbidden-local-port list below.
+  if (url.startsWith("/")) return url.length > 1;
+
   try {
     const parsed = new URL(url);
     if (parsed.hostname.length === 0) return false;

@@ -14,6 +14,7 @@ import {
 } from "./store-admin.view-model";
 
 const DSH_ADMIN_API_BASE_URL = resolveDshApiBaseUrl();
+const isBffMode = DSH_ADMIN_API_BASE_URL.startsWith("/");
 
 const adminClient = validateDshApiBaseUrl(DSH_ADMIN_API_BASE_URL)
   ? createDshStoreClient(DSH_ADMIN_API_BASE_URL)
@@ -31,11 +32,11 @@ export async function fetchAdminStoreList(params?: {
       `Set NEXT_PUBLIC_DSH_API_BASE_URL in apps/control-panel/runtime/.env.local`,
     );
   }
-  const token = getIdentityAccessToken();
-  if (token === null) return adminPermissionDeniedState(401);
+  const token = isBffMode ? undefined : getIdentityAccessToken();
+  if (!isBffMode && token === null) return adminPermissionDeniedState(401);
 
   try {
-    const response = await adminClient.listOperatorStores(token);
+    const response = await adminClient.listOperatorStores(token ?? undefined);
 
     if (!response || !Array.isArray(response.stores)) {
       return adminErrorState("INVALID_RESPONSE: stores array missing");
@@ -59,11 +60,11 @@ export async function fetchAdminStoreDetail(
   if (!adminClient) {
     return { kind: "error", message: "API_CONFIG_ERROR: DSH admin client not initialized" };
   }
-  const token = getIdentityAccessToken();
-  if (token === null) return { kind: "permission_denied", statusCode: 401 };
+  const token = isBffMode ? undefined : getIdentityAccessToken();
+  if (!isBffMode && token === null) return { kind: "permission_denied", statusCode: 401 };
 
   try {
-    const response = await adminClient.getOperatorStore(storeId, token);
+    const response = await adminClient.getOperatorStore(storeId, token ?? undefined);
     if (!response || !response.store) {
       return { kind: "not_found" };
     }

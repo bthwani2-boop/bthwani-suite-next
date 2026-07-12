@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
@@ -19,6 +20,7 @@ import {
   type DshCheckStatus,
   type DshFieldVisit,
 } from "../../shared/field-readiness";
+import { uploadFieldStoreMedia } from "../../shared/media";
 
 type Props = {
   readonly storeId: string;
@@ -33,6 +35,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   const [activeCheck, setActiveCheck] = React.useState<DshCheckType | null>(null);
   const [evidenceUrl, setEvidenceUrl] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  const [uploadingEvidence, setUploadingEvidence] = React.useState(false);
 
   if (identity.state.kind !== "authenticated") return null;
   if (checklistState.kind === "loading") return <StateView title="جاري تحميل قائمة التحقق…" />;
@@ -62,12 +65,42 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   const checks = checklistState.kind === "success" ? checklistState.checks : [];
   const vm = buildChecklistViewModel(visit, checks);
 
+  async function pickEvidence(source: "camera" | "library") {
+    if (!activeCheck) return;
+    setUploadingEvidence(true);
+    try {
+      const permission = source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) return;
+      const result = source === "camera"
+        ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
+        : await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const mediaRef = await uploadFieldStoreMedia(storeId, {
+        uri: asset.uri,
+        name: asset.fileName ?? `${activeCheck}-${Date.now()}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+      });
+      setEvidenceUrl(mediaRef);
+    } finally {
+      setUploadingEvidence(false);
+    }
+  }
+
   function handleSubmitCheck(checkType: DshCheckType, status: DshCheckStatus) {
     void submitCheck({ checkType, status, evidenceUrl: evidenceUrl.trim(), notes: notes.trim() }).then(() => {
       setActiveCheck(null);
       setEvidenceUrl("");
       setNotes("");
     });
+  }
+
+  function startEditingCheck(item: { checkType: DshCheckType; evidenceUrl: string; notes: string }) {
+    setActiveCheck(item.checkType);
+    setEvidenceUrl(item.evidenceUrl);
+    setNotes(item.notes);
   }
 
   return (
@@ -109,17 +142,21 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
                 tone={item.status === "passed" ? "success" : item.status === "failed" ? "danger" : "neutral"}
               />
               {visit.status === "in_progress" && (
-                <Button label="تسجيل" tone="ghost" onPress={() => setActiveCheck(item.checkType)} />
+                <Button label="تسجيل" tone="ghost" onPress={() => startEditingCheck(item)} />
               )}
             </View>
           </View>
 
           {activeCheck === item.checkType && (
             <View style={styles.checkForm}>
-              <TextField label="رابط الدليل (اختياري)" value={evidenceUrl} onChangeText={setEvidenceUrl} placeholder="https://..." />
+              <TextField label="مرجع الدليل" value={evidenceUrl} onChangeText={setEvidenceUrl} placeholder="media_..." />
+              <View style={styles.formActions}>
+                <Button label={uploadingEvidence ? "جارٍ الرفع…" : "التقاط دليل"} tone="secondary" disabled={uploadingEvidence} onPress={() => void pickEvidence("camera")} />
+                <Button label="اختيار من المعرض" tone="ghost" disabled={uploadingEvidence} onPress={() => void pickEvidence("library")} />
+              </View>
               <TextField label="ملاحظات" value={notes} onChangeText={setNotes} placeholder="وصف الفحص" multiline />
               <View style={styles.formActions}>
-                <Button label="اجتاز" tone="success" disabled={checkActionState.kind === "submitting"} onPress={() => handleSubmitCheck(item.checkType, "passed")} />
+                <Button label="اجتاز" tone="success" disabled={checkActionState.kind === "submitting" || evidenceUrl.trim().length === 0} onPress={() => handleSubmitCheck(item.checkType, "passed")} />
                 <Button label="فشل" tone="danger" disabled={checkActionState.kind === "submitting"} onPress={() => handleSubmitCheck(item.checkType, "failed")} />
                 <Button label="إلغاء" tone="ghost" onPress={() => setActiveCheck(null)} />
               </View>

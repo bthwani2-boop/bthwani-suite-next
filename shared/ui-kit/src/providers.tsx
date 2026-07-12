@@ -132,9 +132,13 @@ function resolvePortalFactory() {
 	try {
 		const reactDomModule = new Function('return import("react-dom")')() as Promise<{ createPortal?: PortalFactory }>;
 		cachedPortalFactory = null;
-		void reactDomModule.then((module) => {
-			cachedPortalFactory = module.createPortal ?? null;
-		});
+		void reactDomModule
+			.then((module) => {
+				cachedPortalFactory = module.createPortal ?? null;
+			})
+			.catch(() => {
+				cachedPortalFactory = null;
+			});
 	} catch {
 		cachedPortalFactory = null;
 	}

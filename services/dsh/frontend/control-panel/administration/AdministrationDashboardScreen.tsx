@@ -13,7 +13,6 @@ import {
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   ADMIN_MAIN_TABS,
   ADMIN_SCOPE_DETAILS,
@@ -45,7 +44,7 @@ import {
 } from "../../shared/identity-access/dsh-role-permission.model";
 
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Tab button (underline style) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Main Tab button (underline style) ──────────────────────────────────────────
 
 function MainTabButton({
   active,
@@ -97,53 +96,20 @@ function MainTabButton({
   );
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Screen Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export function AdministrationDashboardScreen() {
-  const identity = useIdentitySession();
-
   const [mainTab, setMainTab] = useState<AdminMainTabId>("overview");
 
   // Sub-controllers for real operational data
-  const { state: staffState } = useStaffController(identity.state.kind);
-  const { state: captainState } = useCaptainCredentialController(identity.state.kind);
-  const { state: auditState } = useAdminAuditController(identity.state.kind);
+  const { state: staffState } = useStaffController("authenticated");
+  const { state: captainState } = useCaptainCredentialController("authenticated");
+  const { state: auditState } = useAdminAuditController("authenticated");
 
   const staffCount = staffState.kind === "success" ? staffState.data.length : 0;
   const metrics = useMemo(() => buildAdminKpiMetrics(staffCount), [staffCount]);
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Auth gate Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <section
-        dir="rtl"
-        style={{
-          maxWidth: "32rem",
-          margin: "4rem auto",
-          display: "grid",
-          gap: "1rem",
-          padding: "1.5rem",
-          border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-          borderRadius: "1rem",
-          background: "Canvas",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0, textAlign: "right" }}>Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¯Ã˜Â§Ã˜Â±Ã˜Â© Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â§Ã˜Âª</h2>
-          <p style={{ opacity: 0.7, textAlign: "right" }}>
-            Ã™Å Ã˜ÂªÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜Â­Ã˜Â³Ã˜Â§Ã˜Â¨ operator Ã™â€¦Ã˜ÂµÃ˜Â±Ã˜Â­ Ã˜Â¨Ã™â€¡ Ã™â€žÃ™â€žÃ™Ë†Ã˜ÂµÃ™Ë†Ã™â€ž Ã™â€žÃ™â€žÃ˜ÂªÃ˜Â­Ã™Æ’Ã™â€¦ Ã˜Â¨Ã˜Â§Ã™â€žÃ™Ë†Ã˜ÂµÃ™Ë†Ã™â€ž Ã˜Â§Ã™â€žÃ™ÂÃ™â€ Ã™Å .
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <CpButton onClick={() => devBypassLogin("operator")} style={{ flex: 1 }}>
-            Ã˜ÂªÃ˜Â¬Ã˜Â§Ã™Ë†Ã˜Â² Ã˜ÂªÃ˜Â³Ã˜Â¬Ã™Å Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â¯Ã˜Â®Ã™Ë†Ã™â€ž (Ã™â€¦Ã˜Â·Ã™Ë†Ã˜Â±)
-          </CpButton>
-        </div>
-      </section>
-    );
-  }
-
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Roles & Permissions Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Render Roles & Permissions Panel ───────────────────────────────────────
   const renderRolesPanel = () => {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -191,11 +157,11 @@ export function AdministrationDashboardScreen() {
 
         {/* Permissions Matrix */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã™â€¦Ã˜ÂµÃ™ÂÃ™Ë†Ã™ÂÃ˜Â© Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â§Ã˜Âª Ã˜Â¨Ã˜Â§Ã™â€žÃ™â€¦Ã™â€ Ã˜ÂµÃ˜Â©</h3>
-          <CpTable aria-label="Ã™â€¦Ã˜ÂµÃ™ÂÃ™Ë†Ã™ÂÃ˜Â© Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â§Ã˜Âª">
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>مصفوفة الصلاحيات بالمنصة</h3>
+          <CpTable aria-label="مصفوفة الصلاحيات">
             <thead>
               <tr>
-                <CpTableHeaderCell style={{ width: "12rem" }}>Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â© / Ã˜Â§Ã™â€žÃ™â€ Ã˜Â·Ã˜Â§Ã™â€š</CpTableHeaderCell>
+                <CpTableHeaderCell style={{ width: "12rem" }}>الصلاحية / النطاق</CpTableHeaderCell>
                 {ADMIN_ROLES.map((role) => (
                   <CpTableHeaderCell key={role.id} style={{ textAlign: "center", fontSize: "0.8rem" }}>
                     {role.arabicName}
@@ -214,7 +180,7 @@ export function AdministrationDashboardScreen() {
                     const hasPerm = role.permissions.includes(perm.id);
                     return (
                       <CpTableCell key={role.id} style={{ textAlign: "center", fontSize: "1rem", fontWeight: 700, color: hasPerm ? colorRoles.brandStructure : colorRoles.brandAction }}>
-                        {hasPerm ? "Ã¢Å“â€œ" : "Ã¢Å“â€”"}
+                        {hasPerm ? "✓" : "✗"}
                       </CpTableCell>
                     );
                   })}
@@ -227,7 +193,7 @@ export function AdministrationDashboardScreen() {
     );
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Users & Captains Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Render Users & Captains Panel ──────────────────────────────────────────
   const renderUsersPanel = () => {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -271,29 +237,29 @@ export function AdministrationDashboardScreen() {
         </div>
         {/* Real Captain Credentials from controller */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã˜Â£Ã™Ë†Ã˜Â±Ã˜Â§Ã™â€š Ã˜Â§Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â§Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€šÃ˜Â¨Ã˜Â§Ã˜Â·Ã™â€ Ã˜Â© (Real Data)</h3>
-          {captainState.kind === "loading" && <CpStatePanel role="status" title="Ã˜Â¬Ã˜Â§Ã˜Â±Ã™Â Ã˜ÂªÃ˜Â­Ã™â€¦Ã™Å Ã™â€ž Ã˜Â£Ã™Ë†Ã˜Â±Ã˜Â§Ã™â€š Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â§Ã˜Â¯Ã¢â‚¬Â¦" />}
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>أوراق اعتماد القباطنة (Real Data)</h3>
+          {captainState.kind === "loading" && <CpStatePanel role="status" title="جارٍ تحميل أوراق الاعتماد…" />}
           {captainState.kind === "success" && (
-            <CpTable aria-label="Ã˜Â³Ã˜Â¬Ã™â€ž Ã˜Â§Ã™â€žÃ™â€šÃ˜Â¨Ã˜Â§Ã˜Â·Ã™â€ Ã˜Â©">
+            <CpTable aria-label="سجل القباطنة">
               <thead>
                 <tr>
-                  <CpTableHeaderCell>Ã™â€¦Ã˜Â¹Ã˜Â±Ã™â€˜Ã™Â Ã˜Â§Ã™â€žÃ™â€šÃ˜Â¨Ã˜Â·Ã˜Â§Ã™â€ </CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â±Ã™â€šÃ™â€¦ Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â®Ã˜ÂµÃ˜Â©</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã™â€ Ã™Ë†Ã˜Â¹ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã™Æ’Ã˜Â¨Ã˜Â©</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â© Ã˜Â¨Ã˜Â§Ã™â€žÃ™â€¦Ã™â€ Ã˜ÂµÃ˜Â©</CpTableHeaderCell>
+                  <CpTableHeaderCell>معرّف القبطان</CpTableHeaderCell>
+                  <CpTableHeaderCell>رقم الرخصة</CpTableHeaderCell>
+                  <CpTableHeaderCell>نوع المركبة</CpTableHeaderCell>
+                  <CpTableHeaderCell>الحالة بالمنصة</CpTableHeaderCell>
                 </tr>
               </thead>
               <tbody>
                 {captainState.data.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>Ã™â€žÃ˜Â§ Ã˜ÂªÃ™Ë†Ã˜Â¬Ã˜Â¯ Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã™â€šÃ˜Â¨Ã˜Â§Ã˜Â·Ã™â€ Ã˜Â©.</td>
+                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>لا توجد بيانات قباطنة.</td>
                   </tr>
                 ) : (
                   captainState.data.map((c) => (
                     <tr key={c.captainId}>
                       <CpTableCell><code>{c.captainId}</code></CpTableCell>
-                      <CpTableCell>{c.licenseNumber || "Ã¢â‚¬â€"}</CpTableCell>
-                      <CpTableCell>{c.vehicleType || "Ã¢â‚¬â€"}</CpTableCell>
+                      <CpTableCell>{c.licenseNumber || "—"}</CpTableCell>
+                      <CpTableCell>{c.vehicleType || "—"}</CpTableCell>
                       <CpTableCell>
                         <span style={{ background: "var(--surface-muted, colorRoles.surfaceBase)", color: colorRoles.brandStructure, padding: "0.15rem 0.5rem", borderRadius: "0.25rem", fontSize: "0.75rem", fontWeight: 600 }}>
                           {c.status}
@@ -310,35 +276,35 @@ export function AdministrationDashboardScreen() {
     );
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Approval Chain & Partner Activations Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Render Approval Chain & Partner Activations ───────────────────────────
   const renderApprovalChainPanel = () => {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {/* Visual Chains info */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1.25rem", fontSize: "1rem", fontWeight: 700 }}>Ã˜Â³Ã™â€žÃ˜Â§Ã˜Â³Ã™â€ž Ã™Ë†Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â§Ã˜Â¯</h3>
+          <h3 style={{ margin: "0 0 1.25rem", fontSize: "1rem", fontWeight: 700 }}>سلاسل ومسارات الاعتماد</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {/* Chain 1 */}
             <div style={{ padding: "1rem", background: colorRoles.surfaceBase, borderRadius: "0.75rem", border: `1px solid var(--border-color, colorRoles.surfaceBase)` }}>
-              <strong style={{ fontSize: "0.875rem", color: colorRoles.brandStructure }}>Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â± Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â§Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â§Ã™â€¦ (Ã˜Â§Ã™â€žÃ˜Â´Ã˜Â±Ã™Æ’Ã˜Â§Ã˜Â¡ Ã™Ë†Ã˜Â§Ã™â€žÃ™Æ’Ã˜ÂªÃ˜Â§Ã™â€žÃ™Ë†Ã˜Â¬Ã˜Â§Ã˜Âª)</strong>
+              <strong style={{ fontSize: "0.875rem", color: colorRoles.brandStructure }}>مسار الاعتماد العام (الشركاء والكتالوجات)</strong>
               <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginTop: "0.75rem", flexWrap: "wrap" }}>
-                <span style={{ background: "var(--surface-muted, colorRoles.surfaceBase)", color: "var(--text-secondary, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>Ã˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂªÃ™ÂÃ˜Â¹Ã™Å Ã™â€ž (Ã™â€¦Ã˜Â´Ã˜ÂºÃ™â€ž)</span>
-                <span style={{ fontSize: "1rem" }}>Ã¢â€ Â</span>
-                <span style={{ background: colorRoles.surfaceBase, color: "var(--status-warning-text, colorRoles.brandAction)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>Ã™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹Ã˜Â© Ã™Ë†Ã˜ÂªÃ™Ë†Ã˜Â«Ã™Å Ã™â€š (Ã™â€¦Ã™Å Ã˜Â¯Ã˜Â§Ã™â€ Ã™Å )</span>
-                <span style={{ fontSize: "1rem" }}>Ã¢â€ Â</span>
-                <span style={{ background: colorRoles.surfaceBase, color: "var(--status-success-text, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>Ã™â€šÃ˜Â±Ã˜Â§Ã˜Â± Ã™â€ Ã™â€¡Ã˜Â§Ã˜Â¦Ã™Å  (Ã™â€¦Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€¦Ã™â€ Ã˜ÂµÃ˜Â©)</span>
+                <span style={{ background: "var(--surface-muted, colorRoles.surfaceBase)", color: "var(--text-secondary, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>طلب تفعيل (مشغل)</span>
+                <span style={{ fontSize: "1rem" }}>â⬠</span>
+                <span style={{ background: colorRoles.surfaceBase, color: "var(--status-warning-text, colorRoles.brandAction)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>مراجعة وتوثيق (ميداني)</span>
+                <span style={{ fontSize: "1rem" }}>â⬠</span>
+                <span style={{ background: colorRoles.surfaceBase, color: "var(--status-success-text, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>قرار نهائي (معتمد المنصة)</span>
               </div>
             </div>
 
             {/* Chain 2 */}
             <div style={{ padding: "1rem", background: colorRoles.surfaceBase, borderRadius: "0.75rem", border: `1px solid var(--border-color, colorRoles.surfaceBase)` }}>
-              <strong style={{ fontSize: "0.875rem", color: colorRoles.brandStructure }}>Ã˜Â§Ã™â€žÃ™â€šÃ˜Â±Ã˜Â§Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â§Ã™â€žÃ™Å Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â³Ã˜Â§Ã˜Â³Ã˜Â© (Mutations)</strong>
+              <strong style={{ fontSize: "0.875rem", color: colorRoles.brandStructure }}>القرارات المالية الحساسة (Mutations)</strong>
               <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginTop: "0.75rem", flexWrap: "wrap" }}>
-                <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction, padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>Ã˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€ž Ã˜Â¹Ã™â€¦Ã™Ë†Ã™â€žÃ˜Â© (Ã˜Â¨Ã˜Â«Ã™Ë†Ã˜Â§Ã™â€ Ã™Å )</span>
-                <span style={{ fontSize: "1rem" }}>Ã¢â€ Â</span>
-                <span style={{ background: "var(--status-purple-surface, colorRoles.surfaceBase)", color: "var(--status-purple, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>Ã™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹Ã˜Â© WLT Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â§Ã™â€žÃ™Å </span>
-                <span style={{ fontSize: "1rem" }}>Ã¢â€ Â</span>
-                <span style={{ background: colorRoles.surfaceBase, color: "var(--status-success-text, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>Ã˜Â§Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â§Ã˜Â¯ Ã™â€¦Ã˜Â²Ã˜Â¯Ã™Ë†Ã˜Â¬ Ã™â€¦Ã˜Â§Ã™â€žÃ™Å  Ã˜Â­Ã˜ÂµÃ˜Â±Ã™â€¹Ã˜Â§ (WLT-only)</span>
+                <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction, padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>طلب تعديل عمولة (بثواني)</span>
+                <span style={{ fontSize: "1rem" }}>â⬠</span>
+                <span style={{ background: "var(--status-purple-surface, colorRoles.surfaceBase)", color: "var(--status-purple, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>مراجعة WLT المالي</span>
+                <span style={{ fontSize: "1rem" }}>â⬠</span>
+                <span style={{ background: colorRoles.surfaceBase, color: "var(--status-success-text, colorRoles.brandStructure)", padding: "0.25rem 0.5rem", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600 }}>اعتماد مزدوج مالي حصرًا (WLT-only)</span>
               </div>
             </div>
           </div>
@@ -348,13 +314,13 @@ export function AdministrationDashboardScreen() {
     );
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Maker / Checker Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Render Maker / Checker Panel ──────────────────────────────────────────
   const renderMakerCheckerPanel = () => {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {/* Maker/Checker Grid */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã™â€šÃ™Ë†Ã˜Â§Ã˜Â¹Ã˜Â¯ Ã˜ÂµÃ˜Â§Ã™â€ Ã˜Â¹ Ã˜Â§Ã™â€žÃ™â€šÃ˜Â±Ã˜Â§Ã˜Â± Ã™Ë†Ã™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹Ã™â€¡ (Maker / Checker Matrix)</h3>
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>قواعد صانع القرار ومراجعه (Maker / Checker Matrix)</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(18rem, 1fr))", gap: "1rem" }}>
             {DSH_MAKER_CHECKER_MATRIX.map((entry) => (
               <div
@@ -373,20 +339,20 @@ export function AdministrationDashboardScreen() {
                   <strong style={{ fontSize: "0.875rem" }}>{entry.actionLabel}</strong>
                   {entry.wltReadOnly && (
                     <span style={{ background: colorRoles.surfaceBase, color: "var(--status-danger-strong, colorRoles.brandAction)", fontSize: "0.68rem", fontWeight: 700, padding: "0.05rem 0.35rem", borderRadius: "0.25rem" }}>
-                      WLT Ã™â€šÃ˜Â±Ã˜Â§Ã˜Â¡Ã˜Â© Ã™ÂÃ™â€šÃ˜Â·
+                      WLT قراءة فقط
                     </span>
                   )}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: colorRoles.brandStructure }}>
-                  Ã™â€¦Ã™â€ Ã˜Â´Ã˜Â¦ Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨: <strong>{getDshRoleArabicName(entry.makerRoleId)}</strong>
+                  منشئ الطلب: <strong>{getDshRoleArabicName(entry.makerRoleId)}</strong>
                 </div>
                 <div style={{ fontSize: "0.75rem", color: colorRoles.brandStructure }}>
-                  Ã™â€¦Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€šÃ˜Â±Ã˜Â§Ã˜Â±: <strong>{getDshRoleArabicName(entry.checkerRoleId)}</strong>
+                  معتمد القرار: <strong>{getDshRoleArabicName(entry.checkerRoleId)}</strong>
                 </div>
                 <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
-                  {entry.auditRequired && <span style={{ background: colorRoles.surfaceBase, color: "var(--status-warning-text, colorRoles.brandAction)", fontSize: "0.65rem", padding: "0.05rem 0.25rem", borderRadius: "0.25rem", fontWeight: 600 }}>Ã˜Â³Ã˜Â¬Ã™â€ž Ã˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€š</span>}
-                  {entry.reasonRequired && <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandStructure, fontSize: "0.65rem", padding: "0.05rem 0.25rem", borderRadius: "0.25rem", fontWeight: 600 }}>Ã˜Â³Ã˜Â¨Ã˜Â¨ Ã˜Â¥Ã™â€žÃ˜Â²Ã˜Â§Ã™â€¦Ã™Å </span>}
-                  {entry.evidenceRequired && <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandStructure, fontSize: "0.65rem", padding: "0.05rem 0.25rem", borderRadius: "0.25rem", fontWeight: 600 }}>Ã™Ë†Ã˜Â«Ã™Å Ã™â€šÃ˜Â© Ã˜Â¥Ã˜Â«Ã˜Â¨Ã˜Â§Ã˜Âª</span>}
+                  {entry.auditRequired && <span style={{ background: colorRoles.surfaceBase, color: "var(--status-warning-text, colorRoles.brandAction)", fontSize: "0.65rem", padding: "0.05rem 0.25rem", borderRadius: "0.25rem", fontWeight: 600 }}>سجل تدقيق</span>}
+                  {entry.reasonRequired && <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandStructure, fontSize: "0.65rem", padding: "0.05rem 0.25rem", borderRadius: "0.25rem", fontWeight: 600 }}>سبب إلزامي</span>}
+                  {entry.evidenceRequired && <span style={{ background: colorRoles.surfaceBase, color: colorRoles.brandStructure, fontSize: "0.65rem", padding: "0.05rem 0.25rem", borderRadius: "0.25rem", fontWeight: 600 }}>وثيقة إثبات</span>}
                 </div>
               </div>
             ))}
@@ -395,14 +361,14 @@ export function AdministrationDashboardScreen() {
 
         {/* Reason / Evidence Policies */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã˜Â³Ã™Å Ã˜Â§Ã˜Â³Ã˜Â§Ã˜Âª Ã™â€¦Ã˜ÂªÃ˜Â·Ã™â€žÃ˜Â¨Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¨Ã˜Â±Ã™Å Ã˜Â± Ã™Ë†Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â«Ã˜Â¨Ã˜Â§Ã˜Âª</h3>
-          <CpTable aria-label="Ã˜Â³Ã™Å Ã˜Â§Ã˜Â³Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¨Ã˜Â±Ã™Å Ã˜Â±">
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>سياسات متطلبات التبرير والإثبات</h3>
+          <CpTable aria-label="سياسات التبرير">
             <thead>
               <tr>
-                <CpTableHeaderCell>Ã˜Â¹Ã™â€ Ã™Ë†Ã˜Â§Ã™â€  Ã˜Â§Ã™â€žÃ˜Â³Ã™Å Ã˜Â§Ã˜Â³Ã˜Â©</CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¨Ã˜Â¨ Ã™â€¦Ã˜Â·Ã™â€žÃ™Ë†Ã˜Â¨</CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â«Ã˜Â¨Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¨Ã˜ÂµÃ˜Â±Ã™Å  Ã™â€¦Ã˜Â·Ã™â€žÃ™Ë†Ã˜Â¨</CpTableHeaderCell>
-                <CpTableHeaderCell>Ã˜ÂªÃ˜ÂµÃ˜Â¯Ã™Å Ã˜Â± Ã˜Â§Ã™â€žÃ˜ÂªÃ™â€šÃ˜Â±Ã™Å Ã˜Â± Ã˜Â§Ã™â€žÃ™ÂÃ™â€ Ã™Å </CpTableHeaderCell>
+                <CpTableHeaderCell>عنوان السياسة</CpTableHeaderCell>
+                <CpTableHeaderCell>السبب مطلوب</CpTableHeaderCell>
+                <CpTableHeaderCell>الإثبات البصري مطلوب</CpTableHeaderCell>
+                <CpTableHeaderCell>تصدير التقرير الفني</CpTableHeaderCell>
               </tr>
             </thead>
             <tbody>
@@ -410,10 +376,10 @@ export function AdministrationDashboardScreen() {
                 <tr key={policy.policyId}>
                   <CpTableCell><strong>{policy.title}</strong></CpTableCell>
                   <CpTableCell style={{ fontWeight: 600, color: policy.reasonRequired ? colorRoles.brandAction : colorRoles.brandStructure }}>
-                    {policy.reasonRequired ? "Ã˜Â¥Ã™â€žÃ˜Â²Ã˜Â§Ã™â€¦Ã™Å " : "Ã˜Â§Ã˜Â®Ã˜ÂªÃ™Å Ã˜Â§Ã˜Â±Ã™Å "}
+                    {policy.reasonRequired ? "إلزامي" : "اختياري"}
                   </CpTableCell>
                   <CpTableCell style={{ fontWeight: 600, color: policy.evidenceRequired ? colorRoles.brandAction : colorRoles.brandStructure }}>
-                    {policy.evidenceRequired ? "Ã˜Â¥Ã™â€žÃ˜Â²Ã˜Â§Ã™â€¦Ã™Å " : "Ã˜Â§Ã˜Â®Ã˜ÂªÃ™Å Ã˜Â§Ã˜Â±Ã™Å "}
+                    {policy.evidenceRequired ? "إلزامي" : "اختياري"}
                   </CpTableCell>
                   <CpTableCell><code>{policy.exportSnapshotLabel}</code></CpTableCell>
                 </tr>
@@ -425,13 +391,13 @@ export function AdministrationDashboardScreen() {
     );
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Sensitive Decisions Panel & Audits Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Render Sensitive Decisions Panel & Audits ─────────────────────────────
   const renderSensitiveDecisionsPanel = () => {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {/* 10 Sensitive Decisions List */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã™â€ Ã™â€šÃ˜Â§Ã˜Â· Ã˜Â§Ã™â€žÃ™â€šÃ˜Â±Ã˜Â§Ã˜Â± Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â´Ã˜Â± Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â³Ã˜Â§Ã˜Â³Ã˜Â© Ã˜Â¨Ã™â‚¬ DSH</h3>
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>نقاط القرار العشر الحساسة بـ DSH</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {DSH_ROLE_PERMISSIONS.map((entry) => (
               <div
@@ -449,13 +415,13 @@ export function AdministrationDashboardScreen() {
                 <div style={{ display: "flex", justifySelf: "space-between", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem" }}>
                   <strong style={{ fontSize: "0.9rem", color: colorRoles.brandStructure }}>{entry.arabicLabel}</strong>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
-                    {entry.auditRequired && <span style={{ background: colorRoles.surfaceBase, color: "var(--status-warning-text, colorRoles.brandAction)", fontSize: "0.68rem", fontWeight: 700, padding: "0.1rem 0.35rem", borderRadius: "0.25rem" }}>Ã˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€š Ã˜Â¥Ã™â€žÃ˜Â²Ã˜Â§Ã™â€¦Ã™Å </span>}
-                    {entry.wltMutationForbidden && <span style={{ background: colorRoles.surfaceBase, color: "var(--status-danger-strong, colorRoles.brandAction)", fontSize: "0.68rem", fontWeight: 700, padding: "0.1rem 0.35rem", borderRadius: "0.25rem" }}>WLT Ã˜Â¹Ã˜Â±Ã˜Â¶ Ã™ Ã™â€šÃ˜Â·</span>}
+                    {entry.auditRequired && <span style={{ background: colorRoles.surfaceBase, color: "var(--status-warning-text, colorRoles.brandAction)", fontSize: "0.68rem", fontWeight: 700, padding: "0.1rem 0.35rem", borderRadius: "0.25rem" }}>تدقيق إلزامي</span>}
+                    {entry.wltMutationForbidden && <span style={{ background: colorRoles.surfaceBase, color: "var(--status-danger-strong, colorRoles.brandAction)", fontSize: "0.68rem", fontWeight: 700, padding: "0.1rem 0.35rem", borderRadius: "0.25rem" }}>WLT Ø¹Ø±Ø¶ Ù Ù‚Ø·</span>}
                   </div>
                 </div>
                 <p style={{ margin: 0, fontSize: "0.813rem", opacity: 0.7, lineHeight: 1.5 }}>{entry.arabicDescription}</p>
                 <div style={{ fontSize: "0.75rem", opacity: 0.6, marginTop: "0.25rem" }}>
-                  Ã˜Â§Ã™â€žÃ˜Â£Ã˜Â³Ã˜Â·Ã˜Â­ Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜Â£Ã˜Â«Ã˜Â±Ã˜Â©: {entry.affectedSurfaces.join(" Ã‚Â· ")} | Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â£Ã˜Â¯Ã™â€ Ã™â€° Ã™â€žÃ™â€žÃ˜Â¯Ã™Ë†Ã˜Â±: {getDshRoleArabicName(entry.roleId)}
+                  الأسطح المتأثرة: {entry.affectedSurfaces.join(" · ")} | الحد الأدنى للدور: {getDshRoleArabicName(entry.roleId)}
                 </div>
               </div>
             ))}
@@ -464,29 +430,29 @@ export function AdministrationDashboardScreen() {
 
         {/* Real Audit logs or Audit entries */}
         <div style={{ background: colorRoles.surfaceBase, border: `1px solid var(--border-color, colorRoles.surfaceBase)`, borderRadius: "1rem", padding: "1.5rem" }}>
-          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>Ã˜Â³Ã˜Â¬Ã™â€ž Ã˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€š Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€¦Ã™â€žÃ™Å Ã˜Â§Ã˜Âª Ã™Ë†Ã˜Â§Ã™â€žÃ™â€šÃ˜Â±Ã˜Â§Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â³Ã˜Â§Ã˜Â³Ã˜Â© (Real Data)</h3>
-          {auditState.kind === "loading" && <CpStatePanel role="status" title="Ã˜Â¬Ã˜Â§Ã˜Â±Ã™Â Ã˜ÂªÃ˜Â­Ã™â€¦Ã™Å Ã™â€ž Ã˜Â³Ã˜Â¬Ã™â€ž Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€šÃ¢â‚¬Â¦" />}
+          <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700 }}>سجل تدقيق العمليات والقرارات الحساسة (Real Data)</h3>
+          {auditState.kind === "loading" && <CpStatePanel role="status" title="جارٍ تحميل سجل التدقيق…" />}
           {auditState.kind === "success" && (
-            <CpTable aria-label="Ã˜Â³Ã˜Â¬Ã™â€ž Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€š">
+            <CpTable aria-label="سجل التدقيق">
               <thead>
                 <tr>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â´Ã˜Â±Ã™Â</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â¯Ã™Â</CpTableHeaderCell>
-                  <CpTableHeaderCell>Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â§Ã˜Â±Ã™Å Ã˜Â®</CpTableHeaderCell>
+                  <CpTableHeaderCell>المشرف</CpTableHeaderCell>
+                  <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+                  <CpTableHeaderCell>الهدف</CpTableHeaderCell>
+                  <CpTableHeaderCell>التاريخ</CpTableHeaderCell>
                 </tr>
               </thead>
               <tbody>
                 {auditState.data.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>Ã™â€žÃ˜Â§ Ã˜ÂªÃ™Ë†Ã˜Â¬Ã˜Â¯ Ã˜Â³Ã˜Â¬Ã™â€žÃ˜Â§Ã˜Âª Ã˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€š Ã˜Â¨Ã˜Â§Ã™â€žÃ™â€¦Ã™â€ Ã˜ÂµÃ˜Â©.</td>
+                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", opacity: 0.5 }}>لا توجد سجلات تدقيق بالمنصة.</td>
                   </tr>
                 ) : (
                   auditState.data.map((a, i) => (
                     <tr key={`${a.actorId}-${a.action}-${i}`}>
                       <CpTableCell><strong>{a.actorId}</strong></CpTableCell>
                       <CpTableCell><code>{a.action}</code></CpTableCell>
-                      <CpTableCell>{a.targetId || "Ã¢â‚¬â€"}</CpTableCell>
+                      <CpTableCell>{a.targetId || "—"}</CpTableCell>
                       <CpTableCell style={{ opacity: 0.65 }}>{a.createdAt}</CpTableCell>
                     </tr>
                   ))
@@ -503,21 +469,21 @@ export function AdministrationDashboardScreen() {
     <DataTablePageFrame
       dir="rtl"
       header={
-        <CpPageHeader title="Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¯Ã˜Â§Ã˜Â±Ã˜Â© Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â§Ã˜Âª">
+        <CpPageHeader title="الإدارة والصلاحيات">
           <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
-            Ã˜ÂªÃ˜Â­Ã˜Â¯Ã™Å Ã˜Â¯ Ã™â€¦Ã™â€  Ã™Å Ã˜Â±Ã™â€° Platform Ã™Ë†Ã™â€¦Ã™â€  Ã™Å Ã˜Â¹Ã˜ÂªÃ™â€¦Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜ÂºÃ™Å Ã™Å Ã˜Â±Ã˜Â§Ã˜Âª Ã™Ë†Ã™â€¦Ã™â€  Ã™Å Ã™â€ Ã™ÂÃ˜Â°Ã™â€¡Ã˜Â§.
+            تحديد من يرى Platform ومن يعتمد التغييرات ومن ينفذها.
           </p>
 
-          {/* Ã¢â€â‚¬Ã¢â€â‚¬ KPI Strip Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          {/* ── KPI Strip ─────────────────────────────────────────────── */}
           <CpKpiStrip>
-            <CpKpiCard label="Ã˜Â§Ã™â€žÃ˜Â£Ã˜Â¯Ã™Ë†Ã˜Â§Ã˜Â±"      value={metrics.rolesCount} />
-            <CpKpiCard label="Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã™â€¦Ã™Ë†Ã™â€ "  value={metrics.usersCount} />
-            <CpKpiCard label="Ã™â€ Ã™â€¦Ã˜Â· Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â­Ã™â€žÃ˜Â©"  value={metrics.environmentMode} />
+            <CpKpiCard label="الأدوار"      value={metrics.rolesCount} />
+            <CpKpiCard label="المستخدمون"  value={metrics.usersCount} />
+            <CpKpiCard label="نمط المرحلة"  value={metrics.environmentMode} />
           </CpKpiStrip>
         </CpPageHeader>
       }
     >
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Status Alert Bar Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Status Alert Bar ──────────────────────────────────────────────── */}
       <div
         dir="rtl"
         style={{
@@ -531,10 +497,10 @@ export function AdministrationDashboardScreen() {
           fontWeight: 600,
         }}
       >
-        Ã™Ë†Ã˜Â¶Ã˜Â¹ Ã˜ÂªÃ˜Â¬Ã˜Â±Ã™Å Ã˜Â¨Ã™Å : Ã˜Â¬Ã™â€¦Ã™Å Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª Ã™â€¦Ã˜Â­Ã˜Â§Ã™Æ’Ã˜Â§Ã˜Â© Ã™â€¦Ã˜Â­Ã™â€žÃ™Å Ã˜Â© Ã™ÂÃ™â€šÃ˜Â·. Ã™â€žÃ˜Â§ Ã™Å Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€ž Ã˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â§Ã˜Âª Ã˜Â­Ã™â€šÃ™Å Ã™â€šÃ™Å Ã˜Â© Ã˜Â£Ã™Ë† Ã˜Â­Ã˜Â³Ã˜Â§Ã˜Â¨Ã˜Â§Ã˜Âª Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â®Ã˜Â¯Ã™â€¦Ã™Å Ã™â€ .
+        وضع تجريبي: جميع الإجراءات محاكاة محلية فقط. لا يتم تعديل صلاحيات حقيقية أو حسابات مستخدمين.
       </div>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Main Tab Navigation (matching underline style) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Main Tab Navigation (matching underline style) ────────────────── */}
       <nav
         dir="rtl"
         style={{
@@ -558,7 +524,7 @@ export function AdministrationDashboardScreen() {
         ))}
       </nav>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Content View conditionally rendered by mainTab Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Content View conditionally rendered by mainTab ───────────────── */}
       <div style={{ padding: "0 1rem 1rem" }}>
         {mainTab === "overview" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -576,19 +542,19 @@ export function AdministrationDashboardScreen() {
               }}
             >
               <div>
-                <span style={{ opacity: 0.65 }}>Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¬Ã˜Â§Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ™Å :</span>{" "}
+                <span style={{ opacity: 0.65 }}>المجال الحالي:</span>{" "}
                 <strong>{ADMIN_SCOPE_DETAILS.currentDomain}</strong>
               </div>
               <div>
-                <span style={{ opacity: 0.65 }}>Ã˜Â§Ã™â€žÃ™â€ Ã˜Â·Ã˜Â§Ã™â€š:</span>{" "}
+                <span style={{ opacity: 0.65 }}>النطاق:</span>{" "}
                 <strong>{ADMIN_SCOPE_DETAILS.scope}</strong>
               </div>
               <div>
-                <span style={{ opacity: 0.65 }}>Ã™â€ Ã™â€¦Ã˜Â· Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜Â­Ã™â€žÃ˜Â©:</span>{" "}
+                <span style={{ opacity: 0.65 }}>نمط المرحلة:</span>{" "}
                 <strong>{ADMIN_SCOPE_DETAILS.envMode}</strong>
               </div>
               <div>
-                <span style={{ opacity: 0.65 }}>Auth Ã˜Â­Ã™â€šÃ™Å Ã™â€šÃ™Å :</span>{" "}
+                <span style={{ opacity: 0.65 }}>Auth حقيقي:</span>{" "}
                 <strong style={{ color: colorRoles.brandAction }}>{ADMIN_SCOPE_DETAILS.authType}</strong>
               </div>
             </div>
@@ -652,7 +618,7 @@ export function AdministrationDashboardScreen() {
         {mainTab === "sensitive-decisions" && renderSensitiveDecisionsPanel()}
       </div>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Status Footer (ownership bar) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Status Footer (ownership bar) ────────────────────────────────────── */}
       <div
         dir="rtl"
         style={{
@@ -666,9 +632,9 @@ export function AdministrationDashboardScreen() {
           flexWrap: "wrap",
         }}
       >
-        <span>Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â§Ã™â€žÃ™Æ’: <strong>{ADMIN_STATUS_FOOTER.owner}</strong></span>
-        <span>Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¯Ã™â€šÃ™Å Ã™â€š: <strong>{ADMIN_STATUS_FOOTER.ownerPath}</strong></span>
-        <span>Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â¯Ã™â€¦Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€ Ã˜Â´Ã˜Â·Ã˜Â©: {ADMIN_STATUS_FOOTER.activeServices}</span>
+        <span>المالك: <strong>{ADMIN_STATUS_FOOTER.owner}</strong></span>
+        <span>والتدقيق: <strong>{ADMIN_STATUS_FOOTER.ownerPath}</strong></span>
+        <span>الخدمات النشطة: {ADMIN_STATUS_FOOTER.activeServices}</span>
         <span style={{ marginInlineStart: "auto", color: "var(--status-success-strong, colorRoles.brandStructure)", fontWeight: 600 }}>{ADMIN_STATUS_FOOTER.status}</span>
       </div>
     </DataTablePageFrame>

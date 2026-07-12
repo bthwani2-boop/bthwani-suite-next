@@ -14,6 +14,14 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Legacy catalog-submission permission actions on the control-panel
+// surface. "operator" remains a valid fallback role during RBAC data
+// migration.
+const (
+	CatalogPermissionSubmissionRead   = "catalog.submission.read"
+	CatalogPermissionSubmissionDecide = "catalog.submission.decide"
+)
+
 // handlePublicCatalog is the sole client-facing catalog read. Per
 // governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md rule 4, it reads
 // only from the master catalog + store assortment -- never from the legacy
@@ -263,7 +271,7 @@ func (s *protectedStoreServer) handleSubmitCatalog(w http.ResponseWriter, r *htt
 }
 
 func (s *protectedStoreServer) handleCatalogSubmissions(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", CatalogPermissionSubmissionRead, "operator"); !ok {
 		return
 	}
 	items, err := catalog.ListSubmissions(r.Context(), s.db)
@@ -275,7 +283,7 @@ func (s *protectedStoreServer) handleCatalogSubmissions(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleCatalogDecision(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", CatalogPermissionSubmissionDecide, "operator")
 	if !ok {
 		return
 	}
@@ -292,7 +300,7 @@ func (s *protectedStoreServer) handleCatalogDecision(w http.ResponseWriter, r *h
 }
 
 func (s *protectedStoreServer) handleCatalogAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", CatalogPermissionSubmissionRead, "operator"); !ok {
 		return
 	}
 	items, err := catalog.ListAudit(r.Context(), s.db, r.PathValue("storeId"))

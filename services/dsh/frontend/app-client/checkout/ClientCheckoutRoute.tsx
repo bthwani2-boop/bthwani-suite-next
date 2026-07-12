@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { TopBar, ScrollScreen } from "@bthwani/ui-kit";
 import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { CartScreen } from "../cart";
@@ -31,7 +31,6 @@ export function ClientCheckoutRoute({ storeId, serviceAreaCode = "sana", onBrows
             loading={identity.state.kind === "authenticating"}
             {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
             onSubmit={(username, password) => void identity.login(username, password)}
-            onDevBypass={() => devBypassLogin("client")}
           />
         </ScrollScreen>
       </View>

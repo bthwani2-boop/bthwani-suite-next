@@ -35,13 +35,14 @@ export type StoreRoleContextController = {
 export function useStoreRoleContextController(
   expectedRole: Exclude<StoreRole, "operator">,
   authKind = "unauthenticated",
+  storeId?: string,
 ): StoreRoleContextController {
   const [state, setState] = useState<StoreRoleContextState>({ kind: "loading" });
   const [actionState, setActionState] = useState<StoreActionState>({ kind: "idle" });
 
   const load = useCallback(async () => {
-    await loadStoreRoleContext(fetchStoreRoleContext, setState, expectedRole);
-  }, [expectedRole]);
+    await loadStoreRoleContext(() => fetchStoreRoleContext(storeId), setState, expectedRole);
+  }, [expectedRole, storeId]);
 
   useEffect(() => {
     if (authKind === "authenticated") void load();

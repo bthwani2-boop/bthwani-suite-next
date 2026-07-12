@@ -1,6 +1,5 @@
 "use client";
 
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   DataTable,
@@ -16,13 +15,8 @@ import type { DshZone, DshSlaRule } from "../../shared/platform-policies";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
 export function PlatformPoliciesScreen() {
-  const identity = useIdentitySession();
-  const { state: zonesState, reload: reloadZones, toggle } = useZonesController(identity.state.kind);
-  const { state: slaState } = useSlaRulesController(identity.state.kind);
-
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
+  const { state: zonesState, reload: reloadZones, toggle } = useZonesController("authenticated");
+  const { state: slaState } = useSlaRulesController("authenticated");
 
   return (
     <ScrollScreen>
@@ -68,7 +62,7 @@ export function PlatformPoliciesScreen() {
         )}
       </View>
 
-      <StoreOnboardingFeePolicySection authKind={identity.state.kind} />
+      <StoreOnboardingFeePolicySection authKind="authenticated" />
     </ScrollScreen>
   );
 }

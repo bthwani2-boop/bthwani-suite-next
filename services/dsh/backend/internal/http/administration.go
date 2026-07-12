@@ -8,9 +8,16 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Administration permission actions on the control-panel surface.
+// "operator" remains a valid fallback role during RBAC data migration.
+const (
+	AdministrationPermissionRead   = "administration.read"
+	AdministrationPermissionManage = "administration.manage"
+)
+
 // GET /dsh/operator/admin/roles
 func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -24,7 +31,7 @@ func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Re
 
 // POST /dsh/operator/admin/roles
 func (s *protectedStoreServer) handleCreateRole(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -49,7 +56,7 @@ func (s *protectedStoreServer) handleCreateRole(w http.ResponseWriter, r *http.R
 
 // GET /dsh/operator/admin/staff
 func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -63,7 +70,7 @@ func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Re
 
 // POST /dsh/operator/admin/staff/{staffId}/roles
 func (s *protectedStoreServer) handleAssignStaffRole(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -88,7 +95,7 @@ func (s *protectedStoreServer) handleAssignStaffRole(w http.ResponseWriter, r *h
 
 // GET /dsh/operator/admin/partners
 func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -103,7 +110,7 @@ func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWrite
 
 // POST /dsh/operator/admin/partners/{partnerId}/activate
 func (s *protectedStoreServer) handleActivatePartner(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -132,7 +139,7 @@ func (s *protectedStoreServer) handleActivatePartner(w http.ResponseWriter, r *h
 
 // POST /dsh/operator/admin/partners/{partnerId}/block
 func (s *protectedStoreServer) handleBlockPartner(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -161,7 +168,7 @@ func (s *protectedStoreServer) handleBlockPartner(w http.ResponseWriter, r *http
 
 // GET /dsh/operator/admin/captains
 func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -176,7 +183,7 @@ func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWrite
 
 // POST /dsh/operator/admin/captains/{captainId}/credential
 func (s *protectedStoreServer) handleUpsertCaptainCredential(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -204,7 +211,7 @@ func (s *protectedStoreServer) handleUpsertCaptainCredential(w http.ResponseWrit
 
 // GET /dsh/operator/admin/audit
 func (s *protectedStoreServer) handleListAdminAudit(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", AdministrationPermissionRead, "operator")
 	if !ok {
 		return
 	}

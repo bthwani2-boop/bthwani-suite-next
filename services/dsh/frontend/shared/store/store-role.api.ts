@@ -14,18 +14,19 @@ import { toAdminDetail } from "./store-admin.view-model";
 import type { StoreRoleContextState } from "./store-role-context.controller-core";
 
 const baseUrl = resolveDshApiBaseUrl();
+const isBffMode = baseUrl.startsWith("/");
 const client = validateDshApiBaseUrl(baseUrl) ? createDshStoreClient(baseUrl) : null;
 
-export async function fetchStoreRoleContext(): Promise<StoreRoleContextState> {
-  const token = getIdentityAccessToken();
-  if (token === null) {
+export async function fetchStoreRoleContext(storeId?: string): Promise<StoreRoleContextState> {
+  const token = isBffMode ? undefined : getIdentityAccessToken();
+  if (!isBffMode && token === null) {
     return { kind: "permission_denied", statusCode: 401 };
   }
   if (client === null) {
     return { kind: "error", message: "API_CONFIG_ERROR" };
   }
   try {
-    const response = await client.getStoreContext(token);
+    const response = await client.getStoreContext(token ?? undefined, storeId);
     return {
       kind: "success",
       actorRole: response.actorRole,
@@ -40,12 +41,12 @@ export async function fetchStoreRoleContext(): Promise<StoreRoleContextState> {
 
 
 export async function submitStoreRoleAction(action: StoreRoleAction): Promise<StoreActionResponse> {
-  const accessToken = getIdentityAccessToken();
-  if (accessToken === null || client === null) {
+  const accessToken = isBffMode ? undefined : getIdentityAccessToken();
+  if ((!isBffMode && accessToken === null) || client === null) {
     throw { kind: "http", status: 401 };
   }
   const auth = {
-    accessToken,
+    ...(accessToken ? { accessToken } : {}),
     idempotencyKey: createRequestId("idem"),
     correlationId: createRequestId("corr"),
   };

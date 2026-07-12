@@ -15,7 +15,14 @@ import {
   onboardingStatusIdleState, onboardingStatusLoadingState, onboardingStatusSuccessState, onboardingStatusErrorState,
   workQueueIdleState, workQueueLoadingState, workQueueSuccessState, workQueueErrorState,
 } from "./field-readiness.states";
-import type { DshCreateVisitInput, DshUpsertCheckInput, DshCreateEscalationInput, DshUpdateEscalationInput } from "./field-readiness.types";
+import type {
+  DshCreateVisitInput,
+  DshUpsertCheckInput,
+  DshCreateEscalationInput,
+  DshUpdateEscalationInput,
+  DshFieldVisit,
+  DshReadinessCheck,
+} from "./field-readiness.types";
 
 function resolveMessage(err: unknown): string {
   const c = classifyFieldReadinessError(err);
@@ -183,6 +190,50 @@ export function useFieldWorkQueueController(authKind = "unauthenticated") {
       setState(workQueueErrorState(resolveMessage(err)));
     }
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated(authKind)) void load();
+  }, [authKind, load]);
+
+  return { state, reload: load };
+}
+
+export type FieldVerificationLoadState =
+  | { readonly kind: "idle" }
+  | { readonly kind: "loading" }
+  | { readonly kind: "error"; readonly message: string }
+  | {
+      readonly kind: "success";
+      readonly visit: DshFieldVisit;
+      readonly checks: readonly DshReadinessCheck[];
+      readonly canVerify: boolean;
+    };
+
+export function useFieldVerificationController(
+  storeId: string,
+  visitId: string,
+  authKind = "unauthenticated",
+) {
+  const [state, setState] = useState<FieldVerificationLoadState>({ kind: "idle" });
+
+  const load = useCallback(async () => {
+    setState({ kind: "loading" });
+    try {
+      const [visits, checks] = await Promise.all([
+        fetchFieldVisits(storeId),
+        fetchVisitChecks(visitId),
+      ]);
+      const visit = visits.find((item) => item.id === visitId);
+      if (!visit) {
+        setState({ kind: "error", message: "لم يتم إيجاد الزيارة المحددة" });
+        return;
+      }
+      const canVerify = visit.status === "complete";
+      setState({ kind: "success", visit, checks, canVerify });
+    } catch (err) {
+      setState({ kind: "error", message: resolveMessage(err) });
+    }
+  }, [storeId, visitId]);
 
   useEffect(() => {
     if (isAuthenticated(authKind)) void load();

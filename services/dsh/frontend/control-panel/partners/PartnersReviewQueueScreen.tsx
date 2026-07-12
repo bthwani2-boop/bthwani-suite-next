@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -15,6 +14,9 @@ import {
   alpha,
 } from '@bthwani/ui-kit';
 import { usePartnersController } from "../../shared/partner";
+import { PartnerListScreen } from "./PartnerListScreen";
+import { FieldActivationScreen } from "./FieldActivationScreen";
+import { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
 
 type Props = {
   readonly onOpenPartner?: (partnerId: string) => void;
@@ -23,13 +25,12 @@ type Props = {
 export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const identity = useIdentitySession();
 
   const controller = usePartnersController({
     initialWorkspace: 'inbox',
     searchParams: searchParams ?? undefined,
     router: router ?? undefined,
-    authKind: identity.state.kind,
+    authKind: "authenticated",
   });
 
   const {
@@ -51,10 +52,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const activeSubTabMeta = useMemo(() => {
     return subTabItems.find(s => s.id === activeSubTab);
   }, [subTabItems, activeSubTab]);
-
-  if (identity.state.kind !== "authenticated") {
-    return <StateView title="تسجيل الدخول مطلوب" description="هذه الشاشة للمشغّلين فقط." />;
-  }
 
   const renderInboxContent = () => {
     if (activeSubTab === 'registration') {
@@ -141,7 +138,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم عرض تبويب فرعي {activeSubTabMeta?.label || activeSubTab} بالكامل قريباً.
+          تبويب {activeSubTabMeta?.label || activeSubTab} غير متاح حالياً.
         </Text>
       </Card>
     );
@@ -152,10 +149,32 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
       return renderInboxContent();
     }
 
+    if (activeTab === 'all_partners') {
+      if (activeSubTab === 'partners_list') {
+        return (
+          <PartnerListScreen
+            {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})}
+          />
+        );
+      }
+    }
+
+    if (activeTab === 'activation') {
+      if (activeSubTab === 'field_activation') {
+        return <FieldActivationScreen />;
+      }
+    }
+
+    if (activeTab === 'field_readiness') {
+      if (activeSubTab === 'field_readiness_queue' || activeSubTab === 'readiness_escalations') {
+        return <FieldReadinessQueueScreen />;
+      }
+    }
+
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم ربط تبويب {activeTabMeta?.label || activeTab} بمسار العمليات في شريحة لاحقة.
+          تبويب {activeSubTabMeta?.label || activeSubTab || activeTabMeta?.label || activeTab} غير متاح حالياً.
         </Text>
       </Card>
     );
@@ -184,10 +203,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
               <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
                 <Text role="caption" tone="muted">طلبات معلقة</Text>
                 <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.warning, marginTop: '0.25rem' }}>{pendingCount}</Text>
-              </Card>
-              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
-                <Text role="caption" tone="muted">مناطق نشطة</Text>
-                <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.success, marginTop: '0.25rem' }}>0/0</Text>
               </Card>
             </div>
           </div>
@@ -219,11 +234,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
             ))}
           </div>
         )}
-
-        {/* Current Date update banner */}
-        <Text role="caption" tone="muted" style={{ fontSize: '11px', alignSelf: 'flex-start' }}>
-          آخر تحديث حي: 4:23:23 ص
-        </Text>
 
         {/* Content Area */}
         <div style={{ marginTop: '0.5rem' }}>

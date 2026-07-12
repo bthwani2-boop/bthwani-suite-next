@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS build
+FROM golang:1.26.5-alpine AS build
 WORKDIR /app
 
 COPY services/wlt/backend/go.mod services/wlt/backend/go.sum ./services/wlt/backend/

@@ -1,4 +1,5 @@
-export { default } from "./ControlPanelHrScreen";
+export { default } from "./WorkforceHrScreen";
+export { WorkforceHrScreen } from "./WorkforceHrScreen";
 export type * from "./hr.types";
 export const HR_WORKSPACE_REGISTRY = [
   { id: "overview", label: "نظرة عامة" },

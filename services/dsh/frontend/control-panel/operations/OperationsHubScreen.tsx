@@ -222,7 +222,7 @@ export function ControlPanelDshOperationsScreen({
               <span style={{ fontSize: '9px', opacity: 0.5 }}>◀</span>
               <span
                 style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-                onClick={() => router.push('/operations')}
+                onClick={() => router.push(buildOperationsHref())}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--bthwani-control-panel-brand)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '')}
               >

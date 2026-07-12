@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { devBypassLogin } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -13,28 +12,32 @@ import {
   TextField,
   spacing,
 } from "@bthwani/ui-kit";
-import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
+import { DshFieldActivationCard } from "../components/DshFieldActivationCard";
 import {
   toStoreRoleStatePresentation,
   useStoreRoleContextController,
 } from "../../shared/store";
+import { useFieldVerificationController } from "../../shared/field-readiness";
 
-export function DshFieldStoreVerificationScreen() {
+type Props = {
+  readonly storeId: string;
+  readonly visitId: string;
+};
+
+export function DshFieldStoreVerificationScreen({ storeId, visitId }: Props) {
   const identity = useIdentitySession();
-  const controller = useStoreRoleContextController("field", identity.state.kind);
+  const controller = useStoreRoleContextController("field", identity.state.kind, storeId);
+  const verification = useFieldVerificationController(storeId, visitId, identity.state.kind);
   const [notes, setNotes] = React.useState("");
   const state = controller.state;
 
   if (identity.state.kind !== "authenticated") {
     return (
       <ScrollScreen>
-        <AuthLoginCard
-          title="تسجيل دخول الموظف الميداني"
-          subtitle="ستظهر فقط مهمة المتجر المرتبطة بهويتك."
+        <DshFieldActivationCard
           loading={identity.state.kind === "authenticating"}
           {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
-          onSubmit={(username, password) => void identity.login(username, password)}
-          onDevBypass={() => devBypassLogin("field")}
+          onSubmit={(phone, code) => void identity.activate(phone, code)}
         />
       </ScrollScreen>
     );
@@ -56,8 +59,24 @@ export function DshFieldStoreVerificationScreen() {
     );
   }
 
+  if (verification.state.kind === "loading" || verification.state.kind === "idle") {
+    return <StateView title="جاري تحميل زيارة التحقق…" />;
+  }
+
+  if (verification.state.kind === "error") {
+    return (
+      <StateView
+        title="تعذر تحميل زيارة التحقق"
+        description={verification.state.message}
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => void verification.reload()}
+      />
+    );
+  }
+
   const field = controller.experience?.field;
   if (!field) return null;
+  const visit = verification.state.visit;
   return (
     <ScrollScreen>
       <Card>
@@ -89,16 +108,24 @@ export function DshFieldStoreVerificationScreen() {
             placeholder="صف الأدلة والنتيجة الميدانية"
             multiline
           />
+          {visit.status !== "complete" && (
+            <Text tone="secondary">أكمل الزيارة وقائمة الفحص قبل اعتماد التحقق النهائي.</Text>
+          )}
           <View style={styles.actions}>
             <Button
               label="اعتماد التحقق"
               tone="success"
-              disabled={notes.trim().length < 3 || controller.actionState.kind === "submitting"}
+              disabled={
+                notes.trim().length < 3 ||
+                controller.actionState.kind === "submitting" ||
+                !verification.state.canVerify
+              }
               onPress={() => void controller.submit({
                 kind: "field",
                 storeId: field.store.id,
                 input: {
                   expectedVersion: field.store.version,
+                  visitId: visit.id,
                   outcome: "verified",
                   evidenceStatus: "complete",
                   notes: notes.trim(),
@@ -114,6 +141,7 @@ export function DshFieldStoreVerificationScreen() {
                 storeId: field.store.id,
                 input: {
                   expectedVersion: field.store.version,
+                  visitId: visit.id,
                   outcome: "needs_follow_up",
                   evidenceStatus: "partial",
                   notes: notes.trim(),

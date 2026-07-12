@@ -48,7 +48,16 @@ install_gitleaks() {
 
 install_trivy() {
   if command -v trivy >/dev/null 2>&1; then return 0; fi
-  curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1
+  local version="0.72.0"
+  local archive="trivy_${version}_Linux-64bit.tar.gz"
+  local checksums="trivy_${version}_checksums.txt"
+  local base_url="https://github.com/aquasecurity/trivy/releases/download/v${version}"
+  curl -fsSLO "${base_url}/${archive}"
+  curl -fsSLO "${base_url}/${checksums}"
+  grep " ${archive}$" "${checksums}" | sha256sum --check -
+  tar -zxf "${archive}" trivy
+  sudo mv trivy /usr/local/bin/trivy
+  sudo chmod +x /usr/local/bin/trivy
 }
 
 if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then

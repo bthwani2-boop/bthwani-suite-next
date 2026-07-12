@@ -7,8 +7,8 @@
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
-  Supported: identity, dsh, media, wlt, financial-simulators, mail, cache
-  Example: -Profiles identity,dsh,media or -Profiles wlt,financial-simulators
+  Supported: identity, workforce, dsh, media, wlt, financial-simulators, mail, cache
+  Example: -Profiles identity,workforce,dsh,media or -Profiles wlt,financial-simulators
 
 .PARAMETER Service
   (Optional) Target a specific service for logs/status.
@@ -59,13 +59,16 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("identity", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability")
+$AllowedProfiles = @("identity", "workforce", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
   }
 }
 if ($ProfileList -contains "dsh" -and $ProfileList -notcontains "identity") {
+  $ProfileList = @("identity") + $ProfileList
+}
+if ($ProfileList -contains "workforce" -and $ProfileList -notcontains "identity") {
   $ProfileList = @("identity") + $ProfileList
 }
 
@@ -100,6 +103,7 @@ function Get-RequiredDatabaseNames {
   if ($script:ProfileList -contains "identity") { $RequiredDatabases += "identity_runtime" }
   if ($script:ProfileList -contains "dsh") { $RequiredDatabases += "dsh_runtime" }
   if ($script:ProfileList -contains "wlt") { $RequiredDatabases += "wlt_runtime" }
+  if ($script:ProfileList -contains "workforce") { $RequiredDatabases += "workforce_runtime" }
   if ($RequiredDatabases.Count -eq 0 -and ($Action -eq "migrate" -or $Action -eq "seed")) {
     $RequiredDatabases += "dsh_runtime"
   }
@@ -132,6 +136,7 @@ function Write-RuntimeDoctor {
     if ($script:ProfileList -contains "identity") { $logServices += "identity-api" }
     if ($script:ProfileList -contains "dsh") { $logServices += "dsh-api" }
     if ($script:ProfileList -contains "wlt") { $logServices += "wlt-api" }
+    if ($script:ProfileList -contains "workforce") { $logServices += "workforce-api" }
     if ($script:ProfileList -contains "media") { $logServices += "minio" }
     if ($script:ProfileList -contains "financial-simulators") { $logServices += "wiremock-financial-provider" }
     if ($script:ProfileList -contains "mail") { $logServices += "mailpit" }
@@ -219,6 +224,29 @@ function Wait-ForIdentityApi {
   throw "Identity API did not become healthy after $max attempts"
 }
 
+function Wait-ForWorkforceApi {
+  $max = 20
+  for ($i = 1; $i -le $max; $i++) {
+    Write-Host "Waiting for Workforce API ($i/$max)..."
+    try {
+      $h = Invoke-RestMethod "http://localhost:58086/workforce/health" -TimeoutSec 5 -ErrorAction Stop
+      if ($h.status -eq "healthy") { Write-Host "Workforce API: healthy"; return }
+    } catch { }
+    Start-Sleep -Seconds 4
+  }
+  Write-RuntimeDoctor -Reason "Workforce API health check failed after $max attempts" -Service "workforce-api"
+  throw "Workforce API did not become healthy after $max attempts"
+}
+
+function Invoke-WorkforceSmoke {
+  Write-Host "`n--- Workforce API smoke ---"
+  $health = Invoke-RestMethod "http://localhost:58086/workforce/health" -TimeoutSec 10 -ErrorAction Stop
+  if ($health.status -ne "healthy") { throw "/workforce/health not healthy" }
+  $readiness = Invoke-RestMethod "http://localhost:58086/workforce/readiness" -TimeoutSec 10 -ErrorAction Stop
+  if ($readiness.status -ne "ready") { throw "/workforce/readiness not ready" }
+  Write-Host "Workforce API smoke: PASS"
+}
+
 function Invoke-IdentityMigrate {
   $MigrationDir = "core/identity/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
@@ -232,6 +260,21 @@ function Invoke-IdentityMigrate {
     if ($LASTEXITCODE -ne 0) { throw "Identity migration failed for $($f.Name) (exit $LASTEXITCODE)" }
   }
   Write-Host "Identity migration: PASS"
+}
+
+function Invoke-WorkforceMigrate {
+  $MigrationDir = "core/workforce/database/migrations"
+  $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
+  if ($MigrationFiles.Count -eq 0) { throw "No workforce migration files found in $MigrationDir" }
+  Write-Host "`n--- Applying workforce migrations ---"
+  foreach ($f in $MigrationFiles) {
+    Write-Host "  Applying: $($f.Name)"
+    Get-Content -LiteralPath $f.FullName -Raw |
+      docker compose @(Get-ComposeBase) exec -T postgres `
+        psql -U workforce_runtime -d workforce_runtime -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) { throw "Workforce migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+  }
+  Write-Host "Workforce migration: PASS"
 }
 
 function Invoke-IdentitySmoke {
@@ -860,6 +903,9 @@ elseif ($Action -eq "reset") {
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate
   }
+  if ($ProfileList -contains "workforce") {
+    Invoke-WorkforceMigrate
+  }
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
     Invoke-WltSeed
@@ -877,6 +923,10 @@ elseif ($Action -eq "reset") {
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
     Start-DshApi
+  }
+  if ($ProfileList -contains "workforce") {
+    Wait-ForWorkforceApi
+    Invoke-WorkforceSmoke
   }
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
@@ -930,6 +980,7 @@ elseif ($Action -eq "migrate") {
   Wait-ForPostgres
   if ($ProfileList -contains "dsh" -or $ProfileList.Count -eq 0) { Invoke-Migrate }
   if ($ProfileList -contains "identity") { Invoke-IdentityMigrate }
+  if ($ProfileList -contains "workforce") { Invoke-WorkforceMigrate }
   if ($ProfileList -contains "wlt") { Invoke-WltMigrate }
 }
 
@@ -968,6 +1019,16 @@ elseif ($Action -eq "smoke") {
 
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
+  }
+
+  if ($ProfileList -contains "workforce") {
+    Invoke-WorkforceMigrate
+
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --force-recreate workforce-api
+    if ($LASTEXITCODE -ne 0) { throw "Workforce API recreate failed for smoke (exit $LASTEXITCODE)" }
+
+    Wait-ForWorkforceApi
+    Invoke-WorkforceSmoke
   }
 
   if ($ProfileList -contains "wlt") {
@@ -1042,6 +1103,9 @@ elseif ($Action -eq "all") {
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate
   }
+  if ($ProfileList -contains "workforce") {
+    Invoke-WorkforceMigrate
+  }
   if ($ProfileList -contains "wlt") {
     Invoke-WltMigrate
     Invoke-WltSeed
@@ -1060,6 +1124,11 @@ elseif ($Action -eq "all") {
     Wait-ForIdentityApi
     Invoke-IdentitySmoke
     Start-DshApi
+  }
+
+  if ($ProfileList -contains "workforce") {
+    Wait-ForWorkforceApi
+    Invoke-WorkforceSmoke
   }
 
   if ($ProfileList -contains "wlt") {

@@ -150,5 +150,5 @@ jobs:
       - name: OpenAPI client drift check
         run: |
           pnpm run openapi:generate
-          git diff --exit-code services/dsh/clients/generated/ services/wlt/clients/generated/ core/identity/clients/generated/ || \
+          git diff --exit-code services/dsh/clients/generated/ services/wlt/clients/generated/ core/identity/clients/generated/ core/workforce/clients/generated/ || \
             (echo "ERROR: Generated API clients have drifted from OpenAPI specs. Run 'pnpm run openapi:generate' and commit." && exit 1)

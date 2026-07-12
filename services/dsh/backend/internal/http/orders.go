@@ -8,6 +8,14 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Operations permission actions on the control-panel surface, shared by
+// orders/cart/checkout/dispatch/field-readiness operator views. "operator"
+// remains a valid fallback role during RBAC data migration.
+const (
+	OperationsPermissionRead   = "operations.read"
+	OperationsPermissionManage = "operations.manage"
+)
+
 // POST /dsh/client/orders
 func (s *protectedStoreServer) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
@@ -220,7 +228,7 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 
 // GET /dsh/operator/orders?status=...
 func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -235,7 +243,7 @@ func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r
 
 // POST /dsh/operator/orders/{orderId}/cancel
 func (s *protectedStoreServer) handleOperatorCancelOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
 	if !ok {
 		return
 	}

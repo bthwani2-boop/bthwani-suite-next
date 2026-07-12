@@ -19,7 +19,6 @@ import {
   CpDescriptionRow,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { useIdentitySession, devBypassLogin } from "@bthwani/core-identity";
 import {
   useOperatorTicketController,
   useSupportIncidentController,
@@ -123,18 +122,14 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export function SupportDashboardScreen() {
-  const identity = useIdentitySession();
-
-  const ticketCtrl = useOperatorTicketController(identity.state.kind);
-  const incidentCtrl = useSupportIncidentController(identity.state.kind);
+  const ticketCtrl = useOperatorTicketController("authenticated");
+  const incidentCtrl = useSupportIncidentController("authenticated");
 
   const [mainTab, setMainTab] = useState<SupportMainTabId>("queues");
   const [queueFilter, setQueueFilter] = useState<SupportQueueFilterId>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicketId, setSelectedTicketId] = useState<string | undefined>(undefined);
   const [replyBody, setReplyBody] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
 
   // ── KPI metrics ────────────────────────────────────────────────────────────
   const tickets = ticketCtrl.listState.kind === "success" ? ticketCtrl.listState.tickets : [];
@@ -158,49 +153,6 @@ export function SupportDashboardScreen() {
 
   const breadcrumb = buildSupportBreadcrumb(mainTab, queueFilter, filteredTickets.length);
   const selectedTicket = filteredTickets.find((t) => t.id === selectedTicketId);
-
-  // ── Auth gate ──────────────────────────────────────────────────────────────
-  if (identity.state.kind !== "authenticated") {
-    return (
-      <section
-        dir="rtl"
-        style={{
-          maxWidth: "32rem",
-          margin: "4rem auto",
-          display: "grid",
-          gap: "1rem",
-          padding: "1.5rem",
-          border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-          borderRadius: "1rem",
-          background: "Canvas",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0, textAlign: "right" }}>دعم DSH</h2>
-          <p style={{ opacity: 0.7, textAlign: "right" }}>
-            يتطلب حساب operator مصرح به.
-          </p>
-        </div>
-        <CpTextInput value={username} onChange={setUsername} placeholder="اسم المستخدم" aria-label="اسم المستخدم" />
-        <CpTextInput value={password} onChange={setPassword} placeholder="كلمة المرور" type="password" aria-label="كلمة المرور" />
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <CpButton
-            disabled={username.trim().length === 0 || password.length < 4 || identity.state.kind === "authenticating"}
-            onClick={() => void identity.login(username.trim(), password)}
-            style={{ flex: 1 }}
-          >
-            {identity.state.kind === "authenticating" ? "جاري التحقق…" : "تسجيل الدخول"}
-          </CpButton>
-          <CpButton onClick={() => devBypassLogin("operator")} style={{ flex: 1 }}>
-            تجاوز (مطور)
-          </CpButton>
-        </div>
-        {identity.state.kind === "error" && (
-          <p role="alert" style={{ color: lightThemeColors.danger, textAlign: "right" }}>{identity.state.message}</p>
-        )}
-      </section>
-    );
-  }
 
   const isLoadingTickets = ticketCtrl.listState.kind === "loading";
   const isLoadingIncidents = incidentCtrl.listState.kind === "loading";

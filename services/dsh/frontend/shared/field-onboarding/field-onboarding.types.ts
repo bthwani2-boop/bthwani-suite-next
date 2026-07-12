@@ -70,6 +70,8 @@ export const FIELD_ONBOARDING_STEP_LABELS: Record<FieldPartnerDraftStep, string>
   agreement_review: "الاتفاق والمراجعة النهائية",
 };
 
+export type FieldOnboardingLoadStatus = "idle" | "hydrating" | "ready" | "error";
+
 export type FieldOnboardingDraftState = {
   partnerId: string | null;
   partnerVersion: number | null;
@@ -85,6 +87,10 @@ export type FieldOnboardingDraftState = {
   isSubmitting: boolean;
   submitError: string | null;
   isSubmitted: boolean;
+  loadStatus: FieldOnboardingLoadStatus;
+  loadError: string | null;
+  isSaving: boolean;
+  lastSavedAt: string | null;
 };
 
 export function initialDraftState(): FieldOnboardingDraftState {
@@ -106,6 +112,10 @@ export function initialDraftState(): FieldOnboardingDraftState {
     isSubmitting: false,
     submitError: null,
     isSubmitted: false,
+    loadStatus: "idle",
+    loadError: null,
+    isSaving: false,
+    lastSavedAt: null,
   };
 }
 
