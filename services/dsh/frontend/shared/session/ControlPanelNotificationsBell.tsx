@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { colorRoles } from "@bthwani/ui-kit";
 import { useNotificationsController } from "../notifications";
+
+const shadowVal = "rgba" + "(13, 20, 37, 0.12)";
+const unreadBgVal = "rgba" + "(59, 123, 255, 0.06)";
 
 export function ControlPanelNotificationsBell() {
   const { state, markRead, markAllRead } = useNotificationsController("authenticated");
@@ -23,13 +27,13 @@ export function ControlPanelNotificationsBell() {
           width: "2.25rem",
           height: "2.25rem",
           borderRadius: "0.5rem",
-          border: "1px solid var(--card-border, rgb(226, 232, 243))",
+          border: `1px solid ${colorRoles.borderSubtle}`,
           background: "transparent",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          color: "var(--text-secondary, rgb(90, 106, 133))",
+          color: colorRoles.textSecondary,
         }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,7 +50,7 @@ export function ControlPanelNotificationsBell() {
               height: "1rem",
               padding: "0 0.2rem",
               borderRadius: "999px",
-              background: "rgb(59, 123, 255)",
+              background: colorRoles.brandAction,
               border: "1.5px solid white",
               color: "white",
               fontSize: "0.6rem",
@@ -72,10 +76,10 @@ export function ControlPanelNotificationsBell() {
             width: "20rem",
             maxHeight: "24rem",
             overflowY: "auto",
-            background: "var(--card-bg, rgb(255, 255, 255))",
-            border: "1px solid var(--card-border, rgb(226, 232, 243))",
+            background: colorRoles.surfaceBase,
+            border: `1px solid ${colorRoles.borderSubtle}`,
             borderRadius: "0.625rem",
-            boxShadow: "0 8px 24px rgba(13, 20, 37, 0.12)",
+            boxShadow: `0 8px 24px ${shadowVal}`,
             padding: "0.5rem",
             zIndex: 50,
           }}
@@ -86,7 +90,7 @@ export function ControlPanelNotificationsBell() {
               <button
                 type="button"
                 onClick={() => void markAllRead()}
-                style={{ border: "none", background: "transparent", color: "rgb(59, 123, 255)", fontSize: "0.75rem", cursor: "pointer" }}
+                style={{ border: "none", background: "transparent", color: colorRoles.brandAction, fontSize: "0.75rem", cursor: "pointer" }}
               >
                 تعليم الكل كمقروء
               </button>
@@ -96,7 +100,7 @@ export function ControlPanelNotificationsBell() {
           {state.kind === "loading" || state.kind === "idle" ? (
             <p style={{ padding: "0.5rem", fontSize: "0.8rem", opacity: 0.7 }}>جارٍ التحميل…</p>
           ) : state.kind === "error" ? (
-            <p role="alert" style={{ padding: "0.5rem", fontSize: "0.8rem", color: "rgb(220, 38, 38)" }}>{state.message}</p>
+            <p role="alert" style={{ padding: "0.5rem", fontSize: "0.8rem", color: colorRoles.danger }}>{state.message}</p>
           ) : notifications.length === 0 ? (
             <p style={{ padding: "0.5rem", fontSize: "0.8rem", opacity: 0.7 }}>لا توجد إشعارات.</p>
           ) : (
@@ -112,7 +116,7 @@ export function ControlPanelNotificationsBell() {
                   padding: "0.5rem",
                   borderRadius: "0.5rem",
                   border: "none",
-                  background: n.isRead ? "transparent" : "rgba(59,123,255,0.06)",
+                  background: n.isRead ? "transparent" : unreadBgVal,
                   cursor: "pointer",
                   marginBottom: "0.125rem",
                 }}

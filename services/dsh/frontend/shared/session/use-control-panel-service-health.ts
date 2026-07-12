@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 
 export type ControlPanelServiceHealth = "checking" | "healthy" | "unhealthy";
+
+const client = createDshHttpClient("/api/dsh", "health-poll");
 
 /**
  * Polls DSH's real /dsh/health through the control-panel BFF proxy. Replaces
@@ -16,8 +19,8 @@ export function useControlPanelServiceHealth(pollMs = 30000): ControlPanelServic
 
     async function check(): Promise<void> {
       try {
-        const response = await fetch("/api/dsh/health", { credentials: "same-origin" });
-        if (!cancelled) setStatus(response.ok ? "healthy" : "unhealthy");
+        await client.request("/dsh/health");
+        if (!cancelled) setStatus("healthy");
       } catch {
         if (!cancelled) setStatus("unhealthy");
       }

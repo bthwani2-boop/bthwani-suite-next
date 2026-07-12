@@ -189,6 +189,7 @@ paths:
       security:
         - serviceToken: []
       parameters:
+        - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
       requestBody:
         required: true
@@ -226,6 +227,7 @@ paths:
         - serviceToken: []
       parameters:
         - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
       responses:
         "200":
@@ -249,6 +251,7 @@ paths:
         - serviceToken: []
       parameters:
         - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
       responses:
         "204":
@@ -266,6 +269,7 @@ paths:
         - serviceToken: []
       parameters:
         - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
       responses:
         "204":
@@ -285,6 +289,7 @@ paths:
         - serviceToken: []
       parameters:
         - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
         - in: header
           name: Idempotency-Key
@@ -334,6 +339,7 @@ paths:
         - serviceToken: []
       parameters:
         - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
         - $ref: "#/components/parameters/ServiceCaller"
       responses:
         "204":
@@ -353,6 +359,13 @@ components:
     ActorId:
       in: path
       name: actorId
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    Authorization:
+      in: header
+      name: Authorization
       required: true
       schema:
         type: string
