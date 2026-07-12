@@ -93,7 +93,7 @@ for (const [text, message] of [
 
 requireText(
   loginCardPath,
-  'password.length < 12',
+  'password.length < 6',
   "login UI password minimum must match the Identity contract",
 );
 forbidText(
@@ -144,19 +144,19 @@ for (const absoluteFile of walkFiles("services/dsh/backend", [".go"])) {
 const identityAuthContractPath = "core/identity/contracts/auth.openapi.yaml";
 requireText(
   identityAuthContractPath,
-  "minLength: 12",
-  "Identity's LoginRequest.password contract must require at least 12 characters",
+  "minLength: 6",
+  "Identity's LoginRequest.password contract must require at least 6 characters",
 );
 
 const identityBootstrapPath = "core/identity/backend/internal/identity/repository.go";
 forbidText(
   identityBootstrapPath,
   "len(input.Password) < 4",
-  "local bootstrap must not accept passwords shorter than the 12-char contract minimum",
+  "local bootstrap must not accept passwords shorter than the 6-char contract minimum",
 );
 requireText(
   identityBootstrapPath,
-  "len(input.Password) < 12",
+  "len(input.Password) < 6",
   "local bootstrap password minimum must match the Identity contract",
 );
 

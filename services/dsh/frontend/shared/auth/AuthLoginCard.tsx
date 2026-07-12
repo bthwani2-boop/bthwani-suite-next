@@ -19,7 +19,7 @@ export function AuthLoginCard({
 }: AuthLoginCardProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const disabled = username.trim().length === 0 || password.length < 12;
+  const disabled = username.trim().length === 0 || password.length < 6;
 
   return (
     <Card>

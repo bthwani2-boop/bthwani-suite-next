@@ -102,7 +102,7 @@ function DshLoginForm() {
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
             required
-            minLength={12}
+            minLength={6}
             style={{
               padding: "0.625rem 0.75rem",
               borderRadius: "0.5rem",
@@ -119,7 +119,7 @@ function DshLoginForm() {
 
         <button
           type="submit"
-          disabled={username.trim().length === 0 || password.length < 12 || isSubmitting}
+          disabled={username.trim().length === 0 || password.length < 6 || isSubmitting}
           style={{
             padding: "0.75rem",
             borderRadius: "0.5rem",

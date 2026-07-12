@@ -35,8 +35,8 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	if !input.Enabled {
 		return nil
 	}
-	if len(input.Password) < 12 {
-		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 12 characters")
+	if len(input.Password) < 6 {
+		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
