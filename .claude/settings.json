@@ -3,7 +3,9 @@
     "allow": [
       "Bash(node -e ' *)",
       "Bash(grep -n -B5 'requireActor\\(w, r, \"operator\"\\)$' services/dsh/backend/internal/http/cart.go services/dsh/backend/internal/http/checkout.go services/dsh/backend/internal/http/dispatch.go services/dsh/backend/internal/http/orders.go services/dsh/backend/internal/http/fieldreadiness.go services/dsh/backend/internal/http/notifications.go)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   },
   "project": "bthwani-suite-next",
