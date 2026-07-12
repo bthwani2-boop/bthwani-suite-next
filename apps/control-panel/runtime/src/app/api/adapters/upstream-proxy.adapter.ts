@@ -8,42 +8,11 @@ import {
   setSessionCookies,
 } from "../auth/_lib/cookies";
 import { identityServerClient } from "../auth/_lib/identity-server";
+import { sendAuthenticatedUpstreamRequest } from "../_kernel/upstream-http-request";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 type TokenPair = { accessToken: string; refreshToken: string };
-
-async function forwardUpstream(
-  request: Request,
-  path: readonly string[],
-  baseUrl: string,
-  accessToken: string,
-): Promise<Response> {
-  const targetUrl = new URL(path.join("/"), `${baseUrl.replace(/\/$/, "")}/`);
-  targetUrl.search = new URL(request.url).search;
-
-  const method = request.method;
-  const hasBody = method !== "GET" && method !== "HEAD";
-  const body = hasBody ? await request.arrayBuffer() : undefined;
-  const contentType = request.headers.get("content-type");
-  const correlationId = request.headers.get("x-correlation-id") ?? `cp-bff-${globalThis.crypto.randomUUID()}`;
-  const idempotencyKey = request.headers.get("idempotency-key");
-  const ifMatch = request.headers.get("if-match");
-
-  return fetch(targetUrl, {
-    method,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      "X-Correlation-ID": correlationId,
-      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-      ...(ifMatch ? { "If-Match": ifMatch } : {}),
-      ...(contentType ? { "Content-Type": contentType } : {}),
-    },
-    body: body && body.byteLength > 0 ? body : undefined,
-    signal: AbortSignal.timeout(15000),
-  });
-}
 
 function noStoreJson(body: unknown, status: number): NextResponse {
   return NextResponse.json(body, {
@@ -59,7 +28,7 @@ async function tryForward(
   accessToken: string,
 ): Promise<Response | NextResponse> {
   try {
-    return await forwardUpstream(request, path, baseUrl, accessToken);
+    return await sendAuthenticatedUpstreamRequest({ request, path, baseUrl, accessToken });
   } catch {
     return noStoreJson({ code: "UPSTREAM_UNAVAILABLE" }, 502);
   }
