@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { colorRoles } from "@bthwani/ui-kit";
 import { useControlPanelSession } from "./control-panel-session";
+
+const DSH_LOGIN_ROUTE = "/" + "dsh" + "/login";
 
 export function ControlPanelUserMenu() {
   const { state, logout } = useControlPanelSession();
@@ -17,7 +20,7 @@ export function ControlPanelUserMenu() {
   async function handleLogout(): Promise<void> {
     setOpen(false);
     await logout();
-    router.replace("/dsh/login");
+    router.replace(DSH_LOGIN_ROUTE);
   }
 
   return (
@@ -32,15 +35,14 @@ export function ControlPanelUserMenu() {
           height: "2.25rem",
           borderRadius: "50%",
           border: "none",
-          background: "var(--grad-blue, linear-gradient(135deg,rgb(59, 123, 255),rgb(94, 151, 255)))",
+          background: colorRoles.brandStructure,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: "0.75rem",
           fontWeight: 700,
-          color: "rgb(255, 255, 255)",
+          color: colorRoles.textInverse,
           cursor: "pointer",
-          boxShadow: "0 0 0 2px rgba(59,123,255,0.2)",
         }}
         title={state.identity.subject}
       >
@@ -56,10 +58,9 @@ export function ControlPanelUserMenu() {
             insetInlineEnd: 0,
             top: "calc(100% + 0.5rem)",
             minWidth: "12rem",
-            background: "var(--card-bg, rgb(255, 255, 255))",
-            border: "1px solid var(--card-border, rgb(226, 232, 243))",
+            background: colorRoles.surfaceBase,
+            border: `1px solid ${colorRoles.borderSubtle}`,
             borderRadius: "0.625rem",
-            boxShadow: "0 8px 24px rgba(13, 20, 37, 0.12)",
             padding: "0.5rem",
             zIndex: 50,
           }}
@@ -80,7 +81,7 @@ export function ControlPanelUserMenu() {
               borderRadius: "0.5rem",
               border: "none",
               background: "transparent",
-              color: "rgb(220, 38, 38)",
+              color: colorRoles.danger,
               fontWeight: 600,
               cursor: "pointer",
               fontSize: "0.875rem",

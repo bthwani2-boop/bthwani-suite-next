@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+export type ControlPanelServiceStatus = "checking" | "healthy" | "unhealthy";
+
 export type ControlPanelTopBarProps = {
   readonly logo?: ReactNode;
   readonly title?: ReactNode;
@@ -9,6 +11,15 @@ export type ControlPanelTopBarProps = {
   readonly actions?: ReactNode;
   readonly userMenu?: ReactNode;
   readonly dir?: "ltr" | "rtl";
+  /** Real backend health signal. Omit to hide the status indicator entirely
+   * rather than defaulting to a fake "active" claim. */
+  readonly serviceStatus?: ControlPanelServiceStatus;
+};
+
+const SERVICE_STATUS_META: Record<ControlPanelServiceStatus, { readonly color: string; readonly label: string }> = {
+  checking: { color: "rgb(138, 155, 187)", label: "جارٍ التحقق" },
+  healthy: { color: "rgb(0, 194, 168)", label: "متصل" },
+  unhealthy: { color: "rgb(220, 38, 38)", label: "غير متصل" },
 };
 
 export function ControlPanelTopBar({
@@ -20,6 +31,7 @@ export function ControlPanelTopBar({
   actions,
   userMenu,
   dir = "rtl",
+  serviceStatus,
 }: ControlPanelTopBarProps) {
   return (
     <header
@@ -118,23 +130,25 @@ export function ControlPanelTopBar({
         </>
       )}
 
-      {/* Live status indicator */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
-        <span
-          style={{
-            width: "6px",
-            height: "6px",
-            borderRadius: "50%",
-            background: "rgb(0, 194, 168)",
-            display: "inline-block",
-            animation: "dsh-pulse-dot 2s ease-in-out infinite",
-            boxShadow: "0 0 6px rgba(0,194,168,0.6)",
-          }}
-        />
-        <span style={{ fontSize: "0.72rem", color: "var(--text-muted, rgb(138, 155, 187))", fontWeight: 500 }}>
-          نشط
-        </span>
-      </div>
+      {/* Real backend health indicator — hidden entirely if no status was supplied */}
+      {serviceStatus != null && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: SERVICE_STATUS_META[serviceStatus].color,
+              display: "inline-block",
+              animation: serviceStatus === "healthy" ? "dsh-pulse-dot 2s ease-in-out infinite" : undefined,
+              boxShadow: `0 0 6px ${SERVICE_STATUS_META[serviceStatus].color}99`,
+            }}
+          />
+          <span style={{ fontSize: "0.72rem", color: "var(--text-muted, rgb(138, 155, 187))", fontWeight: 500 }}>
+            {SERVICE_STATUS_META[serviceStatus].label}
+          </span>
+        </div>
+      )}
 
       {/* Search slot */}
       <div style={{ flex: 1, minWidth: 0 }}>{search}</div>
@@ -142,56 +156,9 @@ export function ControlPanelTopBar({
       {/* Custom actions slot */}
       {actions != null ? <div style={{ flexShrink: 0 }}>{actions}</div> : null}
 
-      {/* Notifications slot or default bell */}
-      {notifications != null ? (
-        <div style={{ flexShrink: 0 }}>{notifications}</div>
-      ) : (
-        <button
-          type="button"
-          aria-label="الإشعارات"
-          style={{
-            flexShrink: 0,
-            position: "relative",
-            width: "2.25rem",
-            height: "2.25rem",
-            borderRadius: "0.5rem",
-            border: "1px solid var(--card-border, rgb(226, 232, 243))",
-            background: "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "var(--text-secondary, rgb(90, 106, 133))",
-            transition: "background 0.15s ease, border-color 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(59,123,255,0.06)";
-            e.currentTarget.style.borderColor = "rgba(59,123,255,0.25)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.borderColor = "var(--card-border, rgb(226, 232, 243))";
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          {/* Badge */}
-          <span
-            style={{
-              position: "absolute",
-              top: "0.25rem",
-              insetInlineEnd: "0.25rem",
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
-              background: "rgb(59, 123, 255)",
-              border: "1.5px solid white",
-            }}
-          />
-        </button>
-      )}
+      {/* Notifications slot — no default bell; a section that has not wired
+          real notifications simply shows none rather than a fake badge. */}
+      {notifications != null ? <div style={{ flexShrink: 0 }}>{notifications}</div> : null}
 
       {/* User menu slot or default avatar */}
       {userMenu != null ? (

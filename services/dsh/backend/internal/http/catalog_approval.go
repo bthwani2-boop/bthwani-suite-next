@@ -9,6 +9,14 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Catalog-approval workflow permission actions on the control-panel
+// surface. "operator" remains a valid fallback role during RBAC data
+// migration.
+const (
+	CatalogApprovalPermissionRead   = "catalog.approval.read"
+	CatalogApprovalPermissionManage = "catalog.approval.manage"
+)
+
 // POST /dsh/catalog-approvals
 // Partner or field surfaces submit a product/category/media/store change for review.
 func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +78,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 // GET /dsh/catalog-approvals
 // Marketing/catalog control-panel queue view, filterable by entityType/stage/source.
 func (s *protectedStoreServer) handleListCatalogApprovals(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", CatalogApprovalPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -125,7 +133,7 @@ func (s *protectedStoreServer) handleGetCatalogApproval(w http.ResponseWriter, r
 // POST /dsh/catalog-approvals/{recordId}/transition
 // Marketing/catalog control-panel actors move a record to its next stage.
 func (s *protectedStoreServer) handleTransitionCatalogApproval(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", CatalogApprovalPermissionManage, "operator")
 	if !ok {
 		return
 	}

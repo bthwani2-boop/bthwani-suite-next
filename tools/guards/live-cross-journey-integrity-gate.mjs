@@ -133,10 +133,28 @@ for (const absoluteFile of walkFiles("services/dsh/backend", [".go"])) {
   // permission_test.go intentionally asserts that a stale central-catalog
   // grant is now rejected -- excluded from this production-code check.
   if (absoluteFile.endsWith("_test.go")) continue;
-  if (fs.readFileSync(absoluteFile, "utf8").includes('"central-catalog"')) {
-    const relativeFile = path.relative(repoRoot, absoluteFile);
+  const goSource = fs.readFileSync(absoluteFile, "utf8");
+  const relativeFile = path.relative(repoRoot, absoluteFile);
+  if (goSource.includes('"central-catalog"')) {
     failures.push(
       `${relativeFile}: DSH backend permissions must use the control-panel surface (contract-valid), not the non-contract central-catalog surface`,
+    );
+  }
+  // WP7 regression guard: every operator-only route must go through
+  // requirePermission/requireCatalogPermission/servePartnerPermissionHandler
+  // (fine-grained, permission-data-ready) rather than the coarse role-only
+  // requireActor/servePartnerHandler -- protected_store.go itself is exempt
+  // since it defines requireActor and legitimately still uses it for
+  // non-operator-only role sets (client/partner/captain/field mixes).
+  if (relativeFile.endsWith("protected_store.go")) continue;
+  if (/requireActor\(w,\s*r,\s*"operator"\)/.test(goSource)) {
+    failures.push(
+      `${relativeFile}: plain requireActor(w, r, "operator") checks must be migrated to requirePermission (see WP7)`,
+    );
+  }
+  if (/servePartnerHandler\(w, r, [^)]*"operator"\)/.test(goSource)) {
+    failures.push(
+      `${relativeFile}: plain servePartnerHandler(..., "operator") checks must be migrated to servePartnerPermissionHandler (see WP7)`,
     );
   }
 }
@@ -168,6 +186,50 @@ for (const loginText of ['type="password"', "identity.state.kind !== \"authentic
     "control-panel screens must not render a local login gate; the single login lives at apps/control-panel/runtime/src/app/dsh/login",
   );
 }
+
+for (const placeholderText of ["سيتم ربط", "سيتم عرض", "قريباً", "preview-ready"]) {
+  forbidTextInDirectory(
+    "services/dsh/frontend/control-panel",
+    [".ts", ".tsx"],
+    placeholderText,
+    "control-panel screens must not promise future work in-UI; use an honest unavailable state instead (see WP8)",
+  );
+}
+
+const topBarPath = "apps/control-panel/runtime/src/shell/ControlPanelTopBar.tsx";
+forbidText(
+  topBarPath,
+  ">نشط<",
+  "the TopBar must not hardcode a fake \"active\" status label; use the real serviceStatus prop",
+);
+requireText(
+  topBarPath,
+  "serviceStatus",
+  "the TopBar must derive its status indicator from a real health signal",
+);
+
+requireText(
+  identityBootstrapPath,
+  "loginLockoutThreshold",
+  "Identity login must enforce a lockout threshold against brute-force attempts",
+);
+requireText(
+  identityBootstrapPath,
+  "identity_login_attempts",
+  "Identity login attempts (success and failure, never the password) must be audit-logged",
+);
+
+const identityServerPath = "core/identity/backend/internal/http/server.go";
+forbidText(
+  identityServerPath,
+  'origin == "http://localhost:13000"',
+  "Identity CORS must be environment-configurable, not hardcoded to a single localhost origin",
+);
+requireText(
+  identityServerPath,
+  "IDENTITY_CORS_ALLOWED_ORIGINS",
+  "Identity CORS allowlist must be read from environment configuration",
+);
 
 for (const encodingDir of [
   "services/dsh/frontend/control-panel",

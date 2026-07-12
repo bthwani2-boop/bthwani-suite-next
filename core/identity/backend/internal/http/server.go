@@ -3,7 +3,9 @@ package http
 import (
 	"database/sql"
 	"encoding/json"
+	"net"
 	"net/http"
+	"os"
 	"strings"
 
 	"identity-api/internal/identity"
@@ -20,6 +22,8 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /identity/health", s.health)
 	mux.HandleFunc("GET /identity/readiness", s.readiness)
 	mux.HandleFunc("POST /auth/login", s.login)
+	mux.HandleFunc("POST /auth/activations", s.issueActivation)
+	mux.HandleFunc("POST /auth/activate", s.activate)
 	mux.HandleFunc("POST /auth/refresh", s.refresh)
 	mux.HandleFunc("POST /auth/logout", s.logout)
 	mux.HandleFunc("GET /auth/session", s.session)
@@ -27,14 +31,35 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	return mux
 }
 
+// allowedCorsOrigins reads IDENTITY_CORS_ALLOWED_ORIGINS (comma-separated)
+// so each deployment environment configures its own real origins instead of
+// this service hardcoding a single localhost dev port. Falls back to the
+// local control-panel dev origin only when the env var is unset, matching
+// prior behavior for local development.
+func allowedCorsOrigins() map[string]bool {
+	raw := strings.TrimSpace(os.Getenv("IDENTITY_CORS_ALLOWED_ORIGINS"))
+	if raw == "" {
+		return map[string]bool{"http://localhost:13000": true}
+	}
+	origins := map[string]bool{}
+	for _, origin := range strings.Split(raw, ",") {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			origins[origin] = true
+		}
+	}
+	return origins
+}
+
 func CorsMiddleware(next http.Handler) http.Handler {
+	allowed := allowedCorsOrigins()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Service", "core-identity")
 		origin := r.Header.Get("Origin")
-		if origin == "http://localhost:13000" {
+		if allowed[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Fingerprint")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Device-Fingerprint, Idempotency-Key, X-Correlation-ID")
 			w.Header().Set("Vary", "Origin")
 		}
 		if r.Method == http.MethodOptions {
@@ -66,9 +91,67 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	pair, err := s.repository.Login(r.Context(), request.Username, request.Password, request.DeviceFingerprint)
+	pair, err := s.repository.Login(r.Context(), request.Username, request.Password, request.DeviceFingerprint, clientIP(r))
 	if err != nil {
+		if err == identity.ErrLoginRateLimited {
+			sendError(w, http.StatusTooManyRequests, "LOGIN_RATE_LIMITED", "too many failed attempts; try again later")
+			return
+		}
 		sendError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "invalid username or password")
+		return
+	}
+	sendJSON(w, http.StatusOK, tokenResponse(pair))
+}
+
+func (s *server) issueActivation(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
+		return
+	}
+	issuer, err := s.repository.ResolveAccessToken(r.Context(), token)
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return
+	}
+	var request struct {
+		ActorType string `json:"actorType"`
+		Phone     string `json:"phone"`
+		Surface   string `json:"surface"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	result, err := s.repository.IssueActivation(r.Context(), issuer, identity.IssueActivationInput{
+		ActorType: request.ActorType,
+		Phone:     request.Phone,
+		Surface:   request.Surface,
+	}, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeActivationError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusCreated, result)
+}
+
+func (s *server) activate(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		ActorType         string `json:"actorType"`
+		Phone             string `json:"phone"`
+		Code              string `json:"code"`
+		DeviceFingerprint string `json:"deviceFingerprint"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	pair, err := s.repository.ConsumeActivation(r.Context(), identity.ConsumeActivationInput{
+		ActorType:         request.ActorType,
+		Phone:             request.Phone,
+		Code:              request.Code,
+		DeviceFingerprint: request.DeviceFingerprint,
+	})
+	if err != nil {
+		writeActivationError(w, err)
 		return
 	}
 	sendJSON(w, http.StatusOK, tokenResponse(pair))
@@ -147,6 +230,24 @@ func bearerToken(r *http.Request) (string, bool) {
 	return token, token != ""
 }
 
+// clientIP extracts the caller's address for login-attempt auditing. It
+// trusts X-Forwarded-For only as a best-effort signal (this service sits
+// behind infra-controlled proxies in every deployed environment); it is
+// never used for any authorization decision, only for the audit record.
+func clientIP(r *http.Request) string {
+	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
+		if first, _, found := strings.Cut(forwarded, ","); found {
+			return strings.TrimSpace(first)
+		}
+		return forwarded
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024))
 	decoder.DisallowUnknownFields()
@@ -165,4 +266,21 @@ func sendJSON(w http.ResponseWriter, status int, body any) {
 
 func sendError(w http.ResponseWriter, status int, code, message string) {
 	sendJSON(w, status, identity.ApiError{Code: code, Message: message})
+}
+
+func writeActivationError(w http.ResponseWriter, err error) {
+	switch err {
+	case identity.ErrForbidden:
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "activation is not allowed")
+	case identity.ErrActivationRateLimited:
+		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
+	case identity.ErrActivationUnavailable:
+		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
+	case identity.ErrActivationTargetAbsent:
+		sendError(w, http.StatusNotFound, "ACTIVATION_TARGET_NOT_FOUND", "activation target was not found")
+	case identity.ErrInvalidActivation:
+		sendError(w, http.StatusUnauthorized, "INVALID_ACTIVATION", "activation code is invalid or expired")
+	default:
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
+	}
 }

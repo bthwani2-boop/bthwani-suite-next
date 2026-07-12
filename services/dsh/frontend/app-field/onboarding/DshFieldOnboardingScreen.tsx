@@ -19,7 +19,7 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useIdentitySession } from '@bthwani/core-identity';
-import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
+import { DshFieldActivationCard } from '../components/DshFieldActivationCard';
 import {
   useFieldPartnerOnboardingController,
   getBasicsProfileMissingCount,
@@ -204,12 +204,10 @@ export function DshFieldOnboardingScreen({
         style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}
         contentContainerStyle={{ padding: spacing[4], justifyContent: 'center' }}
       >
-        <AuthLoginCard
-          title="تسجيل دخول الموظف الميداني"
-          subtitle="سجّل دخولك لإضافة شريك جديد."
+        <DshFieldActivationCard
           loading={identity.state.kind === 'authenticating'}
           {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-          onSubmit={(username, password) => void identity.login(username, password)}
+          onSubmit={(phone, code) => void identity.activate(phone, code)}
         />
       </ScrollView>
     );

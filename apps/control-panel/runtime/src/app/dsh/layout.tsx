@@ -12,6 +12,8 @@ import {
 import { ControlPanelSessionProvider } from "@dsh-shared/session/control-panel-session";
 import { ControlPanelAuthBoundary } from "@dsh-shared/session/ControlPanelAuthBoundary";
 import { ControlPanelUserMenu } from "@dsh-shared/session/ControlPanelUserMenu";
+import { ControlPanelNotificationsBell } from "@dsh-shared/session/ControlPanelNotificationsBell";
+import { useControlPanelServiceHealth } from "@dsh-shared/session/use-control-panel-service-health";
 
 function resolveActiveSection(pathname: string | null): string | undefined {
   if (!pathname) return undefined;
@@ -24,6 +26,7 @@ function DshShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const activeSection = resolveActiveSection(pathname);
   const activeLabel = DSH_NAV_ITEMS.find((item) => item.section === activeSection)?.label;
+  const serviceStatus = useControlPanelServiceHealth();
 
   return (
     <ControlPanelShell
@@ -32,6 +35,8 @@ function DshShell({ children }: { readonly children: ReactNode }) {
         <ControlPanelTopBar
           title={<strong>لوحة التحكم</strong>}
           serviceLabel={activeLabel ? <span>{activeLabel}</span> : undefined}
+          serviceStatus={serviceStatus}
+          notifications={<ControlPanelNotificationsBell />}
           userMenu={<ControlPanelUserMenu />}
         />
       }

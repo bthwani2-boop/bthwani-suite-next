@@ -1,14 +1,11 @@
 import type { NextResponse } from "next/server";
+import { isProductionRuntime } from "./env";
 
 export const ACCESS_TOKEN_COOKIE = "dsh_cp_at";
 export const REFRESH_TOKEN_COOKIE = "dsh_cp_rt";
 
 const ACCESS_TOKEN_MAX_AGE_SECONDS = 15 * 60;
 const REFRESH_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
-
-function isProduction(): boolean {
-  return process.env.NODE_ENV === "production";
-}
 
 /**
  * HttpOnly session cookies. The access/refresh tokens are never readable by
@@ -20,14 +17,14 @@ export function setSessionCookies(
 ): void {
   response.cookies.set(ACCESS_TOKEN_COOKIE, session.accessToken, {
     httpOnly: true,
-    secure: isProduction(),
+    secure: isProductionRuntime(),
     sameSite: "lax",
     path: "/",
     maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
   });
   response.cookies.set(REFRESH_TOKEN_COOKIE, session.refreshToken, {
     httpOnly: true,
-    secure: isProduction(),
+    secure: isProductionRuntime(),
     sameSite: "lax",
     path: "/",
     maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
@@ -37,14 +34,14 @@ export function setSessionCookies(
 export function clearSessionCookies(response: NextResponse): void {
   response.cookies.set(ACCESS_TOKEN_COOKIE, "", {
     httpOnly: true,
-    secure: isProduction(),
+    secure: isProductionRuntime(),
     sameSite: "lax",
     path: "/",
     maxAge: 0,
   });
   response.cookies.set(REFRESH_TOKEN_COOKIE, "", {
     httpOnly: true,
-    secure: isProduction(),
+    secure: isProductionRuntime(),
     sameSite: "lax",
     path: "/",
     maxAge: 0,

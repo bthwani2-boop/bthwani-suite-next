@@ -174,7 +174,7 @@ export function FinanceDashboardScreen() {
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم ربط تبويب {activeSubGroupMeta?.label || activeSubGroup} بالخادم المالي في شريحة لاحقة.
+          تبويب {activeSubGroupMeta?.label || activeSubGroup} غير متاح حالياً.
         </Text>
       </Card>
     );

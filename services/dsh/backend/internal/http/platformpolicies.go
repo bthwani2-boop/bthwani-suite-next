@@ -10,9 +10,16 @@ import (
 	"dsh-api/internal/store"
 )
 
+// Platform permission actions on the control-panel surface. "operator"
+// remains a valid fallback role during RBAC data migration.
+const (
+	PlatformPermissionRead   = "platform.read"
+	PlatformPermissionManage = "platform.manage"
+)
+
 // GET /dsh/operator/platform/zones
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -26,7 +33,7 @@ func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Re
 
 // POST /dsh/operator/platform/zones
 func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -52,7 +59,7 @@ func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.R
 
 // PATCH /dsh/operator/platform/zones/{zoneId}
 func (s *protectedStoreServer) handleUpdateZone(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -79,7 +86,7 @@ func (s *protectedStoreServer) handleUpdateZone(w http.ResponseWriter, r *http.R
 
 // GET /dsh/operator/platform/sla-rules
 func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -94,7 +101,7 @@ func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http
 
 // PUT /dsh/operator/platform/sla-rules
 func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -122,7 +129,7 @@ func (s *protectedStoreServer) handleUpsertSlaRules(w http.ResponseWriter, r *ht
 
 // GET /dsh/operator/platform/capacity
 func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -141,7 +148,7 @@ func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r 
 
 // PUT /dsh/operator/platform/capacity
 func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -169,7 +176,7 @@ func (s *protectedStoreServer) handleUpsertCapacityConfig(w http.ResponseWriter,
 
 // GET /dsh/operator/platform/store-onboarding-fee — operator edit view.
 func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -187,7 +194,7 @@ func (s *protectedStoreServer) handleGetStoreOnboardingFeePolicy(w http.Response
 
 // PUT /dsh/operator/platform/store-onboarding-fee
 func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -249,7 +256,7 @@ func (s *protectedStoreServer) handleGetStoreOnboardingFeeReference(w http.Respo
 
 // GET /dsh/operator/platform/serviceability/{zoneId}
 func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
 	if !ok {
 		return
 	}

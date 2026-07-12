@@ -24,6 +24,37 @@ func TestTokenHashDoesNotExposeToken(t *testing.T) {
 	}
 }
 
+func TestNormalizePhoneE164AcceptsYemenLocalNumbers(t *testing.T) {
+	phone, err := NormalizePhoneE164("777 123 456")
+	if err != nil {
+		t.Fatalf("expected phone to normalize: %v", err)
+	}
+	if phone != "+967777123456" {
+		t.Fatalf("unexpected normalized phone: %q", phone)
+	}
+}
+
+func TestActivationCodeHashDoesNotExposeCode(t *testing.T) {
+	repo := &Repository{activationSecret: []byte("01234567890123456789012345678901")}
+	hash := repo.activationCodeHash("field", "+967777123456", "123456")
+	if hash == "123456" || len(hash) != 64 {
+		t.Fatalf("unexpected activation hash: %q", hash)
+	}
+	if hash != repo.activationCodeHash("field", "+967777123456", "123456") {
+		t.Fatal("activation hashing must be deterministic")
+	}
+}
+
+func TestRandomActivationCodeIsSixDigits(t *testing.T) {
+	code, err := randomActivationCode()
+	if err != nil {
+		t.Fatalf("generate activation code: %v", err)
+	}
+	if len(code) != 6 || strings.Trim(code, "0123456789") != "" {
+		t.Fatalf("activation code must be six digits, got %q", code)
+	}
+}
+
 func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{

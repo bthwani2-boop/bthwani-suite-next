@@ -179,7 +179,7 @@ func (s *protectedStoreServer) handleCreateReadinessEscalation(w http.ResponseWr
 
 // GET /dsh/operator/field-readiness/escalations
 func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -198,7 +198,7 @@ func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWrit
 
 // PATCH /dsh/operator/field-readiness/escalations/{escalationId}
 func (s *protectedStoreServer) handleUpdateEscalation(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
 	if !ok {
 		return
 	}

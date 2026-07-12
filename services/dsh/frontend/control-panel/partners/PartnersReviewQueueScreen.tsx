@@ -138,7 +138,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم عرض تبويب فرعي {activeSubTabMeta?.label || activeSubTab} بالكامل قريباً.
+          تبويب {activeSubTabMeta?.label || activeSubTab} غير متاح حالياً.
         </Text>
       </Card>
     );
@@ -153,7 +153,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
       if (activeSubTab === 'partners_list') {
         return (
           <PartnerListScreen
-            onSelectPartner={onOpenPartner}
+            {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})}
           />
         );
       }
@@ -166,7 +166,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     }
 
     if (activeTab === 'field_readiness') {
-      if (activeSubTab === 'field_readiness_queue') {
+      if (activeSubTab === 'field_readiness_queue' || activeSubTab === 'readiness_escalations') {
         return <FieldReadinessQueueScreen />;
       }
     }
@@ -174,7 +174,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     return (
       <Card style={{ padding: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <Text role="body" tone="muted">
-          سيتم ربط تبويب {activeSubTabMeta?.label || activeSubTab || activeTabMeta?.label || activeTab} بمسار العمليات في شريحة لاحقة.
+          تبويب {activeSubTabMeta?.label || activeSubTab || activeTabMeta?.label || activeTab} غير متاح حالياً.
         </Text>
       </Card>
     );
@@ -203,10 +203,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
               <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
                 <Text role="caption" tone="muted">طلبات معلقة</Text>
                 <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.warning, marginTop: '0.25rem' }}>{pendingCount}</Text>
-              </Card>
-              <Card style={{ padding: '0.5rem 0.75rem', alignItems: 'center' }}>
-                <Text role="caption" tone="muted">مناطق نشطة</Text>
-                <Text role="titleMd" style={{ fontWeight: 'bold', color: lightThemeColors.success, marginTop: '0.25rem' }}>0/0</Text>
               </Card>
             </div>
           </div>
@@ -238,11 +234,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
             ))}
           </div>
         )}
-
-        {/* Current Date update banner */}
-        <Text role="caption" tone="muted" style={{ fontSize: '11px', alignSelf: 'flex-start' }}>
-          آخر تحديث حي: 4:23:23 ص
-        </Text>
 
         {/* Content Area */}
         <div style={{ marginTop: '0.5rem' }}>

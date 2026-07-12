@@ -23,8 +23,17 @@ type protectedStoreServer struct {
 	media    *media.Client
 }
 
+// Partners permission actions on the control-panel surface, covering store
+// listing/governance (partners & stores nav). "operator" remains a valid
+// fallback role during RBAC data migration.
+const (
+	PartnersPermissionRead     = "partners.read"
+	PartnersPermissionManage   = "partners.manage"
+	PartnersPermissionActivate = "partners.activate"
+)
+
 func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -37,7 +46,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminList(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminCreate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -50,7 +59,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminCreate(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminUpdate(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -63,7 +72,7 @@ func (s *protectedStoreServer) handleHomeDiscoveryAdminUpdate(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleHomeDiscoveryAdminDelete(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", MarketingPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -137,6 +146,24 @@ func (s *protectedStoreServer) servePartnerHandler(
 	handler(w, partnerRequestWithActor(r, actor))
 }
 
+// servePartnerPermissionHandler is servePartnerHandler's fine-grained
+// counterpart: it grants access via a Permission{Service:"dsh",
+// Surface:"control-panel", Action:action} entry in addition to the
+// fallbackRoles, mirroring requirePermission.
+func (s *protectedStoreServer) servePartnerPermissionHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	handler http.HandlerFunc,
+	action string,
+	fallbackRoles ...string,
+) {
+	actor, ok := s.requirePermission(w, r, "control-panel", action, fallbackRoles...)
+	if !ok {
+		return
+	}
+	handler(w, partnerRequestWithActor(r, actor))
+}
+
 func (s *protectedStoreServer) servePartnerSelfHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -155,51 +182,51 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 }
 
 func (s *protectedStoreServer) handleListPartners(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListPartners(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListPartners(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleCreatePartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleCreatePartner(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleCreatePartner(s.db), PartnersPermissionManage, "operator")
 }
 
 func (s *protectedStoreServer) handleGetPartner(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleGetPartner(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleGetPartner(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleActivationTransition(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleActivationTransition(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleActivationTransition(s.db), PartnersPermissionActivate, "operator")
 }
 
 func (s *protectedStoreServer) handleGetPartnerReadiness(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleGetReadiness(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleGetReadiness(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListDocuments(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListDocuments(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleAddPartnerDocument(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleAddDocument(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleAddDocument(s.db), PartnersPermissionManage, "operator")
 }
 
 func (s *protectedStoreServer) handleReviewPartnerDocument(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleReviewDocument(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleReviewDocument(s.db), PartnersPermissionManage, "operator")
 }
 
 func (s *protectedStoreServer) handleListPartnerStores(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListPartnerStores(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListPartnerStores(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleLinkPartnerStore(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleLinkPartnerStore(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleLinkPartnerStore(s.db), PartnersPermissionManage, "operator")
 }
 
 func (s *protectedStoreServer) handleListPartnerFieldVisits(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListFieldVisits(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListFieldVisits(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleListPartnerAudit(w http.ResponseWriter, r *http.Request) {
-	s.servePartnerHandler(w, r, partner.HandleListAudit(s.db), "operator")
+	s.servePartnerPermissionHandler(w, r, partner.HandleListAudit(s.db), PartnersPermissionRead, "operator")
 }
 
 func (s *protectedStoreServer) handleFieldListPartnerDrafts(w http.ResponseWriter, r *http.Request) {
@@ -270,7 +297,7 @@ func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -283,7 +310,7 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -344,7 +371,7 @@ func (s *protectedStoreServer) handleCaptainReadiness(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionManage, "operator")
 	if !ok {
 		return
 	}
@@ -360,7 +387,7 @@ func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
 	if !ok {
 		return
 	}

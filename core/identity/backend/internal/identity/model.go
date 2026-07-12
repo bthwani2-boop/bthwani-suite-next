@@ -7,6 +7,7 @@ type Actor struct {
 	Username     string
 	PasswordHash string
 	TenantID     string
+	PhoneE164    string
 	Roles        []string
 	Permissions  []Permission
 	Active       bool
@@ -41,6 +42,26 @@ type TokenPair struct {
 type LocalBootstrap struct {
 	Enabled  bool
 	Password string
+}
+
+type IssueActivationInput struct {
+	ActorType string
+	Phone     string
+	Surface   string
+}
+
+type IssueActivationResult struct {
+	ActivationID string    `json:"activationId"`
+	Code         string    `json:"code"`
+	MaskedPhone  string    `json:"maskedPhone"`
+	ExpiresAt    time.Time `json:"expiresAt"`
+}
+
+type ConsumeActivationInput struct {
+	ActorType         string
+	Phone             string
+	Code              string
+	DeviceFingerprint string
 }
 
 type ApiError struct {

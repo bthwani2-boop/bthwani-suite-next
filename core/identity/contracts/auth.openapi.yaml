@@ -51,6 +51,69 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /auth/activations:
+    post:
+      operationId: issueActivation
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+          required: false
+        - in: header
+          name: X-Correlation-ID
+          schema:
+            type: string
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueActivationRequest"
+      responses:
+        "201":
+          description: One-time activation code issued. The code is returned only on this response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueActivationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /auth/activate:
+    post:
+      operationId: activateActor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateRequest"
+      responses:
+        "200":
+          description: Activation consumed and authenticated session created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /auth/logout:
     post:
       operationId: logout
@@ -133,6 +196,24 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Authenticated actor is not allowed to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Requested identity resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    RateLimited:
+      description: Request was rate limited.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
     ServiceUnavailable:
       description: Identity runtime is unavailable.
       content:
@@ -159,6 +240,55 @@ components:
         password:
           type: string
           minLength: 6
+        deviceFingerprint:
+          type: string
+          maxLength: 200
+    IssueActivationRequest:
+      type: object
+      additionalProperties: false
+      required: [actorType, phone, surface]
+      properties:
+        actorType:
+          type: string
+          enum: [field]
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 20
+        surface:
+          type: string
+          enum: [app-field]
+    IssueActivationResponse:
+      type: object
+      additionalProperties: false
+      required: [activationId, code, maskedPhone, expiresAt]
+      properties:
+        activationId:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+        maskedPhone:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ActivateRequest:
+      type: object
+      additionalProperties: false
+      required: [actorType, phone, code]
+      properties:
+        actorType:
+          type: string
+          enum: [field]
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 20
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
         deviceFingerprint:
           type: string
           maxLength: 200

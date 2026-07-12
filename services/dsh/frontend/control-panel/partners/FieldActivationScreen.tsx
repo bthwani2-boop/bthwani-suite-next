@@ -13,37 +13,47 @@ import {
   colorRoles,
   statusScale,
 } from "@bthwani/ui-kit";
+import { useFieldActivationIssuer } from "../../shared/auth/use-field-activation-controller";
 
 type ActiveCode = {
-  phone: string;
-  code: string;
+  activationId: string;
+  maskedPhone: string;
+  expiresAt: string;
   createdAt: string;
 };
 
 export function FieldActivationScreen() {
+  const issueFieldActivationCode = useFieldActivationIssuer();
   const [phone, setPhone] = useState("");
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [activeCodes, setActiveCodes] = useState<ActiveCode[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const isValidPhone = phone.trim().length >= 9;
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!isValidPhone) {
       setError("يرجى إدخال رقم هاتف صحيح (9 أرقام على الأقل)");
       return;
     }
     setError(null);
-    const digits = Math.floor(1000 + Math.random() * 9000).toString();
-    const code = `CP-FIELD-${digits}`;
-    setGeneratedCode(code);
-    
-    const newCodeRecord: ActiveCode = {
-      phone: phone.trim(),
-      code,
-      createdAt: new Date().toLocaleTimeString("ar-YE", { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    };
-    setActiveCodes((prev) => [newCodeRecord, ...prev]);
+    setLoading(true);
+    try {
+      const issued = await issueFieldActivationCode(phone.trim());
+      setGeneratedCode(issued.code);
+      const newCodeRecord: ActiveCode = {
+        activationId: issued.activationId,
+        maskedPhone: issued.maskedPhone,
+        expiresAt: issued.expiresAt,
+        createdAt: new Date().toLocaleTimeString("ar-YE", { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      };
+      setActiveCodes((prev) => [newCodeRecord, ...prev]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر الاتصال بخدمة الهوية");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
@@ -83,8 +93,9 @@ export function FieldActivationScreen() {
           <Button
             label="توليد كود التفعيل"
             tone="primary"
-            disabled={!isValidPhone}
-            onPress={handleGenerate}
+            disabled={!isValidPhone || loading}
+            loading={loading}
+            onPress={() => void handleGenerate()}
           />
           {(phone || generatedCode) && (
             <Button
@@ -106,7 +117,7 @@ export function FieldActivationScreen() {
               شارك هذا الكود مع الموظف الميداني المرتبط بالرقم:
             </Text>
             <Text role="titleMd" style={{ fontWeight: "bold", color: statusScale.infoStrong }}>
-              {phone}
+              {activeCodes[0]?.maskedPhone ?? phone}
             </Text>
           </Box>
 
@@ -137,6 +148,7 @@ export function FieldActivationScreen() {
 
           <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
             يدخل الموظف هذا الكود ورقم هاتفه في شاشة تسجيل دخول التطبيق الميداني لتفعيل حسابه فوراً.
+            تنتهي صلاحية الكود خلال عشر دقائق ولا يظهر مرة أخرى بعد مغادرة هذه الاستجابة.
           </Text>
         </Card>
       )}
@@ -149,7 +161,7 @@ export function FieldActivationScreen() {
           <Box style={{ gap: spacing[2] }}>
             {activeCodes.map((item, idx) => (
               <Box
-                key={idx}
+                key={item.activationId}
                 style={{
                   flexDirection: "row-reverse",
                   justifyContent: "space-between",
@@ -160,23 +172,15 @@ export function FieldActivationScreen() {
                 }}
               >
                 <Box style={{ alignItems: "flex-end" }}>
-                  <Text role="bodyStrong">{item.phone}</Text>
+                  <Text role="bodyStrong">{item.maskedPhone}</Text>
                   <Text role="caption" tone="muted">تم التوليد: {item.createdAt}</Text>
                 </Box>
-                <Text
-                  role="body"
-                  style={{
-                    fontFamily: "monospace",
-                    fontWeight: "bold",
-                    color: colorRoles.info,
-                    backgroundColor: statusScale.infoSoft,
-                    paddingHorizontal: spacing[2],
-                    paddingVertical: spacing[1],
-                    borderRadius: radius.sm,
-                  }}
-                >
-                  {item.code}
-                </Text>
+                <Box style={{ alignItems: "flex-end" }}>
+                  <Text role="caption" tone="muted">ينتهي</Text>
+                  <Text role="body" style={{ color: colorRoles.info }}>
+                    {new Date(item.expiresAt).toLocaleTimeString("ar-YE", { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </Box>
               </Box>
             ))}
           </Box>

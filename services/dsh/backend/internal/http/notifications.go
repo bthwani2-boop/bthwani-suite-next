@@ -95,7 +95,7 @@ func (s *protectedStoreServer) handleUpdateNotificationPreferences(w http.Respon
 
 // GET /dsh/operator/notifications/config
 func (s *protectedStoreServer) handleListPlatformNotificationConfig(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "operator")
+	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
 	if !ok {
 		return
 	}
@@ -113,7 +113,7 @@ func (s *protectedStoreServer) handleListPlatformNotificationConfig(w http.Respo
 
 // PUT /dsh/operator/notifications/config
 func (s *protectedStoreServer) handleUpsertPlatformNotificationConfig(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionManage, "operator")
 	if !ok {
 		return
 	}

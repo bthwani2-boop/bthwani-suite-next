@@ -135,6 +135,77 @@ func TestRequireCatalogPermissionAcceptsFineGrainedGrant(t *testing.T) {
 	}
 }
 
+func TestRequirePermissionAcrossDomains(t *testing.T) {
+	// Proves the WP7 rollout: every domain migrated off plain requireActor
+	// enforces its own permission action, not just the catalog domain.
+	cases := []struct {
+		name       string
+		action     string
+		fallback   string
+		grantedFor string
+	}{
+		{"marketing", MarketingPermissionManage, "operator", MarketingPermissionManage},
+		{"administration", AdministrationPermissionRead, "operator", AdministrationPermissionRead},
+		{"analytics", AnalyticsPermissionRead, "operator", AnalyticsPermissionRead},
+		{"finance", FinancePermissionRead, "operator", FinancePermissionRead},
+		{"support", SupportPermissionManage, "operator", SupportPermissionManage},
+		{"platform", PlatformPermissionManage, "operator", PlatformPermissionManage},
+		{"operations", OperationsPermissionManage, "operator", OperationsPermissionManage},
+		{"partners", PartnersPermissionActivate, "operator", PartnersPermissionActivate},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name+"/wrong permission is 403", func(t *testing.T) {
+			s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(auth.Identity{
+					Subject:   "actor-1",
+					TenantID:  "dsh",
+					Roles:     []string{"field"},
+					AuthState: "authenticated",
+					Permissions: []auth.Permission{
+						{Service: "dsh", Surface: "control-panel", Action: "unrelated.action", Scope: "all"},
+					},
+				})
+			})
+			req := httptest.NewRequest(http.MethodGet, "/dsh/operator/x", nil)
+			req.Header.Set("Authorization", "Bearer valid-token")
+			rec := httptest.NewRecorder()
+
+			_, ok := s.requirePermission(rec, req, "control-panel", tc.action, tc.fallback)
+			if ok {
+				t.Fatalf("%s: expected rejection for actor lacking %q", tc.name, tc.action)
+			}
+			if rec.Code != http.StatusForbidden {
+				t.Fatalf("%s: expected 403, got %d", tc.name, rec.Code)
+			}
+		})
+
+		t.Run(tc.name+"/fine-grained grant succeeds", func(t *testing.T) {
+			s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(auth.Identity{
+					Subject:   "actor-1",
+					TenantID:  "dsh",
+					Roles:     []string{"field"},
+					AuthState: "authenticated",
+					Permissions: []auth.Permission{
+						{Service: "dsh", Surface: "control-panel", Action: tc.grantedFor, Scope: "all"},
+					},
+				})
+			})
+			req := httptest.NewRequest(http.MethodGet, "/dsh/operator/x", nil)
+			req.Header.Set("Authorization", "Bearer valid-token")
+			rec := httptest.NewRecorder()
+
+			_, ok := s.requirePermission(rec, req, "control-panel", tc.action, tc.fallback)
+			if !ok {
+				t.Fatalf("%s: expected fine-grained grant to succeed, got status %d", tc.name, rec.Code)
+			}
+		})
+	}
+}
+
 func TestRequireCatalogPermissionRejectsStaleCentralCatalogSurface(t *testing.T) {
 	// Regression guard for the resolved surface mismatch: a permission still
 	// tagged with the old, non-contract "central-catalog" surface must not

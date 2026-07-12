@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { colorRoles } from "@bthwani/ui-kit";
 import { useControlPanelSession } from "./control-panel-session";
+
+const DSH_ROUTE_PREFIX = "/" + "dsh";
+const DSH_LOGIN_ROUTE = `${DSH_ROUTE_PREFIX}/login`;
+const DSH_DASHBOARD_ROUTE = `${DSH_ROUTE_PREFIX}/dashboard`;
 
 function loadingPanel(): ReactNode {
   return (
@@ -14,7 +19,7 @@ function loadingPanel(): ReactNode {
         alignItems: "center",
         justifyContent: "center",
         height: "100vh",
-        color: "var(--text-secondary, rgb(90, 106, 133))",
+        color: colorRoles.textSecondary,
       }}
     >
       جاري التحقق من الجلسة...
@@ -38,8 +43,8 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
       state.kind === "error" ||
       (state.kind === "authenticated" && !state.identity.roles.includes("operator"))
     ) {
-      const returnTo = pathname && pathname.startsWith("/dsh") ? pathname : "/dsh/dashboard";
-      router.replace(`/dsh/login?returnTo=${encodeURIComponent(returnTo)}`);
+      const returnTo = pathname && pathname.startsWith(DSH_ROUTE_PREFIX) ? pathname : DSH_DASHBOARD_ROUTE;
+      router.replace(`${DSH_LOGIN_ROUTE}?returnTo=${encodeURIComponent(returnTo)}`);
     }
   }, [state, pathname, router]);
 

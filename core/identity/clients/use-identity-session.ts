@@ -3,6 +3,7 @@ import {
   subscribeIdentityState,
   getIdentityState,
   loginIdentity,
+  activateIdentity,
   logoutIdentity,
 } from "./identity-session-store.ts";
 
@@ -16,6 +17,10 @@ export function useIdentitySession() {
     (username: string, password: string) => loginIdentity(username, password),
     [],
   );
+  const activate = useCallback(
+    (phone: string, code: string) => activateIdentity(phone, code),
+    [],
+  );
   const logout = useCallback(() => logoutIdentity(), []);
-  return { state, login, logout };
+  return { state, login, activate, logout };
 }

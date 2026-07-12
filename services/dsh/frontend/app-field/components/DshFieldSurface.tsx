@@ -12,7 +12,7 @@ import {
   configureIdentitySession,
   configureIdentitySessionStorage,
 } from '@bthwani/core-identity';
-import { AuthLoginCard } from '../../shared/auth/AuthLoginCard';
+import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useAndroidBackHandler } from '../../shared/runtime/useAndroidBackHandler';
 import { createSecureStoreSessionStorageAdapter } from '../../shared/runtime/secure-identity-session-storage';
 import { resolveIdentityApiBaseUrl } from '../../shared/_kernel/identity-api-base-url';
@@ -187,12 +187,10 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           translucent={false}
         />
         <View style={{ flex: 1, justifyContent: 'center', padding: spacing[4] }}>
-          <AuthLoginCard
-            title="تسجيل دخول الموظف الميداني"
-            subtitle="سجّل دخولك لإضافة وإدارة الشركاء."
+          <DshFieldActivationCard
             loading={identity.state.kind === 'authenticating'}
             {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-            onSubmit={(username, password) => void identity.login(username, password)}
+            onSubmit={(phone, code) => void identity.activate(phone, code)}
           />
         </View>
       </View>

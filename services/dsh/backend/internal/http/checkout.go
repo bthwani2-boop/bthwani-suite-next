@@ -171,7 +171,7 @@ func (s *protectedStoreServer) handleCancelCheckoutIntent(w http.ResponseWriter,
 
 // GET /dsh/operator/checkout-intents
 func (s *protectedStoreServer) handleOperatorCheckoutIntents(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator"); !ok {
+	if _, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator"); !ok {
 		return
 	}
 	stateFilter := r.URL.Query().Get("state")

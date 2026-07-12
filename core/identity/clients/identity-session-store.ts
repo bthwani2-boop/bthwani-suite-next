@@ -320,6 +320,50 @@ export async function loginIdentity(
   }
 }
 
+export async function activateIdentity(
+  phone: string,
+  code: string,
+): Promise<void> {
+  if (client === null) {
+    state = { kind: "error", message: "IDENTITY_NOT_CONFIGURED" };
+    emit();
+    return;
+  }
+
+  state = { kind: "authenticating" };
+  emit();
+
+  try {
+    const response = await client.activate({
+      actorType: "field",
+      phone,
+      code,
+      deviceFingerprint: "bthwani-runtime-session",
+    });
+
+    if (!isValidActorIdentity(response.identity)) {
+      clearSession("IDENTITY_SESSION_INVALID");
+      return;
+    }
+
+    commitAuthenticatedSession(
+      {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        identity: response.identity,
+      },
+      true,
+    );
+  } catch (error) {
+    const typed = error as IdentityClientError;
+    clearSession(
+      typed.kind === "http"
+        ? typed.code
+        : "IDENTITY_UNAVAILABLE",
+    );
+  }
+}
+
 export async function logoutIdentity(): Promise<void> {
   const accessToken = stored?.accessToken;
   clearSession();

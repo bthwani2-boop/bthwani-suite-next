@@ -89,7 +89,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
             <WebControlPanelRecommendation
               title="لا توجد توصيات نشطة"
-              reason="سيتم ربط توصيات النظام بـ API العمليات (dispatch/analytics)."
+              reason="لا يوجد مصدر بيانات حي لتوصيات النظام حالياً."
               confidence="low"
               auditTag="NEEDS_RUNTIME_EVIDENCE"
             />
@@ -102,7 +102,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
             <WebControlPanelRecommendation
               title="لا توجد تدخلات عاجلة"
-              reason="سيتم ربط قائمة التدخل السريع بـ API العمليات (dispatch/analytics)."
+              reason="لا يوجد مصدر بيانات حي لقائمة التدخل السريع حالياً."
               confidence="low"
               auditTag="NEEDS_RUNTIME_EVIDENCE"
             />
@@ -115,7 +115,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
             <WebControlPanelRecommendation
               title="لا توجد خطط تدخل نشطة"
-              reason="سيتم ربط خطط التدخل بـ API العمليات."
+              reason="لا يوجد مصدر بيانات حي لخطط التدخل حالياً."
               confidence="low"
               auditTag="NEEDS_RUNTIME_EVIDENCE"
             />
@@ -167,7 +167,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
             <WebControlPanelRecommendation
               title="لا توجد مؤشرات خدمة نشطة"
-              reason="سيتم ربط مؤشرات الخدمة بـ API العمليات."
+              reason="لا يوجد مصدر بيانات حي لمؤشرات الخدمة حالياً."
               confidence="low"
               auditTag="NEEDS_RUNTIME_EVIDENCE"
             />
@@ -183,7 +183,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
             </Text>
           </Box>
           <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            <Text role="caption" tone="muted">لا توجد تنبيهات مالية — سيتم ربطها بـ WLT API.</Text>
+            <Text role="caption" tone="muted">لا يوجد مصدر بيانات حي لتنبيهات WLT المالية حالياً.</Text>
           </div>
         </div>
 

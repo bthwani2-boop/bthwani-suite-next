@@ -12,7 +12,7 @@ import {
   TextField,
   spacing,
 } from "@bthwani/ui-kit";
-import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
+import { DshFieldActivationCard } from "../components/DshFieldActivationCard";
 import {
   toStoreRoleStatePresentation,
   useStoreRoleContextController,
@@ -34,12 +34,10 @@ export function DshFieldStoreVerificationScreen({ storeId, visitId }: Props) {
   if (identity.state.kind !== "authenticated") {
     return (
       <ScrollScreen>
-        <AuthLoginCard
-          title="تسجيل دخول الموظف الميداني"
-          subtitle="ستظهر فقط مهمة المتجر المرتبطة بهويتك."
+        <DshFieldActivationCard
           loading={identity.state.kind === "authenticating"}
           {...(identity.state.kind === "error" ? { error: identity.state.message } : {})}
-          onSubmit={(username, password) => void identity.login(username, password)}
+          onSubmit={(phone, code) => void identity.activate(phone, code)}
         />
       </ScrollScreen>
     );
