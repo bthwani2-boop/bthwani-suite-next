@@ -30,7 +30,31 @@ var (
 	ErrActivationUnavailable  = errors.New("activation unavailable")
 	ErrActivationTargetAbsent = errors.New("activation target absent")
 	ErrLoginRateLimited       = errors.New("login rate limited")
+	ErrPhoneAlreadyBound      = errors.New("phone already bound to another actor")
+	ErrUsernameTaken          = errors.New("username already taken")
+	ErrActorNotFound          = errors.New("actor not found")
 )
+
+// activationSurfaceByActorType is the single source for which surface each
+// activatable actor type belongs to. enabledActivationActorTypes gates which
+// of them are accepted on the public activation endpoints today; enabling
+// captain later is a one-line change here, not a rework.
+var activationSurfaceByActorType = map[string]string{
+	"field":   "app-field",
+	"captain": "app-captain",
+}
+
+var enabledActivationActorTypes = map[string]bool{
+	"field": true,
+}
+
+func activationSurfaceFor(actorType string) (string, bool) {
+	if !enabledActivationActorTypes[actorType] {
+		return "", false
+	}
+	surface, ok := activationSurfaceByActorType[actorType]
+	return surface, ok
+}
 
 // Login lockout policy: after loginLockoutThreshold failed attempts for the
 // same username within loginLockoutWindow, further attempts are rejected
@@ -128,8 +152,8 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 		return IssueActivationResult{}, ErrForbidden
 	}
 	actorType := strings.TrimSpace(input.ActorType)
-	surface := strings.TrimSpace(input.Surface)
-	if actorType != "field" || surface != "app-field" {
+	surface, ok := activationSurfaceFor(actorType)
+	if !ok || strings.TrimSpace(input.Surface) != surface {
 		return IssueActivationResult{}, ErrInvalidActivation
 	}
 	phone, err := NormalizePhoneE164(input.Phone)
@@ -143,8 +167,74 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 	}
 	defer tx.Rollback()
 
+	actor, err := actorByPhoneAndRoleTx(ctx, tx, phone, actorType)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return IssueActivationResult{}, ErrActivationTargetAbsent
+		}
+		return IssueActivationResult{}, err
+	}
+	result, err := r.issueChallengeTx(ctx, tx, actor, actorType, surface, issuer.Subject, idempotencyKey, correlationID)
+	if err != nil {
+		return IssueActivationResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return IssueActivationResult{}, err
+	}
+	return result, nil
+}
+
+// IssueActivationForActor issues an activation challenge for a specific actor
+// id. This is the internal (service-to-service) path used by Workforce: the
+// caller references the employee's actor id and Identity resolves the phone
+// sovereignly, so no phone ever travels from another service as input.
+// issuedByActorID must reference the operator actor on whose behalf the
+// calling service acts (kept for the audit FK on the challenge row).
+func (r *Repository) IssueActivationForActor(ctx context.Context, issuedByActorID, actorID, idempotencyKey, correlationID string) (IssueActivationResult, error) {
+	if len(r.activationSecret) < 32 {
+		return IssueActivationResult{}, ErrActivationUnavailable
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return IssueActivationResult{}, err
+	}
+	defer tx.Rollback()
+
+	actor, err := actorByIDForUpdateTx(ctx, tx, actorID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return IssueActivationResult{}, ErrActorNotFound
+		}
+		return IssueActivationResult{}, err
+	}
+	actorType := ""
+	surface := ""
+	for _, role := range actor.Roles {
+		if s, ok := activationSurfaceFor(role); ok {
+			actorType, surface = role, s
+			break
+		}
+	}
+	if actorType == "" || strings.TrimSpace(actor.PhoneE164) == "" {
+		return IssueActivationResult{}, ErrInvalidActivation
+	}
+	result, err := r.issueChallengeTx(ctx, tx, actor, actorType, surface, issuedByActorID, idempotencyKey, correlationID)
+	if err != nil {
+		return IssueActivationResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return IssueActivationResult{}, err
+	}
+	return result, nil
+}
+
+// issueChallengeTx enforces the per-phone issue rate limit, revokes any prior
+// pending challenge for the same actor type + phone, and inserts the new one.
+func (r *Repository) issueChallengeTx(ctx context.Context, tx *sql.Tx, actor Actor, actorType, surface, issuedByActorID, idempotencyKey, correlationID string) (IssueActivationResult, error) {
+	phone := actor.PhoneE164
+
 	var lastIssued time.Time
-	err = tx.QueryRowContext(ctx, `
+	err := tx.QueryRowContext(ctx, `
 		SELECT created_at
 		FROM identity_activation_challenges
 		WHERE actor_type = $1 AND phone_e164 = $2 AND status = 'pending'
@@ -158,13 +248,6 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 		return IssueActivationResult{}, err
 	}
 
-	actor, err := actorByPhoneAndRoleTx(ctx, tx, phone, actorType)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return IssueActivationResult{}, ErrActivationTargetAbsent
-		}
-		return IssueActivationResult{}, err
-	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE identity_activation_challenges
 		SET status = 'revoked', updated_at = now()
@@ -189,11 +272,8 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, ''), NULLIF($10, ''))`,
 		activationID, actor.ID, actorType, phone, surface,
 		r.activationCodeHash(actorType, phone, code), expiresAt,
-		issuer.Subject, strings.TrimSpace(idempotencyKey), strings.TrimSpace(correlationID))
+		issuedByActorID, strings.TrimSpace(idempotencyKey), strings.TrimSpace(correlationID))
 	if err != nil {
-		return IssueActivationResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
 		return IssueActivationResult{}, err
 	}
 	return IssueActivationResult{
@@ -209,7 +289,8 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		return TokenPair{}, ErrActivationUnavailable
 	}
 	actorType := strings.TrimSpace(input.ActorType)
-	if actorType != "field" {
+	surface, ok := activationSurfaceFor(actorType)
+	if !ok {
 		return TokenPair{}, ErrInvalidActivation
 	}
 	phone, err := NormalizePhoneE164(input.Phone)
@@ -217,8 +298,8 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		return TokenPair{}, err
 	}
 	code := strings.TrimSpace(input.Code)
-	ok, _ := regexp.MatchString(`^[0-9]{6}$`, code)
-	if !ok {
+	codeOK, _ := regexp.MatchString(`^[0-9]{6}$`, code)
+	if !codeOK {
 		return TokenPair{}, ErrInvalidActivation
 	}
 
@@ -234,11 +315,11 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 	err = tx.QueryRowContext(ctx, `
 		SELECT id, actor_id, code_hash, status, attempts, expires_at
 		FROM identity_activation_challenges
-		WHERE actor_type = $1 AND phone_e164 = $2 AND surface = 'app-field'
+		WHERE actor_type = $1 AND phone_e164 = $2 AND surface = $3
 		  AND status = 'pending'
 		ORDER BY created_at DESC
 		LIMIT 1
-		FOR UPDATE`, actorType, phone).Scan(&challengeID, &actorID, &codeHash, &status, &attempts, &expiresAt)
+		FOR UPDATE`, actorType, phone, surface).Scan(&challengeID, &actorID, &codeHash, &status, &attempts, &expiresAt)
 	if err != nil {
 		return TokenPair{}, ErrInvalidActivation
 	}
@@ -583,4 +664,220 @@ func maskPhone(phone string) string {
 		return phone
 	}
 	return phone[:4] + strings.Repeat("*", len(phone)-6) + phone[len(phone)-2:]
+}
+
+// ProvisionActor creates an inactive actor for a workforce-managed employee.
+// The actor stays active=false until the employee consumes an activation code
+// (ConsumeActivation flips it to true), so a provisioned-but-never-activated
+// employee can never log in or refresh. The call is idempotent: if the phone
+// is already bound to an actor holding the requested role, that actor is
+// returned unchanged; if the phone belongs to an actor without the role, the
+// call fails with ErrPhoneAlreadyBound so role merging stays an explicit,
+// separate workflow instead of a silent side effect.
+func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
+	role := strings.TrimSpace(input.Role)
+	surface, ok := activationSurfaceByActorType[role]
+	if !ok {
+		return ActorAdminView{}, ErrInvalidActivation
+	}
+	username := strings.TrimSpace(input.Username)
+	if username == "" {
+		return ActorAdminView{}, ErrInvalidActivation
+	}
+	tenantID := strings.TrimSpace(input.TenantID)
+	if tenantID == "" {
+		tenantID = "local-dsh"
+	}
+	phone, err := NormalizePhoneE164(input.PhoneE164)
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+	defer tx.Rollback()
+
+	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return ActorAdminView{}, err
+	}
+	if err == nil {
+		if hasRole(existing.Roles, role) {
+			if err := tx.Commit(); err != nil {
+				return ActorAdminView{}, err
+			}
+			return toAdminView(existing), nil
+		}
+		return ActorAdminView{}, ErrPhoneAlreadyBound
+	}
+
+	suffix, err := randomToken(9)
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+	actorID := role + "-" + suffix
+	permissions, err := json.Marshal([]Permission{
+		{Service: "dsh", Surface: surface, Action: "store:read", Scope: "assigned"},
+		{Service: "dsh", Surface: surface, Action: "store:write", Scope: "assigned"},
+	})
+	if err != nil {
+		return ActorAdminView{}, err
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO identity_actors
+			(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
+		actorID, username, tenantID, phone, pq.Array([]string{role}), string(permissions))
+	if err != nil {
+		return ActorAdminView{}, mapUniqueViolation(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return ActorAdminView{}, err
+	}
+	return ActorAdminView{
+		ActorID: actorID, Username: username, PhoneE164: phone,
+		Roles: []string{role}, Active: false,
+	}, nil
+}
+
+// ActorAdminByID returns the internal projection of an actor, including the
+// sovereign phone number, for service-to-service consumers.
+func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorAdminView, error) {
+	var actor Actor
+	var roles pq.StringArray
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, username, COALESCE(phone_e164, ''), roles, active
+		FROM identity_actors WHERE id = $1`, actorID).Scan(
+		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Active,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ActorAdminView{}, ErrActorNotFound
+		}
+		return ActorAdminView{}, err
+	}
+	actor.Roles = []string(roles)
+	return toAdminView(actor), nil
+}
+
+// DeactivateActor suspends authentication for an actor in one transaction:
+// the actor is marked inactive (Login/Refresh/ResolveAccessToken all reject
+// inactive actors), every live session is revoked, and any pending activation
+// challenge is revoked so a previously issued code cannot resurrect access.
+func (r *Repository) DeactivateActor(ctx context.Context, actorID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE identity_actors SET active = false, updated_at = now() WHERE id = $1`, actorID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return ErrActorNotFound
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE identity_sessions SET revoked_at = now()
+		WHERE actor_id = $1 AND revoked_at IS NULL`, actorID); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE identity_activation_challenges SET status = 'revoked', updated_at = now()
+		WHERE actor_id = $1 AND status = 'pending'`, actorID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ReactivateActor restores authentication for a previously activated actor
+// (e.g. a suspended employee being reinstated). It does not create sessions;
+// the actor logs in again through the normal flows.
+func (r *Repository) ReactivateActor(ctx context.Context, actorID string) error {
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actorID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return ErrActorNotFound
+	}
+	return nil
+}
+
+// RevokeActivationChallenges cancels all pending activation codes for an
+// actor without touching the actor's active flag or sessions.
+func (r *Repository) RevokeActivationChallenges(ctx context.Context, actorID string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE identity_activation_challenges SET status = 'revoked', updated_at = now()
+		WHERE actor_id = $1 AND status = 'pending'`, actorID)
+	return err
+}
+
+func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error) {
+	var actor Actor
+	var roles pq.StringArray
+	var permissionsJSON []byte
+	err := tx.QueryRowContext(ctx, `
+		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		FROM identity_actors WHERE id = $1
+		FOR UPDATE`, actorID).Scan(
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&roles, &permissionsJSON, &actor.Active,
+	)
+	if err != nil {
+		return Actor{}, err
+	}
+	actor.Roles = []string(roles)
+	if err := json.Unmarshal(permissionsJSON, &actor.Permissions); err != nil {
+		return Actor{}, err
+	}
+	return actor, nil
+}
+
+func actorByPhoneAnyRoleTx(ctx context.Context, tx *sql.Tx, phone string) (Actor, error) {
+	var actor Actor
+	var roles pq.StringArray
+	err := tx.QueryRowContext(ctx, `
+		SELECT id, username, COALESCE(phone_e164, ''), roles, active
+		FROM identity_actors
+		WHERE phone_e164 = $1
+		LIMIT 1
+		FOR UPDATE`, phone).Scan(
+		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Active,
+	)
+	if err != nil {
+		return Actor{}, err
+	}
+	actor.Roles = []string(roles)
+	return actor, nil
+}
+
+func toAdminView(actor Actor) ActorAdminView {
+	return ActorAdminView{
+		ActorID:   actor.ID,
+		Username:  actor.Username,
+		PhoneE164: actor.PhoneE164,
+		Roles:     actor.Roles,
+		Active:    actor.Active,
+	}
+}
+
+// mapUniqueViolation converts Postgres unique-constraint failures on the
+// actors table into the matching sentinel error.
+func mapUniqueViolation(err error) error {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		switch pqErr.Constraint {
+		case "identity_actors_username_key":
+			return ErrUsernameTaken
+		case "identity_actors_phone_e164_idx":
+			return ErrPhoneAlreadyBound
+		}
+	}
+	return err
 }

@@ -68,6 +68,7 @@ services:
       IDENTITY_LOCAL_BOOTSTRAP: "${IDENTITY_LOCAL_BOOTSTRAP:-true}"
       IDENTITY_LOCAL_BOOTSTRAP_PASSWORD: "${IDENTITY_LOCAL_BOOTSTRAP_PASSWORD:-123456}"
       IDENTITY_ACTIVATION_HMAC_SECRET: "${IDENTITY_ACTIVATION_HMAC_SECRET:-LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret}"
+      IDENTITY_SERVICE_TOKEN: "${IDENTITY_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_shared_internal_service_token}"
     ports:
       - "${BTHWANI_IDENTITY_API_HOST_PORT:-58082}:8082"
     depends_on:
@@ -75,6 +76,35 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/identity/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - bthwani-runtime
+
+  workforce-api:
+    profiles:
+      - workforce
+    build:
+      context: ../..
+      dockerfile: core/workforce/backend/Dockerfile
+    container_name: ${BTHWANI_WORKFORCE_API_CONTAINER:-bthwani-workforce-api-runtime}
+    restart: unless-stopped
+    environment:
+      PORT: "8086"
+      DATABASE_URL: "postgres://${BTHWANI_WORKFORCE_DB_USER:-workforce_runtime}:${BTHWANI_WORKFORCE_DB_PASSWORD:-workforce_runtime_password}@postgres:5432/${BTHWANI_WORKFORCE_DB_NAME:-workforce_runtime}?sslmode=disable"
+      WORKFORCE_IDENTITY_BASE_URL: "http://identity-api:8082"
+      WORKFORCE_IDENTITY_SERVICE_TOKEN: "${IDENTITY_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_shared_internal_service_token}"
+      WORKFORCE_CORS_ALLOWED_ORIGINS: "${WORKFORCE_CORS_ALLOWED_ORIGINS:-}"
+    ports:
+      - "${BTHWANI_WORKFORCE_API_HOST_PORT:-58086}:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8086/workforce/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6

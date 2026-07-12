@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"net"
@@ -28,7 +29,37 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /auth/logout", s.logout)
 	mux.HandleFunc("GET /auth/session", s.session)
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
+	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
+	mux.HandleFunc("GET /internal/actors/{actorId}", s.serviceOnly(s.internalActorGet))
+	mux.HandleFunc("POST /internal/actors/{actorId}/deactivate", s.serviceOnly(s.internalActorDeactivate))
+	mux.HandleFunc("POST /internal/actors/{actorId}/reactivate", s.serviceOnly(s.internalActorReactivate))
+	mux.HandleFunc("POST /internal/actors/{actorId}/activations", s.serviceOnly(s.internalActorIssueActivation))
+	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
 	return mux
+}
+
+// serviceOnly guards the /internal surface: callers must present the shared
+// service token (IDENTITY_SERVICE_TOKEN) as a bearer credential plus an
+// X-Service-Caller header naming themselves. These routes are for sibling
+// backends (e.g. workforce-api), never for browsers or mobile clients.
+func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		expected := strings.TrimSpace(os.Getenv("IDENTITY_SERVICE_TOKEN"))
+		if expected == "" {
+			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "internal API is not configured")
+			return
+		}
+		token, ok := bearerToken(r)
+		if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(expected)) != 1 {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "service token is required")
+			return
+		}
+		if strings.TrimSpace(r.Header.Get("X-Service-Caller")) == "" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller header is required")
+			return
+		}
+		next(w, r)
+	}
 }
 
 // allowedCorsOrigins reads IDENTITY_CORS_ALLOWED_ORIGINS (comma-separated)
@@ -212,6 +243,102 @@ func (s *server) introspect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, resolved)
+}
+
+func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Username  string `json:"username"`
+		PhoneE164 string `json:"phoneE164"`
+		Role      string `json:"role"`
+		TenantID  string `json:"tenantId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	view, err := s.repository.ProvisionActor(r.Context(), identity.ProvisionActorInput{
+		Username:  request.Username,
+		PhoneE164: request.PhoneE164,
+		Role:      request.Role,
+		TenantID:  request.TenantID,
+	})
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusCreated, view)
+}
+
+func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
+	view, err := s.repository.ActorAdminByID(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, view)
+}
+
+func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {
+	if err := s.repository.DeactivateActor(r.Context(), r.PathValue("actorId")); err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) internalActorReactivate(w http.ResponseWriter, r *http.Request) {
+	if err := s.repository.ReactivateActor(r.Context(), r.PathValue("actorId")); err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		IssuedByActorID string `json:"issuedByActorId"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	if strings.TrimSpace(request.IssuedByActorID) == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "issuedByActorId is required")
+		return
+	}
+	result, err := s.repository.IssueActivationForActor(
+		r.Context(), request.IssuedByActorID, r.PathValue("actorId"),
+		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusCreated, result)
+}
+
+func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {
+	if err := s.repository.RevokeActivationChallenges(r.Context(), r.PathValue("actorId")); err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func writeInternalActorError(w http.ResponseWriter, err error) {
+	switch err {
+	case identity.ErrActorNotFound:
+		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "actor was not found")
+	case identity.ErrPhoneAlreadyBound:
+		sendError(w, http.StatusConflict, "PHONE_ALREADY_BOUND", "phone is already bound to another actor")
+	case identity.ErrUsernameTaken:
+		sendError(w, http.StatusConflict, "USERNAME_TAKEN", "username is already taken")
+	case identity.ErrActivationRateLimited:
+		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
+	case identity.ErrActivationUnavailable:
+		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
+	case identity.ErrInvalidActivation:
+		sendError(w, http.StatusUnprocessableEntity, "INVALID_ACTOR_INPUT", "actor input is invalid")
+	default:
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
+	}
 }
 
 func tokenResponse(pair identity.TokenPair) map[string]any {

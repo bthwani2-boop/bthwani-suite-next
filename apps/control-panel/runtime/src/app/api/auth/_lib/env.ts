@@ -13,6 +13,11 @@ export function resolveDshServerBaseUrl(): string {
   return readServerEnv("DSH_API_BASE_URL", "http://localhost:58080");
 }
 
+/** Server-only Workforce backend base URL used by the /api/workforce proxy route. */
+export function resolveWorkforceServerBaseUrl(): string {
+  return readServerEnv("WORKFORCE_API_BASE_URL", "http://localhost:58086");
+}
+
 export function isProductionRuntime(): boolean {
   return process.env["NODE_ENV"] === "production";
 }

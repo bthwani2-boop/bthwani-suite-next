@@ -1,0 +1,511 @@
+package workforce
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/lib/pq"
+)
+
+var (
+	ErrNotFound              = errors.New("workforce person not found")
+	ErrVersionConflict       = errors.New("version conflict")
+	ErrDuplicateProviderCode = errors.New("provider code already used")
+	ErrInvalidReference      = errors.New("invalid reference code")
+	ErrIdempotencyConflict   = errors.New("idempotency key reused with different request")
+	ErrReferenceInUse        = errors.New("reference code is in use")
+	ErrReferenceExists       = errors.New("reference code already exists")
+)
+
+type Repository struct {
+	db  *sql.DB
+	now func() time.Time
+}
+
+func NewRepository(db *sql.DB) *Repository {
+	return &Repository{db: db, now: time.Now}
+}
+
+func (r *Repository) DB() *sql.DB { return r.db }
+
+// ---- idempotency (replay-capable, mirroring dsh_store_idempotency) ----
+
+// IdempotentReplay returns the stored response for (actorID, operation, key)
+// when the same request was already completed. A key reuse with a different
+// request hash is a client bug and fails loudly.
+func (r *Repository) IdempotentReplay(ctx context.Context, actorID, operation, key, requestHash string) ([]byte, bool, error) {
+	if key == "" {
+		return nil, false, nil
+	}
+	var storedHash string
+	var response []byte
+	err := r.db.QueryRowContext(ctx, `
+		SELECT request_hash, response_body FROM workforce_idempotency
+		WHERE actor_id = $1 AND operation = $2 AND idempotency_key = $3`,
+		actorID, operation, key).Scan(&storedHash, &response)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if storedHash != requestHash {
+		return nil, false, ErrIdempotencyConflict
+	}
+	return response, true, nil
+}
+
+func (r *Repository) StoreIdempotentResponse(ctx context.Context, actorID, operation, key, requestHash string, response []byte) error {
+	if key == "" {
+		return nil
+	}
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO workforce_idempotency (actor_id, operation, idempotency_key, request_hash, response_body)
+		VALUES ($1, $2, $3, $4, $5::jsonb)
+		ON CONFLICT (actor_id, operation, idempotency_key) DO NOTHING`,
+		actorID, operation, key, requestHash, string(response))
+	return err
+}
+
+// ---- audit (mirroring dsh_store_action_audit) ----
+
+// RecordAudit is best-effort for reads but called inside the write paths;
+// failures propagate so a state change is never silently unaudited.
+func (r *Repository) RecordAudit(ctx context.Context, actorID, actorRole, targetActorID, action string, fromState, toState any, reason, correlationID string) error {
+	fromJSON, err := marshalNullable(fromState)
+	if err != nil {
+		return err
+	}
+	toJSON, err := marshalNullable(toState)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `
+		INSERT INTO workforce_action_audit
+			(actor_id, actor_role, target_actor_id, action, from_state, to_state, reason, correlation_id)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5::jsonb, $6::jsonb, NULLIF($7, ''), NULLIF($8, ''))`,
+		actorID, actorRole, targetActorID, action, fromJSON, toJSON, reason, correlationID)
+	return err
+}
+
+func marshalNullable(state any) (any, error) {
+	if state == nil {
+		return nil, nil
+	}
+	encoded, err := json.Marshal(state)
+	if err != nil {
+		return nil, err
+	}
+	return string(encoded), nil
+}
+
+// ---- people ----
+
+func (r *Repository) CreatePerson(ctx context.Context, actorID string, input CreateFieldAgentInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	if err := validateReferenceTx(ctx, tx, "workforce_cities", input.CityCode); err != nil {
+		return Person{}, err
+	}
+	if err := validateReferenceTx(ctx, tx, "workforce_shifts", input.ShiftCode); err != nil {
+		return Person{}, err
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO workforce_people
+			(actor_id, full_name_ar, full_name_en, provider_code, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, '')::date, NULLIF($7, ''))`,
+		actorID, input.FullNameAr, input.FullNameEn, input.ProviderCode,
+		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+
+	documents, err := json.Marshal(nonNil(input.DocumentMediaRefs))
+	if err != nil {
+		return Person{}, err
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO workforce_field_profiles
+			(actor_id, city_code, shift_code, supervisor_actor_id, document_media_refs)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5::jsonb)`,
+		actorID, input.CityCode, input.ShiftCode, input.SupervisorActorID, string(documents))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
+func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Person, error) {
+	row := r.db.QueryRowContext(ctx, personSelect+` WHERE p.actor_id = $1`, actorID)
+	person, err := scanPerson(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Person{}, ErrNotFound
+	}
+	return person, err
+}
+
+const personSelect = `
+	SELECT p.actor_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.provider_code,
+	       p.engagement_type, COALESCE(p.engagement_start_date::text, ''), p.engagement_status,
+	       COALESCE(p.photo_media_ref, ''), p.version, p.created_at, p.updated_at,
+	       COALESCE(f.city_code, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
+	       COALESCE(f.emergency_contact_name, ''), COALESCE(f.emergency_contact_phone, ''),
+	       COALESCE(f.preferred_language, ''), COALESCE(f.policy_consent_at::text, ''),
+	       COALESCE(f.document_media_refs, '[]'::jsonb)
+	FROM workforce_people p
+	LEFT JOIN workforce_field_profiles f ON f.actor_id = p.actor_id`
+
+type rowScanner interface{ Scan(dest ...any) error }
+
+func scanPerson(row rowScanner) (Person, error) {
+	var person Person
+	profile := FieldProfile{}
+	var documentsJSON []byte
+	err := row.Scan(
+		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.ProviderCode,
+		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
+		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
+		&profile.CityCode, &profile.ShiftCode, &profile.SupervisorActorID,
+		&profile.EmergencyContactName, &profile.EmergencyContactPhone,
+		&profile.PreferredLanguage, &profile.PolicyConsentAt, &documentsJSON,
+	)
+	if err != nil {
+		return Person{}, err
+	}
+	if err := json.Unmarshal(documentsJSON, &profile.DocumentMediaRefs); err != nil {
+		return Person{}, err
+	}
+	if profile.DocumentMediaRefs == nil {
+		profile.DocumentMediaRefs = []string{}
+	}
+	person.FieldProfile = &profile
+	return person, nil
+}
+
+func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Person, error) {
+	clauses := []string{"1=1"}
+	args := []any{}
+	if filter.Status != "" {
+		args = append(args, filter.Status)
+		clauses = append(clauses, fmt.Sprintf("p.engagement_status = $%d", len(args)))
+	}
+	if filter.CityCode != "" {
+		args = append(args, filter.CityCode)
+		clauses = append(clauses, fmt.Sprintf("f.city_code = $%d", len(args)))
+	}
+	if filter.Query != "" {
+		args = append(args, "%"+strings.TrimSpace(filter.Query)+"%")
+		clauses = append(clauses, fmt.Sprintf(
+			"(p.full_name_ar ILIKE $%d OR COALESCE(p.full_name_en,'') ILIKE $%d OR p.provider_code ILIKE $%d)",
+			len(args), len(args), len(args)))
+	}
+	limit := filter.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	args = append(args, limit)
+	limitPos := len(args)
+	args = append(args, max(filter.Offset, 0))
+	offsetPos := len(args)
+
+	query := personSelect + ` WHERE ` + strings.Join(clauses, " AND ") +
+		fmt.Sprintf(` ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d`, limitPos, offsetPos)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	people := []Person{}
+	for rows.Next() {
+		person, err := scanPerson(rows)
+		if err != nil {
+			return nil, err
+		}
+		people = append(people, person)
+	}
+	return people, rows.Err()
+}
+
+// UpdatePerson applies sovereign edits with optimistic locking: the UPDATE is
+// version-guarded and bumps the version, so a stale expectedVersion never
+// silently overwrites a newer edit.
+func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input UpdateFieldAgentInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	var currentVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT version FROM workforce_people WHERE actor_id = $1 FOR UPDATE`, actorID).Scan(&currentVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Person{}, ErrNotFound
+	}
+	if err != nil {
+		return Person{}, err
+	}
+	if currentVersion != input.ExpectedVersion {
+		return Person{}, ErrVersionConflict
+	}
+
+	if input.CityCode != nil {
+		if err := validateReferenceTx(ctx, tx, "workforce_cities", *input.CityCode); err != nil {
+			return Person{}, err
+		}
+	}
+	if input.ShiftCode != nil {
+		if err := validateReferenceTx(ctx, tx, "workforce_shifts", *input.ShiftCode); err != nil {
+			return Person{}, err
+		}
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE workforce_people SET
+			full_name_ar = COALESCE($2, full_name_ar),
+			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
+			provider_code = COALESCE($4, provider_code),
+			engagement_type = COALESCE($5, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
+			version = version + 1,
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, input.FullNameAr, deref(input.FullNameEn), input.ProviderCode,
+		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	_, err = tx.ExecContext(ctx, `
+		UPDATE workforce_field_profiles SET
+			city_code = COALESCE(NULLIF($2, ''), city_code),
+			shift_code = COALESCE(NULLIF($3, ''), shift_code),
+			supervisor_actor_id = COALESCE(NULLIF($4, ''), supervisor_actor_id),
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, deref(input.CityCode), deref(input.ShiftCode), deref(input.SupervisorActorID))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
+// UpdateSelf applies the employee's own (non-sovereign) edits. No version
+// gate: these fields are only ever written by their owner.
+func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input UpdateSelfInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	if input.PhotoMediaRef != nil {
+		if _, err = tx.ExecContext(ctx, `
+			UPDATE workforce_people SET photo_media_ref = NULLIF($2, ''), updated_at = now()
+			WHERE actor_id = $1`, actorID, *input.PhotoMediaRef); err != nil {
+			return Person{}, err
+		}
+	}
+	consentClause := "policy_consent_at"
+	if input.PolicyConsent != nil && *input.PolicyConsent {
+		consentClause = "COALESCE(policy_consent_at, now())"
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE workforce_field_profiles SET
+			emergency_contact_name = COALESCE(NULLIF($2, ''), emergency_contact_name),
+			emergency_contact_phone = COALESCE(NULLIF($3, ''), emergency_contact_phone),
+			preferred_language = COALESCE(NULLIF($4, ''), preferred_language),
+			policy_consent_at = `+consentClause+`,
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, deref(input.EmergencyContactName), deref(input.EmergencyContactPhone),
+		deref(input.PreferredLanguage))
+	if err != nil {
+		return Person{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return Person{}, ErrNotFound
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
+// SetEngagementStatus transitions engagement_status under the version guard
+// and returns the refreshed person.
+func (r *Repository) SetEngagementStatus(ctx context.Context, actorID, status string, expectedVersion int) (Person, error) {
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE workforce_people
+		SET engagement_status = $2, version = version + 1, updated_at = now()
+		WHERE actor_id = $1 AND version = $3`, actorID, status, expectedVersion)
+	if err != nil {
+		return Person{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		if _, lookupErr := r.PersonByActorID(ctx, actorID); lookupErr != nil {
+			return Person{}, lookupErr
+		}
+		return Person{}, ErrVersionConflict
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
+// MarkActiveIfPending performs the lazy pending_activation→active transition
+// once an employee proves possession of a valid session (activation worked).
+func (r *Repository) MarkActiveIfPending(ctx context.Context, actorID string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE workforce_people
+		SET engagement_status = 'active', version = version + 1, updated_at = now()
+		WHERE actor_id = $1 AND engagement_status = 'pending_activation'`, actorID)
+	return err
+}
+
+// ---- reference data ----
+
+func (r *Repository) ListCities(ctx context.Context, includeInactive bool) ([]City, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT code, name_ar, COALESCE(name_en, ''), active FROM workforce_cities
+		WHERE active OR $1 ORDER BY code`, includeInactive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	cities := []City{}
+	for rows.Next() {
+		var city City
+		if err := rows.Scan(&city.Code, &city.NameAr, &city.NameEn, &city.Active); err != nil {
+			return nil, err
+		}
+		cities = append(cities, city)
+	}
+	return cities, rows.Err()
+}
+
+func (r *Repository) UpsertCity(ctx context.Context, city City, create bool) error {
+	if create {
+		_, err := r.db.ExecContext(ctx, `
+			INSERT INTO workforce_cities (code, name_ar, name_en, active)
+			VALUES ($1, $2, NULLIF($3, ''), $4)`, city.Code, city.NameAr, city.NameEn, city.Active)
+		return mapReferenceWriteError(err)
+	}
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE workforce_cities SET name_ar = $2, name_en = NULLIF($3, ''), active = $4, updated_at = now()
+		WHERE code = $1`, city.Code, city.NameAr, city.NameEn, city.Active)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Repository) ListShifts(ctx context.Context, includeInactive bool) ([]Shift, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT code, name_ar, COALESCE(name_en, ''), COALESCE(starts_at::text, ''), COALESCE(ends_at::text, ''), active
+		FROM workforce_shifts
+		WHERE active OR $1 ORDER BY code`, includeInactive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	shifts := []Shift{}
+	for rows.Next() {
+		var shift Shift
+		if err := rows.Scan(&shift.Code, &shift.NameAr, &shift.NameEn, &shift.StartsAt, &shift.EndsAt, &shift.Active); err != nil {
+			return nil, err
+		}
+		shifts = append(shifts, shift)
+	}
+	return shifts, rows.Err()
+}
+
+func (r *Repository) UpsertShift(ctx context.Context, shift Shift, create bool) error {
+	if create {
+		_, err := r.db.ExecContext(ctx, `
+			INSERT INTO workforce_shifts (code, name_ar, name_en, starts_at, ends_at, active)
+			VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, '')::time, NULLIF($5, '')::time, $6)`,
+			shift.Code, shift.NameAr, shift.NameEn, shift.StartsAt, shift.EndsAt, shift.Active)
+		return mapReferenceWriteError(err)
+	}
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE workforce_shifts SET name_ar = $2, name_en = NULLIF($3, ''),
+			starts_at = NULLIF($4, '')::time, ends_at = NULLIF($5, '')::time, active = $6, updated_at = now()
+		WHERE code = $1`, shift.Code, shift.NameAr, shift.NameEn, shift.StartsAt, shift.EndsAt, shift.Active)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ---- helpers ----
+
+func validateReferenceTx(ctx context.Context, tx *sql.Tx, table, code string) error {
+	if code == "" {
+		return nil
+	}
+	var active bool
+	err := tx.QueryRowContext(ctx,
+		`SELECT active FROM `+table+` WHERE code = $1`, code).Scan(&active)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && !active) {
+		return ErrInvalidReference
+	}
+	return err
+}
+
+func mapPersonWriteError(err error) error {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case "23505":
+			if strings.Contains(pqErr.Constraint, "provider_code") {
+				return ErrDuplicateProviderCode
+			}
+		case "23503", "23514":
+			return ErrInvalidReference
+		}
+	}
+	return err
+}
+
+func mapReferenceWriteError(err error) error {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		return ErrReferenceExists
+	}
+	return err
+}
+
+func deref(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func nonNil(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
+}
