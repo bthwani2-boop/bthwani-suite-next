@@ -84,3 +84,18 @@ func (i Identity) HasRole(role string) bool {
 	}
 	return false
 }
+
+func (i Identity) HasPermission(service, action, scope string) bool {
+	for _, permission := range i.Permissions {
+		if permission.Service != service {
+			continue
+		}
+		if permission.Action != action && permission.Action != "*" {
+			continue
+		}
+		if permission.Scope == scope || permission.Scope == "all" || permission.Scope == "*" {
+			return true
+		}
+	}
+	return false
+}

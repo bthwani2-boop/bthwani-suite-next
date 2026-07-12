@@ -8,18 +8,19 @@ import "time"
 // fees) is owned by WLT and never modeled here. actor_id is the shared key
 // with Identity; no phone is stored here (Identity owns phones).
 type Person struct {
-	ActorID             string        `json:"actorId"`
-	FullNameAr          string        `json:"fullNameAr"`
-	FullNameEn          string        `json:"fullNameEn,omitempty"`
-	ProviderCode        string        `json:"providerCode"`
-	EngagementType      string        `json:"engagementType"`
-	EngagementStartDate string        `json:"engagementStartDate,omitempty"`
-	EngagementStatus    string        `json:"engagementStatus"`
-	PhotoMediaRef       string        `json:"photoMediaRef,omitempty"`
-	Version             int           `json:"version"`
-	CreatedAt           time.Time     `json:"createdAt"`
-	UpdatedAt           time.Time     `json:"updatedAt"`
-	FieldProfile        *FieldProfile `json:"fieldProfile,omitempty"`
+	ActorID             string          `json:"actorId"`
+	FullNameAr          string          `json:"fullNameAr"`
+	FullNameEn          string          `json:"fullNameEn,omitempty"`
+	ProviderCode        string          `json:"providerCode"`
+	EngagementType      string          `json:"engagementType"`
+	EngagementStartDate string          `json:"engagementStartDate,omitempty"`
+	EngagementStatus    string          `json:"engagementStatus"`
+	PhotoMediaRef       string          `json:"photoMediaRef,omitempty"`
+	Version             int             `json:"version"`
+	CreatedAt           time.Time       `json:"createdAt"`
+	UpdatedAt           time.Time       `json:"updatedAt"`
+	FieldProfile        *FieldProfile   `json:"fieldProfile,omitempty"`
+	CaptainProfile      *CaptainProfile `json:"captainProfile,omitempty"`
 }
 
 type FieldProfile struct {
@@ -31,6 +32,16 @@ type FieldProfile struct {
 	PreferredLanguage     string   `json:"preferredLanguage,omitempty"`
 	PolicyConsentAt       string   `json:"policyConsentAt,omitempty"`
 	DocumentMediaRefs     []string `json:"documentMediaRefs"`
+}
+
+type CaptainProfile struct {
+	VehicleType        string   `json:"vehicleType,omitempty"`
+	VehicleIdentifier  string   `json:"vehicleIdentifier,omitempty"`
+	LicenseStatus      string   `json:"licenseStatus,omitempty"`
+	LicenseExpiresAt   string   `json:"licenseExpiresAt,omitempty"`
+	OperatingCityCode  string   `json:"operatingCityCode,omitempty"`
+	OperatingScopeCode string   `json:"operatingScopeCode,omitempty"`
+	DocumentMediaRefs  []string `json:"documentMediaRefs"`
 }
 
 type CreateFieldAgentInput struct {
@@ -47,6 +58,23 @@ type CreateFieldAgentInput struct {
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
 }
 
+type CreateCaptainInput struct {
+	FullNameAr          string   `json:"fullNameAr"`
+	FullNameEn          string   `json:"fullNameEn"`
+	PhoneE164           string   `json:"phoneE164"`
+	ProviderCode        string   `json:"providerCode"`
+	EngagementType      string   `json:"engagementType"`
+	EngagementStartDate string   `json:"engagementStartDate"`
+	PhotoMediaRef       string   `json:"photoMediaRef"`
+	VehicleType         string   `json:"vehicleType"`
+	VehicleIdentifier   string   `json:"vehicleIdentifier"`
+	LicenseStatus       string   `json:"licenseStatus"`
+	LicenseExpiresAt    string   `json:"licenseExpiresAt"`
+	OperatingCityCode   string   `json:"operatingCityCode"`
+	OperatingScopeCode  string   `json:"operatingScopeCode"`
+	DocumentMediaRefs   []string `json:"documentMediaRefs"`
+}
+
 type UpdateFieldAgentInput struct {
 	ExpectedVersion     int     `json:"expectedVersion"`
 	FullNameAr          *string `json:"fullNameAr"`
@@ -58,6 +86,22 @@ type UpdateFieldAgentInput struct {
 	ShiftCode           *string `json:"shiftCode"`
 	SupervisorActorID   *string `json:"supervisorActorId"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
+}
+
+type UpdateCaptainInput struct {
+	ExpectedVersion     int     `json:"expectedVersion"`
+	FullNameAr          *string `json:"fullNameAr"`
+	FullNameEn          *string `json:"fullNameEn"`
+	ProviderCode        *string `json:"providerCode"`
+	EngagementType      *string `json:"engagementType"`
+	EngagementStartDate *string `json:"engagementStartDate"`
+	PhotoMediaRef       *string `json:"photoMediaRef"`
+	VehicleType         *string `json:"vehicleType"`
+	VehicleIdentifier   *string `json:"vehicleIdentifier"`
+	LicenseStatus       *string `json:"licenseStatus"`
+	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
+	OperatingCityCode   *string `json:"operatingCityCode"`
+	OperatingScopeCode  *string `json:"operatingScopeCode"`
 }
 
 // UpdateSelfInput carries the only fields a provider may edit about
@@ -79,11 +123,12 @@ type MeView struct {
 }
 
 type ListFilter struct {
-	Status   string
-	CityCode string
-	Query    string
-	Limit    int
-	Offset   int
+	Status       string
+	CityCode     string
+	Query        string
+	ProviderKind string
+	Limit        int
+	Offset       int
 }
 
 type City struct {

@@ -7,8 +7,8 @@
 
 .PARAMETER Profiles
   Comma-separated list of Docker Compose profiles to activate.
-  Supported: identity, dsh, media, wlt, financial-simulators, mail, cache
-  Example: -Profiles identity,dsh,media or -Profiles wlt,financial-simulators
+  Supported: identity, workforce, dsh, media, wlt, financial-simulators, mail, cache
+  Example: -Profiles identity,workforce,dsh,media or -Profiles wlt,financial-simulators
 
 .PARAMETER Service
   (Optional) Target a specific service for logs/status.
@@ -59,13 +59,16 @@ $ProfileList = @()
 if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
-$AllowedProfiles = @("identity", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability")
+$AllowedProfiles = @("identity", "workforce", "dsh", "media", "wlt", "financial-simulators", "mail", "cache", "observability")
 foreach ($p in $ProfileList) {
   if ($AllowedProfiles -notcontains $p) {
     throw "Unsupported profile: '$p'. Allowed: $($AllowedProfiles -join ', ')"
   }
 }
 if ($ProfileList -contains "dsh" -and $ProfileList -notcontains "identity") {
+  $ProfileList = @("identity") + $ProfileList
+}
+if ($ProfileList -contains "workforce" -and $ProfileList -notcontains "identity") {
   $ProfileList = @("identity") + $ProfileList
 }
 

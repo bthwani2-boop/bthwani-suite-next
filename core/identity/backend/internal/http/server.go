@@ -38,13 +38,19 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	return mux
 }
 
-// serviceOnly guards the /internal surface: callers must present the shared
-// service token (IDENTITY_SERVICE_TOKEN) as a bearer credential plus an
-// X-Service-Caller header naming themselves. These routes are for sibling
-// backends (e.g. workforce-api), never for browsers or mobile clients.
+// serviceOnly guards the /internal surface. Workforce is currently the only
+// allowed caller for actor provisioning/activation; it must present its own
+// service credential and a stable caller header. A non-empty caller header is
+// not sufficient authorization.
 func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		expected := strings.TrimSpace(os.Getenv("IDENTITY_SERVICE_TOKEN"))
+		expectedCaller := "workforce"
+		caller := strings.TrimSpace(r.Header.Get("X-Service-Caller"))
+		if caller != expectedCaller {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller is not allowed")
+			return
+		}
+		expected := strings.TrimSpace(os.Getenv("IDENTITY_WORKFORCE_SERVICE_TOKEN"))
 		if expected == "" {
 			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "internal API is not configured")
 			return
@@ -52,10 +58,6 @@ func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 		token, ok := bearerToken(r)
 		if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(expected)) != 1 {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "service token is required")
-			return
-		}
-		if strings.TrimSpace(r.Header.Get("X-Service-Caller")) == "" {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller header is required")
 			return
 		}
 		next(w, r)

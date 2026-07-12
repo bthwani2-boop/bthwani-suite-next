@@ -77,6 +77,22 @@ CREATE TABLE IF NOT EXISTS workforce_field_profiles (
 CREATE INDEX IF NOT EXISTS workforce_field_profiles_city_idx
   ON workforce_field_profiles(city_code);
 
+CREATE TABLE IF NOT EXISTS workforce_captain_profiles (
+  actor_id              text PRIMARY KEY REFERENCES workforce_people(actor_id) ON DELETE CASCADE,
+  vehicle_type          text,
+  vehicle_identifier    text,
+  license_status        text CHECK (license_status IN ('missing', 'pending_review', 'valid', 'expired', 'rejected')),
+  license_expires_at    date,
+  operating_city_code   text REFERENCES workforce_cities(code),
+  operating_scope_code  text,
+  document_media_refs   jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS workforce_captain_profiles_city_idx
+  ON workforce_captain_profiles(operating_city_code);
+
 -- Audit + idempotency follow the proven dsh-001b templates.
 CREATE TABLE IF NOT EXISTS workforce_action_audit (
   id              bigserial PRIMARY KEY,

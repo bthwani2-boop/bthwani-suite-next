@@ -45,7 +45,8 @@ var activationSurfaceByActorType = map[string]string{
 }
 
 var enabledActivationActorTypes = map[string]bool{
-	"field": true,
+	"field":   true,
+	"captain": true,
 }
 
 func activationSurfaceFor(actorType string) (string, bool) {
@@ -97,10 +98,29 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		{"client-local-001", "client", "client", "app-client", "own", "+967774000004"},
 	}
 	for _, actor := range actors {
-		permissions, marshalErr := json.Marshal([]Permission{
+		actorPermissions := []Permission{
 			{Service: "dsh", Surface: actor.surface, Action: "store:read", Scope: actor.scope},
 			{Service: "dsh", Surface: actor.surface, Action: "store:write", Scope: actor.scope},
-		})
+		}
+		if actor.role == "operator" {
+			actorPermissions = append(actorPermissions,
+				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:read", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:create", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:update", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:suspend", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:reactivate", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "provider.activation:issue", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "reference:manage", Scope: "all"},
+				Permission{Service: "workforce", Surface: "control-panel", Action: "audit:read", Scope: "all"},
+			)
+		}
+		if actor.role == "field" || actor.role == "captain" {
+			actorPermissions = append(actorPermissions,
+				Permission{Service: "workforce", Surface: actor.surface, Action: "provider:read", Scope: "own"},
+				Permission{Service: "workforce", Surface: actor.surface, Action: "provider:update", Scope: "own"},
+			)
+		}
+		permissions, marshalErr := json.Marshal(actorPermissions)
 		if marshalErr != nil {
 			return marshalErr
 		}
@@ -186,7 +206,7 @@ func (r *Repository) IssueActivation(ctx context.Context, issuer ActorIdentity, 
 
 // IssueActivationForActor issues an activation challenge for a specific actor
 // id. This is the internal (service-to-service) path used by Workforce: the
-// caller references the employee's actor id and Identity resolves the phone
+// caller references the provider's actor id and Identity resolves the phone
 // sovereignly, so no phone ever travels from another service as input.
 // issuedByActorID must reference the operator actor on whose behalf the
 // calling service acts (kept for the audit FK on the challenge row).
@@ -666,14 +686,14 @@ func maskPhone(phone string) string {
 	return phone[:4] + strings.Repeat("*", len(phone)-6) + phone[len(phone)-2:]
 }
 
-// ProvisionActor creates an inactive actor for a workforce-managed employee.
-// The actor stays active=false until the employee consumes an activation code
+// ProvisionActor creates an inactive actor for a workforce-managed provider.
+// The actor stays active=false until the provider consumes an activation code
 // (ConsumeActivation flips it to true), so a provisioned-but-never-activated
-// employee can never log in or refresh. The call is idempotent: if the phone
+// provider can never log in or refresh. The call is idempotent: if the phone
 // is already bound to an actor holding the requested role, that actor is
 // returned unchanged; if the phone belongs to an actor without the role, the
-// call fails with ErrPhoneAlreadyBound so role merging stays an explicit,
-// separate workflow instead of a silent side effect.
+// requested provider role and surface permissions are attached to the same
+// actor so one phone never creates duplicate identities.
 func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
 	role := strings.TrimSpace(input.Role)
 	surface, ok := activationSurfaceByActorType[role]
@@ -710,7 +730,24 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 			}
 			return toAdminView(existing), nil
 		}
-		return ActorAdminView{}, ErrPhoneAlreadyBound
+		permissionsJSON, err := providerPermissions(surface)
+		if err != nil {
+			return ActorAdminView{}, err
+		}
+		_, err = tx.ExecContext(ctx, `
+			UPDATE identity_actors
+			SET roles = array_append(roles, $2),
+			    permissions = permissions || $3::jsonb,
+			    updated_at = now()
+			WHERE id = $1 AND NOT ($2 = ANY(roles))`,
+			existing.ID, role, string(permissionsJSON))
+		if err != nil {
+			return ActorAdminView{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return ActorAdminView{}, err
+		}
+		return r.ActorAdminByID(ctx, existing.ID)
 	}
 
 	suffix, err := randomToken(9)
@@ -718,10 +755,7 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 		return ActorAdminView{}, err
 	}
 	actorID := role + "-" + suffix
-	permissions, err := json.Marshal([]Permission{
-		{Service: "dsh", Surface: surface, Action: "store:read", Scope: "assigned"},
-		{Service: "dsh", Surface: surface, Action: "store:write", Scope: "assigned"},
-	})
+	permissions, err := providerPermissions(surface)
 	if err != nil {
 		return ActorAdminView{}, err
 	}
@@ -740,6 +774,15 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 		ActorID: actorID, Username: username, PhoneE164: phone,
 		Roles: []string{role}, Active: false,
 	}, nil
+}
+
+func providerPermissions(surface string) ([]byte, error) {
+	return json.Marshal([]Permission{
+		{Service: "dsh", Surface: surface, Action: "store:read", Scope: "assigned"},
+		{Service: "dsh", Surface: surface, Action: "store:write", Scope: "assigned"},
+		{Service: "workforce", Surface: surface, Action: "provider:read", Scope: "own"},
+		{Service: "workforce", Surface: surface, Action: "provider:update", Scope: "own"},
+	})
 }
 
 // ActorAdminByID returns the internal projection of an actor, including the
@@ -795,7 +838,7 @@ func (r *Repository) DeactivateActor(ctx context.Context, actorID string) error 
 }
 
 // ReactivateActor restores authentication for a previously activated actor
-// (e.g. a suspended employee being reinstated). It does not create sessions;
+// (e.g. a suspended provider being reinstated). It does not create sessions;
 // the actor logs in again through the normal flows.
 func (r *Repository) ReactivateActor(ctx context.Context, actorID string) error {
 	result, err := r.db.ExecContext(ctx, `

@@ -95,6 +95,53 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 	return person, false, nil
 }
 
+func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input CreateCaptainInput, idempotencyKey, correlationID string) (Person, bool, error) {
+	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
+	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
+	input.ProviderCode = strings.TrimSpace(input.ProviderCode)
+	if input.EngagementType == "" {
+		input.EngagementType = "independent_contractor"
+	}
+	if input.FullNameAr == "" || !providerCodePattern.MatchString(input.ProviderCode) {
+		return Person{}, false, ErrInvalidInput
+	}
+	if input.EngagementType != "independent_contractor" && input.EngagementType != "agency_contractor" {
+		return Person{}, false, ErrInvalidInput
+	}
+
+	requestHash := hashRequest(input)
+	if stored, replayed, err := s.repo.IdempotentReplay(ctx, operator.ActorID, "create_captain", idempotencyKey, requestHash); err != nil {
+		return Person{}, false, err
+	} else if replayed {
+		var person Person
+		if err := json.Unmarshal(stored, &person); err != nil {
+			return Person{}, false, err
+		}
+		return person, true, nil
+	}
+
+	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
+		Username:  input.ProviderCode,
+		PhoneE164: input.PhoneE164,
+		Role:      "captain",
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, input)
+	if err != nil {
+		return Person{}, false, err
+	}
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
+		"captain.created", nil, person, "", correlationID); err != nil {
+		return Person{}, false, err
+	}
+	if encoded, err := json.Marshal(person); err == nil {
+		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded)
+	}
+	return person, false, nil
+}
+
 type Operator struct {
 	ActorID string
 	Role    string
@@ -112,6 +159,22 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"field_agent.updated", before, person, "", correlationID); err != nil {
+		return Person{}, err
+	}
+	return person, nil
+}
+
+func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID string, input UpdateCaptainInput, correlationID string) (Person, error) {
+	before, err := s.repo.PersonByActorID(ctx, actorID)
+	if err != nil {
+		return Person{}, err
+	}
+	person, err := s.repo.UpdateCaptain(ctx, actorID, input)
+	if err != nil {
+		return Person{}, err
+	}
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
+		"captain.updated", before, person, "", correlationID); err != nil {
 		return Person{}, err
 	}
 	return person, nil
@@ -139,7 +202,7 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"field_agent.suspended", before, person, reason, correlationID); err != nil {
+		"provider.suspended", before, person, reason, correlationID); err != nil {
 		return Person{}, err
 	}
 	return person, nil
@@ -166,7 +229,7 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"field_agent.reactivated", before, person, reason, correlationID); err != nil {
+		"provider.reactivated", before, person, reason, correlationID); err != nil {
 		return Person{}, err
 	}
 	return person, nil
@@ -199,7 +262,7 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 		return identityclient.ActivationCode{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"field_agent.activation_issued", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID); err != nil {
+		"provider.activation_issued", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID); err != nil {
 		return identityclient.ActivationCode{}, err
 	}
 	return code, nil
@@ -214,7 +277,7 @@ func (s *Service) RevokeActivation(ctx context.Context, operator Operator, actor
 		return err
 	}
 	return s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"field_agent.activation_revoked", nil, nil, "", correlationID)
+		"provider.activation_revoked", nil, nil, "", correlationID)
 }
 
 // Me returns the provider-facing profile, applying the lazy
@@ -269,9 +332,9 @@ func (s *Service) UpdateMe(ctx context.Context, actorID string, input UpdateSelf
 // (masked phone + auth state) for operator screens.
 type FieldAgentDetail struct {
 	Person
-	PhoneMasked string `json:"phoneMasked,omitempty"`
-	AuthActive  bool   `json:"authActive"`
-	ReadyToIssue bool  `json:"readyToIssue"`
+	PhoneMasked  string `json:"phoneMasked,omitempty"`
+	AuthActive   bool   `json:"authActive"`
+	ReadyToIssue bool   `json:"readyToIssue"`
 }
 
 func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgentDetail, error) {
@@ -290,25 +353,46 @@ func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgen
 	return detail, nil
 }
 
+func (s *Service) CaptainByID(ctx context.Context, actorID string) (FieldAgentDetail, error) {
+	detail, err := s.FieldAgentByID(ctx, actorID)
+	if err != nil {
+		return FieldAgentDetail{}, err
+	}
+	detail.ReadyToIssue = detail.EngagementStatus == "pending_activation" && sovereignFieldsComplete(detail.Person)
+	return detail, nil
+}
+
 // sovereignFieldsComplete is the issuance-readiness policy: an operator must
 // have filled the sovereign minimum before any activation code exists.
 func sovereignFieldsComplete(person Person) bool {
 	if person.FullNameAr == "" || person.ProviderCode == "" {
 		return false
 	}
-	if person.FieldProfile == nil {
-		return false
+	if person.FieldProfile != nil {
+		return person.FieldProfile.CityCode != "" && person.FieldProfile.ShiftCode != ""
 	}
-	return person.FieldProfile.CityCode != "" && person.FieldProfile.ShiftCode != ""
+	if person.CaptainProfile != nil {
+		return person.CaptainProfile.VehicleType != "" &&
+			person.CaptainProfile.VehicleIdentifier != "" &&
+			person.CaptainProfile.LicenseStatus == "valid" &&
+			person.CaptainProfile.OperatingCityCode != ""
+	}
+	return false
 }
 
 // selfFieldsComplete drives the in-app completion screen: the provider owns
 // these non-sovereign fields.
 func selfFieldsComplete(person Person) bool {
-	if person.PhotoMediaRef == "" || person.FieldProfile == nil {
+	if person.PhotoMediaRef == "" {
 		return false
 	}
-	return person.FieldProfile.EmergencyContactPhone != "" && person.FieldProfile.PolicyConsentAt != ""
+	if person.FieldProfile != nil {
+		return person.FieldProfile.EmergencyContactPhone != "" && person.FieldProfile.PolicyConsentAt != ""
+	}
+	if person.CaptainProfile != nil {
+		return person.CaptainProfile.VehicleType != "" && person.CaptainProfile.VehicleIdentifier != ""
+	}
+	return false
 }
 
 func maskPhone(phone string) string {

@@ -27,24 +27,33 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("GET /workforce/health", s.health)
 	mux.HandleFunc("GET /workforce/readiness", s.readiness)
 
-	mux.HandleFunc("POST /workforce/field-agents", s.operatorOnly(s.createFieldAgent))
-	mux.HandleFunc("GET /workforce/field-agents", s.operatorOnly(s.listFieldAgents))
-	mux.HandleFunc("GET /workforce/field-agents/{actorId}", s.operatorOnly(s.getFieldAgent))
-	mux.HandleFunc("PATCH /workforce/field-agents/{actorId}", s.operatorOnly(s.updateFieldAgent))
-	mux.HandleFunc("POST /workforce/field-agents/{actorId}/suspend", s.operatorOnly(s.suspendFieldAgent))
-	mux.HandleFunc("POST /workforce/field-agents/{actorId}/reactivate", s.operatorOnly(s.reactivateFieldAgent))
-	mux.HandleFunc("POST /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly(s.issueActivation))
-	mux.HandleFunc("DELETE /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly(s.revokeActivation))
+	mux.HandleFunc("POST /workforce/field-agents", s.operatorOnly("provider:create", s.createFieldAgent))
+	mux.HandleFunc("GET /workforce/field-agents", s.operatorOnly("provider:read", s.listFieldAgents))
+	mux.HandleFunc("GET /workforce/field-agents/{actorId}", s.operatorOnly("provider:read", s.getFieldAgent))
+	mux.HandleFunc("PATCH /workforce/field-agents/{actorId}", s.operatorOnly("provider:update", s.updateFieldAgent))
+	mux.HandleFunc("POST /workforce/field-agents/{actorId}/suspend", s.operatorOnly("provider:suspend", s.suspendFieldAgent))
+	mux.HandleFunc("POST /workforce/field-agents/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
+	mux.HandleFunc("POST /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
+	mux.HandleFunc("DELETE /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
 
-	mux.HandleFunc("GET /workforce/me", s.fieldOnly(s.me))
-	mux.HandleFunc("PATCH /workforce/me", s.fieldOnly(s.updateMe))
+	mux.HandleFunc("POST /workforce/captains", s.operatorOnly("provider:create", s.createCaptain))
+	mux.HandleFunc("GET /workforce/captains", s.operatorOnly("provider:read", s.listCaptains))
+	mux.HandleFunc("GET /workforce/captains/{actorId}", s.operatorOnly("provider:read", s.getCaptain))
+	mux.HandleFunc("PATCH /workforce/captains/{actorId}", s.operatorOnly("provider:update", s.updateCaptain))
+	mux.HandleFunc("POST /workforce/captains/{actorId}/suspend", s.operatorOnly("provider:suspend", s.suspendFieldAgent))
+	mux.HandleFunc("POST /workforce/captains/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
+	mux.HandleFunc("POST /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
+	mux.HandleFunc("DELETE /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
+
+	mux.HandleFunc("GET /workforce/me", s.providerSelf("provider:read", s.me))
+	mux.HandleFunc("PATCH /workforce/me", s.providerSelf("provider:update", s.updateMe))
 
 	mux.HandleFunc("GET /workforce/reference/cities", s.anyAuthenticated(s.listCities))
-	mux.HandleFunc("POST /workforce/reference/cities", s.operatorOnly(s.createCity))
-	mux.HandleFunc("PATCH /workforce/reference/cities/{code}", s.operatorOnly(s.updateCity))
+	mux.HandleFunc("POST /workforce/reference/cities", s.operatorOnly("reference:manage", s.createCity))
+	mux.HandleFunc("PATCH /workforce/reference/cities/{code}", s.operatorOnly("reference:manage", s.updateCity))
 	mux.HandleFunc("GET /workforce/reference/shifts", s.anyAuthenticated(s.listShifts))
-	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly(s.createShift))
-	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly(s.updateShift))
+	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
+	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	return mux
 }
 
@@ -99,20 +108,20 @@ func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
 
 type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.Identity)
 
-func (s *server) operatorOnly(next guardedHandler) http.HandlerFunc {
+func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
 	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-		if !identity.HasRole("operator") {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "operator role is required")
+		if !identity.HasPermission("workforce", action, "all") {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
 			return
 		}
 		next(w, r, identity)
 	})
 }
 
-func (s *server) fieldOnly(next guardedHandler) http.HandlerFunc {
+func (s *server) providerSelf(action string, next guardedHandler) http.HandlerFunc {
 	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-		if !identity.HasRole("field") {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "field role is required")
+		if !identity.HasPermission("workforce", action, "own") {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "own provider permission is required")
 			return
 		}
 		next(w, r, identity)
@@ -168,11 +177,12 @@ func (s *server) listFieldAgents(w http.ResponseWriter, r *http.Request, _ auth.
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
 	people, err := s.repo.ListPeople(r.Context(), workforce.ListFilter{
-		Status:   strings.TrimSpace(query.Get("status")),
-		CityCode: strings.TrimSpace(query.Get("city")),
-		Query:    strings.TrimSpace(query.Get("q")),
-		Limit:    limit,
-		Offset:   offset,
+		Status:       strings.TrimSpace(query.Get("status")),
+		CityCode:     strings.TrimSpace(query.Get("city")),
+		Query:        strings.TrimSpace(query.Get("q")),
+		ProviderKind: "field",
+		Limit:        limit,
+		Offset:       offset,
 	})
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -262,6 +272,72 @@ func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identi
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---- captains ----
+
+func (s *server) createCaptain(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.CreateCaptainInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
+		return
+	}
+	person, replayed, err := s.service.CreateCaptain(r.Context(), operatorOf(identity), input,
+		idempotencyKey, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	status := http.StatusCreated
+	if replayed {
+		status = http.StatusOK
+	}
+	sendJSON(w, status, person)
+}
+
+func (s *server) listCaptains(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	query := r.URL.Query()
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	offset, _ := strconv.Atoi(query.Get("offset"))
+	people, err := s.repo.ListCaptains(r.Context(), workforce.ListFilter{
+		Status:   strings.TrimSpace(query.Get("status")),
+		CityCode: strings.TrimSpace(query.Get("city")),
+		Query:    strings.TrimSpace(query.Get("q")),
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"captains": people})
+}
+
+func (s *server) getCaptain(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	detail, err := s.service.CaptainByID(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, detail)
+}
+
+func (s *server) updateCaptain(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateCaptainInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	person, err := s.service.UpdateCaptain(r.Context(), operatorOf(identity),
+		r.PathValue("actorId"), input, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, person)
 }
 
 // ---- self ----

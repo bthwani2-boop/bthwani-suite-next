@@ -184,7 +184,7 @@ paths:
       tags: [internal]
       description: >-
         Service-to-service only. Creates an inactive actor for a
-        workforce-managed employee. Idempotent when the phone already belongs
+        workforce-managed service provider. Idempotent when the phone already belongs
         to an actor holding the requested role.
       security:
         - serviceToken: []
@@ -354,7 +354,7 @@ components:
     serviceToken:
       type: http
       scheme: bearer
-      description: Shared service token (IDENTITY_SERVICE_TOKEN) for sibling backends.
+      description: Workforce service token (IDENTITY_WORKFORCE_SERVICE_TOKEN) for internal actor APIs.
   parameters:
     ActorId:
       in: path

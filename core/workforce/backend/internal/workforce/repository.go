@@ -148,6 +148,53 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID string, input Cre
 	return r.PersonByActorID(ctx, actorID)
 }
 
+func (r *Repository) CreateCaptain(ctx context.Context, actorID string, input CreateCaptainInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	if err := validateReferenceTx(ctx, tx, "workforce_cities", input.OperatingCityCode); err != nil {
+		return Person{}, err
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO workforce_people
+			(actor_id, full_name_ar, full_name_en, provider_code, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, '')::date, NULLIF($7, ''))
+		ON CONFLICT (actor_id) DO NOTHING`,
+		actorID, input.FullNameAr, input.FullNameEn, input.ProviderCode,
+		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+
+	documents, err := json.Marshal(nonNil(input.DocumentMediaRefs))
+	if err != nil {
+		return Person{}, err
+	}
+	licenseStatus := input.LicenseStatus
+	if licenseStatus == "" {
+		licenseStatus = "missing"
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO workforce_captain_profiles
+			(actor_id, vehicle_type, vehicle_identifier, license_status, license_expires_at,
+			 operating_city_code, operating_scope_code, document_media_refs)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, NULLIF($5, '')::date,
+			NULLIF($6, ''), NULLIF($7, ''), $8::jsonb)`,
+		actorID, input.VehicleType, input.VehicleIdentifier, licenseStatus, input.LicenseExpiresAt,
+		input.OperatingCityCode, input.OperatingScopeCode, string(documents))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
 func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Person, error) {
 	row := r.db.QueryRowContext(ctx, personSelect+` WHERE p.actor_id = $1`, actorID)
 	person, err := scanPerson(row)
@@ -164,23 +211,34 @@ const personSelect = `
 	       COALESCE(f.city_code, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
 	       COALESCE(f.emergency_contact_name, ''), COALESCE(f.emergency_contact_phone, ''),
 	       COALESCE(f.preferred_language, ''), COALESCE(f.policy_consent_at::text, ''),
-	       COALESCE(f.document_media_refs, '[]'::jsonb)
+	       COALESCE(f.document_media_refs, '[]'::jsonb), f.actor_id IS NOT NULL,
+	       COALESCE(c.vehicle_type, ''), COALESCE(c.vehicle_identifier, ''), COALESCE(c.license_status, ''),
+	       COALESCE(c.license_expires_at::text, ''), COALESCE(c.operating_city_code, ''),
+	       COALESCE(c.operating_scope_code, ''), COALESCE(c.document_media_refs, '[]'::jsonb), c.actor_id IS NOT NULL
 	FROM workforce_people p
-	LEFT JOIN workforce_field_profiles f ON f.actor_id = p.actor_id`
+	LEFT JOIN workforce_field_profiles f ON f.actor_id = p.actor_id
+	LEFT JOIN workforce_captain_profiles c ON c.actor_id = p.actor_id`
 
 type rowScanner interface{ Scan(dest ...any) error }
 
 func scanPerson(row rowScanner) (Person, error) {
 	var person Person
 	profile := FieldProfile{}
+	captainProfile := CaptainProfile{}
 	var documentsJSON []byte
+	var captainDocumentsJSON []byte
+	var hasFieldProfile bool
+	var hasCaptainProfile bool
 	err := row.Scan(
 		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.ProviderCode,
 		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
 		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
 		&profile.CityCode, &profile.ShiftCode, &profile.SupervisorActorID,
 		&profile.EmergencyContactName, &profile.EmergencyContactPhone,
-		&profile.PreferredLanguage, &profile.PolicyConsentAt, &documentsJSON,
+		&profile.PreferredLanguage, &profile.PolicyConsentAt, &documentsJSON, &hasFieldProfile,
+		&captainProfile.VehicleType, &captainProfile.VehicleIdentifier, &captainProfile.LicenseStatus,
+		&captainProfile.LicenseExpiresAt, &captainProfile.OperatingCityCode,
+		&captainProfile.OperatingScopeCode, &captainDocumentsJSON, &hasCaptainProfile,
 	)
 	if err != nil {
 		return Person{}, err
@@ -191,7 +249,18 @@ func scanPerson(row rowScanner) (Person, error) {
 	if profile.DocumentMediaRefs == nil {
 		profile.DocumentMediaRefs = []string{}
 	}
-	person.FieldProfile = &profile
+	if hasFieldProfile {
+		person.FieldProfile = &profile
+	}
+	if err := json.Unmarshal(captainDocumentsJSON, &captainProfile.DocumentMediaRefs); err != nil {
+		return Person{}, err
+	}
+	if captainProfile.DocumentMediaRefs == nil {
+		captainProfile.DocumentMediaRefs = []string{}
+	}
+	if hasCaptainProfile {
+		person.CaptainProfile = &captainProfile
+	}
 	return person, nil
 }
 
@@ -211,6 +280,12 @@ func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Perso
 		clauses = append(clauses, fmt.Sprintf(
 			"(p.full_name_ar ILIKE $%d OR COALESCE(p.full_name_en,'') ILIKE $%d OR p.provider_code ILIKE $%d)",
 			len(args), len(args), len(args)))
+	}
+	if filter.ProviderKind == "field" {
+		clauses = append(clauses, "f.actor_id IS NOT NULL")
+	}
+	if filter.ProviderKind == "captain" {
+		clauses = append(clauses, "c.actor_id IS NOT NULL")
 	}
 	limit := filter.Limit
 	if limit <= 0 || limit > 100 {
@@ -237,6 +312,11 @@ func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Perso
 		people = append(people, person)
 	}
 	return people, rows.Err()
+}
+
+func (r *Repository) ListCaptains(ctx context.Context, filter ListFilter) ([]Person, error) {
+	filter.ProviderKind = "captain"
+	return r.ListPeople(ctx, filter)
 }
 
 // UpdatePerson applies sovereign edits with optimistic locking: the UPDATE is
@@ -306,7 +386,68 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input Upd
 	return r.PersonByActorID(ctx, actorID)
 }
 
-// UpdateSelf applies the employee's own (non-sovereign) edits. No version
+func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, input UpdateCaptainInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	var currentVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT version FROM workforce_people WHERE actor_id = $1 FOR UPDATE`, actorID).Scan(&currentVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Person{}, ErrNotFound
+	}
+	if err != nil {
+		return Person{}, err
+	}
+	if currentVersion != input.ExpectedVersion {
+		return Person{}, ErrVersionConflict
+	}
+	if input.OperatingCityCode != nil {
+		if err := validateReferenceTx(ctx, tx, "workforce_cities", *input.OperatingCityCode); err != nil {
+			return Person{}, err
+		}
+	}
+	_, err = tx.ExecContext(ctx, `
+		UPDATE workforce_people SET
+			full_name_ar = COALESCE($2, full_name_ar),
+			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
+			provider_code = COALESCE($4, provider_code),
+			engagement_type = COALESCE($5, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
+			version = version + 1,
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, input.FullNameAr, deref(input.FullNameEn), input.ProviderCode,
+		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	_, err = tx.ExecContext(ctx, `
+		UPDATE workforce_captain_profiles SET
+			vehicle_type = COALESCE(NULLIF($2, ''), vehicle_type),
+			vehicle_identifier = COALESCE(NULLIF($3, ''), vehicle_identifier),
+			license_status = COALESCE(NULLIF($4, ''), license_status),
+			license_expires_at = COALESCE(NULLIF($5, '')::date, license_expires_at),
+			operating_city_code = COALESCE(NULLIF($6, ''), operating_city_code),
+			operating_scope_code = COALESCE(NULLIF($7, ''), operating_scope_code),
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, deref(input.VehicleType), deref(input.VehicleIdentifier), deref(input.LicenseStatus),
+		deref(input.LicenseExpiresAt), deref(input.OperatingCityCode), deref(input.OperatingScopeCode))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
+// UpdateSelf applies the provider's own (non-sovereign) edits. No version
 // gate: these fields are only ever written by their owner.
 func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input UpdateSelfInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -321,6 +462,21 @@ func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input Updat
 			WHERE actor_id = $1`, actorID, *input.PhotoMediaRef); err != nil {
 			return Person{}, err
 		}
+	}
+	var hasFieldProfile bool
+	if err := tx.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM workforce_field_profiles WHERE actor_id = $1)`, actorID).Scan(&hasFieldProfile); err != nil {
+		return Person{}, err
+	}
+	if !hasFieldProfile {
+		if input.EmergencyContactName != nil || input.EmergencyContactPhone != nil ||
+			input.PreferredLanguage != nil || input.PolicyConsent != nil {
+			return Person{}, ErrInvalidInput
+		}
+		if err := tx.Commit(); err != nil {
+			return Person{}, err
+		}
+		return r.PersonByActorID(ctx, actorID)
 	}
 	consentClause := "policy_consent_at"
 	if input.PolicyConsent != nil && *input.PolicyConsent {
@@ -368,7 +524,7 @@ func (r *Repository) SetEngagementStatus(ctx context.Context, actorID, status st
 }
 
 // MarkActiveIfPending performs the lazy pending_activation→active transition
-// once an employee proves possession of a valid session (activation worked).
+// once a provider proves possession of a valid session (activation worked).
 func (r *Repository) MarkActiveIfPending(ctx context.Context, actorID string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE workforce_people

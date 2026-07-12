@@ -163,7 +163,7 @@ jobs:
       - name: OpenAPI client drift check
         run: |
           pnpm run openapi:generate
-          git diff --exit-code services/dsh/clients/generated/ services/wlt/clients/generated/ core/identity/clients/generated/ || \
+          git diff --exit-code services/dsh/clients/generated/ services/wlt/clients/generated/ core/identity/clients/generated/ core/workforce/clients/generated/ || \
             (echo "ERROR: Generated API clients have drifted from OpenAPI specs. Run 'pnpm run openapi:generate' and commit." && exit 1)
 
       - name: Foundation gate
@@ -387,6 +387,29 @@ jobs:
         working-directory: core/identity/backend
         run: go build ./...
 
+  workforce-go:
+    name: Workforce Go backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/workforce/backend/go.mod
+          cache: true
+
+      - name: Go test
+        working-directory: core/workforce/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: core/workforce/backend
+        run: go build ./...
+
   docker-runtime-smoke:
     name: Docker runtime smoke
     runs-on: ubuntu-latest
@@ -413,7 +436,7 @@ jobs:
       - name: Full runtime reset and smoke
         shell: pwsh
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail,media
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
@@ -471,7 +494,7 @@ jobs:
         env:
           WLT_MUTATIONS_ENABLED: "true"
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,dsh,wlt,financial-simulators,mail,media
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
