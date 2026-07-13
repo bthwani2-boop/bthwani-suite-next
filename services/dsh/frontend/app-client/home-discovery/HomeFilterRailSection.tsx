@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
   },
   scrollContent: {
+    flexDirection: 'row-reverse',
     paddingHorizontal: spacing[4],
     gap: spacing[2],
     alignItems: 'center',

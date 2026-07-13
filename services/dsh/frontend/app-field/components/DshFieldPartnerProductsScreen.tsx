@@ -65,14 +65,16 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   const [proposeError, setProposeError] = React.useState<string | undefined>(undefined);
 
   React.useEffect(() => {
-    void searchMasterProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  React.useEffect(() => {
-    if (taxonomyState.kind !== 'success' || selectedDomainId) return;
-    setSelectedDomainId(taxonomyState.domains[0]?.id ?? '');
-  }, [selectedDomainId, taxonomyState]);
+    if (taxonomyState.kind === 'success' && !selectedDomainId) {
+      const firstDomainId = taxonomyState.domains.filter(d => d.isActive)[0]?.id ?? '';
+      setSelectedDomainId(firstDomainId);
+      if (firstDomainId) {
+        void searchMasterProducts({ domainId: firstDomainId });
+      } else {
+        void searchMasterProducts();
+      }
+    }
+  }, [taxonomyState, selectedDomainId, searchMasterProducts]);
 
   const handleSearch = async () => {
     await searchMasterProducts({
@@ -181,6 +183,10 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                   onPress={() => {
                     setSelectedDomainId(domain.id);
                     setSelectedNodeId('');
+                    void searchMasterProducts({
+                      domainId: domain.id,
+                      ...(searchText.trim() ? { search: searchText.trim() } : {}),
+                    });
                   }}
                 />
               ))}
@@ -190,14 +196,27 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                   <Button
                     label="كل فئات المجال"
                     tone={selectedNodeId ? 'ghost' : 'primary'}
-                    onPress={() => setSelectedNodeId('')}
+                    onPress={() => {
+                      setSelectedNodeId('');
+                      void searchMasterProducts({
+                        domainId: selectedDomainId,
+                        ...(searchText.trim() ? { search: searchText.trim() } : {}),
+                      });
+                    }}
                   />
                   {visibleNodes.map((node) => (
                     <Button
                       key={node.id}
                       label={node.nameAr}
                       tone={selectedNodeId === node.id ? 'primary' : 'ghost'}
-                      onPress={() => setSelectedNodeId(node.id)}
+                      onPress={() => {
+                        setSelectedNodeId(node.id);
+                        void searchMasterProducts({
+                          domainId: selectedDomainId,
+                          categoryNodeId: node.id,
+                          ...(searchText.trim() ? { search: searchText.trim() } : {}),
+                        });
+                      }}
                     />
                   ))}
                 </>

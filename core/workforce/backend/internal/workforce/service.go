@@ -173,6 +173,10 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, err
 	}
 
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+		return existing, true, nil
+	}
+
 	person, err := s.repo.CreatePerson(ctx, actor.ActorID, providerCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateProviderCode) {
@@ -243,6 +247,11 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	if err != nil {
 		return Person{}, false, err
 	}
+
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+		return existing, true, nil
+	}
+
 	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, providerCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateProviderCode) {

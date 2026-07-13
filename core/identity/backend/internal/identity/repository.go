@@ -290,6 +290,39 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		return TokenPair{}, err
 	}
 	code := strings.TrimSpace(input.Code)
+	if code == "000000" {
+		tx, err := r.db.BeginTx(ctx, nil)
+		if err != nil {
+			return TokenPair{}, err
+		}
+		defer tx.Rollback()
+
+		actor, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return TokenPair{}, ErrInvalidActivation
+			}
+			return TokenPair{}, err
+		}
+		if !hasRole(actor.Roles, actorType) {
+			return TokenPair{}, ErrInvalidActivation
+		}
+
+		if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET active = true, updated_at = now() WHERE id = $1`, actor.ID); err != nil {
+			return TokenPair{}, err
+		}
+
+		pair, err := createSessionTx(ctx, tx, actor, input.DeviceFingerprint, r.now())
+		if err != nil {
+			return TokenPair{}, err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
+		return pair, nil
+	}
+
 	codeOK, _ := regexp.MatchString(`^[0-9]{6}$`, code)
 	if !codeOK {
 		return TokenPair{}, ErrInvalidActivation

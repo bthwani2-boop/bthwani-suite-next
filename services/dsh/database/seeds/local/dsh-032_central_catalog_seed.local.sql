@@ -43,9 +43,16 @@ INSERT INTO dsh_catalog_nodes (id, domain_id, parent_id, level, slug, name_ar, n
   ('node-perfumes',           'domain-elegance', NULL, 'BUSINESS_SUBDOMAIN', 'perfumes',           'عطور',                 'Perfumes',              10, TRUE, FALSE),
   ('node-beauty-accessories', 'domain-elegance', NULL, 'BUSINESS_SUBDOMAIN', 'beauty_accessories', 'إكسسوارات وأدوات تجميل','Beauty Accessories',    20, TRUE, FALSE),
   ('node-clothing',           'domain-elegance', NULL, 'BUSINESS_SUBDOMAIN', 'clothing',           'ملابس',                'Clothing',              30, TRUE, FALSE),
-  -- manual_request (no product catalog)
-  ('node-shay-in', 'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'shay_in', 'شيء إن', 'Shay In', 10, FALSE, FALSE),
-  ('node-awnak',   'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'awnak',   'عونك',   'Awnak',   20, FALSE, FALSE)
+  ('node-awnak',   'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'awnak',   'عونك',   'Awnak',   20, FALSE, FALSE),
+  -- sub-classifications under groceries (node-supermarket)
+  ('node-dairy-cheese',       'domain-groceries', 'node-supermarket', 'PRODUCT_MAIN_CLASS', 'dairy_cheese',       'ألبان وأجبان',      'Dairy & Cheese',     11, TRUE, FALSE),
+  ('node-canned-food',        'domain-groceries', 'node-supermarket', 'PRODUCT_MAIN_CLASS', 'canned_food',        'أغذية معلبة',       'Canned Food',        12, TRUE, FALSE),
+  -- sub-classifications under groceries (node-vegetables-fruits)
+  ('node-local-vegetables',   'domain-groceries', 'node-vegetables-fruits', 'PRODUCT_MAIN_CLASS', 'local_vegetables',   'خضروات محلية',      'Local Vegetables',   21, TRUE, FALSE),
+  ('node-imported-fruits',    'domain-groceries', 'node-vegetables-fruits', 'PRODUCT_MAIN_CLASS', 'imported_fruits',    'فواكه مستوردة',     'Imported Fruits',    22, TRUE, FALSE),
+  -- sub-classifications under sweets_juices (node-sweets)
+  ('node-sweets-cake',        'domain-sweets-juices', 'node-sweets', 'PRODUCT_MAIN_CLASS', 'sweets_cake',        'كيك وتورتات',       'Cakes & Tortes',     21, TRUE, TRUE),
+  ('node-sweets-chocolate',   'domain-sweets-juices', 'node-sweets', 'PRODUCT_MAIN_CLASS', 'sweets_chocolate',   'شوكولاتة فاخرة',     'Fine Chocolates',    22, TRUE, TRUE)
 ON CONFLICT (id) DO UPDATE SET
   domain_id = EXCLUDED.domain_id,
   parent_id = EXCLUDED.parent_id,
@@ -110,7 +117,23 @@ VALUES
    '1 L', 'volume', 'approved', TRUE, 'central-catalog-seed'),
   ('product-1005-apple', 'domain-groceries', 'node-vegetables-fruits',
    'تفاح رويال غالا', 'Royal Gala Apple', 'بثواني', 'ROYAL-GALA',
-   '1 kg', 'weight', 'approved', TRUE, 'central-catalog-seed')
+   '1 kg', 'weight', 'approved', TRUE, 'central-catalog-seed'),
+  -- mock products for subcategories
+  ('product-cheese-kraft', 'domain-groceries', 'node-dairy-cheese',
+   'جبنة كرافت شيدر علب', 'Kraft Cheddar Cheese', 'كرافت', 'KRAFT-CHEDDAR-50G', '50g', 'weight',
+   'approved', TRUE, 'central-catalog-seed'),
+  ('product-canned-tuna', 'domain-groceries', 'node-canned-food',
+   'تونة حدائق كاليفورنيا قطعة واحدة', 'California Gardens Tuna Solid', 'حدائق كاليفورنيا', 'CG-TUNA-185G', '185g', 'weight',
+   'approved', TRUE, 'central-catalog-seed'),
+  ('product-local-tomato', 'domain-groceries', 'node-local-vegetables',
+   'طماطم بلدي طازج', 'Fresh Local Tomatoes', 'بلدي', 'LOCAL-TOMATO-1KG', '1 kg', 'weight',
+   'approved', TRUE, 'central-catalog-seed'),
+  ('product-imported-banana', 'domain-groceries', 'node-imported-fruits',
+   'موز سكري مستورد', 'Sweet Imported Bananas', 'مستورد', 'IMPORTED-BANANA-1KG', '1 kg', 'weight',
+   'approved', TRUE, 'central-catalog-seed'),
+  ('product-chocolate-box', 'domain-sweets-juices', 'node-sweets-chocolate',
+   'علبة شوكولاتة باتشي فاخرة', 'Patchi Chocolate Luxury Box', 'باتشي', 'PATCHI-BOX-500G', '500g', 'weight',
+   'approved', TRUE, 'central-catalog-seed')
 ON CONFLICT (id) DO UPDATE SET
   domain_id = EXCLUDED.domain_id,
   category_node_id = EXCLUDED.category_node_id,
@@ -145,8 +168,23 @@ VALUES
    1100, 'YER', TRUE, 'in_stock', 'حليب طازج', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-1005-apple', 'store-1005', 'product-1005-apple',
-   1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
-   'system-seed', 'system-seed')
+    1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
+    'system-seed', 'system-seed'),
+  ('assortment-store-cheese-kraft', 'store-1005', 'product-cheese-kraft',
+    1200, 'YER', TRUE, 'in_stock', 'عبوة معدنية', 'client_visible',
+    'system-seed', 'system-seed'),
+  ('assortment-store-canned-tuna', 'store-1005', 'product-canned-tuna',
+    1500, 'YER', TRUE, 'in_stock', 'سهلة الفتح', 'client_visible',
+    'system-seed', 'system-seed'),
+  ('assortment-store-local-tomato', 'store-1005', 'product-local-tomato',
+    900, 'YER', TRUE, 'in_stock', 'إنتاج مزارع صنعاء', 'client_visible',
+    'system-seed', 'system-seed'),
+  ('assortment-store-imported-banana', 'store-1005', 'product-imported-banana',
+     1100, 'YER', TRUE, 'in_stock', 'موز طازج', 'client_visible',
+     'system-seed', 'system-seed'),
+  ('assortment-store-chocolate-box', 'store-1005', 'product-chocolate-box',
+     25000, 'YER', TRUE, 'in_stock', 'هدية فاخرة', 'client_visible',
+     'system-seed', 'system-seed')
 ON CONFLICT (store_id, master_product_id) DO UPDATE SET
   unit_price = EXCLUDED.unit_price,
   currency = EXCLUDED.currency,
@@ -156,4 +194,56 @@ ON CONFLICT (store_id, master_product_id) DO UPDATE SET
   publication_status = 'client_visible',
   submitted_by = EXCLUDED.submitted_by,
   approved_by = EXCLUDED.approved_by,
+  updated_at = NOW();
+
+-- DAM assets for new subcategories and mock products
+INSERT INTO dsh_catalog_assets
+  (id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height, checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by)
+VALUES
+  ('asset-node-dairy-cheese',      'node-dairy-cheese.png',      'http://localhost:59000/dsh-media/node-dairy-cheese.png',      'cheese.png',    'image/png', 1024, 512, 512, 'sha256', 'ألبان وأجبان',      'Dairy & Cheese',     '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-canned-food',       'node-canned-food.png',       'http://localhost:59000/dsh-media/node-canned-food.png',       'canned.png',    'image/png', 1024, 512, 512, 'sha256', 'أغذية معلبة',       'Canned Food',        '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-local-vegetables',  'node-local-vegetables.png',  'http://localhost:59000/dsh-media/node-local-vegetables.png',  'vegetables.png','image/png', 1024, 512, 512, 'sha256', 'خضروات محلية',      'Local Vegetables',   '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-imported-fruits',   'node-imported-fruits.png',   'http://localhost:59000/dsh-media/node-imported-fruits.png',   'fruits.png',    'image/png', 1024, 512, 512, 'sha256', 'فواكه مستوردة',     'Imported Fruits',    '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-sweets-cake',       'node-sweets-cake.png',       'http://localhost:59000/dsh-media/node-sweets-cake.png',       'cake.png',      'image/png', 1024, 512, 512, 'sha256', 'كيك وتورتات',       'Cakes & Tortes',     '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-sweets-chocolate',  'node-sweets-chocolate.png',  'http://localhost:59000/dsh-media/node-sweets-chocolate.png',  'chocolate.png', 'image/png', 1024, 512, 512, 'sha256', 'شوكولاتة فاخرة',     'Fine Chocolates',    '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-cheese-kraft',   'product-cheese-kraft.png',   'http://localhost:59000/dsh-media/product-cheese-kraft.png',   'kraft.png',     'image/png', 1024, 512, 512, 'sha256', 'جبنة كرافت شيدر',    'Kraft Cheddar Cheese','#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-canned-tuna',    'product-canned-tuna.png',    'http://localhost:59000/dsh-media/product-canned-tuna.png',    'tuna.png',      'image/png', 1024, 512, 512, 'sha256', 'تونة حدائق كاليفورنيا','California Tuna',    '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-local-tomato',   'product-local-tomato.png',   'http://localhost:59000/dsh-media/product-local-tomato.png',   'tomato.png',    'image/png', 1024, 512, 512, 'sha256', 'طماطم بلدي',        'Local Tomato',       '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-imported-banana', 'product-imported-banana.png', 'http://localhost:59000/dsh-media/product-imported-banana.png', 'banana.png',    'image/png', 1024, 512, 512, 'sha256', 'موز مستورد',        'Imported Banana',    '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-chocolate-box',  'product-chocolate-box.png',  'http://localhost:59000/dsh-media/product-chocolate-box.png',  'patchi.png',    'image/png', 1024, 512, 512, 'sha256', 'علبة شوكولاتة باتشي', 'Patchi Chocolate Box','#ffffff', 'approved', 'system', 'system-seed')
+ON CONFLICT (id) DO UPDATE SET
+  object_key = EXCLUDED.object_key,
+  public_url = EXCLUDED.public_url,
+  original_file_name = EXCLUDED.original_file_name,
+  mime_type = EXCLUDED.mime_type,
+  size_bytes = EXCLUDED.size_bytes,
+  width = EXCLUDED.width,
+  height = EXCLUDED.height,
+  checksum_sha256 = EXCLUDED.checksum_sha256,
+  alt_ar = EXCLUDED.alt_ar,
+  alt_en = EXCLUDED.alt_en,
+  dominant_color = EXCLUDED.dominant_color,
+  status = EXCLUDED.status,
+  source_surface = EXCLUDED.source_surface,
+  uploaded_by = EXCLUDED.uploaded_by,
+  updated_at = NOW();
+
+-- DAM asset links for new subcategories and mock products
+INSERT INTO dsh_catalog_asset_links
+  (id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
+VALUES
+  ('link-node-dairy-cheese',      'asset-node-dairy-cheese',      'node',           'node-dairy-cheese',      'cover',                   0, TRUE, 'approved'),
+  ('link-node-canned-food',       'asset-node-canned-food',       'node',           'node-canned-food',       'cover',                   0, TRUE, 'approved'),
+  ('link-node-local-vegetables',  'asset-node-local-vegetables',  'node',           'node-local-vegetables',  'cover',                   0, TRUE, 'approved'),
+  ('link-node-imported-fruits',   'asset-node-imported-fruits',   'node',           'node-imported-fruits',   'cover',                   0, TRUE, 'approved'),
+  ('link-node-sweets-cake',       'asset-node-sweets-cake',       'node',           'node-sweets-cake',       'cover',                   0, TRUE, 'approved'),
+  ('link-node-sweets-chocolate',  'asset-node-sweets-chocolate',  'node',           'node-sweets-chocolate',  'cover',                   0, TRUE, 'approved'),
+  ('link-product-cheese-kraft',   'asset-product-cheese-kraft',   'master_product', 'product-cheese-kraft',   'canonical_product_image', 0, TRUE, 'approved'),
+  ('link-product-canned-tuna',    'asset-product-canned-tuna',    'master_product', 'product-canned-tuna',    'canonical_product_image', 0, TRUE, 'approved'),
+  ('link-product-local-tomato',   'asset-product-local-tomato',   'master_product', 'product-local-tomato',   'canonical_product_image', 0, TRUE, 'approved'),
+  ('link-product-imported-banana', 'asset-product-imported-banana', 'master_product', 'product-imported-banana', 'canonical_product_image', 0, TRUE, 'approved'),
+  ('link-product-chocolate-box',  'asset-product-chocolate-box',  'master_product', 'product-chocolate-box',  'canonical_product_image', 0, TRUE, 'approved')
+ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
+  is_primary = EXCLUDED.is_primary,
+  status = EXCLUDED.status,
   updated_at = NOW();

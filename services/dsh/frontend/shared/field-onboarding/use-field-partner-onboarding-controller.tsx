@@ -33,7 +33,7 @@ export type FieldOnboardingController = {
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
   /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
-  ensureDraftCreated: () => Promise<string | false>;
+  ensureDraftCreated: (placeholder?: boolean) => Promise<string | false>;
   uploadDocument: (kind: DshPartnerDocumentType, mediaRef: string) => Promise<boolean>;
   /** Loads an existing partner draft's full state from the server. Returns false on 403/404/network error. */
   loadDraft: (partnerId: string) => Promise<boolean>;
@@ -103,17 +103,25 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     setState((s) => ({ ...s, evidenceMediaRefs: [...s.evidenceMediaRefs, ref], isDirty: true }));
   }, []);
 
-  const ensureDraftCreated = useCallback(async (): Promise<string | false> => {
-    const errors = { ...validateIdentityStep(state.form), ...validateOwnerStep(state.form) };
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return false;
-    }
-    setValidationErrors({});
-
+  const ensureDraftCreated = useCallback(async (placeholder = false): Promise<string | false> => {
     if (state.partnerId) return state.partnerId;
 
-    const form = state.form;
+    const form = { ...state.form };
+    if (placeholder) {
+      if (!form.legalNameAr?.trim()) form.legalNameAr = "شريك جديد";
+      if (!form.displayName?.trim()) form.displayName = "شريك جديد";
+      if (!form.primaryPhone?.trim()) form.primaryPhone = "+967770000000";
+      if (!form.legalIdentityNumber?.trim()) form.legalIdentityNumber = "temp-" + Date.now();
+      if (!form.ownerName?.trim()) form.ownerName = "مالك افتراضي";
+    } else {
+      const errors = { ...validateIdentityStep(form), ...validateOwnerStep(form) };
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return false;
+      }
+      setValidationErrors({});
+    }
+
     try {
       const res = await fieldCreateDraft({
         legalNameAr: form.legalNameAr!,
@@ -129,7 +137,13 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         notes: form.notes ?? "",
       });
       await fieldUpdatePartnerStore(res.id, buildStoreDraftInput(form));
-      setState((s) => ({ ...s, partnerId: res.id, partnerVersion: res.version, submitError: null }));
+      setState((s) => ({
+        ...s,
+        partnerId: res.id,
+        partnerVersion: res.version,
+        form: { ...s.form, ...form },
+        submitError: null,
+      }));
       return res.id;
     } catch (err) {
       const msg = err && typeof err === "object" && "status" in err
@@ -138,7 +152,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
       setState((s) => ({ ...s, submitError: msg }));
       return false;
     }
-  }, [state]);
+  }, [state.partnerId, state.form, setState, setValidationErrors]);
 
   const loadDraft = useCallback(async (partnerId: string): Promise<boolean> => {
     setState((s) => ({ ...s, loadStatus: "hydrating", loadError: null }));

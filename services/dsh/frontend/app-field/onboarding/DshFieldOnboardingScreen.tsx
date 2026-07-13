@@ -411,7 +411,7 @@ export function DshFieldOnboardingScreen({
               onPress={async () => {
                 let id = state.partnerId;
                 if (!id) {
-                  const created = await controller.ensureDraftCreated();
+                  const created = await controller.ensureDraftCreated(true);
                   if (created) id = created;
                 }
                 if (id) {
