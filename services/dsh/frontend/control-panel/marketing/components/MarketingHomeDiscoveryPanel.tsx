@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { colorRoles, alpha } from '@bthwani/ui-kit';
 import React from "react";
 import {
   CpButton,
@@ -115,6 +115,25 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
   );
 }
 
+function computeQuality(draft: DshHomeAdminContentInput): number {
+  let score = 0;
+  if (draft.title?.trim()) {
+    score += 20;
+    if (draft.title.trim().length >= 5) score += 15;
+  }
+  if (draft.subtitle?.trim()) {
+    score += 15;
+    if (draft.subtitle.trim().length >= 10) score += 15;
+  }
+  if (draft.imageUrl?.trim()) {
+    score += 25;
+  }
+  if (draft.actionType === "none" || draft.actionTarget?.trim()) {
+    score += 10;
+  }
+  return score;
+}
+
 function HomeDiscoveryEditor({
   kind,
   draft,
@@ -136,11 +155,154 @@ function HomeDiscoveryEditor({
   const update = <K extends keyof DshHomeAdminContentInput>(key: K, value: DshHomeAdminContentInput[K]) =>
     setDraft({ ...draft, [key]: value });
 
+  const quality = computeQuality(draft);
+
   return (
     <div style={{ display: "grid", gap: "0.75rem" }}>
       <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
         {editing ? `تعديل ${meta.singular}` : `إضافة ${meta.singular}`}
       </h4>
+
+      {/* Visual Live Preview */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <span style={{ fontSize: "0.75rem", fontWeight: 700, opacity: 0.65 }}>المعاينة التفاعلية (app-client):</span>
+        {kind === "banners" ? (
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              aspectRatio: "16/9",
+              borderRadius: "0.75rem",
+              background: draft.imageUrl?.trim()
+                ? `url(${draft.imageUrl}) center/cover no-repeat`
+                : `linear-gradient(135deg, ${colorRoles.brandStructure} 0%, color-mix(in srgb, ${colorRoles.brandStructure} 80%, black) 100%)`,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              padding: "1rem",
+              boxShadow: `0 4px 12px ${alpha(colorRoles.shadowBase, 0.15)}`,
+              overflow: "hidden",
+              border: `1px solid color-mix(in srgb, currentColor 10%, transparent)`,
+            }}
+          >
+            {/* Overlay */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `linear-gradient(to top, ${alpha(colorRoles.mediaScrimStrong, 0.9)} 0%, ${alpha(colorRoles.mediaScrimStrong, 0.4)} 60%, transparent 100%)`,
+                zIndex: 1,
+              }}
+            />
+            {/* Content */}
+            <div style={{ position: "relative", zIndex: 2, color: colorRoles.textInverse, display: "flex", flexDirection: "column", gap: "0.25rem", textAlign: "right" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: colorRoles.brandAction, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                {draft.actionType !== "none" ? `انتقال إلى ${draft.actionType === "store" ? "المتجر" : draft.actionType === "category" ? "التصنيف" : "رابط"}` : "عرض ترويجي"}
+              </span>
+              <strong style={{ fontSize: "1.05rem", fontWeight: 800, textShadow: `0 1px 2px ${alpha(colorRoles.shadowBase, 0.5)}` }}>
+                {draft.title || "عنوان البنر الجديد"}
+              </strong>
+              {draft.subtitle && (
+                <span style={{ fontSize: "0.78rem", opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {draft.subtitle}
+                </span>
+              )}
+            </div>
+            {/* Simulated dots */}
+            <div style={{ position: "absolute", bottom: "0.75rem", left: "1rem", display: "flex", gap: "4px", zIndex: 2 }}>
+              <div style={{ width: "12px", height: "4px", borderRadius: "2px", background: colorRoles.brandAction }} />
+              <div style={{ width: "4px", height: "4px", borderRadius: "2px", background: alpha(colorRoles.textInverse, 0.4) }} />
+              <div style={{ width: "4px", height: "4px", borderRadius: "2px", background: alpha(colorRoles.textInverse, 0.4) }} />
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              aspectRatio: "16/9",
+              borderRadius: "0.75rem",
+              background: draft.imageUrl?.trim()
+                ? `url(${draft.imageUrl}) center/cover no-repeat`
+                : `linear-gradient(135deg, ${colorRoles.brandStructure} 0%, color-mix(in srgb, ${colorRoles.brandStructure} 80%, black) 100%)`,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              padding: "1rem",
+              boxShadow: `0 4px 12px ${alpha(colorRoles.shadowBase, 0.15)}`,
+              overflow: "hidden",
+              border: `1px solid color-mix(in srgb, currentColor 10%, transparent)`,
+            }}
+          >
+            {/* Overlay */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `linear-gradient(to top, ${alpha(colorRoles.mediaScrimStrong, 0.9)} 0%, ${alpha(colorRoles.mediaScrimStrong, 0.3)} 70%, transparent 100%)`,
+                zIndex: 1,
+              }}
+            />
+            {/* Badge */}
+            <div
+              style={{
+                position: "absolute",
+                top: "0.75rem",
+                right: "0.75rem",
+                background: colorRoles.brandAction,
+                color: colorRoles.textInverse,
+                padding: "0.25rem 0.625rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.7rem",
+                fontWeight: 800,
+                zIndex: 2,
+                boxShadow: `0 2px 4px ${alpha(colorRoles.shadowBase, 0.2)}`,
+              }}
+            >
+              {draft.badgeLabel || "شارة العرض"}
+            </div>
+            {/* Content */}
+            <div style={{ position: "relative", zIndex: 2, color: colorRoles.textInverse, display: "flex", flexDirection: "column", gap: "0.25rem", textAlign: "right" }}>
+              <strong style={{ fontSize: "1.05rem", fontWeight: 800, textShadow: `0 1px 2px ${alpha(colorRoles.shadowBase, 0.5)}` }}>
+                {draft.title || "عنوان العرض الترويجي"}
+              </strong>
+              {draft.subtitle && (
+                <span style={{ fontSize: "0.78rem", opacity: 0.85, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {draft.subtitle}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Quality complete meter */}
+      <div style={{ padding: "0.75rem", background: colorRoles.surfaceInset, borderRadius: "0.5rem", border: `1px solid color-mix(in srgb, currentColor 8%, transparent)` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", fontWeight: 700, marginBottom: "0.25rem" }}>
+          <span>جودة محتوى العنصر:</span>
+          <span style={{ color: quality >= 70 ? colorRoles.success : colorRoles.brandAction }}>{quality}%</span>
+        </div>
+        <div style={{ height: "6px", width: "100%", background: "color-mix(in srgb, currentColor 12%, transparent)", borderRadius: "3px", overflow: "hidden" }}>
+          <div
+            style={{
+              height: "100%",
+              width: `${quality}%`,
+              background: quality >= 70 ? colorRoles.success : colorRoles.brandAction,
+              transition: "width 0.3s ease",
+            }}
+          />
+        </div>
+        <p style={{ margin: "0.35rem 0 0", fontSize: "0.688rem", opacity: 0.65 }}>
+          {quality < 70 ? "⚠️ يُنصح بإكمال الحقول والوصف للحصول على جودة مقبولة." : "✅ جودة المحتوى ممتازة وجاهز للنشر."}
+        </p>
+      </div>
+
       <CpTextInput value={draft.title} onChange={(v) => update("title", v)} placeholder="العنوان" aria-label="العنوان" />
       <CpTextInput value={draft.subtitle} onChange={(v) => update("subtitle", v)} placeholder="الوصف المختصر" aria-label="الوصف المختصر" />
       {kind === "promos" && (

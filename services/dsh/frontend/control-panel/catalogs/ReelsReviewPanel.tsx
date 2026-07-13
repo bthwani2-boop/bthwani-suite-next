@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useCallback } from "react";
 import { CpButton, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
-import { fetchReels } from "../../../shared/catalog/central-catalog.api";
-import type { Reel } from "../../../shared/catalog/central-catalog.types";
+import { fetchReels } from "../../shared/catalog/central-catalog.api";
+import type { Reel } from "../../shared/catalog/central-catalog.types";
 
 interface ReelsReviewPanelProps {
   readonly onReviewReel: (
@@ -76,12 +76,12 @@ export function ReelsReviewPanel({ onReviewReel }: ReelsReviewPanelProps) {
         <CpButton onClick={() => void load()} aria-label="تحديث قائمة الريلز">🔄 تحديث</CpButton>
       </div>
 
-      {error && <CpStatePanel title="خطأ" description={error} />}
+      {error && <CpStatePanel role="alert" title="خطأ" description={error} />}
 
       {loading ? (
-        <CpStatePanel title="جاري تحميل الريلز..." loading />
+        <CpStatePanel role="status" title="جاري تحميل الريلز..." />
       ) : reels.length === 0 ? (
-        <CpStatePanel title="لا توجد ريلز" description="لا توجد ريلز بهذه الحالة حالياً." />
+        <CpStatePanel role="status" title="لا توجد ريلز" description="لا توجد ريلز بهذه الحالة حالياً." />
       ) : (
         <div style={tableWrapStyle}>
           <CpTable aria-label="جدول مراجعة الريلز">

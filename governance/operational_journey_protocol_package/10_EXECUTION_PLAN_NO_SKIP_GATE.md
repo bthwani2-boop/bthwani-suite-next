@@ -1,7 +1,7 @@
 # 10 — Execution Plan No-Skip Gate & Docker/Hosting/Runtime Matrix
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
-**File:** `10/11 (Amendment)`
+**File:** 10 of 12
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained, tools/plan archived)

@@ -80,6 +80,10 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   ),
 };
 
+import type { CSSProperties } from "react";
+import { colorRoles, alpha } from "@bthwani/ui-kit";
+import { WebStyleSheet } from "@bthwani/ui-kit/web";
+
 function NavItem({
   item,
   isActive,
@@ -92,8 +96,27 @@ function NavItem({
   const [hovered, setHovered] = useState(false);
   const icon = item.icon ?? SECTION_ICONS[item.section];
 
+  const dynamicButtonStyle: CSSProperties = {
+    cursor: (item.disabled ?? false) ? "not-allowed" : "pointer",
+    fontWeight: isActive ? 700 : 500,
+    background: isActive
+      ? `linear-gradient(135deg, ${alpha(colorRoles.brandStructure, 0.85)} 0%, ${alpha(colorRoles.brandStructure, 0.95)} 100%)`
+      : hovered
+      ? alpha(colorRoles.textInverse, 0.05)
+      : "transparent",
+    color: isActive
+      ? colorRoles.textInverse
+      : hovered
+      ? alpha(colorRoles.textInverse, 0.8)
+      : "var(--sidebar-text, rgb(168, 191, 223))",
+    boxShadow: isActive
+      ? `inset 0 0 0 1px ${alpha(colorRoles.textSecondary, 0.35)}, 0 0 12px ${alpha(colorRoles.textSecondary, 0.12)}`
+      : "none",
+    opacity: (item.disabled ?? false) ? 0.4 : 1,
+  };
+
   return (
-    <li style={{ marginBottom: "2px" }}>
+    <li style={styles.navItemLi}>
       <button
         type="button"
         disabled={item.disabled ?? false}
@@ -103,53 +126,13 @@ function NavItem({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
-          gap: "0.75rem",
-          padding: "0.625rem 0.875rem",
-          borderRadius: "0.625rem",
-          border: "none",
-          cursor: (item.disabled ?? false) ? "not-allowed" : "pointer",
-          textAlign: "inherit",
-          fontFamily: "var(--font-arabic)",
-          fontSize: "0.9rem",
-          fontWeight: isActive ? 700 : 500,
-          transition: "all 0.18s var(--ease-smooth, ease)",
-          outline: "none",
-          position: "relative",
-          // Active: blue glow pill
-          background: isActive
-            ? "linear-gradient(135deg, rgb(30, 45, 85) 0%, rgb(36, 55, 102) 100%)"
-            : hovered
-            ? "rgba(255,255,255,0.05)"
-            : "transparent",
-          color: isActive
-            ? "rgb(255, 255, 255)"
-            : hovered
-            ? "rgb(200, 216, 240)"
-            : "var(--sidebar-text, rgb(168, 191, 223))",
-          boxShadow: isActive
-            ? "inset 0 0 0 1px rgba(59,123,255,0.35), 0 0 12px rgba(59,123,255,0.12)"
-            : "none",
-          opacity: (item.disabled ?? false) ? 0.4 : 1,
+          ...styles.navItemButton,
+          ...dynamicButtonStyle,
         }}
       >
         {/* Active indicator bar (start side) */}
         {isActive && (
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              insetInlineStart: 0,
-              top: "20%",
-              bottom: "20%",
-              width: "3px",
-              borderRadius: "0 2px 2px 0",
-              background: "var(--dsh-blue, rgb(59, 123, 255))",
-              boxShadow: "0 0 8px var(--dsh-blue, rgb(59, 123, 255))",
-            }}
-          />
+          <span aria-hidden="true" style={styles.activeIndicator} />
         )}
 
         {/* Icon */}
@@ -157,12 +140,8 @@ function NavItem({
           <span
             aria-hidden="true"
             style={{
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: isActive ? "rgb(59, 123, 255)" : "inherit",
-              transition: "color 0.18s ease",
+              ...styles.iconWrapper,
+              color: isActive ? colorRoles.textSecondary : "inherit",
             }}
           >
             {icon}
@@ -170,22 +149,11 @@ function NavItem({
         ) : null}
 
         {/* Label */}
-        <span style={{ flex: 1 }}>{item.label}</span>
+        <span style={styles.label}>{item.label}</span>
 
         {/* Badge */}
         {item.badge != null ? (
-          <span
-            style={{
-              flexShrink: 0,
-              background: "var(--dsh-blue, rgb(59, 123, 255))",
-              color: "rgb(255, 255, 255)",
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              padding: "0.1rem 0.45rem",
-              borderRadius: "999px",
-              lineHeight: 1.4,
-            }}
-          >
+          <span style={styles.badge}>
             {item.badge}
           </span>
         ) : null}
@@ -203,64 +171,22 @@ export function ControlPanelNavigation({
   dir = "rtl",
 }: ControlPanelNavigationProps) {
   return (
-    <nav
-      dir={dir}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        background: "var(--sidebar-bg, rgb(13, 20, 37))",
-      }}
-      aria-label="قائمة لوحة التحكم"
-    >
+    <nav dir={dir} style={styles.nav} aria-label="قائمة لوحة التحكم">
       {/* Brand Header */}
-      <div
-        style={{
-          padding: "1.25rem 1rem 1rem",
-          borderBottom: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+      <div style={styles.brandHeader}>
+        <div style={styles.brandLogoContainer}>
           {/* DSH Logo Mark */}
-          <div
-            style={{
-              width: "2rem",
-              height: "2rem",
-              borderRadius: "0.5rem",
-              background: "var(--grad-blue, linear-gradient(135deg, rgb(59, 123, 255), rgb(94, 151, 255)))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              boxShadow: "0 0 12px rgba(59,123,255,0.4)",
-            }}
-          >
+          <div style={styles.brandLogoMark}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
               <path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z" />
             </svg>
           </div>
           <div>
-            <div
-              style={{
-                fontSize: "1rem",
-                fontWeight: 800,
-                color: "rgb(255, 255, 255)",
-                letterSpacing: "0.02em",
-                lineHeight: 1.1,
-              }}
-            >
+            <div style={styles.brandLogoText}>
               DSH
             </div>
             <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--sidebar-text, rgb(168, 191, 223))",
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                }}
-              >
+              <div style={styles.brandLogoSubtitle}>
                 لوحة التحكم
               </div>
             </div>
@@ -268,11 +194,11 @@ export function ControlPanelNavigation({
         </div>
       </div>
 
-      {header != null ? <div style={{ flexShrink: 0 }}>{header}</div> : null}
+      {header != null ? <div style={styles.headerWrapper}>{header}</div> : null}
 
       {/* Nav Items */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem 0.625rem", scrollbarWidth: "none" }}>
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+      <div style={styles.itemsWrapper}>
+        <ul style={styles.itemsList}>
           {items.map((item) => (
             <NavItem
               key={item.section}
@@ -286,13 +212,7 @@ export function ControlPanelNavigation({
 
       {/* Footer */}
       {footer != null ? (
-        <div
-          style={{
-            flexShrink: 0,
-            borderTop: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
-            padding: "0.75rem",
-          }}
-        >
+        <div style={styles.footerWrapper}>
           {footer}
         </div>
       ) : null}
@@ -300,11 +220,8 @@ export function ControlPanelNavigation({
       {/* Version badge */}
       <div
         style={{
-          padding: "0.75rem 1rem",
+          ...styles.versionBadge,
           borderTop: footer == null ? "1px solid var(--sidebar-border, rgb(26, 42, 74))" : undefined,
-          fontSize: "0.68rem",
-          color: "rgba(168,191,223,0.45)",
-          letterSpacing: "0.04em",
         }}
       >
         DSH Control Panel v2
@@ -312,3 +229,119 @@ export function ControlPanelNavigation({
     </nav>
   );
 }
+
+const styles = WebStyleSheet.create({
+  navItemLi: {
+    marginBottom: "2px",
+  },
+  navItemButton: {
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    gap: "0.75rem",
+    padding: "0.625rem 0.875rem",
+    borderRadius: "0.625rem",
+    border: "none",
+    textAlign: "inherit",
+    fontFamily: "var(--font-arabic)",
+    fontSize: "0.9rem",
+    transition: "all 0.18s var(--ease-smooth, ease)",
+    outline: "none",
+    position: "relative",
+  },
+  activeIndicator: {
+    position: "absolute",
+    insetInlineStart: 0,
+    top: "20%",
+    bottom: "20%",
+    width: "3px",
+    borderRadius: "0 2px 2px 0",
+    background: "var(--dsh-blue, rgb(59, 123, 255))",
+    boxShadow: "0 0 8px var(--dsh-blue, rgb(59, 123, 255))",
+  },
+  iconWrapper: {
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "color 0.18s ease",
+  },
+  label: {
+    flex: 1,
+  },
+  badge: {
+    flexShrink: 0,
+    background: "var(--dsh-blue, rgb(59, 123, 255))",
+    color: colorRoles.textInverse,
+    fontSize: "0.7rem",
+    fontWeight: 700,
+    padding: "0.1rem 0.45rem",
+    borderRadius: "999px",
+    lineHeight: 1.4,
+  },
+  nav: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    background: "var(--sidebar-bg, rgb(13, 20, 37))",
+  },
+  brandHeader: {
+    padding: "1.25rem 1rem 1rem",
+    borderBottom: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+    flexShrink: 0,
+  },
+  brandLogoContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.625rem",
+  },
+  brandLogoMark: {
+    width: "2rem",
+    height: "2rem",
+    borderRadius: "0.5rem",
+    background: "var(--grad-blue, linear-gradient(135deg, rgb(59, 123, 255), rgb(94, 151, 255)))",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    boxShadow: `0 0 12px ${alpha(colorRoles.textSecondary, 0.4)}`,
+  },
+  brandLogoText: {
+    fontSize: "1rem",
+    fontWeight: 800,
+    color: colorRoles.textInverse,
+    letterSpacing: "0.02em",
+    lineHeight: 1.1,
+  },
+  brandLogoSubtitle: {
+    fontSize: "0.68rem",
+    color: "var(--sidebar-text, rgb(168, 191, 223))",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+  },
+  headerWrapper: {
+    flexShrink: 0,
+  },
+  itemsWrapper: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "0.75rem 0.625rem",
+    scrollbarWidth: "none",
+  },
+  itemsList: {
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  },
+  footerWrapper: {
+    flexShrink: 0,
+    borderTop: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+    padding: "0.75rem",
+  },
+  versionBadge: {
+    padding: "0.75rem 1rem",
+    fontSize: "0.68rem",
+    color: alpha(colorRoles.textSecondary, 0.45),
+    letterSpacing: "0.04em",
+  },
+});

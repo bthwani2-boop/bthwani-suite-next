@@ -5,7 +5,7 @@ export type DshRuntimeBinding = {
   readonly contractOperations?: readonly string[];
   readonly backendImplemented: boolean;
   readonly runtimeEvidence: string | null;
-  readonly state: "blocked" | "verified" | "experience-fix-required" | "client-reverified-only";
+  readonly state: "blocked" | "verified" | "experience-fix-required" | "client-reverified-only" | "incomplete";
   readonly runtimeBound?: boolean;
   readonly screensReady?: boolean;
   readonly databaseReady?: boolean;
@@ -59,8 +59,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Cart & Serviceability-cart-serviceability",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Checkout Intent & WLT Handoff ───────────────────────────────────────
   {
@@ -72,8 +72,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Checkout & WLT Handoff-checkout-intent",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Order Fulfillment & Partner Acceptance ──────────────────────────────
   {
@@ -85,8 +85,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Order Fulfillment-order-fulfillment",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Dispatch & Captain Delivery ─────────────────────────────────────────
   {
@@ -98,8 +98,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Dispatch & Captain Delivery-dispatch-delivery-lifecycle",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Field Verification & Store Quality Assurance ────────────────────────
   {
@@ -111,8 +111,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Field Verification-field-readiness",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Support, Incidents & Escalation Room ─────────────────────────────────
   {
@@ -124,8 +124,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Support-support-incidents",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Platform Analytics & Operational Reporting ──────────────────────────
   {
@@ -137,8 +137,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/Analytics-analytics-finance-visibility",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Notifications & Actor Communication ──────────────────────────────────
   {
@@ -150,8 +150,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/notifications-actor-communication/dsh-notifications-runtime-smoke.txt",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Marketing Command Deck ───────────────────────────────────────────────
   // Campaigns, tickers, and partner-offers are all API-backed with governed
@@ -178,8 +178,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/marketing-partner-offers-runtime-smoke/dsh-runtime-smoke.txt",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Platform Policies & Service Area Management ──────────────────────────
   {
@@ -191,8 +191,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Administration, Roles & Activation ──────────────────────────────────
   {
@@ -204,8 +204,8 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
   // ── Partner Onboarding & Store Publication ──────────────────────────────────────────────
   {
@@ -217,7 +217,7 @@ export const DSH_RUNTIME_MAP = [
     databaseReady: true,
     generatedClientReady: true,
     surfaceBindingApproved: true,
-    state: "verified",
-    runtimeEvidence: "services/dsh/evidence/partner-onboarding-store-publication-final-closure/dsh-runtime-smoke.txt",
+    state: "incomplete",
+    runtimeEvidence: null,
   },
 ] as const satisfies readonly DshRuntimeBinding[];

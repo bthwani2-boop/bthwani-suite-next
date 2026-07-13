@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { WebStyleSheet } from "@bthwani/ui-kit/web";
 
 export type DataTablePageFrameProps = {
   readonly header?: ReactNode;
@@ -12,14 +13,14 @@ export type DataTablePageFrameProps = {
 
 export function DataTablePageFrame({ header, toolbar, filters, children, stateView, sidePanel, dir = "rtl" }: DataTablePageFrameProps) {
   return (
-    <section dir={dir} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {header != null && <div style={{ flexShrink: 0 }}>{header}</div>}
-      {toolbar != null && <div style={{ flexShrink: 0 }}>{toolbar}</div>}
-      {filters != null && <div style={{ flexShrink: 0 }}>{filters}</div>}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>{stateView ?? children}</div>
+    <section dir={dir} style={styles.section}>
+      {header != null && <div style={styles.header}>{header}</div>}
+      {toolbar != null && <div style={styles.toolbar}>{toolbar}</div>}
+      {filters != null && <div style={styles.filters}>{filters}</div>}
+      <div style={styles.body}>
+        <div style={styles.content}>{stateView ?? children}</div>
         {sidePanel != null && (
-          <aside style={{ width: "22rem", flexShrink: 0, borderInlineStart: "1px solid var(--card-border, currentColor)", overflowY: "auto" }}>
+          <aside style={styles.sidePanel}>
             {sidePanel}
           </aside>
         )}
@@ -27,3 +28,36 @@ export function DataTablePageFrame({ header, toolbar, filters, children, stateVi
     </section>
   );
 }
+
+const styles = WebStyleSheet.create({
+  section: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+  },
+  header: {
+    flexShrink: 0,
+  },
+  toolbar: {
+    flexShrink: 0,
+  },
+  filters: {
+    flexShrink: 0,
+  },
+  body: {
+    flex: 1,
+    display: "flex",
+    overflow: "hidden",
+  },
+  content: {
+    flex: 1,
+    overflowY: "auto",
+    overflowX: "auto",
+  },
+  sidePanel: {
+    width: "22rem",
+    flexShrink: 0,
+    borderInlineStart: "1px solid var(--card-border, currentColor)",
+    overflowY: "auto",
+  },
+});

@@ -1,7 +1,7 @@
 # 02 — بوابات GitHub Remote والمصدر والتحكم البشري
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
-**File:** `02/11`
+**File:** `02 of 12`
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained)

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useBThwaniAppearance, getBThwaniGlassRecipe, useBThwaniAppearanceContext } from "@bthwani/ui-kit";
+import { WebStyleSheet } from "@bthwani/ui-kit/web";
 
 export type ControlPanelShellSlots = {
   readonly navigation: ReactNode;
@@ -30,8 +31,6 @@ export function ControlPanelShell({
   const glass = getBThwaniGlassRecipe(glassMode, "surface");
 
   const topBarStyle: CSSProperties = {
-    flexShrink: 0,
-    zIndex: 40,
     backdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
     WebkitBackdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
     background: glass.backgroundColor ?? "var(--topbar-bg, rgb(255, 255, 255))",
@@ -39,66 +38,27 @@ export function ControlPanelShell({
   };
 
   return (
-    <div
-      dir={dir}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        overflow: "hidden",
-        fontFamily: "var(--font-arabic)",
-        background: "var(--main-bg, rgb(240, 244, 250))",
-        color: "var(--text-primary, rgb(13, 20, 37))",
-      }}
-    >
+    <div dir={dir} style={styles.container}>
       {serviceContext}
 
       {/* Top Bar — appearance-driven glass chrome */}
-      <div style={topBarStyle}>{topBar}</div>
+      <div style={{ ...styles.topBar, ...topBarStyle }}>{topBar}</div>
 
-      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={styles.body}>
 
         {/* Sidebar */}
-        <aside
-          style={{
-            width: "var(--sidebar-width, 15.5rem)",
-            flexShrink: 0,
-            overflowY: "auto",
-            overflowX: "hidden",
-            background: "var(--sidebar-bg, rgb(13, 20, 37))",
-            borderInlineEnd: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
-            display: "flex",
-            flexDirection: "column",
-            scrollbarWidth: "none",
-          }}
-        >
+        <aside style={styles.sidebar}>
           {navigation}
         </aside>
 
         {/* Main Content */}
-        <main
-          style={{
-            flex: 1,
-            minWidth: 0,
-            overflowY: "auto",
-            background: "var(--main-bg, rgb(240, 244, 250))",
-            scrollbarWidth: "thin",
-            scrollbarColor: "var(--card-border, rgb(226, 232, 243)) transparent",
-          }}
-        >
+        <main style={styles.main}>
           {main}
         </main>
 
         {/* Side Panel */}
         {sidePanel != null ? (
-          <div
-            style={{
-              flexShrink: 0,
-              overflowY: "auto",
-              background: "var(--card-bg, rgb(255, 255, 255))",
-              borderInlineStart: "1px solid var(--card-border, rgb(226, 232, 243))",
-            }}
-          >
+          <div style={styles.sidePanel}>
             {sidePanel}
           </div>
         ) : null}
@@ -106,16 +66,62 @@ export function ControlPanelShell({
 
       {/* Status Bar */}
       {statusBar != null ? (
-        <footer
-          style={{
-            flexShrink: 0,
-            background: "var(--topbar-bg, rgb(255, 255, 255))",
-            borderTop: "1px solid var(--topbar-border, rgb(226, 232, 243))",
-          }}
-        >
+        <footer style={styles.footer}>
           {statusBar}
         </footer>
       ) : null}
     </div>
   );
 }
+
+const styles = WebStyleSheet.create({
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100vh",
+    overflow: "hidden",
+    fontFamily: "var(--font-arabic)",
+    background: "var(--main-bg, rgb(240, 244, 250))",
+    color: "var(--text-primary, rgb(13, 20, 37))",
+  },
+  topBar: {
+    flexShrink: 0,
+    zIndex: 40,
+  },
+  body: {
+    display: "flex",
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
+  },
+  sidebar: {
+    width: "var(--sidebar-width, 15.5rem)",
+    flexShrink: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    background: "var(--sidebar-bg, rgb(13, 20, 37))",
+    borderInlineEnd: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+    display: "flex",
+    flexDirection: "column",
+    scrollbarWidth: "none",
+  },
+  main: {
+    flex: 1,
+    minWidth: 0,
+    overflowY: "auto",
+    background: "var(--main-bg, rgb(240, 244, 250))",
+    scrollbarWidth: "thin",
+    scrollbarColor: "var(--card-border, rgb(226, 232, 243)) transparent",
+  },
+  sidePanel: {
+    flexShrink: 0,
+    overflowY: "auto",
+    background: "var(--card-bg, rgb(255, 255, 255))",
+    borderInlineStart: "1px solid var(--card-border, rgb(226, 232, 243))",
+  },
+  footer: {
+    flexShrink: 0,
+    background: "var(--topbar-bg, rgb(255, 255, 255))",
+    borderTop: "1px solid var(--topbar-border, rgb(226, 232, 243))",
+  },
+});

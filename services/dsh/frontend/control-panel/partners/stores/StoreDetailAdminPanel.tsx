@@ -40,7 +40,13 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
     }
     setUploading(true);
     try {
-      await uploadAndLinkAsset(file, "stores", storeId, role, "control-panel-catalog", "");
+      await uploadAndLinkAsset({
+        file,
+        entityType: "stores",
+        entityId: storeId,
+        role,
+        altAr: "",
+      });
       alert("تم رفع الصورة؛ ستظهر على المتجر بعد اعتمادها من قائمة مراجعة الصور في الكتالوج.");
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (e: any) {

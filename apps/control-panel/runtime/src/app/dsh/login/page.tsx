@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
+import { colorRoles, alpha } from "@bthwani/ui-kit";
 
 function resolveSafeReturnTo(raw: string | null): string {
   if (!raw) return "/dsh/dashboard";
@@ -69,7 +70,7 @@ function DshLoginForm() {
           borderRadius: "1rem",
           border: "1px solid var(--card-border, rgb(226, 232, 243))",
           background: "var(--card-bg, rgb(255, 255, 255))",
-          boxShadow: "0 1px 2px rgba(13, 20, 37, 0.06)",
+          boxShadow: `0 1px 2px ${alpha(colorRoles.shadowBase, 0.06)}`,
         }}
       >
         <div>
@@ -112,7 +113,7 @@ function DshLoginForm() {
         </label>
 
         {submitError && (
-          <p role="alert" style={{ margin: 0, color: "rgb(220, 38, 38)", fontSize: "0.875rem" }}>
+          <p role="alert" style={{ margin: 0, color: colorRoles.danger, fontSize: "0.875rem" }}>
             {submitError}
           </p>
         )}

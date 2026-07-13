@@ -1,7 +1,7 @@
 # 11 — Code-First / Fix-First / Full-Stack Multi-Surface Coverage Mode
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
-**File:** `11/11 amendment`
+**File:** 11 of 12
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained)

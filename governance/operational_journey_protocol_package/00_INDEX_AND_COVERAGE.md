@@ -1,6 +1,7 @@
 # 00 — فهرس الحزمة ومصفوفة عدم إسقاط البنود
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
+**File:** 00 of 12
 **File count:** 12 Markdown files (10 protocol files + 2 execution amendments) + 1 trace file
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
@@ -61,7 +62,7 @@ internal_reference_integrity_matrix:
   broken_references_count: 0
   status: PASS
   checked_items:
-    - "تحديث ترقيم الملفات من 09/01 إلى 11/01 وتوحيدها على x/11"
+    - "تحديث ترقيم الملفات وتوحيدها على صيغة x of 12"
     - "إزالة عبارات 11 ملفًا وتعديلها لتشمل 12 ملفًا"
     - "تحديث نطاقات الاستدعاء لتشمل الملف 11"
     - "تأكيد تعريف zero_defect_closure_matrix والرجوع إليها في 06"

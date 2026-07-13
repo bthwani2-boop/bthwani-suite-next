@@ -358,7 +358,13 @@ export function CatalogDashboardScreen() {
     }
     setUploading(true);
     try {
-      await uploadAndLinkAsset(file, uploadEntityType, uploadEntityId.trim(), uploadRole.trim() || "gallery", "control-panel-catalog", uploadAltAr.trim());
+      await uploadAndLinkAsset({
+        file,
+        entityType: uploadEntityType,
+        entityId: uploadEntityId.trim(),
+        role: uploadRole.trim() || "gallery",
+        altAr: uploadAltAr.trim(),
+      });
       alert("تم رفع الصورة وربطها بنجاح");
       setUploadEntityId("");
       setUploadAltAr("");

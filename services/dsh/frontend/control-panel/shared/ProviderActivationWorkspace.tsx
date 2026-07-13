@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet } from "react-native";
+import { WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
   Box,
   borders,

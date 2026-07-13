@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { Box, Button, Card, ScrollScreen, Text, TextField, spacing, colorRoles, alpha } from "@bthwani/ui-kit";
 import { useCaptainCreateController } from "../../shared/workforce";
 import type { Captain, LicenseStatus, SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
@@ -145,15 +145,15 @@ export function CaptainCreateView(props: {
       )}
 
       {createdCaptain ? (
-        <Box style={{ gap: spacing[3], marginTop: spacing[3], padding: spacing[3], backgroundColor: "#f6fdf9", border: "1px solid #c2f0d5", borderRadius: 8 }}>
+        <Box style={{ gap: spacing[3], marginTop: spacing[3], padding: spacing[3], backgroundColor: alpha(colorRoles.success, 0.08), border: `1px solid ${alpha(colorRoles.success, 0.3)}`, borderRadius: 8 }}>
           <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>
             تم إنشاء حساب مقدم الخدمة بنجاح!
           </Text>
           {issuedCode ? (
             <Box style={{ gap: spacing[2] }}>
               <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل لتطبيق الهواتف:</Text>
-              <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", backgroundColor: "#ffffff", padding: spacing[2], borderRadius: 4, border: "1px solid #d3d3d3" }}>
-                <Text role="titleMd" style={{ color: "#2e7d32", letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
+              <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", backgroundColor: colorRoles.surfaceBase, padding: spacing[2], borderRadius: 4, border: `1px solid ${colorRoles.borderSubtle}` }}>
+                <Text role="titleMd" style={{ color: colorRoles.success, letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
                 <Button
                   label={copied ? "تم النسخ ✓" : "نسخ الكود"}
                   tone="ghost"

@@ -1,7 +1,7 @@
 # 01 — الأمر، القالب، النتائج المسموحة
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
-**File:** `01/11`
+**File:** `01 of 12`
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained)
