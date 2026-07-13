@@ -21,11 +21,11 @@ const (
 )
 
 const (
-	CategoryRestaurant DshStoreCategory = "restaurant"
-	CategoryGrocery    DshStoreCategory = "grocery"
-	CategoryPharmacy   DshStoreCategory = "pharmacy"
-	CategoryBakery     DshStoreCategory = "bakery"
-	CategoryDefault    DshStoreCategory = "default"
+	CategoryRestaurant DshStoreCategory = "domain-restaurants"
+	CategoryGrocery    DshStoreCategory = "domain-groceries"
+	CategoryPharmacy   DshStoreCategory = "domain-pharmacy"
+	CategoryBakery     DshStoreCategory = "domain-groceries"
+	CategoryDefault    DshStoreCategory = "domain-bthwani-store"
 )
 
 type DshStoreRow struct {
@@ -45,6 +45,7 @@ type DshStoreRow struct {
 	HeroImageURL          *string
 	LogoURL               *string
 	Category              DshStoreCategory
+	CategoryLabel         string
 	DeliveryModes         []string
 	IsFreeDelivery        bool
 	DistanceKM            *float64
@@ -88,6 +89,7 @@ type DshStoreSummary struct {
 	HeroImageURL          *string            `json:"heroImageUrl"`
 	LogoURL               *string            `json:"logoUrl"`
 	Category              DshStoreCategory   `json:"category"`
+	CategoryLabel         string             `json:"categoryLabel"`
 	DeliveryModes         []string           `json:"deliveryModes"`
 	IsFreeDelivery        bool               `json:"isFreeDelivery"`
 	DistanceKM            *float64           `json:"distanceKm"`
@@ -171,7 +173,7 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		RatingAverage:  row.RatingAverage, RatingCount: row.RatingCount,
 		DeliveryEtaMin: row.DeliveryEtaMin, DeliveryEtaMax: row.DeliveryEtaMax,
 		IsVisible: row.IsVisible, HeroImageURL: row.HeroImageURL, LogoURL: row.LogoURL,
-		Category: row.Category, DeliveryModes: row.DeliveryModes,
+		Category: row.Category, CategoryLabel: row.CategoryLabel, DeliveryModes: row.DeliveryModes,
 		IsFreeDelivery: row.IsFreeDelivery, DistanceKM: row.DistanceKM,
 		FollowerCount: row.FollowerCount, HasProBadge: row.HasProBadge,
 		HasCouponBadge: row.HasCouponBadge, PointsMultiplier: row.PointsMultiplier,

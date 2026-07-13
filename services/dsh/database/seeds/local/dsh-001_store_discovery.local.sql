@@ -14,7 +14,7 @@ INSERT INTO dsh_stores (
   is_visible,
   hero_image_url,
   logo_url,
-  category,
+  catalog_domain_id,
   delivery_modes,
   is_free_delivery,
   distance_km,
@@ -31,7 +31,7 @@ INSERT INTO dsh_stores (
     'sana', 'haddah', 'serviceable', 4.80, 312, 25, 40, true,
     'http://localhost:59000/dsh-media/store-1001-hero.jpg',
     'http://localhost:59000/dsh-media/store-1001-logo.jpg',
-    'grocery', ARRAY['delivery','pickup','express'], true,
+    'domain-groceries', ARRAY['delivery','pickup','express'], true,
     2.10, 3100, true, false, 2, true,
     15.3400, 44.1900
   ),
@@ -40,7 +40,7 @@ INSERT INTO dsh_stores (
     'sana', 'sabeen', 'serviceable', 4.60, 189, 20, 35, true,
     'http://localhost:59000/dsh-media/store-1002-hero.jpg',
     'http://localhost:59000/dsh-media/store-1002-logo.jpg',
-    'bakery', ARRAY['delivery','pickup'], true,
+    'domain-groceries', ARRAY['delivery','pickup'], true,
     1.80, 1200, true, true, null, false,
     15.3300, 44.2000
   ),
@@ -49,7 +49,7 @@ INSERT INTO dsh_stores (
     'sana', 'taiz-st', 'limited', 4.20, 97, 35, 55, true,
     'http://localhost:59000/dsh-media/store-1003-hero.jpg',
     'http://localhost:59000/dsh-media/store-1003-logo.jpg',
-    'grocery', ARRAY['delivery','pickup'], false,
+    'domain-groceries', ARRAY['delivery','pickup'], false,
     3.50, 850, false, false, null, false,
     15.3200, 44.1800
   ),
@@ -58,7 +58,7 @@ INSERT INTO dsh_stores (
     'sana', 'zubairi', 'unavailable', 4.50, 241, null, null, true,
     'http://localhost:59000/dsh-media/store-1004-hero.jpg',
     'http://localhost:59000/dsh-media/store-1004-logo.jpg',
-    'grocery', ARRAY['delivery'], false,
+    'domain-groceries', ARRAY['delivery'], false,
     1.20, 2400, true, false, null, false,
     15.3600, 44.1700
   ),
@@ -67,7 +67,7 @@ INSERT INTO dsh_stores (
     'sana', 'old-city', 'serviceable', 4.90, 524, 15, 30, true,
     'http://localhost:59000/dsh-media/store-1005-hero.jpg',
     'http://localhost:59000/dsh-media/store-1005-logo.jpg',
-    'restaurant', ARRAY['delivery','pickup','express'], true,
+    'domain-restaurants', ARRAY['delivery','pickup','express'], true,
     0.50, 5200, true, true, 3, true,
     15.3560, 44.1800
   ),
@@ -76,7 +76,7 @@ INSERT INTO dsh_stores (
     'sana', 'maeen', 'serviceable', 4.70, 88, 20, 35, true,
     'http://localhost:59000/dsh-media/store-1006-hero.jpg',
     'http://localhost:59000/dsh-media/store-1006-logo.jpg',
-    'pharmacy', ARRAY['delivery'], true,
+    'domain-pharmacy', ARRAY['delivery'], true,
     4.10, 980, false, true, null, false,
     15.3700, 44.1900
   )
@@ -94,7 +94,7 @@ ON CONFLICT (id) DO UPDATE SET
   is_visible = EXCLUDED.is_visible,
   hero_image_url = EXCLUDED.hero_image_url,
   logo_url = EXCLUDED.logo_url,
-  category = EXCLUDED.category,
+  catalog_domain_id = EXCLUDED.catalog_domain_id,
   delivery_modes = EXCLUDED.delivery_modes,
   is_free_delivery = EXCLUDED.is_free_delivery,
   distance_km = EXCLUDED.distance_km,

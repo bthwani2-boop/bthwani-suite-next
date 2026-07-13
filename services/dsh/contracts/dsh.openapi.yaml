@@ -185,7 +185,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
     post:
       operationId: createOperatorHomeDiscoveryContent
-      summary: Create a banner, promotion, or category.
+      summary: Create a home banner or promotion; categories come from the central catalog.
       tags: [DshHomeDiscovery]
       security:
         - bearerAuth: []
@@ -549,234 +549,11 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /dsh/partner/catalog:
-    get:
-      operationId: getPartnerDshCatalog
-      summary: Return the authenticated partner's complete catalog.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: Partner catalog including draft and inactive items.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DshCatalogResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-
-  /dsh/partner/catalog/categories:
-    post:
-      operationId: createPartnerCatalogCategory
-      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use POST /dsh/partner/catalog/product-proposals + PUT .../assortment/{masterProductId}.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/CorrelationId" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogCategoryInput" }
-      responses:
-        "201":
-          description: Category created.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [category]
-                properties:
-                  category: { $ref: "#/components/schemas/DshCatalogCategory" }
-
-  /dsh/partner/catalog/categories/{categoryId}:
-    parameters:
-      - name: categoryId
-        in: path
-        required: true
-        schema: { type: string }
-      - $ref: "#/components/parameters/CorrelationId"
-    patch:
-      operationId: updatePartnerCatalogCategory
-      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogCategoryInput" }
-      responses:
-        "200": { description: Category updated. }
-        "409": { $ref: "#/components/responses/Conflict" }
-    delete:
-      operationId: deletePartnerCatalogCategory
-      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - name: expectedVersion
-          in: query
-          required: true
-          schema: { type: integer, minimum: 1 }
-      responses:
-        "204": { description: Category deleted. }
-        "409": { $ref: "#/components/responses/Conflict" }
-
-  /dsh/partner/catalog/products:
-    post:
-      operationId: createPartnerCatalogProduct
-      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/CorrelationId" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogProductInput" }
-      responses:
-        "201":
-          description: Product created.
-
-  /dsh/partner/catalog/products/{productId}:
-    parameters:
-      - name: productId
-        in: path
-        required: true
-        schema: { type: string }
-      - $ref: "#/components/parameters/CorrelationId"
-    patch:
-      operationId: updatePartnerCatalogProduct
-      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogProductInput" }
-      responses:
-        "200": { description: Product updated. }
-        "409": { $ref: "#/components/responses/Conflict" }
-    delete:
-      operationId: deletePartnerCatalogProduct
-      deprecated: true # legacy-read-only as of dsh-030: returns 410 LEGACY_CATALOG_WRITE_BLOCKED. Use central-catalog product-proposals + store assortment endpoints instead.
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - name: expectedVersion
-          in: query
-          required: true
-          schema: { type: integer, minimum: 1 }
-      responses:
-        "204": { description: Product deleted. }
-        "409": { $ref: "#/components/responses/Conflict" }
-
-  /dsh/partner/catalog/media/upload-intents:
-    post:
-      operationId: createPartnerCatalogMediaUploadIntent
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/CorrelationId" }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshMediaUploadIntentInput" }
-      responses:
-        "201":
-          description: Object-storage upload intent created.
-
-  /dsh/partner/catalog/media/{mediaId}/complete:
-    patch:
-      operationId: completePartnerCatalogMedia
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema: { type: string }
-        - $ref: "#/components/parameters/CorrelationId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshMediaCompleteInput" }
-      responses:
-        "200": { description: Media reference completed. }
-        "409": { $ref: "#/components/responses/Conflict" }
-
-  /dsh/partner/catalog/media/{mediaId}:
-    delete:
-      operationId: deletePartnerCatalogMedia
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - name: mediaId
-          in: path
-          required: true
-          schema: { type: string }
-        - name: expectedVersion
-          in: query
-          required: true
-          schema: { type: integer, minimum: 1 }
-        - $ref: "#/components/parameters/CorrelationId"
-      responses:
-        "204": { description: Media reference deleted. }
-
-  /dsh/partner/catalog/submit:
-    post:
-      operationId: submitPartnerCatalog
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/CorrelationId" }]
-      responses:
-        "201": { description: Catalog submitted for operator review. }
-
-  /dsh/operator/catalog/submissions:
-    get:
-      operationId: listOperatorCatalogSubmissions
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200": { description: Catalog submission queue. }
-
-  /dsh/operator/catalog/{storeId}/decision:
-    post:
-      operationId: decideOperatorCatalogSubmission
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: "#/components/parameters/StoreId"
-        - $ref: "#/components/parameters/CorrelationId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/DshCatalogDecisionInput" }
-      responses:
-        "200": { description: Submission approved or rejected. }
-        "409": { $ref: "#/components/responses/Conflict" }
-
-  /dsh/operator/catalog/{storeId}/audit:
-    get:
-      operationId: listOperatorCatalogAudit
-      tags: [DshCatalog]
-      security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/StoreId" }]
-      responses:
-        "200": { description: Catalog audit timeline. }
-
   # ─── Central Catalog Sovereignty ───────────────────────────────────────────
   # governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md. From dsh-030
   # forward, dsh_catalog_domains/dsh_catalog_nodes/dsh_master_products are the
-  # only ground truth for categories/products; the legacy
-  # /dsh/partner/catalog/categories and /dsh/partner/catalog/products write
-  # endpoints above are deprecated (legacy-read-only — POST/PATCH/DELETE now
-  # return 410 LEGACY_CATALOG_WRITE_BLOCKED). Use the endpoints below instead.
+  # only ground truth for categories/products. Local catalog routes and tables
+  # were retired by dsh-036; every surface uses the endpoints below.
   /dsh/operator/catalog/domains:
     get:
       operationId: listCatalogDomains
@@ -1251,13 +1028,32 @@ paths:
         "200": { description: Assortment row created/updated on behalf of a field-onboarded partner's store. }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /dsh/field/catalog/product-proposals:
+  /dsh/field/partners/{partnerId}/assortment:
+    get:
+      operationId: fieldGetStoreAssortment
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Current central assortment for the field-owned partner draft. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/field/partners/{partnerId}/catalog/product-proposals:
     post:
       operationId: createFieldProductProposal
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        "201": { description: Product proposal submitted by a field actor — never a final sellable product. }
+        "201": { description: Product proposal submitted for the field-owned partner store — never a final sellable product. }
 
   # ─── Cart & Serviceability Quote ────────────────────────────────
   # Runtime handlers registered in server.go. Client must be authenticated.
@@ -4285,7 +4081,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [banners, promos, categories]
+        enum: [banners, promos]
     StoreId:
       name: storeId
       in: path
@@ -4428,7 +4224,7 @@ components:
           $ref: "#/components/schemas/DshStoreCategory"
         categoryLabel:
           type: string
-          description: Human-readable category label resolved from dsh_categories
+          description: Human-readable category label resolved from the sovereign central catalog domain
         deliveryModes:
           type: array
           items:
@@ -4464,12 +4260,8 @@ components:
 
     DshStoreCategory:
       type: string
-      enum:
-        - restaurant
-        - grocery
-        - pharmacy
-        - bakery
-        - default
+      description: Sovereign central catalog domain identifier assigned to the store.
+      pattern: ^domain-[a-z0-9-]+$
 
     DshStoreDeliveryMode:
       type: string
@@ -4751,127 +4543,109 @@ components:
           items:
             $ref: "#/components/schemas/DshStoreAuditEvent"
 
-    DshCatalogCategory:
+    DshCentralCatalogDomain:
       type: object
-      required: [id, storeId, name, description, sortOrder, isActive, version, createdAt, updatedAt]
+      required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
       properties:
         id: { type: string }
-        storeId: { type: string }
-        name: { type: string }
-        description: { type: string }
+        slug: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        icon: { type: string }
         sortOrder: { type: integer }
         isActive: { type: boolean }
-        version: { type: integer, minimum: 1 }
+        isClientVisible: { type: boolean }
+        requiresProductCatalog: { type: boolean }
+        isManualRequest: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
-    DshCatalogMedia:
+    DshCentralCatalogNode:
       type: object
-      required: [id, storeId, objectKey, contentType, state, version, createdAt, updatedAt]
+      required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible]
       properties:
         id: { type: string }
-        storeId: { type: string }
-        productId: { type: ["string", "null"] }
-        objectKey: { type: string }
-        contentType: { type: string }
-        state: { type: string, enum: [pending, complete, deleted] }
-        publicUrl: { type: ["string", "null"] }
-        version: { type: integer, minimum: 1 }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
-    DshCatalogProduct:
-      type: object
-      required: [id, storeId, name, description, sku, priceReference, unitPrice, isActive, version, media, createdAt, updatedAt]
-      properties:
-        id: { type: string }
-        storeId: { type: string }
-        categoryId: { type: ["string", "null"] }
-        name: { type: string }
-        description: { type: string }
-        sku: { type: string }
-        priceReference:
-          type: string
-          description: Display label only. The real commercial price is unitPrice.
-        unitPrice:
-          type: number
-          format: double
-          minimum: 0
-          description: >
-            The real numeric commercial price DSH catalog sells this product at
-            (major currency units, e.g. YER). Sole source of the cart/checkout
-            total handed off to WLT. WLT remains the sole owner of payment
-            authorization/capture/settlement/refund/ledger truth.
+        domainId: { type: string }
+        parentId: { type: ["string", "null"] }
+        level: { type: string, enum: [BUSINESS_SUBDOMAIN, PRODUCT_MAIN_CLASS, PRODUCT_SUB_CLASS] }
+        slug: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        icon: { type: string }
+        sortOrder: { type: integer }
         isActive: { type: boolean }
-        version: { type: integer, minimum: 1 }
-        media:
-          type: array
-          items: { $ref: "#/components/schemas/DshCatalogMedia" }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
+        isClientVisible: { type: boolean }
+
+    DshClientCatalogProduct:
+      type: object
+      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, unitPrice, currency, stockStatus, imageObjectKey]
+      properties:
+        id: { type: string }
+        domainId: { type: string }
+        categoryNodeId: { type: ["string", "null"] }
+        canonicalNameAr: { type: string }
+        canonicalNameEn: { type: string }
+        brand: { type: string }
+        barcode: { type: ["string", "null"] }
+        gtin: { type: ["string", "null"] }
+        sku: { type: ["string", "null"] }
+        unit: { type: string }
+        measurementType: { type: string }
+        canonicalImageObjectKey: { type: ["string", "null"] }
+        approvalStatus: { type: string, enum: [approved] }
+        isActive: { type: boolean }
+        unitPrice: { type: number, format: double, minimum: 0 }
+        currency: { type: string }
+        stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+        imageObjectKey: { type: string }
+
+    DshCatalogAssetLink:
+      type: object
+      required: [id, assetId, entityType, entityId, role, sortOrder, isPrimary, status]
+      properties:
+        id: { type: string }
+        assetId: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        role: { type: string }
+        sortOrder: { type: integer }
+        isPrimary: { type: boolean }
+        status: { type: string }
+
+    DshCatalogPolicySnapshot:
+      type: object
+      required: [id, policyScope, isActive]
+      properties:
+        id: { type: string }
+        domainId: { type: ["string", "null"] }
+        nodeId: { type: ["string", "null"] }
+        policyScope: { type: string, enum: [default, domain, node] }
+        isActive: { type: boolean }
+        allowsStoreProductCustomImage: { type: boolean }
+        allowsProductProposal: { type: boolean }
+        requiresBarcode: { type: boolean }
+        requiresCatalogReview: { type: boolean }
+        requiresProductImage: { type: boolean }
 
     DshCatalogResponse:
       type: object
-      required: [categories, products]
+      required: [domains, nodes, products, media, policySnapshot]
       properties:
-        storeId: { type: string }
-        categories:
+        domains:
           type: array
-          items: { $ref: "#/components/schemas/DshCatalogCategory" }
+          items: { $ref: "#/components/schemas/DshCentralCatalogDomain" }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/DshCentralCatalogNode" }
         products:
           type: array
-          items: { $ref: "#/components/schemas/DshCatalogProduct" }
-
-    DshCatalogCategoryInput:
-      type: object
-      additionalProperties: false
-      required: [name, description, sortOrder, isActive, expectedVersion]
-      properties:
-        name: { type: string, minLength: 1 }
-        description: { type: string }
-        sortOrder: { type: integer }
-        isActive: { type: boolean }
-        expectedVersion: { type: integer, minimum: 0 }
-
-    DshCatalogProductInput:
-      type: object
-      additionalProperties: false
-      required: [name, description, sku, priceReference, unitPrice, isActive, expectedVersion]
-      properties:
-        categoryId: { type: ["string", "null"] }
-        name: { type: string, minLength: 1 }
-        description: { type: string }
-        sku: { type: string, minLength: 1 }
-        priceReference: { type: string, minLength: 1 }
-        unitPrice: { type: number, format: double, exclusiveMinimum: 0 }
-        isActive: { type: boolean }
-        expectedVersion: { type: integer, minimum: 0 }
-
-    DshMediaUploadIntentInput:
-      type: object
-      additionalProperties: false
-      required: [fileName, contentType]
-      properties:
-        productId: { type: ["string", "null"] }
-        fileName: { type: string, minLength: 1 }
-        contentType: { type: string, pattern: "^image/" }
-
-    DshMediaCompleteInput:
-      type: object
-      additionalProperties: false
-      required: [publicUrl, expectedVersion]
-      properties:
-        publicUrl: { type: string, format: uri }
-        expectedVersion: { type: integer, minimum: 1 }
-
-    DshCatalogDecisionInput:
-      type: object
-      additionalProperties: false
-      required: [decision, reason, expectedVersion]
-      properties:
-        decision: { type: string, enum: [approved, rejected] }
-        reason: { type: string, minLength: 3 }
-        expectedVersion: { type: integer, minimum: 1 }
+          items: { $ref: "#/components/schemas/DshClientCatalogProduct" }
+        media:
+          type: array
+          items: { $ref: "#/components/schemas/DshCatalogAssetLink" }
+        policySnapshot:
+          type: array
+          items: { $ref: "#/components/schemas/DshCatalogPolicySnapshot" }
 
     DshHealthResponse:
       type: object
@@ -5021,7 +4795,7 @@ components:
           type: string
         kind:
           type: string
-          enum: [banners, promos, categories]
+          enum: [banners, promos]
         title:
           type: string
         subtitle:

@@ -7,7 +7,6 @@ import type {
   PartnerHubSection,
 } from './dsh-partner.types';
 import { DshPartnerHubSurface } from './account/PartnerHubScreen';
-import { InventoryCatalogScreen } from './Catalog/InventoryCatalogScreen';
 import {
   AuctionStatusUpdateScreen,
   ConversationScreen,

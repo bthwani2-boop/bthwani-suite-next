@@ -1,6 +1,13 @@
 import * as api from "./central-catalog.api";
 import type { CatalogAsset, CatalogAssetLink } from "./central-catalog.types";
 
+const entityTypeMap: Record<string, CatalogAssetLink["entityType"]> = {
+  domains: "domain",
+  nodes: "node",
+  "master-products": "master_product",
+  "product-proposals": "product_proposal",
+};
+
 /**
  * DAM Helper orchestrating asset uploads, reviews, and entity associations.
  */
@@ -39,8 +46,9 @@ export async function uploadAndLinkAsset(
   });
 
   // 4. Link asset to the entity
+  const normalizedEntityType = entityTypeMap[entityType] ?? entityType;
   const link = await api.linkCatalogAsset(updatedAsset.id, {
-    entityType,
+    entityType: normalizedEntityType,
     entityId,
     role,
     isPrimary: true,

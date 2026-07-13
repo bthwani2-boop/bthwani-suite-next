@@ -241,7 +241,7 @@ export function resolveDshStoreClientVisibility(
 }
 
 // ─── Transport Error & Readiness Status ──────────────────────────────────────
-// Used by InventoryCatalogScreen and other catalog surfaces
+// Used by central catalog and other publication surfaces.
 type DshStoreVisibilityTransportError = {
   readonly code: string;
   readonly message: string;

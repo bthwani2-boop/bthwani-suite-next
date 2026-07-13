@@ -59,6 +59,7 @@ export type HomeStoreCardViewModel = {
   heroImageUrl: string | null;
   logoUrl: string | null;
   categoryLabel: string;
+  categoryId: string;
   isFreeDelivery: boolean;
   hasProBadge: boolean;
   hasCouponBadge: boolean;
@@ -146,6 +147,7 @@ export function toHomeStoreCardViewModel(dto: DshHomeStoreDto): HomeStoreCardVie
     heroImageUrl: resolveDshMediaUrl(dto.heroImageUrl),
     logoUrl: resolveDshMediaUrl(dto.logoUrl),
     categoryLabel: dto.categoryLabel,
+    categoryId: dto.category,
     isFreeDelivery: dto.isFreeDelivery,
     hasProBadge: dto.hasProBadge,
     hasCouponBadge: dto.hasCouponBadge,

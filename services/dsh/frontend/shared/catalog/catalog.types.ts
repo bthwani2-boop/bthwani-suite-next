@@ -1,5 +1,5 @@
 // Store-catalog submission workflow types (media intents, audit submissions).
-// The store-local product/category shape has moved to legacy-catalog-compat.types.ts.
+// Client-facing product/category view models live in client-catalog.types.ts.
 
 export type MediaUploadIntent = {
   readonly mediaId: string;

@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { LoadingState, StateView } from '@bthwani/ui-kit';
 import { useStoreDetailController } from '../../shared/store';
 import { usePublishedCatalogController } from '../../shared/catalog';
-import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/legacy-catalog-compat.types';
+import type { CatalogCategory, CatalogProduct } from '../../shared/catalog/client-catalog.types';
 import { StoreDetailShell } from './StoreDetailShell';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useCartController } from '../../shared/cart';

@@ -1,17 +1,17 @@
 -- LEGACY_FILENAME_ONLY — not a slice reference
 -- Home Discovery: Home Discovery local seed
--- Inserts banners, promos, categories, and links stores to categories
+-- Inserts banners/promos and projects store classification onto central domains.
 
 -- Banners
 INSERT INTO dsh_home_banners (id, title, subtitle, image_url, action_type, action_target, sort_order)
 VALUES
   (
     'banner-001',
-    'اكتشف متاجر جديدة',
-    'أفضل العروض في صنعاء',
+    'اكتشف أفضل المطاعم',
+    'خيارات مميزة في صنعاء',
     'http://localhost:59000/dsh-media/banner-001.jpg',
     'category',
-    'all',
+    'domain-restaurants',
     1
   ),
   (
@@ -62,22 +62,6 @@ ON CONFLICT (id) DO UPDATE SET
   action_target = EXCLUDED.action_target,
   updated_at   = NOW();
 
--- Categories
-INSERT INTO dsh_categories (id, label, sort_order)
-VALUES
-  ('cat-restaurant', 'مطاعم',  1),
-  ('cat-grocery',    'بقالة',  2),
-  ('cat-pharmacy',   'صيدلية', 3),
-  ('cat-bakery',     'مخابز',  4),
-  ('cat-default',    'أخرى',   5)
-ON CONFLICT (id) DO UPDATE SET
-  label      = EXCLUDED.label,
-  sort_order = EXCLUDED.sort_order,
-  updated_at = NOW();
-
--- Link dsh_stores to categories based on existing category column
-UPDATE dsh_stores SET category_id = 'cat-restaurant' WHERE category = 'restaurant';
-UPDATE dsh_stores SET category_id = 'cat-grocery'    WHERE category = 'grocery';
-UPDATE dsh_stores SET category_id = 'cat-pharmacy'   WHERE category = 'pharmacy';
-UPDATE dsh_stores SET category_id = 'cat-bakery'     WHERE category = 'bakery';
-UPDATE dsh_stores SET category_id = 'cat-default'    WHERE category = 'default';
+-- Home category cards and store classification are projections of the
+-- sovereign central catalog. Store-domain links are seeded by
+-- dsh-001_store_discovery.local.sql; no local category rows exist.

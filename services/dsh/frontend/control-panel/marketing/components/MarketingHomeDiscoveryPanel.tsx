@@ -21,7 +21,6 @@ import {
 const KIND_META = {
   banners: { title: "إدارة بنرات الصفحة الرئيسية", singular: "بنر", imageLabel: "رابط صورة البنر" },
   promos: { title: "إدارة عروض الصفحة الرئيسية", singular: "عرض", imageLabel: "رابط صورة العرض" },
-  categories: { title: "إدارة تصنيفات الصفحة الرئيسية", singular: "تصنيف", imageLabel: "رابط الأيقونة (اختياري)" },
 } as const;
 
 export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind }) {
@@ -143,29 +142,23 @@ function HomeDiscoveryEditor({
         {editing ? `تعديل ${meta.singular}` : `إضافة ${meta.singular}`}
       </h4>
       <CpTextInput value={draft.title} onChange={(v) => update("title", v)} placeholder="العنوان" aria-label="العنوان" />
-      {kind !== "categories" && (
-        <CpTextInput value={draft.subtitle} onChange={(v) => update("subtitle", v)} placeholder="الوصف المختصر" aria-label="الوصف المختصر" />
-      )}
+      <CpTextInput value={draft.subtitle} onChange={(v) => update("subtitle", v)} placeholder="الوصف المختصر" aria-label="الوصف المختصر" />
       {kind === "promos" && (
         <CpTextInput value={draft.badgeLabel} onChange={(v) => update("badgeLabel", v)} placeholder="شارة العرض" aria-label="شارة العرض" />
       )}
       <CpTextInput value={draft.imageUrl} onChange={(v) => update("imageUrl", v)} placeholder={meta.imageLabel} aria-label={meta.imageLabel} />
-      {kind !== "categories" && (
-        <>
-          <CpSelect
-            value={draft.actionType}
-            onChange={(v) => update("actionType", v as DshHomeAdminContentInput["actionType"])}
-            options={[
-              { value: "none", label: "بدون انتقال" },
-              { value: "store", label: "متجر" },
-              { value: "category", label: "تصنيف" },
-              { value: "external", label: "رابط خارجي" },
-            ]}
-            aria-label="نوع الإجراء"
-          />
-          <CpTextInput value={draft.actionTarget} onChange={(v) => update("actionTarget", v)} placeholder="هدف الإجراء" aria-label="هدف الإجراء" />
-        </>
-      )}
+      <CpSelect
+        value={draft.actionType}
+        onChange={(v) => update("actionType", v as DshHomeAdminContentInput["actionType"])}
+        options={[
+          { value: "none", label: "بدون انتقال" },
+          { value: "store", label: "متجر" },
+          { value: "category", label: "تصنيف مركزي" },
+          { value: "external", label: "رابط خارجي" },
+        ]}
+        aria-label="نوع الإجراء"
+      />
+      <CpTextInput value={draft.actionTarget} onChange={(v) => update("actionTarget", v)} placeholder="معرف المتجر أو الفئة المركزية" aria-label="هدف الإجراء" />
       <CpTextInput value={String(draft.sortOrder)} onChange={(v) => update("sortOrder", Number.parseInt(v, 10) || 0)} placeholder="الترتيب" aria-label="الترتيب" />
       <CpSelect
         value={draft.isActive ? "active" : "inactive"}
@@ -178,7 +171,7 @@ function HomeDiscoveryEditor({
       />
       <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
         <CpButton
-          disabled={submitting || draft.title.trim().length < 2 || (kind !== "categories" && draft.imageUrl.trim().length === 0)}
+          disabled={submitting || draft.title.trim().length < 2 || draft.imageUrl.trim().length === 0}
           onClick={onSave}
           style={{ background: colorRoles.brandAction, color: colorRoles.surfaceBase, border: "none", borderRadius: "0.375rem", padding: "0.35rem 0.75rem", fontSize: "0.813rem" }}
         >

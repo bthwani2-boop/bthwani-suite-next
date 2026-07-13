@@ -20,6 +20,7 @@ type Props = {
 
 export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStorePress, onRetry }: Props) {
   const isRtl = I18nManager.isRTL;
+  const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
 
   if (state.kind === 'loading') {
     return (
@@ -79,7 +80,8 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
 
   const { banners, promos, filters, categories, stores } = state.data;
 
-  const filteredStores = applyDiscoveryFilter(stores, activeFilter);
+  const filteredStores = applyDiscoveryFilter(stores, activeFilter)
+    .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId);
 
   return (
     <Screen padded={false}>
@@ -100,7 +102,11 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
           onFilterChange={onFilterChange}
         />
         {categories.length > 0 && (
-          <HomeCategorySection categories={categories} />
+          <HomeCategorySection
+            categories={categories}
+            activeId={activeCategoryId}
+            onCategoryPress={(categoryId) => setActiveCategoryId((current) => current === categoryId ? null : categoryId)}
+          />
         )}
         <HomeStoreFeedSection
           stores={filteredStores}

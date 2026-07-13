@@ -60,9 +60,11 @@ func ListPromos(db *sql.DB) ([]HomePromo, error) {
 
 func ListCategories(db *sql.DB) ([]HomeCategory, error) {
 	rows, err := db.Query(`
-		SELECT id, label, COALESCE(icon_url,''), sort_order
-		FROM dsh_categories
+		SELECT id, name_ar, COALESCE(icon,''), sort_order
+		FROM dsh_catalog_domains
 		WHERE is_active = true
+		  AND is_client_visible = true
+		  AND is_manual_request = false
 		ORDER BY sort_order ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query categories: %w", err)
@@ -116,20 +118,20 @@ func ListHomeStores(db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, err
 	}
 
 	var total int
-	if err := db.QueryRow("SELECT COUNT(*) FROM dsh_stores s LEFT JOIN dsh_categories c ON c.id = s.category_id "+whereClause, params...).Scan(&total); err != nil {
+	if err := db.QueryRow("SELECT COUNT(*) FROM dsh_stores s LEFT JOIN dsh_catalog_domains c ON c.id = s.catalog_domain_id "+whereClause, params...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("failed to count home stores: %w", err)
 	}
 
 	const cols = `s.id, s.slug, s.display_name, s.status, s.city_code, s.service_area_code,
 		s.serviceability_status, s.rating_average, s.rating_count, s.delivery_eta_min,
-		s.delivery_eta_max, s.is_visible, s.hero_image_url, s.logo_url, s.category,
-		COALESCE(c.label, s.category) AS category_label,
+		s.delivery_eta_max, s.is_visible, s.hero_image_url, s.logo_url, s.catalog_domain_id,
+		COALESCE(c.name_ar, '') AS category_label,
 		s.delivery_modes, s.is_free_delivery, s.distance_km, s.follower_count,
 		s.has_pro_badge, s.has_coupon_badge, s.points_multiplier, s.is_popular,
 		s.created_at, s.updated_at`
 
 	q := fmt.Sprintf(`SELECT %s FROM dsh_stores s
-		LEFT JOIN dsh_categories c ON c.id = s.category_id
+		LEFT JOIN dsh_catalog_domains c ON c.id = s.catalog_domain_id
 		%s
 		ORDER BY s.rating_average DESC NULLS LAST, s.display_name ASC
 		LIMIT $%d OFFSET 0`, cols, whereClause, idx)

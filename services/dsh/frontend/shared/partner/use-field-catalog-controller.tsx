@@ -10,6 +10,7 @@ import { fieldGetPartnerStore } from "./partner.api";
 import {
   fetchFieldTaxonomy,
   fetchFieldMasterProducts,
+  fetchFieldStoreAssortment,
   upsertFieldStoreAssortment,
   createFieldProductProposal,
 } from "../catalog/central-catalog.api";
@@ -68,10 +69,6 @@ export function useFieldCatalogController(partnerId: string) {
   const [masterProductsState, setMasterProductsState] = useState<FieldCatalogMasterProductsState>({ kind: "idle" });
   const [actionState, setActionState] = useState<FieldCatalogActionState>({ kind: "idle" });
 
-  // No field-surface GET route exists for store assortment (only the field
-  // upsert route does — confirmed against server.go), so the "current
-  // assortment" list is built up client-side from successful links made in
-  // this session rather than re-fetched from the server.
   const [assortmentItems, setAssortmentItems] = useState<readonly StoreAssortment[]>([]);
   const [proposals, setProposals] = useState<readonly ProductProposal[]>([]);
 
@@ -80,6 +77,11 @@ export function useFieldCatalogController(partnerId: string) {
     setStoreState({ kind: "loading" });
     try {
       const { storeId, store } = await fieldGetPartnerStore(partnerId);
+      const currentAssortment = await fetchFieldStoreAssortment(partnerId);
+      if (currentAssortment.storeId !== storeId) {
+        throw new Error("field catalog store scope mismatch");
+      }
+      setAssortmentItems(currentAssortment.assortment);
       setStoreState({ kind: "success", storeId, store });
     } catch {
       setStoreState({ kind: "error", message: "تعذر تحميل متجر الشريك" });
@@ -145,7 +147,7 @@ export function useFieldCatalogController(partnerId: string) {
     async (input: FieldProductProposalInput): Promise<ProductProposal | null> => {
       setActionState({ kind: "submitting" });
       try {
-        const proposal = await createFieldProductProposal({
+        const proposal = await createFieldProductProposal(partnerId, {
           proposedNameAr: input.proposedNameAr,
           proposedNameEn: input.proposedNameEn,
           domainId: input.domainId,
@@ -163,7 +165,7 @@ export function useFieldCatalogController(partnerId: string) {
         return null;
       }
     },
-    []
+    [partnerId]
   );
 
   return {

@@ -197,6 +197,9 @@ export function CatalogDashboardScreen() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState("store-1001");
+  const [assortmentProductId, setAssortmentProductId] = useState("");
+  const [assortmentPrice, setAssortmentPrice] = useState("");
+  const [assortmentSaving, setAssortmentSaving] = useState(false);
   const [reasonByProposal, setReasonByProposal] = useState<Record<string, string>>({});
 
   const [selectedProposalStatus, setSelectedProposalStatus] = useState<ProductProposalPipelineStatus>("partner-proposed");
@@ -207,6 +210,8 @@ export function CatalogDashboardScreen() {
   const [seedStatus, setSeedStatus] = useState<{
     domainsCount: number;
     nodesCount: number;
+    masterProductsCount: number;
+    assortmentsCount: number;
     manualRequestExists: boolean;
     shayInExists: boolean;
     awnakExists: boolean;
@@ -242,6 +247,7 @@ export function CatalogDashboardScreen() {
     rows: readonly any[];
     errors: readonly any[];
   } | null>(null);
+  const [importing, setImporting] = useState(false);
 
   // Pagination for Master Products
   const [productPage, setProductPage] = useState(0);
@@ -280,7 +286,7 @@ export function CatalogDashboardScreen() {
       await Promise.all(
         visibleMasterProducts.map(async (m) => {
           try {
-            const links = await fetchCatalogAssetLinks({ entityType: "master-products", entityId: m.id });
+            const links = await fetchCatalogAssetLinks({ entityType: "master_product", entityId: m.id });
             if (!links.some((l) => l.status === "approved")) {
               missing.add(m.id);
             }
@@ -387,6 +393,15 @@ export function CatalogDashboardScreen() {
   const proposalsPendingCount = controller.state.proposals.items.filter((p) =>
     ["partner-proposed", "partner-review", "marketing-review", "catalog-adopted", "catalog-approved"].includes(p.status)
   ).length;
+  const duplicateCandidates = useMemo(() => {
+    const groups = new Map<string, typeof controller.state.masterProducts.items>();
+    for (const product of controller.state.masterProducts.items) {
+      const key = product.barcode?.trim() || product.canonicalNameAr.trim().toLocaleLowerCase("ar");
+      if (!key) continue;
+      groups.set(key, [...(groups.get(key) ?? []), product]);
+    }
+    return [...groups.entries()].filter(([, products]) => products.length > 1);
+  }, [controller.state.masterProducts.items]);
 
   return (
     <DataTablePageFrame
@@ -492,7 +507,9 @@ export function CatalogDashboardScreen() {
                 <li>إجمالي الفئات الرئيسية: <strong>{domainsCount}</strong></li>
                 <li>إجمالي التصنيفات الفرعية: <strong>{nodesCount}</strong></li>
                 <li>إجمالي المنتجات المركزية L5: <strong>{masterCount}</strong></li>
-                <li>بذور الكتالوج (Seed Status): <strong>{seedStatus?.domainsCount ? "متوفرة" : "غير مطبقة"}</strong></li>
+                <li>بذور الكتالوج (Seed Status): <strong>{seedStatus && seedStatus.missingSeeds.length === 0 ? "مكتملة" : "غير مكتملة"}</strong></li>
+                <li>منتجات البذور المعتمدة: <strong>{seedStatus?.masterProductsCount ?? 0}</strong></li>
+                <li>تشكيلات ظاهرة للعميل: <strong>{seedStatus?.assortmentsCount ?? 0}</strong></li>
                 <li>نسخة البذور: <strong>{seedStatus?.seedVersion || "مجهولة"}</strong></li>
               </ul>
             </div>
@@ -862,6 +879,36 @@ export function CatalogDashboardScreen() {
         {activeTab === "assortment" && (
           <div>
             <h3>🔗 تشكيلة المتجر الفعالة ({selectedStoreId})</h3>
+            <div style={filterRowStyle}>
+              <CpTextInput value={assortmentProductId} onChange={setAssortmentProductId} placeholder="معرف المنتج المركزي" />
+              <CpTextInput value={assortmentPrice} onChange={setAssortmentPrice} placeholder="السعر المحلي YER" />
+              <CpButton disabled={assortmentSaving} onClick={async () => {
+                const unitPrice = Number(assortmentPrice.trim());
+                if (!selectedStoreId.trim() || !assortmentProductId.trim() || !Number.isFinite(unitPrice) || unitPrice < 0) {
+                  alert("أدخل معرف متجر ومنتج مركزي وسعراً صحيحاً.");
+                  return;
+                }
+                const current = controller.assortment.items.find((item) => item.masterProductId === assortmentProductId.trim());
+                setAssortmentSaving(true);
+                try {
+                  await controller.upsertAssortment(selectedStoreId.trim(), assortmentProductId.trim(), {
+                    unitPrice,
+                    currency: "YER",
+                    available: current?.available ?? true,
+                    stockStatus: current?.stockStatus ?? "in_stock",
+                    localNote: current?.localNote ?? "",
+                    customImageObjectKey: current?.customImageObjectKey ?? null,
+                    publicationStatus: current?.publicationStatus ?? "draft",
+                  });
+                  setAssortmentProductId("");
+                  setAssortmentPrice("");
+                } catch (caught) {
+                  alert("تعذر حفظ التشكيلة: " + (caught instanceof Error ? caught.message : String(caught)));
+                } finally {
+                  setAssortmentSaving(false);
+                }
+              }}>{assortmentSaving ? "جاري الحفظ..." : "إضافة/تحديث التشكيلة"}</CpButton>
+            </div>
             <CpTable aria-label="جدول تشكيلة المتجر">
               <thead>
                 <tr dir="rtl">
@@ -928,11 +975,37 @@ export function CatalogDashboardScreen() {
                 const validated = parseAndValidateCSV(csvText);
                 setImportPreview(validated);
               }}>معاينة وتدقيق الملف</CpButton>
-              <CpButton disabled={!importPreview || importPreview.errors.length > 0} onClick={() => {
-                alert("تم إرسال المنتجات للاستيراد بنجاح!");
-                setCsvText("");
-                setImportPreview(null);
-              }}>تأكيد الاستيراد الفعلي</CpButton>
+              <CpButton disabled={importing || !importPreview || importPreview.errors.length > 0} onClick={async () => {
+                if (!importPreview) return;
+                setImporting(true);
+                try {
+                  for (const row of importPreview.rows) {
+                    await controller.createMasterProduct({
+                      domainId: row.domainId,
+                      categoryNodeId: row.categoryNodeId || null,
+                      canonicalNameAr: row.canonicalNameAr,
+                      canonicalNameEn: row.canonicalNameEn,
+                      brand: row.brand,
+                      barcode: row.barcode || null,
+                      gtin: null,
+                      sku: null,
+                      unit: row.unit,
+                      measurementType: "unit",
+                      canonicalImageObjectKey: null,
+                      approvalStatus: "draft",
+                      isActive: true,
+                      createdSource: "control-panel-catalog-csv",
+                    });
+                  }
+                  alert(`تم استيراد ${importPreview.rows.length} منتج مركزي كمسودات للمراجعة.`);
+                  setCsvText("");
+                  setImportPreview(null);
+                } catch (caught) {
+                  alert("فشل الاستيراد الفعلي: " + (caught instanceof Error ? caught.message : String(caught)));
+                } finally {
+                  setImporting(false);
+                }
+              }}>{importing ? "جاري الاستيراد..." : "تأكيد الاستيراد الفعلي"}</CpButton>
             </div>
 
             {importPreview && (
@@ -964,7 +1037,15 @@ export function CatalogDashboardScreen() {
             <p>يقوم النظام تلقائياً بالتحقق من جودة الكتالوج والبحث عن منتجات مكررة عبر الباركود أو الأسماء المتقاربة.</p>
             <div style={cleanupBoxStyle}>
               <strong>النتائج الحالية:</strong>
-              <div style={cleanupResultStyle}>✅ لم يتم العثور على أي ترشيحات لمنتجات مكررة حالياً. الكتالوج المركزي نظيف.</div>
+              {duplicateCandidates.length === 0 ? (
+                <div style={cleanupResultStyle}>✅ لم تُكتشف مجموعات مكررة في البيانات المحملة حالياً.</div>
+              ) : (
+                <ul>
+                  {duplicateCandidates.map(([key, products]) => (
+                    <li key={key}>{key}: {products.map((product) => product.canonicalNameAr).join("، ")}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         )}

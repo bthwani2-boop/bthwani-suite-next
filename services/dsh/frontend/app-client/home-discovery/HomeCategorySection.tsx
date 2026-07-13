@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colorRoles, elevation, radius, spacing } from '@bthwani/ui-kit';
 import type { CategoryViewModel } from '../../shared/home-discovery';
 
@@ -9,18 +9,24 @@ type Props = Readonly<{
 }>;
 
 const CATEGORY_EMOJIS: Record<string, string> = {
-  'cat-restaurant': '🍽️',
-  'cat-grocery':    '🛒',
-  'cat-pharmacy':   '💊',
-  'cat-bakery':     '🥐',
-  'cat-default':    '📦',
+  'domain-restaurants': '🍽️',
+  'domain-groceries': '🛒',
+  'domain-pharmacy': '💊',
+  'domain-sweets-juices': '🍰',
+  'domain-elegance': '✨',
+  'domain-bthwani-store': '📦',
+  'domain-home-projects': '🏠',
+  'domain-spare-parts': '🔧',
+  'domain-honey-dates': '🍯',
+  'domain-electronics': '📱',
+  'domain-cloud-kitchens': '👩‍🍳',
 };
 
 function getEmoji(id: string): string {
   return CATEGORY_EMOJIS[id] ?? '📦';
 }
 
-export function HomeCategorySection({ categories, activeId }: Props) {
+export function HomeCategorySection({ categories, activeId, onCategoryPress }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView
@@ -31,9 +37,12 @@ export function HomeCategorySection({ categories, activeId }: Props) {
         {categories.map((cat) => {
           const isSelected = activeId != null && cat.id === activeId;
           return (
-            <View
+            <Pressable
               key={cat.id}
               style={styles.categorySelectorCard}
+              onPress={() => onCategoryPress?.(cat.id)}
+              accessibilityRole="button"
+              accessibilityLabel={cat.label}
             >
               {/* categoryIconContainer: 56×56, radius.xl, elevation.raised */}
               <View
@@ -53,7 +62,7 @@ export function HomeCategorySection({ categories, activeId }: Props) {
                   {cat.label}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           );
         })}
       </ScrollView>

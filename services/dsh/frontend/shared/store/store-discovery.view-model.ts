@@ -5,7 +5,11 @@ import {
   formatServiceArea,
 } from "./store-discovery.formatters";
 
-type StoreTone = "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
+type StoreTone =
+  | "domain-restaurants"
+  | "domain-groceries"
+  | "domain-pharmacy"
+  | "domain-bthwani-store";
 type PlaceholderTone = "brandAction" | "success" | "info" | "warning" | "default";
 
 export type DshStoreCardViewModel = {
@@ -56,19 +60,17 @@ const AREA_NAMES: Record<string, string> = {
 };
 
 const CATEGORY_EMOJI: Record<StoreTone, string> = {
-  restaurant: "🍽️",
-  grocery: "🏪",
-  pharmacy: "💊",
-  bakery: "🥖",
-  default: "🛍️",
+  "domain-restaurants": "🍽️",
+  "domain-groceries": "🏪",
+  "domain-pharmacy": "💊",
+  "domain-bthwani-store": "🛍️",
 };
 
 const CATEGORY_TONE: Record<StoreTone, PlaceholderTone> = {
-  restaurant: "brandAction",
-  grocery: "success",
-  pharmacy: "info",
-  bakery: "warning",
-  default: "default",
+  "domain-restaurants": "brandAction",
+  "domain-groceries": "success",
+  "domain-pharmacy": "info",
+  "domain-bthwani-store": "default",
 };
 
 function formatFollowerCount(count: number): string | null {
@@ -124,8 +126,8 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
               ? "خارج نطاق التوصيل"
               : null,
     isFreeDelivery: dto.isFreeDelivery,
-    placeholderEmoji: CATEGORY_EMOJI[category] ?? CATEGORY_EMOJI.default,
-    placeholderTone: CATEGORY_TONE[category] ?? CATEGORY_TONE.default,
+    placeholderEmoji: CATEGORY_EMOJI[category] ?? CATEGORY_EMOJI["domain-bthwani-store"],
+    placeholderTone: CATEGORY_TONE[category] ?? CATEGORY_TONE["domain-bthwani-store"],
     deliveryModeLabels: dto.deliveryModes.map(formatDeliveryMode),
     distanceLabel: dto.distanceKm == null ? null : `${dto.distanceKm.toFixed(1)} كم`,
     distanceKm: dto.distanceKm ?? null,

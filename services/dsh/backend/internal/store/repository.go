@@ -13,7 +13,8 @@ import (
 
 const storeColumns = `id, COALESCE(partner_id,''), slug, display_name, status, city_code, service_area_code,
 	serviceability_status, rating_average, rating_count, delivery_eta_min,
-	delivery_eta_max, is_visible, hero_image_url, logo_url, category,
+	delivery_eta_max, is_visible, hero_image_url, logo_url, catalog_domain_id,
+	COALESCE((SELECT d.name_ar FROM dsh_catalog_domains d WHERE d.id = dsh_stores.catalog_domain_id), ''),
 	delivery_modes, is_free_delivery, distance_km, follower_count,
 	has_pro_badge, has_coupon_badge, points_multiplier, is_popular, version,
 	partner_readiness, catalog_approval_status, marketing_visibility,
@@ -28,7 +29,7 @@ func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 		&row.ID, &row.PartnerID, &row.Slug, &row.DisplayName, &row.Status, &row.CityCode,
 		&row.ServiceAreaCode, &row.ServiceabilityStatus, &row.RatingAverage,
 		&row.RatingCount, &row.DeliveryEtaMin, &row.DeliveryEtaMax, &row.IsVisible,
-		&row.HeroImageURL, &row.LogoURL, &row.Category, pq.Array(&row.DeliveryModes),
+		&row.HeroImageURL, &row.LogoURL, &row.Category, &row.CategoryLabel, pq.Array(&row.DeliveryModes),
 		&row.IsFreeDelivery, &row.DistanceKM, &row.FollowerCount, &row.HasProBadge,
 		&row.HasCouponBadge, &row.PointsMultiplier, &row.IsPopular,
 		&row.Version,
@@ -167,10 +168,7 @@ type CreateDraftStoreInput struct {
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
 func CreateDraftStore(db *sql.DB, input CreateDraftStoreInput) (DshStoreRow, error) {
 	id := fmt.Sprintf("store-%d", time.Now().UnixNano())
-	category := input.Category
-	if category == "" {
-		category = "default"
-	}
+	catalogDomainID := catalogDomainIDForPartnerCategory(input.Category)
 	cityCode := input.CityCode
 	if cityCode == "" {
 		cityCode = "unassigned"
@@ -179,9 +177,9 @@ func CreateDraftStore(db *sql.DB, input CreateDraftStoreInput) (DshStoreRow, err
 	_, err := db.Exec(`
 		INSERT INTO dsh_stores (
 			id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible, category, partner_id
+			serviceability_status, is_visible, catalog_domain_id, partner_id
 		) VALUES ($1,$1,$2,'inactive',$3,$3,'unavailable',false,$4,$5)`,
-		id, input.DisplayName, cityCode, category, input.PartnerID,
+		id, input.DisplayName, cityCode, catalogDomainID, input.PartnerID,
 	)
 	if err != nil {
 		return DshStoreRow{}, fmt.Errorf("failed to create draft store: %w", err)
@@ -192,6 +190,23 @@ func CreateDraftStore(db *sql.DB, input CreateDraftStoreInput) (DshStoreRow, err
 		return DshStoreRow{}, fmt.Errorf("failed to load created draft store: %w", err)
 	}
 	return row, nil
+}
+
+func catalogDomainIDForPartnerCategory(category string) string {
+	category = strings.TrimSpace(category)
+	if strings.HasPrefix(category, "domain-") {
+		return category
+	}
+	switch category {
+	case "restaurant":
+		return "domain-restaurants"
+	case "grocery", "bakery":
+		return "domain-groceries"
+	case "pharmacy":
+		return "domain-pharmacy"
+	default:
+		return "domain-bthwani-store"
+	}
 }
 
 func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, correlationID string, input FieldStoreDraftInput) (FieldPartnerStoreDraft, StoreAuditEvent, error) {

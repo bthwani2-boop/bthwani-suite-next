@@ -34,10 +34,8 @@ func TestValidateAdminInputByContentKind(t *testing.T) {
 			t.Fatalf("%s should be valid: %v", kind, err)
 		}
 	}
-	category := valid
-	category.ImageURL = ""
-	if err := validateAdminInput("categories", category); err != nil {
-		t.Fatalf("category icon must be optional: %v", err)
+	if err := validateAdminInput("categories", valid); err == nil {
+		t.Fatal("home categories must be managed by the central catalog")
 	}
 	if err := validateAdminInput("unknown", valid); err == nil {
 		t.Fatal("unknown content kind must fail")

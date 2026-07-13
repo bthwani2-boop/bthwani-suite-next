@@ -6,6 +6,7 @@ INSERT INTO dsh_catalog_domains (id, slug, name_ar, name_en, sort_order, require
   ('domain-restaurants',    'restaurants',    'مطاعم',          'Restaurants',    10, TRUE,  FALSE),
   ('domain-groceries',      'groceries',      'مقاضي',          'Groceries',      20, TRUE,  FALSE),
   ('domain-sweets-juices',  'sweets_juices',  'حلا وعصائر',      'Sweets & Juices',30, TRUE,  FALSE),
+  ('domain-pharmacy',       'pharmacy',       'صيدلية',          'Pharmacy',        35, TRUE,  FALSE),
   ('domain-elegance',       'elegance',       'أناقتي',         'Elegance',       40, TRUE,  FALSE),
   ('domain-bthwani-store',  'bthwani_store',  'بثواني ستور',     'Bthwani Store',  50, TRUE,  FALSE),
   ('domain-home-projects',  'home_projects',  'مشاريع منزلية',   'Home Projects',  60, TRUE,  FALSE),
@@ -21,6 +22,8 @@ ON CONFLICT (id) DO UPDATE SET
   sort_order = EXCLUDED.sort_order,
   requires_product_catalog = EXCLUDED.requires_product_catalog,
   is_manual_request = EXCLUDED.is_manual_request,
+  is_active = TRUE,
+  is_client_visible = TRUE,
   updated_at = NOW();
 
 INSERT INTO dsh_catalog_nodes (id, domain_id, parent_id, level, slug, name_ar, name_en, sort_order, requires_product_catalog, allows_store_product_custom_image) VALUES
@@ -81,3 +84,75 @@ SELECT 'policy-domain-' || id, id, 'domain', FALSE, 'Custom store image disallow
 FROM dsh_catalog_domains
 WHERE slug IN ('electronics', 'spare_parts', 'honey_dates')
 ON CONFLICT (id) DO UPDATE SET allows_store_product_custom_image = EXCLUDED.allows_store_product_custom_image, updated_at = NOW();
+
+-- Canonical local-development products. These are real sovereign master
+-- products, not screen-local fixtures and not per-store product truth.
+INSERT INTO dsh_master_products
+  (id, domain_id, category_node_id, canonical_name_ar, canonical_name_en,
+   brand, sku, unit, measurement_type, approval_status, is_active,
+   created_source)
+VALUES
+  ('product-1001-rice', 'domain-groceries', 'node-supermarket',
+   'أرز بسمتي', 'Basmati Rice', 'بثواني', 'RICE-5KG', '5 kg', 'weight',
+   'approved', TRUE, 'central-catalog-seed'),
+  ('product-1005-meal', 'domain-restaurants', NULL,
+   'وجبة المدينة', 'City Meal', 'مطعم المدينة', 'CITY-MEAL', 'meal', 'unit',
+   'approved', TRUE, 'central-catalog-seed'),
+  ('product-1005-croissant', 'domain-groceries', 'node-bakeries',
+   'كرواسون زبدة طازج', 'Fresh Butter Croissant', 'مخبز المدينة',
+   'CROISSANT-01', 'piece', 'unit', 'approved', TRUE, 'central-catalog-seed'),
+  ('product-1005-wheatbread', 'domain-groceries', 'node-bakeries',
+   'خبز قمح كامل', 'Whole Wheat Bread', 'مخبز المدينة', 'WHEATBREAD-01',
+   'loaf', 'unit', 'approved', TRUE, 'central-catalog-seed'),
+  ('product-1005-milk', 'domain-groceries', 'node-supermarket',
+   'حليب كامل الدسم', 'Full Cream Milk', 'بثواني', 'ORGANIC-MILK',
+   '1 L', 'volume', 'approved', TRUE, 'central-catalog-seed'),
+  ('product-1005-apple', 'domain-groceries', 'node-vegetables-fruits',
+   'تفاح رويال غالا', 'Royal Gala Apple', 'بثواني', 'ROYAL-GALA',
+   '1 kg', 'weight', 'approved', TRUE, 'central-catalog-seed')
+ON CONFLICT (id) DO UPDATE SET
+  domain_id = EXCLUDED.domain_id,
+  category_node_id = EXCLUDED.category_node_id,
+  canonical_name_ar = EXCLUDED.canonical_name_ar,
+  canonical_name_en = EXCLUDED.canonical_name_en,
+  brand = EXCLUDED.brand,
+  sku = EXCLUDED.sku,
+  unit = EXCLUDED.unit,
+  measurement_type = EXCLUDED.measurement_type,
+  approval_status = 'approved',
+  is_active = TRUE,
+  created_source = EXCLUDED.created_source,
+  updated_at = NOW();
+
+INSERT INTO dsh_store_assortments
+  (id, store_id, master_product_id, unit_price, currency, available,
+   stock_status, local_note, publication_status, submitted_by, approved_by)
+VALUES
+  ('assortment-store-1001-rice', 'store-1001', 'product-1001-rice',
+   18000, 'YER', TRUE, 'in_stock', 'عبوة 5 كجم', 'client_visible',
+   'system-seed', 'system-seed'),
+  ('assortment-store-1005-meal', 'store-1005', 'product-1005-meal',
+   1800, 'YER', TRUE, 'in_stock', 'وجبة رئيسية', 'client_visible',
+   'system-seed', 'system-seed'),
+  ('assortment-store-1005-croissant', 'store-1005', 'product-1005-croissant',
+   500, 'YER', TRUE, 'in_stock', 'طازج يومياً', 'client_visible',
+   'system-seed', 'system-seed'),
+  ('assortment-store-1005-wheatbread', 'store-1005', 'product-1005-wheatbread',
+   300, 'YER', TRUE, 'in_stock', 'خبز قمح كامل', 'client_visible',
+   'system-seed', 'system-seed'),
+  ('assortment-store-1005-milk', 'store-1005', 'product-1005-milk',
+   1100, 'YER', TRUE, 'in_stock', 'حليب طازج', 'client_visible',
+   'system-seed', 'system-seed'),
+  ('assortment-store-1005-apple', 'store-1005', 'product-1005-apple',
+   1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
+   'system-seed', 'system-seed')
+ON CONFLICT (store_id, master_product_id) DO UPDATE SET
+  unit_price = EXCLUDED.unit_price,
+  currency = EXCLUDED.currency,
+  available = TRUE,
+  stock_status = EXCLUDED.stock_status,
+  local_note = EXCLUDED.local_note,
+  publication_status = 'client_visible',
+  submitted_by = EXCLUDED.submitted_by,
+  approved_by = EXCLUDED.approved_by,
+  updated_at = NOW();

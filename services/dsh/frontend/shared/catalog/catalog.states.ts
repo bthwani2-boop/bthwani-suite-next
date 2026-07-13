@@ -1,5 +1,5 @@
 import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
-import type { CatalogState, PartnerCatalog } from "./legacy-catalog-compat.types";
+import type { CatalogState, ClientStoreCatalog } from "./client-catalog.types";
 
 export type CatalogActionState = "idle" | "submitting" | "success" | "error" | "conflict";
 
@@ -25,7 +25,7 @@ export function catalogErrorState(message: string): CatalogState {
   return { kind: "error", message };
 }
 
-export function catalogSuccessState(catalog: PartnerCatalog): CatalogState {
+export function catalogSuccessState(catalog: ClientStoreCatalog): CatalogState {
   return { kind: "success", catalog };
 }
 

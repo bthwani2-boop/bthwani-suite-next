@@ -143,7 +143,8 @@ func (s *protectedStoreServer) handleUpdateCatalogNode(w http.ResponseWriter, r 
 // ── Taxonomy (read-only domains+nodes) for partner/field surfaces ──────────
 
 func (s *protectedStoreServer) handleCatalogTaxonomy(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "partner", "field", "operator"); !ok {
+	actor, ok := s.requireActor(w, r, "partner", "field", "operator")
+	if !ok {
 		return
 	}
 	domains, err := centralcatalog.ListDomains(r.Context(), s.db)
@@ -156,21 +157,47 @@ func (s *protectedStoreServer) handleCatalogTaxonomy(w http.ResponseWriter, r *h
 		s.writeCentralCatalogError(w, err)
 		return
 	}
+	if actor.Role != "operator" {
+		visibleDomainIDs := make(map[string]struct{})
+		visibleDomains := make([]centralcatalog.Domain, 0, len(domains))
+		for _, domain := range domains {
+			if domain.IsActive && domain.IsClientVisible && !domain.IsManualRequest {
+				visibleDomainIDs[domain.ID] = struct{}{}
+				visibleDomains = append(visibleDomains, domain)
+			}
+		}
+		visibleNodes := make([]centralcatalog.Node, 0, len(nodes))
+		for _, node := range nodes {
+			if _, domainVisible := visibleDomainIDs[node.DomainID]; domainVisible && node.IsActive && node.IsClientVisible {
+				visibleNodes = append(visibleNodes, node)
+			}
+		}
+		domains = visibleDomains
+		nodes = visibleNodes
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"domains": domains, "nodes": nodes})
 }
 
 // ── Operator: master products (L5) ──────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	approvalStatus := r.URL.Query().Get("approvalStatus")
+	activeOnly := false
+	if actor.Role != "operator" {
+		approvalStatus = "approved"
+		activeOnly = true
+	}
 	filter := centralcatalog.MasterProductFilter{
 		DomainID:       r.URL.Query().Get("domainId"),
 		CategoryNodeID: r.URL.Query().Get("categoryNodeId"),
-		ApprovalStatus: r.URL.Query().Get("approvalStatus"),
+		ApprovalStatus: approvalStatus,
+		ActiveOnly:     activeOnly,
 		Search:         r.URL.Query().Get("search"),
 		Limit:          limit,
 		Offset:         offset,
@@ -325,11 +352,11 @@ func (s *protectedStoreServer) handlePartnerCreateProductProposal(w http.Respons
 }
 
 func (s *protectedStoreServer) handleFieldCreateProductProposal(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "field")
+	actorID, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	s.createProductProposal(w, r, actor.ID, nil)
+	s.createProductProposal(w, r, actorID, &storeID)
 }
 
 // ── Platform catalog policies ────────────────────────────────────────────────
@@ -379,7 +406,7 @@ func (s *protectedStoreServer) handleOperatorGetStoreAssortment(w http.ResponseW
 // upsertStoreAssortment resolves the master product's effective platform
 // policy before writing, so a local image is only ever accepted when the
 // category's policy allows it (Phase 8) — never left to the caller's word.
-func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
+func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *http.Request, actorID, actorRole, storeID string) {
 	masterProductID := r.PathValue("masterProductId")
 	var input centralcatalog.StoreAssortmentInput
 	if !decodeProtectedJSON(w, r, &input) {
@@ -389,6 +416,16 @@ func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *h
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
+	}
+	if actorRole != "operator" {
+		if mp.ApprovalStatus != "approved" || !mp.IsActive {
+			s.writeCentralCatalogError(w, centralcatalog.ErrForbidden)
+			return
+		}
+		// Partner and field changes always re-enter catalog governance. They
+		// cannot self-publish or preserve a previously approved state after
+		// changing store-local price, availability, stock, note, or media.
+		input.PublicationStatus = "submitted"
 	}
 	nodeID := ""
 	if mp.CategoryNodeID != nil {
@@ -412,7 +449,7 @@ func (s *protectedStoreServer) handleOperatorUpsertStoreAssortment(w http.Respon
 	if !ok {
 		return
 	}
-	s.upsertStoreAssortment(w, r, actor.ID, r.PathValue("storeId"))
+	s.upsertStoreAssortment(w, r, actor.ID, "operator", r.PathValue("storeId"))
 }
 
 func (s *protectedStoreServer) handlePartnerGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
@@ -442,7 +479,7 @@ func (s *protectedStoreServer) handlePartnerUpsertStoreAssortment(w http.Respons
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
 		return
 	}
-	s.upsertStoreAssortment(w, r, actor.ID, storeID)
+	s.upsertStoreAssortment(w, r, actor.ID, actor.Role, storeID)
 }
 
 func (s *protectedStoreServer) handleFieldUpsertStoreAssortment(w http.ResponseWriter, r *http.Request) {
@@ -454,7 +491,20 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortment(w http.ResponseW
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to this partner draft")
 		return
 	}
-	s.upsertStoreAssortment(w, r, actorID, storeID)
+	s.upsertStoreAssortment(w, r, actorID, "field", storeID)
+}
+
+func (s *protectedStoreServer) handleFieldGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
+	_, storeID, ok := s.fieldPartnerStore(w, r)
+	if !ok {
+		return
+	}
+	items, err := centralcatalog.ListStoreAssortment(r.Context(), s.db, storeID)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "assortment": items})
 }
 
 // ── Catalog assets (DAM) ─────────────────────────────────────────────────────

@@ -313,6 +313,7 @@ type MasterProductFilter struct {
 	DomainID       string
 	CategoryNodeID string
 	ApprovalStatus string
+	ActiveOnly     bool
 	Search         string
 	Limit          int
 	Offset         int
@@ -325,10 +326,11 @@ func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFil
 	}
 	query := `SELECT ` + masterProductColumns + ` FROM dsh_master_products
 		WHERE ($1='' OR domain_id=$1) AND ($2='' OR category_node_id=$2) AND ($3='' OR approval_status=$3)
-		  AND ($4='' OR canonical_name_ar ILIKE '%'||$4||'%' OR canonical_name_en ILIKE '%'||$4||'%' OR barcode=$4)
-		ORDER BY updated_at DESC LIMIT $5 OFFSET $6`
+		  AND (NOT $4 OR is_active=true)
+		  AND ($5='' OR canonical_name_ar ILIKE '%'||$5||'%' OR canonical_name_en ILIKE '%'||$5||'%' OR barcode=$5)
+		ORDER BY updated_at DESC LIMIT $6 OFFSET $7`
 	rows, err := db.QueryContext(ctx, query, filter.DomainID, filter.CategoryNodeID, filter.ApprovalStatus,
-		filter.Search, limit, filter.Offset)
+		filter.ActiveOnly, filter.Search, limit, filter.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1673,6 +1675,8 @@ func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID s
 type SeedStatus struct {
 	DomainsCount        int      `json:"domainsCount"`
 	NodesCount          int      `json:"nodesCount"`
+	MasterProductsCount int      `json:"masterProductsCount"`
+	AssortmentsCount    int      `json:"assortmentsCount"`
 	ManualRequestExists bool     `json:"manualRequestExists"`
 	ShayInExists        bool     `json:"shayInExists"`
 	AwnakExists         bool     `json:"awnakExists"`
@@ -1691,6 +1695,12 @@ func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_catalog_nodes`).Scan(&s.NodesCount); err != nil {
 		return SeedStatus{}, err
 	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_master_products WHERE approval_status='approved' AND is_active=true`).Scan(&s.MasterProductsCount); err != nil {
+		return SeedStatus{}, err
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_store_assortments WHERE publication_status='client_visible' AND available=true`).Scan(&s.AssortmentsCount); err != nil {
+		return SeedStatus{}, err
+	}
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_domains WHERE id='domain-manual-request')`).Scan(&s.ManualRequestExists); err != nil {
 		return SeedStatus{}, err
 	}
@@ -1700,9 +1710,9 @@ func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_nodes WHERE id='node-awnak')`).Scan(&s.AwnakExists); err != nil {
 		return SeedStatus{}, err
 	}
-	s.SeedVersion = "dsh-032"
+	s.SeedVersion = "dsh-036"
 	s.MissingSeeds = []string{}
-	if s.DomainsCount < 11 {
+	if s.DomainsCount < 12 {
 		s.MissingSeeds = append(s.MissingSeeds, "domains")
 	}
 	if !s.ManualRequestExists {
@@ -1713,6 +1723,12 @@ func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
 	}
 	if !s.AwnakExists {
 		s.MissingSeeds = append(s.MissingSeeds, "node-awnak")
+	}
+	if s.MasterProductsCount < 6 {
+		s.MissingSeeds = append(s.MissingSeeds, "master-products")
+	}
+	if s.AssortmentsCount < 6 {
+		s.MissingSeeds = append(s.MissingSeeds, "store-assortments")
 	}
 	return s, nil
 }

@@ -419,7 +419,17 @@ export async function upsertFieldStoreAssortment(
   return resp.assortment;
 }
 
-export async function createFieldProductProposal(input: {
+export async function fetchFieldStoreAssortment(partnerId: string): Promise<{
+  readonly storeId: string;
+  readonly assortment: readonly StoreAssortment[];
+}> {
+  return request<{
+    readonly storeId: string;
+    readonly assortment: readonly StoreAssortment[];
+  }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/assortment`);
+}
+
+export async function createFieldProductProposal(partnerId: string, input: {
   readonly proposedNameAr: string;
   readonly proposedNameEn: string;
   readonly domainId: string;
@@ -429,7 +439,7 @@ export async function createFieldProductProposal(input: {
   readonly imageObjectKey: string | null;
   readonly sourceSurface: "app-field";
 }): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>("/dsh/field/catalog/product-proposals", {
+  const resp = await request<{ proposal: ProductProposal }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals`, {
     method: "POST",
     body: input,
   });
@@ -445,6 +455,8 @@ export async function fetchPublishedCentralCatalog(storeId: string): Promise<Cli
 export interface SeedStatus {
   readonly domainsCount: number;
   readonly nodesCount: number;
+  readonly masterProductsCount: number;
+  readonly assortmentsCount: number;
   readonly manualRequestExists: boolean;
   readonly shayInExists: boolean;
   readonly awnakExists: boolean;

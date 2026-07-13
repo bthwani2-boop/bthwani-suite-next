@@ -78,20 +78,23 @@ func validateCategoryTarget(db *sql.DB, categoryID string) (bool, string, error)
 	var eligible bool
 	err := db.QueryRow(`
 		SELECT EXISTS (
-		  SELECT 1 FROM dsh_catalog_categories c
-		  JOIN dsh_stores s ON s.id = c.store_id
-		  WHERE c.id=$1 AND c.is_active=true
-		    AND s.status='active' AND s.is_visible=true
-		    AND s.serviceability_status IN ('serviceable','limited')
-		    AND s.partner_readiness='ready'
-		    AND s.catalog_approval_status='approved'
-		    AND s.marketing_visibility='visible'
+		  SELECT 1
+		  FROM dsh_catalog_domains d
+		  WHERE d.id=$1 AND d.is_active=true AND d.is_client_visible=true
+		    AND d.is_manual_request=false
+		  UNION ALL
+		  SELECT 1
+		  FROM dsh_catalog_nodes n
+		  JOIN dsh_catalog_domains d ON d.id=n.domain_id
+		  WHERE n.id=$1 AND n.is_active=true AND n.is_client_visible=true
+		    AND d.is_active=true AND d.is_client_visible=true
+		    AND d.is_manual_request=false
 		)`, categoryID).Scan(&eligible)
 	if err != nil {
 		return false, "", err
 	}
 	if !eligible {
-		return false, "category is not active or its store is not client_visible", nil
+		return false, "central catalog domain/node is not active or client_visible", nil
 	}
 	return true, "", nil
 }
@@ -103,9 +106,16 @@ func validateProductTarget(db *sql.DB, productID string) (bool, string, error) {
 	var eligible bool
 	err := db.QueryRow(`
 		SELECT EXISTS (
-		  SELECT 1 FROM dsh_catalog_products p
-		  JOIN dsh_stores s ON s.id = p.store_id
-		  WHERE p.id=$1 AND p.is_active=true
+		  SELECT 1 FROM dsh_master_products p
+		  JOIN dsh_catalog_domains d ON d.id = p.domain_id
+		  LEFT JOIN dsh_catalog_nodes n ON n.id = p.category_node_id
+		  JOIN dsh_store_assortments a ON a.master_product_id = p.id
+		  JOIN dsh_stores s ON s.id = a.store_id
+		  WHERE p.id=$1 AND p.is_active=true AND p.approval_status='approved'
+		    AND d.is_active=true AND d.is_client_visible=true
+		    AND d.is_manual_request=false
+		    AND (n.id IS NULL OR (n.is_active=true AND n.is_client_visible=true))
+		    AND a.publication_status='client_visible' AND a.available=true
 		    AND s.status='active' AND s.is_visible=true
 		    AND s.serviceability_status IN ('serviceable','limited')
 		    AND s.partner_readiness='ready'
@@ -116,7 +126,7 @@ func validateProductTarget(db *sql.DB, productID string) (bool, string, error) {
 		return false, "", err
 	}
 	if !eligible {
-		return false, "product is not approved/active or its store is not client_visible", nil
+		return false, "master product or its client-visible assortment/store is not publishable", nil
 	}
 	return true, "", nil
 }

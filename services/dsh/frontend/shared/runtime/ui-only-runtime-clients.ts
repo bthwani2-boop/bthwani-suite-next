@@ -1,11 +1,6 @@
 import type { DshMediaAsset } from "../media/dsh-media-api.client";
-import type { CatalogMedia } from "../catalog/catalog.types";
-import {
-  completeMedia,
-  deleteMedia as deleteCatalogMedia,
-  uploadMediaIntent,
-} from "../catalog/catalog.api";
-import { fetchPartnerCatalog } from "../catalog/legacy-catalog-compat.api";
+import { fetchPartnerMasterProducts } from "../catalog/central-catalog.api";
+import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDispatchAssignment } from "../dispatch/dispatch.api";
 
 type MediaListQuery = {
@@ -21,157 +16,66 @@ type MediaUploadInput = MediaListQuery & {
   readonly file_size_bytes?: number;
 };
 
-function toRuntimeMedia(media: CatalogMedia): DshMediaAsset {
-  return {
-    id: media.id,
-    entity_id: media.productId ?? "",
+async function listProductMedia(productId: string): Promise<readonly DshMediaAsset[]> {
+  const products = await fetchPartnerMasterProducts({ limit: 200 });
+  const product = products.find((item) => item.id === productId);
+  const objectKey = product?.canonicalImageObjectKey;
+  if (!objectKey) return [];
+  const baseUrl = resolveDshApiBaseUrl();
+  const publicUrl = objectKey.startsWith("http") ? objectKey : `${baseUrl}/dsh/media?key=${encodeURIComponent(objectKey)}`;
+  return [{
+    id: `${productId}-canonical-image`,
+    entity_id: productId,
     entity_type: "product",
-    media_key: media.objectKey,
-    url: media.publicUrl ?? "",
-    mime_type: media.contentType,
-    created_at: "",
-    purpose: "primary",
-    ...(media.publicUrl ? { public_url: media.publicUrl } : {}),
-    status: media.state,
-  };
+    media_key: objectKey,
+    url: publicUrl,
+    public_url: publicUrl,
+    mime_type: "image/webp",
+    created_at: product?.updatedAt ?? "",
+    purpose: "canonical_product_image",
+    status: "approved",
+  }];
 }
 
-async function listProductMedia(productId: string): Promise<readonly DshMediaAsset[]> {
-  const state = await fetchPartnerCatalog();
-
-  if (state.kind === "permission_denied") {
-    throw { kind: "http", status: 403 };
-  }
-  if (state.kind === "error") {
-    throw { kind: "runtime", message: state.message };
-  }
-  if (state.kind !== "success") {
-    return [];
-  }
-
-  const product = state.catalog.products.find((item) => item.id === productId);
-  return product?.media.map(toRuntimeMedia) ?? [];
+function centralDamOnlyError(): never {
+  throw new Error("صور المنتجات المركزية تُرفع كأصول DAM وتخضع للمراجعة؛ مسار وسائط الكتالوج المحلي متقاعد.");
 }
 
 export function getDshMediaRuntimeClient() {
   return {
-    async listAssets(
-      entityId: string,
-      entityType: "product" | "store" | "category",
-    ): Promise<readonly DshMediaAsset[]> {
-      // The current partner catalog contract exposes product media only.
+    async listAssets(entityId: string, entityType: "product" | "store" | "category"): Promise<readonly DshMediaAsset[]> {
       if (entityType !== "product") return [];
       return listProductMedia(entityId);
     },
-
     async listMedia(query: MediaListQuery): Promise<{ items: readonly DshMediaAsset[] }> {
       if (query.owner_type !== "product") return { items: [] };
       return { items: await listProductMedia(query.owner_id) };
     },
-
-    async createUploadIntent(
-      input: MediaUploadInput,
-      _headers?: Record<string, string>,
-    ) {
-      if (input.owner_type !== "product") {
-        throw { kind: "validation", message: "Only product media upload is supported." };
-      }
-
-      const intent = await uploadMediaIntent({
-        productId: input.owner_id,
-        contentType: input.mime_type,
-        fileName: input.filename,
-      });
-
-      return {
-        intent: {
-          media_id: intent.mediaId,
-          upload_url: intent.uploadUrl,
-          object_key: intent.objectKey,
-          expires_at: intent.expiresAt,
-        },
-      };
+    async createUploadIntent(_input: MediaUploadInput, _headers?: Record<string, string>) {
+      return centralDamOnlyError();
     },
-
     async readLocalUriAsBlob(uri: string): Promise<Blob> {
-      let response: Response;
-      try {
-        const callFetch = fetch;
-        response = await callFetch(uri);
-      } catch (error) {
-        throw {
-          code: "offline",
-          message: error instanceof Error ? error.message : "media source read failed",
-        };
-      }
-
-      if (!response.ok) {
-        throw {
-          code: "storage_unavailable",
-          message: `media source read failed with HTTP ${response.status}`,
-        };
-      }
-
+      const callFetch = globalThis.fetch;
+      const response = await callFetch(uri);
+      if (!response.ok) throw { code: "storage_unavailable", message: `media source read failed with HTTP ${response.status}` };
       return response.blob();
     },
-
-    async putToPresignedUrl(
-      uploadUrl: string,
-      body: Blob,
-      contentType: string,
-    ): Promise<void> {
-      let response: Response;
-      try {
-        const callFetch = fetch;
-        response = await callFetch(uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": contentType,
-          },
-          body,
-        });
-      } catch (error) {
-        throw {
-          code: "offline",
-          message: error instanceof Error ? error.message : "media upload network error",
-        };
-      }
-
-      if (!response.ok) {
-        throw {
-          code: "storage_unavailable",
-          message: `media upload failed with HTTP ${response.status}`,
-        };
-      }
+    async putToPresignedUrl(_uploadUrl: string, _body: Blob, _contentType: string): Promise<void> {
+      return centralDamOnlyError();
     },
-
-    async completeUpload(
-      mediaId: string,
-      _body?: unknown,
-      _headers?: Record<string, string>,
-    ) {
-      return { media: toRuntimeMedia(await completeMedia(mediaId)) };
+    async completeUpload(_mediaId: string, _body?: unknown, _headers?: Record<string, string>) {
+      return centralDamOnlyError();
     },
-
-    async deleteMedia(
-      mediaId: string,
-      _headers?: Record<string, string>,
-    ): Promise<void> {
-      await deleteCatalogMedia(mediaId);
+    async deleteMedia(_mediaId: string, _headers?: Record<string, string>): Promise<void> {
+      return centralDamOnlyError();
     },
   };
 }
 
 export function getDshOrderLifecycleRuntimeClient() {
   return {
-    assignCaptain(
-      orderId: string,
-      input: { readonly captain_id: string },
-    ) {
-      return createDispatchAssignment({
-        orderId,
-        captainId: input.captain_id,
-      });
+    assignCaptain(orderId: string, input: { readonly captain_id: string }) {
+      return createDispatchAssignment({ orderId, captainId: input.captain_id });
     },
   };
 }

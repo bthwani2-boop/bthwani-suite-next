@@ -87,7 +87,7 @@ export type DshHomeDiscoveryParams = {
   limit?: number;
 };
 
-export type DshHomeAdminKind = 'banners' | 'promos' | 'categories';
+export type DshHomeAdminKind = 'banners' | 'promos';
 export type DshHomeAdminContentItem = {
   id: string;
   kind: DshHomeAdminKind;

@@ -84,7 +84,7 @@ export interface paths {
         /** List all home discovery content including inactive items. */
         get: operations["listOperatorHomeDiscoveryContent"];
         put?: never;
-        /** Create a banner, promotion, or category. */
+        /** Create a home banner or promotion; categories come from the central catalog. */
         post: operations["createOperatorHomeDiscoveryContent"];
         delete?: never;
         options?: never;
@@ -275,213 +275,6 @@ export interface paths {
         };
         /** Return the approved, active catalog for a publicly eligible store. */
         get: operations["getPublishedDshCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/partner/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Return the authenticated partner's complete catalog. */
-        get: operations["getPartnerDshCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/partner/catalog/categories": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["createPartnerCatalogCategory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/partner/catalog/categories/{categoryId}": {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                categoryId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @deprecated */
-        delete: operations["deletePartnerCatalogCategory"];
-        options?: never;
-        head?: never;
-        /** @deprecated */
-        patch: operations["updatePartnerCatalogCategory"];
-        trace?: never;
-    };
-    "/dsh/partner/catalog/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @deprecated */
-        post: operations["createPartnerCatalogProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/partner/catalog/products/{productId}": {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                productId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @deprecated */
-        delete: operations["deletePartnerCatalogProduct"];
-        options?: never;
-        head?: never;
-        /** @deprecated */
-        patch: operations["updatePartnerCatalogProduct"];
-        trace?: never;
-    };
-    "/dsh/partner/catalog/media/upload-intents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["createPartnerCatalogMediaUploadIntent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/partner/catalog/media/{mediaId}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["completePartnerCatalogMedia"];
-        trace?: never;
-    };
-    "/dsh/partner/catalog/media/{mediaId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["deletePartnerCatalogMedia"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/partner/catalog/submit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["submitPartnerCatalog"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/operator/catalog/submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listOperatorCatalogSubmissions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/operator/catalog/{storeId}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["decideOperatorCatalogSubmission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dsh/operator/catalog/{storeId}/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listOperatorCatalogAudit"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1018,7 +811,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dsh/field/catalog/product-proposals": {
+    "/dsh/field/partners/{partnerId}/assortment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["fieldGetStoreAssortment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/catalog/product-proposals": {
         parameters: {
             query?: never;
             header?: never;
@@ -2943,7 +2752,7 @@ export interface components {
             heroImageUrl?: string | null;
             logoUrl?: string | null;
             category: components["schemas"]["DshStoreCategory"];
-            /** @description Human-readable category label resolved from dsh_categories */
+            /** @description Human-readable category label resolved from the sovereign central catalog domain */
             categoryLabel: string;
             deliveryModes: components["schemas"]["DshStoreDeliveryMode"][];
             isFreeDelivery: boolean;
@@ -2962,8 +2771,8 @@ export interface components {
             marketingVisibility: "hidden" | "visible";
             publicationEligible: boolean;
         };
-        /** @enum {string} */
-        DshStoreCategory: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
+        /** @description Sovereign central catalog domain identifier assigned to the store. */
+        DshStoreCategory: string;
         /** @enum {string} */
         DshStoreDeliveryMode: "delivery" | "pickup" | "express";
         DshStoreDetail: components["schemas"]["DshStoreSummary"] & {
@@ -3086,94 +2895,88 @@ export interface components {
         DshStoreAuditResponse: {
             events: components["schemas"]["DshStoreAuditEvent"][];
         };
-        DshCatalogCategory: {
+        DshCentralCatalogDomain: {
             id: string;
-            storeId: string;
-            name: string;
-            description: string;
+            slug: string;
+            nameAr: string;
+            nameEn: string;
+            icon: string;
             sortOrder: number;
             isActive: boolean;
-            version: number;
+            isClientVisible: boolean;
+            requiresProductCatalog: boolean;
+            isManualRequest: boolean;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string;
             /** Format: date-time */
-            updatedAt: string;
+            updatedAt?: string;
         };
-        DshCatalogMedia: {
+        DshCentralCatalogNode: {
             id: string;
-            storeId: string;
-            productId?: string | null;
-            objectKey: string;
-            contentType: string;
+            domainId: string;
+            parentId?: string | null;
             /** @enum {string} */
-            state: "pending" | "complete" | "deleted";
-            publicUrl?: string | null;
-            version: number;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        DshCatalogProduct: {
-            id: string;
-            storeId: string;
-            categoryId?: string | null;
-            name: string;
-            description: string;
-            sku: string;
-            /** @description Display label only. The real commercial price is unitPrice. */
-            priceReference: string;
-            /**
-             * Format: double
-             * @description The real numeric commercial price DSH catalog sells this product at (major currency units, e.g. YER). Sole source of the cart/checkout total handed off to WLT. WLT remains the sole owner of payment authorization/capture/settlement/refund/ledger truth.
-             */
-            unitPrice: number;
-            isActive: boolean;
-            version: number;
-            media: components["schemas"]["DshCatalogMedia"][];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        DshCatalogResponse: {
-            storeId?: string;
-            categories: components["schemas"]["DshCatalogCategory"][];
-            products: components["schemas"]["DshCatalogProduct"][];
-        };
-        DshCatalogCategoryInput: {
-            name: string;
-            description: string;
+            level: "BUSINESS_SUBDOMAIN" | "PRODUCT_MAIN_CLASS" | "PRODUCT_SUB_CLASS";
+            slug: string;
+            nameAr: string;
+            nameEn: string;
+            icon: string;
             sortOrder: number;
             isActive: boolean;
-            expectedVersion: number;
+            isClientVisible: boolean;
         };
-        DshCatalogProductInput: {
-            categoryId?: string | null;
-            name: string;
-            description: string;
-            sku: string;
-            priceReference: string;
+        DshClientCatalogProduct: {
+            id: string;
+            domainId: string;
+            categoryNodeId?: string | null;
+            canonicalNameAr: string;
+            canonicalNameEn: string;
+            brand: string;
+            barcode?: string | null;
+            gtin?: string | null;
+            sku?: string | null;
+            unit: string;
+            measurementType: string;
+            canonicalImageObjectKey?: string | null;
+            /** @enum {string} */
+            approvalStatus: "approved";
+            isActive: boolean;
             /** Format: double */
             unitPrice: number;
-            isActive: boolean;
-            expectedVersion: number;
-        };
-        DshMediaUploadIntentInput: {
-            productId?: string | null;
-            fileName: string;
-            contentType: string;
-        };
-        DshMediaCompleteInput: {
-            /** Format: uri */
-            publicUrl: string;
-            expectedVersion: number;
-        };
-        DshCatalogDecisionInput: {
+            currency: string;
             /** @enum {string} */
-            decision: "approved" | "rejected";
-            reason: string;
-            expectedVersion: number;
+            stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+            imageObjectKey: string;
+        };
+        DshCatalogAssetLink: {
+            id: string;
+            assetId: string;
+            entityType: string;
+            entityId: string;
+            role: string;
+            sortOrder: number;
+            isPrimary: boolean;
+            status: string;
+        };
+        DshCatalogPolicySnapshot: {
+            id: string;
+            domainId?: string | null;
+            nodeId?: string | null;
+            /** @enum {string} */
+            policyScope: "default" | "domain" | "node";
+            isActive: boolean;
+            allowsStoreProductCustomImage?: boolean;
+            allowsProductProposal?: boolean;
+            requiresBarcode?: boolean;
+            requiresCatalogReview?: boolean;
+            requiresProductImage?: boolean;
+        };
+        DshCatalogResponse: {
+            domains: components["schemas"]["DshCentralCatalogDomain"][];
+            nodes: components["schemas"]["DshCentralCatalogNode"][];
+            products: components["schemas"]["DshClientCatalogProduct"][];
+            media: components["schemas"]["DshCatalogAssetLink"][];
+            policySnapshot: components["schemas"]["DshCatalogPolicySnapshot"][];
         };
         DshHealthResponse: {
             /** @constant */
@@ -3230,7 +3033,7 @@ export interface components {
         DshHomeAdminContentItem: {
             id: string;
             /** @enum {string} */
-            kind: "banners" | "promos" | "categories";
+            kind: "banners" | "promos";
             title: string;
             subtitle?: string;
             badgeLabel?: string;
@@ -4474,7 +4277,7 @@ export interface components {
         };
     };
     parameters: {
-        HomeContentKind: "banners" | "promos" | "categories";
+        HomeContentKind: "banners" | "promos";
         StoreId: string;
         IdempotencyKey: string;
         CorrelationId: string;
@@ -5044,344 +4847,6 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-        };
-    };
-    getPartnerDshCatalog: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Partner catalog including draft and inactive items. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshCatalogResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    createPartnerCatalogCategory: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshCatalogCategoryInput"];
-            };
-        };
-        responses: {
-            /** @description Category created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        category: components["schemas"]["DshCatalogCategory"];
-                    };
-                };
-            };
-        };
-    };
-    deletePartnerCatalogCategory: {
-        parameters: {
-            query: {
-                expectedVersion: number;
-            };
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                categoryId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Category deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    updatePartnerCatalogCategory: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                categoryId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshCatalogCategoryInput"];
-            };
-        };
-        responses: {
-            /** @description Category updated. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    createPartnerCatalogProduct: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshCatalogProductInput"];
-            };
-        };
-        responses: {
-            /** @description Product created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    deletePartnerCatalogProduct: {
-        parameters: {
-            query: {
-                expectedVersion: number;
-            };
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                productId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    updatePartnerCatalogProduct: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                productId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshCatalogProductInput"];
-            };
-        };
-        responses: {
-            /** @description Product updated. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    createPartnerCatalogMediaUploadIntent: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshMediaUploadIntentInput"];
-            };
-        };
-        responses: {
-            /** @description Object-storage upload intent created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    completePartnerCatalogMedia: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                mediaId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshMediaCompleteInput"];
-            };
-        };
-        responses: {
-            /** @description Media reference completed. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    deletePartnerCatalogMedia: {
-        parameters: {
-            query: {
-                expectedVersion: number;
-            };
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                mediaId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Media reference deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    submitPartnerCatalog: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Catalog submitted for operator review. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    listOperatorCatalogSubmissions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Catalog submission queue. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    decideOperatorCatalogSubmission: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
-            path: {
-                storeId: components["parameters"]["StoreId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshCatalogDecisionInput"];
-            };
-        };
-        responses: {
-            /** @description Submission approved or rejected. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    listOperatorCatalogAudit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                storeId: components["parameters"]["StoreId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Catalog audit timeline. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
         };
     };
     listCatalogDomains: {
@@ -6105,16 +5570,39 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
-    createFieldProductProposal: {
+    fieldGetStoreAssortment: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                partnerId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Product proposal submitted by a field actor — never a final sellable product. */
+            /** @description Current central assortment for the field-owned partner draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createFieldProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product proposal submitted for the field-owned partner store — never a final sellable product. */
             201: {
                 headers: {
                     [name: string]: unknown;

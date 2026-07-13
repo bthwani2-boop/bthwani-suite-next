@@ -88,7 +88,7 @@ import {
 import { usePartnerSelfController } from '../../shared/partner/use-partner-self-controller';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
-import { InventoryCatalogScreen } from '../Catalog/InventoryCatalogScreen';
+import { PartnerCatalogManagementScreen } from '../Catalog/PartnerCatalogManagementScreen';
 import { PromotionsScreen } from './PromotionsScreen';
 import { StoreProfileScreen } from '../store/StoreProfileScreen';
 
@@ -2007,13 +2007,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     if (activeSection === 'inventory') {
       return (
         <HubSectionShell title={sectionCopy.inventory.title} description={sectionCopy.inventory.description} icon={sectionCopy.inventory.icon} onBack={() => updateSection('hub')}>
-          <InventoryCatalogScreen
-            storeName={resolvedStoreName}
-            branchLabel={resolvedBranchLabel}
-            activeZoneLabel={resolvedActiveZoneLabel}
-            todayHoursLabel={resolvedTodayHoursLabel}
-            {...(activeCanonicalStore?.id !== undefined ? { canonicalStoreId: activeCanonicalStore.id } : {})}
-          />
+          <PartnerCatalogManagementScreen />
         </HubSectionShell>
       );
     }

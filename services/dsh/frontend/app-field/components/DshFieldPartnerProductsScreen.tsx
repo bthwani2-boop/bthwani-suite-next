@@ -50,6 +50,8 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   } = useFieldCatalogController(partnerId);
 
   const [searchText, setSearchText] = React.useState('');
+  const [selectedDomainId, setSelectedDomainId] = React.useState('');
+  const [selectedNodeId, setSelectedNodeId] = React.useState('');
   const [linkingId, setLinkingId] = React.useState<string | null>(null);
   const [linkPrice, setLinkPrice] = React.useState('');
   const [linkNote, setLinkNote] = React.useState('');
@@ -67,8 +69,17 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  React.useEffect(() => {
+    if (taxonomyState.kind !== 'success' || selectedDomainId) return;
+    setSelectedDomainId(taxonomyState.domains[0]?.id ?? '');
+  }, [selectedDomainId, taxonomyState]);
+
   const handleSearch = async () => {
-    await searchMasterProducts(searchText.trim() ? { search: searchText.trim() } : undefined);
+    await searchMasterProducts({
+      ...(searchText.trim() ? { search: searchText.trim() } : {}),
+      ...(selectedDomainId ? { domainId: selectedDomainId } : {}),
+      ...(selectedNodeId ? { categoryNodeId: selectedNodeId } : {}),
+    });
   };
 
   const startLinking = (product: MasterProduct) => {
@@ -105,7 +116,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     }
     setProposeError(undefined);
 
-    const domainId = taxonomyState.kind === 'success' ? taxonomyState.domains[0]?.id : undefined;
+    const domainId = selectedDomainId;
     if (!domainId) {
       setProposeError('لا يوجد تصنيف متاح حالياً لإرسال الاقتراح');
       return;
@@ -115,7 +126,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       proposedNameAr: proposeNameAr.trim(),
       proposedNameEn: proposeNameEn.trim(),
       domainId,
-      categoryNodeId: null,
+      categoryNodeId: selectedNodeId || null,
       brand: proposeBrand.trim(),
       barcode: null,
     });
@@ -135,6 +146,9 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   }
 
   const masterProducts = masterProductsState.kind === 'success' ? masterProductsState.items : [];
+  const visibleNodes = taxonomyState.kind === 'success'
+    ? taxonomyState.nodes.filter((node) => node.domainId === selectedDomainId && node.isActive)
+    : [];
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
@@ -154,6 +168,42 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
 
         <View style={{ gap: spacing[2] }}>
+          {taxonomyState.kind === 'error' ? (
+            <StateView tone="danger" title="تعذر تحميل الفئات المركزية" description={taxonomyState.message} />
+          ) : taxonomyState.kind === 'success' ? (
+            <>
+              <Text role="bodyStrong" style={{ textAlign: 'right' }}>المجال المركزي</Text>
+              {taxonomyState.domains.filter((domain) => domain.isActive).map((domain) => (
+                <Button
+                  key={domain.id}
+                  label={domain.nameAr}
+                  tone={selectedDomainId === domain.id ? 'primary' : 'ghost'}
+                  onPress={() => {
+                    setSelectedDomainId(domain.id);
+                    setSelectedNodeId('');
+                  }}
+                />
+              ))}
+              {visibleNodes.length > 0 && (
+                <>
+                  <Text role="bodyStrong" style={{ textAlign: 'right' }}>الفئة المركزية</Text>
+                  <Button
+                    label="كل فئات المجال"
+                    tone={selectedNodeId ? 'ghost' : 'primary'}
+                    onPress={() => setSelectedNodeId('')}
+                  />
+                  {visibleNodes.map((node) => (
+                    <Button
+                      key={node.id}
+                      label={node.nameAr}
+                      tone={selectedNodeId === node.id ? 'primary' : 'ghost'}
+                      onPress={() => setSelectedNodeId(node.id)}
+                    />
+                  ))}
+                </>
+              )}
+            </>
+          ) : null}
           <TextField
             label="بحث في منتجات الكتالوج"
             value={searchText}

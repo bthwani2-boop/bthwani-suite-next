@@ -36,20 +36,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/home-discovery/{kind}", protected.handleHomeDiscoveryAdminCreate)
 	mux.HandleFunc("PATCH /dsh/operator/home-discovery/{kind}/{itemId}", protected.handleHomeDiscoveryAdminUpdate)
 	mux.HandleFunc("DELETE /dsh/operator/home-discovery/{kind}/{itemId}", protected.handleHomeDiscoveryAdminDelete)
-	mux.HandleFunc("GET /dsh/partner/catalog", protected.handlePartnerCatalog)
-	mux.HandleFunc("POST /dsh/partner/catalog/categories", protected.handlePartnerCategoryCreate)
-	mux.HandleFunc("PATCH /dsh/partner/catalog/categories/{categoryId}", protected.handlePartnerCategoryUpdate)
-	mux.HandleFunc("DELETE /dsh/partner/catalog/categories/{categoryId}", protected.handlePartnerCategoryDelete)
-	mux.HandleFunc("POST /dsh/partner/catalog/products", protected.handlePartnerProductCreate)
-	mux.HandleFunc("PATCH /dsh/partner/catalog/products/{productId}", protected.handlePartnerProductUpdate)
-	mux.HandleFunc("DELETE /dsh/partner/catalog/products/{productId}", protected.handlePartnerProductDelete)
-	mux.HandleFunc("POST /dsh/partner/catalog/media/upload-intents", protected.handleUploadIntent)
-	mux.HandleFunc("PATCH /dsh/partner/catalog/media/{mediaId}/complete", protected.handleCompleteMedia)
-	mux.HandleFunc("DELETE /dsh/partner/catalog/media/{mediaId}", protected.handleDeleteMedia)
-	mux.HandleFunc("POST /dsh/partner/catalog/submit", protected.handleSubmitCatalog)
-	mux.HandleFunc("GET /dsh/operator/catalog/submissions", protected.handleCatalogSubmissions)
-	mux.HandleFunc("POST /dsh/operator/catalog/{storeId}/decision", protected.handleCatalogDecision)
-	mux.HandleFunc("GET /dsh/operator/catalog/{storeId}/audit", protected.handleCatalogAudit)
 	// Cart & Serviceability
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
@@ -156,8 +142,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", protected.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/field/catalog/master-products", protected.handleListMasterProducts)
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", protected.handleFieldGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", protected.handleFieldUpsertStoreAssortment)
-	mux.HandleFunc("POST /dsh/field/catalog/product-proposals", protected.handleFieldCreateProductProposal)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals", protected.handleFieldCreateProductProposal)
 
 	// Support, Incidents & Escalation Room
 	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateSupportTicket)

@@ -7,7 +7,7 @@
  */
 
 import type { CatalogSubmission } from "./catalog.types";
-import type { CatalogProduct, CatalogCategory } from "./legacy-catalog-compat.types";
+import type { CatalogProduct, CatalogCategory } from "./client-catalog.types";
 
 // ─── Main Tab Registry ────────────────────────────────────────────────────────
 

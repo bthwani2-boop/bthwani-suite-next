@@ -1,5 +1,5 @@
 import type { CatalogSubmission } from "./catalog.types";
-import type { CatalogState } from "./legacy-catalog-compat.types";
+import type { CatalogState } from "./client-catalog.types";
 import {
   type CatalogActionState,
   catalogActionConflictState,

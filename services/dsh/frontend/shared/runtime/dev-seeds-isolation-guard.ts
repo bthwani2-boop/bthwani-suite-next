@@ -47,7 +47,7 @@ export const DSH_SEED_EVIDENCE: readonly SeedEvidenceEntry[] = [
     reason: 'Was: manifest-key selector + POST /media (seed). Now: runtime createUploadIntent → PUT MinIO → completeUpload → listMediaAssets.',
   },
   {
-    file: 'dsh/frontend/app-partner/screens/InventoryCatalogScreen.tsx',
+    file: 'dsh/frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx',
     classification: 'RUNTIME_VIOLATION_FIXED',
     reason: 'Was: resolveDshImageSource(item.mediaKey) for product thumbnails. Now: useEffect → listMedia({ owner_type: product, owner_id }) → public_url via dsh-media-api.client.ts. Falls back to emoji initial when no media uploaded.',
   },

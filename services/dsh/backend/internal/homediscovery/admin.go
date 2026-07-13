@@ -20,9 +20,6 @@ func ListAdminContent(ctx context.Context, db *sql.DB, kind string) ([]AdminCont
 	if kind == "promos" {
 		selectColumns = "id, title, COALESCE(subtitle,''), COALESCE(badge_label,''), image_url, action_type, action_target, sort_order, is_active"
 	}
-	if kind == "categories" {
-		selectColumns = "id, label, '', '', COALESCE(icon_url,''), 'none', '', sort_order, is_active"
-	}
 	rows, err := db.QueryContext(ctx, "SELECT "+selectColumns+" FROM "+table+" ORDER BY sort_order ASC, id ASC")
 	if err != nil {
 		return nil, err
@@ -48,9 +45,6 @@ func CreateAdminContent(ctx context.Context, db *sql.DB, kind, actorID, correlat
 		return AdminContentItem{}, err
 	}
 	prefix := strings.TrimSuffix(kind, "s")
-	if kind == "categories" {
-		prefix = "category"
-	}
 	id := fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
 	return writeAdminContent(ctx, db, kind, id, actorID, correlationID, "create", input, true)
 }
@@ -103,13 +97,7 @@ func writeAdminContent(
 	}
 	defer tx.Rollback()
 	var result sql.Result
-	if kind == "categories" {
-		if create {
-			result, err = tx.ExecContext(ctx, "INSERT INTO "+table+" (id,label,icon_url,sort_order,is_active) VALUES ($1,$2,NULLIF($3,''),$4,$5)", id, input.Title, input.ImageURL, input.SortOrder, input.IsActive)
-		} else {
-			result, err = tx.ExecContext(ctx, "UPDATE "+table+" SET label=$1,icon_url=NULLIF($2,''),sort_order=$3,is_active=$4,updated_at=now() WHERE id=$5", input.Title, input.ImageURL, input.SortOrder, input.IsActive, id)
-		}
-	} else if kind == "promos" {
+	if kind == "promos" {
 		if create {
 			result, err = tx.ExecContext(ctx, "INSERT INTO "+table+" (id,title,subtitle,badge_label,image_url,action_type,action_target,sort_order,is_active) VALUES ($1,$2,NULLIF($3,''),NULLIF($4,''),$5,$6,$7,$8,$9)", id, input.Title, input.Subtitle, input.BadgeLabel, input.ImageURL, input.ActionType, input.ActionTarget, input.SortOrder, input.IsActive)
 		} else {
@@ -165,8 +153,6 @@ func adminTable(kind string) (string, error) {
 		return "dsh_home_banners", nil
 	case "promos":
 		return "dsh_home_promos", nil
-	case "categories":
-		return "dsh_categories", nil
 	default:
 		return "", fmt.Errorf("invalid content kind")
 	}
@@ -179,15 +165,13 @@ func validateAdminInput(kind string, input AdminContentInput) error {
 	if len(strings.TrimSpace(input.Title)) < 2 || input.SortOrder < 0 {
 		return fmt.Errorf("invalid home discovery content")
 	}
-	if kind != "categories" {
-		if strings.TrimSpace(input.ImageURL) == "" {
-			return fmt.Errorf("image url is required")
-		}
-		switch input.ActionType {
-		case "store", "category", "external", "none":
-		default:
-			return fmt.Errorf("invalid action type")
-		}
+	if strings.TrimSpace(input.ImageURL) == "" {
+		return fmt.Errorf("image url is required")
+	}
+	switch input.ActionType {
+	case "store", "category", "external", "none":
+	default:
+		return fmt.Errorf("invalid action type")
 	}
 	return nil
 }

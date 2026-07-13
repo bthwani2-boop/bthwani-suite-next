@@ -153,7 +153,10 @@ export interface ClientVisibleCatalogEntry {
 
 export interface ClientVisibleCatalogResponse {
   readonly domains: readonly CentralCatalogDomain[];
+  readonly nodes: readonly CentralCatalogNode[];
   readonly products: readonly ClientVisibleCatalogEntry[];
+  readonly media: readonly CatalogAssetLink[];
+  readonly policySnapshot: readonly CatalogPlatformPolicy[];
 }
 
 export interface CatalogAsset {
