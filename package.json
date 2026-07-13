@@ -96,6 +96,7 @@
     "guard:frontend-feature-binding": "node tools/guards/frontend-feature-binding-gate.mjs",
     "runtime:frontend-binding:check": "node tools/scripts/check-frontend-binding-readiness.mjs",
     "swagger": "node tools/scripts/serve-swagger.mjs",
+    "swagger:build": "node tools/scripts/build-swagger-static.mjs",
     "diagnostics:codeql:local": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-codeql-local.ps1",
     "diagnostics:sonarqube:config": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1",
     "diagnostics:go-routes": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-go-ast-extractor.ps1",
