@@ -15,7 +15,11 @@ const VEHICLE_TYPES: Array<{ label: string; value: string }> = [
 
 import { issueCaptainActivationCode } from "../../shared/workforce";
 
-export function CaptainCreateView(props: { readonly onBack: () => void; readonly onCreated: (captain: Captain) => void }) {
+export function CaptainCreateView(props: {
+  readonly onBack?: () => void;
+  readonly onCreated: (captain: Captain) => void;
+  readonly inline?: boolean;
+}) {
   const { state, submit } = useCaptainCreateController();
   const [fullNameAr, setFullNameAr] = useState("");
   const [phone, setPhone] = useState("");
