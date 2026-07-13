@@ -27,6 +27,26 @@ if (-not (Test-Path -LiteralPath $AdbHelper)) {
 }
 
 . $AdbHelper
+
+# BTHWANI_WIFI_BOOTSTRAP:
+# Ensure the saved Wi-Fi device is connected before Expo starts.
+$WifiBootstrap = Join-Path $RepoRoot "apps\scrcpy-wifi.ps1"
+
+if (-not (Test-Path -LiteralPath $WifiBootstrap)) {
+    throw "Wi-Fi ADB bootstrap script not found: $WifiBootstrap"
+}
+
+& powershell.exe `
+    -NoLogo `
+    -NoProfile `
+    -ExecutionPolicy Bypass `
+    -File $WifiBootstrap `
+    -ConnectOnly
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Wi-Fi ADB bootstrap failed."
+}
+
 Set-Location -LiteralPath $RuntimeDir
 
 $DefaultRoute = Get-NetRoute `
@@ -54,7 +74,10 @@ if (-not $HostAddress) {
     throw "No usable IPv4 address was found on the active network interface."
 }
 
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = $HostAddress.IPAddress
+# Metro is reached through adb reverse, not through an incoming LAN port.
+$env:NODE_OPTIONS = "--dns-result-order=ipv4first"
+$env:REACT_NATIVE_PACKAGER_HOSTNAME = "127.0.0.1"
+$env:EXPO_PACKAGER_PROXY_URL = "http://127.0.0.1:$MetroPort"
 $env:EXPO_PUBLIC_DSH_API_BASE_URL      = "http://127.0.0.1:58080"
 $env:NEXT_PUBLIC_DSH_API_BASE_URL      = "http://127.0.0.1:58080"
 $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
@@ -98,6 +121,8 @@ $Devices = Get-BthwaniAndroidDevices -AdbPath $AdbPath
 $SelectedDevice = Select-BthwaniAndroidDevice -Devices $Devices
 $SelectedSerial = $SelectedDevice.Serial
 $env:ANDROID_SERIAL = $SelectedSerial
+$env:BTHWANI_ANDROID_SERIAL = $SelectedSerial
+$env:ADB = $AdbPath
 
 $Ports = @(58080, 58082, 58083, 58086, 59000, $MetroPort)
 Invoke-BthwaniAdbReverse `
@@ -120,7 +145,8 @@ Write-Host ""
 Write-Host "=== MOBILE RUNTIME ==="
 Write-Host "App:          $AppKey"
 Write-Host "Runtime:      $RuntimeDir"
-Write-Host "Host IP:      $($HostAddress.IPAddress)"
+Write-Host "Metro URL:    http://127.0.0.1:$MetroPort"
+Write-Host "LAN IP:       $($HostAddress.IPAddress)"
 Write-Host "ADB:          $AdbPath"
 Write-Host "Device:       $SelectedSerial"
 Write-Host "Metro port:   $MetroPort"
@@ -133,8 +159,7 @@ $ExpoArguments = @(
     "expo",
     "start",
     "--dev-client",
-    "--host",
-    "lan",
+    "--localhost",
     "--port",
     [string] $MetroPort,
     "--android"
@@ -144,7 +169,102 @@ if ($ShouldClearCache) {
     $ExpoArguments += "--clear"
 }
 
-& pnpm @ExpoArguments
-if ($LASTEXITCODE -ne 0) {
-    throw "Expo runtime failed for $AppKey."
+# BTHWANI_ADB_WATCHDOG:
+# Keep the TCP/IP transport online and restore reverse mappings
+# whenever Android temporarily marks the Wi-Fi device offline.
+$AdbWatchdog = $null
+
+if (
+    $SelectedSerial -match
+    "^\d{1,3}(?:\.\d{1,3}){3}:\d+$"
+) {
+    $AdbWatchdog = Start-Job `
+        -ArgumentList @(
+            $AdbPath,
+            $SelectedSerial,
+            $Ports
+        ) `
+        -ScriptBlock {
+            param(
+                [string] $WatchAdb,
+                [string] $WatchSerial,
+                [int[]] $WatchPorts
+            )
+
+            $ErrorActionPreference = "SilentlyContinue"
+
+            while ($true) {
+                $State = (
+                    & $WatchAdb `
+                        -s $WatchSerial `
+                        get-state 2>$null |
+                        Out-String
+                ).Trim()
+
+                $StateExitCode = $LASTEXITCODE
+
+                if (
+                    $StateExitCode -ne 0 -or
+                    $State -ne "device"
+                ) {
+                    & $WatchAdb `
+                        disconnect $WatchSerial `
+                        2>$null |
+                        Out-Null
+
+                    Start-Sleep -Milliseconds 750
+
+                    & $WatchAdb `
+                        connect $WatchSerial `
+                        2>$null |
+                        Out-Null
+
+                    Start-Sleep -Seconds 1
+
+                    $RecoveredState = (
+                        & $WatchAdb `
+                            -s $WatchSerial `
+                            get-state 2>$null |
+                            Out-String
+                    ).Trim()
+
+                    if ($RecoveredState -eq "device") {
+                        foreach (
+                            $WatchPort in
+                            ($WatchPorts | Select-Object -Unique)
+                        ) {
+                            & $WatchAdb `
+                                -s $WatchSerial `
+                                reverse `
+                                "tcp:$WatchPort" `
+                                "tcp:$WatchPort" `
+                                2>$null |
+                                Out-Null
+                        }
+                    }
+                }
+
+                Start-Sleep -Seconds 2
+            }
+        }
+}
+
+try {
+    & pnpm @ExpoArguments
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Expo runtime failed for $AppKey."
+    }
+}
+finally {
+    if ($AdbWatchdog) {
+        Stop-Job `
+            -Job $AdbWatchdog `
+            -ErrorAction SilentlyContinue
+
+        Remove-Job `
+            -Job $AdbWatchdog `
+            -Force `
+            -ErrorAction SilentlyContinue
+    }
 }

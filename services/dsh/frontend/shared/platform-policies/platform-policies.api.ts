@@ -1,11 +1,10 @@
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshZone, DshSlaRule, DshCapacityConfig, DshZoneServiceability,
   DshStoreOnboardingFeePolicy, DshStoreOnboardingFeePolicyInput,
 } from "./platform-policies.types";
 
-const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "pp");
+const { request: req } = createDshHttpClient("/api/dsh", "pp");
 
 export const fetchZones = (includeInactive = true) =>
   req<{ zones: DshZone[] }>(`/dsh/operator/platform/zones?includeInactive=${includeInactive ? "true" : "false"}`);

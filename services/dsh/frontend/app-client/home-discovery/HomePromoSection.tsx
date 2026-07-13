@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import {
   alpha,
   colorRoles,
@@ -14,7 +14,7 @@ import type { PromoViewModel } from '../../shared/home-discovery';
 type Props = {
   promos: PromoViewModel[];
   onPromoPress?: (promo: PromoViewModel) => void;
-  onCategoriesPress?: () => void;
+  onCategoriesPress?: (event: GestureResponderEvent) => void;
   onVideoPress?: () => void;
 };
 
@@ -114,7 +114,7 @@ function QuickBtn({
   isHub = false,
 }: {
   label: string;
-  onPress?: (() => void) | undefined;
+  onPress?: ((event: GestureResponderEvent) => void) | undefined;
   isVideo?: boolean | undefined;
   isHub?: boolean | undefined;
 }) {

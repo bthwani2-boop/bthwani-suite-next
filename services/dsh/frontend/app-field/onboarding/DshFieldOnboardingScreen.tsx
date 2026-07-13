@@ -402,22 +402,25 @@ export function DshFieldOnboardingScreen({
             <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold' }}>
               قسم المنتجات
             </Text>
-            {state.partnerId ? (
-              <>
-                <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-                  أضف منتجات تجريبية لمتجر الشريك قبل إرسال الملف أو بعده.
-                </Text>
-                <Button
-                  label="إضافة/إدارة منتجات المتجر"
-                  tone="secondary"
-                  onPress={() => onOpenProducts(state.partnerId!)}
-                />
-              </>
-            ) : (
-              <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-                أكمل البيانات الأساسية أولًا لإنشاء ملف الشريك قبل إضافة المنتجات.
-              </Text>
-            )}
+            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+              أضف منتجات تجريبية لمتجر الشريك قبل إرسال الملف أو بعده.
+            </Text>
+            <Button
+              label="إضافة/إدارة منتجات المتجر"
+              tone="secondary"
+              onPress={async () => {
+                let id = state.partnerId;
+                if (!id) {
+                  const created = await controller.ensureDraftCreated();
+                  if (created) id = created;
+                }
+                if (id) {
+                  onOpenProducts(id);
+                } else {
+                  setActiveGroup('basics_profile');
+                }
+              }}
+            />
           </View>
         )}
 

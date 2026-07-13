@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colorRoles, elevation, radius, spacing } from '@bthwani/ui-kit';
 import type { CategoryViewModel } from '../../shared/home-discovery';
 
@@ -8,32 +8,10 @@ type Props = Readonly<{
   onCategoryPress?: (id: string) => void;
 }>;
 
-const CATEGORY_EMOJIS: Record<string, string> = {
-  'domain-restaurants': '🍽️',
-  'domain-groceries': '🛒',
-  'domain-pharmacy': '💊',
-  'domain-sweets-juices': '🍰',
-  'domain-elegance': '✨',
-  'domain-bthwani-store': '📦',
-  'domain-home-projects': '🏠',
-  'domain-spare-parts': '🔧',
-  'domain-honey-dates': '🍯',
-  'domain-electronics': '📱',
-  'domain-cloud-kitchens': '👩‍🍳',
-};
-
-function getEmoji(id: string): string {
-  return CATEGORY_EMOJIS[id] ?? '📦';
-}
-
 export function HomeCategorySection({ categories, activeId, onCategoryPress }: Props) {
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <View style={styles.gridContent}>
         {categories.map((cat) => {
           const isSelected = activeId != null && cat.id === activeId;
           return (
@@ -51,7 +29,7 @@ export function HomeCategorySection({ categories, activeId, onCategoryPress }: P
                   isSelected && styles.categoryIconContainerSelected,
                 ]}
               >
-                <Text style={styles.categoryEmoji}>{getEmoji(cat.id)}</Text>
+                <Text style={styles.categoryEmoji}>{cat.iconUrl || '📦'}</Text>
               </View>
 
               <View style={styles.categoryNameContainer}>
@@ -65,7 +43,7 @@ export function HomeCategorySection({ categories, activeId, onCategoryPress }: P
             </Pressable>
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -74,10 +52,12 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing[4],
   },
-  scrollContent: {
+  gridContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing[4],
     gap: spacing[3],
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
 
   categorySelectorCard: {

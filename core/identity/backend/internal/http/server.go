@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"os"

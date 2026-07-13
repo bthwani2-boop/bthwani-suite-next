@@ -5,10 +5,10 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ProviderKind } from "../../shared/workforce";
-import { Box, Button, Card, Header, ScrollScreen, spacing } from "@bthwani/ui-kit";
-import { ProviderActivationWorkspace } from "../shared";
+import { Box, Button, Card, Header, ScrollScreen, Text, spacing } from "@bthwani/ui-kit";
+
 import { ProviderListView } from "./ProviderListView";
-import { ProviderTypeSelectView } from "./ProviderTypeSelectView";
+
 import { FieldAgentCreateView } from "./FieldAgentCreateView";
 import { CaptainCreateView } from "./CaptainCreateView";
 import { ProviderDetailView } from "./ProviderDetailView";
@@ -30,30 +30,48 @@ function WorkforceHrScreenInner() {
     router.push(`?${params.toString()}`);
   };
 
-  if (view === "type-select") {
+  // Unified "إضافة مقدم خدمة" view — form includes activation (autoActivate toggle).
+  if (view === "create" || view === "manage" || view === "type-select" || view === "activation") {
     return (
-      <ProviderTypeSelectView
-        onBack={() => navigateTo("list")}
-        onSelect={(providerKind) => navigateTo("create", providerKind)}
-      />
+      <ScrollScreen>
+        <Card style={{ padding: spacing[4], gap: spacing[3] }}>
+          <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+            <Header
+              title="إضافة مقدم خدمة"
+              subtitle="أكمل البيانات أدناه — يمكنك تفعيل الحساب وإصدار كود الدخول في نفس الاستمارة."
+            />
+            <Button label="رجوع" tone="ghost" onPress={() => navigateTo("list")} />
+          </Box>
+          <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>نوع مقدم الخدمة:</Text>
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
+            <Button
+              label="كابتن"
+              tone={kind === "captain" ? "primary" : "secondary"}
+              onPress={() => navigateTo("create", "captain")}
+            />
+            <Button
+              label="ميداني"
+              tone={kind === "field" ? "primary" : "secondary"}
+              onPress={() => navigateTo("create", "field")}
+            />
+          </Box>
+        </Card>
+
+        {kind === "captain" ? (
+          <CaptainCreateView
+            inline
+            onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)}
+          />
+        ) : (
+          <FieldAgentCreateView
+            inline
+            onCreated={(agent) => navigateTo("detail", "field", agent.actorId)}
+          />
+        )}
+      </ScrollScreen>
     );
   }
-  if (view === "create" && kind === "captain") {
-    return (
-      <CaptainCreateView
-        onBack={() => navigateTo("type-select")}
-        onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)}
-      />
-    );
-  }
-  if (view === "create") {
-    return (
-      <FieldAgentCreateView
-        onBack={() => navigateTo("type-select")}
-        onCreated={(agent) => navigateTo("detail", "field", agent.actorId)}
-      />
-    );
-  }
+
   if (view === "detail") {
     return (
       <ProviderDetailView
@@ -66,44 +84,13 @@ function WorkforceHrScreenInner() {
   if (view === "reference") {
     return <WorkforceReferenceView onBack={() => navigateTo("list")} />;
   }
-  if (view === "activation") {
-    return (
-      <ScrollScreen>
-        <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-          <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-            <Header
-              title="تفعيل حسابات التطبيق"
-              subtitle="أصدر أكواد التفعيل، أوقف الحسابات، أو أعد تفعيلها لمقدمي الخدمات."
-            />
-            <Button label="رجوع" tone="ghost" onPress={() => navigateTo("list")} />
-          </Box>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
-            <Button
-              label="تفعيل الميداني"
-              tone={kind === "field" ? "primary" : "secondary"}
-              onPress={() => navigateTo("activation", "field")}
-            />
-            <Button
-              label="تفعيل الكباتن"
-              tone={kind === "captain" ? "primary" : "secondary"}
-              onPress={() => navigateTo("activation", "captain")}
-            />
-          </Box>
-        </Card>
 
-        <ProviderActivationWorkspace
-          providerKind={kind}
-          entrySource="hr"
-        />
-      </ScrollScreen>
-    );
-  }
   return (
     <ProviderListView
-      onCreate={() => navigateTo("type-select")}
+      onCreate={() => navigateTo("create", "field")}
       onOpen={(actorIdVal, providerKindVal) => navigateTo("detail", providerKindVal, actorIdVal)}
       onReference={() => navigateTo("reference")}
-      onActivation={() => navigateTo("activation", "field")}
+      onActivation={() => navigateTo("create", "field")}
     />
   );
 }

@@ -2,23 +2,24 @@
 -- stale/partial rows to the current canonical seed values, unlike dsh-030's
 -- ON CONFLICT DO NOTHING which silently no-ops once a row exists.
 
-INSERT INTO dsh_catalog_domains (id, slug, name_ar, name_en, sort_order, requires_product_catalog, is_manual_request) VALUES
-  ('domain-restaurants',    'restaurants',    'مطاعم',          'Restaurants',    10, TRUE,  FALSE),
-  ('domain-groceries',      'groceries',      'مقاضي',          'Groceries',      20, TRUE,  FALSE),
-  ('domain-sweets-juices',  'sweets_juices',  'حلا وعصائر',      'Sweets & Juices',30, TRUE,  FALSE),
-  ('domain-pharmacy',       'pharmacy',       'صيدلية',          'Pharmacy',        35, TRUE,  FALSE),
-  ('domain-elegance',       'elegance',       'أناقتي',         'Elegance',       40, TRUE,  FALSE),
-  ('domain-bthwani-store',  'bthwani_store',  'بثواني ستور',     'Bthwani Store',  50, TRUE,  FALSE),
-  ('domain-home-projects',  'home_projects',  'مشاريع منزلية',   'Home Projects',  60, TRUE,  FALSE),
-  ('domain-spare-parts',    'spare_parts',    'قطع غيار',        'Spare Parts',    70, TRUE,  FALSE),
-  ('domain-honey-dates',    'honey_dates',    'عسل وتمور',       'Honey & Dates',  80, TRUE,  FALSE),
-  ('domain-electronics',    'electronics',    'إلكترونيات',      'Electronics',    90, TRUE,  FALSE),
-  ('domain-cloud-kitchens', 'cloud_kitchens', 'مطابخ سحابية',    'Cloud Kitchens', 100, TRUE, FALSE),
-  ('domain-manual-request', 'manual_request', 'طلب يدوي',        'Manual Request', 110, FALSE, TRUE)
+INSERT INTO dsh_catalog_domains (id, slug, name_ar, name_en, icon, sort_order, requires_product_catalog, is_manual_request) VALUES
+  ('domain-restaurants',    'restaurants',    'مطاعم',          'Restaurants',    '🍽️', 10, TRUE,  FALSE),
+  ('domain-groceries',      'groceries',      'مقاضي',          'Groceries',      '🛒', 20, TRUE,  FALSE),
+  ('domain-sweets-juices',  'sweets_juices',  'حلا وعصائر',      'Sweets & Juices','🍰', 30, TRUE,  FALSE),
+  ('domain-pharmacy',       'pharmacy',       'صيدلية',          'Pharmacy',       '💊', 35, TRUE,  FALSE),
+  ('domain-elegance',       'elegance',       'أناقتي',         'Elegance',       '✨', 40, TRUE,  FALSE),
+  ('domain-bthwani-store',  'bthwani_store',  'بثواني ستور',     'Bthwani Store',  '📦', 50, TRUE,  FALSE),
+  ('domain-home-projects',  'home_projects',  'مشاريع منزلية',   'Home Projects',  '🏠', 60, TRUE,  FALSE),
+  ('domain-spare-parts',    'spare_parts',    'قطع غيار',        'Spare Parts',    '🔧', 70, TRUE,  FALSE),
+  ('domain-honey-dates',    'honey_dates',    'عسل وتمور',       'Honey & Dates',  '🍯', 80, TRUE,  FALSE),
+  ('domain-electronics',    'electronics',    'إلكترونيات',      'Electronics',    '📱', 90, TRUE,  FALSE),
+  ('domain-cloud-kitchens', 'cloud_kitchens', 'مطابخ سحابية',    'Cloud Kitchens', '👩‍🍳', 100, TRUE, FALSE),
+  ('domain-manual-request', 'manual_request', 'طلب يدوي',        'Manual Request', '📝', 110, FALSE, TRUE)
 ON CONFLICT (id) DO UPDATE SET
   slug = EXCLUDED.slug,
   name_ar = EXCLUDED.name_ar,
   name_en = EXCLUDED.name_en,
+  icon = EXCLUDED.icon,
   sort_order = EXCLUDED.sort_order,
   requires_product_catalog = EXCLUDED.requires_product_catalog,
   is_manual_request = EXCLUDED.is_manual_request,
