@@ -23,11 +23,13 @@ type Zone struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-func ListZones(db *sql.DB) ([]Zone, error) {
+func ListZones(db *sql.DB, includeInactive bool) ([]Zone, error) {
 	rows, err := db.Query(`
 		SELECT id, name, city_code, is_active,
 		       COALESCE(description,''), created_at, updated_at
-		FROM dsh_platform_zones ORDER BY city_code, name`)
+		FROM dsh_platform_zones
+		WHERE is_active OR $1
+		ORDER BY city_code, name`, includeInactive)
 	if err != nil {
 		return nil, err
 	}

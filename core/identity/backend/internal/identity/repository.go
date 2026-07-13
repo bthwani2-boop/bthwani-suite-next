@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -735,6 +736,48 @@ func providerPermissions(surface string) ([]byte, error) {
 
 // ActorAdminByID returns the internal projection of an actor, including the
 // sovereign phone number, for service-to-service consumers.
+// SearchActors backs Workforce's supervisor picker (role + free-text query
+// on username/phone), replacing the old raw actor-id text box. Password
+// hashes are never selected.
+func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int) ([]ActorAdminView, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 25
+	}
+	clauses := []string{"active"}
+	args := []any{}
+	if role != "" {
+		args = append(args, role)
+		clauses = append(clauses, fmt.Sprintf("$%d = ANY(roles)", len(args)))
+	}
+	if q != "" {
+		args = append(args, "%"+q+"%")
+		clauses = append(clauses, fmt.Sprintf("(username ILIKE $%d OR COALESCE(phone_e164, '') ILIKE $%d)", len(args), len(args)))
+	}
+	args = append(args, limit)
+	query := `
+		SELECT id, username, COALESCE(phone_e164, ''), roles, active
+		FROM identity_actors
+		WHERE ` + strings.Join(clauses, " AND ") + `
+		ORDER BY username
+		LIMIT $` + strconv.Itoa(len(args))
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	views := []ActorAdminView{}
+	for rows.Next() {
+		var actor Actor
+		var roles pq.StringArray
+		if err := rows.Scan(&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Active); err != nil {
+			return nil, err
+		}
+		actor.Roles = []string(roles)
+		views = append(views, toAdminView(actor))
+	}
+	return views, rows.Err()
+}
+
 func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorAdminView, error) {
 	var actor Actor
 	var roles pq.StringArray

@@ -812,6 +812,41 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /workforce/reference/supervisors:
+    get:
+      operationId: searchWorkforceSupervisors
+      description: >-
+        Operator-only. Backs the supervisor picker: role + free-text search
+        over active Identity actors, replacing free-text actor-id entry.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            $ref: "#/components/schemas/ProviderKind"
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Supervisor candidates.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [supervisors]
+                properties:
+                  supervisors:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SupervisorCandidate"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -919,7 +954,7 @@ components:
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
-      required: [fullNameAr, phoneE164, providerCode]
+      required: [fullNameAr, phoneE164]
       properties:
         fullNameAr:
           type: string
@@ -930,15 +965,14 @@ components:
           type: string
           minLength: 8
           maxLength: 20
-        providerCode:
-          type: string
-          pattern: "^[A-Za-z0-9_-]{2,32}$"
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
           type: string
           format: date
         cityCode:
+          type: string
+        serviceZoneId:
           type: string
         shiftCode:
           type: string
@@ -962,14 +996,14 @@ components:
           type: string
         fullNameEn:
           type: string
-        providerCode:
-          type: string
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
           type: string
           format: date
         cityCode:
+          type: string
+        serviceZoneId:
           type: string
         shiftCode:
           type: string
@@ -980,7 +1014,7 @@ components:
     CreateCaptainRequest:
       type: object
       additionalProperties: false
-      required: [fullNameAr, phoneE164, providerCode]
+      required: [fullNameAr, phoneE164]
       properties:
         fullNameAr:
           type: string
@@ -991,9 +1025,6 @@ components:
           type: string
           minLength: 8
           maxLength: 20
-        providerCode:
-          type: string
-          pattern: "^[A-Za-z0-9_-]{2,32}$"
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1013,7 +1044,11 @@ components:
           format: date
         operatingCityCode:
           type: string
+        serviceZoneId:
+          type: string
         operatingScopeCode:
+          type: string
+        supervisorActorId:
           type: string
         documentMediaRefs:
           type: array
@@ -1031,8 +1066,6 @@ components:
           type: string
         fullNameEn:
           type: string
-        providerCode:
-          type: string
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1052,7 +1085,11 @@ components:
           format: date
         operatingCityCode:
           type: string
+        serviceZoneId:
+          type: string
         operatingScopeCode:
+          type: string
+        supervisorActorId:
           type: string
     StatusChangeRequest:
       type: object
@@ -1079,11 +1116,16 @@ components:
           enum: [ar, en]
         policyConsent:
           type: boolean
+    ProviderKind:
+      type: string
+      enum: [field, captain]
     FieldProfile:
       type: object
       required: [documentMediaRefs]
       properties:
         cityCode:
+          type: string
+        serviceZoneId:
           type: string
         shiftCode:
           type: string
@@ -1115,7 +1157,11 @@ components:
           type: string
         operatingCityCode:
           type: string
+        serviceZoneId:
+          type: string
         operatingScopeCode:
+          type: string
+        supervisorActorId:
           type: string
         documentMediaRefs:
           type: array
@@ -1123,7 +1169,7 @@ components:
             type: string
     FieldAgent:
       type: object
-      required: [actorId, fullNameAr, providerCode, engagementType, engagementStatus, version, createdAt, updatedAt]
+      required: [actorId, fullNameAr, providerCode, providerKind, engagementType, engagementStatus, version, createdAt, updatedAt]
       properties:
         actorId:
           type: string
@@ -1133,6 +1179,8 @@ components:
           type: string
         providerCode:
           type: string
+        providerKind:
+          $ref: "#/components/schemas/ProviderKind"
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1226,6 +1274,18 @@ components:
         active:
           type: boolean
           default: true
+    SupervisorCandidate:
+      type: object
+      required: [actorId, username, active]
+      properties:
+        actorId:
+          type: string
+        username:
+          type: string
+        phoneMasked:
+          type: string
+        active:
+          type: boolean
     ApiError:
       type: object
       additionalProperties: false
@@ -1253,6 +1313,8 @@ components:
             - ACTIVATION_RATE_LIMITED
             - INVALID_ACTOR_INPUT
             - IDENTITY_UNAVAILABLE
+            - INVALID_SUPERVISOR
+            - PROVIDER_KIND_CONFLICT
             - WORKFORCE_NOT_READY
             - WORKFORCE_INTERNAL_ERROR
         message:

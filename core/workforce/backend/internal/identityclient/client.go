@@ -75,6 +75,27 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 	return view, err
 }
 
+// SearchActors looks up candidate supervisor actors by role and free-text
+// query, used to back the HR/Partners supervisor picker.
+func (c *Client) SearchActors(ctx context.Context, role, q string) ([]ActorView, error) {
+	var result struct {
+		Actors []ActorView `json:"actors"`
+	}
+	values := url.Values{}
+	if role != "" {
+		values.Set("role", role)
+	}
+	if q != "" {
+		values.Set("q", q)
+	}
+	path := "/internal/actors/search"
+	if encoded := values.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	err := c.do(ctx, http.MethodGet, path, nil, &result, nil)
+	return result.Actors, err
+}
+
 func (c *Client) Deactivate(ctx context.Context, actorID string) error {
 	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/deactivate", nil, nil, nil)
 }

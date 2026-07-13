@@ -7,7 +7,8 @@ import type {
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "pp");
 
-export const fetchZones = () => req<{ zones: DshZone[] }>("/dsh/operator/platform/zones");
+export const fetchZones = (includeInactive = true) =>
+  req<{ zones: DshZone[] }>(`/dsh/operator/platform/zones?includeInactive=${includeInactive ? "true" : "false"}`);
 export const createZone = (body: { name: string; cityCode: string; description?: string }) =>
   req<{ zone: DshZone }>("/dsh/operator/platform/zones", { method: "POST", body: JSON.stringify(body) });
 export const updateZone = (id: string, body: { isActive: boolean; name?: string; description?: string }) =>

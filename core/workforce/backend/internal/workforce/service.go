@@ -6,17 +6,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"regexp"
 	"strings"
 
 	"workforce-api/internal/identityclient"
 )
 
 var (
-	ErrStatusNotIssuable = errors.New("engagement status does not allow activation issuance")
-	ErrProfileIncomplete = errors.New("profile is incomplete")
-	ErrSuspended         = errors.New("engagement suspended")
-	ErrInvalidInput      = errors.New("invalid input")
+	ErrStatusNotIssuable    = errors.New("engagement status does not allow activation issuance")
+	ErrProfileIncomplete    = errors.New("profile is incomplete")
+	ErrSuspended            = errors.New("engagement suspended")
+	ErrInvalidInput         = errors.New("invalid input")
+	ErrInvalidSupervisor    = errors.New("supervisor actor is missing, inactive, or invalid")
+	ErrProviderKindConflict = errors.New("actor already holds a profile of the other provider kind")
 )
 
 // Service orchestrates the provider lifecycle across Workforce (sovereign
@@ -31,25 +32,93 @@ func NewService(repo *Repository, identity *identityclient.Client) *Service {
 	return &Service{repo: repo, identity: identity}
 }
 
-var providerCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{2,32}$`)
+// validateSupervisor confirms a supervisor actor (when supplied) exists and
+// is active, and is not the provider itself. Kept permissive on role: the
+// exact supervisory role taxonomy varies by deployment, so any active actor
+// other than the provider is accepted for now.
+func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, providerActorID string) error {
+	if supervisorActorID == "" {
+		return nil
+	}
+	if supervisorActorID == providerActorID {
+		return ErrInvalidSupervisor
+	}
+	actor, err := s.identity.Actor(ctx, supervisorActorID)
+	if err != nil {
+		if errors.Is(err, identityclient.ErrActorNotFound) {
+			return ErrInvalidSupervisor
+		}
+		return err
+	}
+	if !actor.Active {
+		return ErrInvalidSupervisor
+	}
+	return nil
+}
+
+// SupervisorCandidate is the operator-facing projection returned by the
+// supervisor picker (masked phone, no raw actor plumbing exposed).
+type SupervisorCandidate struct {
+	ActorID  string `json:"actorId"`
+	Username string `json:"username"`
+	Phone    string `json:"phoneMasked,omitempty"`
+	Active   bool   `json:"active"`
+}
+
+// SearchSupervisors backs the HR/Partners supervisor picker: it never
+// returns raw actor IDs for free-text entry, only a searchable, validated
+// candidate list.
+func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]SupervisorCandidate, error) {
+	actors, err := s.identity.SearchActors(ctx, kind, query)
+	if err != nil {
+		return nil, err
+	}
+	candidates := make([]SupervisorCandidate, 0, len(actors))
+	for _, actor := range actors {
+		candidates = append(candidates, SupervisorCandidate{
+			ActorID:  actor.ActorID,
+			Username: actor.Username,
+			Phone:    maskPhone(actor.PhoneE164),
+			Active:   actor.Active,
+		})
+	}
+	return candidates, nil
+}
+
+// ensureServiceZoneCity mirrors the DSH platform zone's city into the local
+// workforce_cities table so the existing FK on city_code keeps working even
+// though the operator now picks a zone, not a Workforce-owned city.
+func (s *Service) ensureServiceZoneCity(ctx context.Context, cityCode string) error {
+	if cityCode == "" {
+		return nil
+	}
+	return s.repo.EnsureCity(ctx, cityCode, cityCode)
+}
 
 // CreateFieldAgent provisions the Identity actor first (idempotent on
 // phone+role, returns the actor id that keys everything), then writes the
 // sovereign profile. If the local write fails the provisioned actor stays
 // inactive and unbound to any profile — a retry with the same phone reuses
 // it via idempotent provisioning, so no orphaned live credentials exist.
+// The provider code is generated server-side and never accepted from the
+// caller.
 func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input CreateFieldAgentInput, idempotencyKey, correlationID string) (Person, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
-	input.ProviderCode = strings.TrimSpace(input.ProviderCode)
 	if input.EngagementType == "" {
 		input.EngagementType = "independent_contractor"
 	}
-	if input.FullNameAr == "" || !providerCodePattern.MatchString(input.ProviderCode) {
+	if input.FullNameAr == "" {
 		return Person{}, false, ErrInvalidInput
 	}
 	if input.EngagementType != "independent_contractor" && input.EngagementType != "agency_contractor" {
 		return Person{}, false, ErrInvalidInput
+	}
+	if err := s.validateSupervisor(ctx, input.SupervisorActorID, ""); err != nil {
+		return Person{}, false, err
+	}
+	if err := s.ensureServiceZoneCity(ctx, input.CityCode); err != nil {
+		return Person{}, false, err
 	}
 
 	requestHash := hashRequest(input)
@@ -63,8 +132,13 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return person, true, nil
 	}
 
+	providerCode, err := s.repo.NextProviderCode(ctx, "field")
+	if err != nil {
+		return Person{}, false, err
+	}
+
 	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
-		Username:  input.ProviderCode,
+		Username:  providerCode,
 		PhoneE164: input.PhoneE164,
 		Role:      "field",
 	})
@@ -72,13 +146,13 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, err
 	}
 
-	person, err := s.repo.CreatePerson(ctx, actor.ActorID, input)
+	person, err := s.repo.CreatePerson(ctx, actor.ActorID, providerCode, input)
 	if err != nil {
 		// A duplicate profile for the same actor means an earlier attempt
 		// already completed but the idempotency record was lost/absent —
 		// surface the existing profile instead of failing the operator.
 		if errors.Is(err, ErrDuplicateProviderCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil && existing.ProviderCode == input.ProviderCode {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
@@ -98,15 +172,20 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input CreateCaptainInput, idempotencyKey, correlationID string) (Person, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
-	input.ProviderCode = strings.TrimSpace(input.ProviderCode)
 	if input.EngagementType == "" {
 		input.EngagementType = "independent_contractor"
 	}
-	if input.FullNameAr == "" || !providerCodePattern.MatchString(input.ProviderCode) {
+	if input.FullNameAr == "" {
 		return Person{}, false, ErrInvalidInput
 	}
 	if input.EngagementType != "independent_contractor" && input.EngagementType != "agency_contractor" {
 		return Person{}, false, ErrInvalidInput
+	}
+	if err := s.validateSupervisor(ctx, input.SupervisorActorID, ""); err != nil {
+		return Person{}, false, err
+	}
+	if err := s.ensureServiceZoneCity(ctx, input.OperatingCityCode); err != nil {
+		return Person{}, false, err
 	}
 
 	requestHash := hashRequest(input)
@@ -120,16 +199,26 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		return person, true, nil
 	}
 
+	providerCode, err := s.repo.NextProviderCode(ctx, "captain")
+	if err != nil {
+		return Person{}, false, err
+	}
+
 	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
-		Username:  input.ProviderCode,
+		Username:  providerCode,
 		PhoneE164: input.PhoneE164,
 		Role:      "captain",
 	})
 	if err != nil {
 		return Person{}, false, err
 	}
-	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, input)
+	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, providerCode, input)
 	if err != nil {
+		if errors.Is(err, ErrDuplicateProviderCode) {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
+				return existing, true, nil
+			}
+		}
 		return Person{}, false, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
@@ -153,6 +242,16 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 	if err != nil {
 		return Person{}, err
 	}
+	if input.SupervisorActorID != nil {
+		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID); err != nil {
+			return Person{}, err
+		}
+	}
+	if input.CityCode != nil {
+		if err := s.ensureServiceZoneCity(ctx, *input.CityCode); err != nil {
+			return Person{}, err
+		}
+	}
 	person, err := s.repo.UpdatePerson(ctx, actorID, input)
 	if err != nil {
 		return Person{}, err
@@ -168,6 +267,16 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 	before, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
 		return Person{}, err
+	}
+	if input.SupervisorActorID != nil {
+		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID); err != nil {
+			return Person{}, err
+		}
+	}
+	if input.OperatingCityCode != nil {
+		if err := s.ensureServiceZoneCity(ctx, *input.OperatingCityCode); err != nil {
+			return Person{}, err
+		}
 	}
 	person, err := s.repo.UpdateCaptain(ctx, actorID, input)
 	if err != nil {

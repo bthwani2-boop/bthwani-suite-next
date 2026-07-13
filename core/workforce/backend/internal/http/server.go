@@ -54,6 +54,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("GET /workforce/reference/shifts", s.anyAuthenticated(s.listShifts))
 	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
+	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
 	return mux
 }
 
@@ -445,6 +446,16 @@ func (s *server) createShift(w http.ResponseWriter, r *http.Request, _ auth.Iden
 	sendJSON(w, http.StatusCreated, shift)
 }
 
+func (s *server) searchSupervisors(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	query := r.URL.Query()
+	candidates, err := s.service.SearchSupervisors(r.Context(), strings.TrimSpace(query.Get("kind")), strings.TrimSpace(query.Get("q")))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"supervisors": candidates})
+}
+
 func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
 	var shift workforce.Shift
 	if !decodeJSON(w, r, &shift) {
@@ -512,6 +523,10 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "STATUS_NOT_ALLOWED", "engagement status does not allow this action")
 	case errors.Is(err, workforce.ErrInvalidInput):
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "input validation failed")
+	case errors.Is(err, workforce.ErrInvalidSupervisor):
+		sendError(w, http.StatusUnprocessableEntity, "INVALID_SUPERVISOR", "supervisor actor is missing, inactive, or invalid")
+	case errors.Is(err, workforce.ErrProviderKindConflict):
+		sendError(w, http.StatusConflict, "PROVIDER_KIND_CONFLICT", "actor already holds a profile of the other provider kind")
 	case errors.Is(err, identityclient.ErrPhoneAlreadyBound):
 		sendError(w, http.StatusConflict, "DUPLICATE_PHONE", "phone is already bound to another actor")
 	case errors.Is(err, identityclient.ErrUsernameTaken):

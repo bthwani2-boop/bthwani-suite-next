@@ -16,43 +16,46 @@ import {
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   issueFieldAgentActivationCode,
+  reactivateFieldAgent,
+  revokeFieldAgentActivationCodes,
+  suspendFieldAgent,
   useFieldAgentListController,
   useWorkforceReferenceData,
   workforceErrorMessage,
 } from "../../shared/workforce";
-import type { ActivationCodeResult, FieldAgent } from "../../shared/workforce";
+import type { EngagementStatus, ActivationCodeResult, FieldAgent } from "../../shared/workforce";
 
 type IssuedRecord = ActivationCodeResult & {
   readonly agentName: string;
   readonly createdAt: string;
 };
 
+const STATUS_TABS: Array<{ label: string; value: EngagementStatus | undefined }> = [
+  { label: "بانتظار التفعيل", value: "pending_activation" },
+  { label: "نشط", value: "active" },
+  { label: "موقوف", value: "suspended" },
+  { label: "الكل", value: undefined },
+];
+
 // Activation is issued for a selected, registered provider — never for a
 // hand-typed phone. The backend resolves the phone sovereignly from Identity
 // by actor id, so a typo or an unregistered phone can no longer receive a
 // code. Providers are created in the HR section first.
 export function FieldActivationScreen() {
-  const { state, query, setQuery, reload } = useFieldAgentListController("pending_activation");
+  const { state, status, setStatus, query, setQuery, reload } = useFieldAgentListController("pending_activation");
   const reference = useWorkforceReferenceData();
   const [selected, setSelected] = useState<FieldAgent | null>(null);
   const [generated, setGenerated] = useState<IssuedRecord | null>(null);
   const [history, setHistory] = useState<IssuedRecord[]>([]);
+  const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleIssue = async () => {
-    if (!selected) return;
+  const runAction = async (action: () => Promise<unknown>) => {
     setError(null);
     setLoading(true);
     try {
-      const issued = await issueFieldAgentActivationCode(selected.actorId, selected.version);
-      const record: IssuedRecord = {
-        ...issued,
-        agentName: selected.fullNameAr,
-        createdAt: new Date().toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      };
-      setGenerated(record);
-      setHistory((prev) => [record, ...prev]);
+      await action();
       await reload();
       setSelected(null);
     } catch (err) {
@@ -62,26 +65,65 @@ export function FieldActivationScreen() {
     }
   };
 
+  const handleIssue = () => {
+    if (!selected) return;
+    return runAction(async () => {
+      const issued = await issueFieldAgentActivationCode(selected.actorId, selected.version);
+      const record: IssuedRecord = {
+        ...issued,
+        agentName: selected.fullNameAr,
+        createdAt: new Date().toLocaleTimeString("ar-YE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      };
+      setGenerated(record);
+      setHistory((prev) => [record, ...prev]);
+    });
+  };
+
+  const handleSuspend = () => {
+    if (!selected || reason.trim().length === 0) return;
+    return runAction(() => suspendFieldAgent(selected.actorId, selected.version, reason.trim()));
+  };
+
+  const handleReactivate = () => {
+    if (!selected) return;
+    return runAction(() => reactivateFieldAgent(selected.actorId, selected.version, reason.trim()));
+  };
+
+  const handleRevokeCodes = () => {
+    if (!selected) return;
+    return runAction(() => revokeFieldAgentActivationCodes(selected.actorId));
+  };
+
   return (
     <ScrollScreen>
       <Header
         title="تفعيل حسابات التطبيق الميداني"
-        subtitle="اختر مقدم الخدمة الجاهز للتفعيل ثم أصدر كوده — إضافة مقدمي الخدمة تتم من قسم الموارد البشرية."
+        subtitle="اختر مقدم الخدمة ثم أصدر كوده أو أوقفه أو أعد تفعيله — إضافة مقدمي الخدمة تتم من قسم الموارد البشرية."
       />
 
       <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>
-          جاهزون للتفعيل
-        </Text>
+        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+          {STATUS_TABS.map((tab) => (
+            <Button
+              key={tab.label}
+              label={tab.label}
+              tone={status === tab.value ? "primary" : "ghost"}
+              onPress={() => {
+                setStatus(tab.value);
+                setSelected(null);
+              }}
+            />
+          ))}
+        </Box>
 
         <TextField
-          label="بحث بالاسم أو رقم المزود"
+          label="بحث بالاسم أو رقم مقدم الخدمة"
           value={query}
           onChangeText={(value) => {
             setQuery(value);
             if (error) setError(null);
           }}
-          placeholder="مثال: WF-102 أو أحمد"
+          placeholder="مثال: FLD-000123 أو أحمد"
         />
 
         {state.kind === "loading" && (
@@ -97,7 +139,7 @@ export function FieldActivationScreen() {
         )}
         {state.kind === "ready" && state.fieldAgents.length === 0 && (
           <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-            لا يوجد مقدمو خدمة جاهزون للتفعيل — أنشئ الملف من قسم الموارد البشرية أولًا.
+            لا يوجد مقدمو خدمة مطابقون — أنشئ الملف من قسم الموارد البشرية أولًا.
           </Text>
         )}
         {state.kind === "ready" &&
@@ -134,14 +176,39 @@ export function FieldActivationScreen() {
           </Text>
         )}
 
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[2] }}>
-          <Button
-            label={selected ? `إصدار كود لـ ${selected.fullNameAr}` : "إصدار كود التفعيل"}
-            tone="primary"
-            disabled={!selected || loading}
-            loading={loading}
-            onPress={() => void handleIssue()}
+        {selected && (
+          <TextField
+            label="سبب الإيقاف / إعادة التفعيل"
+            value={reason}
+            onChangeText={setReason}
+            placeholder="اختياري لإعادة التفعيل، مطلوب للإيقاف"
           />
+        )}
+
+        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[2], flexWrap: "wrap" }}>
+          {(selected?.engagementStatus === "pending_activation" || selected?.engagementStatus === "active") && (
+            <Button
+              label={selected ? `إصدار كود لـ ${selected.fullNameAr}` : "إصدار كود التفعيل"}
+              tone="primary"
+              disabled={!selected || loading}
+              loading={loading}
+              onPress={() => void handleIssue()}
+            />
+          )}
+          {selected && (
+            <Button label="إبطال الأكواد المعلقة" tone="ghost" disabled={loading} onPress={() => void handleRevokeCodes()} />
+          )}
+          {selected && selected.engagementStatus !== "suspended" && selected.engagementStatus !== "terminated" && (
+            <Button
+              label="إيقاف"
+              tone="danger"
+              disabled={loading || reason.trim().length === 0}
+              onPress={() => void handleSuspend()}
+            />
+          )}
+          {selected?.engagementStatus === "suspended" && (
+            <Button label="إعادة تفعيل" tone="secondary" disabled={loading} onPress={() => void handleReactivate()} />
+          )}
           {selected && <Button label="إلغاء التحديد" tone="ghost" onPress={() => setSelected(null)} />}
         </Box>
       </Card>

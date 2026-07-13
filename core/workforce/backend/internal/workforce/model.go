@@ -12,6 +12,7 @@ type Person struct {
 	FullNameAr          string          `json:"fullNameAr"`
 	FullNameEn          string          `json:"fullNameEn,omitempty"`
 	ProviderCode        string          `json:"providerCode"`
+	ProviderKind        string          `json:"providerKind"`
 	EngagementType      string          `json:"engagementType"`
 	EngagementStartDate string          `json:"engagementStartDate,omitempty"`
 	EngagementStatus    string          `json:"engagementStatus"`
@@ -25,6 +26,7 @@ type Person struct {
 
 type FieldProfile struct {
 	CityCode              string   `json:"cityCode,omitempty"`
+	ServiceZoneID         string   `json:"serviceZoneId,omitempty"`
 	ShiftCode             string   `json:"shiftCode,omitempty"`
 	SupervisorActorID     string   `json:"supervisorActorId,omitempty"`
 	EmergencyContactName  string   `json:"emergencyContactName,omitempty"`
@@ -40,7 +42,9 @@ type CaptainProfile struct {
 	LicenseStatus      string   `json:"licenseStatus,omitempty"`
 	LicenseExpiresAt   string   `json:"licenseExpiresAt,omitempty"`
 	OperatingCityCode  string   `json:"operatingCityCode,omitempty"`
+	ServiceZoneID      string   `json:"serviceZoneId,omitempty"`
 	OperatingScopeCode string   `json:"operatingScopeCode,omitempty"`
+	SupervisorActorID  string   `json:"supervisorActorId,omitempty"`
 	DocumentMediaRefs  []string `json:"documentMediaRefs"`
 }
 
@@ -48,10 +52,10 @@ type CreateFieldAgentInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
 	PhoneE164           string   `json:"phoneE164"`
-	ProviderCode        string   `json:"providerCode"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	CityCode            string   `json:"cityCode"`
+	ServiceZoneID       string   `json:"serviceZoneId"`
 	ShiftCode           string   `json:"shiftCode"`
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -62,7 +66,6 @@ type CreateCaptainInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
 	PhoneE164           string   `json:"phoneE164"`
-	ProviderCode        string   `json:"providerCode"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -71,7 +74,9 @@ type CreateCaptainInput struct {
 	LicenseStatus       string   `json:"licenseStatus"`
 	LicenseExpiresAt    string   `json:"licenseExpiresAt"`
 	OperatingCityCode   string   `json:"operatingCityCode"`
+	ServiceZoneID       string   `json:"serviceZoneId"`
 	OperatingScopeCode  string   `json:"operatingScopeCode"`
+	SupervisorActorID   string   `json:"supervisorActorId"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
 }
 
@@ -79,10 +84,10 @@ type UpdateFieldAgentInput struct {
 	ExpectedVersion     int     `json:"expectedVersion"`
 	FullNameAr          *string `json:"fullNameAr"`
 	FullNameEn          *string `json:"fullNameEn"`
-	ProviderCode        *string `json:"providerCode"`
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
 	CityCode            *string `json:"cityCode"`
+	ServiceZoneID       *string `json:"serviceZoneId"`
 	ShiftCode           *string `json:"shiftCode"`
 	SupervisorActorID   *string `json:"supervisorActorId"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
@@ -92,7 +97,6 @@ type UpdateCaptainInput struct {
 	ExpectedVersion     int     `json:"expectedVersion"`
 	FullNameAr          *string `json:"fullNameAr"`
 	FullNameEn          *string `json:"fullNameEn"`
-	ProviderCode        *string `json:"providerCode"`
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
@@ -101,7 +105,9 @@ type UpdateCaptainInput struct {
 	LicenseStatus       *string `json:"licenseStatus"`
 	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
 	OperatingCityCode   *string `json:"operatingCityCode"`
+	ServiceZoneID       *string `json:"serviceZoneId"`
 	OperatingScopeCode  *string `json:"operatingScopeCode"`
+	SupervisorActorID   *string `json:"supervisorActorId"`
 }
 
 // UpdateSelfInput carries the only fields a provider may edit about

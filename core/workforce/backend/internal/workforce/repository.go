@@ -106,7 +106,7 @@ func marshalNullable(state any) (any, error) {
 
 // ---- people ----
 
-func (r *Repository) CreatePerson(ctx context.Context, actorID string, input CreateFieldAgentInput) (Person, error) {
+func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode string, input CreateFieldAgentInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -122,9 +122,10 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID string, input Cre
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, provider_code, engagement_type, engagement_start_date, photo_media_ref)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, '')::date, NULLIF($7, ''))`,
-		actorID, input.FullNameAr, input.FullNameEn, input.ProviderCode,
+			(actor_id, full_name_ar, full_name_en, provider_code, provider_kind, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, NULLIF($3, ''), $4, 'field', $5, NULLIF($6, '')::date, NULLIF($7, ''))
+		ON CONFLICT (actor_id) DO NOTHING`,
+		actorID, input.FullNameAr, input.FullNameEn, providerCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -136,9 +137,9 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID string, input Cre
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_field_profiles
-			(actor_id, city_code, shift_code, supervisor_actor_id, document_media_refs)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5::jsonb)`,
-		actorID, input.CityCode, input.ShiftCode, input.SupervisorActorID, string(documents))
+			(actor_id, city_code, service_zone_id, shift_code, supervisor_actor_id, document_media_refs)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
+		actorID, input.CityCode, input.ServiceZoneID, input.ShiftCode, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -148,7 +149,7 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID string, input Cre
 	return r.PersonByActorID(ctx, actorID)
 }
 
-func (r *Repository) CreateCaptain(ctx context.Context, actorID string, input CreateCaptainInput) (Person, error) {
+func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode string, input CreateCaptainInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -161,10 +162,10 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID string, input Cr
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, provider_code, engagement_type, engagement_start_date, photo_media_ref)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, '')::date, NULLIF($7, ''))
+			(actor_id, full_name_ar, full_name_en, provider_code, provider_kind, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, NULLIF($3, ''), $4, 'captain', $5, NULLIF($6, '')::date, NULLIF($7, ''))
 		ON CONFLICT (actor_id) DO NOTHING`,
-		actorID, input.FullNameAr, input.FullNameEn, input.ProviderCode,
+		actorID, input.FullNameAr, input.FullNameEn, providerCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -181,11 +182,11 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID string, input Cr
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_captain_profiles
 			(actor_id, vehicle_type, vehicle_identifier, license_status, license_expires_at,
-			 operating_city_code, operating_scope_code, document_media_refs)
+			 operating_city_code, service_zone_id, operating_scope_code, supervisor_actor_id, document_media_refs)
 		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, NULLIF($5, '')::date,
-			NULLIF($6, ''), NULLIF($7, ''), $8::jsonb)`,
+			NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), $10::jsonb)`,
 		actorID, input.VehicleType, input.VehicleIdentifier, licenseStatus, input.LicenseExpiresAt,
-		input.OperatingCityCode, input.OperatingScopeCode, string(documents))
+		input.OperatingCityCode, input.ServiceZoneID, input.OperatingScopeCode, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -193,6 +194,25 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID string, input Cr
 		return Person{}, err
 	}
 	return r.PersonByActorID(ctx, actorID)
+}
+
+// NextProviderCode draws a server-generated, human-readable provider code
+// from a per-kind sequence (FLD-000123 / CAP-000124). Existing legacy codes
+// are never reformatted; this only mints codes for new rows going forward.
+func (r *Repository) NextProviderCode(ctx context.Context, kind string) (string, error) {
+	var seq, prefix string
+	switch kind {
+	case "field":
+		seq, prefix = "workforce_field_code_seq", "FLD-"
+	case "captain":
+		seq, prefix = "workforce_captain_code_seq", "CAP-"
+	default:
+		return "", ErrInvalidInput
+	}
+	var code string
+	err := r.db.QueryRowContext(ctx,
+		`SELECT $1 || lpad(nextval('`+seq+`')::text, 6, '0')`, prefix).Scan(&code)
+	return code, err
 }
 
 func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Person, error) {
@@ -205,16 +225,17 @@ func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Perso
 }
 
 const personSelect = `
-	SELECT p.actor_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.provider_code,
+	SELECT p.actor_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.provider_code, p.provider_kind,
 	       p.engagement_type, COALESCE(p.engagement_start_date::text, ''), p.engagement_status,
 	       COALESCE(p.photo_media_ref, ''), p.version, p.created_at, p.updated_at,
-	       COALESCE(f.city_code, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
+	       COALESCE(f.city_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
 	       COALESCE(f.emergency_contact_name, ''), COALESCE(f.emergency_contact_phone, ''),
 	       COALESCE(f.preferred_language, ''), COALESCE(f.policy_consent_at::text, ''),
 	       COALESCE(f.document_media_refs, '[]'::jsonb), f.actor_id IS NOT NULL,
 	       COALESCE(c.vehicle_type, ''), COALESCE(c.vehicle_identifier, ''), COALESCE(c.license_status, ''),
-	       COALESCE(c.license_expires_at::text, ''), COALESCE(c.operating_city_code, ''),
-	       COALESCE(c.operating_scope_code, ''), COALESCE(c.document_media_refs, '[]'::jsonb), c.actor_id IS NOT NULL
+	       COALESCE(c.license_expires_at::text, ''), COALESCE(c.operating_city_code, ''), COALESCE(c.service_zone_id, ''),
+	       COALESCE(c.operating_scope_code, ''), COALESCE(c.supervisor_actor_id, ''),
+	       COALESCE(c.document_media_refs, '[]'::jsonb), c.actor_id IS NOT NULL
 	FROM workforce_people p
 	LEFT JOIN workforce_field_profiles f ON f.actor_id = p.actor_id
 	LEFT JOIN workforce_captain_profiles c ON c.actor_id = p.actor_id`
@@ -230,15 +251,15 @@ func scanPerson(row rowScanner) (Person, error) {
 	var hasFieldProfile bool
 	var hasCaptainProfile bool
 	err := row.Scan(
-		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.ProviderCode,
+		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.ProviderCode, &person.ProviderKind,
 		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
 		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
-		&profile.CityCode, &profile.ShiftCode, &profile.SupervisorActorID,
+		&profile.CityCode, &profile.ServiceZoneID, &profile.ShiftCode, &profile.SupervisorActorID,
 		&profile.EmergencyContactName, &profile.EmergencyContactPhone,
 		&profile.PreferredLanguage, &profile.PolicyConsentAt, &documentsJSON, &hasFieldProfile,
 		&captainProfile.VehicleType, &captainProfile.VehicleIdentifier, &captainProfile.LicenseStatus,
-		&captainProfile.LicenseExpiresAt, &captainProfile.OperatingCityCode,
-		&captainProfile.OperatingScopeCode, &captainDocumentsJSON, &hasCaptainProfile,
+		&captainProfile.LicenseExpiresAt, &captainProfile.OperatingCityCode, &captainProfile.ServiceZoneID,
+		&captainProfile.OperatingScopeCode, &captainProfile.SupervisorActorID, &captainDocumentsJSON, &hasCaptainProfile,
 	)
 	if err != nil {
 		return Person{}, err
@@ -357,14 +378,13 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input Upd
 		UPDATE workforce_people SET
 			full_name_ar = COALESCE($2, full_name_ar),
 			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
-			provider_code = COALESCE($4, provider_code),
-			engagement_type = COALESCE($5, engagement_type),
-			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
-			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
+			engagement_type = COALESCE($4, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($5, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($6, ''), photo_media_ref),
 			version = version + 1,
 			updated_at = now()
 		WHERE actor_id = $1`,
-		actorID, input.FullNameAr, deref(input.FullNameEn), input.ProviderCode,
+		actorID, input.FullNameAr, deref(input.FullNameEn),
 		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -372,11 +392,12 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input Upd
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_field_profiles SET
 			city_code = COALESCE(NULLIF($2, ''), city_code),
-			shift_code = COALESCE(NULLIF($3, ''), shift_code),
-			supervisor_actor_id = COALESCE(NULLIF($4, ''), supervisor_actor_id),
+			service_zone_id = COALESCE(NULLIF($3, ''), service_zone_id),
+			shift_code = COALESCE(NULLIF($4, ''), shift_code),
+			supervisor_actor_id = COALESCE(NULLIF($5, ''), supervisor_actor_id),
 			updated_at = now()
 		WHERE actor_id = $1`,
-		actorID, deref(input.CityCode), deref(input.ShiftCode), deref(input.SupervisorActorID))
+		actorID, deref(input.CityCode), deref(input.ServiceZoneID), deref(input.ShiftCode), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -414,14 +435,13 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, input Up
 		UPDATE workforce_people SET
 			full_name_ar = COALESCE($2, full_name_ar),
 			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
-			provider_code = COALESCE($4, provider_code),
-			engagement_type = COALESCE($5, engagement_type),
-			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
-			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
+			engagement_type = COALESCE($4, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($5, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($6, ''), photo_media_ref),
 			version = version + 1,
 			updated_at = now()
 		WHERE actor_id = $1`,
-		actorID, input.FullNameAr, deref(input.FullNameEn), input.ProviderCode,
+		actorID, input.FullNameAr, deref(input.FullNameEn),
 		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -433,11 +453,14 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, input Up
 			license_status = COALESCE(NULLIF($4, ''), license_status),
 			license_expires_at = COALESCE(NULLIF($5, '')::date, license_expires_at),
 			operating_city_code = COALESCE(NULLIF($6, ''), operating_city_code),
-			operating_scope_code = COALESCE(NULLIF($7, ''), operating_scope_code),
+			service_zone_id = COALESCE(NULLIF($7, ''), service_zone_id),
+			operating_scope_code = COALESCE(NULLIF($8, ''), operating_scope_code),
+			supervisor_actor_id = COALESCE(NULLIF($9, ''), supervisor_actor_id),
 			updated_at = now()
 		WHERE actor_id = $1`,
 		actorID, deref(input.VehicleType), deref(input.VehicleIdentifier), deref(input.LicenseStatus),
-		deref(input.LicenseExpiresAt), deref(input.OperatingCityCode), deref(input.OperatingScopeCode))
+		deref(input.LicenseExpiresAt), deref(input.OperatingCityCode), deref(input.ServiceZoneID),
+		deref(input.OperatingScopeCode), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -534,6 +557,25 @@ func (r *Repository) MarkActiveIfPending(ctx context.Context, actorID string) er
 }
 
 // ---- reference data ----
+
+// EnsureCity idempotently mirrors a DSH platform zone's city into
+// workforce_cities so the existing FK on city_code/operating_city_code
+// keeps working even though zone selection now happens in DSH, not here.
+// It never overwrites an existing row (an operator-managed city always
+// wins over an auto-mirrored one).
+func (r *Repository) EnsureCity(ctx context.Context, code, nameAr string) error {
+	if code == "" {
+		return nil
+	}
+	if nameAr == "" {
+		nameAr = code
+	}
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO workforce_cities (code, name_ar)
+		VALUES ($1, $2)
+		ON CONFLICT (code) DO NOTHING`, code, nameAr)
+	return err
+}
 
 func (r *Repository) ListCities(ctx context.Context, includeInactive bool) ([]City, error) {
 	rows, err := r.db.QueryContext(ctx, `

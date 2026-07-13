@@ -1,10 +1,17 @@
 import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   ActivationCodeResult,
+  Captain,
+  CaptainDetail,
+  CaptainListFilter,
+  CreateCaptainInput,
   CreateFieldAgentInput,
   FieldAgent,
   FieldAgentDetail,
   FieldAgentListFilter,
+  ProviderKind,
+  SupervisorCandidate,
+  UpdateCaptainInput,
   UpdateFieldAgentInput,
   UpdateSelfInput,
   WorkforceCity,
@@ -20,6 +27,18 @@ export function workforceErrorCode(error: unknown): string | null {
   return typeof error === "object" && error !== null && "code" in error && typeof (error as { code: unknown }).code === "string"
     ? (error as { code: string }).code
     : null;
+}
+
+// Distinguishes "the operator's control-panel session expired" (must
+// redirect to login) from every other failure mode (network outage,
+// service-down, forbidden, validation) which keeps the existing
+// retry-in-place UX. The two must never be rendered with the same
+// "retry" affordance — a static retry can never fix an expired session.
+const SESSION_EXPIRED_CODES = new Set(["SESSION_NOT_FOUND", "SESSION_EXPIRED", "UNAUTHENTICATED"]);
+
+export function isSessionExpiredCode(error: unknown): boolean {
+  const code = workforceErrorCode(error);
+  return code !== null && SESSION_EXPIRED_CODES.has(code);
 }
 
 export function workforceErrorMessage(error: unknown): string {
@@ -48,6 +67,10 @@ export function workforceErrorMessage(error: unknown): string {
       return "تم إصدار كود حديثًا لهذا الحساب، أعد المحاولة بعد دقيقة";
     case "IDENTITY_UNAVAILABLE":
       return "خدمة الهوية غير متاحة حاليًا";
+    case "INVALID_SUPERVISOR":
+      return "المشرف المختار غير موجود أو غير مفعل — اختر مشرفًا آخر";
+    case "PROVIDER_KIND_CONFLICT":
+      return "هذا الحساب مسجل بالفعل كنوع آخر من مقدمي الخدمة";
     case "FORBIDDEN":
       return "جلسة لوحة التحكم لا تملك صلاحية هذا الإجراء";
     case "SESSION_NOT_FOUND":
@@ -120,6 +143,69 @@ export async function revokeFieldAgentActivationCodes(actorId: string): Promise<
   await request<void>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, {
     method: "DELETE",
   });
+}
+
+export async function listCaptains(filter: CaptainListFilter = {}): Promise<readonly Captain[]> {
+  const result = await request<{ captains: Captain[] }>(`/workforce/captains${listQuery(filter)}`);
+  return result.captains;
+}
+
+export async function getCaptain(actorId: string): Promise<CaptainDetail> {
+  return request<CaptainDetail>(`/workforce/captains/${encodeURIComponent(actorId)}`);
+}
+
+export async function createCaptain(input: CreateCaptainInput): Promise<Captain> {
+  return request<Captain>("/workforce/captains", {
+    method: "POST",
+    idempotencyKey: corrId("wf-create"),
+    body: input,
+  });
+}
+
+export async function updateCaptain(actorId: string, input: UpdateCaptainInput): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export async function suspendCaptain(actorId: string, expectedVersion: number, reason: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/suspend`, {
+    method: "POST",
+    body: { expectedVersion, reason },
+  });
+}
+
+export async function reactivateCaptain(actorId: string, expectedVersion: number, reason: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/reactivate`, {
+    method: "POST",
+    body: { expectedVersion, reason },
+  });
+}
+
+export async function issueCaptainActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
+  return request<ActivationCodeResult>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, {
+    method: "POST",
+    idempotencyKey: corrId("wf-activation"),
+    body: { expectedVersion },
+  });
+}
+
+export async function revokeCaptainActivationCodes(actorId: string): Promise<void> {
+  await request<void>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, {
+    method: "DELETE",
+  });
+}
+
+export async function searchSupervisors(kind: ProviderKind, q: string): Promise<readonly SupervisorCandidate[]> {
+  const params = new URLSearchParams();
+  if (kind) params.set("kind", kind);
+  if (q) params.set("q", q);
+  const qs = params.toString();
+  const result = await request<{ supervisors: SupervisorCandidate[] }>(
+    `/workforce/reference/supervisors${qs ? `?${qs}` : ""}`,
+  );
+  return result.supervisors;
 }
 
 export async function listWorkforceCities(includeInactive = false): Promise<readonly WorkforceCity[]> {

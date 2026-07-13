@@ -29,6 +29,7 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /auth/session", s.session)
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
 	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
+	mux.HandleFunc("GET /internal/actors/search", s.serviceOnly(s.internalActorSearch))
 	mux.HandleFunc("GET /internal/actors/{actorId}", s.serviceOnly(s.internalActorGet))
 	mux.HandleFunc("POST /internal/actors/{actorId}/deactivate", s.serviceOnly(s.internalActorDeactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/reactivate", s.serviceOnly(s.internalActorReactivate))
@@ -245,6 +246,19 @@ func (s *server) internalActorGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, view)
+}
+
+// internalActorSearch backs Workforce's supervisor picker: role+query
+// lookup instead of the free-text actor-id box the HR screen used to
+// expose. Results are capped and never include password hashes.
+func (s *server) internalActorSearch(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	views, err := s.repository.SearchActors(r.Context(), strings.TrimSpace(query.Get("role")), strings.TrimSpace(query.Get("q")), 25)
+	if err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"actors": views})
 }
 
 func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request) {

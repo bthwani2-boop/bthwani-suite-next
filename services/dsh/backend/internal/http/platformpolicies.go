@@ -18,12 +18,19 @@ const (
 )
 
 // GET /dsh/operator/platform/zones
+// includeInactive defaults to true (existing zone-admin behavior); callers
+// that only want assignable zones (e.g. the Workforce provider create form)
+// pass includeInactive=false explicitly.
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requirePermission(w, r, "control-panel", PlatformPermissionRead, "operator")
 	if !ok {
 		return
 	}
-	zones, err := platformpolicies.ListZones(s.db)
+	includeInactive := true
+	if raw := r.URL.Query().Get("includeInactive"); raw != "" {
+		includeInactive = raw == "true"
+	}
+	zones, err := platformpolicies.ListZones(s.db, includeInactive)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list zones")
 		return
