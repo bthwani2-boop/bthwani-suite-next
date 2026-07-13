@@ -15,7 +15,6 @@ import {
 } from '@bthwani/ui-kit';
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
-import { FieldActivationScreen } from "./FieldActivationScreen";
 import { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
 
 type Props = {
@@ -159,11 +158,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
       }
     }
 
-    if (activeTab === 'activation') {
-      if (activeSubTab === 'field_activation') {
-        return <FieldActivationScreen />;
-      }
-    }
 
     if (activeTab === 'field_readiness') {
       if (activeSubTab === 'field_readiness_queue' || activeSubTab === 'readiness_escalations') {

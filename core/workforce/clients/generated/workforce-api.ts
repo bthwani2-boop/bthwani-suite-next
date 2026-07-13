@@ -234,29 +234,11 @@ export interface paths {
         /** @description Any authenticated actor. Operators may pass includeInactive=true. */
         get: operations["listWorkforceCities"];
         put?: never;
-        /** @description Operator-only. */
-        post: operations["createWorkforceCity"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workforce/reference/cities/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Operator-only. Deactivation instead of deletion keeps history intact. */
-        patch: operations["updateWorkforceCity"];
+        patch?: never;
         trace?: never;
     };
     "/workforce/reference/shifts": {
@@ -1278,71 +1260,6 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
-        };
-    };
-    createWorkforceCity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["City"];
-            };
-        };
-        responses: {
-            /** @description City created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["City"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            /** @description REFERENCE_EXISTS. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    updateWorkforceCity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                code: components["parameters"]["ReferenceCode"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["City"];
-            };
-        };
-        responses: {
-            /** @description City updated. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["City"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
         };
     };
     listWorkforceShifts: {

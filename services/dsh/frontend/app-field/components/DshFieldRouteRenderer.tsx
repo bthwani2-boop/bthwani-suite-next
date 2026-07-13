@@ -68,6 +68,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldStoreVerificationScreen
         storeId={route.storeId}
         visitId={route.visitId}
+        onBack={actions.popRoute}
       />
     );
   }
@@ -129,6 +130,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldEscalationScreen
         storeId={route.storeId}
         {...(route.visitId ? { visitId: route.visitId } : {})}
+        onBack={actions.popRoute}
       />
     );
   }

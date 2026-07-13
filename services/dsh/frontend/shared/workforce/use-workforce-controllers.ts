@@ -49,12 +49,13 @@ export type WorkforceListState =
   | { kind: "error"; message: string; isSessionExpired: boolean }
   | { kind: "ready"; fieldAgents: readonly FieldAgent[] };
 
-export function useFieldAgentListController(initialStatus?: EngagementStatus) {
+export function useFieldAgentListController(initialStatus?: EngagementStatus, options?: { enabled?: boolean }) {
   const [status, setStatus] = useState<EngagementStatus | undefined>(initialStatus);
   const [query, setQuery] = useState("");
   const [state, setState] = useState<WorkforceListState>({ kind: "loading" });
 
   const reload = useCallback(async () => {
+    if (options?.enabled === false) return;
     setState({ kind: "loading" });
     try {
       const fieldAgents = await listFieldAgents({ status, q: query.trim() || undefined });
@@ -62,11 +63,13 @@ export function useFieldAgentListController(initialStatus?: EngagementStatus) {
     } catch (error) {
       setState({ kind: "error", message: workforceErrorMessage(error), isSessionExpired: isSessionExpiredCode(error) });
     }
-  }, [status, query]);
+  }, [status, query, options?.enabled]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (options?.enabled !== false) {
+      void reload();
+    }
+  }, [reload, options?.enabled]);
 
   return { state, status, setStatus, query, setQuery, reload };
 }
@@ -222,12 +225,13 @@ export type CaptainListState =
   | { kind: "error"; message: string; isSessionExpired: boolean }
   | { kind: "ready"; captains: readonly Captain[] };
 
-export function useCaptainListController(initialStatus?: EngagementStatus) {
+export function useCaptainListController(initialStatus?: EngagementStatus, options?: { enabled?: boolean }) {
   const [status, setStatus] = useState<EngagementStatus | undefined>(initialStatus);
   const [query, setQuery] = useState("");
   const [state, setState] = useState<CaptainListState>({ kind: "loading" });
 
   const reload = useCallback(async () => {
+    if (options?.enabled === false) return;
     setState({ kind: "loading" });
     try {
       const captains = await listCaptains({ status, q: query.trim() || undefined });
@@ -235,11 +239,13 @@ export function useCaptainListController(initialStatus?: EngagementStatus) {
     } catch (error) {
       setState({ kind: "error", message: workforceErrorMessage(error), isSessionExpired: isSessionExpiredCode(error) });
     }
-  }, [status, query]);
+  }, [status, query, options?.enabled]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (options?.enabled !== false) {
+      void reload();
+    }
+  }, [reload, options?.enabled]);
 
   return { state, status, setStatus, query, setQuery, reload };
 }
@@ -481,9 +487,9 @@ export function useProviderActivationController(providerKind: "field" | "captain
     });
   };
 
-  const suspend = async (reason: string) => {
-    if (!detail) return;
-    await runAction(async () => {
+  const suspend = async (reason: string): Promise<boolean> => {
+    if (!detail) return false;
+    return runAction(async () => {
       if (providerKind === "captain") {
         await suspendCaptain(actorId, detail.version, reason);
       } else {
@@ -492,9 +498,9 @@ export function useProviderActivationController(providerKind: "field" | "captain
     });
   };
 
-  const reactivate = async (reason: string) => {
-    if (!detail) return;
-    await runAction(async () => {
+  const reactivate = async (reason: string): Promise<boolean> => {
+    if (!detail) return false;
+    return runAction(async () => {
       if (providerKind === "captain") {
         await reactivateCaptain(actorId, detail.version, reason);
       } else {

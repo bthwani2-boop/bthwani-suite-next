@@ -49,8 +49,6 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("PATCH /workforce/me", s.providerSelf("provider:update", s.updateMe))
 
 	mux.HandleFunc("GET /workforce/reference/cities", s.anyAuthenticated(s.listCities))
-	mux.HandleFunc("POST /workforce/reference/cities", s.operatorOnly("reference:manage", s.createCity))
-	mux.HandleFunc("PATCH /workforce/reference/cities/{code}", s.operatorOnly("reference:manage", s.updateCity))
 	mux.HandleFunc("GET /workforce/reference/shifts", s.anyAuthenticated(s.listShifts))
 	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
@@ -390,35 +388,6 @@ func (s *server) listCities(w http.ResponseWriter, r *http.Request, identity aut
 	sendJSON(w, http.StatusOK, map[string]any{"cities": cities})
 }
 
-func (s *server) createCity(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
-	var city workforce.City
-	if !decodeJSON(w, r, &city) {
-		return
-	}
-	if strings.TrimSpace(city.Code) == "" || strings.TrimSpace(city.NameAr) == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "code and nameAr are required")
-		return
-	}
-	city.Active = true
-	if err := s.repo.UpsertCity(r.Context(), city, true); err != nil {
-		writeWorkforceError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusCreated, city)
-}
-
-func (s *server) updateCity(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
-	var city workforce.City
-	if !decodeJSON(w, r, &city) {
-		return
-	}
-	city.Code = r.PathValue("code")
-	if err := s.repo.UpsertCity(r.Context(), city, false); err != nil {
-		writeWorkforceError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, city)
-}
 
 func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	shifts, err := s.repo.ListShifts(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")

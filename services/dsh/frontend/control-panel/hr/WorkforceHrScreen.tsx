@@ -5,6 +5,8 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ProviderKind } from "../../shared/workforce";
+import { Box, Button, Card, Header, ScrollScreen, spacing } from "@bthwani/ui-kit";
+import { ProviderActivationWorkspace } from "../shared";
 import { ProviderListView } from "./ProviderListView";
 import { ProviderTypeSelectView } from "./ProviderTypeSelectView";
 import { FieldAgentCreateView } from "./FieldAgentCreateView";
@@ -64,11 +66,44 @@ function WorkforceHrScreenInner() {
   if (view === "reference") {
     return <WorkforceReferenceView onBack={() => navigateTo("list")} />;
   }
+  if (view === "activation") {
+    return (
+      <ScrollScreen>
+        <Card style={{ padding: spacing[4], gap: spacing[3] }}>
+          <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+            <Header
+              title="تفعيل حسابات التطبيق"
+              subtitle="أصدر أكواد التفعيل، أوقف الحسابات، أو أعد تفعيلها لمقدمي الخدمات."
+            />
+            <Button label="رجوع" tone="ghost" onPress={() => navigateTo("list")} />
+          </Box>
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
+            <Button
+              label="تفعيل الميداني"
+              tone={kind === "field" ? "primary" : "secondary"}
+              onPress={() => navigateTo("activation", "field")}
+            />
+            <Button
+              label="تفعيل الكباتن"
+              tone={kind === "captain" ? "primary" : "secondary"}
+              onPress={() => navigateTo("activation", "captain")}
+            />
+          </Box>
+        </Card>
+
+        <ProviderActivationWorkspace
+          providerKind={kind}
+          entrySource="hr"
+        />
+      </ScrollScreen>
+    );
+  }
   return (
     <ProviderListView
       onCreate={() => navigateTo("type-select")}
       onOpen={(actorIdVal, providerKindVal) => navigateTo("detail", providerKindVal, actorIdVal)}
       onReference={() => navigateTo("reference")}
+      onActivation={() => navigateTo("activation", "field")}
     />
   );
 }

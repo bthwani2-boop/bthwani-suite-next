@@ -105,8 +105,10 @@ export function useFieldChecklistController(visitId: string, authKind = "unauthe
       const check = await upsertReadinessCheck(visitId, input);
       setCheckActionState(checkActionSuccessState(check));
       await load();
+      return true;
     } catch (err) {
       setCheckActionState(checkActionErrorState(resolveMessage(err)));
+      return false;
     }
   }, [visitId, load]);
 
@@ -138,8 +140,10 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
     try {
       const escalation = await createReadinessEscalation(storeId, input);
       setActionState(escalationActionSuccessState(escalation));
+      return true;
     } catch (err) {
       setActionState(escalationActionErrorState(resolveMessage(err)));
+      return false;
     }
   }, []);
 

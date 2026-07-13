@@ -9,19 +9,10 @@ import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import {
   useIdentitySession,
-  configureIdentitySession,
-  configureIdentitySessionStorage,
 } from '@bthwani/core-identity';
 import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useAndroidBackHandler } from '../../shared/runtime/useAndroidBackHandler';
-import { createSecureStoreSessionStorageAdapter } from '../../shared/runtime/secure-identity-session-storage';
-import { resolveIdentityApiBaseUrl } from '../../shared/_kernel/identity-api-base-url';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
-
-if (Platform.OS !== 'web') {
-  configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
-}
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 // ─── Bottom Navigation (exact donor replica) ────────────────────────────────
 // RTL order visible on screen (left→right): حسابي | المالية | [FAB] | السجل | المهام

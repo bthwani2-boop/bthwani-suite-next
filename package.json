@@ -246,15 +246,5 @@
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
     "typescript": "~6.0.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "next": "^16.2.6",
-      "minimatch": "^9.0.7",
-      "@opentelemetry/sdk-node": "^0.217.0",
-      "@opentelemetry/exporter-prometheus": "^0.217.0",
-      "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
-      "protobufjs": "^8.4.1"
-    }
   }
 }

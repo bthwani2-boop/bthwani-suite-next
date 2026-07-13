@@ -22,11 +22,21 @@ type DshFieldFinanceScreenProps = {
 
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
   const partnerDrafts = useFieldPartnerDraftsController();
-
   const partners = partnerDrafts.listState.kind === 'success' ? partnerDrafts.listState.partners : [];
-  const partnerId = partners[0]?.id;
 
-  const controller = useWltDshFieldCommissionReferenceController(partnerId ?? '');
+  const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (partners.length > 0 && !selectedPartnerId) {
+      const first = partners[0];
+      if (first) {
+        setSelectedPartnerId(first.id);
+      }
+    }
+  }, [partners, selectedPartnerId]);
+
+  const activePartnerId = selectedPartnerId || partners[0]?.id;
+  const controller = useWltDshFieldCommissionReferenceController(activePartnerId ?? '');
   const state = controller.state;
 
   if (partnerDrafts.listState.kind === 'loading' || partnerDrafts.listState.kind === 'idle') {
@@ -39,7 +49,7 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
     );
   }
 
-  if (!partnerId) {
+  if (!activePartnerId) {
     return (
       <StateView
         tone="neutral"
@@ -92,6 +102,23 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
         </View>
 
         <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+
+        {partners.length > 1 && (
+          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2], marginVertical: spacing[1], alignSelf: 'stretch', justifyContent: 'flex-start' }}>
+            {partners.map((p) => {
+              const isSelected = p.id === activePartnerId;
+              return (
+                <Button
+                  key={p.id}
+                  label={p.displayName}
+                  tone={isSelected ? 'primary' : 'secondary'}
+                  onPress={() => setSelectedPartnerId(p.id)}
+                  size="sm"
+                />
+              );
+            })}
+          </View>
+        )}
 
         {state.kind === 'not_available' || !state.reference ? (
           <StateView

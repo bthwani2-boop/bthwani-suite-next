@@ -52,7 +52,6 @@ export const OPERATIONS_CANONICAL_GROUPS: readonly OperationsGroupMeta[] = [
     badge: 'إسناد',
     subGroups: [
       { id: 'pending', label: 'قيد الإسناد' },
-      { id: 'captains', label: 'تفعيل الكباتن' },
       { id: 'heatmap', label: 'خريطة المناطق' },
       { id: 'zones', label: 'المناطق والسعة' },
     ],

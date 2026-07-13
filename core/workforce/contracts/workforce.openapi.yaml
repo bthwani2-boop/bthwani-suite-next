@@ -3,11 +3,12 @@ info:
   title: BThwani Core Workforce API
   version: 0.1.0
   description: >-
-    Sovereign service-provider profiles (field agents today, captains later).
+    Sovereign service-provider profiles (field agents and captains).
     Providers are independent contractors, not employees; compensation is
     owned by WLT. The shared key across all services is actorId (owned by
-    core/identity); phone numbers are never stored or accepted here — they
-    are resolved sovereignly from Identity.
+    core/identity). Workforce accepts phoneE164 only as a transient orchestration
+    input. Identity owns and stores the phone sovereignly. Workforce never
+    persists the phone.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 servers:
@@ -674,63 +675,6 @@ paths:
                       $ref: "#/components/schemas/City"
         "401":
           $ref: "#/components/responses/Unauthenticated"
-    post:
-      operationId: createWorkforceCity
-      description: Operator-only.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/City"
-      responses:
-        "201":
-          description: City created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/City"
-        "400":
-          $ref: "#/components/responses/InvalidRequest"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          description: REFERENCE_EXISTS.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-  /workforce/reference/cities/{code}:
-    patch:
-      operationId: updateWorkforceCity
-      description: Operator-only. Deactivation instead of deletion keeps history intact.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/ReferenceCode"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/City"
-      responses:
-        "200":
-          description: City updated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/City"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
   /workforce/reference/shifts:
     get:
       operationId: listWorkforceShifts

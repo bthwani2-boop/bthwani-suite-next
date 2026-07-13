@@ -12,6 +12,8 @@ import {
   TextField,
   Chip,
   spacing,
+  IconButton,
+  Icon,
 } from "@bthwani/ui-kit";
 import {
   useFieldEscalationController,
@@ -24,9 +26,10 @@ import {
 type Props = {
   readonly storeId: string;
   readonly visitId?: string;
+  readonly onBack?: () => void;
 };
 
-export function DshFieldEscalationScreen({ storeId, visitId }: Props) {
+export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
   const identity = useIdentitySession();
   const { actionState, raiseEscalation, resetAction } = useFieldEscalationController();
   const [severity, setSeverity] = React.useState<DshEscalationSeverity>("medium");
@@ -43,8 +46,10 @@ export function DshFieldEscalationScreen({ storeId, visitId }: Props) {
       severity,
       category,
       description: description.trim(),
-    }).then(() => {
-      setDescription("");
+    }).then((success) => {
+      if (success) {
+        setDescription("");
+      }
     });
   }
 
@@ -63,6 +68,14 @@ export function DshFieldEscalationScreen({ storeId, visitId }: Props) {
       <Header
         title="رفع تصعيد"
         subtitle="يُرسل التصعيد إلى فريق العمليات للمراجعة والحل"
+        actions={onBack ? (
+          <IconButton
+            icon={<Icon name="arrow-back" mirrored />}
+            accessibilityLabel="رجوع"
+            tone="ghost"
+            onPress={onBack}
+          />
+        ) : undefined}
       />
 
       {actionState.kind === "success" && (

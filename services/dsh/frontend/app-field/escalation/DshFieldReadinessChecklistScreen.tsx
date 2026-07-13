@@ -90,10 +90,12 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
   }
 
   function handleSubmitCheck(checkType: DshCheckType, status: DshCheckStatus) {
-    void submitCheck({ checkType, status, evidenceUrl: evidenceUrl.trim(), notes: notes.trim() }).then(() => {
-      setActiveCheck(null);
-      setEvidenceUrl("");
-      setNotes("");
+    void submitCheck({ checkType, status, evidenceUrl: evidenceUrl.trim(), notes: notes.trim() }).then((success) => {
+      if (success) {
+        setActiveCheck(null);
+        setEvidenceUrl("");
+        setNotes("");
+      }
     });
   }
 

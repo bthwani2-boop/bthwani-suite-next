@@ -280,6 +280,9 @@ func scanPerson(row rowScanner) (Person, error) {
 		captainProfile.DocumentMediaRefs = []string{}
 	}
 	if hasCaptainProfile {
+		if captainProfile.LicenseStatus == "valid" && !isLicenseNotExpired(captainProfile.LicenseExpiresAt) {
+			captainProfile.LicenseStatus = "expired"
+		}
 		person.CaptainProfile = &captainProfile
 	}
 	return person, nil

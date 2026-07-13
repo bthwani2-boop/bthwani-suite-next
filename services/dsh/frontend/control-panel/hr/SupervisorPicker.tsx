@@ -12,6 +12,7 @@ export function SupervisorPicker(props: {
   readonly kind: ProviderKind;
   readonly selected: SupervisorCandidate | null;
   readonly onSelect: (candidate: SupervisorCandidate | null) => void;
+  readonly disabled?: boolean;
 }) {
   const search = useSupervisorSearchController(props.kind);
 
@@ -22,7 +23,7 @@ export function SupervisorPicker(props: {
           {props.selected.username}
           {props.selected.phoneMasked ? ` — ${props.selected.phoneMasked}` : ""}
         </Text>
-        <Button label="تغيير" tone="ghost" onPress={() => props.onSelect(null)} />
+        {!props.disabled && <Button label="تغيير" tone="ghost" onPress={() => props.onSelect(null)} />}
       </Box>
     );
   }
@@ -34,28 +35,33 @@ export function SupervisorPicker(props: {
         value={search.query}
         onChangeText={search.setQuery}
         placeholder="ابحث بالاسم أو الرقم (حرفان على الأقل)"
+        disabled={props.disabled ?? false}
       />
-      {search.loading && (
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>جارٍ البحث…</Text>
+      {!props.disabled && (
+        <>
+          {search.loading && (
+            <Text role="caption" tone="muted" style={{ textAlign: "right" }}>جارٍ البحث…</Text>
+          )}
+          {search.error && (
+            <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{search.error}</Text>
+          )}
+          {!search.loading && search.query.trim().length >= 2 && search.candidates.length === 0 && !search.error && (
+            <Text role="caption" tone="muted" style={{ textAlign: "right" }}>لا توجد نتائج مطابقة</Text>
+          )}
+          {search.candidates.map((candidate) => (
+            <Box
+              key={candidate.actorId}
+              style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <Text role="bodySm">
+                {candidate.username}
+                {candidate.phoneMasked ? ` — ${candidate.phoneMasked}` : ""}
+              </Text>
+              <Button label="اختيار" tone="secondary" onPress={() => props.onSelect(candidate)} />
+            </Box>
+          ))}
+        </>
       )}
-      {search.error && (
-        <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{search.error}</Text>
-      )}
-      {!search.loading && search.query.trim().length >= 2 && search.candidates.length === 0 && !search.error && (
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>لا توجد نتائج مطابقة</Text>
-      )}
-      {search.candidates.map((candidate) => (
-        <Box
-          key={candidate.actorId}
-          style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}
-        >
-          <Text role="bodySm">
-            {candidate.username}
-            {candidate.phoneMasked ? ` — ${candidate.phoneMasked}` : ""}
-          </Text>
-          <Button label="اختيار" tone="secondary" onPress={() => props.onSelect(candidate)} />
-        </Box>
-      ))}
     </Box>
   );
 }

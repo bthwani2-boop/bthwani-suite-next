@@ -4,9 +4,9 @@ This package contains the governing, non-bypassable contract and rules for execu
 
 ## Contents (المحتويات)
 
-- [بروتوكول رحلة التشغيل (Operational Journey Protocol)](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/operational_journey_protocol.md) - The complete governing contract detailing compliance modes, waste prevention rules, minimum achievement requirements, sequencing gate, execution cycles, blocker handling, full-stack surface rules, ownership limits, targeted verifications, and closure verification criteria.
+- [فهرس الحزمة ومصفوفة عدم إسقاط البنود (Index & Coverage)](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md) - The main entrypoint, manifest, coverage matrices, and legacy source trace for the unified protocol package.
 
 ## Usage (الاستخدام)
 
-All workspace operations, agent plans, and implementations must respect the policies defined in [operational_journey_protocol.md](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/operational_journey_protocol.md).
+All workspace operations, agent plans, and implementations must respect the policies defined in [00_INDEX_AND_COVERAGE.md](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md).
 This protocol serves as a final, non-bypassable authority for code-first full-stack slices.

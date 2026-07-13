@@ -3,4 +3,3 @@ export { PartnerDetailScreen } from "./PartnerDetailScreen";
 export { StoreManagementScreen } from "./stores/StoreManagementScreen";
 export { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
 export { PartnersReviewQueueScreen } from "./PartnersReviewQueueScreen";
-export { FieldActivationScreen } from "./FieldActivationScreen";

@@ -1,7 +1,19 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
+import { WorkforceProfileProvider } from "../../../../services/dsh/frontend/shared/workforce/use-workforce-profile";
+import {
+  configureIdentitySession,
+  configureIdentitySessionStorage,
+} from "@bthwani/core-identity";
+import { createSecureStoreSessionStorageAdapter } from "../../../../services/dsh/frontend/shared/runtime/secure-identity-session-storage";
+import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
+
+if (Platform.OS !== "web") {
+  configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
+}
+configureIdentitySession(resolveIdentityApiBaseUrl());
 
 function AppContent() {
   return (
@@ -14,7 +26,13 @@ function AppContent() {
 }
 
 export default function App() {
-  return <AppContent />;
+  return (
+    <SafeAreaProvider>
+      <WorkforceProfileProvider>
+        <AppContent />
+      </WorkforceProfileProvider>
+    </SafeAreaProvider>
+  );
 }
 
 const styles = StyleSheet.create({

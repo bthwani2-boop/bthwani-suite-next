@@ -162,11 +162,16 @@ type CreateDraftStoreInput struct {
 	Category    string
 }
 
+type queryer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 // CreateDraftStore inserts a new, unpublished store linked to a partner.
 // Never visible to app-client: is_visible=false, status=inactive,
 // serviceability=unavailable, and partner_readiness/catalog_approval_status/
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
-func CreateDraftStore(db *sql.DB, input CreateDraftStoreInput) (DshStoreRow, error) {
+func CreateDraftStore(db queryer, input CreateDraftStoreInput) (DshStoreRow, error) {
 	id := fmt.Sprintf("store-%d", time.Now().UnixNano())
 	catalogDomainID := catalogDomainIDForPartnerCategory(input.Category)
 	cityCode := input.CityCode
@@ -213,7 +218,14 @@ func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, co
 	if storeID == "" || actorID == "" {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, fmt.Errorf("invalid field store draft input")
 	}
-	before, err := scanStore(db.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+	defer tx.Rollback()
+
+	before, err := scanStore(tx.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
 	if err == sql.ErrNoRows {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, ErrScopedStoreNotFound
 	}
@@ -221,7 +233,7 @@ func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, co
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
 
-	_, err = db.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 		UPDATE dsh_stores
 		SET display_name = COALESCE($2, display_name),
 		    city_code = COALESCE($3, city_code),
@@ -245,7 +257,7 @@ func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, co
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
 
-	after, err := scanStore(db.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
+	after, err := scanStore(tx.QueryRowContext(ctx, "SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1", storeID))
 	if err != nil {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
@@ -263,7 +275,7 @@ func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, co
 	}
 	beforeJSON, _ := json.Marshal(audit.FromState)
 	afterJSON, _ := json.Marshal(audit.ToState)
-	_, err = db.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_action_audit
 		  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
 		VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10)`,
@@ -273,5 +285,10 @@ func UpdateFieldStoreDraft(ctx context.Context, db *sql.DB, storeID, actorID, co
 	if err != nil {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
+
+	if err := tx.Commit(); err != nil {
+		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
+	}
+
 	return RowToFieldPartnerStoreDraft(after), audit, nil
 }

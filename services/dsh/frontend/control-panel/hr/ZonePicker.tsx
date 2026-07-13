@@ -9,7 +9,11 @@ import { Box, Button, Text, spacing } from "@bthwani/ui-kit";
 import { fetchZones } from "../../shared/platform-policies/platform-policies.api";
 import type { DshZone } from "../../shared/platform-policies/platform-policies.types";
 
-export function ZonePicker(props: { readonly value: string; readonly onChange: (zone: DshZone | null) => void }) {
+export function ZonePicker(props: {
+  readonly value: string;
+  readonly onChange: (zone: DshZone | null) => void;
+  readonly disabled?: boolean;
+}) {
   const [zones, setZones] = useState<readonly DshZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +57,7 @@ export function ZonePicker(props: { readonly value: string; readonly onChange: (
             key={zone.id}
             label={zone.name}
             tone={props.value === zone.id ? "primary" : "ghost"}
+            disabled={props.disabled}
             onPress={() => props.onChange(props.value === zone.id ? null : zone)}
           />
         ))}

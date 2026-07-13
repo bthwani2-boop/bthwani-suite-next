@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
+	"time"
 
 	"workforce-api/internal/dshclient"
 	"workforce-api/internal/identityclient"
@@ -183,7 +185,7 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
 		"field_agent.created", nil, person, "", correlationID); err != nil {
-		return Person{}, false, err
+		log.Printf("[workforce] RecordAudit error in CreateFieldAgent: %v", err)
 	}
 	if encoded, err := json.Marshal(person); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash, encoded)
@@ -252,7 +254,7 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actor.ActorID,
 		"captain.created", nil, person, "", correlationID); err != nil {
-		return Person{}, false, err
+		log.Printf("[workforce] RecordAudit error in CreateCaptain: %v", err)
 	}
 	if encoded, err := json.Marshal(person); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded)
@@ -297,7 +299,7 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"field_agent.updated", before, person, "", correlationID); err != nil {
-		return Person{}, err
+		log.Printf("[workforce] RecordAudit error in UpdateFieldAgent: %v", err)
 	}
 	return person, nil
 }
@@ -332,7 +334,7 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"captain.updated", before, person, "", correlationID); err != nil {
-		return Person{}, err
+		log.Printf("[workforce] RecordAudit error in UpdateCaptain: %v", err)
 	}
 	return person, nil
 }
@@ -360,7 +362,7 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"provider.suspended", before, person, reason, correlationID); err != nil {
-		return Person{}, err
+		log.Printf("[workforce] RecordAudit error in Suspend: %v", err)
 	}
 	return person, nil
 }
@@ -387,7 +389,7 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"provider.reactivated", before, person, reason, correlationID); err != nil {
-		return Person{}, err
+		log.Printf("[workforce] RecordAudit error in Reactivate: %v", err)
 	}
 	return person, nil
 }
@@ -423,7 +425,7 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	}
 	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"provider.activation_issued", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID); err != nil {
-		return identityclient.ActivationCode{}, err
+		log.Printf("[workforce] RecordAudit error in IssueActivation: %v", err)
 	}
 	return code, nil
 }
@@ -458,8 +460,11 @@ func (s *Service) RevokeActivation(ctx context.Context, operator Operator, actor
 	if err := s.identity.RevokeActivations(ctx, actorID); err != nil {
 		return err
 	}
-	return s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"provider.activation_revoked", nil, nil, "", correlationID)
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
+		"provider.activation_revoked", nil, nil, "", correlationID); err != nil {
+		log.Printf("[workforce] RecordAudit error in RevokeActivation: %v", err)
+	}
+	return nil
 }
 
 // Me returns the provider-facing profile, applying the lazy
@@ -561,9 +566,41 @@ func sovereignFieldsComplete(person Person) bool {
 		return person.CaptainProfile.VehicleType != "" &&
 			person.CaptainProfile.VehicleIdentifier != "" &&
 			person.CaptainProfile.LicenseStatus == "valid" &&
+			isLicenseNotExpired(person.CaptainProfile.LicenseExpiresAt) &&
 			person.CaptainProfile.OperatingCityCode != ""
 	}
 	return false
+}
+
+func isLicenseNotExpired(expiresAtStr string) bool {
+	if expiresAtStr == "" {
+		return false
+	}
+	layouts := []string{"2006-01-02", time.RFC3339}
+	var expiresAt time.Time
+	var parsed bool
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, expiresAtStr); err == nil {
+			expiresAt = t
+			parsed = true
+			break
+		}
+	}
+	if !parsed {
+		if t, err := time.Parse("2006-01-02 15:04:05 -0700 MST", expiresAtStr); err == nil {
+			expiresAt = t
+			parsed = true
+		} else if t, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", expiresAtStr); err == nil {
+			expiresAt = t
+			parsed = true
+		}
+	}
+	if !parsed {
+		return false
+	}
+	currentDate := time.Now().UTC().Truncate(24 * time.Hour)
+	expireDate := expiresAt.UTC().Truncate(24 * time.Hour)
+	return !expireDate.Before(currentDate)
 }
 
 // selfFieldsComplete drives the in-app completion screen: the provider owns

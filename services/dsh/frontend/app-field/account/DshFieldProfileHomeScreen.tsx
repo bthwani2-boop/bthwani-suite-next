@@ -13,7 +13,7 @@ import {
   colorRoles,
   Icon,
 } from '@bthwani/ui-kit';
-import { useIdentitySession } from '@bthwani/core-identity';
+import { useWorkforceMeOrNull } from '../../shared/workforce/use-workforce-profile';
 
 type DshFieldProfileHomeScreenProps = {
   readonly onBack: () => void;
@@ -32,9 +32,9 @@ export function DshFieldProfileHomeScreen({
   onOpenVerification,
   onLogout,
 }: DshFieldProfileHomeScreenProps) {
-  const identity = useIdentitySession();
-  const username = identity.state.kind === 'authenticated' ? identity.state.identity.subject : 'ميداني';
-  const roleName = identity.state.kind === 'authenticated' ? (identity.state.identity.roles.includes('field') ? 'موظف ميداني' : identity.state.identity.roles.join(', ')) : 'عضو فريق الميدان';
+  const me = useWorkforceMeOrNull();
+  const username = me ? me.fullNameAr : 'ميداني';
+  const roleName = me ? (me.providerKind === 'captain' ? 'كابتن' : 'موظف ميداني') : 'عضو فريق الميدان';
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>

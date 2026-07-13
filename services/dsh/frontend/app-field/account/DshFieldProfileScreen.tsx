@@ -2,31 +2,47 @@
 // Profile details screen displaying static agent parameters.
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { Text, Header, IconButton, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
+import { Button, Text, Header, IconButton, spacing, colorRoles, Icon } from '@bthwani/ui-kit';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
+
+import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
+import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce/workforce.types';
 
 type DshFieldProfileScreenProps = {
   readonly onBack: () => void;
 };
 
 export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
-  const identity = useIdentitySession();
-  // Scoped to the calling field actor's own submissions — the operator-wide
-  // partner list (usePartnerAdminController → GET /dsh/operator/partners) is
-  // 403 Forbidden for a field-role session (verified live).
-  const fieldDrafts = useFieldPartnerDraftsController();
+  const profileContext = useWorkforceProfile();
+  const { state } = profileContext;
 
-  const username = identity.state.kind === 'authenticated' ? identity.state.identity.subject : 'ميداني';
-  const roleName = identity.state.kind === 'authenticated' ? (identity.state.identity.roles.includes('field') ? 'موظف ميداني' : identity.state.identity.roles.join(', ')) : 'عضو فريق الميدان';
-  const activeCount = fieldDrafts.listState.kind === 'success'
-    ? fieldDrafts.listState.partners.filter(p => p.activationStatus !== 'ops_approved').length.toString()
-    : '0';
+  if (state.kind === 'loading') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', alignItems: 'center' }}>
+        <Text role="body" tone="muted">جارٍ تحميل بيانات الحساب…</Text>
+      </View>
+    );
+  }
 
-  const items = [
-    { label: 'الاسم / المعرف', value: username },
-    { label: 'الدور العملياتي', value: roleName },
-    { label: 'الملفات النشطة', value: activeCount, color: colorRoles.brandAction },
+  if (state.kind !== 'ready') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', alignItems: 'center', gap: spacing[3] }}>
+        <Text role="body" tone="danger">تعذر تحميل بيانات الحساب العملياتية</Text>
+        <Button label="إعادة المحاولة" onPress={() => void profileContext.reload()} />
+      </View>
+    );
+  }
+
+  const me = state.me;
+
+  const items: Array<{ label: string; value: string; color?: string }> = [
+    { label: 'الاسم الكامل', value: me.fullNameAr },
+    { label: 'رقم مقدم الخدمة', value: me.providerCode },
+    { label: 'منطقة الخدمة', value: me.fieldProfile?.serviceZoneId || 'غير محدد' },
+    { label: 'الوردية', value: me.fieldProfile?.shiftCode || 'غير محدد' },
+    { label: 'المشرف', value: me.fieldProfile?.supervisorActorId || 'بدون مشرف' },
+    { label: 'حالة الارتباط', value: ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus] },
   ];
 
   return (

@@ -39,7 +39,6 @@ export const PARTNER_SUB_TAB_DEFINITIONS: Readonly<Record<string, readonly Partn
   ],
   activation: [
     { id: 'partner_activation', label: 'تفعيل شركاء' },
-    { id: 'field_activation', label: 'تفعيل ميداني' },
   ],
   field_readiness: [
     { id: 'field_readiness_queue', label: 'جاهزية الميدان' },

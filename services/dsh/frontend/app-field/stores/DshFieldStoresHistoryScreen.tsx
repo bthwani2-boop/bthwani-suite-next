@@ -17,6 +17,21 @@ export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScr
 
   const partners = controller.listState.kind === 'success' ? controller.listState.partners : [];
 
+  const getStatusPresentation = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return { label: 'مسودة', tone: 'neutral' as const };
+      case 'submitted':
+        return { label: 'قيد المراجعة', tone: 'warning' as const };
+      case 'rejected':
+        return { label: 'مرفوض', tone: 'danger' as const };
+      case 'ops_approved':
+        return { label: 'معتمد', tone: 'success' as const };
+      default:
+        return { label: status, tone: 'neutral' as const };
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <Header
@@ -29,27 +44,30 @@ export function DshFieldStoresHistoryScreen({ onBack }: DshFieldStoresHistoryScr
         showsVerticalScrollIndicator={false}
       >
         <View style={{ gap: spacing[3] }}>
-          {partners.map((partner, index) => (
-            <View key={partner.id}>
-              {index > 0 && <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[2] }} />}
-              <View style={{ gap: spacing[2], paddingVertical: spacing[2] }}>
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: spacing[3] }}>
-                  <View style={{ flex: 1, gap: 3, alignItems: 'flex-end' }}>
-                    <Text role="bodyStrong" style={{ textAlign: 'right' }}>
-                      {partner.displayName}
-                    </Text>
-                    <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-                      {partner.category}
-                    </Text>
-                    <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-                      {`${partner.activationStatus} · ${new Date(partner.updatedAt).toLocaleDateString('ar-YE')}`}
-                    </Text>
+          {partners.map((partner, index) => {
+            const statusInfo = getStatusPresentation(partner.activationStatus);
+            return (
+              <View key={partner.id}>
+                {index > 0 && <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[2] }} />}
+                <View style={{ gap: spacing[2], paddingVertical: spacing[2] }}>
+                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: spacing[3] }}>
+                    <View style={{ flex: 1, gap: 3, alignItems: 'flex-end' }}>
+                      <Text role="bodyStrong" style={{ textAlign: 'right' }}>
+                        {partner.displayName}
+                      </Text>
+                      <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
+                        {partner.category}
+                      </Text>
+                      <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+                        {`${statusInfo.label} · ${new Date(partner.updatedAt).toLocaleDateString('ar-YE')}`}
+                      </Text>
+                    </View>
+                    <Badge label={statusInfo.label} tone={statusInfo.tone} />
                   </View>
-                  <Badge label="منجز" tone="success" />
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </View>

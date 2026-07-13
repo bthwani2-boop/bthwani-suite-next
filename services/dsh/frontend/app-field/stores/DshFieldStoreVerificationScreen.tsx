@@ -11,6 +11,10 @@ import {
   Text,
   TextField,
   spacing,
+  Header,
+  IconButton,
+  Icon,
+  colorRoles,
 } from "@bthwani/ui-kit";
 import { DshFieldActivationCard } from "../components/DshFieldActivationCard";
 import {
@@ -22,9 +26,10 @@ import { useFieldVerificationController } from "../../shared/field-readiness";
 type Props = {
   readonly storeId: string;
   readonly visitId: string;
+  readonly onBack?: () => void;
 };
 
-export function DshFieldStoreVerificationScreen({ storeId, visitId }: Props) {
+export function DshFieldStoreVerificationScreen({ storeId, visitId, onBack }: Props) {
   const identity = useIdentitySession();
   const controller = useStoreRoleContextController("field", identity.state.kind, storeId);
   const verification = useFieldVerificationController(storeId, visitId, identity.state.kind);
@@ -78,8 +83,21 @@ export function DshFieldStoreVerificationScreen({ storeId, visitId }: Props) {
   if (!field) return null;
   const visit = verification.state.visit;
   return (
-    <ScrollScreen>
-      <Card>
+    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+      <Header
+        title="التحقق الميداني من المتجر"
+        subtitle="فحص المتطلبات الميدانية للشركاء واعتماد الجاهزية"
+        actions={onBack ? (
+          <IconButton
+            icon={<Icon name="arrow-back" mirrored />}
+            accessibilityLabel="رجوع"
+            tone="ghost"
+            onPress={onBack}
+          />
+        ) : undefined}
+      />
+      <ScrollScreen>
+        <Card>
         <View style={styles.hero}>
           <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
             <Text role="titleLg">{field.store.displayName}</Text>
@@ -202,6 +220,7 @@ export function DshFieldStoreVerificationScreen({ storeId, visitId }: Props) {
         </View>
       </Card>
     </ScrollScreen>
+    </View>
   );
 }
 

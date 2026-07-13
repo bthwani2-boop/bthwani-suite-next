@@ -27,8 +27,14 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 		surface = "app-field"
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		return Partner{}, err
+	}
+	defer tx.Rollback()
+
 	var p Partner
-	err := db.QueryRow(`
+	err = tx.QueryRow(`
 		INSERT INTO dsh_partners (
 			legal_name_ar, legal_name_en, display_name,
 			legal_identity_type, legal_identity_number,
@@ -68,11 +74,27 @@ func CreatePartner(db *sql.DB, input CreatePartnerInput) (Partner, error) {
 	// collects the first store's data as part of the onboarding file). The
 	// store starts fully unpublished — is_visible=false, status=inactive —
 	// and stays invisible to app-client until control-panel approves it.
-	if _, err := store.CreateDraftStore(db, store.CreateDraftStoreInput{
+	sRow, err := store.CreateDraftStore(tx, store.CreateDraftStoreInput{
 		PartnerID:   p.ID,
 		DisplayName: p.DisplayName,
 		Category:    p.Category,
-	}); err != nil {
+	})
+	if err != nil {
+		return Partner{}, err
+	}
+
+	if input.CreatedByActorID != "" {
+		_, err = tx.Exec(`
+			INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type, active)
+			VALUES ($1, 'field', $2, 'assigned', true)
+			ON CONFLICT (actor_id, actor_role, store_id) DO NOTHING`,
+			input.CreatedByActorID, sRow.ID)
+		if err != nil {
+			return Partner{}, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
 		return Partner{}, err
 	}
 

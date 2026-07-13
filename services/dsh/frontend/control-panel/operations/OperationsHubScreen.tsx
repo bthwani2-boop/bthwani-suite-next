@@ -35,7 +35,6 @@ const DispatchAssignmentScreen = React.lazy(() => import('./DispatchAssignmentSc
 const GeoHeatmapScreen = React.lazy(() => import('./GeoHeatmapScreen').then((m) => ({ default: m.GeoHeatmapScreen })));
 const ControlPanelDshSheinProxyScreen = React.lazy(() => import('./ControlPanelDshSheinProxyScreen').then((m) => ({ default: m.ControlPanelDshSheinProxyScreen })));
 const AwnakScreen = React.lazy(() => import('./AwnakScreen').then((m) => ({ default: m.AwnakScreen })));
-const CaptainOperationsScreen = React.lazy(() => import('./CaptainOperationsScreen').then((m) => ({ default: m.CaptainOperationsScreen })));
 const PartnerStoresScreen = React.lazy(() => import('./PartnerStoresScreen').then((m) => ({ default: m.PartnerStoresScreen })));
 const AreaCapacityScreen = React.lazy(() => import('./AreaCapacityScreen').then((m) => ({ default: m.AreaCapacityScreen })));
 const ExceptionsEscalationsScreen = React.lazy(() => import('./ExceptionsEscalationsScreen').then((m) => ({ default: m.ExceptionsEscalationsScreen })));
@@ -74,7 +73,6 @@ const SCREEN_RENDERERS: Record<CanonicalOperationsGroupId, GroupScreenConfig> = 
   'dispatch-capacity': {
     default: DispatchAssignmentScreen,
     bySubGroup: {
-      captains: CaptainOperationsScreen,
       heatmap: GeoHeatmapScreen,
       zones: AreaCapacityScreen,
     },

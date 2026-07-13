@@ -44,6 +44,7 @@ export function ProviderListView(props: {
   readonly onCreate: () => void;
   readonly onOpen: (actorId: string, kind: ProviderKind) => void;
   readonly onReference: () => void;
+  readonly onActivation: () => void;
 }) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const fieldList = useFieldAgentListController();
@@ -98,6 +99,7 @@ export function ProviderListView(props: {
           </Text>
           <Box style={{ flexDirection: "row-reverse", gap: spacing[2] }}>
             <Button label="إضافة مقدم خدمة" tone="primary" onPress={props.onCreate} />
+            <Button label="تفعيل الحسابات" tone="secondary" onPress={props.onActivation} />
             <Button label="المرجعيات" tone="ghost" onPress={props.onReference} />
           </Box>
         </Box>
