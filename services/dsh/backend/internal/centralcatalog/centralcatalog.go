@@ -1114,6 +1114,24 @@ type ProposalTransitionInput struct {
 	CreateMasterProduct    *bool   `json:"createMasterProduct"`
 }
 
+// collectIDs drains a single-column id result set and closes it before the
+// caller issues any further statement on the same transaction connection.
+func collectIDs(rows *sql.Rows, err error) ([]string, error) {
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id string, input ProposalTransitionInput) (ProductProposal, error) {
 	if !validProposalStatus[input.NextStatus] {
 		return ProductProposal{}, fmt.Errorf("%w: invalid nextStatus", ErrInvalid)
@@ -1177,37 +1195,38 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			return ProductProposal{}, fmt.Errorf("%w: barcode is required for this category", ErrInvalid)
 		}
 
-		// Check for duplicate candidates (barcode matches or exact name matches in category)
+		// Check for duplicate candidates (barcode matches or exact name matches
+		// in category). The candidate ids are collected before inserting: the
+		// transaction owns a single connection, so executing while rows are
+		// still open would poison every later statement in the transition.
 		if proposal.Barcode != nil && *proposal.Barcode != "" {
-			rows, err := tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1`, *proposal.Barcode)
-			if err == nil {
-				defer rows.Close()
-				for rows.Next() {
-					var mpID string
-					if err := rows.Scan(&mpID); err == nil {
-						dupID := entityID("dup-candidate")
-						_, _ = tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
-							(id, proposal_id, candidate_master_product_id, reason, score, status)
-							VALUES ($1, $2, $3, 'barcode match', 1.0, 'pending')
-							ON CONFLICT DO NOTHING`, dupID, id, mpID)
-					}
+			barcodeMatches, err := collectIDs(tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1`, *proposal.Barcode))
+			if err != nil {
+				return ProductProposal{}, err
+			}
+			for _, mpID := range barcodeMatches {
+				dupID := entityID("dup-candidate")
+				if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
+					(id, proposal_id, candidate_master_product_id, reason, score, status)
+					VALUES ($1, $2, $3, 'barcode match', 1.0, 'pending')
+					ON CONFLICT DO NOTHING`, dupID, id, mpID); err != nil {
+					return ProductProposal{}, err
 				}
 			}
 		}
 
 		if proposal.CategoryNodeID != nil {
-			rows, err := tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE category_node_id=$1 AND LOWER(canonical_name_ar)=LOWER($2)`, *proposal.CategoryNodeID, proposal.ProposedNameAr)
-			if err == nil {
-				defer rows.Close()
-				for rows.Next() {
-					var mpID string
-					if err := rows.Scan(&mpID); err == nil {
-						dupID := entityID("dup-candidate")
-						_, _ = tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
-							(id, proposal_id, candidate_master_product_id, reason, score, status)
-							VALUES ($1, $2, $3, 'exact name match in category', 0.9, 'pending')
-							ON CONFLICT DO NOTHING`, dupID, id, mpID)
-					}
+			nameMatches, err := collectIDs(tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE category_node_id=$1 AND LOWER(canonical_name_ar)=LOWER($2)`, *proposal.CategoryNodeID, proposal.ProposedNameAr))
+			if err != nil {
+				return ProductProposal{}, err
+			}
+			for _, mpID := range nameMatches {
+				dupID := entityID("dup-candidate")
+				if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
+					(id, proposal_id, candidate_master_product_id, reason, score, status)
+					VALUES ($1, $2, $3, 'exact name match in category', 0.9, 'pending')
+					ON CONFLICT DO NOTHING`, dupID, id, mpID); err != nil {
+					return ProductProposal{}, err
 				}
 			}
 		}

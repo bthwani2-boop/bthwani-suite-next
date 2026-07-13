@@ -1,5 +1,9 @@
--- Verifies the central catalog seed converged correctly. Prints one row per
--- check with a boolean pass column; a human or CI script greps for `f` (fail).
+-- Verifies the central catalog seed and the dsh-036 runtime closure converged
+-- correctly. Prints one row per check with a boolean pass column, then a DO
+-- block re-evaluates the same checks and RAISEs (non-zero psql exit) if any
+-- check is FALSE — so runtime:seed and CI fail automatically instead of only
+-- printing results.
+CREATE OR REPLACE TEMP VIEW central_catalog_checks AS
 SELECT 'domains_count_ge_12' AS check_name, (COUNT(*) >= 12) AS pass FROM dsh_catalog_domains
 UNION ALL
 SELECT 'domain_manual_request_exists', EXISTS (SELECT 1 FROM dsh_catalog_domains WHERE id = 'domain-manual-request')
@@ -41,11 +45,66 @@ SELECT 'client_visible_products_exist', EXISTS (
     AND s.is_visible = TRUE
 )
 UNION ALL
+-- dsh-036 corrective closure: the permanent legacy archive exists and every
+-- archived row is well-formed. On a fresh database the archive is simply
+-- empty; the row-count equality gates live inside dsh-036 itself, where the
+-- source tables still exist.
+SELECT 'legacy_archive_table_exists', to_regclass('public.dsh_catalog_legacy_archive') IS NOT NULL
+UNION ALL
+SELECT 'legacy_audit_archived', NOT EXISTS (
+  SELECT 1 FROM dsh_catalog_legacy_archive
+  WHERE source_table = 'dsh_catalog_audit' AND (payload_json IS NULL OR source_id = '')
+)
+UNION ALL
+SELECT 'legacy_revisions_archived', NOT EXISTS (
+  SELECT 1 FROM dsh_catalog_legacy_archive
+  WHERE source_table = 'dsh_catalog_revisions' AND (payload_json IS NULL OR source_id = '')
+)
+UNION ALL
+SELECT 'legacy_media_assets_preserved',
+  to_regclass('public.dsh_catalog_media') IS NULL
+  AND NOT EXISTS (SELECT 1 FROM dsh_catalog_assets WHERE object_key = '' OR mime_type = '')
+  AND (SELECT COUNT(*) FROM dsh_catalog_assets WHERE uploaded_by = 'system-migration')
+      >= (SELECT COUNT(*) FROM dsh_catalog_legacy_archive
+          WHERE source_table = 'dsh_catalog_media' AND payload_json->>'state' <> 'deleted')
+UNION ALL
+SELECT 'legacy_media_links_valid', NOT EXISTS (
+  SELECT 1 FROM dsh_catalog_asset_links l
+  WHERE l.entity_id IS NULL
+     OR l.entity_id = ''
+     OR (l.entity_type = 'master_product'
+         AND NOT EXISTS (SELECT 1 FROM dsh_master_products mp WHERE mp.id = l.entity_id))
+)
+UNION ALL
+SELECT 'cart_items_fully_mapped', NOT EXISTS (
+  SELECT 1
+  FROM dsh_cart_items ci
+  JOIN dsh_carts c ON c.id = ci.cart_id
+  WHERE ci.store_assortment_id IS NULL
+    AND EXISTS (
+      SELECT 1 FROM dsh_store_assortments a
+      WHERE a.store_id = c.store_id AND a.master_product_id = ci.product_id
+    )
+)
+UNION ALL
+SELECT 'no_orphan_assortments', NOT EXISTS (
+  SELECT 1 FROM dsh_store_assortments a
+  WHERE NOT EXISTS (SELECT 1 FROM dsh_master_products mp WHERE mp.id = a.master_product_id)
+     OR NOT EXISTS (SELECT 1 FROM dsh_stores s WHERE s.id = a.store_id)
+)
+UNION ALL
+SELECT 'no_orphan_asset_links', NOT EXISTS (
+  SELECT 1 FROM dsh_catalog_asset_links l
+  WHERE NOT EXISTS (SELECT 1 FROM dsh_catalog_assets a WHERE a.id = l.asset_id)
+)
+UNION ALL
 SELECT 'local_catalog_tables_removed',
   to_regclass('public.dsh_catalog_categories') IS NULL
   AND to_regclass('public.dsh_catalog_products') IS NULL
   AND to_regclass('public.dsh_catalog_media') IS NULL
   AND to_regclass('public.dsh_categories') IS NULL
+  AND to_regclass('public.dsh_catalog_audit') IS NULL
+  AND to_regclass('public.dsh_catalog_revisions') IS NULL
 UNION ALL
 SELECT 'local_store_category_columns_removed', NOT EXISTS (
   SELECT 1
@@ -54,3 +113,21 @@ SELECT 'local_store_category_columns_removed', NOT EXISTS (
     AND table_name = 'dsh_stores'
     AND column_name IN ('category', 'category_id')
 );
+
+SELECT check_name, pass FROM central_catalog_checks;
+
+DO $verify$
+DECLARE
+  v_failed TEXT;
+BEGIN
+  SELECT string_agg(check_name, ', ') INTO v_failed
+  FROM central_catalog_checks
+  WHERE pass IS DISTINCT FROM TRUE;
+  IF v_failed IS NOT NULL THEN
+    RAISE EXCEPTION 'central catalog verification FAILED: %', v_failed;
+  END IF;
+  RAISE NOTICE 'central catalog verification: all checks passed';
+END
+$verify$;
+
+DROP VIEW IF EXISTS central_catalog_checks;

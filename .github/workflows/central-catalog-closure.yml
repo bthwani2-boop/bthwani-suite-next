@@ -1,0 +1,190 @@
+name: Central Catalog Closure
+
+on:
+  pull_request:
+    paths:
+      - 'services/dsh/database/**'
+      - 'services/dsh/backend/**'
+      - 'services/dsh/contracts/**'
+      - 'services/dsh/tests/**'
+      - 'infra/docker/scripts/runtime.ps1'
+      - 'tools/scripts/scan-legacy-catalog-references.mjs'
+      - 'tools/scripts/test-central-catalog-migration.ps1'
+      - '.github/workflows/central-catalog-closure.yml'
+  push:
+    branches:
+      - onebyone
+      - master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        required: false
+        default: 'manual central catalog closure verification'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: central-catalog-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sql-migration-closure:
+    name: SQL migration + central verification (fresh, legacy, double-run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+          POSTGRES_PASSWORD: bthwani_runtime_password
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Initialize Databases
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+          POSTGRES_USER: bthwani_runtime
+          POSTGRES_DB: bthwani_runtime
+        run: |
+          sh infra/data-plane/postgres/init/001_create_runtime_databases.sh
+
+      - name: Migration closure test (fresh + legacy fixtures + double-run)
+        shell: pwsh
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-central-catalog-migration.ps1 -PsqlMode native
+
+      - name: Apply DSH migrations to dsh_runtime (first run)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/dsh/database/migrations/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Apply DSH migrations to dsh_runtime (second run — re-run proof)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/dsh/database/migrations/*.sql; do
+            echo "Re-applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Apply DSH local seeds (includes hard-failing central verification)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/dsh/database/seeds/local/*.sql; do
+            echo "Applying $f"
+            psql -h localhost -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+  legacy-reference-scan:
+    name: Legacy runtime reference scan + closure tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+
+      - name: Legacy local-catalog reference scan (INVALID must be 0)
+        run: node tools/scripts/scan-legacy-catalog-references.mjs
+
+      - name: Central catalog closure static tests
+        run: node --test services/dsh/tests/central-catalog-closure.test.mjs
+
+  dsh-backend:
+    name: DSH Go backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+
+      - name: Go test
+        working-directory: services/dsh/backend
+        run: go test ./...
+
+      - name: Go build
+        working-directory: services/dsh/backend
+        run: go build ./...
+
+  contracts-and-typescript:
+    name: OpenAPI validation + TypeScript checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Contracts lint (OpenAPI validation)
+        run: pnpm run contracts:lint
+
+      - name: OpenAPI client drift check
+        run: |
+          pnpm run openapi:generate:dsh
+          git diff --exit-code services/dsh/clients/generated/ || \
+            (echo "ERROR: DSH generated API client drifted from the OpenAPI spec." && exit 1)
+
+      - name: Typecheck (all affected surfaces)
+        run: pnpm run typecheck

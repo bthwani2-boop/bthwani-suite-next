@@ -253,7 +253,11 @@ INSERT INTO dsh_catalog_nodes (id, domain_id, parent_id, level, slug, name_ar, n
   -- manual_request (no product catalog)
   ('node-shay-in', 'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'shay_in', 'شيء إن', 'Shay In', 10, FALSE, FALSE),
   ('node-awnak',   'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'awnak',   'عونك',   'Awnak',   20, FALSE, FALSE)
-ON CONFLICT (domain_id, parent_id, slug) DO NOTHING;
+-- Conflict-arbiter note: parent_id is NULL for every BUSINESS_SUBDOMAIN row,
+-- and UNIQUE treats NULLs as distinct, so (domain_id, parent_id, slug) never
+-- fires for these rows — a re-run would crash into the primary key instead.
+-- The seeded ids are stable, so the primary key is the correct arbiter.
+ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
 -- 9. Seed: default platform policies for the image-policy defaults called

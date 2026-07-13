@@ -43,6 +43,66 @@ test("closure migration preserves legacy data before dropping local catalog tabl
   assert.match(migration, /ALTER TABLE dsh_stores DROP COLUMN IF EXISTS category;/);
 });
 
+test("closure migration is atomic, gated, and archives legacy records", () => {
+  const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
+
+  // One atomic transaction: a failed gate rolls back every drop.
+  assert.match(migration, /^BEGIN;$/m);
+  assert.match(migration, /^COMMIT;$/m);
+  assert.ok(migration.indexOf("BEGIN;") < migration.indexOf("CREATE TABLE IF NOT EXISTS dsh_catalog_legacy_archive"));
+
+  // Every legacy table is archived as JSONB before any drop.
+  const dropAt = migration.indexOf("DROP TABLE IF EXISTS dsh_catalog_audit");
+  for (const source of [
+    "dsh_catalog_audit",
+    "dsh_catalog_revisions",
+    "dsh_catalog_categories",
+    "dsh_catalog_products",
+    "dsh_catalog_media",
+    "dsh_categories",
+  ]) {
+    const archiveAt = migration.indexOf(`'${source}:' || t.id`);
+    assert.ok(archiveAt >= 0 && archiveAt < dropAt, `${source} must be archived before drops`);
+  }
+
+  // Product-less media stays in DAM without an invalid NULL entity link.
+  assert.match(migration, /AND product_id IS NOT NULL/);
+  assert.match(migration, /WHERE product_id IS NOT NULL/);
+
+  // Verification gates abort the transaction before the drops.
+  const firstGateAt = migration.indexOf("RAISE EXCEPTION 'dsh-036 gate");
+  assert.ok(firstGateAt >= 0 && firstGateAt < dropAt);
+});
+
+test("migrate runner keeps a checksum ledger so applied migrations never re-run", () => {
+  const runner = fs.readFileSync(
+    new URL("../../../infra/docker/scripts/runtime.ps1", import.meta.url),
+    "utf8",
+  );
+  assert.match(runner, /CREATE TABLE IF NOT EXISTS runtime_schema_migrations/);
+  assert.match(runner, /Skipping \(already applied\)/);
+  assert.match(runner, /checksum mismatch/);
+});
+
+test("central verification fails hard instead of only printing results", () => {
+  const verify = read("database/seeds/local/verify-central-catalog-seed.sql");
+  for (const check of [
+    "legacy_archive_table_exists",
+    "legacy_audit_archived",
+    "legacy_revisions_archived",
+    "legacy_media_assets_preserved",
+    "legacy_media_links_valid",
+    "cart_items_fully_mapped",
+    "no_orphan_assortments",
+    "no_orphan_asset_links",
+    "local_catalog_tables_removed",
+    "local_store_category_columns_removed",
+  ]) {
+    assert.match(verify, new RegExp(check));
+  }
+  assert.match(verify, /RAISE EXCEPTION 'central catalog verification FAILED/);
+});
+
 test("partner and field catalog writes cannot bypass central approval", () => {
   const handlers = read("backend/internal/http/centralcatalog.go");
 

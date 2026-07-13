@@ -304,17 +304,51 @@ function Invoke-IdentitySmoke {
   Write-Host "Identity API smoke: PASS"
 }
 
+function Invoke-DshPsql {
+  param([string]$Sql)
+  $result = $Sql |
+    docker compose @(Get-ComposeBase) exec -T postgres `
+      psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -tA
+  if ($LASTEXITCODE -ne 0) { throw "DSH psql command failed (exit $LASTEXITCODE)" }
+  return ($result -join "`n").Trim()
+}
+
 function Invoke-Migrate {
   $MigrationDir = "services/dsh/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
   Write-Host "`n--- Applying DSH migrations ---"
+
+  # Migration ledger: each applied file is recorded with its checksum so a
+  # re-run applies only new migrations and refuses silently-edited history.
+  Invoke-DshPsql @"
+CREATE TABLE IF NOT EXISTS runtime_schema_migrations (
+  migration_name TEXT        PRIMARY KEY,
+  checksum       TEXT        NOT NULL,
+  applied_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+"@ | Out-Null
+
   foreach ($f in $MigrationFiles) {
+    $checksum = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $recorded = Invoke-DshPsql "SELECT checksum FROM runtime_schema_migrations WHERE migration_name = '$($f.Name)';"
+    if ($recorded -eq $checksum) {
+      Write-Host "  Skipping (already applied): $($f.Name)"
+      continue
+    }
+    if ($recorded -ne "") {
+      throw "Migration ledger checksum mismatch for $($f.Name): recorded $recorded, file $checksum. Applied migrations must never be edited; add a new migration instead."
+    }
     Write-Host "  Applying: $($f.Name)"
     Get-Content -LiteralPath $f.FullName -Raw |
       docker compose @(Get-ComposeBase) exec -T postgres `
         psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw "Migration failed for $($f.Name) (exit $LASTEXITCODE)" }
+    Invoke-DshPsql @"
+INSERT INTO runtime_schema_migrations (migration_name, checksum)
+VALUES ('$($f.Name)', '$checksum')
+ON CONFLICT (migration_name) DO UPDATE SET checksum = EXCLUDED.checksum, applied_at = NOW();
+"@ | Out-Null
     Write-Host "  $($f.Name): PASS"
   }
   Write-Host "Migration: PASS"
