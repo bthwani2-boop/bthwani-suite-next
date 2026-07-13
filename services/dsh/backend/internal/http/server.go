@@ -20,6 +20,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
+	mux.HandleFunc("GET /dsh/public/media/{assetId}/{variant}", handlePublicMedia(db, mediaClient))
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaClient)
 	mux.HandleFunc("POST /dsh/field/media/uploads", protected.handleFieldMediaUpload)
@@ -122,6 +123,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	// Central catalog assets, seed status & entity images
 	mux.HandleFunc("GET /dsh/operator/catalog/assets", protected.handleListCatalogAssets)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/upload-intents", protected.handleCreateAssetUploadIntent)
+	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/complete", protected.handleCompleteAssetUpload)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/assets/{assetId}", protected.handleUpdateCatalogAsset)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/review", protected.handleReviewCatalogAsset)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/link", protected.handleLinkCatalogAsset)
@@ -133,6 +135,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("PUT /dsh/operator/catalog/nodes/{nodeId}/images/{role}", protected.handlePutNodeImage)
 	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/images/{role}", protected.handlePutMasterProductImage)
 	mux.HandleFunc("PUT /dsh/operator/catalog/product-proposals/{proposalId}/images/{role}", protected.handlePutProductProposalImage)
+	mux.HandleFunc("PUT /dsh/stores/{storeId}/images/{role}", protected.handlePutStoreImage)
 
 	mux.HandleFunc("GET /dsh/partner/catalog/taxonomy", protected.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/partner/catalog/master-products", protected.handleListMasterProducts)

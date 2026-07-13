@@ -9,7 +9,7 @@ VALUES
     'banner-001',
     'اكتشف أفضل المطاعم',
     'خيارات مميزة في صنعاء',
-    'http://localhost:59000/dsh-media/banner-001.jpg',
+    'http://localhost:59000/dsh-media/banner-001.png',
     'category',
     'domain-restaurants',
     1
@@ -18,7 +18,7 @@ VALUES
     'banner-002',
     'عروض حصرية',
     'خصومات تصل إلى 50%',
-    'http://localhost:59000/dsh-media/banner-002.jpg',
+    'http://localhost:59000/dsh-media/banner-002.png',
     'store',
     'store-1001',
     2
@@ -40,7 +40,7 @@ VALUES
     'توصيل مجاني',
     'لأول 3 طلبات',
     'مجاني',
-    'http://localhost:59000/dsh-media/promo-001.jpg',
+    'http://localhost:59000/dsh-media/promo-001.png',
     'none',
     ''
   ),
@@ -49,7 +49,7 @@ VALUES
     'مطعم الشارع القديم',
     'أعلى تقييم في صنعاء',
     'الأعلى تقييمًا',
-    'http://localhost:59000/dsh-media/store-1005-hero.jpg',
+    'http://localhost:59000/dsh-media/store-1005-hero.png',
     'store',
     'store-1005'
   )

@@ -479,16 +479,29 @@ export async function fetchCatalogAssets(query?: { status?: string; limit?: numb
   return resp.assets;
 }
 
+export interface AssetUploadIntent {
+  readonly asset: CatalogAsset;
+  readonly uploadUrl: string;
+  readonly expiresAt: string;
+}
+
 export async function createAssetUploadIntent(input: {
-  readonly objectKey: string;
-  readonly originalFileName: string;
+  readonly fileName: string;
   readonly mimeType: string;
   readonly sizeBytes: number;
   readonly sourceSurface: string;
-}): Promise<CatalogAsset> {
-  const resp = await request<{ asset: CatalogAsset }>("/dsh/operator/catalog/assets/upload-intents", {
+  readonly altAr?: string;
+  readonly altEn?: string;
+}): Promise<AssetUploadIntent> {
+  return request<AssetUploadIntent>("/dsh/operator/catalog/assets/upload-intents", {
     method: "POST",
     body: input,
+  });
+}
+
+export async function completeAssetUpload(assetId: string): Promise<CatalogAsset> {
+  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/complete`, {
+    method: "POST",
   });
   return resp.asset;
 }
@@ -508,7 +521,7 @@ export async function updateCatalogAsset(assetId: string, input: {
 }
 
 export async function reviewCatalogAsset(assetId: string, input: {
-  readonly status: "approved" | "rejected" | "archived";
+  readonly decision: "approved" | "rejected" | "archived";
   readonly reviewNote: string;
 }): Promise<CatalogAsset> {
   const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/review`, {

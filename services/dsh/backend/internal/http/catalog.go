@@ -3,12 +3,14 @@ package http
 import (
 	"database/sql"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"dsh-api/internal/centralcatalog"
+	"dsh-api/internal/media"
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 )
@@ -36,6 +38,41 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			"media":          media,
 			"policySnapshot": policySnapshot,
 		})
+	}
+}
+
+// handlePublicMedia serves the binary for an approved DAM asset with no
+// authentication -- this is the counterpart to handlePublicCatalog for
+// images: app-client (and any other unauthenticated surface) can render
+// catalog media directly from the publicUrl the catalog response gives it,
+// without needing a bearer session the way the private-document
+// /dsh/media?mediaRef= path requires. The {variant} path segment is accepted
+// for forward-compatibility with resized/converted renditions but only
+// "original" is served today.
+func handlePublicMedia(db *sql.DB, mediaClient *media.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if mediaClient == nil {
+			store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
+			return
+		}
+		asset, err := centralcatalog.GetApprovedAsset(r.Context(), db, r.PathValue("assetId"))
+		if errors.Is(err, centralcatalog.ErrNotFound) {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "media not found")
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load media asset")
+			return
+		}
+		reader, contentType, err := mediaClient.Get(r.Context(), asset.ObjectKey)
+		if err != nil {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "media not found")
+			return
+		}
+		defer reader.Close()
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		_, _ = io.Copy(w, reader)
 	}
 }
 

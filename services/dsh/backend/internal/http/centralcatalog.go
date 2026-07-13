@@ -532,12 +532,28 @@ func (s *protectedStoreServer) handleCreateAssetUploadIntent(w http.ResponseWrit
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	a, err := centralcatalog.CreateAssetUploadIntent(r.Context(), s.db, actor.ID, input)
+	intent, err := centralcatalog.CreateAssetUploadIntent(r.Context(), s.db, s.media, actor.ID, input)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"asset": a})
+	store.SendJSON(w, http.StatusCreated, map[string]any{
+		"asset":     intent.Asset,
+		"uploadUrl": intent.UploadURL,
+		"expiresAt": intent.ExpiresAt,
+	})
+}
+
+func (s *protectedStoreServer) handleCompleteAssetUpload(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+		return
+	}
+	a, err := centralcatalog.CompleteAssetUpload(r.Context(), s.db, s.media, r.PathValue("assetId"))
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogAsset(w http.ResponseWriter, r *http.Request) {
@@ -573,8 +589,55 @@ func (s *protectedStoreServer) handleReviewCatalogAsset(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
 }
 
+// authorizeAssetLinkEntity checks that a non-operator actor is allowed to
+// link/unlink/list media against the given entity. Domains, nodes, master
+// products, collections, and campaigns are platform-owned (operator only);
+// product proposals are owned by whichever actor created them; store
+// assortments are owned by whichever partner/field actor is scoped to that
+// assortment's store. Returns false and writes the response on rejection.
+func (s *protectedStoreServer) authorizeAssetLinkEntity(w http.ResponseWriter, r *http.Request, actor store.StoreActor, entityType, entityID string) bool {
+	if actor.Role == "operator" {
+		return true
+	}
+	switch entityType {
+	case "product_proposal":
+		proposal, err := centralcatalog.GetProposal(r.Context(), s.db, entityID)
+		if err != nil {
+			s.writeCentralCatalogError(w, err)
+			return false
+		}
+		if proposal.SourceActorID != actor.ID {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this product proposal does not belong to you")
+			return false
+		}
+		return true
+	case "store_assortment":
+		assortment, err := centralcatalog.GetStoreAssortmentByID(r.Context(), s.db, entityID)
+		if err != nil {
+			s.writeCentralCatalogError(w, err)
+			return false
+		}
+		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, assortment.StoreID); err != nil {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store assortment does not belong to you")
+			return false
+		}
+		return true
+	case "store":
+		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, entityID); err != nil {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
+			return false
+		}
+		return true
+	default:
+		// domain, node, master_product, collection, campaign: platform-owned.
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "only operators can manage media for this entity type")
+		return false
+	}
+}
+
 func (s *protectedStoreServer) handleLinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
 		return
 	}
 	var input centralcatalog.AssetLinkInput
@@ -582,6 +645,9 @@ func (s *protectedStoreServer) handleLinkCatalogAsset(w http.ResponseWriter, r *
 		return
 	}
 	input.AssetID = r.PathValue("assetId")
+	if !s.authorizeAssetLinkEntity(w, r, actor, input.EntityType, input.EntityID) {
+		return
+	}
 	link, err := centralcatalog.LinkAsset(r.Context(), s.db, input)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
@@ -591,10 +657,16 @@ func (s *protectedStoreServer) handleLinkCatalogAsset(w http.ResponseWriter, r *
 }
 
 func (s *protectedStoreServer) handleUnlinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
 		return
 	}
-	err := centralcatalog.UnlinkAsset(r.Context(), s.db, r.URL.Query().Get("entityType"), r.URL.Query().Get("entityId"), r.PathValue("linkId"))
+	entityType := r.URL.Query().Get("entityType")
+	entityID := r.URL.Query().Get("entityId")
+	if !s.authorizeAssetLinkEntity(w, r, actor, entityType, entityID) {
+		return
+	}
+	err := centralcatalog.UnlinkAsset(r.Context(), s.db, entityType, entityID, r.PathValue("linkId"))
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -603,10 +675,16 @@ func (s *protectedStoreServer) handleUnlinkCatalogAsset(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleListCatalogAssetLinks(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
 		return
 	}
-	links, err := centralcatalog.ListAssetLinks(r.Context(), s.db, r.URL.Query().Get("entityType"), r.URL.Query().Get("entityId"))
+	entityType := r.URL.Query().Get("entityType")
+	entityID := r.URL.Query().Get("entityId")
+	if !s.authorizeAssetLinkEntity(w, r, actor, entityType, entityID) {
+		return
+	}
+	links, err := centralcatalog.ListAssetLinks(r.Context(), s.db, entityType, entityID)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -664,6 +742,32 @@ func (s *protectedStoreServer) handlePutProductProposalImage(w http.ResponseWrit
 	s.putEntityImage(w, r, "product_proposal", proposalID, role)
 }
 
+// handlePutStoreImage lets a store's own partner/field actor (or an
+// operator) set its logo/cover/storefront/interior/signage photo. Unlike the
+// platform-owned domain/node/product image handlers, store images are
+// store-owned-under-governance: the uploader can be the partner or the field
+// agent who onboarded the store, not just an operator, but ownership is
+// still enforced via store.ResolveActorStoreForID.
+func (s *protectedStoreServer) handlePutStoreImage(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	role := r.PathValue("role")
+	if !centralcatalog.IsValidStoreImageRole(role) {
+		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid store image role")
+		return
+	}
+	if actor.Role != "operator" {
+		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
+			return
+		}
+	}
+	s.putEntityImage(w, r, "store", storeID, role)
+}
+
 type EntityImageInput struct {
 	AssetID string `json:"assetId"`
 }
@@ -674,17 +778,24 @@ func (s *protectedStoreServer) putEntityImage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Reset any existing primary image for this entity & role
-	_, err := s.db.ExecContext(r.Context(), `UPDATE dsh_catalog_asset_links
-		SET is_primary=false, updated_at=now()
-		WHERE entity_type=$1 AND entity_id=$2 AND role=$3`, entityType, entityID, role)
+	tx, err := s.db.BeginTx(r.Context(), nil)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
 	}
+	defer tx.Rollback()
 
-	// Link the new asset as primary
-	link, err := centralcatalog.LinkAsset(r.Context(), s.db, centralcatalog.AssetLinkInput{
+	// Reset any existing primary image for this entity & role
+	if _, err := tx.ExecContext(r.Context(), `UPDATE dsh_catalog_asset_links
+		SET is_primary=false, updated_at=now()
+		WHERE entity_type=$1 AND entity_id=$2 AND role=$3`, entityType, entityID, role); err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+
+	// Link the new asset as primary, in the same transaction so a failure
+	// here rolls back the demotion above instead of leaving no primary image.
+	link, err := centralcatalog.LinkAsset(r.Context(), tx, centralcatalog.AssetLinkInput{
 		AssetID:    input.AssetID,
 		EntityType: entityType,
 		EntityID:   entityID,
@@ -693,6 +804,11 @@ func (s *protectedStoreServer) putEntityImage(w http.ResponseWriter, r *http.Req
 		IsPrimary:  true,
 	})
 	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
 	}

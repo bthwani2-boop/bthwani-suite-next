@@ -6,7 +6,18 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(xxd)",
+      "PowerShell($tokens = $null; $errors = $null; [System.Management.Automation.Language.Parser]::ParseFile\\(\"C:\\\\bthwani-suite-next\\\\infra\\\\docker\\\\scripts\\\\runtime.ps1\", [ref]$tokens, [ref]$errors\\) | Out-Null; if \\($errors.Count -gt 0\\) { $errors | ForEach-Object { Write-Host $_.Message } } else { Write-Host \"No syntax errors\" })",
+      "Bash(docker manifest *)",
+      "Bash(docker run *)",
+      "Bash(docker exec *)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(docker rm *)",
+      "Bash(docker compose *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(\"/c/Users/bassa/AppData/Local/Programs/Python/Python312/python\" -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Bash(\"/c/Users/bassa/AppData/Local/Programs/Python/Python312/python\" \"/c/Users/bassa/AppData/Local/Temp/claude/c--bthwani-suite-next/a64b1476-922a-44de-803a-feb6d4f8ada4/scratchpad/gen_store_pngs.py\")"
     ]
   },
   "project": "bthwani-suite-next",

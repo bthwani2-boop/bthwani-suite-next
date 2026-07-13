@@ -535,8 +535,8 @@ function Invoke-WltSmoke {
   Write-Host "WLT API smoke: PASS"
 }
 
-function Invoke-MinioSmoke {
-  Write-Host "`n--- MinIO smoke ---"
+function Wait-ForMinIO {
+  Write-Host "`n--- Waiting for MinIO ---"
   $MinioPort = if ($env:BTHWANI_MINIO_API_PORT) { $env:BTHWANI_MINIO_API_PORT } else { "59000" }
   $MinioUrl = "http://localhost:$MinioPort"
   $max = 15
@@ -553,18 +553,55 @@ function Invoke-MinioSmoke {
   }
   Invoke-RestMethod "$MinioUrl/minio/health/ready" -TimeoutSec 10 -ErrorAction Stop | Out-Null
   Write-Host "  /minio/health/ready: PASS"
+}
+
+function Invoke-MinioSmoke {
+  Wait-ForMinIO
   Write-Host "MinIO smoke: PASS"
 }
 
 function Invoke-DshMediaSeed {
   Write-Host "`n--- Applying Store Discovery MinIO media seed ---"
+
+  # dsh-032_central_catalog_seed.local.sql inserts dsh_catalog_assets rows with
+  # status='approved', and dsh-001_store_discovery.local.sql / dsh-002_home_discovery.local.sql
+  # write hero/logo/banner/promo image URLs directly, for exactly these object
+  # keys. If any file listed here is missing, those SQL seeds would create rows
+  # pointing at a MinIO object that was never uploaded -- the exact drift this
+  # check exists to prevent.
+  $ExpectedFiles = @(
+    "node-dairy-cheese.png", "node-canned-food.png", "node-local-vegetables.png",
+    "node-imported-fruits.png", "node-sweets-cake.png", "node-sweets-chocolate.png",
+    "product-cheese-kraft.png", "product-canned-tuna.png", "product-local-tomato.png",
+    "product-imported-banana.png", "product-chocolate-box.png",
+    "store-1001-hero.png", "store-1001-logo.png", "store-1002-hero.png", "store-1002-logo.png",
+    "store-1003-hero.png", "store-1003-logo.png", "store-1004-hero.png", "store-1004-logo.png",
+    "store-1005-hero.png", "store-1005-logo.png", "store-1006-hero.png", "store-1006-logo.png",
+    "banner-001.png", "banner-002.png", "promo-001.png"
+  )
+
   $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
+  $Missing = $ExpectedFiles | Where-Object { -not (Test-Path (Join-Path $MediaDirectory $_)) }
+  if ($Missing.Count -gt 0) {
+    throw "DSH media seed: missing expected seed file(s) in $MediaDirectory : $($Missing -join ', ')"
+  }
+
   $Mount = "${MediaDirectory}:/seed:ro"
   docker run --rm --network bthwani-runtime --volume $Mount `
     --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
     -c "mc alias set local http://minio:9000 bthwani_minio bthwani_minio_password && mc mb --ignore-existing local/dsh-media && mc anonymous set download local/dsh-media && mc cp --recursive /seed/ local/dsh-media/"
   if ($LASTEXITCODE -ne 0) { throw "DSH media seed failed (exit $LASTEXITCODE)" }
-  Write-Host "DSH media seed: PASS"
+
+  # Verify every expected object actually landed in MinIO -- mc cp exiting 0
+  # doesn't by itself prove each individual object stat succeeds afterward.
+  foreach ($file in $ExpectedFiles) {
+    docker run --rm --network bthwani-runtime `
+      --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
+      -c "mc alias set local http://minio:9000 bthwani_minio bthwani_minio_password >/dev/null && mc stat local/dsh-media/$file >/dev/null" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "DSH media seed: object dsh-media/$file not found in MinIO after upload" }
+  }
+
+  Write-Host "DSH media seed: PASS ($($ExpectedFiles.Count) objects verified)"
 }
 
 function Invoke-DshSmoke {
@@ -1176,8 +1213,12 @@ elseif ($Action -eq "all") {
   }
 
   if ($ProfileList -contains "media") {
+    # MinIO must be confirmed ready before the seed script's `mc` commands
+    # run against it -- previously the seed ran first and could race a MinIO
+    # container that was still starting.
+    Wait-ForMinIO
     Invoke-DshMediaSeed
-    Invoke-MinioSmoke
+    Write-Host "MinIO smoke: PASS"
   }
 
   if ($ProfileList -contains "financial-simulators") {

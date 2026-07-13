@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import {
   CpDescriptionList,
   CpDescriptionRow,
@@ -11,11 +12,60 @@ import {
   formatDeliveryModes,
   type DshStoreAdminDetailState,
 } from "../../../shared/store";
+import { uploadAndLinkAsset } from "../../../shared/catalog";
 
 type Props = {
   readonly state: DshStoreAdminDetailState;
   readonly onClose: () => void;
 };
+
+const STORE_IMAGE_ROLES = [
+  { value: "store_logo", label: "الشعار" },
+  { value: "store_cover", label: "صورة الغلاف" },
+  { value: "storefront_photo", label: "صورة الواجهة" },
+  { value: "interior_photo", label: "صورة الداخل" },
+  { value: "signage_photo", label: "صورة اللافتة" },
+] as const;
+
+function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [role, setRole] = useState<string>(STORE_IMAGE_ROLES[0].value);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) {
+      alert("يرجى اختيار ملف الصورة");
+      return;
+    }
+    setUploading(true);
+    try {
+      await uploadAndLinkAsset(file, "stores", storeId, role, "control-panel-catalog", "");
+      alert("تم رفع الصورة؛ ستظهر على المتجر بعد اعتمادها من قائمة مراجعة الصور في الكتالوج.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (e: any) {
+      alert("فشل رفع الصورة: " + (e.message ?? e.toString()));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <CpDescriptionRow label="رفع صورة للمتجر">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="نوع صورة المتجر">
+          {STORE_IMAGE_ROLES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </select>
+        <input ref={fileInputRef} type="file" accept="image/*" aria-label="اختيار ملف صورة المتجر" />
+        <button type="button" onClick={() => void handleUpload()} disabled={uploading}>
+          {uploading ? "جارٍ الرفع…" : "رفع وربط"}
+        </button>
+      </div>
+    </CpDescriptionRow>
+  );
+}
 
 export function StoreDetailAdminPanel({ state, onClose }: Props) {
   return (
@@ -104,6 +154,7 @@ export function StoreDetailAdminPanel({ state, onClose }: Props) {
           <CpDescriptionRow label="آخر تحديث">
             {new Date(state.detail.updatedAt).toLocaleString("ar")}
           </CpDescriptionRow>
+          <StoreImageUploadForm storeId={state.detail.id} />
         </CpDescriptionList>
       )}
     </CpDetailPanel>

@@ -155,7 +155,7 @@ export interface ClientVisibleCatalogResponse {
   readonly domains: readonly CentralCatalogDomain[];
   readonly nodes: readonly CentralCatalogNode[];
   readonly products: readonly ClientVisibleCatalogEntry[];
-  readonly media: readonly CatalogAssetLink[];
+  readonly media: readonly CatalogAssetLinkWithAsset[];
   readonly policySnapshot: readonly CatalogPlatformPolicy[];
 }
 
@@ -184,12 +184,25 @@ export interface CatalogAsset {
 export interface CatalogAssetLink {
   readonly id: string;
   readonly assetId: string;
-  readonly entityType: "domain" | "node" | "master_product" | "product_proposal" | "store_assortment" | "collection" | "campaign";
+  readonly entityType: "domain" | "node" | "master_product" | "product_proposal" | "store_assortment" | "collection" | "campaign" | "store";
   readonly entityId: string;
-  readonly role: "icon" | "cover" | "thumbnail" | "gallery" | "canonical_product_image" | "partner_custom_product_image" | "marketing_banner" | "document";
+  readonly role: "icon" | "cover" | "thumbnail" | "gallery" | "canonical_product_image" | "partner_custom_product_image" | "marketing_banner" | "document"
+    | "store_logo" | "store_cover" | "storefront_photo" | "interior_photo" | "signage_photo";
   readonly sortOrder: number;
   readonly isPrimary: boolean;
   readonly status: "draft" | "pending_review" | "approved" | "rejected" | "archived";
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+// Returned by client-facing surfaces (e.g. GET /dsh/stores/{storeId}/catalog)
+// where the link alone isn't enough to render an image -- the backend joins
+// in the asset's object key, a ready-to-use relative publicUrl (prefix with
+// the surface's own API base URL), alt text, and mime type.
+export interface CatalogAssetLinkWithAsset extends CatalogAssetLink {
+  readonly objectKey: string;
+  readonly publicUrl: string;
+  readonly altAr: string;
+  readonly altEn: string;
+  readonly mimeType: string;
 }

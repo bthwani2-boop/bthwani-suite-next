@@ -205,7 +205,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   }
 
   if (route === 'category-management') return renderSurfaceShell(<CategoryManagementScreen storeId={activeStoreRuntimeId} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
-  if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
+  if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} storeId={activeStoreRuntimeId} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'product-overrides') return renderSurfaceShell(<ProductOverridesScreen storeId={activeStoreRuntimeId} productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen onBack={() => openAccountHub('operations')} />) as React.ReactElement;
   if (route === 'team-management') return renderSurfaceShell(<PartnerStoreScreen />) as React.ReactElement;

@@ -196,21 +196,31 @@ ON CONFLICT (store_id, master_product_id) DO UPDATE SET
   approved_by = EXCLUDED.approved_by,
   updated_at = NOW();
 
--- DAM assets for new subcategories and mock products
+-- DAM assets for new subcategories and mock products.
+--
+-- object_key matches the flat filename Invoke-DshMediaSeed (infra/docker/scripts/runtime.ps1)
+-- uploads from services/dsh/database/seeds/local/media/ into the dsh-media bucket, so these
+-- rows only resolve to a real object once that script has actually run against a live MinIO --
+-- unlike the previous version of this seed, which pointed 'approved' rows at localhost URLs
+-- that were never backed by any uploaded file. public_url is left NULL: the runtime derives
+-- the servable URL from object_key via GET /dsh/public/media/{assetId}/original
+-- (see centralcatalog.publicMediaPath), so a stored public_url is unused legacy data.
+-- size_bytes/checksum_sha256 are the real values of the checked-in placeholder PNGs
+-- (generate with the same script used for `id`'s file if these are ever regenerated).
 INSERT INTO dsh_catalog_assets
   (id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height, checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by)
 VALUES
-  ('asset-node-dairy-cheese',      'node-dairy-cheese.png',      'http://localhost:59000/dsh-media/node-dairy-cheese.png',      'cheese.png',    'image/png', 1024, 512, 512, 'sha256', 'ألبان وأجبان',      'Dairy & Cheese',     '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-canned-food',       'node-canned-food.png',       'http://localhost:59000/dsh-media/node-canned-food.png',       'canned.png',    'image/png', 1024, 512, 512, 'sha256', 'أغذية معلبة',       'Canned Food',        '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-local-vegetables',  'node-local-vegetables.png',  'http://localhost:59000/dsh-media/node-local-vegetables.png',  'vegetables.png','image/png', 1024, 512, 512, 'sha256', 'خضروات محلية',      'Local Vegetables',   '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-imported-fruits',   'node-imported-fruits.png',   'http://localhost:59000/dsh-media/node-imported-fruits.png',   'fruits.png',    'image/png', 1024, 512, 512, 'sha256', 'فواكه مستوردة',     'Imported Fruits',    '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-sweets-cake',       'node-sweets-cake.png',       'http://localhost:59000/dsh-media/node-sweets-cake.png',       'cake.png',      'image/png', 1024, 512, 512, 'sha256', 'كيك وتورتات',       'Cakes & Tortes',     '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-sweets-chocolate',  'node-sweets-chocolate.png',  'http://localhost:59000/dsh-media/node-sweets-chocolate.png',  'chocolate.png', 'image/png', 1024, 512, 512, 'sha256', 'شوكولاتة فاخرة',     'Fine Chocolates',    '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-cheese-kraft',   'product-cheese-kraft.png',   'http://localhost:59000/dsh-media/product-cheese-kraft.png',   'kraft.png',     'image/png', 1024, 512, 512, 'sha256', 'جبنة كرافت شيدر',    'Kraft Cheddar Cheese','#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-canned-tuna',    'product-canned-tuna.png',    'http://localhost:59000/dsh-media/product-canned-tuna.png',    'tuna.png',      'image/png', 1024, 512, 512, 'sha256', 'تونة حدائق كاليفورنيا','California Tuna',    '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-local-tomato',   'product-local-tomato.png',   'http://localhost:59000/dsh-media/product-local-tomato.png',   'tomato.png',    'image/png', 1024, 512, 512, 'sha256', 'طماطم بلدي',        'Local Tomato',       '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-imported-banana', 'product-imported-banana.png', 'http://localhost:59000/dsh-media/product-imported-banana.png', 'banana.png',    'image/png', 1024, 512, 512, 'sha256', 'موز مستورد',        'Imported Banana',    '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-chocolate-box',  'product-chocolate-box.png',  'http://localhost:59000/dsh-media/product-chocolate-box.png',  'patchi.png',    'image/png', 1024, 512, 512, 'sha256', 'علبة شوكولاتة باتشي', 'Patchi Chocolate Box','#ffffff', 'approved', 'system', 'system-seed')
+  ('asset-node-dairy-cheese',       'node-dairy-cheese.png',       NULL, 'node-dairy-cheese.png',       'image/png', 135, 64, 64, '3362e728cdca6501caf4cf3c238cda60ddea24ad80051f353844bff0d0494781', 'ألبان وأجبان',        'Dairy & Cheese',       '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-canned-food',        'node-canned-food.png',        NULL, 'node-canned-food.png',        'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'أغذية معلبة',         'Canned Food',          '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-local-vegetables',   'node-local-vegetables.png',   NULL, 'node-local-vegetables.png',   'image/png', 135, 64, 64, '23a6201d9c7a08cdc934cfe9e4d552c941391812d7c685ed5ac52376cefa5c23', 'خضروات محلية',        'Local Vegetables',     '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-imported-fruits',    'node-imported-fruits.png',    NULL, 'node-imported-fruits.png',    'image/png', 134, 64, 64, 'ba664beec27326a39ba16ae3da932a935346a19b7f1402e0b0f1d310d8d1dd48', 'فواكه مستوردة',       'Imported Fruits',      '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-sweets-cake',        'node-sweets-cake.png',        NULL, 'node-sweets-cake.png',        'image/png', 136, 64, 64, '2f9433ed6802eaa797813df5bdc09289c41485ea5bdb4daa4462df5b5911f5ff', 'كيك وتورتات',         'Cakes & Tortes',       '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-node-sweets-chocolate',   'node-sweets-chocolate.png',   NULL, 'node-sweets-chocolate.png',   'image/png', 137, 64, 64, 'e601d3911fa0eaa9c8d3c4a56bb09c3738d5dfd5d6c2b473b0a6b9de59959d50', 'شوكولاتة فاخرة',      'Fine Chocolates',      '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-cheese-kraft',    'product-cheese-kraft.png',    NULL, 'product-cheese-kraft.png',    'image/png', 135, 64, 64, '9865380be562058e750d4d9ff4a0eb98f093ee1c53825ed8da5a1ec54936f779', 'جبنة كرافت شيدر',     'Kraft Cheddar Cheese', '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-canned-tuna',     'product-canned-tuna.png',     NULL, 'product-canned-tuna.png',     'image/png', 137, 64, 64, 'bbd634f328ccfd4b910b2db7c59d3c175a8a9240eebff8f2ce8fa7e1b70863bf', 'تونة حدائق كاليفورنيا', 'California Tuna',    '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-local-tomato',    'product-local-tomato.png',    NULL, 'product-local-tomato.png',    'image/png', 137, 64, 64, '16c1d022de872b12f79372e5dbf386169908ab5a193865319d86f82de1b86a56', 'طماطم بلدي',          'Local Tomato',         '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-imported-banana', 'product-imported-banana.png', NULL, 'product-imported-banana.png', 'image/png', 136, 64, 64, 'a5f0a2970c430ed1fba47d7303e2117f34efe6c58f679a8d6d61b8d5deeb2498', 'موز مستورد',          'Imported Banana',      '#ffffff', 'approved', 'system', 'system-seed'),
+  ('asset-product-chocolate-box',   'product-chocolate-box.png',   NULL, 'product-chocolate-box.png',   'image/png', 136, 64, 64, '282b23b7f5e3bce782ead45bb1d5b4db89552eb3554cf8447e510272ccdd1258', 'علبة شوكولاتة باتشي',  'Patchi Chocolate Box', '#ffffff', 'approved', 'system', 'system-seed')
 ON CONFLICT (id) DO UPDATE SET
   object_key = EXCLUDED.object_key,
   public_url = EXCLUDED.public_url,

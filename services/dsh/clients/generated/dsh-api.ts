@@ -283,6 +283,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/public/media/{assetId}/{variant}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream an approved DAM asset's binary. Unauthenticated -- only status=approved assets are ever served. */
+        get: operations["getPublicCatalogMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/catalog/domains": {
         parameters: {
             query?: never;
@@ -507,6 +524,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/catalog/assets/{assetId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeAssetUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/catalog/assets/{assetId}": {
         parameters: {
             query?: never;
@@ -644,6 +677,23 @@ export interface paths {
         };
         get?: never;
         put: operations["putProductProposalImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/stores/{storeId}/images/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set a store's logo/cover/storefront/interior/signage photo. Callable by the store's own partner/field actor, not just operator. */
+        put: operations["putStoreImage"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4849,6 +4899,29 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getPublicCatalogMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assetId: string;
+                /** @description Rendition selector; only "original" is served today. */
+                variant: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image bytes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     listCatalogDomains: {
         parameters: {
             query?: never;
@@ -5173,10 +5246,49 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    fileName: string;
+                    mimeType: string;
+                    sizeBytes: number;
+                    sourceSurface: string;
+                    altAr?: string;
+                    altEn?: string;
+                };
+            };
+        };
         responses: {
             /** @description Upload intent created. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        asset?: Record<string, never>;
+                        /** @description Short-lived presigned MinIO PUT URL. */
+                        uploadUrl?: string;
+                        /** Format: date-time */
+                        expiresAt?: string;
+                    };
+                };
+            };
+        };
+    };
+    completeAssetUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset upload verified against storage and moved out of draft. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5213,7 +5325,15 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "approved" | "rejected" | "pending_review" | "archived";
+                    reviewNote?: string;
+                };
+            };
+        };
         responses: {
             /** @description Asset reviewed by operator. */
             200: {
@@ -5365,6 +5485,33 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Proposal image updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putStoreImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+                role: "store_logo" | "store_cover" | "storefront_photo" | "interior_photo" | "signage_photo";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    assetId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Store image updated. */
             200: {
                 headers: {
                     [name: string]: unknown;

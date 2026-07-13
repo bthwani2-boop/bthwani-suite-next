@@ -35,28 +35,50 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
         version: 1,
       }));
     const categories = [...nodeCategories, ...domainCategories].sort((a, b) => a.sortOrder - b.sortOrder);
-    const products: CatalogProduct[] = response.products.map((product) => ({
-      id: product.id,
-      storeId,
-      categoryId: product.categoryNodeId ?? product.domainId,
-      name: product.canonicalNameAr,
-      description: product.brand || "",
-      sku: product.sku || "",
-      priceReference: String(product.unitPrice),
-      unitLabel: product.unit,
-      stockStatus: product.stockStatus as CatalogProduct["stockStatus"],
-      isActive: product.isActive,
-      version: 1,
-      media: product.imageObjectKey ? [{
-        id: `${product.id}-media`,
-        productId: product.id,
-        objectKey: product.imageObjectKey,
-        contentType: "image/webp",
-        state: "complete",
-        publicUrl: product.imageObjectKey.startsWith("http") ? product.imageObjectKey : `${baseUrl}/dsh/media?key=${encodeURIComponent(product.imageObjectKey)}`,
+    const products: CatalogProduct[] = response.products.map((product) => {
+      // Prefer the DAM-resolved image (real, review-gated, MinIO-backed
+      // asset) and only fall back to the legacy COALESCE'd object key when
+      // no approved canonical_product_image link exists yet for this
+      // product -- see governance/catalog centralization closure plan.
+      const damLink = response.media.find(
+        (link) => link.entityType === "master_product" && link.entityId === product.id && link.role === "canonical_product_image",
+      );
+      const media: CatalogMedia[] = damLink
+        ? [{
+            id: damLink.assetId,
+            productId: product.id,
+            objectKey: damLink.objectKey,
+            contentType: damLink.mimeType || "image/webp",
+            state: "complete",
+            publicUrl: `${baseUrl}${damLink.publicUrl}`,
+            version: 1,
+          }]
+        : product.imageObjectKey
+          ? [{
+              id: `${product.id}-media`,
+              productId: product.id,
+              objectKey: product.imageObjectKey,
+              contentType: "image/webp",
+              state: "complete",
+              publicUrl: product.imageObjectKey.startsWith("http") ? product.imageObjectKey : `${baseUrl}/dsh/media?mediaRef=${encodeURIComponent(product.imageObjectKey)}`,
+              version: 1,
+            }]
+          : [];
+      return {
+        id: product.id,
+        storeId,
+        categoryId: product.categoryNodeId ?? product.domainId,
+        name: product.canonicalNameAr,
+        description: product.brand || "",
+        sku: product.sku || "",
+        priceReference: String(product.unitPrice),
+        unitLabel: product.unit,
+        stockStatus: product.stockStatus as CatalogProduct["stockStatus"],
+        isActive: product.isActive,
         version: 1,
-      } satisfies CatalogMedia] : [],
-    }));
+        media,
+      };
+    });
     const catalog: ClientStoreCatalog = { storeId, categories, products };
     return resolvePublishedCatalogState(catalog);
   } catch (error) {

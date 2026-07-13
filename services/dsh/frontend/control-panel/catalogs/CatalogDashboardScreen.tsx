@@ -335,7 +335,7 @@ export function CatalogDashboardScreen() {
 
   const handleAssetReview = async (assetId: string, status: "approved" | "rejected" | "archived", note: string) => {
     try {
-      await reviewCatalogAsset(assetId, { status, reviewNote: note });
+      await reviewCatalogAsset(assetId, { decision: status, reviewNote: note });
       alert("تم تسجيل قرار مراجعة الصورة بنجاح");
       await reloadAssets();
     } catch (e: any) {

@@ -6,6 +6,7 @@ const entityTypeMap: Record<string, CatalogAssetLink["entityType"]> = {
   nodes: "node",
   "master-products": "master_product",
   "product-proposals": "product_proposal",
+  stores: "store",
 };
 
 /**
@@ -20,39 +21,36 @@ export async function uploadAndLinkAsset(
   altAr: string,
   altEn = "",
 ): Promise<{ readonly asset: CatalogAsset; readonly link: CatalogAssetLink }> {
-  // 1. Create upload intent
-  const asset = await api.createAssetUploadIntent({
-    objectKey: `catalog-assets/${Date.now()}-${file.name}`,
-    originalFileName: file.name,
+  // 1. Create upload intent: registers a draft asset row and returns a
+  // short-lived presigned MinIO PUT URL. dsh-api never sees the file body.
+  const intent = await api.createAssetUploadIntent({
+    fileName: file.name,
     mimeType: file.type || "image/jpeg",
     sizeBytes: file.size,
     sourceSurface,
-  });
-
-  // 2. Perform actual file upload binary write (simulated client upload using MinIO pre-signed URL)
-  if (asset.publicUrl) {
-    const callFetch = fetch;
-    await callFetch(asset.publicUrl, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": file.type || "image/jpeg" },
-    });
-  }
-
-  // 3. Update asset metadata to trigger draft -> uploaded status
-  const updatedAsset = await api.updateCatalogAsset(asset.id, {
     altAr,
     altEn,
   });
 
+  // 2. Upload the binary directly to MinIO via the presigned URL.
+  await fetch(intent.uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type || "image/jpeg" },
+  });
+
+  // 3. Complete: dsh-api stats the object in MinIO to confirm it actually
+  // landed before moving the asset out of draft into the review queue.
+  const uploadedAsset = await api.completeAssetUpload(intent.asset.id);
+
   // 4. Link asset to the entity
   const normalizedEntityType = entityTypeMap[entityType] ?? entityType;
-  const link = await api.linkCatalogAsset(updatedAsset.id, {
+  const link = await api.linkCatalogAsset(uploadedAsset.id, {
     entityType: normalizedEntityType,
     entityId,
     role,
     isPrimary: true,
   });
 
-  return { asset: updatedAsset, link };
+  return { asset: uploadedAsset, link };
 }

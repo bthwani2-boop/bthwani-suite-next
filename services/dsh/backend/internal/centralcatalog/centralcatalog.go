@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"dsh-api/internal/media"
 )
 
 var (
@@ -658,6 +660,13 @@ func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, e
 	return a, err
 }
 
+// GetStoreAssortmentByID looks up a single assortment row regardless of
+// store, so callers can resolve which store owns it (e.g. for DAM asset-link
+// ownership checks) before knowing the store ID.
+func GetStoreAssortmentByID(ctx context.Context, db *sql.DB, id string) (StoreAssortment, error) {
+	return scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentColumns+` FROM dsh_store_assortments WHERE id=$1`, id))
+}
+
 func ListStoreAssortment(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
 	rows, err := db.QueryContext(ctx, `SELECT `+assortmentColumns+` FROM dsh_store_assortments
 		WHERE store_id=$1 ORDER BY updated_at DESC`, storeID)
@@ -910,7 +919,7 @@ type ClientCatalogEntry struct {
 // for a published store. No local product/category can leak in here because
 // the query originates entirely from the master tables joined through the
 // assortment link.
-func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLink, []CatalogPolicy, error) {
+func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
 		SELECT 1 FROM dsh_stores WHERE id=$1 AND status='active' AND is_visible=true
@@ -953,18 +962,22 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		return CatalogPolicy{}
 	}
 
-	// 2. Fetch approved asset links
+	// 2. Fetch approved asset links, joined with their asset so the client
+	// gets a renderable objectKey/publicUrl instead of a bare link it would
+	// have to separately resolve.
 	linkRows, err := db.QueryContext(ctx, `
-		SELECT `+assetLinkColumns+` FROM dsh_catalog_asset_links
-		WHERE status = 'approved'
+		SELECT `+prefixColumns("al", assetLinkColumns)+`, a.object_key, a.alt_ar, a.alt_en, a.mime_type
+		FROM dsh_catalog_asset_links al
+		JOIN dsh_catalog_assets a ON a.id = al.asset_id
+		WHERE al.status = 'approved' AND a.status = 'approved'
 	`)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
 	defer linkRows.Close()
-	allLinks := []CatalogAssetLink{}
+	allLinks := []CatalogAssetLinkWithAsset{}
 	for linkRows.Next() {
-		l, err := scanAssetLink(linkRows)
+		l, err := scanAssetLinkWithAsset(linkRows)
 		if err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
@@ -1053,7 +1066,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		}
 	}
 
-	relevantLinks := []CatalogAssetLink{}
+	relevantLinks := []CatalogAssetLinkWithAsset{}
 	for _, l := range allLinks {
 		keep := false
 		switch l.EntityType {
@@ -1450,10 +1463,24 @@ var validAssetSourceSurface = map[string]bool{
 var validAssetRole = map[string]bool{
 	"icon": true, "cover": true, "thumbnail": true, "gallery": true, "canonical_product_image": true,
 	"partner_custom_product_image": true, "marketing_banner": true, "document": true,
+	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
 }
 var validAssetEntityType = map[string]bool{
 	"domain": true, "node": true, "master_product": true, "product_proposal": true,
-	"store_assortment": true, "collection": true, "campaign": true,
+	"store_assortment": true, "collection": true, "campaign": true, "store": true,
+}
+
+// validStoreImageRole is the subset of validAssetRole that entityType=store
+// may use -- keeps a partner/field actor from e.g. linking a
+// canonical_product_image role against their store.
+var validStoreImageRole = map[string]bool{
+	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
+}
+
+// IsValidStoreImageRole reports whether role is one of the roles a store
+// entity (logo/cover/branch photos) may be linked under.
+func IsValidStoreImageRole(role string) bool {
+	return validStoreImageRole[role]
 }
 
 const assetColumns = `id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
@@ -1474,6 +1501,7 @@ func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 type AssetUploadIntentInput struct {
 	FileName      string `json:"fileName"`
 	MimeType      string `json:"mimeType"`
+	SizeBytes     int64  `json:"sizeBytes"`
 	SourceSurface string `json:"sourceSurface"`
 	AltAr         string `json:"altAr"`
 	AltEn         string `json:"altEn"`
@@ -1494,21 +1522,107 @@ func sanitizeAssetFileName(value string) string {
 	return b.String()
 }
 
+// maxAssetUploadSizeBytes bounds what a client may declare/upload for a
+// single DAM asset (15 MiB); StatObject re-checks the real object against
+// this too so a declared-then-swapped-larger file can't sneak past intent
+// validation.
+const maxAssetUploadSizeBytes = 15 * 1024 * 1024
+
+// assetUploadIntentTTL is how long the presigned PUT URL stays valid.
+const assetUploadIntentTTL = 15 * time.Minute
+
+// GetApprovedAsset loads an asset for public/unauthenticated serving. Only
+// approved assets are ever returned -- draft/pending/rejected/archived
+// assets must stay invisible to app-client regardless of who guesses the ID.
+func GetApprovedAsset(ctx context.Context, db *sql.DB, id string) (CatalogAsset, error) {
+	asset, err := scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	if asset.Status != "approved" {
+		return CatalogAsset{}, ErrNotFound
+	}
+	return asset, nil
+}
+
+// AssetUploadIntent is what CreateAssetUploadIntent returns: the draft asset
+// row plus a short-lived presigned URL the surface can PUT the file to
+// directly, without dsh-api ever holding the binary or the surface ever
+// holding MinIO credentials.
+type AssetUploadIntent struct {
+	Asset     CatalogAsset `json:"asset"`
+	UploadURL string       `json:"uploadUrl"`
+	ExpiresAt time.Time    `json:"expiresAt"`
+}
+
 // CreateAssetUploadIntent registers a new DAM asset row in draft state and
-// returns the object key the surface should upload to. Nothing is
-// client-visible until an operator/marketing reviewer runs ReviewAsset.
-func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, actorID string, input AssetUploadIntentInput) (CatalogAsset, error) {
-	if strings.TrimSpace(input.FileName) == "" || !strings.HasPrefix(input.MimeType, "image/") || !validAssetSourceSurface[input.SourceSurface] {
-		return CatalogAsset{}, ErrInvalid
+// returns the object key plus a presigned upload URL the surface should PUT
+// the file to. Nothing is client-visible until an operator/marketing
+// reviewer runs ReviewAsset, and nothing is even eligible for review until
+// CompleteAssetUpload confirms the object landed in MinIO.
+func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media.Client, actorID string, input AssetUploadIntentInput) (AssetUploadIntent, error) {
+	if strings.TrimSpace(input.FileName) == "" || !strings.HasPrefix(input.MimeType, "image/") ||
+		input.SizeBytes <= 0 || input.SizeBytes > maxAssetUploadSizeBytes || !validAssetSourceSurface[input.SourceSurface] {
+		return AssetUploadIntent{}, ErrInvalid
+	}
+	if mediaClient == nil {
+		return AssetUploadIntent{}, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
 	}
 	id := entityID("asset")
 	objectKey := fmt.Sprintf("catalog-assets/%s/%s", id, sanitizeAssetFileName(input.FileName))
 	_, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_assets
-		(id, object_key, original_file_name, mime_type, alt_ar, alt_en, status, source_surface, uploaded_by)
-		VALUES ($1,$2,$3,$4,$5,$6,'draft',$7,$8)`,
-		id, objectKey, input.FileName, input.MimeType, input.AltAr, input.AltEn, input.SourceSurface, actorID)
+		(id, object_key, original_file_name, mime_type, size_bytes, alt_ar, alt_en, status, source_surface, uploaded_by)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',$8,$9)`,
+		id, objectKey, input.FileName, input.MimeType, input.SizeBytes, input.AltAr, input.AltEn, input.SourceSurface, actorID)
+	if err != nil {
+		return AssetUploadIntent{}, err
+	}
+	asset, err := scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if err != nil {
+		return AssetUploadIntent{}, err
+	}
+	uploadURL, expiresAt, err := mediaClient.PresignPut(ctx, objectKey, assetUploadIntentTTL)
+	if err != nil {
+		return AssetUploadIntent{}, err
+	}
+	return AssetUploadIntent{Asset: asset, UploadURL: uploadURL, ExpiresAt: expiresAt}, nil
+}
+
+// CompleteAssetUpload verifies the declared object actually landed in MinIO
+// (StatObject) before moving the asset from draft into the review queue.
+// Nothing may be linked to a client-visible surface (see LinkAsset) until an
+// asset has passed both this and ReviewAsset.
+func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Client, id string) (CatalogAsset, error) {
+	if mediaClient == nil {
+		return CatalogAsset{}, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
+	}
+	asset, err := scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
 	if err != nil {
 		return CatalogAsset{}, err
+	}
+	if asset.Status != "draft" {
+		return CatalogAsset{}, fmt.Errorf("%w: asset is %s, expected draft", ErrInvalid, asset.Status)
+	}
+	size, contentType, err := mediaClient.StatObject(ctx, asset.ObjectKey)
+	if err != nil {
+		return CatalogAsset{}, fmt.Errorf("%w: uploaded object not found in storage: %v", ErrInvalid, err)
+	}
+	if size <= 0 || size > maxAssetUploadSizeBytes || !strings.HasPrefix(contentType, "image/") {
+		return CatalogAsset{}, fmt.Errorf("%w: uploaded object does not match declared file", ErrInvalid)
+	}
+	checksum, err := mediaClient.ChecksumSHA256(ctx, asset.ObjectKey)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
+		status='uploaded', size_bytes=$1, mime_type=$2, checksum_sha256=$3, updated_at=now()
+		WHERE id=$4 AND status='draft'`,
+		size, contentType, checksum, id)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return CatalogAsset{}, ErrNotFound
 	}
 	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
 }
@@ -1573,11 +1687,69 @@ type AssetReviewInput struct {
 // ReviewAsset is the only sanctioned way an asset moves into approved (and
 // therefore becomes eligible to satisfy a requires_product_image /
 // requires_category_image platform policy gate).
+// storeImageRoleColumn maps a store-image DAM role to the transitional
+// dsh_stores cache column it's read through until every consumer (see
+// Phase 5 of the media centralization closure plan) reads the DAM link
+// directly instead. logo/cover use the legacy *_url column names because
+// that's what pre-DAM store rows already used; storefront/interior/signage
+// use the *_photo_ref columns dsh-016 added.
+var storeImageRoleColumn = map[string]string{
+	"store_logo":       "logo_url",
+	"store_cover":      "hero_image_url",
+	"storefront_photo": "storefront_photo_ref",
+	"interior_photo":   "interior_photo_ref",
+	"signage_photo":    "signage_photo_ref",
+}
+
+// syncApprovedStoreImageLinks writes the just-approved asset's public media
+// path into whichever dsh_stores cache column its store-scoped links map to,
+// for every link that just became approved. A single asset can be linked to
+// at most one store per role (unique constraint), but nothing stops the same
+// asset being linked as e.g. both store_logo and store_cover, so this walks
+// all of the asset's approved store links rather than assuming one.
+func syncApprovedStoreImageLinks(ctx context.Context, tx *sql.Tx, assetID string) error {
+	rows, err := tx.QueryContext(ctx, `SELECT entity_id, role FROM dsh_catalog_asset_links
+		WHERE asset_id=$1 AND entity_type='store' AND status='approved'`, assetID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type storeLink struct{ storeID, role string }
+	var links []storeLink
+	for rows.Next() {
+		var l storeLink
+		if err := rows.Scan(&l.storeID, &l.role); err != nil {
+			return err
+		}
+		links = append(links, l)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	publicPath := publicMediaPath(assetID)
+	for _, l := range links {
+		column, ok := storeImageRoleColumn[l.role]
+		if !ok {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE dsh_stores SET `+column+`=$1 WHERE id=$2`, publicPath, l.storeID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input AssetReviewInput) (CatalogAsset, error) {
 	if !validAssetStatus[input.Decision] {
 		return CatalogAsset{}, ErrInvalid
 	}
-	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
 		status=$1, reviewed_by=$2, review_note=$3, updated_at=now() WHERE id=$4`,
 		input.Decision, actorID, input.ReviewNote, id)
 	if err != nil {
@@ -1586,7 +1758,23 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	if n, _ := result.RowsAffected(); n != 1 {
 		return CatalogAsset{}, ErrNotFound
 	}
-	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if input.Decision == "approved" {
+		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
+			status='approved', updated_at=now() WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
+			return CatalogAsset{}, err
+		}
+		if err := syncApprovedStoreImageLinks(ctx, tx, id); err != nil {
+			return CatalogAsset{}, err
+		}
+	}
+	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return CatalogAsset{}, err
+	}
+	return asset, nil
 }
 
 type CatalogAssetLink struct {
@@ -1603,6 +1791,38 @@ type CatalogAssetLink struct {
 }
 
 const assetLinkColumns = `id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status, created_at, updated_at`
+
+// CatalogAssetLinkWithAsset is what client-facing surfaces need to actually
+// render an image: the bare link plus the asset's object key and a public
+// URL path (relative -- callers prefix it with their own API base URL),
+// alt text, and mime type. Internal/operator surfaces that only manage
+// links use CatalogAssetLink directly.
+type CatalogAssetLinkWithAsset struct {
+	CatalogAssetLink
+	ObjectKey string `json:"objectKey"`
+	PublicURL string `json:"publicUrl"`
+	AltAr     string `json:"altAr"`
+	AltEn     string `json:"altEn"`
+	MimeType  string `json:"mimeType"`
+}
+
+func publicMediaPath(assetID string) string {
+	return "/dsh/public/media/" + assetID + "/original"
+}
+
+func scanAssetLinkWithAsset(scanner interface{ Scan(...any) error }) (CatalogAssetLinkWithAsset, error) {
+	var l CatalogAssetLinkWithAsset
+	err := scanner.Scan(&l.ID, &l.AssetID, &l.EntityType, &l.EntityID, &l.Role, &l.SortOrder, &l.IsPrimary,
+		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.ObjectKey, &l.AltAr, &l.AltEn, &l.MimeType)
+	if errors.Is(err, sql.ErrNoRows) {
+		return l, ErrNotFound
+	}
+	if err != nil {
+		return l, err
+	}
+	l.PublicURL = publicMediaPath(l.AssetID)
+	return l, nil
+}
 
 func scanAssetLink(scanner interface{ Scan(...any) error }) (CatalogAssetLink, error) {
 	var l CatalogAssetLink
@@ -1623,10 +1843,18 @@ type AssetLinkInput struct {
 	IsPrimary  bool   `json:"isPrimary"`
 }
 
+// dbtx is satisfied by both *sql.DB and *sql.Tx, letting callers that need
+// atomicity (e.g. putEntityImage) run LinkAsset inside their own transaction.
+type dbtx interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 // LinkAsset attaches an asset to an entity in a role. A rejected/archived
 // asset can never be linked, and a link to a not-yet-approved asset starts
 // pending_review so it cannot leak onto a client-visible surface early.
-func LinkAsset(ctx context.Context, db *sql.DB, input AssetLinkInput) (CatalogAssetLink, error) {
+func LinkAsset(ctx context.Context, db dbtx, input AssetLinkInput) (CatalogAssetLink, error) {
 	if strings.TrimSpace(input.AssetID) == "" || !validAssetEntityType[input.EntityType] ||
 		strings.TrimSpace(input.EntityID) == "" || !validAssetRole[input.Role] {
 		return CatalogAssetLink{}, ErrInvalid

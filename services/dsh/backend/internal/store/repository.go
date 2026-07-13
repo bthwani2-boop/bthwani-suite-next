@@ -162,7 +162,7 @@ type CreateDraftStoreInput struct {
 	Category    string
 }
 
-type queryer interface {
+type execQueryRower interface {
 	Exec(query string, args ...any) (sql.Result, error)
 	QueryRow(query string, args ...any) *sql.Row
 }
@@ -171,7 +171,7 @@ type queryer interface {
 // Never visible to app-client: is_visible=false, status=inactive,
 // serviceability=unavailable, and partner_readiness/catalog_approval_status/
 // marketing_visibility keep their safe column defaults (pending/draft/hidden).
-func CreateDraftStore(db queryer, input CreateDraftStoreInput) (DshStoreRow, error) {
+func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreRow, error) {
 	id := fmt.Sprintf("store-%d", time.Now().UnixNano())
 	catalogDomainID := catalogDomainIDForPartnerCategory(input.Category)
 	cityCode := input.CityCode

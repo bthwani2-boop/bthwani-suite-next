@@ -112,12 +112,19 @@ func newMediaClientOrNil() *media.Client {
 	accessKey := os.Getenv("DSH_MINIO_ACCESS_KEY")
 	secretKey := os.Getenv("DSH_MINIO_SECRET_KEY")
 	bucket := os.Getenv("DSH_MINIO_BUCKET")
+	if bucket == "" {
+		bucket = "dsh-media"
+	}
 	useSSL := os.Getenv("DSH_MINIO_USE_SSL") == "true"
+	// Presigned URLs are handed to browsers/apps outside the backend's own
+	// network, so they must be built from a reachable public endpoint, not
+	// necessarily the internal one dsh-api itself uses to reach MinIO.
+	publicEndpoint := os.Getenv("DSH_MINIO_PUBLIC_ENDPOINT")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := media.NewClient(ctx, endpoint, accessKey, secretKey, bucket, useSSL)
+	client, err := media.NewClient(ctx, endpoint, publicEndpoint, accessKey, secretKey, bucket, useSSL)
 	if err != nil {
 		log.Printf("[dsh-api] media store unavailable, upload routes disabled: %v", err)
 		return nil

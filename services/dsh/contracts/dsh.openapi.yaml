@@ -549,6 +549,27 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /dsh/public/media/{assetId}/{variant}:
+    get:
+      operationId: getPublicCatalogMedia
+      summary: Stream an approved DAM asset's binary. Unauthenticated -- only status=approved assets are ever served.
+      tags: [DshCatalog]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: variant
+          in: path
+          required: true
+          description: Rendition selector; only "original" is served today.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Image bytes.
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # ─── Central Catalog Sovereignty ───────────────────────────────────────────
   # governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md. From dsh-030
   # forward, dsh_catalog_domains/dsh_catalog_nodes/dsh_master_products are the
@@ -759,9 +780,47 @@ paths:
       operationId: createAssetUploadIntent
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileName, mimeType, sizeBytes, sourceSurface]
+              properties:
+                fileName: { type: string }
+                mimeType: { type: string }
+                sizeBytes: { type: integer }
+                sourceSurface: { type: string }
+                altAr: { type: string }
+                altEn: { type: string }
       responses:
         "201":
           description: Upload intent created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  asset: { type: object }
+                  uploadUrl:
+                    type: string
+                    description: Short-lived presigned MinIO PUT URL.
+                  expiresAt: { type: string, format: date-time }
+
+  /dsh/operator/catalog/assets/{assetId}/complete:
+    post:
+      operationId: completeAssetUpload
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Asset upload verified against storage and moved out of draft.
 
   /dsh/operator/catalog/assets/{assetId}:
     patch:
@@ -787,6 +846,16 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approved, rejected, pending_review, archived] }
+                reviewNote: { type: string }
       responses:
         "200":
           description: Asset reviewed by operator.
@@ -920,6 +989,36 @@ paths:
       responses:
         "200":
           description: Proposal image updated.
+
+  /dsh/stores/{storeId}/images/{role}:
+    put:
+      operationId: putStoreImage
+      summary: Set a store's logo/cover/storefront/interior/signage photo. Callable by the store's own partner/field actor, not just operator.
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [store_logo, store_cover, storefront_photo, interior_photo, signage_photo]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId]
+              properties:
+                assetId: { type: string }
+      responses:
+        "200":
+          description: Store image updated.
 
   /dsh/operator/stores/{storeId}/assortment:
     get:

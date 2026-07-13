@@ -26,6 +26,8 @@ import { getDshMediaRuntimeClient } from '../../shared';
 
 export type ProductMediaScreenProps = Readonly<{
 	productId: string;
+	/** The store whose assortment row for productId owns the custom image being managed. */
+	storeId: string;
 	/** partnerId used for X-Client-Id in dev mode. Required for operator-scoped writes. */
 	partnerId?: string;
 	onBack?: () => void;
@@ -68,7 +70,7 @@ function formatMediaLabel(asset: DshMediaAsset): string {
 	return parts.join(' · ');
 }
 
-export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMediaScreenProps) {
+export function ProductMediaScreen({ productId, storeId, partnerId, onBack }: ProductMediaScreenProps) {
 	const { direction } = useDirection();
 	const theme = useTheme() as any;
 
@@ -89,7 +91,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 		setScreenState('loading');
 		setErrorMessage(null);
 		try {
-			const resp = await client.listMedia({ owner_type: 'product', owner_id: productId });
+			const resp = await client.listMedia({ owner_type: 'product', owner_id: productId, store_id: storeId });
 			setAssets(resp.items);
 			setScreenState('idle');
 		} catch (err) {
@@ -100,7 +102,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 				setScreenState('error');
 			}
 		}
-	}, [client, productId]);
+	}, [client, productId, storeId]);
 
 	React.useEffect(() => {
 		loadAssets();
@@ -178,6 +180,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 				{
 					owner_type: 'product',
 					owner_id: productId,
+					store_id: storeId,
 					media_type: mimeType.startsWith('video/') ? 'video' : 'image',
 					purpose: 'primary',
 					filename,
@@ -190,7 +193,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 			setUploadProgress(25);
 			await client.putToPresignedUrl(intentResp.intent.upload_url, body, mimeType);
 			setUploadProgress(85);
-			await client.completeUpload(intentResp.intent.media_id, {}, authHeaders);
+			await client.completeUpload(intentResp.intent.media_id, { store_id: storeId, product_id: productId }, authHeaders);
 			setUploadProgress(100);
 			await loadAssets();
 		} catch (err) {
@@ -204,13 +207,13 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 				setScreenState('error');
 			}
 		}
-	}, [client, productId, authHeaders, loadAssets]);
+	}, [client, productId, storeId, authHeaders, loadAssets]);
 
 	const handleDelete = React.useCallback(async (mediaId: string) => {
 		if (!client) return;
 		setErrorMessage(null);
 		try {
-			await client.deleteMedia(mediaId, authHeaders);
+			await client.deleteMedia(mediaId, authHeaders, { store_id: storeId, product_id: productId });
 			await loadAssets();
 		} catch (err) {
 			if (isOfflineError(err)) {
@@ -220,7 +223,7 @@ export function ProductMediaScreen({ productId, partnerId, onBack }: ProductMedi
 				setScreenState('error');
 			}
 		}
-	}, [client, authHeaders, loadAssets]);
+	}, [client, storeId, productId, authHeaders, loadAssets]);
 
 	const isWorking = screenState === 'loading' || screenState === 'picking' || screenState === 'uploading';
 

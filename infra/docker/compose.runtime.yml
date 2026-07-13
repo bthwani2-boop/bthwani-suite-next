@@ -51,6 +51,12 @@ services:
       - "${BTHWANI_MINIO_CONSOLE_PORT:-59001}:9001"
     volumes:
       - bthwani-minio-runtime-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     networks:
       - bthwani-runtime
 
@@ -161,9 +167,13 @@ services:
       WLT_DSH_SERVICE_TOKEN: "${WLT_DSH_SERVICE_TOKEN:-}"
       DSH_WLT_SERVICE_TOKEN: "${DSH_WLT_SERVICE_TOKEN:-}"
       DSH_MINIO_ENDPOINT: "minio:9000"
+      # Must match wherever a browser/app on the host (or a real device on
+      # the LAN/internet) can actually reach MinIO -- localhost only works
+      # for same-machine dev; override for remote/device testing or prod.
+      DSH_MINIO_PUBLIC_ENDPOINT: "${BTHWANI_MINIO_PUBLIC_ENDPOINT:-localhost:59000}"
       DSH_MINIO_ACCESS_KEY: "${BTHWANI_MINIO_ROOT_USER:-bthwani_minio}"
       DSH_MINIO_SECRET_KEY: "${BTHWANI_MINIO_ROOT_PASSWORD:-bthwani_minio_password}"
-      DSH_MINIO_BUCKET: "dsh-partner-media"
+      DSH_MINIO_BUCKET: "dsh-media"
       DSH_MINIO_USE_SSL: "false"
     ports:
       - "${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
