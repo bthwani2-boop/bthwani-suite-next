@@ -160,7 +160,7 @@ func (s *server) createFieldAgent(w http.ResponseWriter, r *http.Request, identi
 		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
 		return
 	}
-	person, replayed, err := s.service.CreateFieldAgent(r.Context(), operatorOf(identity), input,
+	person, replayed, err := s.service.CreateFieldAgent(r.Context(), operatorOf(r, identity), input,
 		idempotencyKey, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -206,7 +206,7 @@ func (s *server) updateFieldAgent(w http.ResponseWriter, r *http.Request, identi
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	person, err := s.service.UpdateFieldAgent(r.Context(), operatorOf(identity),
+	person, err := s.service.UpdateFieldAgent(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), input, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -223,7 +223,7 @@ func (s *server) suspendFieldAgent(w http.ResponseWriter, r *http.Request, ident
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	person, err := s.service.Suspend(r.Context(), operatorOf(identity),
+	person, err := s.service.Suspend(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), input.ExpectedVersion, input.Reason, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -240,7 +240,7 @@ func (s *server) reactivateFieldAgent(w http.ResponseWriter, r *http.Request, id
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	person, err := s.service.Reactivate(r.Context(), operatorOf(identity),
+	person, err := s.service.Reactivate(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), input.ExpectedVersion, input.Reason, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -256,7 +256,7 @@ func (s *server) issueActivation(w http.ResponseWriter, r *http.Request, identit
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	code, err := s.service.IssueActivation(r.Context(), operatorOf(identity),
+	code, err := s.service.IssueActivation(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), input.ExpectedVersion, activationActorType(r), activationSurface(r),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
 	if err != nil {
@@ -281,7 +281,7 @@ func activationSurface(r *http.Request) string {
 }
 
 func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	if err := s.service.RevokeActivation(r.Context(), operatorOf(identity),
+	if err := s.service.RevokeActivation(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), r.Header.Get("X-Correlation-ID")); err != nil {
 		writeWorkforceError(w, err)
 		return
@@ -301,7 +301,7 @@ func (s *server) createCaptain(w http.ResponseWriter, r *http.Request, identity 
 		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
 		return
 	}
-	person, replayed, err := s.service.CreateCaptain(r.Context(), operatorOf(identity), input,
+	person, replayed, err := s.service.CreateCaptain(r.Context(), operatorOf(r, identity), input,
 		idempotencyKey, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -346,7 +346,7 @@ func (s *server) updateCaptain(w http.ResponseWriter, r *http.Request, identity 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	person, err := s.service.UpdateCaptain(r.Context(), operatorOf(identity),
+	person, err := s.service.UpdateCaptain(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), input, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -471,12 +471,12 @@ func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Iden
 
 // ---- plumbing ----
 
-func operatorOf(identity auth.Identity) workforce.Operator {
+func operatorOf(r *http.Request, identity auth.Identity) workforce.Operator {
 	role := "operator"
 	if len(identity.Roles) > 0 {
 		role = identity.Roles[0]
 	}
-	return workforce.Operator{ActorID: identity.Subject, Role: role}
+	return workforce.Operator{ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization")}
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {

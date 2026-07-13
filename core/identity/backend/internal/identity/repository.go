@@ -852,6 +852,24 @@ func (r *Repository) RevokeActivationChallenges(ctx context.Context, actorID str
 	return err
 }
 
+func (r *Repository) LatestActivationForActor(ctx context.Context, actorID string) (ActivationMetadata, error) {
+	var meta ActivationMetadata
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, status, created_at, expires_at, phone_e164
+		FROM identity_activation_challenges
+		WHERE actor_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1`, actorID).Scan(&meta.ActivationID, &meta.Status, &meta.CreatedAt, &meta.ExpiresAt, &meta.MaskedPhone)
+	if err != nil {
+		return ActivationMetadata{}, err
+	}
+	if meta.Status == "pending" && meta.ExpiresAt.Before(r.now()) {
+		meta.Status = "expired"
+	}
+	meta.MaskedPhone = maskPhone(meta.MaskedPhone)
+	return meta, nil
+}
+
 func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error) {
 	var actor Actor
 	var roles pq.StringArray

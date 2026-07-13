@@ -18,7 +18,6 @@ export function CaptainCreateView(props: { readonly onBack: () => void; readonly
   const [fullNameAr, setFullNameAr] = useState("");
   const [phone, setPhone] = useState("");
   const [zoneId, setZoneId] = useState("");
-  const [zoneCityCode, setZoneCityCode] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [vehicleIdentifier, setVehicleIdentifier] = useState("");
   const [licenseExpiresAt, setLicenseExpiresAt] = useState("");
@@ -42,9 +41,8 @@ export function CaptainCreateView(props: { readonly onBack: () => void; readonly
       vehicleIdentifier: vehicleIdentifier.trim(),
       licenseStatus,
       licenseExpiresAt: licenseExpiresAt.trim() || undefined,
-      operatingCityCode: zoneCityCode || undefined,
-      serviceZoneId: zoneId || undefined,
-      supervisorActorId: supervisor?.actorId,
+      serviceZoneId: zoneId,
+      supervisorActorId: supervisor?.actorId ?? undefined,
     });
     if (captain) props.onCreated(captain);
   };
@@ -72,7 +70,6 @@ export function CaptainCreateView(props: { readonly onBack: () => void; readonly
           value={zoneId}
           onChange={(zone) => {
             setZoneId(zone?.id ?? "");
-            setZoneCityCode(zone?.cityCode ?? "");
           }}
         />
 

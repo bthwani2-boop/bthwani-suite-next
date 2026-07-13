@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Box, Button, Card, ScrollScreen, Text, spacing } from "@bthwani/ui-kit";
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
@@ -11,11 +10,10 @@ import {
   useFieldAgentDetailController,
   useWorkforceReferenceData,
 } from "../../shared/workforce";
-import type { ProviderKind } from "../../shared/workforce";
+import type { ProviderKind, LicenseStatus } from "../../shared/workforce";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
-import { buildPartnersHref } from "../../shared/partner/partner-registry";
-import { buildOperationsHref } from "../../shared/operations/operations-registry";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
+import { ProviderActivationWorkspace } from "../shared";
 
 export function ProviderDetailView(props: { readonly actorId: string; readonly kind: ProviderKind; readonly onBack: () => void }) {
   if (props.kind === "captain") {
@@ -24,10 +22,18 @@ export function ProviderDetailView(props: { readonly actorId: string; readonly k
   return <FieldAgentDetailBody actorId={props.actorId} onBack={props.onBack} />;
 }
 
+type LicenseStatusLabelAr = Record<LicenseStatus, string>;
+const LICENSE_STATUS_LABEL_AR: LicenseStatusLabelAr = {
+  missing: "مفقودة",
+  pending_review: "بانتظار المراجعة",
+  valid: "صالحة ومقبولة",
+  expired: "منتهية الصلاحية",
+  rejected: "مرفوضة",
+};
+
 function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useFieldAgentDetailController(props.actorId);
   const reference = useWorkforceReferenceData();
-  const router = useRouter();
 
   if (controller.state.kind === "loading") {
     return <LoadingScreen />;
@@ -76,22 +82,11 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
         ))}
       </Card>
 
-      <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>حالة الدخول</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>
-          {ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]}
-        </Text>
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-          إصدار كود التفعيل والإيقاف وإعادة التفعيل تتم من شاشة تفعيل الميداني.
-        </Text>
-        <Box style={{ alignItems: "flex-end" }}>
-          <Button
-            label="الانتقال إلى إدارة التفعيل"
-            tone="primary"
-            onPress={() => router.push(buildPartnersHref("activation", { subGroup: "field_activation" }))}
-          />
-        </Box>
-      </Card>
+      <ProviderActivationWorkspace
+        providerKind="field"
+        initialActorId={agent.actorId}
+        entrySource="hr"
+      />
     </ScrollScreen>
   );
 }
@@ -99,9 +94,9 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
 function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useCaptainDetailController(props.actorId);
   const reference = useWorkforceReferenceData();
-  const router = useRouter();
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [updatingLicense, setUpdatingLicense] = useState(false);
 
   if (controller.state.kind === "loading") {
     return <LoadingScreen />;
@@ -131,11 +126,23 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
     ["نطاق الخدمة", reference.cityLabel(profile?.operatingCityCode)],
     ["نوع المركبة", profile?.vehicleType || "—"],
     ["رقم المركبة", profile?.vehicleIdentifier || "—"],
-    ["حالة الرخصة", profile?.licenseStatus || "—"],
+    ["حالة الرخصة", LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]],
     ["تاريخ انتهاء الرخصة", profile?.licenseExpiresAt || "—"],
     ["المشرف", profile?.supervisorActorId || "—"],
     ["حالة الارتباط", ENGAGEMENT_STATUS_LABEL_AR[captain.engagementStatus]],
   ];
+
+  const handleUpdateLicense = async (status: LicenseStatus) => {
+    setUpdatingLicense(true);
+    try {
+      await controller.update({
+        expectedVersion: captain.version,
+        licenseStatus: status,
+      });
+    } finally {
+      setUpdatingLicense(false);
+    }
+  };
 
   const pickAndUpload = async () => {
     if (typeof document === "undefined") return;
@@ -165,6 +172,8 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
     input.click();
   };
 
+  const isBusy = updatingLicense || controller.actionBusy;
+
   return (
     <ScrollScreen>
       <Card style={{ padding: spacing[4], gap: spacing[3] }}>
@@ -181,7 +190,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
       </Card>
 
       <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>الوثائق</Text>
+        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>الوثائق المرفوعة</Text>
         {uploadError && (
           <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text>
         )}
@@ -195,22 +204,46 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
         </Box>
       </Card>
 
-      <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>حالة الدخول</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>
-          {ENGAGEMENT_STATUS_LABEL_AR[captain.engagementStatus]}
-        </Text>
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-          إصدار كود التفعيل والإيقاف وإعادة التفعيل تتم من شاشة تفعيل الكباتن في العمليات.
-        </Text>
-        <Box style={{ alignItems: "flex-end" }}>
-          <Button
-            label="الانتقال إلى إدارة التفعيل"
-            tone="primary"
-            onPress={() => router.push(buildOperationsHref("dispatch-capacity", { subGroup: "captains" }))}
-          />
-        </Box>
-      </Card>
+      {profile?.licenseStatus !== "valid" && (
+        <Card style={{ padding: spacing[4], gap: spacing[2] }}>
+          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>مراجعة رخصة القيادة والعمل</Text>
+          <Text role="bodySm" style={{ textAlign: "right" }}>
+            الحالة الحالية: {LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]}
+          </Text>
+          <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+            يرجى مراجعة الوثائق المرفوعة للتأكد من صلاحية الرخصة والبيانات قبل تفعيل الحساب.
+          </Text>
+          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[1] }}>
+            <Button
+              label="اعتماد الرخصة (صالحة)"
+              tone="primary"
+              loading={isBusy}
+              disabled={isBusy}
+              onPress={() => void handleUpdateLicense("valid")}
+            />
+            <Button
+              label="رفض الرخصة"
+              tone="danger"
+              loading={isBusy}
+              disabled={isBusy}
+              onPress={() => void handleUpdateLicense("rejected")}
+            />
+            <Button
+              label="طلب استكمال"
+              tone="secondary"
+              loading={isBusy}
+              disabled={isBusy}
+              onPress={() => void handleUpdateLicense("missing")}
+            />
+          </Box>
+        </Card>
+      )}
+
+      <ProviderActivationWorkspace
+        providerKind="captain"
+        initialActorId={captain.actorId}
+        entrySource="hr"
+      />
     </ScrollScreen>
   );
 }

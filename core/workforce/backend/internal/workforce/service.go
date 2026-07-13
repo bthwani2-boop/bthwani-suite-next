@@ -8,6 +8,7 @@ import (
 	"errors"
 	"strings"
 
+	"workforce-api/internal/dshclient"
 	"workforce-api/internal/identityclient"
 )
 
@@ -26,17 +27,16 @@ var (
 type Service struct {
 	repo     *Repository
 	identity *identityclient.Client
+	dsh      *dshclient.Client
 }
 
-func NewService(repo *Repository, identity *identityclient.Client) *Service {
-	return &Service{repo: repo, identity: identity}
+func NewService(repo *Repository, identity *identityclient.Client, dsh *dshclient.Client) *Service {
+	return &Service{repo: repo, identity: identity, dsh: dsh}
 }
 
 // validateSupervisor confirms a supervisor actor (when supplied) exists and
-// is active, and is not the provider itself. Kept permissive on role: the
-// exact supervisory role taxonomy varies by deployment, so any active actor
-// other than the provider is accepted for now.
-func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, providerActorID string) error {
+// is active, has the correct supervisor role, and is not the provider itself.
+func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, providerActorID, providerKind string) error {
 	if supervisorActorID == "" {
 		return nil
 	}
@@ -51,6 +51,20 @@ func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, pro
 		return err
 	}
 	if !actor.Active {
+		return ErrInvalidSupervisor
+	}
+	expectedRole := "workforce.supervise.field"
+	if providerKind == "captain" {
+		expectedRole = "workforce.supervise.captain"
+	}
+	hasRole := false
+	for _, r := range actor.Roles {
+		if r == expectedRole {
+			hasRole = true
+			break
+		}
+	}
+	if !hasRole {
 		return ErrInvalidSupervisor
 	}
 	return nil
@@ -69,7 +83,11 @@ type SupervisorCandidate struct {
 // returns raw actor IDs for free-text entry, only a searchable, validated
 // candidate list.
 func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]SupervisorCandidate, error) {
-	actors, err := s.identity.SearchActors(ctx, kind, query)
+	expectedRole := "workforce.supervise.field"
+	if kind == "captain" {
+		expectedRole = "workforce.supervise.captain"
+	}
+	actors, err := s.identity.SearchActors(ctx, expectedRole, query)
 	if err != nil {
 		return nil, err
 	}
@@ -114,10 +132,17 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 	if input.EngagementType != "independent_contractor" && input.EngagementType != "agency_contractor" {
 		return Person{}, false, ErrInvalidInput
 	}
-	if err := s.validateSupervisor(ctx, input.SupervisorActorID, ""); err != nil {
+	if err := s.validateSupervisor(ctx, input.SupervisorActorID, "", "field"); err != nil {
 		return Person{}, false, err
 	}
-	if err := s.ensureServiceZoneCity(ctx, input.CityCode); err != nil {
+	zone, err := s.dsh.ValidateZone(ctx, input.ServiceZoneID, operator.Token)
+	if err != nil {
+		if errors.Is(err, dshclient.ErrZoneInactive) || errors.Is(err, dshclient.ErrZoneNotFound) {
+			return Person{}, false, ErrInvalidInput
+		}
+		return Person{}, false, err
+	}
+	if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
 		return Person{}, false, err
 	}
 
@@ -146,11 +171,8 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, err
 	}
 
-	person, err := s.repo.CreatePerson(ctx, actor.ActorID, providerCode, input)
+	person, err := s.repo.CreatePerson(ctx, actor.ActorID, providerCode, zone.CityCode, input)
 	if err != nil {
-		// A duplicate profile for the same actor means an earlier attempt
-		// already completed but the idempotency record was lost/absent —
-		// surface the existing profile instead of failing the operator.
 		if errors.Is(err, ErrDuplicateProviderCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
 				return existing, true, nil
@@ -181,10 +203,17 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	if input.EngagementType != "independent_contractor" && input.EngagementType != "agency_contractor" {
 		return Person{}, false, ErrInvalidInput
 	}
-	if err := s.validateSupervisor(ctx, input.SupervisorActorID, ""); err != nil {
+	if err := s.validateSupervisor(ctx, input.SupervisorActorID, "", "captain"); err != nil {
 		return Person{}, false, err
 	}
-	if err := s.ensureServiceZoneCity(ctx, input.OperatingCityCode); err != nil {
+	zone, err := s.dsh.ValidateZone(ctx, input.ServiceZoneID, operator.Token)
+	if err != nil {
+		if errors.Is(err, dshclient.ErrZoneInactive) || errors.Is(err, dshclient.ErrZoneNotFound) {
+			return Person{}, false, ErrInvalidInput
+		}
+		return Person{}, false, err
+	}
+	if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
 		return Person{}, false, err
 	}
 
@@ -212,7 +241,7 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	if err != nil {
 		return Person{}, false, err
 	}
-	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, providerCode, input)
+	person, err := s.repo.CreateCaptain(ctx, actor.ActorID, providerCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateProviderCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actor.ActorID); lookupErr == nil {
@@ -234,6 +263,7 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 type Operator struct {
 	ActorID string
 	Role    string
+	Token   string
 }
 
 // UpdateFieldAgent applies sovereign edits under optimistic locking.
@@ -243,16 +273,25 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 		return Person{}, err
 	}
 	if input.SupervisorActorID != nil {
-		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID); err != nil {
+		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID, "field"); err != nil {
 			return Person{}, err
 		}
 	}
-	if input.CityCode != nil {
-		if err := s.ensureServiceZoneCity(ctx, *input.CityCode); err != nil {
+	var derivedCityCode *string
+	if input.ServiceZoneID != nil {
+		zone, err := s.dsh.ValidateZone(ctx, *input.ServiceZoneID, operator.Token)
+		if err != nil {
+			if errors.Is(err, dshclient.ErrZoneInactive) || errors.Is(err, dshclient.ErrZoneNotFound) {
+				return Person{}, ErrInvalidInput
+			}
 			return Person{}, err
 		}
+		if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
+			return Person{}, err
+		}
+		derivedCityCode = &zone.CityCode
 	}
-	person, err := s.repo.UpdatePerson(ctx, actorID, input)
+	person, err := s.repo.UpdatePerson(ctx, actorID, derivedCityCode, input)
 	if err != nil {
 		return Person{}, err
 	}
@@ -269,16 +308,25 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 		return Person{}, err
 	}
 	if input.SupervisorActorID != nil {
-		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID); err != nil {
+		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID, "captain"); err != nil {
 			return Person{}, err
 		}
 	}
-	if input.OperatingCityCode != nil {
-		if err := s.ensureServiceZoneCity(ctx, *input.OperatingCityCode); err != nil {
+	var derivedCityCode *string
+	if input.ServiceZoneID != nil {
+		zone, err := s.dsh.ValidateZone(ctx, *input.ServiceZoneID, operator.Token)
+		if err != nil {
+			if errors.Is(err, dshclient.ErrZoneInactive) || errors.Is(err, dshclient.ErrZoneNotFound) {
+				return Person{}, ErrInvalidInput
+			}
 			return Person{}, err
 		}
+		if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
+			return Person{}, err
+		}
+		derivedCityCode = &zone.CityCode
 	}
-	person, err := s.repo.UpdateCaptain(ctx, actorID, input)
+	person, err := s.repo.UpdateCaptain(ctx, actorID, derivedCityCode, input)
 	if err != nil {
 		return Person{}, err
 	}
@@ -466,9 +514,10 @@ func (s *Service) UpdateMe(ctx context.Context, actorID string, input UpdateSelf
 // (masked phone + auth state) for operator screens.
 type FieldAgentDetail struct {
 	Person
-	PhoneMasked  string `json:"phoneMasked,omitempty"`
-	AuthActive   bool   `json:"authActive"`
-	ReadyToIssue bool   `json:"readyToIssue"`
+	PhoneMasked      string                             `json:"phoneMasked,omitempty"`
+	AuthActive       bool                               `json:"authActive"`
+	ReadyToIssue     bool                               `json:"readyToIssue"`
+	LatestActivation *identityclient.ActivationMetadata `json:"latestActivation,omitempty"`
 }
 
 func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgentDetail, error) {
@@ -483,6 +532,9 @@ func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgen
 	if actor, err := s.identity.Actor(ctx, actorID); err == nil {
 		detail.PhoneMasked = maskPhone(actor.PhoneE164)
 		detail.AuthActive = actor.Active
+	}
+	if meta, err := s.identity.LatestActivation(ctx, actorID); err == nil && meta != nil {
+		detail.LatestActivation = meta
 	}
 	return detail, nil
 }

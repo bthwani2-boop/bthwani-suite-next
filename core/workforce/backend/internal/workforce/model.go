@@ -54,7 +54,6 @@ type CreateFieldAgentInput struct {
 	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
-	CityCode            string   `json:"cityCode"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
 	ShiftCode           string   `json:"shiftCode"`
 	SupervisorActorID   string   `json:"supervisorActorId"`
@@ -73,7 +72,6 @@ type CreateCaptainInput struct {
 	VehicleIdentifier   string   `json:"vehicleIdentifier"`
 	LicenseStatus       string   `json:"licenseStatus"`
 	LicenseExpiresAt    string   `json:"licenseExpiresAt"`
-	OperatingCityCode   string   `json:"operatingCityCode"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
 	OperatingScopeCode  string   `json:"operatingScopeCode"`
 	SupervisorActorID   string   `json:"supervisorActorId"`
@@ -86,7 +84,6 @@ type UpdateFieldAgentInput struct {
 	FullNameEn          *string `json:"fullNameEn"`
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
-	CityCode            *string `json:"cityCode"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
 	ShiftCode           *string `json:"shiftCode"`
 	SupervisorActorID   *string `json:"supervisorActorId"`
@@ -104,7 +101,6 @@ type UpdateCaptainInput struct {
 	VehicleIdentifier   *string `json:"vehicleIdentifier"`
 	LicenseStatus       *string `json:"licenseStatus"`
 	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
-	OperatingCityCode   *string `json:"operatingCityCode"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
 	OperatingScopeCode  *string `json:"operatingScopeCode"`
 	SupervisorActorID   *string `json:"supervisorActorId"`

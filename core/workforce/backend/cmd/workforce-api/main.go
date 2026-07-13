@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"workforce-api/internal/auth"
+	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"
 	"workforce-api/internal/identityclient"
 	"workforce-api/internal/workforce"
@@ -32,6 +33,10 @@ func main() {
 	if serviceToken == "" {
 		log.Fatal("[workforce-api] WORKFORCE_IDENTITY_SERVICE_TOKEN is required")
 	}
+	dshBaseURL := os.Getenv("WORKFORCE_DSH_BASE_URL")
+	if dshBaseURL == "" {
+		log.Fatal("[workforce-api] WORKFORCE_DSH_BASE_URL is required")
+	}
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -45,7 +50,8 @@ func main() {
 
 	repo := workforce.NewRepository(db)
 	identity := identityclient.NewClient(identityBaseURL, serviceToken)
-	service := workforce.NewService(repo, identity)
+	dsh := dshclient.NewClient(dshBaseURL)
+	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
 	server := &http.Server{

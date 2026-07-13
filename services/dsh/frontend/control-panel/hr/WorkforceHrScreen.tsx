@@ -2,7 +2,8 @@
 
 // Grammar contract reference — required by control-panel grammar guard.
 // density: standard (operational data). hero: forbidden. state: live (Workforce API).
-import React, { useState } from "react";
+import React, { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ProviderKind } from "../../shared/workforce";
 import { ProviderListView } from "./ProviderListView";
 import { ProviderTypeSelectView } from "./ProviderTypeSelectView";
@@ -11,54 +12,72 @@ import { CaptainCreateView } from "./CaptainCreateView";
 import { ProviderDetailView } from "./ProviderDetailView";
 import { WorkforceReferenceView } from "./WorkforceReferenceView";
 
-type HrView =
-  | { kind: "list" }
-  | { kind: "type-select" }
-  | { kind: "create"; providerKind: ProviderKind }
-  | { kind: "detail"; actorId: string; providerKind: ProviderKind }
-  | { kind: "reference" };
+function WorkforceHrScreenInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-export function WorkforceHrScreen() {
-  const [view, setView] = useState<HrView>({ kind: "list" });
+  const view = searchParams.get("view") || "list";
+  const kind = (searchParams.get("kind") as ProviderKind) || "field";
+  const actorId = searchParams.get("actorId") || "";
 
-  if (view.kind === "type-select") {
+  const navigateTo = (newView: string, newKind?: ProviderKind, newActorId?: string) => {
+    const params = new URLSearchParams();
+    params.set("view", newView);
+    if (newKind) params.set("kind", newKind);
+    if (newActorId) params.set("actorId", newActorId);
+    router.push(`?${params.toString()}`);
+  };
+
+  if (view === "type-select") {
     return (
       <ProviderTypeSelectView
-        onBack={() => setView({ kind: "list" })}
-        onSelect={(providerKind) => setView({ kind: "create", providerKind })}
+        onBack={() => navigateTo("list")}
+        onSelect={(providerKind) => navigateTo("create", providerKind)}
       />
     );
   }
-  if (view.kind === "create" && view.providerKind === "captain") {
+  if (view === "create" && kind === "captain") {
     return (
       <CaptainCreateView
-        onBack={() => setView({ kind: "type-select" })}
-        onCreated={(captain) => setView({ kind: "detail", actorId: captain.actorId, providerKind: "captain" })}
+        onBack={() => navigateTo("type-select")}
+        onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)}
       />
     );
   }
-  if (view.kind === "create") {
+  if (view === "create") {
     return (
       <FieldAgentCreateView
-        onBack={() => setView({ kind: "type-select" })}
-        onCreated={(agent) => setView({ kind: "detail", actorId: agent.actorId, providerKind: "field" })}
+        onBack={() => navigateTo("type-select")}
+        onCreated={(agent) => navigateTo("detail", "field", agent.actorId)}
       />
     );
   }
-  if (view.kind === "detail") {
+  if (view === "detail") {
     return (
-      <ProviderDetailView actorId={view.actorId} kind={view.providerKind} onBack={() => setView({ kind: "list" })} />
+      <ProviderDetailView
+        actorId={actorId}
+        kind={kind}
+        onBack={() => navigateTo("list")}
+      />
     );
   }
-  if (view.kind === "reference") {
-    return <WorkforceReferenceView onBack={() => setView({ kind: "list" })} />;
+  if (view === "reference") {
+    return <WorkforceReferenceView onBack={() => navigateTo("list")} />;
   }
   return (
     <ProviderListView
-      onCreate={() => setView({ kind: "type-select" })}
-      onOpen={(actorId, providerKind) => setView({ kind: "detail", actorId, providerKind })}
-      onReference={() => setView({ kind: "reference" })}
+      onCreate={() => navigateTo("type-select")}
+      onOpen={(actorIdVal, providerKindVal) => navigateTo("detail", providerKindVal, actorIdVal)}
+      onReference={() => navigateTo("reference")}
     />
+  );
+}
+
+export function WorkforceHrScreen() {
+  return (
+    <Suspense fallback={null}>
+      <WorkforceHrScreenInner />
+    </Suspense>
   );
 }
 

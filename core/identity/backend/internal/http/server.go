@@ -34,6 +34,7 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /internal/actors/{actorId}/deactivate", s.serviceOnly(s.internalActorDeactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/reactivate", s.serviceOnly(s.internalActorReactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations", s.serviceOnly(s.internalActorIssueActivation))
+	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
 	return mux
 }
@@ -302,6 +303,19 @@ func (s *server) internalActorIssueActivation(w http.ResponseWriter, r *http.Req
 		return
 	}
 	sendJSON(w, http.StatusCreated, result)
+}
+
+func (s *server) internalActorLatestActivation(w http.ResponseWriter, r *http.Request) {
+	meta, err := s.repository.LatestActivationForActor(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			sendJSON(w, http.StatusOK, nil)
+			return
+		}
+		writeInternalActorError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, meta)
 }
 
 func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {

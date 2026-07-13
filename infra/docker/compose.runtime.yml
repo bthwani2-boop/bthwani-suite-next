@@ -95,6 +95,7 @@ services:
       DATABASE_URL: "postgres://${BTHWANI_WORKFORCE_DB_USER:-workforce_runtime}:${BTHWANI_WORKFORCE_DB_PASSWORD:-workforce_runtime_password}@postgres:5432/${BTHWANI_WORKFORCE_DB_NAME:-workforce_runtime}?sslmode=disable"
       WORKFORCE_IDENTITY_BASE_URL: "http://identity-api:8082"
       WORKFORCE_IDENTITY_SERVICE_TOKEN: "${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}"
+      WORKFORCE_DSH_BASE_URL: "${WORKFORCE_DSH_BASE_URL:-http://dsh-api:8080}"
       WORKFORCE_CORS_ALLOWED_ORIGINS: "${WORKFORCE_CORS_ALLOWED_ORIGINS:-}"
     ports:
       - "${BTHWANI_WORKFORCE_API_HOST_PORT:-58086}:8086"

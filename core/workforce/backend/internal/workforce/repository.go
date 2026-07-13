@@ -106,14 +106,14 @@ func marshalNullable(state any) (any, error) {
 
 // ---- people ----
 
-func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode string, input CreateFieldAgentInput) (Person, error) {
+func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode, cityCode string, input CreateFieldAgentInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
 	}
 	defer tx.Rollback()
 
-	if err := validateReferenceTx(ctx, tx, "workforce_cities", input.CityCode); err != nil {
+	if err := validateReferenceTx(ctx, tx, "workforce_cities", cityCode); err != nil {
 		return Person{}, err
 	}
 	if err := validateReferenceTx(ctx, tx, "workforce_shifts", input.ShiftCode); err != nil {
@@ -139,7 +139,7 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode str
 		INSERT INTO workforce_field_profiles
 			(actor_id, city_code, service_zone_id, shift_code, supervisor_actor_id, document_media_refs)
 		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
-		actorID, input.CityCode, input.ServiceZoneID, input.ShiftCode, input.SupervisorActorID, string(documents))
+		actorID, cityCode, input.ServiceZoneID, input.ShiftCode, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -149,14 +149,14 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode str
 	return r.PersonByActorID(ctx, actorID)
 }
 
-func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode string, input CreateCaptainInput) (Person, error) {
+func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode, cityCode string, input CreateCaptainInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
 	}
 	defer tx.Rollback()
 
-	if err := validateReferenceTx(ctx, tx, "workforce_cities", input.OperatingCityCode); err != nil {
+	if err := validateReferenceTx(ctx, tx, "workforce_cities", cityCode); err != nil {
 		return Person{}, err
 	}
 
@@ -186,7 +186,7 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode st
 		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, NULLIF($5, '')::date,
 			NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), $10::jsonb)`,
 		actorID, input.VehicleType, input.VehicleIdentifier, licenseStatus, input.LicenseExpiresAt,
-		input.OperatingCityCode, input.ServiceZoneID, input.OperatingScopeCode, input.SupervisorActorID, string(documents))
+		cityCode, input.ServiceZoneID, input.OperatingScopeCode, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -343,7 +343,7 @@ func (r *Repository) ListCaptains(ctx context.Context, filter ListFilter) ([]Per
 // UpdatePerson applies sovereign edits with optimistic locking: the UPDATE is
 // version-guarded and bumps the version, so a stale expectedVersion never
 // silently overwrites a newer edit.
-func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input UpdateFieldAgentInput) (Person, error) {
+func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCityCode *string, input UpdateFieldAgentInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -363,8 +363,8 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input Upd
 		return Person{}, ErrVersionConflict
 	}
 
-	if input.CityCode != nil {
-		if err := validateReferenceTx(ctx, tx, "workforce_cities", *input.CityCode); err != nil {
+	if derivedCityCode != nil {
+		if err := validateReferenceTx(ctx, tx, "workforce_cities", *derivedCityCode); err != nil {
 			return Person{}, err
 		}
 	}
@@ -397,7 +397,7 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input Upd
 			supervisor_actor_id = COALESCE(NULLIF($5, ''), supervisor_actor_id),
 			updated_at = now()
 		WHERE actor_id = $1`,
-		actorID, deref(input.CityCode), deref(input.ServiceZoneID), deref(input.ShiftCode), deref(input.SupervisorActorID))
+		actorID, deref(derivedCityCode), deref(input.ServiceZoneID), deref(input.ShiftCode), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -407,7 +407,7 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, input Upd
 	return r.PersonByActorID(ctx, actorID)
 }
 
-func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, input UpdateCaptainInput) (Person, error) {
+func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, derivedCityCode *string, input UpdateCaptainInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -426,8 +426,8 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, input Up
 	if currentVersion != input.ExpectedVersion {
 		return Person{}, ErrVersionConflict
 	}
-	if input.OperatingCityCode != nil {
-		if err := validateReferenceTx(ctx, tx, "workforce_cities", *input.OperatingCityCode); err != nil {
+	if derivedCityCode != nil {
+		if err := validateReferenceTx(ctx, tx, "workforce_cities", *derivedCityCode); err != nil {
 			return Person{}, err
 		}
 	}
@@ -459,7 +459,7 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, input Up
 			updated_at = now()
 		WHERE actor_id = $1`,
 		actorID, deref(input.VehicleType), deref(input.VehicleIdentifier), deref(input.LicenseStatus),
-		deref(input.LicenseExpiresAt), deref(input.OperatingCityCode), deref(input.ServiceZoneID),
+		deref(input.LicenseExpiresAt), deref(derivedCityCode), deref(input.ServiceZoneID),
 		deref(input.OperatingScopeCode), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)

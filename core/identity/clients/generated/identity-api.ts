@@ -217,6 +217,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/actors/{actorId}/activations/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Service-to-service only. Retrieves metadata of the latest activation challenge. */
+        get: operations["getLatestActivationForActor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/actors/{actorId}/activations/revoke": {
         parameters: {
             query?: never;
@@ -317,12 +334,24 @@ export interface components {
         };
         IssueActivationForActorRequest: {
             issuedByActorId: string;
+            /** @enum {string} */
             expectedActorType: "field" | "captain";
+            /** @enum {string} */
             expectedSurface: "app-field" | "app-captain";
         };
         ApiError: {
             code: string;
             message: string;
+        };
+        ActivationChallengeMetadata: {
+            activationId: string;
+            /** @enum {string} */
+            status: "pending" | "revoked" | "consumed" | "expired" | "locked";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            maskedPhone: string;
         };
     };
     responses: {
@@ -738,6 +767,33 @@ export interface operations {
             };
             429: components["responses"]["RateLimited"];
             503: components["responses"]["ServiceUnavailable"];
+        };
+    };
+    getLatestActivationForActor: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest activation challenge metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivationChallengeMetadata"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
         };
     };
     revokeActorActivations: {

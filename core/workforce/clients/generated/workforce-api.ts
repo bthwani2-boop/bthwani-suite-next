@@ -294,6 +294,23 @@ export interface paths {
         patch: operations["updateWorkforceShift"];
         trace?: never;
     };
+    "/workforce/reference/supervisors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Operator-only. Backs the supervisor picker: role + free-text search over active Identity actors, replacing free-text actor-id entry. */
+        get: operations["searchWorkforceSupervisors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -310,12 +327,11 @@ export interface components {
             fullNameAr: string;
             fullNameEn?: string;
             phoneE164: string;
-            providerCode: string;
             engagementType?: components["schemas"]["EngagementType"];
             /** Format: date */
             engagementStartDate?: string;
-            cityCode?: string;
-            shiftCode?: string;
+            serviceZoneId: string;
+            shiftCode: string;
             supervisorActorId?: string;
             photoMediaRef?: string;
             documentMediaRefs?: string[];
@@ -324,11 +340,10 @@ export interface components {
             expectedVersion: number;
             fullNameAr?: string;
             fullNameEn?: string;
-            providerCode?: string;
             engagementType?: components["schemas"]["EngagementType"];
             /** Format: date */
             engagementStartDate?: string;
-            cityCode?: string;
+            serviceZoneId?: string;
             shiftCode?: string;
             supervisorActorId?: string;
             photoMediaRef?: string;
@@ -337,26 +352,25 @@ export interface components {
             fullNameAr: string;
             fullNameEn?: string;
             phoneE164: string;
-            providerCode: string;
             engagementType?: components["schemas"]["EngagementType"];
             /** Format: date */
             engagementStartDate?: string;
             photoMediaRef?: string;
-            vehicleType?: string;
-            vehicleIdentifier?: string;
+            vehicleType: string;
+            vehicleIdentifier: string;
             /** @enum {string} */
             licenseStatus?: "missing" | "pending_review" | "valid" | "expired" | "rejected";
             /** Format: date */
             licenseExpiresAt?: string;
-            operatingCityCode?: string;
+            serviceZoneId: string;
             operatingScopeCode?: string;
+            supervisorActorId?: string;
             documentMediaRefs?: string[];
         };
         UpdateCaptainRequest: {
             expectedVersion: number;
             fullNameAr?: string;
             fullNameEn?: string;
-            providerCode?: string;
             engagementType?: components["schemas"]["EngagementType"];
             /** Format: date */
             engagementStartDate?: string;
@@ -367,8 +381,9 @@ export interface components {
             licenseStatus?: "missing" | "pending_review" | "valid" | "expired" | "rejected";
             /** Format: date */
             licenseExpiresAt?: string;
-            operatingCityCode?: string;
+            serviceZoneId?: string;
             operatingScopeCode?: string;
+            supervisorActorId?: string;
         };
         StatusChangeRequest: {
             expectedVersion: number;
@@ -382,8 +397,11 @@ export interface components {
             preferredLanguage?: "ar" | "en";
             policyConsent?: boolean;
         };
+        /** @enum {string} */
+        ProviderKind: "field" | "captain";
         FieldProfile: {
             cityCode?: string;
+            serviceZoneId?: string;
             shiftCode?: string;
             supervisorActorId?: string;
             emergencyContactName?: string;
@@ -398,7 +416,9 @@ export interface components {
             licenseStatus?: string;
             licenseExpiresAt?: string;
             operatingCityCode?: string;
+            serviceZoneId?: string;
             operatingScopeCode?: string;
+            supervisorActorId?: string;
             documentMediaRefs: string[];
         };
         FieldAgent: {
@@ -406,6 +426,7 @@ export interface components {
             fullNameAr: string;
             fullNameEn?: string;
             providerCode: string;
+            providerKind: components["schemas"]["ProviderKind"];
             engagementType: components["schemas"]["EngagementType"];
             engagementStartDate?: string;
             engagementStatus: components["schemas"]["EngagementStatus"];
@@ -422,6 +443,7 @@ export interface components {
             phoneMasked?: string;
             authActive: boolean;
             readyToIssue: boolean;
+            latestActivation?: components["schemas"]["ActivationMetadata"];
         };
         MeView: components["schemas"]["FieldAgent"] & {
             phoneMasked?: string;
@@ -433,6 +455,16 @@ export interface components {
             maskedPhone: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        ActivationMetadata: {
+            activationId: string;
+            /** @enum {string} */
+            status: "pending" | "revoked" | "consumed" | "expired" | "locked";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            maskedPhone: string;
         };
         City: {
             code: string;
@@ -450,9 +482,15 @@ export interface components {
             /** @default true */
             active: boolean;
         };
+        SupervisorCandidate: {
+            actorId: string;
+            username: string;
+            phoneMasked?: string;
+            active: boolean;
+        };
         ApiError: {
             /** @enum {string} */
-            code: "INVALID_REQUEST" | "UNAUTHENTICATED" | "FORBIDDEN" | "PROFILE_NOT_PROVISIONED" | "PROFILE_INCOMPLETE" | "ENGAGEMENT_SUSPENDED" | "STATUS_NOT_ALLOWED" | "VERSION_CONFLICT" | "DUPLICATE_PHONE" | "DUPLICATE_PROVIDER_CODE" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "INVALID_REFERENCE_CODE" | "REFERENCE_EXISTS" | "REFERENCE_IN_USE" | "ACTOR_NOT_FOUND" | "ACTIVATION_RATE_LIMITED" | "INVALID_ACTOR_INPUT" | "IDENTITY_UNAVAILABLE" | "WORKFORCE_NOT_READY" | "WORKFORCE_INTERNAL_ERROR";
+            code: "INVALID_REQUEST" | "UNAUTHENTICATED" | "FORBIDDEN" | "PROFILE_NOT_PROVISIONED" | "PROFILE_INCOMPLETE" | "ENGAGEMENT_SUSPENDED" | "STATUS_NOT_ALLOWED" | "VERSION_CONFLICT" | "DUPLICATE_PHONE" | "DUPLICATE_PROVIDER_CODE" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "INVALID_REFERENCE_CODE" | "REFERENCE_EXISTS" | "REFERENCE_IN_USE" | "ACTOR_NOT_FOUND" | "ACTIVATION_RATE_LIMITED" | "INVALID_ACTOR_INPUT" | "IDENTITY_UNAVAILABLE" | "INVALID_SUPERVISOR" | "PROVIDER_KIND_CONFLICT" | "WORKFORCE_NOT_READY" | "WORKFORCE_INTERNAL_ERROR";
             message: string;
         };
     };
@@ -1396,6 +1434,33 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    searchWorkforceSupervisors: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["ProviderKind"];
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Supervisor candidates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        supervisors: components["schemas"]["SupervisorCandidate"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

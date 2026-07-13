@@ -289,6 +289,28 @@ paths:
           $ref: "#/components/responses/RateLimited"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+  /internal/actors/{actorId}/activations/latest:
+    get:
+      operationId: getLatestActivationForActor
+      tags: [internal]
+      description: Service-to-service only. Retrieves metadata of the latest activation challenge.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      responses:
+        "200":
+          description: Latest activation challenge metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivationChallengeMetadata"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /internal/actors/{actorId}/activations/revoke:
     post:
       operationId: revokeActorActivations
@@ -581,3 +603,23 @@ components:
           type: string
         message:
           type: string
+    ActivationChallengeMetadata:
+      type: object
+      additionalProperties: false
+      required: [activationId, status, createdAt, expiresAt, maskedPhone]
+      properties:
+        activationId:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: [pending, revoked, consumed, expired, locked]
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        maskedPhone:
+          type: string
+

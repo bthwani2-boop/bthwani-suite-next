@@ -954,7 +954,7 @@ components:
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
-      required: [fullNameAr, phoneE164]
+      required: [fullNameAr, phoneE164, serviceZoneId, shiftCode]
       properties:
         fullNameAr:
           type: string
@@ -970,8 +970,6 @@ components:
         engagementStartDate:
           type: string
           format: date
-        cityCode:
-          type: string
         serviceZoneId:
           type: string
         shiftCode:
@@ -1001,8 +999,6 @@ components:
         engagementStartDate:
           type: string
           format: date
-        cityCode:
-          type: string
         serviceZoneId:
           type: string
         shiftCode:
@@ -1014,7 +1010,7 @@ components:
     CreateCaptainRequest:
       type: object
       additionalProperties: false
-      required: [fullNameAr, phoneE164]
+      required: [fullNameAr, phoneE164, serviceZoneId, vehicleType, vehicleIdentifier]
       properties:
         fullNameAr:
           type: string
@@ -1042,8 +1038,6 @@ components:
         licenseExpiresAt:
           type: string
           format: date
-        operatingCityCode:
-          type: string
         serviceZoneId:
           type: string
         operatingScopeCode:
@@ -1083,8 +1077,6 @@ components:
         licenseExpiresAt:
           type: string
           format: date
-        operatingCityCode:
-          type: string
         serviceZoneId:
           type: string
         operatingScopeCode:
@@ -1213,6 +1205,8 @@ components:
               type: boolean
             readyToIssue:
               type: boolean
+            latestActivation:
+              $ref: "#/components/schemas/ActivationMetadata"
     MeView:
       allOf:
         - $ref: "#/components/schemas/FieldAgent"
@@ -1238,6 +1232,24 @@ components:
         expiresAt:
           type: string
           format: date-time
+    ActivationMetadata:
+      type: object
+      additionalProperties: false
+      required: [activationId, status, createdAt, expiresAt, maskedPhone]
+      properties:
+        activationId:
+          type: string
+        status:
+          type: string
+          enum: [pending, revoked, consumed, expired, locked]
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        maskedPhone:
+          type: string
     City:
       type: object
       additionalProperties: false

@@ -13,21 +13,24 @@ export function FieldAgentCreateView(props: { readonly onBack: () => void; reado
   const [fullNameAr, setFullNameAr] = useState("");
   const [phone, setPhone] = useState("");
   const [zoneId, setZoneId] = useState("");
-  const [zoneCityCode, setZoneCityCode] = useState("");
   const [shiftCode, setShiftCode] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
 
-  const canSubmit = fullNameAr.trim().length > 0 && phone.trim().length >= 9 && zoneId !== "" && state.kind !== "submitting";
+  const canSubmit =
+    fullNameAr.trim().length > 0 &&
+    phone.trim().length >= 9 &&
+    zoneId !== "" &&
+    shiftCode !== "" &&
+    state.kind !== "submitting";
 
   const handleSubmit = async () => {
     const agent = await submit({
       fullNameAr: fullNameAr.trim(),
       phoneE164: phone.trim(),
       engagementType: "independent_contractor",
-      cityCode: zoneCityCode || undefined,
-      serviceZoneId: zoneId || undefined,
-      shiftCode: shiftCode || undefined,
-      supervisorActorId: supervisor?.actorId,
+      serviceZoneId: zoneId,
+      shiftCode: shiftCode,
+      supervisorActorId: supervisor?.actorId ?? undefined,
     });
     if (agent) props.onCreated(agent);
   };
@@ -55,11 +58,10 @@ export function FieldAgentCreateView(props: { readonly onBack: () => void; reado
           value={zoneId}
           onChange={(zone) => {
             setZoneId(zone?.id ?? "");
-            setZoneCityCode(zone?.cityCode ?? "");
           }}
         />
 
-        <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الوردية</Text>
+        <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الوردية *</Text>
         {reference.error && (
           <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{reference.error}</Text>
         )}

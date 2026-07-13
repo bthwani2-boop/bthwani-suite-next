@@ -52,10 +52,19 @@ export type FieldAgent = {
 
 export type Captain = FieldAgent;
 
+export type ActivationMetadata = {
+  readonly activationId: string;
+  readonly status: "pending" | "revoked" | "consumed" | "expired" | "locked";
+  readonly createdAt: string;
+  readonly expiresAt: string;
+  readonly maskedPhone: string;
+};
+
 export type FieldAgentDetail = FieldAgent & {
   readonly phoneMasked?: string;
   readonly authActive: boolean;
   readonly readyToIssue: boolean;
+  readonly latestActivation?: ActivationMetadata;
 };
 
 export type CaptainDetail = FieldAgentDetail;
@@ -71,9 +80,8 @@ export type CreateFieldAgentInput = {
   readonly phoneE164: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
-  readonly cityCode?: string | undefined;
-  readonly serviceZoneId?: string | undefined;
-  readonly shiftCode?: string | undefined;
+  readonly serviceZoneId: string;
+  readonly shiftCode: string;
   readonly supervisorActorId?: string | undefined;
   readonly photoMediaRef?: string | undefined;
   readonly documentMediaRefs?: readonly string[] | undefined;
@@ -85,7 +93,6 @@ export type UpdateFieldAgentInput = {
   readonly fullNameEn?: string | undefined;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
-  readonly cityCode?: string | undefined;
   readonly serviceZoneId?: string | undefined;
   readonly shiftCode?: string | undefined;
   readonly supervisorActorId?: string | undefined;
@@ -99,12 +106,11 @@ export type CreateCaptainInput = {
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
-  readonly vehicleType?: string | undefined;
-  readonly vehicleIdentifier?: string | undefined;
+  readonly vehicleType: string;
+  readonly vehicleIdentifier: string;
   readonly licenseStatus?: LicenseStatus | undefined;
   readonly licenseExpiresAt?: string | undefined;
-  readonly operatingCityCode?: string | undefined;
-  readonly serviceZoneId?: string | undefined;
+  readonly serviceZoneId: string;
   readonly operatingScopeCode?: string | undefined;
   readonly supervisorActorId?: string | undefined;
   readonly documentMediaRefs?: readonly string[] | undefined;
@@ -121,7 +127,6 @@ export type UpdateCaptainInput = {
   readonly vehicleIdentifier?: string | undefined;
   readonly licenseStatus?: LicenseStatus | undefined;
   readonly licenseExpiresAt?: string | undefined;
-  readonly operatingCityCode?: string | undefined;
   readonly serviceZoneId?: string | undefined;
   readonly operatingScopeCode?: string | undefined;
   readonly supervisorActorId?: string | undefined;

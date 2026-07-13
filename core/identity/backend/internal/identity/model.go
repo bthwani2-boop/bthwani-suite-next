@@ -87,3 +87,12 @@ type ApiError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
+
+type ActivationMetadata struct {
+	ActivationID string    `json:"activationId"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"createdAt"`
+	ExpiresAt    time.Time `json:"expiresAt"`
+	MaskedPhone  string    `json:"maskedPhone"`
+}
+

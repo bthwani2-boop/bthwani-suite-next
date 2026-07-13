@@ -63,6 +63,15 @@ type ActivationCode struct {
 	ExpiresAt    time.Time `json:"expiresAt"`
 }
 
+type ActivationMetadata struct {
+	ActivationID string    `json:"activationId"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"createdAt"`
+	ExpiresAt    time.Time `json:"expiresAt"`
+	MaskedPhone  string    `json:"maskedPhone"`
+}
+
+
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
 	err := c.do(ctx, http.MethodPost, "/internal/actors/provision", input, &view, nil)
@@ -125,6 +134,13 @@ func (c *Client) IssueActivation(ctx context.Context, actorID, issuedByActorID, 
 func (c *Client) RevokeActivations(ctx context.Context, actorID string) error {
 	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/activations/revoke", nil, nil, nil)
 }
+
+func (c *Client) LatestActivation(ctx context.Context, actorID string) (*ActivationMetadata, error) {
+	var meta *ActivationMetadata
+	err := c.do(ctx, http.MethodGet, "/internal/actors/"+url.PathEscape(actorID)+"/activations/latest", nil, &meta, nil)
+	return meta, err
+}
+
 
 func (c *Client) do(ctx context.Context, method, path string, body, target any, headers map[string]string) error {
 	if !c.Configured() {

@@ -22,6 +22,8 @@ import {
   isSessionExpiredCode,
   workforceErrorMessage,
 } from "./workforce.api";
+import { fetchZones } from "../platform-policies/platform-policies.api";
+import type { DshZone } from "../platform-policies/platform-policies.types";
 import type {
   ActivationCodeResult,
   Captain,
@@ -380,4 +382,139 @@ export function useSupervisorSearchController(kind: ProviderKind) {
   }, [kind, query]);
 
   return { query, setQuery, candidates, loading, error };
+}
+
+export type ServiceZoneReferenceState = {
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly zones: readonly DshZone[];
+};
+
+export function useServiceZoneReference() {
+  const [state, setState] = useState<ServiceZoneReferenceState>({
+    loading: true,
+    error: null,
+    zones: [],
+  });
+
+  const reload = useCallback(async () => {
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const { zones } = await fetchZones(true);
+      setState({ loading: false, error: null, zones: zones ?? [] });
+    } catch (error) {
+      setState((prev) => ({ ...prev, loading: false, error: workforceErrorMessage(error) }));
+    }
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const zoneLabel = useMemo(() => {
+    const byId = new Map((state.zones || []).map((z) => [z.id, z.name]));
+    return (id?: string) => (id ? byId.get(id) ?? id : "—");
+  }, [state.zones]);
+
+  return { ...state, reload, zoneLabel };
+}
+
+export function useProviderActivationController(providerKind: "field" | "captain", actorId: string) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<FieldAgentDetail | null>(null);
+  const [issuedCode, setIssuedCode] = useState<ActivationCodeResult | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = providerKind === "captain" ? await getCaptain(actorId) : await getFieldAgent(actorId);
+      setDetail(data);
+    } catch (err) {
+      setError(workforceErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [providerKind, actorId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const runAction = async (action: () => Promise<unknown>) => {
+    setActionError(null);
+    setActionBusy(true);
+    try {
+      await action();
+      await reload();
+      return true;
+    } catch (err) {
+      setActionError(workforceErrorMessage(err));
+      return false;
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const issueCode = async () => {
+    if (!detail) return;
+    setIssuedCode(null);
+    await runAction(async () => {
+      const res = providerKind === "captain"
+        ? await issueCaptainActivationCode(actorId, detail.version)
+        : await issueFieldAgentActivationCode(actorId, detail.version);
+      setIssuedCode(res);
+    });
+  };
+
+  const revokeCode = async () => {
+    setIssuedCode(null);
+    await runAction(async () => {
+      if (providerKind === "captain") {
+        await revokeCaptainActivationCodes(actorId);
+      } else {
+        await revokeFieldAgentActivationCodes(actorId);
+      }
+    });
+  };
+
+  const suspend = async (reason: string) => {
+    if (!detail) return;
+    await runAction(async () => {
+      if (providerKind === "captain") {
+        await suspendCaptain(actorId, detail.version, reason);
+      } else {
+        await suspendFieldAgent(actorId, detail.version, reason);
+      }
+    });
+  };
+
+  const reactivate = async (reason: string) => {
+    if (!detail) return;
+    await runAction(async () => {
+      if (providerKind === "captain") {
+        await reactivateCaptain(actorId, detail.version, reason);
+      } else {
+        await reactivateFieldAgent(actorId, detail.version, reason);
+      }
+    });
+  };
+
+  return {
+    loading,
+    error,
+    detail,
+    issuedCode,
+    actionBusy,
+    actionError,
+    issueCode,
+    revokeCode,
+    suspend,
+    reactivate,
+    reload,
+    clearIssuedCode: () => setIssuedCode(null),
+  };
 }
