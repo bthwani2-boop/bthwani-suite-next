@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"time"
 
@@ -18,28 +17,19 @@ import (
 )
 
 type Client struct {
-	mc             *minio.Client
-	bucket         string
-	publicEndpoint string // see NewClient
-	useSSL         bool
+	mc        *minio.Client
+	presignMC *minio.Client
+	bucket    string
 }
 
-// NewClient connects to MinIO using the given endpoint/credentials and ensures
-// the target bucket exists. endpoint must be host:port with no scheme.
+// NewClient creates MinIO clients using the given endpoint/credentials.
+// endpoint must be host:port with no scheme.
 //
-// publicEndpoint controls the host:port written into presigned PUT URLs
-// (PresignPut). It must be reachable by the *uploading client* (a browser, a
-// phone -- not dsh-api itself). In Docker Compose, dsh-api talks to MinIO
-// over the internal Docker network hostname (e.g. "minio:9000"), but a
-// presigned URL handed back to a browser/app outside that network must point
-// at the host-published port (e.g. "localhost:59000") instead. The presign
-// operation itself must still run against the internal client, though --
-// minio-go's presigner does a bucket-location lookup over the network, and
-// that has to go through the endpoint dsh-api can actually reach; only the
-// resulting URL's host gets rewritten to publicEndpoint afterward. If
-// publicEndpoint is empty, no rewrite happens (correct for a deployment
-// where dsh-api and its clients share one network / hostname).
-func NewClient(ctx context.Context, endpoint, publicEndpoint, accessKey, secretKey, bucket string, useSSL bool) (*Client, error) {
+// publicEndpoint controls the host:port used to sign presigned PUT URLs
+// (PresignPut). It must be reachable by the uploading client. It is configured
+// on a dedicated presign client instead of rewriting URL hosts after signing,
+// because SigV4 signs the host header.
+func NewClient(endpoint, publicEndpoint, accessKey, secretKey, bucket string, useSSL, publicUseSSL bool) (*Client, error) {
 	mc, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
@@ -48,17 +38,37 @@ func NewClient(ctx context.Context, endpoint, publicEndpoint, accessKey, secretK
 		return nil, fmt.Errorf("media: failed to create minio client: %w", err)
 	}
 
-	exists, err := mc.BucketExists(ctx, bucket)
-	if err != nil {
-		return nil, fmt.Errorf("media: failed to check bucket: %w", err)
+	presignEndpoint := endpoint
+	presignUseSSL := useSSL
+	if publicEndpoint != "" {
+		presignEndpoint = publicEndpoint
+		presignUseSSL = publicUseSSL
 	}
-	if !exists {
-		if err := mc.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-			return nil, fmt.Errorf("media: failed to create bucket: %w", err)
-		}
+	presignMC, err := minio.New(presignEndpoint, &minio.Options{
+		Creds:        credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure:       presignUseSSL,
+		Region:       "us-east-1",
+		BucketLookup: minio.BucketLookupPath,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("media: failed to create minio presign client: %w", err)
 	}
 
-	return &Client{mc: mc, bucket: bucket, publicEndpoint: publicEndpoint, useSSL: useSSL}, nil
+	return &Client{mc: mc, presignMC: presignMC, bucket: bucket}, nil
+}
+
+// EnsureBucket ensures the configured bucket exists.
+func (c *Client) EnsureBucket(ctx context.Context) error {
+	exists, err := c.mc.BucketExists(ctx, c.bucket)
+	if err != nil {
+		return fmt.Errorf("media: failed to check bucket: %w", err)
+	}
+	if !exists {
+		if err := c.mc.MakeBucket(ctx, c.bucket, minio.MakeBucketOptions{}); err != nil {
+			return fmt.Errorf("media: failed to create bucket: %w", err)
+		}
+	}
+	return nil
 }
 
 // Upload streams reader into the bucket under key, returning the stored object key.
@@ -78,17 +88,9 @@ func (c *Client) Upload(ctx context.Context, key string, reader io.Reader, size 
 // time; StatObject re-checks that after the fact rather than binding it into
 // the signature, since minio-go's presign helper doesn't support that.
 func (c *Client) PresignPut(ctx context.Context, key string, ttl time.Duration) (uploadURL string, expiresAt time.Time, err error) {
-	u, err := c.mc.PresignedPutObject(ctx, c.bucket, key, ttl)
+	u, err := c.presignMC.PresignedPutObject(ctx, c.bucket, key, ttl)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("media: presign put failed: %w", err)
-	}
-	if c.publicEndpoint != "" {
-		u.Host = c.publicEndpoint
-		if c.useSSL {
-			u.Scheme = "https"
-		} else {
-			u.Scheme = "http"
-		}
 	}
 	return u.String(), time.Now().Add(ttl), nil
 }
@@ -101,6 +103,14 @@ func (c *Client) StatObject(ctx context.Context, key string) (size int64, conten
 		return 0, "", fmt.Errorf("media: stat failed: %w", err)
 	}
 	return info.Size, info.ContentType, nil
+}
+
+// Remove deletes an object from the bucket.
+func (c *Client) Remove(ctx context.Context, key string) error {
+	if err := c.mc.RemoveObject(ctx, c.bucket, key, minio.RemoveObjectOptions{}); err != nil {
+		return fmt.Errorf("media: remove failed: %w", err)
+	}
+	return nil
 }
 
 // ChecksumSHA256 downloads the object and hashes it, for callers (like

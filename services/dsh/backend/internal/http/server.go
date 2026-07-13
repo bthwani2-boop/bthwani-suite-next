@@ -12,17 +12,18 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaClient *media.Client) *http.ServeMux {
+func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
-	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db))
+	mux.HandleFunc("GET /dsh/readiness", health.HandleReadiness(db, mediaProvider))
 	mux.HandleFunc("GET /dsh/stores", store.HandleListStores(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}", store.HandleGetStore(db))
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
-	mux.HandleFunc("GET /dsh/public/media/{assetId}/{variant}", handlePublicMedia(db, mediaClient))
+	mux.HandleFunc("GET /dsh/public/media/{assetId}/{variant}", handlePublicMedia(db, mediaProvider))
+	mux.HandleFunc("GET /dsh/public/reels", handlePublicReels(db))
 	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
-	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaClient)
+	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("POST /dsh/field/media/uploads", protected.handleFieldMediaUpload)
 	mux.HandleFunc("GET /dsh/media", protected.handleMediaDownload)
 	mux.HandleFunc("GET /dsh/store-context", protected.handleStoreContext)
@@ -116,6 +117,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/decision", protected.handleDecideProductProposal)
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/transition", protected.handleTransitionProductProposal)
 	mux.HandleFunc("GET /dsh/operator/catalog/platform-policies", protected.handleListCatalogPolicies)
+	mux.HandleFunc("PATCH /dsh/operator/catalog/platform-policies/{policyId}", protected.handleUpdateCatalogPolicy)
 	mux.HandleFunc("PUT /dsh/operator/catalog/platform-policies/{policyId}", protected.handleUpdateCatalogPolicy)
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/assortment", protected.handleOperatorGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/assortment/{masterProductId}", protected.handleOperatorUpsertStoreAssortment)
@@ -126,10 +128,13 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/complete", protected.handleCompleteAssetUpload)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/assets/{assetId}", protected.handleUpdateCatalogAsset)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/review", protected.handleReviewCatalogAsset)
+	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}", protected.handleDeleteCatalogAsset)
 	mux.HandleFunc("POST /dsh/operator/catalog/assets/{assetId}/link", protected.handleLinkCatalogAsset)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/assets/{assetId}/links/{linkId}", protected.handleUnlinkCatalogAsset)
 	mux.HandleFunc("GET /dsh/operator/catalog/asset-links", protected.handleListCatalogAssetLinks)
 	mux.HandleFunc("GET /dsh/operator/catalog/seed-status", protected.handleCatalogSeedStatus)
+	mux.HandleFunc("GET /dsh/operator/reels", protected.handleListReels)
+	mux.HandleFunc("POST /dsh/operator/reels/{reelId}/review", protected.handleReviewReel)
 
 	mux.HandleFunc("PUT /dsh/operator/catalog/domains/{domainId}/images/{role}", protected.handlePutDomainImage)
 	mux.HandleFunc("PUT /dsh/operator/catalog/nodes/{nodeId}/images/{role}", protected.handlePutNodeImage)
@@ -142,6 +147,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", protected.handlePartnerGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", protected.handlePartnerUpsertStoreAssortment)
 	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals", protected.handlePartnerCreateProductProposal)
+	mux.HandleFunc("POST /dsh/partner/reels", protected.handleSubmitReel)
 
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", protected.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/field/catalog/master-products", protected.handleListMasterProducts)

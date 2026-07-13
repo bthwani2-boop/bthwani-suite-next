@@ -20,7 +20,7 @@ type protectedStoreServer struct {
 	db       *sql.DB
 	identity *auth.Client
 	wlt      *wlt.Client
-	media    *media.Client
+	media    *media.Provider
 }
 
 // Partners permission actions on the control-panel surface, covering store
@@ -100,8 +100,15 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 	store.SendJSON(w, status, map[string]any{"item": item})
 }
 
-func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaClient *media.Client) *protectedStoreServer {
-	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient, media: mediaClient}
+func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider) *protectedStoreServer {
+	return &protectedStoreServer{db: db, identity: identity, wlt: wltClient, media: mediaProvider}
+}
+
+func (s *protectedStoreServer) mediaClient() *media.Client {
+	if s.media == nil {
+		return nil
+	}
+	return s.media.Client()
 }
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {

@@ -4,12 +4,14 @@ on:
   pull_request:
     branches:
       - master
+      - onebyone
   push:
     branches:
       - slicing
       - implementing
       - journy
       - master
+      - onebyone
   workflow_dispatch:
     inputs:
       reason:

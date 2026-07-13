@@ -599,6 +599,22 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: All fields are optional. Only provided fields are updated.
+              properties:
+                nameAr: { type: string }
+                nameEn: { type: string }
+                icon: { type: string }
+                sortOrder: { type: integer }
+                isActive: { type: boolean }
+                isClientVisible: { type: boolean }
+                requiresProductCatalog: { type: boolean }
+                isManualRequest: { type: boolean }
       responses:
         "200": { description: Domain updated. }
 
@@ -633,6 +649,20 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: All fields are optional. Only provided fields are updated.
+              properties:
+                nameAr: { type: string }
+                nameEn: { type: string }
+                icon: { type: string }
+                sortOrder: { type: integer }
+                isActive: { type: boolean }
+                isClientVisible: { type: boolean }
       responses:
         "200": { description: Node updated. }
 
@@ -679,6 +709,23 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: All fields are optional. Only provided fields are updated. Do NOT send canonicalImageObjectKey — images are managed via DAM asset links.
+              properties:
+                canonicalNameAr: { type: string }
+                canonicalNameEn: { type: string }
+                brand: { type: string }
+                unit: { type: string }
+                unitPrice: { type: number }
+                currency: { type: string }
+                stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+                isActive: { type: boolean }
+                approvalStatus: { type: string }
       responses:
         "200": { description: Master product updated. }
 
@@ -741,6 +788,57 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >
+                All fields must be sent (PUT semantics — omitted fields will be cleared).
+                This prevents unintentional zeroing of booleans and integers.
+              properties:
+                isActive: { type: boolean }
+                requiresMarketingReview: { type: boolean }
+                requiresProductImage: { type: boolean }
+                requiresCategoryImage: { type: boolean }
+                requiresDescription: { type: boolean }
+                requiresBrand: { type: boolean }
+                requiresUnit: { type: boolean }
+                productDataQualityMinimumScore: { type: integer }
+                maxGalleryImages: { type: integer }
+                manualRequestMode: { type: boolean }
+                allowsStoreProductCustomImage: { type: boolean }
+      responses:
+        "200": { description: Policy updated. }
+    patch:
+      operationId: patchCatalogPlatformPolicy
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: All fields are optional. Only provided fields are updated.
+              properties:
+                isActive: { type: boolean }
+                requiresMarketingReview: { type: boolean }
+                requiresProductImage: { type: boolean }
+                requiresCategoryImage: { type: boolean }
+                requiresDescription: { type: boolean }
+                requiresBrand: { type: boolean }
+                requiresUnit: { type: boolean }
+                productDataQualityMinimumScore: { type: integer }
+                maxGalleryImages: { type: integer }
+                manualRequestMode: { type: boolean }
+                allowsStoreProductCustomImage: { type: boolean }
       responses:
         "200": { description: Policy updated. }
 
@@ -786,14 +884,26 @@ paths:
           application/json:
             schema:
               type: object
-              required: [fileName, mimeType, sizeBytes, sourceSurface]
+              required: [fileName, mimeType, sizeBytes]
               properties:
                 fileName: { type: string }
-                mimeType: { type: string }
+                mimeType:
+                  type: string
+                  description: >
+                    For image assets: image/jpeg, image/png, or image/webp only.
+                    For reel videos: video/mp4 only.
                 sizeBytes: { type: integer }
-                sourceSurface: { type: string }
                 altAr: { type: string }
                 altEn: { type: string }
+                intendedEntityType:
+                  type: string
+                  description: Optional target entity type (domain, node, master_product, store, store_assortment, product_proposal, campaign).
+                intendedEntityId:
+                  type: string
+                  description: Optional target entity ID.
+                intendedRole:
+                  type: string
+                  description: Optional DAM role for the target entity.
       responses:
         "201":
           description: Upload intent created.
@@ -802,10 +912,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  asset: { type: object }
+                  asset: { $ref: "#/components/schemas/DshCatalogAsset" }
                   uploadUrl:
                     type: string
-                    description: Short-lived presigned MinIO PUT URL.
+                    description: >
+                      Short-lived presigned MinIO PUT URL signed against the public endpoint.
+                      The client must PUT directly to this URL without modifying it.
                   expiresAt: { type: string, format: date-time }
 
   /dsh/operator/catalog/assets/{assetId}/complete:
@@ -832,9 +944,35 @@ paths:
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: >
+                Only alt text and dominant color may be updated via PATCH.
+                Status, size, checksum, and publicUrl are controlled by the upload lifecycle
+                (intent → PUT → complete) and must not be sent here.
+              properties:
+                altAr: { type: string }
+                altEn: { type: string }
+                dominantColor: { type: string }
       responses:
         "200":
-          description: Asset metadata updated.
+          description: Asset alt text / dominant color updated.
+    delete:
+      operationId: deleteCatalogAsset
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Asset deleted (only draft/uploaded/rejected with no active links).
 
   /dsh/operator/catalog/assets/{assetId}/review:
     post:
@@ -854,11 +992,23 @@ paths:
               type: object
               required: [decision]
               properties:
-                decision: { type: string, enum: [approved, rejected, pending_review, archived] }
+                decision:
+                  type: string
+                  enum: [approved, rejected, archived]
+                  description: >
+                    Valid transitions: uploaded→pending_review (automatic on complete),
+                    pending_review→approved|rejected, approved→archived.
+                    draft assets may not be approved directly.
                 reviewNote: { type: string }
       responses:
         "200":
           description: Asset reviewed by operator.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  asset: { $ref: "#/components/schemas/DshCatalogAsset" }
 
   /dsh/operator/catalog/assets/{assetId}/link:
     post:
@@ -899,6 +1049,120 @@ paths:
       responses:
         "200":
           description: Link removed.
+
+  /dsh/operator/reels:
+    get:
+      operationId: listReels
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [pending_review, approved, rejected, archived] }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: List of reels (operator view).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reels:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshReel" }
+
+  /dsh/operator/reels/{reelId}/review:
+    post:
+      operationId: reviewReel
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: reelId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approved, rejected, archived] }
+                reviewNote: { type: string }
+                targetType: { type: string, enum: [master_product, store, offer] }
+                targetId: { type: string }
+                sortOrder: { type: integer }
+      responses:
+        "200":
+          description: Reel reviewed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reel: { $ref: "#/components/schemas/DshReel" }
+
+  /dsh/partner/reels:
+    post:
+      operationId: submitReel
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId, targetType, targetId]
+              properties:
+                assetId: { type: string }
+                titleAr: { type: string }
+                titleEn: { type: string }
+                targetType: { type: string, enum: [master_product, store, offer] }
+                targetId: { type: string }
+                sortOrder: { type: integer }
+                sourceStoreId: { type: string }
+      responses:
+        "201":
+          description: Reel submitted for review.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reel: { $ref: "#/components/schemas/DshReel" }
+
+  /dsh/public/reels:
+    get:
+      operationId: listPublicReels
+      tags: [DshHomeDiscovery]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Approved reels for public home screen carousel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reels:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPublicReel" }
 
   /dsh/operator/catalog/asset-links:
     get:
@@ -4642,7 +4906,71 @@ components:
           items:
             $ref: "#/components/schemas/DshStoreAuditEvent"
 
+
+    DshCatalogAsset:
+      type: object
+      required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        objectKey: { type: string }
+        publicUrl: { type: [string, "null"] }
+        mimeType: { type: string }
+        sizeBytes: { type: integer }
+        widthPx: { type: [integer, "null"] }
+        heightPx: { type: [integer, "null"] }
+        checksum: { type: [string, "null"] }
+        altAr: { type: string }
+        altEn: { type: string }
+        dominantColor: { type: [string, "null"] }
+        status:
+          type: string
+          enum: [draft, uploaded, pending_review, approved, rejected, archived]
+        sourceSurface: { type: string }
+        uploadedBy: { type: string }
+        reviewedBy: { type: [string, "null"] }
+        reviewNote: { type: string }
+        intendedEntityType: { type: [string, "null"] }
+        intendedEntityId: { type: [string, "null"] }
+        intendedRole: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshReel:
+      type: object
+      required: [id, assetId, targetType, targetId, status, sortOrder, submittedBy, submittedByRole, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        assetId: { type: string }
+        titleAr: { type: string }
+        titleEn: { type: string }
+        targetType: { type: string, enum: [master_product, store, offer] }
+        targetId: { type: string }
+        status: { type: string, enum: [pending_review, approved, rejected, archived] }
+        sortOrder: { type: integer }
+        submittedBy: { type: string }
+        submittedByRole: { type: string }
+        sourceStoreId: { type: [string, "null"] }
+        reviewedBy: { type: [string, "null"] }
+        reviewNote: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshPublicReel:
+      type: object
+      required: [id, videoUrl, targetType, targetId, sortOrder]
+      properties:
+        id: { type: string }
+        titleAr: { type: string }
+        titleEn: { type: string }
+        videoUrl:
+          type: string
+          description: Public streaming URL from /dsh/public/media/{assetId}/original
+        targetType: { type: string, enum: [master_product, store, offer] }
+        targetId: { type: string }
+        sortOrder: { type: integer }
+
     DshCentralCatalogDomain:
+
       type: object
       required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
       properties:
@@ -4696,7 +5024,18 @@ components:
         unitPrice: { type: number, format: double, minimum: 0 }
         currency: { type: string }
         stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
-        imageObjectKey: { type: string }
+        imageObjectKey: { type: string, deprecated: true, description: "Deprecated: use effectiveImage instead." }
+        effectiveImage:
+          type: object
+          nullable: true
+          description: >
+            DAM-computed effective product image. Priority: approved store-assortment
+            partner_custom_product_image (when policy allows) > approved master-product
+            canonical_product_image > null.
+          properties:
+            url: { type: string }
+            altAr: { type: string }
+            source: { type: string, enum: [store_custom, canonical] }
 
     DshCatalogAssetLink:
       type: object

@@ -1,4 +1,4 @@
-export interface CentralCatalogDomain {
+﻿export interface CentralCatalogDomain {
   readonly id: string;
   readonly slug: string;
   readonly nameAr: string;
@@ -46,6 +46,7 @@ export interface MasterProduct {
   readonly sku: string | null;
   readonly unit: string;
   readonly measurementType: string;
+  /** @deprecated Use DAM asset links instead */
   readonly canonicalImageObjectKey: string | null;
   readonly approvalStatus: "draft" | "pending_review" | "approved" | "rejected" | "archived";
   readonly isActive: boolean;
@@ -53,6 +54,56 @@ export interface MasterProduct {
   readonly createdSource: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** PATCH input for master products - all fields optional; only sent fields are updated. */
+export interface MasterProductPatchInput {
+  readonly canonicalNameAr?: string;
+  readonly canonicalNameEn?: string;
+  readonly brand?: string;
+  readonly unit?: string;
+  readonly unitPrice?: number;
+  readonly currency?: string;
+  readonly stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  readonly isActive?: boolean;
+  readonly approvalStatus?: string;
+}
+
+/** PATCH input for catalog domains - all fields optional. */
+export interface DomainPatchInput {
+  readonly nameAr?: string;
+  readonly nameEn?: string;
+  readonly icon?: string;
+  readonly sortOrder?: number;
+  readonly isActive?: boolean;
+  readonly isClientVisible?: boolean;
+  readonly requiresProductCatalog?: boolean;
+  readonly isManualRequest?: boolean;
+}
+
+/** PATCH input for catalog nodes - all fields optional. */
+export interface NodePatchInput {
+  readonly nameAr?: string;
+  readonly nameEn?: string;
+  readonly icon?: string;
+  readonly sortOrder?: number;
+  readonly isActive?: boolean;
+  readonly isClientVisible?: boolean;
+}
+
+/** PUT/PATCH input for platform policies. */
+export interface CatalogPolicyUpdateInput {
+  readonly isActive?: boolean;
+  readonly requiresMarketingReview?: boolean;
+  readonly requiresProductImage?: boolean;
+  readonly requiresCategoryImage?: boolean;
+  readonly requiresDescription?: boolean;
+  readonly requiresBrand?: boolean;
+  readonly requiresUnit?: boolean;
+  readonly productDataQualityMinimumScore?: number;
+  readonly maxGalleryImages?: number;
+  readonly manualRequestMode?: boolean;
+  readonly allowsStoreProductCustomImage?: boolean;
 }
 
 import type { ProductProposalPipelineStatus } from "./central-catalog-product-pipeline";
@@ -74,7 +125,6 @@ export interface ProductProposal {
   readonly adoptedMasterProductId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-
   readonly reviewStage?: string;
   readonly partnerReviewedBy?: string | null;
   readonly marketingReviewedBy?: string | null;
@@ -119,11 +169,26 @@ export interface CatalogPlatformPolicy {
   readonly requiresBarcode: boolean;
   readonly requiresCatalogReview: boolean;
   readonly requiresProductImage: boolean;
+  readonly requiresCategoryImage: boolean;
+  readonly requiresMarketingReview: boolean;
+  readonly requiresDescription: boolean;
+  readonly requiresBrand: boolean;
+  readonly requiresUnit: boolean;
+  readonly productDataQualityMinimumScore: number;
+  readonly maxGalleryImages: number;
+  readonly manualRequestMode: boolean;
   readonly isActive: boolean;
   readonly effectiveFrom: string;
   readonly notes: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** DAM-resolved effective image for a catalog product or entity. */
+export interface EffectiveImage {
+  readonly url: string;
+  readonly altAr: string;
+  readonly source: "store_custom" | "canonical";
 }
 
 export interface ClientVisibleCatalogEntry {
@@ -138,6 +203,7 @@ export interface ClientVisibleCatalogEntry {
   readonly sku: string | null;
   readonly unit: string;
   readonly measurementType: string;
+  /** @deprecated Use effectiveImage instead */
   readonly canonicalImageObjectKey: string | null;
   readonly approvalStatus: string;
   readonly isActive: boolean;
@@ -148,7 +214,10 @@ export interface ClientVisibleCatalogEntry {
   readonly unitPrice: number;
   readonly currency: string;
   readonly stockStatus: string;
+  /** @deprecated Use effectiveImage instead */
   readonly imageObjectKey: string;
+  /** DAM-resolved effective image. Null when no approved image exists. */
+  readonly effectiveImage: EffectiveImage | null;
 }
 
 export interface ClientVisibleCatalogResponse {
@@ -177,17 +246,35 @@ export interface CatalogAsset {
   readonly uploadedBy: string;
   readonly reviewedBy: string | null;
   readonly reviewNote: string;
+  readonly intendedEntityType: string | null;
+  readonly intendedEntityId: string | null;
+  readonly intendedRole: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export type CatalogAssetStatus = CatalogAsset["status"];
 
 export interface CatalogAssetLink {
   readonly id: string;
   readonly assetId: string;
   readonly entityType: "domain" | "node" | "master_product" | "product_proposal" | "store_assortment" | "collection" | "campaign" | "store";
   readonly entityId: string;
-  readonly role: "icon" | "cover" | "thumbnail" | "gallery" | "canonical_product_image" | "partner_custom_product_image" | "marketing_banner" | "document"
-    | "store_logo" | "store_cover" | "storefront_photo" | "interior_photo" | "signage_photo";
+  readonly role:
+    | "icon"
+    | "cover"
+    | "thumbnail"
+    | "gallery"
+    | "canonical_product_image"
+    | "partner_custom_product_image"
+    | "marketing_banner"
+    | "document"
+    | "store_logo"
+    | "store_cover"
+    | "storefront_photo"
+    | "interior_photo"
+    | "signage_photo"
+    | "reel_video";
   readonly sortOrder: number;
   readonly isPrimary: boolean;
   readonly status: "draft" | "pending_review" | "approved" | "rejected" | "archived";
@@ -195,14 +282,86 @@ export interface CatalogAssetLink {
   readonly updatedAt: string;
 }
 
-// Returned by client-facing surfaces (e.g. GET /dsh/stores/{storeId}/catalog)
-// where the link alone isn't enough to render an image -- the backend joins
-// in the asset's object key, a ready-to-use relative publicUrl (prefix with
-// the surface's own API base URL), alt text, and mime type.
 export interface CatalogAssetLinkWithAsset extends CatalogAssetLink {
   readonly objectKey: string;
   readonly publicUrl: string;
   readonly altAr: string;
   readonly altEn: string;
   readonly mimeType: string;
+}
+
+/** Upload intent creation input. sourceSurface is derived from actor role on the server. */
+export interface AssetUploadIntentInput {
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly altAr?: string;
+  readonly altEn?: string;
+  readonly intendedEntityType?: string;
+  readonly intendedEntityId?: string;
+  readonly intendedRole?: string;
+}
+
+/** Asset PATCH input - only alt text and dominantColor may be updated. */
+export interface AssetUpdateInput {
+  readonly altAr?: string;
+  readonly altEn?: string;
+  readonly dominantColor?: string;
+}
+
+/** Upload progress state machine. */
+export type AssetUploadProgress =
+  | { stage: "idle" }
+  | { stage: "signing" }
+  | { stage: "uploading"; percent: number }
+  | { stage: "verifying" }
+  | { stage: "linked"; assetId: string; linkId?: string }
+  | { stage: "failed"; error: string };
+
+/** Reel entity - partner-submitted video for the home reel carousel. */
+export interface Reel {
+  readonly id: string;
+  readonly assetId: string;
+  readonly titleAr: string;
+  readonly titleEn: string;
+  readonly targetType: "master_product" | "store" | "offer";
+  readonly targetId: string;
+  readonly status: "pending_review" | "approved" | "rejected" | "archived";
+  readonly sortOrder: number;
+  readonly submittedBy: string;
+  readonly submittedByRole: string;
+  readonly sourceStoreId: string | null;
+  readonly reviewedBy: string | null;
+  readonly reviewNote: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** Public reel data returned by /dsh/public/reels. */
+export interface PublicReel {
+  readonly id: string;
+  readonly titleAr: string;
+  readonly titleEn: string;
+  readonly videoUrl: string;
+  readonly targetType: "master_product" | "store" | "offer";
+  readonly targetId: string;
+  readonly sortOrder: number;
+}
+
+export interface CreateReelSubmissionInput {
+  readonly assetId: string;
+  readonly titleAr?: string;
+  readonly titleEn?: string;
+  readonly targetType: "master_product" | "store" | "offer";
+  readonly targetId: string;
+  readonly sortOrder?: number;
+  readonly sourceStoreId?: string;
+}
+
+export interface ReviewReelInput {
+  readonly decision: "approved" | "rejected" | "archived";
+  readonly reviewNote?: string;
+  readonly targetType?: "master_product" | "store" | "offer";
+  readonly targetId?: string;
+  readonly sortOrder?: number;
 }

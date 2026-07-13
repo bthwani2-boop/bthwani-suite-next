@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"dsh-api/internal/media"
 	"dsh-api/internal/store"
 )
 
@@ -31,7 +32,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	store.SendJSON(w, http.StatusOK, resp)
 }
 
-func HandleReadiness(db *sql.DB) http.HandlerFunc {
+func HandleReadiness(db *sql.DB, mediaProvider *media.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dbStatus := "ready"
 		err := db.Ping()
@@ -40,10 +41,11 @@ func HandleReadiness(db *sql.DB) http.HandlerFunc {
 		}
 		wltBaseURLStatus := configuredStatus(os.Getenv("DSH_WLT_BASE_URL"))
 		wltTokenStatus := configuredStatus(os.Getenv("WLT_DSH_SERVICE_TOKEN"))
+		storageStatus := mediaProvider.Status(r.Context())
 
 		overallStatus := "ready"
 		httpStatus := http.StatusOK
-		if dbStatus == "down" || wltBaseURLStatus != "configured" || wltTokenStatus != "configured" {
+		if dbStatus == "down" || wltBaseURLStatus != "configured" || wltTokenStatus != "configured" || storageStatus == "unavailable" {
 			overallStatus = "not_ready"
 			httpStatus = http.StatusServiceUnavailable
 		}
@@ -55,6 +57,7 @@ func HandleReadiness(db *sql.DB) http.HandlerFunc {
 				"postgres":          dbStatus,
 				"wlt_base_url":      wltBaseURLStatus,
 				"wlt_service_token": wltTokenStatus,
+				"storage":           storageStatus,
 			},
 			CheckedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}

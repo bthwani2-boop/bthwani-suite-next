@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -19,6 +20,7 @@ import (
 )
 
 const maxMediaUploadBytes = 15 << 20 // 15MB
+const mediaUploadMultipartOverheadBytes = 512 << 10
 
 // POST /dsh/field/media/uploads — field agent uploads a binary document/photo
 // and receives back a mediaRef to attach via POST /dsh/field/partners/{id}/documents.
@@ -27,11 +29,13 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 	if !ok {
 		return
 	}
-	if s.media == nil {
+	mediaClient := s.mediaClient()
+	if mediaClient == nil {
 		store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxMediaUploadBytes+mediaUploadMultipartOverheadBytes)
 	if err := r.ParseMultipartForm(maxMediaUploadBytes); err != nil {
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart upload or file too large")
 		return
@@ -81,14 +85,15 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 	}
 	defer file.Close()
 
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media type")
+		return
 	}
 	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
 	key := media.BuildKey("dsh-partner-documents", "objects", opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
 
-	if err := s.media.Upload(r.Context(), key, file, header.Size, contentType); err != nil {
+	if err := mediaClient.Upload(r.Context(), key, uploadBody, header.Size, contentType); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload media")
 		return
 	}
@@ -107,7 +112,8 @@ func (s *protectedStoreServer) handleMediaDownload(w http.ResponseWriter, r *htt
 	if !ok {
 		return
 	}
-	if s.media == nil {
+	mediaClient := s.mediaClient()
+	if mediaClient == nil {
 		store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
 		return
 	}
@@ -134,7 +140,7 @@ func (s *protectedStoreServer) handleMediaDownload(w http.ResponseWriter, r *htt
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this media reference")
 		return
 	}
-	reader, contentType, err := s.media.Get(r.Context(), ref.StorageKey)
+	reader, contentType, err := mediaClient.Get(r.Context(), ref.StorageKey)
 	if err != nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "media not found")
 		return
@@ -238,10 +244,12 @@ func (s *protectedStoreServer) handleProviderMediaUpload(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	if s.media == nil {
+	mediaClient := s.mediaClient()
+	if mediaClient == nil {
 		store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxMediaUploadBytes+mediaUploadMultipartOverheadBytes)
 	if err := r.ParseMultipartForm(maxMediaUploadBytes); err != nil {
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid multipart upload or file too large")
 		return
@@ -259,14 +267,15 @@ func (s *protectedStoreServer) handleProviderMediaUpload(w http.ResponseWriter, 
 	}
 	defer file.Close()
 
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media type")
+		return
 	}
 	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
 	key := media.BuildKey("dsh-provider-documents", "objects", opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
 
-	if err := s.media.Upload(r.Context(), key, file, header.Size, contentType); err != nil {
+	if err := mediaClient.Upload(r.Context(), key, uploadBody, header.Size, contentType); err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload media")
 		return
 	}
@@ -283,4 +292,45 @@ func (s *protectedStoreServer) handleProviderMediaUpload(w http.ResponseWriter, 
 		return
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]string{"mediaRef": mediaRef})
+}
+
+func prepareMediaUploadBody(file io.Reader, declaredContentType string) (io.Reader, string, error) {
+	head := make([]byte, 512)
+	n, err := io.ReadFull(file, head)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return nil, "", err
+	}
+	head = head[:n]
+
+	detectedContentType := http.DetectContentType(head)
+	if !isAllowedMediaUploadContentType(detectedContentType, declaredContentType) {
+		return nil, "", fmt.Errorf("unsupported media content type: %s", detectedContentType)
+	}
+	return io.MultiReader(bytes.NewReader(head), file), detectedContentType, nil
+}
+
+func isAllowedMediaUploadContentType(detectedContentType, declaredContentType string) bool {
+	detected := normalizeMediaContentType(detectedContentType)
+	declared := normalizeMediaContentType(declaredContentType)
+	if isExplicitlyRejectedMediaContentType(detected) || isExplicitlyRejectedMediaContentType(declared) {
+		return false
+	}
+	switch detected {
+	case "image/jpeg", "image/png", "image/webp", "application/pdf":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeMediaContentType(contentType string) string {
+	contentType = strings.TrimSpace(strings.ToLower(contentType))
+	if i := strings.IndexByte(contentType, ';'); i >= 0 {
+		contentType = strings.TrimSpace(contentType[:i])
+	}
+	return contentType
+}
+
+func isExplicitlyRejectedMediaContentType(contentType string) bool {
+	return contentType == "image/svg+xml" || contentType == "text/html" || strings.HasPrefix(contentType, "video/")
 }

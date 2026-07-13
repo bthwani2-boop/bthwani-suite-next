@@ -32,7 +32,12 @@ import {
   uploadAndLinkAsset,
   type CatalogAsset,
 } from "../../shared/catalog";
+import { reviewReel } from "../../shared/catalog/central-catalog.api";
+
+
 import { CategoryControlRoom } from "./products/CategoryControlRoom";
+import { ReelsReviewPanel } from "./ReelsReviewPanel";
+
 
 type StatusTone = "warning" | "success" | "danger" | "neutral" | "info";
 type DamEntityType = "domains" | "nodes" | "master-products" | "product-proposals";
@@ -167,6 +172,7 @@ type TabId =
   | "master_products"
   | "proposals"
   | "marketing_media"
+  | "reels"
   | "policies"
   | "assortment"
   | "visibility"
@@ -180,6 +186,7 @@ const TABS: { id: TabId; label: string; disabled?: boolean; reason?: string }[] 
   { id: "master_products", label: "المنتجات المركزية L5" },
   { id: "proposals", label: "اقتراحات المنتجات" },
   { id: "marketing_media", label: "مراجعة التسويق والصور" },
+  { id: "reels", label: "مراجعة الريلز 🎬" },
   { id: "policies", label: "السياسات والصلاحيات" },
   { id: "assortment", label: "ربط المتاجر بالمنتجات" },
   { id: "visibility", label: "النشر والرؤية" },
@@ -838,6 +845,15 @@ export function CatalogDashboardScreen() {
               </CpTable>
             )}
           </div>
+        )}
+
+        {/* TAB: REELS REVIEW */}
+        {activeTab === "reels" && (
+          <ReelsReviewPanel
+            onReviewReel={async (reelId, decision, note) => {
+              await reviewReel(reelId, { decision, reviewNote: note });
+            }}
+          />
         )}
 
         {/* TAB 6: POLICIES */}

@@ -1,4 +1,4 @@
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+﻿import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type { CatalogMedia } from "./catalog.types";
 import type { CatalogCategory, CatalogProduct, CatalogState, ClientStoreCatalog } from "./client-catalog.types";
 import { resolveCatalogError } from "./catalog.controller-core";
@@ -36,34 +36,22 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
       }));
     const categories = [...nodeCategories, ...domainCategories].sort((a, b) => a.sortOrder - b.sortOrder);
     const products: CatalogProduct[] = response.products.map((product) => {
-      // Prefer the DAM-resolved image (real, review-gated, MinIO-backed
-      // asset) and only fall back to the legacy COALESCE'd object key when
-      // no approved canonical_product_image link exists yet for this
-      // product -- see governance/catalog centralization closure plan.
-      const damLink = response.media.find(
-        (link) => link.entityType === "master_product" && link.entityId === product.id && link.role === "canonical_product_image",
-      );
-      const media: CatalogMedia[] = damLink
+      // Use server-resolved effectiveImage (DAM-gated, review-approved).
+      // Priority: store-assortment partner_custom > master-product canonical > null.
+      // Never reconstruct URLs from objectKey; never use /dsh/media?mediaRef= fallback.
+      const media: CatalogMedia[] = product.effectiveImage
         ? [{
-            id: damLink.assetId,
+            id: `${product.id}-effective`,
             productId: product.id,
-            objectKey: damLink.objectKey,
-            contentType: damLink.mimeType || "image/webp",
+            objectKey: "",
+            contentType: "image/webp",
             state: "complete",
-            publicUrl: `${baseUrl}${damLink.publicUrl}`,
+            publicUrl: product.effectiveImage.url.startsWith("http")
+              ? product.effectiveImage.url
+              : `${baseUrl}${product.effectiveImage.url}`,
             version: 1,
           }]
-        : product.imageObjectKey
-          ? [{
-              id: `${product.id}-media`,
-              productId: product.id,
-              objectKey: product.imageObjectKey,
-              contentType: "image/webp",
-              state: "complete",
-              publicUrl: product.imageObjectKey.startsWith("http") ? product.imageObjectKey : `${baseUrl}/dsh/media?mediaRef=${encodeURIComponent(product.imageObjectKey)}`,
-              version: 1,
-            }]
-          : [];
+        : [];
       return {
         id: product.id,
         storeId,

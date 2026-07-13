@@ -489,9 +489,11 @@ export async function createAssetUploadIntent(input: {
   readonly fileName: string;
   readonly mimeType: string;
   readonly sizeBytes: number;
-  readonly sourceSurface: string;
   readonly altAr?: string;
   readonly altEn?: string;
+  readonly intendedEntityType?: string;
+  readonly intendedEntityId?: string;
+  readonly intendedRole?: string;
 }): Promise<AssetUploadIntent> {
   return request<AssetUploadIntent>("/dsh/operator/catalog/assets/upload-intents", {
     method: "POST",
@@ -510,8 +512,6 @@ export async function updateCatalogAsset(assetId: string, input: {
   readonly altAr?: string;
   readonly altEn?: string;
   readonly dominantColor?: string;
-  readonly width?: number;
-  readonly height?: number;
 }): Promise<CatalogAsset> {
   const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`, {
     method: "PATCH",
@@ -596,4 +596,47 @@ export async function putEntityImage(
     body: { assetId },
   });
   return resp.link;
+}
+
+export async function deleteCatalogAsset(assetId: string): Promise<void> {
+  await request<void>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`, {
+    method: "DELETE",
+  });
+}
+
+// ─── Reels APIs ───────────────────────────────────────────────────────────────
+
+import type { Reel, PublicReel, CreateReelSubmissionInput, ReviewReelInput } from "./central-catalog.types";
+
+export async function submitReel(input: CreateReelSubmissionInput): Promise<Reel> {
+  const resp = await request<{ reel: Reel}>("/dsh/partner/reels", {
+    method: "POST",
+    body: input,
+  });
+  return resp.reel;
+}
+
+export async function fetchReels(query?: { status?: string; limit?: number; offset?: number }): Promise<readonly Reel[]> {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.limit !== undefined) params.set("limit", String(query.limit));
+  if (query?.offset !== undefined) params.set("offset", String(query.offset));
+  const qs = params.toString();
+  const path = qs ? `/dsh/operator/reels?${qs}` : "/dsh/operator/reels";
+  const resp = await request<{ reels: readonly Reel[] }>(path);
+  return resp.reels;
+}
+
+export async function reviewReel(reelId: string, input: ReviewReelInput): Promise<Reel> {
+  const resp = await request<{ reel: Reel }>(`/dsh/operator/reels/${encodeURIComponent(reelId)}/review`, {
+    method: "POST",
+    body: input,
+  });
+  return resp.reel;
+}
+
+export async function fetchPublicReels(limit?: number): Promise<readonly PublicReel[]> {
+  const qs = limit ? `?limit=${limit}` : "";
+  const resp = await publicRequest<{ reels: readonly PublicReel[] }>(`/dsh/public/reels${qs}`);
+  return resp.reels;
 }

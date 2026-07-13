@@ -103,7 +103,6 @@ export function getDshMediaRuntimeClient() {
         fileName: input.filename,
         mimeType: input.mime_type,
         sizeBytes: input.file_size_bytes ?? 0,
-        sourceSurface: "app-partner",
       });
       return { intent: { upload_url: intent.uploadUrl, media_id: intent.asset.id } };
     },

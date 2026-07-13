@@ -49,8 +49,12 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 // /dsh/media?mediaRef= path requires. The {variant} path segment is accepted
 // for forward-compatibility with resized/converted renditions but only
 // "original" is served today.
-func handlePublicMedia(db *sql.DB, mediaClient *media.Client) http.HandlerFunc {
+func handlePublicMedia(db *sql.DB, mediaProvider *media.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var mediaClient *media.Client
+		if mediaProvider != nil {
+			mediaClient = mediaProvider.Client()
+		}
 		if mediaClient == nil {
 			store.SendError(w, http.StatusServiceUnavailable, "MEDIA_UNAVAILABLE", "media storage is not configured")
 			return

@@ -1,9 +1,11 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +16,59 @@ import (
 	"dsh-api/internal/store"
 	_ "github.com/lib/pq"
 )
+
+func TestPrepareMediaUploadBodyAcceptsAllowedDetectedTypes(t *testing.T) {
+	pngBody := append([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, []byte("image-body")...)
+	body, contentType, err := prepareMediaUploadBody(bytes.NewReader(pngBody), "application/octet-stream")
+	if err != nil {
+		t.Fatalf("prepareMediaUploadBody() error = %v", err)
+	}
+	if contentType != "image/png" {
+		t.Fatalf("contentType = %q, want image/png", contentType)
+	}
+	got, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("ReadAll() error = %v", err)
+	}
+	if !bytes.Equal(got, pngBody) {
+		t.Fatal("prepared upload body did not preserve original bytes")
+	}
+}
+
+func TestPrepareMediaUploadBodyAcceptsPDF(t *testing.T) {
+	_, contentType, err := prepareMediaUploadBody(bytes.NewReader([]byte("%PDF-1.7\nbody")), "")
+	if err != nil {
+		t.Fatalf("prepareMediaUploadBody() error = %v", err)
+	}
+	if contentType != "application/pdf" {
+		t.Fatalf("contentType = %q, want application/pdf", contentType)
+	}
+}
+
+func TestPrepareMediaUploadBodyRejectsUnsafeTypes(t *testing.T) {
+	for name, tc := range map[string]struct {
+		body     []byte
+		declared string
+	}{
+		"html": {
+			body: []byte("<!doctype html><html><body>x</body></html>"),
+		},
+		"video": {
+			body:     append([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, []byte("image-body")...),
+			declared: "video/mp4",
+		},
+		"svg": {
+			body:     append([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}, []byte("image-body")...),
+			declared: "image/svg+xml",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, _, err := prepareMediaUploadBody(bytes.NewReader(tc.body), tc.declared); err == nil {
+				t.Fatal("prepareMediaUploadBody() error = nil, want rejection")
+			}
+		})
+	}
+}
 
 // Helper to open the test database if enabled
 func openTestDB(t *testing.T) *sql.DB {
@@ -194,7 +249,7 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 	mockAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
@@ -219,7 +274,7 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 		s := &protectedStoreServer{
 			db:       nil,
 			identity: authClient,
-			media:    &media.Client{}, // dummy media client so it passes the nil check
+			media:    media.NewStaticProvider(&media.Client{}), // dummy media client so it passes the nil check
 		}
 		req := httptest.NewRequest(http.MethodGet, "/dsh/media", nil)
 		req.Header.Set("Authorization", "Bearer operator-token")
@@ -259,7 +314,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	mockAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
@@ -277,7 +332,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	s := &protectedStoreServer{
 		db:       db,
 		identity: authClient,
-		media:    &media.Client{}, // Dummy media client to bypass nil check
+		media:    media.NewStaticProvider(&media.Client{}), // Dummy media client to bypass nil check
 	}
 
 	// Unknown mediaRef (not present in DB) -> returns 404 Not Found

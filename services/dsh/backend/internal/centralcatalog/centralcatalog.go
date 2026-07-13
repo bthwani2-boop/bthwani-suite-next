@@ -7,14 +7,24 @@
 package centralcatalog
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/png"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
 	"dsh-api/internal/media"
+	"github.com/google/uuid"
+	_ "golang.org/x/image/webp"
 )
 
 var (
@@ -51,6 +61,17 @@ type DomainInput struct {
 	IsClientVisible        bool   `json:"isClientVisible"`
 	RequiresProductCatalog bool   `json:"requiresProductCatalog"`
 	IsManualRequest        bool   `json:"isManualRequest"`
+}
+
+type DomainPatchInput struct {
+	NameAr                 *string `json:"nameAr"`
+	NameEn                 *string `json:"nameEn"`
+	Icon                   *string `json:"icon"`
+	SortOrder              *int    `json:"sortOrder"`
+	IsActive               *bool   `json:"isActive"`
+	IsClientVisible        *bool   `json:"isClientVisible"`
+	RequiresProductCatalog *bool   `json:"requiresProductCatalog"`
+	IsManualRequest        *bool   `json:"isManualRequest"`
 }
 
 const domainColumns = `id, slug, name_ar, name_en, icon, sort_order, is_active, is_client_visible,
@@ -105,15 +126,23 @@ func CreateDomain(ctx context.Context, db *sql.DB, input DomainInput) (Domain, e
 	return GetDomain(ctx, db, id)
 }
 
-func UpdateDomain(ctx context.Context, db *sql.DB, id string, input DomainInput) (Domain, error) {
-	if strings.TrimSpace(input.NameAr) == "" {
-		return Domain{}, ErrInvalid
+func UpdateDomain(ctx context.Context, db *sql.DB, id string, input DomainPatchInput) (Domain, error) {
+	nameAr := input.NameAr
+	if nameAr != nil {
+		trimmed := strings.TrimSpace(*nameAr)
+		if trimmed == "" {
+			return Domain{}, ErrInvalid
+		}
+		nameAr = &trimmed
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_domains SET
-		name_ar=$1, name_en=$2, icon=$3, sort_order=$4, is_active=$5, is_client_visible=$6,
-		requires_product_catalog=$7, is_manual_request=$8, updated_at=now()
+		name_ar=COALESCE($1, name_ar), name_en=COALESCE($2, name_en), icon=COALESCE($3, icon),
+		sort_order=COALESCE($4, sort_order), is_active=COALESCE($5, is_active),
+		is_client_visible=COALESCE($6, is_client_visible),
+		requires_product_catalog=COALESCE($7, requires_product_catalog),
+		is_manual_request=COALESCE($8, is_manual_request), updated_at=now()
 		WHERE id=$9`,
-		strings.TrimSpace(input.NameAr), input.NameEn, input.Icon, input.SortOrder, input.IsActive,
+		nameAr, input.NameEn, input.Icon, input.SortOrder, input.IsActive,
 		input.IsClientVisible, input.RequiresProductCatalog, input.IsManualRequest, id)
 	if err != nil {
 		return Domain{}, err
@@ -165,6 +194,20 @@ type NodeInput struct {
 	AllowsStoreProductCustomImage bool    `json:"allowsStoreProductCustomImage"`
 	RequiresCatalogReview         bool    `json:"requiresCatalogReview"`
 	RequiresProductCatalog        bool    `json:"requiresProductCatalog"`
+}
+
+type NodePatchInput struct {
+	NameAr                        *string `json:"nameAr"`
+	NameEn                        *string `json:"nameEn"`
+	Icon                          *string `json:"icon"`
+	SortOrder                     *int    `json:"sortOrder"`
+	IsActive                      *bool   `json:"isActive"`
+	IsClientVisible               *bool   `json:"isClientVisible"`
+	RequiresBarcode               *bool   `json:"requiresBarcode"`
+	AllowsProductProposal         *bool   `json:"allowsProductProposal"`
+	AllowsStoreProductCustomImage *bool   `json:"allowsStoreProductCustomImage"`
+	RequiresCatalogReview         *bool   `json:"requiresCatalogReview"`
+	RequiresProductCatalog        *bool   `json:"requiresProductCatalog"`
 }
 
 const nodeColumns = `id, domain_id, parent_id, level, slug, name_ar, name_en, icon, sort_order,
@@ -233,16 +276,25 @@ func CreateNode(ctx context.Context, db *sql.DB, input NodeInput) (Node, error) 
 	return GetNode(ctx, db, id)
 }
 
-func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodeInput) (Node, error) {
-	if strings.TrimSpace(input.NameAr) == "" {
-		return Node{}, ErrInvalid
+func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput) (Node, error) {
+	nameAr := input.NameAr
+	if nameAr != nil {
+		trimmed := strings.TrimSpace(*nameAr)
+		if trimmed == "" {
+			return Node{}, ErrInvalid
+		}
+		nameAr = &trimmed
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_nodes SET
-		name_ar=$1, name_en=$2, icon=$3, sort_order=$4, is_active=$5, is_client_visible=$6,
-		requires_barcode=$7, allows_product_proposal=$8, allows_store_product_custom_image=$9,
-		requires_catalog_review=$10, requires_product_catalog=$11, updated_at=now()
+		name_ar=COALESCE($1, name_ar), name_en=COALESCE($2, name_en), icon=COALESCE($3, icon),
+		sort_order=COALESCE($4, sort_order), is_active=COALESCE($5, is_active),
+		is_client_visible=COALESCE($6, is_client_visible), requires_barcode=COALESCE($7, requires_barcode),
+		allows_product_proposal=COALESCE($8, allows_product_proposal),
+		allows_store_product_custom_image=COALESCE($9, allows_store_product_custom_image),
+		requires_catalog_review=COALESCE($10, requires_catalog_review),
+		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now()
 		WHERE id=$12`,
-		strings.TrimSpace(input.NameAr), input.NameEn, input.Icon, input.SortOrder, input.IsActive,
+		nameAr, input.NameEn, input.Icon, input.SortOrder, input.IsActive,
 		input.IsClientVisible, input.RequiresBarcode, input.AllowsProductProposal,
 		input.AllowsStoreProductCustomImage, input.RequiresCatalogReview, input.RequiresProductCatalog, id)
 	if err != nil {
@@ -294,6 +346,20 @@ type MasterProductInput struct {
 	ApprovalStatus          string  `json:"approvalStatus"`
 	IsActive                bool    `json:"isActive"`
 	CreatedSource           string  `json:"createdSource"`
+}
+
+type MasterProductPatchInput struct {
+	CategoryNodeID  *string `json:"categoryNodeId"`
+	CanonicalNameAr *string `json:"canonicalNameAr"`
+	CanonicalNameEn *string `json:"canonicalNameEn"`
+	Brand           *string `json:"brand"`
+	Barcode         *string `json:"barcode"`
+	GTIN            *string `json:"gtin"`
+	SKU             *string `json:"sku"`
+	Unit            *string `json:"unit"`
+	MeasurementType *string `json:"measurementType"`
+	ApprovalStatus  *string `json:"approvalStatus"`
+	IsActive        *bool   `json:"isActive"`
 }
 
 const masterProductColumns = `id, domain_id, category_node_id, canonical_name_ar, canonical_name_en, brand,
@@ -389,21 +455,27 @@ func CreateMasterProduct(ctx context.Context, db *sql.DB, input MasterProductInp
 	return GetMasterProduct(ctx, db, id)
 }
 
-func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input MasterProductInput) (MasterProduct, error) {
-	if strings.TrimSpace(input.CanonicalNameAr) == "" {
-		return MasterProduct{}, ErrInvalid
+func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input MasterProductPatchInput) (MasterProduct, error) {
+	canonicalNameAr := input.CanonicalNameAr
+	if canonicalNameAr != nil {
+		trimmed := strings.TrimSpace(*canonicalNameAr)
+		if trimmed == "" {
+			return MasterProduct{}, ErrInvalid
+		}
+		canonicalNameAr = &trimmed
 	}
-	if input.ApprovalStatus != "" && !validApprovalStatus[input.ApprovalStatus] {
+	if input.ApprovalStatus != nil && !validApprovalStatus[*input.ApprovalStatus] {
 		return MasterProduct{}, ErrInvalid
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_master_products SET
-		category_node_id=$1, canonical_name_ar=$2, canonical_name_en=$3, brand=$4, barcode=$5, gtin=$6, sku=$7,
-		unit=COALESCE(NULLIF($8,''),unit), measurement_type=COALESCE(NULLIF($9,''),measurement_type),
-		canonical_image_object_key=$10, approval_status=COALESCE(NULLIF($11,''),approval_status),
-		is_active=$12, updated_at=now()
-		WHERE id=$13`,
-		input.CategoryNodeID, strings.TrimSpace(input.CanonicalNameAr), input.CanonicalNameEn, input.Brand,
-		input.Barcode, input.GTIN, input.SKU, input.Unit, input.MeasurementType, input.CanonicalImageObjectKey,
+		category_node_id=COALESCE($1, category_node_id), canonical_name_ar=COALESCE($2, canonical_name_ar),
+		canonical_name_en=COALESCE($3, canonical_name_en), brand=COALESCE($4, brand),
+		barcode=COALESCE($5, barcode), gtin=COALESCE($6, gtin), sku=COALESCE($7, sku),
+		unit=COALESCE(NULLIF($8::text,''), unit), measurement_type=COALESCE(NULLIF($9::text,''), measurement_type),
+		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now()
+		WHERE id=$12`,
+		input.CategoryNodeID, canonicalNameAr, input.CanonicalNameEn, input.Brand,
+		input.Barcode, input.GTIN, input.SKU, input.Unit, input.MeasurementType,
 		input.ApprovalStatus, input.IsActive, id)
 	if err != nil {
 		return MasterProduct{}, err
@@ -818,40 +890,54 @@ func ListCatalogPolicies(ctx context.Context, db *sql.DB) ([]CatalogPolicy, erro
 }
 
 type CatalogPolicyInput struct {
-	PlatformCommissionRate                   float64 `json:"platformCommissionRate"`
-	FieldPartnerOnboardingCommissionAmount   float64 `json:"fieldPartnerOnboardingCommissionAmount"`
-	FieldPartnerOnboardingCommissionCurrency string  `json:"fieldPartnerOnboardingCommissionCurrency"`
-	StoreOnboardingFeeAmount                 float64 `json:"storeOnboardingFeeAmount"`
-	StoreOnboardingFeeCurrency               string  `json:"storeOnboardingFeeCurrency"`
-	AllowsStoreProductCustomImage            bool    `json:"allowsStoreProductCustomImage"`
-	AllowsProductProposal                    bool    `json:"allowsProductProposal"`
-	RequiresBarcode                          bool    `json:"requiresBarcode"`
-	RequiresCatalogReview                    bool    `json:"requiresCatalogReview"`
-	RequiresMarketingReview                  bool    `json:"requiresMarketingReview"`
-	RequiresProductImage                     bool    `json:"requiresProductImage"`
-	RequiresCategoryImage                    bool    `json:"requiresCategoryImage"`
-	RequiresDescription                      bool    `json:"requiresDescription"`
-	RequiresBrand                            bool    `json:"requiresBrand"`
-	RequiresUnit                             bool    `json:"requiresUnit"`
-	ProductDataQualityMinimumScore           float64 `json:"productDataQualityMinimumScore"`
-	MaxGalleryImages                         int     `json:"maxGalleryImages"`
-	ManualRequestMode                        bool    `json:"manualRequestMode"`
-	IsActive                                 bool    `json:"isActive"`
-	Notes                                    string  `json:"notes"`
+	PlatformCommissionRate                   *float64 `json:"platformCommissionRate"`
+	FieldPartnerOnboardingCommissionAmount   *float64 `json:"fieldPartnerOnboardingCommissionAmount"`
+	FieldPartnerOnboardingCommissionCurrency *string  `json:"fieldPartnerOnboardingCommissionCurrency"`
+	StoreOnboardingFeeAmount                 *float64 `json:"storeOnboardingFeeAmount"`
+	StoreOnboardingFeeCurrency               *string  `json:"storeOnboardingFeeCurrency"`
+	AllowsStoreProductCustomImage            *bool    `json:"allowsStoreProductCustomImage"`
+	AllowsProductProposal                    *bool    `json:"allowsProductProposal"`
+	RequiresBarcode                          *bool    `json:"requiresBarcode"`
+	RequiresCatalogReview                    *bool    `json:"requiresCatalogReview"`
+	RequiresMarketingReview                  *bool    `json:"requiresMarketingReview"`
+	RequiresProductImage                     *bool    `json:"requiresProductImage"`
+	RequiresCategoryImage                    *bool    `json:"requiresCategoryImage"`
+	RequiresDescription                      *bool    `json:"requiresDescription"`
+	RequiresBrand                            *bool    `json:"requiresBrand"`
+	RequiresUnit                             *bool    `json:"requiresUnit"`
+	ProductDataQualityMinimumScore           *float64 `json:"productDataQualityMinimumScore"`
+	MaxGalleryImages                         *int     `json:"maxGalleryImages"`
+	ManualRequestMode                        *bool    `json:"manualRequestMode"`
+	IsActive                                 *bool    `json:"isActive"`
+	Notes                                    *string  `json:"notes"`
 }
 
 func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input CatalogPolicyInput) (CatalogPolicy, error) {
-	if input.PlatformCommissionRate < 0 || input.PlatformCommissionRate > 1 {
+	if input.PlatformCommissionRate != nil && (*input.PlatformCommissionRate < 0 || *input.PlatformCommissionRate > 1) {
 		return CatalogPolicy{}, ErrInvalid
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_platform_policies SET
-		platform_commission_rate=$1, field_partner_onboarding_commission_amount=$2,
-		field_partner_onboarding_commission_currency=$3, store_onboarding_fee_amount=$4,
-		store_onboarding_fee_currency=$5, allows_store_product_custom_image=$6, allows_product_proposal=$7,
-		requires_barcode=$8, requires_catalog_review=$9, requires_marketing_review=$10, requires_product_image=$11,
-		requires_category_image=$12, requires_description=$13, requires_brand=$14, requires_unit=$15,
-		product_data_quality_minimum_score=$16, max_gallery_images=$17, manual_request_mode=$18,
-		is_active=$19, notes=$20, updated_at=now()
+		platform_commission_rate=COALESCE($1, platform_commission_rate),
+		field_partner_onboarding_commission_amount=COALESCE($2, field_partner_onboarding_commission_amount),
+		field_partner_onboarding_commission_currency=COALESCE($3, field_partner_onboarding_commission_currency),
+		store_onboarding_fee_amount=COALESCE($4, store_onboarding_fee_amount),
+		store_onboarding_fee_currency=COALESCE($5, store_onboarding_fee_currency),
+		allows_store_product_custom_image=COALESCE($6, allows_store_product_custom_image),
+		allows_product_proposal=COALESCE($7, allows_product_proposal),
+		requires_barcode=COALESCE($8, requires_barcode),
+		requires_catalog_review=COALESCE($9, requires_catalog_review),
+		requires_marketing_review=COALESCE($10, requires_marketing_review),
+		requires_product_image=COALESCE($11, requires_product_image),
+		requires_category_image=COALESCE($12, requires_category_image),
+		requires_description=COALESCE($13, requires_description),
+		requires_brand=COALESCE($14, requires_brand),
+		requires_unit=COALESCE($15, requires_unit),
+		product_data_quality_minimum_score=COALESCE($16, product_data_quality_minimum_score),
+		max_gallery_images=COALESCE($17, max_gallery_images),
+		manual_request_mode=COALESCE($18, manual_request_mode),
+		is_active=COALESCE($19, is_active),
+		notes=COALESCE($20, notes),
+		updated_at=now()
 		WHERE id=$21`,
 		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
 		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
@@ -907,10 +993,18 @@ type ClientCatalogNode struct {
 
 type ClientCatalogEntry struct {
 	MasterProduct
-	UnitPrice      float64 `json:"unitPrice"`
-	Currency       string  `json:"currency"`
-	StockStatus    string  `json:"stockStatus"`
-	ImageObjectKey string  `json:"imageObjectKey"`
+	UnitPrice      float64         `json:"unitPrice"`
+	Currency       string          `json:"currency"`
+	StockStatus    string          `json:"stockStatus"`
+	ImageObjectKey string          `json:"imageObjectKey"`
+	EffectiveImage *EffectiveImage `json:"effectiveImage,omitempty"`
+	assortmentID   string
+}
+
+type EffectiveImage struct {
+	URL    string `json:"url"`
+	AltAr  string `json:"altAr"`
+	Source string `json:"source"`
 }
 
 // GetClientCatalog returns only what rule 4 of the sovereignty decision
@@ -983,10 +1077,26 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		}
 		allLinks = append(allLinks, l)
 	}
+	selectApprovedLink := func(entityType, entityID, role string) *CatalogAssetLinkWithAsset {
+		var fallback *CatalogAssetLinkWithAsset
+		for i := range allLinks {
+			l := &allLinks[i]
+			if l.EntityType != entityType || l.EntityID != entityID || l.Role != role {
+				continue
+			}
+			if l.IsPrimary {
+				return l
+			}
+			if fallback == nil {
+				fallback = l
+			}
+		}
+		return fallback
+	}
 
 	// 3. Fetch candidate products
 	rows, err := db.QueryContext(ctx, `
-		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.unit_price, a.currency, a.stock_status,
+		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.id, a.unit_price, a.currency, a.stock_status,
 		       COALESCE(a.custom_image_object_key, mp.canonical_image_object_key, '')
 		FROM dsh_store_assortments a
 		JOIN dsh_master_products mp ON mp.id = a.master_product_id
@@ -1017,7 +1127,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		if err := rows.Scan(&e.ID, &e.DomainID, &e.CategoryNodeID, &e.CanonicalNameAr, &e.CanonicalNameEn,
 			&e.Brand, &e.Barcode, &e.GTIN, &e.SKU, &e.Unit, &e.MeasurementType, &e.CanonicalImageObjectKey,
 			&e.ApprovalStatus, &e.IsActive, &e.DuplicateGroupID, &e.CreatedSource, &e.CreatedAt, &e.UpdatedAt,
-			&e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
+			&e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
@@ -1027,17 +1137,18 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 			catNodeID = *e.CategoryNodeID
 		}
 		p := resolvePolicy(e.DomainID, catNodeID)
-		if p.RequiresProductImage {
-			hasApprovedImg := false
-			for _, l := range allLinks {
-				if l.EntityType == "master_product" && l.EntityID == e.ID && l.Role == "canonical_product_image" {
-					hasApprovedImg = true
-					break
-				}
+		if p.AllowsStoreProductCustomImage {
+			if l := selectApprovedLink("store_assortment", e.assortmentID, "partner_custom_product_image"); l != nil {
+				e.EffectiveImage = &EffectiveImage{URL: l.PublicURL, AltAr: l.AltAr, Source: "store_custom"}
 			}
-			if !hasApprovedImg {
-				continue
+		}
+		if e.EffectiveImage == nil {
+			if l := selectApprovedLink("master_product", e.ID, "canonical_product_image"); l != nil {
+				e.EffectiveImage = &EffectiveImage{URL: l.PublicURL, AltAr: l.AltAr, Source: "canonical"}
 			}
+		}
+		if p.RequiresProductImage && e.EffectiveImage == nil {
+			continue
 		}
 
 		entries = append(entries, e)
@@ -1081,6 +1192,13 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 					break
 				}
 			}
+		case "store_assortment":
+			for _, e := range entries {
+				if e.assortmentID == l.EntityID {
+					keep = true
+					break
+				}
+			}
 		}
 		if keep {
 			relevantLinks = append(relevantLinks, l)
@@ -1117,7 +1235,7 @@ func prefixColumns(alias, columns string) string {
 }
 
 func entityID(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+	return prefix + "-" + uuid.NewString()
 }
 
 type ProposalTransitionInput struct {
@@ -1433,25 +1551,28 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 // ── Catalog assets (DAM) ─────────────────────────────────────────────────────
 
 type CatalogAsset struct {
-	ID               string    `json:"id"`
-	ObjectKey        string    `json:"objectKey"`
-	PublicURL        *string   `json:"publicUrl"`
-	OriginalFileName string    `json:"originalFileName"`
-	MimeType         string    `json:"mimeType"`
-	SizeBytes        int64     `json:"sizeBytes"`
-	Width            *int      `json:"width"`
-	Height           *int      `json:"height"`
-	ChecksumSHA256   *string   `json:"checksumSha256"`
-	AltAr            string    `json:"altAr"`
-	AltEn            string    `json:"altEn"`
-	DominantColor    *string   `json:"dominantColor"`
-	Status           string    `json:"status"`
-	SourceSurface    string    `json:"sourceSurface"`
-	UploadedBy       string    `json:"uploadedBy"`
-	ReviewedBy       *string   `json:"reviewedBy"`
-	ReviewNote       string    `json:"reviewNote"`
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updatedAt"`
+	ID                 string    `json:"id"`
+	ObjectKey          string    `json:"objectKey"`
+	PublicURL          *string   `json:"publicUrl"`
+	OriginalFileName   string    `json:"originalFileName"`
+	MimeType           string    `json:"mimeType"`
+	SizeBytes          int64     `json:"sizeBytes"`
+	Width              *int      `json:"width"`
+	Height             *int      `json:"height"`
+	ChecksumSHA256     *string   `json:"checksumSha256"`
+	AltAr              string    `json:"altAr"`
+	AltEn              string    `json:"altEn"`
+	DominantColor      *string   `json:"dominantColor"`
+	Status             string    `json:"status"`
+	SourceSurface      string    `json:"sourceSurface"`
+	UploadedBy         string    `json:"uploadedBy"`
+	ReviewedBy         *string   `json:"reviewedBy"`
+	ReviewNote         string    `json:"reviewNote"`
+	IntendedEntityType *string   `json:"intendedEntityType"`
+	IntendedEntityID   *string   `json:"intendedEntityId"`
+	IntendedRole       *string   `json:"intendedRole"`
+	CreatedAt          time.Time `json:"createdAt"`
+	UpdatedAt          time.Time `json:"updatedAt"`
 }
 
 var validAssetStatus = map[string]bool{
@@ -1464,10 +1585,58 @@ var validAssetRole = map[string]bool{
 	"icon": true, "cover": true, "thumbnail": true, "gallery": true, "canonical_product_image": true,
 	"partner_custom_product_image": true, "marketing_banner": true, "document": true,
 	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
+	"reel_video": true,
 }
 var validAssetEntityType = map[string]bool{
 	"domain": true, "node": true, "master_product": true, "product_proposal": true,
 	"store_assortment": true, "collection": true, "campaign": true, "store": true,
+}
+
+var validAssetRolesByEntityType = map[string]map[string]bool{
+	"domain":           {"icon": true, "cover": true},
+	"node":             {"icon": true, "cover": true},
+	"master_product":   {"canonical_product_image": true, "gallery": true, "thumbnail": true},
+	"product_proposal": {"canonical_product_image": true, "gallery": true},
+	"store_assortment": {"partner_custom_product_image": true, "gallery": true},
+	"store":            {"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true},
+	"campaign":         {"marketing_banner": true, "reel_video": true},
+}
+
+func validAssetRoleForEntityType(entityType, role string) bool {
+	roles, ok := validAssetRolesByEntityType[entityType]
+	return ok && roles[role]
+}
+
+func assertEntityExists(ctx context.Context, db dbtx, entityType, entityID string) error {
+	var query string
+	switch entityType {
+	case "domain":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_catalog_domains WHERE id=$1)`
+	case "node":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_catalog_nodes WHERE id=$1)`
+	case "master_product":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_master_products WHERE id=$1)`
+	case "product_proposal":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_product_proposals WHERE id=$1)`
+	case "store_assortment":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_store_assortments WHERE id=$1)`
+	case "store":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_stores WHERE id=$1)`
+	case "collection":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_catalog_collections WHERE id=$1)`
+	case "campaign":
+		query = `SELECT EXISTS(SELECT 1 FROM dsh_marketing_campaigns WHERE id::text=$1)`
+	default:
+		return ErrInvalid
+	}
+	var exists bool
+	if err := db.QueryRowContext(ctx, query, entityID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // validStoreImageRole is the subset of validAssetRole that entityType=store
@@ -1485,13 +1654,14 @@ func IsValidStoreImageRole(role string) bool {
 
 const assetColumns = `id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
 	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
-	review_note, created_at, updated_at`
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at`
 
 func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 	var a CatalogAsset
 	err := scanner.Scan(&a.ID, &a.ObjectKey, &a.PublicURL, &a.OriginalFileName, &a.MimeType, &a.SizeBytes,
 		&a.Width, &a.Height, &a.ChecksumSHA256, &a.AltAr, &a.AltEn, &a.DominantColor, &a.Status, &a.SourceSurface,
-		&a.UploadedBy, &a.ReviewedBy, &a.ReviewNote, &a.CreatedAt, &a.UpdatedAt)
+		&a.UploadedBy, &a.ReviewedBy, &a.ReviewNote, &a.IntendedEntityType, &a.IntendedEntityID, &a.IntendedRole,
+		&a.CreatedAt, &a.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -1499,12 +1669,14 @@ func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 }
 
 type AssetUploadIntentInput struct {
-	FileName      string `json:"fileName"`
-	MimeType      string `json:"mimeType"`
-	SizeBytes     int64  `json:"sizeBytes"`
-	SourceSurface string `json:"sourceSurface"`
-	AltAr         string `json:"altAr"`
-	AltEn         string `json:"altEn"`
+	FileName           string  `json:"fileName"`
+	MimeType           string  `json:"mimeType"`
+	SizeBytes          int64   `json:"sizeBytes"`
+	AltAr              string  `json:"altAr"`
+	AltEn              string  `json:"altEn"`
+	IntendedEntityType *string `json:"intendedEntityType"`
+	IntendedEntityID   *string `json:"intendedEntityId"`
+	IntendedRole       *string `json:"intendedRole"`
 }
 
 func sanitizeAssetFileName(value string) string {
@@ -1522,11 +1694,12 @@ func sanitizeAssetFileName(value string) string {
 	return b.String()
 }
 
-// maxAssetUploadSizeBytes bounds what a client may declare/upload for a
-// single DAM asset (15 MiB); StatObject re-checks the real object against
-// this too so a declared-then-swapped-larger file can't sneak past intent
-// validation.
-const maxAssetUploadSizeBytes = 15 * 1024 * 1024
+// CompleteAssetUpload re-checks the real object bytes against these bounds so
+// a declared-then-swapped file cannot sneak past intent validation.
+const maxImageAssetUploadSizeBytes = 15 * 1024 * 1024
+const maxVideoAssetUploadSizeBytes = 100 * 1024 * 1024
+const maxImageAssetUploadPixels = 24_000_000
+const maxImageAssetUploadDimension = 6000
 
 // assetUploadIntentTTL is how long the presigned PUT URL stays valid.
 const assetUploadIntentTTL = 15 * time.Minute
@@ -1545,6 +1718,10 @@ func GetApprovedAsset(ctx context.Context, db *sql.DB, id string) (CatalogAsset,
 	return asset, nil
 }
 
+func GetAsset(ctx context.Context, db *sql.DB, id string) (CatalogAsset, error) {
+	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+}
+
 // AssetUploadIntent is what CreateAssetUploadIntent returns: the draft asset
 // row plus a short-lived presigned URL the surface can PUT the file to
 // directly, without dsh-api ever holding the binary or the surface ever
@@ -1560,9 +1737,10 @@ type AssetUploadIntent struct {
 // the file to. Nothing is client-visible until an operator/marketing
 // reviewer runs ReviewAsset, and nothing is even eligible for review until
 // CompleteAssetUpload confirms the object landed in MinIO.
-func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media.Client, actorID string, input AssetUploadIntentInput) (AssetUploadIntent, error) {
-	if strings.TrimSpace(input.FileName) == "" || !strings.HasPrefix(input.MimeType, "image/") ||
-		input.SizeBytes <= 0 || input.SizeBytes > maxAssetUploadSizeBytes || !validAssetSourceSurface[input.SourceSurface] {
+func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media.Client, actorID, sourceSurface string, input AssetUploadIntentInput) (AssetUploadIntent, error) {
+	maxSize, ok := maxUploadSizeForRoleAndMime(input.IntendedRole, input.MimeType)
+	if strings.TrimSpace(input.FileName) == "" || input.SizeBytes <= 0 || input.SizeBytes > maxSize ||
+		!ok || !validAssetSourceSurface[sourceSurface] || !validIntendedAssetTarget(input.IntendedEntityType, input.IntendedEntityID, input.IntendedRole) {
 		return AssetUploadIntent{}, ErrInvalid
 	}
 	if mediaClient == nil {
@@ -1571,9 +1749,11 @@ func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media
 	id := entityID("asset")
 	objectKey := fmt.Sprintf("catalog-assets/%s/%s", id, sanitizeAssetFileName(input.FileName))
 	_, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_assets
-		(id, object_key, original_file_name, mime_type, size_bytes, alt_ar, alt_en, status, source_surface, uploaded_by)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',$8,$9)`,
-		id, objectKey, input.FileName, input.MimeType, input.SizeBytes, input.AltAr, input.AltEn, input.SourceSurface, actorID)
+		(id, object_key, original_file_name, mime_type, size_bytes, alt_ar, alt_en, status, source_surface, uploaded_by,
+		 intended_entity_type, intended_entity_id, intended_role)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',$8,$9,$10,$11,$12)`,
+		id, objectKey, input.FileName, input.MimeType, input.SizeBytes, input.AltAr, input.AltEn, sourceSurface, actorID,
+		input.IntendedEntityType, input.IntendedEntityID, input.IntendedRole)
 	if err != nil {
 		return AssetUploadIntent{}, err
 	}
@@ -1588,10 +1768,106 @@ func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media
 	return AssetUploadIntent{Asset: asset, UploadURL: uploadURL, ExpiresAt: expiresAt}, nil
 }
 
+func maxUploadSizeForRoleAndMime(role *string, mimeType string) (int64, bool) {
+	if role != nil && *role == "reel_video" {
+		return maxVideoAssetUploadSizeBytes, mimeType == "video/mp4"
+	}
+	switch mimeType {
+	case "image/jpeg", "image/png", "image/webp":
+		return maxImageAssetUploadSizeBytes, true
+	default:
+		return maxImageAssetUploadSizeBytes, false
+	}
+}
+
+func validIntendedAssetTarget(entityType, entityID, role *string) bool {
+	if entityType == nil && entityID == nil && role == nil {
+		return true
+	}
+	if entityType == nil || entityID == nil || role == nil {
+		return false
+	}
+	if strings.TrimSpace(*entityID) == "" {
+		return false
+	}
+	return validAssetRoleForEntityType(*entityType, *role)
+}
+
+type uploadedAssetFacts struct {
+	size        int64
+	contentType string
+	checksum    string
+	width       *int
+	height      *int
+}
+
+func verifyAndNormalizeUploadedAsset(ctx context.Context, mediaClient *media.Client, asset CatalogAsset) (uploadedAssetFacts, error) {
+	maxSize, _ := maxUploadSizeForRoleAndMime(asset.IntendedRole, asset.MimeType)
+	reader, _, err := mediaClient.Get(ctx, asset.ObjectKey)
+	if err != nil {
+		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded object not found in storage: %v", ErrInvalid, err)
+	}
+	defer reader.Close()
+	data, err := io.ReadAll(io.LimitReader(reader, maxSize+1))
+	if err != nil {
+		return uploadedAssetFacts{}, err
+	}
+	if int64(len(data)) == 0 || int64(len(data)) > maxSize {
+		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded object size is not allowed", ErrInvalid)
+	}
+	head := data
+	if len(head) > 512 {
+		head = head[:512]
+	}
+	contentType := http.DetectContentType(head)
+	if asset.IntendedRole != nil && *asset.IntendedRole == "reel_video" {
+		if contentType != "video/mp4" {
+			return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded reel must be video/mp4", ErrInvalid)
+		}
+		sum := sha256.Sum256(data)
+		return uploadedAssetFacts{size: int64(len(data)), contentType: contentType, checksum: hex.EncodeToString(sum[:])}, nil
+	}
+	if _, ok := maxUploadSizeForRoleAndMime(asset.IntendedRole, contentType); !ok {
+		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded image type is not allowed", ErrInvalid)
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded image could not be decoded", ErrInvalid)
+	}
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > maxImageAssetUploadDimension || cfg.Height > maxImageAssetUploadDimension ||
+		int64(cfg.Width)*int64(cfg.Height) > maxImageAssetUploadPixels {
+		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded image dimensions are not allowed", ErrInvalid)
+	}
+	stored := data
+	if contentType == "image/jpeg" {
+		img, _, err := image.Decode(bytes.NewReader(data))
+		if err != nil {
+			return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded jpeg could not be decoded", ErrInvalid)
+		}
+		var out bytes.Buffer
+		if err := jpeg.Encode(&out, img, &jpeg.Options{Quality: 90}); err != nil {
+			return uploadedAssetFacts{}, err
+		}
+		stored = out.Bytes()
+		if err := mediaClient.Upload(ctx, asset.ObjectKey, bytes.NewReader(stored), int64(len(stored)), contentType); err != nil {
+			return uploadedAssetFacts{}, err
+		}
+	}
+	sum := sha256.Sum256(stored)
+	width, height := cfg.Width, cfg.Height
+	return uploadedAssetFacts{
+		size:        int64(len(stored)),
+		contentType: contentType,
+		checksum:    hex.EncodeToString(sum[:]),
+		width:       &width,
+		height:      &height,
+	}, nil
+}
+
 // CompleteAssetUpload verifies the declared object actually landed in MinIO
-// (StatObject) before moving the asset from draft into the review queue.
-// Nothing may be linked to a client-visible surface (see LinkAsset) until an
-// asset has passed both this and ReviewAsset.
+// and that its bytes match the allowed image/video contract before moving the
+// asset from draft into the review queue. Intended targets are linked inside
+// the same transaction so retrying completion stays idempotent.
 func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Client, id string) (CatalogAsset, error) {
 	if mediaClient == nil {
 		return CatalogAsset{}, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
@@ -1600,31 +1876,51 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if err != nil {
 		return CatalogAsset{}, err
 	}
+	if asset.Status == "uploaded" || asset.Status == "pending_review" {
+		return asset, nil
+	}
 	if asset.Status != "draft" {
 		return CatalogAsset{}, fmt.Errorf("%w: asset is %s, expected draft", ErrInvalid, asset.Status)
 	}
-	size, contentType, err := mediaClient.StatObject(ctx, asset.ObjectKey)
-	if err != nil {
-		return CatalogAsset{}, fmt.Errorf("%w: uploaded object not found in storage: %v", ErrInvalid, err)
-	}
-	if size <= 0 || size > maxAssetUploadSizeBytes || !strings.HasPrefix(contentType, "image/") {
-		return CatalogAsset{}, fmt.Errorf("%w: uploaded object does not match declared file", ErrInvalid)
-	}
-	checksum, err := mediaClient.ChecksumSHA256(ctx, asset.ObjectKey)
+	facts, err := verifyAndNormalizeUploadedAsset(ctx, mediaClient, asset)
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
-		status='uploaded', size_bytes=$1, mime_type=$2, checksum_sha256=$3, updated_at=now()
-		WHERE id=$4 AND status='draft'`,
-		size, contentType, checksum, id)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
+		status='uploaded', size_bytes=$1, mime_type=$2, checksum_sha256=$3, width=$4, height=$5, updated_at=now()
+		WHERE id=$6 AND status='draft'`,
+		facts.size, facts.contentType, facts.checksum, facts.width, facts.height, id)
 	if err != nil {
 		return CatalogAsset{}, err
 	}
 	if n, _ := result.RowsAffected(); n != 1 {
 		return CatalogAsset{}, ErrNotFound
 	}
-	return scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if asset.IntendedEntityType != nil && asset.IntendedEntityID != nil && asset.IntendedRole != nil {
+		if _, err := LinkAsset(ctx, tx, AssetLinkInput{
+			AssetID:    asset.ID,
+			EntityType: *asset.IntendedEntityType,
+			EntityID:   *asset.IntendedEntityID,
+			Role:       *asset.IntendedRole,
+			SortOrder:  0,
+			IsPrimary:  false,
+		}); err != nil {
+			return CatalogAsset{}, err
+		}
+	}
+	asset, err = scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return CatalogAsset{}, err
+	}
+	return asset, nil
 }
 
 func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset int) ([]CatalogAsset, error) {
@@ -1649,27 +1945,19 @@ func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset in
 }
 
 type AssetUpdateInput struct {
-	PublicURL      *string `json:"publicUrl"`
-	Width          *int    `json:"width"`
-	Height         *int    `json:"height"`
-	SizeBytes      *int64  `json:"sizeBytes"`
-	ChecksumSHA256 *string `json:"checksumSha256"`
-	AltAr          *string `json:"altAr"`
-	AltEn          *string `json:"altEn"`
-	DominantColor  *string `json:"dominantColor"`
+	AltAr         *string `json:"altAr"`
+	AltEn         *string `json:"altEn"`
+	DominantColor *string `json:"dominantColor"`
 }
 
-// UpdateAsset lets an uploader complete metadata after the binary lands in
-// object storage; moves draft -> uploaded so it enters the review queue.
+// UpdateAsset only edits reviewable display metadata; storage facts are set by
+// upload completion and must not be patched by clients.
 func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateInput) (CatalogAsset, error) {
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
-		public_url=COALESCE($1, public_url), width=COALESCE($2, width), height=COALESCE($3, height),
-		size_bytes=COALESCE($4, size_bytes), checksum_sha256=COALESCE($5, checksum_sha256),
-		alt_ar=COALESCE($6, alt_ar), alt_en=COALESCE($7, alt_en), dominant_color=COALESCE($8, dominant_color),
-		status=CASE WHEN status='draft' THEN 'uploaded' ELSE status END, updated_at=now()
-		WHERE id=$9`,
-		input.PublicURL, input.Width, input.Height, input.SizeBytes, input.ChecksumSHA256, input.AltAr, input.AltEn,
-		input.DominantColor, id)
+		alt_ar=COALESCE($1, alt_ar), alt_en=COALESCE($2, alt_en), dominant_color=COALESCE($3, dominant_color),
+		updated_at=now()
+		WHERE id=$4`,
+		input.AltAr, input.AltEn, input.DominantColor, id)
 	if err != nil {
 		return CatalogAsset{}, err
 	}
@@ -1682,6 +1970,13 @@ func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateIn
 type AssetReviewInput struct {
 	Decision   string `json:"decision"` // approved | rejected | pending_review | archived
 	ReviewNote string `json:"reviewNote"`
+}
+
+var assetReviewTransitions = map[string]map[string]bool{
+	"uploaded":       {"pending_review": true},
+	"pending_review": {"approved": true, "rejected": true},
+	"approved":       {"archived": true},
+	"rejected":       {"draft": true},
 }
 
 // ReviewAsset is the only sanctioned way an asset moves into approved (and
@@ -1701,15 +1996,28 @@ var storeImageRoleColumn = map[string]string{
 	"signage_photo":    "signage_photo_ref",
 }
 
-// syncApprovedStoreImageLinks writes the just-approved asset's public media
-// path into whichever dsh_stores cache column its store-scoped links map to,
-// for every link that just became approved. A single asset can be linked to
-// at most one store per role (unique constraint), but nothing stops the same
-// asset being linked as e.g. both store_logo and store_cover, so this walks
-// all of the asset's approved store links rather than assuming one.
-func syncApprovedStoreImageLinks(ctx context.Context, tx *sql.Tx, assetID string) error {
+func syncStoreImageProjection(ctx context.Context, tx *sql.Tx, storeID, role string) error {
+	column, ok := storeImageRoleColumn[role]
+	if !ok {
+		return nil
+	}
+	var primaryAssetID sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT asset_id FROM dsh_catalog_asset_links
+		WHERE entity_type='store' AND entity_id=$1 AND role=$2 AND is_primary=true AND status='approved'
+		ORDER BY updated_at DESC LIMIT 1`, storeID, role).Scan(&primaryAssetID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	var publicPath any
+	if primaryAssetID.Valid && primaryAssetID.String != "" {
+		publicPath = publicMediaPath(primaryAssetID.String)
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE dsh_stores SET `+column+`=$1 WHERE id=$2`, publicPath, storeID)
+	return err
+}
+
+func syncStoreImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetID string) error {
 	rows, err := tx.QueryContext(ctx, `SELECT entity_id, role FROM dsh_catalog_asset_links
-		WHERE asset_id=$1 AND entity_type='store' AND status='approved'`, assetID)
+		WHERE asset_id=$1 AND entity_type='store'`, assetID)
 	if err != nil {
 		return err
 	}
@@ -1726,13 +2034,8 @@ func syncApprovedStoreImageLinks(ctx context.Context, tx *sql.Tx, assetID string
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	publicPath := publicMediaPath(assetID)
 	for _, l := range links {
-		column, ok := storeImageRoleColumn[l.role]
-		if !ok {
-			continue
-		}
-		if _, err := tx.ExecContext(ctx, `UPDATE dsh_stores SET `+column+`=$1 WHERE id=$2`, publicPath, l.storeID); err != nil {
+		if err := syncStoreImageProjection(ctx, tx, l.storeID, l.role); err != nil {
 			return err
 		}
 	}
@@ -1749,21 +2052,40 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	}
 	defer tx.Rollback()
 
+	var currentStatus string
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&currentStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return CatalogAsset{}, ErrNotFound
+		}
+		return CatalogAsset{}, err
+	}
+	if !assetReviewTransitions[currentStatus][input.Decision] {
+		return CatalogAsset{}, ErrConflict
+	}
+
 	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
-		status=$1, reviewed_by=$2, review_note=$3, updated_at=now() WHERE id=$4`,
-		input.Decision, actorID, input.ReviewNote, id)
+		status=$1, reviewed_by=$2, review_note=$3, updated_at=now() WHERE id=$4 AND status=$5`,
+		input.Decision, actorID, input.ReviewNote, id, currentStatus)
 	if err != nil {
 		return CatalogAsset{}, err
 	}
 	if n, _ := result.RowsAffected(); n != 1 {
-		return CatalogAsset{}, ErrNotFound
+		return CatalogAsset{}, ErrConflict
 	}
 	if input.Decision == "approved" {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status='approved', updated_at=now() WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
 			return CatalogAsset{}, err
 		}
-		if err := syncApprovedStoreImageLinks(ctx, tx, id); err != nil {
+		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
+			return CatalogAsset{}, err
+		}
+	} else if input.Decision == "rejected" || input.Decision == "archived" {
+		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
+			status=$1, is_primary=false, updated_at=now() WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
+			return CatalogAsset{}, err
+		}
+		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
 			return CatalogAsset{}, err
 		}
 	}
@@ -1856,8 +2178,11 @@ type dbtx interface {
 // pending_review so it cannot leak onto a client-visible surface early.
 func LinkAsset(ctx context.Context, db dbtx, input AssetLinkInput) (CatalogAssetLink, error) {
 	if strings.TrimSpace(input.AssetID) == "" || !validAssetEntityType[input.EntityType] ||
-		strings.TrimSpace(input.EntityID) == "" || !validAssetRole[input.Role] {
+		strings.TrimSpace(input.EntityID) == "" || !validAssetRoleForEntityType(input.EntityType, input.Role) || input.IsPrimary {
 		return CatalogAssetLink{}, ErrInvalid
+	}
+	if err := assertEntityExists(ctx, db, input.EntityType, input.EntityID); err != nil {
+		return CatalogAssetLink{}, err
 	}
 	var assetStatus string
 	if err := db.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1`, input.AssetID).Scan(&assetStatus); err != nil {
@@ -1879,11 +2204,48 @@ func LinkAsset(ctx context.Context, db dbtx, input AssetLinkInput) (CatalogAsset
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
 		  sort_order=EXCLUDED.sort_order, is_primary=EXCLUDED.is_primary, status=EXCLUDED.status, updated_at=now()`,
-		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder, input.IsPrimary, linkStatus)
+		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder, false, linkStatus)
 	if err != nil {
 		return CatalogAssetLink{}, err
 	}
 	return scanAssetLink(db.QueryRowContext(ctx, `SELECT `+assetLinkColumns+`
+		FROM dsh_catalog_asset_links WHERE entity_type=$1 AND entity_id=$2 AND role=$3 AND asset_id=$4`,
+		input.EntityType, input.EntityID, input.Role, input.AssetID))
+}
+
+func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInput) (CatalogAssetLink, error) {
+	if strings.TrimSpace(input.AssetID) == "" || !validAssetEntityType[input.EntityType] ||
+		strings.TrimSpace(input.EntityID) == "" || !validAssetRoleForEntityType(input.EntityType, input.Role) {
+		return CatalogAssetLink{}, ErrInvalid
+	}
+	if err := assertEntityExists(ctx, tx, input.EntityType, input.EntityID); err != nil {
+		return CatalogAssetLink{}, err
+	}
+	var assetStatus string
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1`, input.AssetID).Scan(&assetStatus); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return CatalogAssetLink{}, ErrNotFound
+		}
+		return CatalogAssetLink{}, err
+	}
+	if assetStatus != "approved" {
+		return CatalogAssetLink{}, fmt.Errorf("%w: asset is %s and cannot be primary", ErrForbidden, assetStatus)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET is_primary=false, updated_at=now()
+		WHERE entity_type=$1 AND entity_id=$2 AND role=$3 AND is_primary=true AND status <> 'archived'`,
+		input.EntityType, input.EntityID, input.Role); err != nil {
+		return CatalogAssetLink{}, err
+	}
+	id := entityID("asset-link")
+	if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_catalog_asset_links
+		(id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
+		VALUES ($1,$2,$3,$4,$5,$6,true,'approved')
+		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
+		  sort_order=EXCLUDED.sort_order, is_primary=true, status='approved', updated_at=now()`,
+		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder); err != nil {
+		return CatalogAssetLink{}, err
+	}
+	return scanAssetLink(tx.QueryRowContext(ctx, `SELECT `+assetLinkColumns+`
 		FROM dsh_catalog_asset_links WHERE entity_type=$1 AND entity_id=$2 AND role=$3 AND asset_id=$4`,
 		input.EntityType, input.EntityID, input.Role, input.AssetID))
 }
@@ -1907,13 +2269,67 @@ func ListAssetLinks(ctx context.Context, db *sql.DB, entityType, entityID string
 }
 
 func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID string) error {
-	result, err := db.ExecContext(ctx, `DELETE FROM dsh_catalog_asset_links WHERE id=$1 AND entity_type=$2 AND entity_id=$3`, linkID, entityType, entityID)
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if n, _ := result.RowsAffected(); n != 1 {
+	defer tx.Rollback()
+	var role string
+	if err := tx.QueryRowContext(ctx, `DELETE FROM dsh_catalog_asset_links
+		WHERE id=$1 AND entity_type=$2 AND entity_id=$3 RETURNING role`, linkID, entityType, entityID).Scan(&role); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if role == "" {
 		return ErrNotFound
 	}
+	if entityType == "store" {
+		if err := syncStoreImageProjection(ctx, tx, entityID, role); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func DeleteUnlinkedAsset(ctx context.Context, db *sql.DB, mediaClient *media.Client, id string) error {
+	if mediaClient == nil {
+		return fmt.Errorf("%w: media storage is not configured", ErrInvalid)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var status, objectKey string
+	if err := tx.QueryRowContext(ctx, `SELECT status, object_key FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&status, &objectKey); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	if status != "draft" && status != "uploaded" && status != "rejected" {
+		return fmt.Errorf("%w: asset is %s and cannot be deleted", ErrForbidden, status)
+	}
+	var attached bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(
+		SELECT 1 FROM dsh_catalog_asset_links WHERE asset_id=$1
+		UNION ALL
+		SELECT 1 FROM dsh_reels WHERE asset_id=$1
+	)`, id).Scan(&attached); err != nil {
+		return err
+	}
+	if attached {
+		return fmt.Errorf("%w: asset is still linked", ErrForbidden)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET status='archived', updated_at=now() WHERE id=$1`, id); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	_ = mediaClient.Remove(ctx, objectKey)
 	return nil
 }
 

@@ -1,6 +1,48 @@
 package media
 
-import "testing"
+import (
+	"context"
+	"net/url"
+	"testing"
+	"time"
+)
+
+func TestPresignPutUsesPublicEndpointWithoutRewrite(t *testing.T) {
+	client, err := NewClient(
+		"minio-internal:9000",
+		"media.example.test:9443",
+		"access-key",
+		"secret-key",
+		"dsh-media",
+		false,
+		true,
+	)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	rawURL, _, err := client.PresignPut(context.Background(), "catalog/asset.jpg", time.Minute)
+	if err != nil {
+		t.Fatalf("PresignPut() error = %v", err)
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatalf("Parse(%q) error = %v", rawURL, err)
+	}
+
+	if u.Host != "media.example.test:9443" {
+		t.Fatalf("presigned URL host = %q, want public endpoint", u.Host)
+	}
+	if u.Scheme != "https" {
+		t.Fatalf("presigned URL scheme = %q, want https", u.Scheme)
+	}
+	if u.Path != "/dsh-media/catalog/asset.jpg" {
+		t.Fatalf("presigned URL path = %q, want path-style bucket lookup", u.Path)
+	}
+	if got := u.Query().Get("X-Amz-SignedHeaders"); got != "host" {
+		t.Fatalf("X-Amz-SignedHeaders = %q, want host", got)
+	}
+}
 
 func TestBuildKeyJoinsNamespaceOwnerEntityAndFileName(t *testing.T) {
 	got := BuildKey("store", "owner-1", "entity-1", "hero.png")
