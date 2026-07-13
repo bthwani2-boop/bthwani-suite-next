@@ -9,7 +9,7 @@ x-bthwani-policy:
       - "infra/docker/compose.slice.yml"
       - "per-journey compose files"
   postgres: "active by default through Docker"
-  minio: "media profile only"
+  minio: "media and dsh profiles; bucket private by default"
   redis: "not active"
   mongo: "forbidden"
 
@@ -23,7 +23,7 @@ services:
       POSTGRES_PASSWORD: ${BTHWANI_POSTGRES_PASSWORD:-bthwani_runtime_password}
       POSTGRES_DB: ${BTHWANI_POSTGRES_DB:-bthwani_runtime}
     ports:
-      - "${BTHWANI_POSTGRES_PORT:-55432}:5432"
+      - "127.0.0.1:${BTHWANI_POSTGRES_PORT:-55432}:5432"
     volumes:
       - bthwani-postgres-runtime-data:/var/lib/postgresql/data
       - ../data-plane/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -39,6 +39,7 @@ services:
   minio:
     profiles:
       - media
+      - dsh
     image: ${BTHWANI_MINIO_IMAGE:-minio/minio:RELEASE.2024-11-07T00-52-20Z}
     container_name: ${BTHWANI_MINIO_CONTAINER:-bthwani-minio-runtime}
     restart: unless-stopped
@@ -47,8 +48,8 @@ services:
       MINIO_ROOT_USER: ${BTHWANI_MINIO_ROOT_USER:-bthwani_minio}
       MINIO_ROOT_PASSWORD: ${BTHWANI_MINIO_ROOT_PASSWORD:-bthwani_minio_password}
     ports:
-      - "${BTHWANI_MINIO_API_PORT:-59000}:9000"
-      - "${BTHWANI_MINIO_CONSOLE_PORT:-59001}:9001"
+      - "127.0.0.1:${BTHWANI_MINIO_API_PORT:-59000}:9000"
+      - "127.0.0.1:${BTHWANI_MINIO_CONSOLE_PORT:-59001}:9001"
     volumes:
       - bthwani-minio-runtime-data:/data
     healthcheck:
@@ -76,7 +77,7 @@ services:
       IDENTITY_ACTIVATION_HMAC_SECRET: "${IDENTITY_ACTIVATION_HMAC_SECRET:-LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret}"
       IDENTITY_WORKFORCE_SERVICE_TOKEN: "${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}"
     ports:
-      - "${BTHWANI_IDENTITY_API_HOST_PORT:-58082}:8082"
+      - "127.0.0.1:${BTHWANI_IDENTITY_API_HOST_PORT:-58082}:8082"
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,7 +105,7 @@ services:
       WORKFORCE_DSH_BASE_URL: "${WORKFORCE_DSH_BASE_URL:-http://dsh-api:8080}"
       WORKFORCE_CORS_ALLOWED_ORIGINS: "${WORKFORCE_CORS_ALLOWED_ORIGINS:-}"
     ports:
-      - "${BTHWANI_WORKFORCE_API_HOST_PORT:-58086}:8086"
+      - "127.0.0.1:${BTHWANI_WORKFORCE_API_HOST_PORT:-58086}:8086"
     depends_on:
       postgres:
         condition: service_healthy
@@ -138,7 +139,7 @@ services:
       WLT_DSH_BASE_URL: "${WLT_DSH_BASE_URL:-http://dsh-api:8080}"
       WLT_MUTATIONS_ENABLED: "${WLT_MUTATIONS_ENABLED:-false}"
     ports:
-      - "${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
+      - "127.0.0.1:${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,16 +172,19 @@ services:
       # the LAN/internet) can actually reach MinIO -- localhost only works
       # for same-machine dev; override for remote/device testing or prod.
       DSH_MINIO_PUBLIC_ENDPOINT: "${BTHWANI_MINIO_PUBLIC_ENDPOINT:-localhost:59000}"
-      DSH_MINIO_ACCESS_KEY: "${BTHWANI_MINIO_ROOT_USER:-bthwani_minio}"
-      DSH_MINIO_SECRET_KEY: "${BTHWANI_MINIO_ROOT_PASSWORD:-bthwani_minio_password}"
+      DSH_MINIO_ACCESS_KEY: "${BTHWANI_MINIO_DSH_ACCESS_KEY:-dsh_media_local}"
+      DSH_MINIO_SECRET_KEY: "${BTHWANI_MINIO_DSH_SECRET_KEY:-dsh_media_local_secret}"
       DSH_MINIO_BUCKET: "dsh-media"
       DSH_MINIO_USE_SSL: "false"
+      DSH_MINIO_PUBLIC_USE_SSL: "false"
     ports:
-      - "${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
+      - "127.0.0.1:${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
       identity-api:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/health || exit 1"]

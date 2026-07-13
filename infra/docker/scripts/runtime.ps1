@@ -110,6 +110,23 @@ function Get-RequiredDatabaseNames {
   return $RequiredDatabases | Select-Object -Unique
 }
 
+function Test-RuntimeDefaultSecrets {
+  $defaults = @(
+    @{ Name = "BTHWANI_MINIO_ROOT_PASSWORD"; Value = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }; Default = "bthwani_minio_password" },
+    @{ Name = "BTHWANI_POSTGRES_PASSWORD"; Value = if ($env:BTHWANI_POSTGRES_PASSWORD) { $env:BTHWANI_POSTGRES_PASSWORD } else { "bthwani_runtime_password" }; Default = "bthwani_runtime_password" },
+    @{ Name = "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"; Value = if ($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD) { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD } else { "123456" }; Default = "123456" }
+  )
+  $weak = $defaults | Where-Object { $_.Value -eq $_.Default }
+  foreach ($item in $weak) {
+    Write-Warning "Runtime default secret in use: $($item.Name). Override it outside local-only development."
+  }
+  if ($env:BTHWANI_REQUIRE_STRONG_SECRETS -eq "true" -and $weak.Count -gt 0) {
+    throw "BTHWANI_REQUIRE_STRONG_SECRETS=true and default runtime secrets are still configured: $($weak.Name -join ', ')"
+  }
+}
+
+Test-RuntimeDefaultSecrets
+
 function Write-RuntimeDoctor {
   param(
     [string]$Reason = "runtime doctor",
@@ -560,6 +577,20 @@ function Invoke-MinioSmoke {
   Write-Host "MinIO smoke: PASS"
 }
 
+function Invoke-MinioInit {
+  Write-Host "`n--- Initializing MinIO dsh-media bucket and service user ---"
+  $rootUser = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_ROOT_USER)) { "bthwani_minio" } else { $env:BTHWANI_MINIO_ROOT_USER }
+  $rootPassword = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_ROOT_PASSWORD)) { "bthwani_minio_password" } else { $env:BTHWANI_MINIO_ROOT_PASSWORD }
+  $dshAccessKey = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_DSH_ACCESS_KEY)) { "dsh_media_local" } else { $env:BTHWANI_MINIO_DSH_ACCESS_KEY }
+  $dshSecretKey = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_DSH_SECRET_KEY)) { "dsh_media_local_secret" } else { $env:BTHWANI_MINIO_DSH_SECRET_KEY }
+  $policyJson = '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::dsh-media","arn:aws:s3:::dsh-media/*"]}]}'
+  docker run --rm --network bthwani-runtime `
+    --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
+    -c "mc alias set local http://minio:9000 '$rootUser' '$rootPassword' && mc mb --ignore-existing local/dsh-media && mc anonymous set none local/dsh-media && printf '%s' '$policyJson' > /tmp/dsh-media-rw.json && mc admin user add local '$dshAccessKey' '$dshSecretKey' || true && mc admin policy create local dsh-media-rw /tmp/dsh-media-rw.json || true && mc admin policy attach local dsh-media-rw --user '$dshAccessKey'"
+  if ($LASTEXITCODE -ne 0) { throw "MinIO init failed (exit $LASTEXITCODE)" }
+  Write-Host "MinIO init: PASS"
+}
+
 function Invoke-DshMediaSeed {
   Write-Host "`n--- Applying Store Discovery MinIO media seed ---"
 
@@ -587,9 +618,11 @@ function Invoke-DshMediaSeed {
   }
 
   $Mount = "${MediaDirectory}:/seed:ro"
+  $rootUser = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_ROOT_USER)) { "bthwani_minio" } else { $env:BTHWANI_MINIO_ROOT_USER }
+  $rootPassword = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_ROOT_PASSWORD)) { "bthwani_minio_password" } else { $env:BTHWANI_MINIO_ROOT_PASSWORD }
   docker run --rm --network bthwani-runtime --volume $Mount `
     --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
-    -c "mc alias set local http://minio:9000 bthwani_minio bthwani_minio_password && mc mb --ignore-existing local/dsh-media && mc anonymous set download local/dsh-media && mc cp --recursive /seed/ local/dsh-media/"
+    -c "mc alias set local http://minio:9000 '$rootUser' '$rootPassword' && mc mb --ignore-existing local/dsh-media && mc cp --recursive /seed/ local/dsh-media/"
   if ($LASTEXITCODE -ne 0) { throw "DSH media seed failed (exit $LASTEXITCODE)" }
 
   # Verify every expected object actually landed in MinIO -- mc cp exiting 0
@@ -597,7 +630,7 @@ function Invoke-DshMediaSeed {
   foreach ($file in $ExpectedFiles) {
     docker run --rm --network bthwani-runtime `
       --entrypoint /bin/sh minio/mc:RELEASE.2025-08-13T08-35-41Z `
-      -c "mc alias set local http://minio:9000 bthwani_minio bthwani_minio_password >/dev/null && mc stat local/dsh-media/$file >/dev/null" | Out-Null
+      -c "mc alias set local http://minio:9000 '$rootUser' '$rootPassword' >/dev/null && mc stat local/dsh-media/$file >/dev/null" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "DSH media seed: object dsh-media/$file not found in MinIO after upload" }
   }
 
@@ -1113,6 +1146,15 @@ elseif ($Action -eq "smoke") {
     Invoke-WltSmoke
   }
 
+  if (($ProfileList -contains "media") -or ($ProfileList -contains "dsh")) {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d minio
+    if ($LASTEXITCODE -ne 0) { throw "MinIO start failed for smoke (exit $LASTEXITCODE)" }
+
+    Wait-ForMinIO
+    Invoke-MinioInit
+    Invoke-DshMediaSeed
+  }
+
   if ($ProfileList -contains "dsh") {
     Invoke-Migrate
     Invoke-Seed
@@ -1122,13 +1164,6 @@ elseif ($Action -eq "smoke") {
 
     Wait-ForDshApi
     Invoke-DshSmoke
-  }
-
-  if ($ProfileList -contains "media") {
-    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d minio
-    if ($LASTEXITCODE -ne 0) { throw "MinIO start failed for smoke (exit $LASTEXITCODE)" }
-
-    Invoke-MinioSmoke
   }
 
   if ($ProfileList -contains "financial-simulators") {
@@ -1170,6 +1205,14 @@ elseif ($Action -eq "all") {
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --build postgres
   Wait-ForPostgres
 
+  if (($ProfileList -contains "media") -or ($ProfileList -contains "dsh")) {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d --build minio
+    if ($LASTEXITCODE -ne 0) { throw "MinIO start failed for all (exit $LASTEXITCODE)" }
+    Wait-ForMinIO
+    Invoke-MinioInit
+    Invoke-DshMediaSeed
+  }
+
   # Run database migrations before starting the API containers
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate
@@ -1210,15 +1253,6 @@ elseif ($Action -eq "all") {
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
     Invoke-DshSmoke
-  }
-
-  if ($ProfileList -contains "media") {
-    # MinIO must be confirmed ready before the seed script's `mc` commands
-    # run against it -- previously the seed ran first and could race a MinIO
-    # container that was still starting.
-    Wait-ForMinIO
-    Invoke-DshMediaSeed
-    Write-Host "MinIO smoke: PASS"
   }
 
   if ($ProfileList -contains "financial-simulators") {

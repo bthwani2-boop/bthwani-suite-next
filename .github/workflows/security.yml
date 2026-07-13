@@ -4,10 +4,12 @@ on:
   pull_request:
     branches:
       - master
+      - onebyone
   push:
     branches:
       - master
       - implementing
+      - onebyone
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
