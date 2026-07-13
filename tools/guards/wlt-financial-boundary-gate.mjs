@@ -36,6 +36,7 @@ const allowedPrefixes = [
   ".devcontainer/",
   "package.json",
   "tools/guards/wlt-financial-boundary-gate.mjs",
+  "tools/guards/live-cross-journey-integrity-gate.mjs",
   "tools/scripts/smoke-wiremock-financial-provider.ps1",
   "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
   ".github/workflows/"

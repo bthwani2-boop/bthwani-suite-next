@@ -5,6 +5,7 @@ packages:
   - "shared/ui-kit"
   - "services/*"
   - "core/identity"
+  - "core/workforce"
   - "contracts"
 
 verifyDepsBeforeRun: false

@@ -12,6 +12,7 @@ const specs = [
   { input: 'contracts/master.openapi.yaml', output: 'contracts/master.bundled.json', name: 'Master API Index' },
   { input: 'core/identity/contracts/auth.openapi.yaml', output: 'contracts/identity.bundled.json', name: 'Core - Identity API' },
   { input: 'core/providers/contracts/providers.openapi.yaml', output: 'contracts/providers.bundled.json', name: 'Core - Providers API' },
+  { input: 'core/workforce/contracts/workforce.openapi.yaml', output: 'contracts/workforce.bundled.json', name: 'Core - Workforce API' },
   { input: 'services/dsh/contracts/dsh.openapi.yaml', output: 'contracts/dsh.bundled.json', name: 'Services - Dsh API' },
   { input: 'services/wlt/contracts/wlt.openapi.yaml', output: 'contracts/wlt.bundled.json', name: 'Services - Wlt API' }
 ];

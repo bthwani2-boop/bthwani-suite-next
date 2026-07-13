@@ -6,13 +6,11 @@ import { DshOperationScreen } from '../DshOperationScreen';
 const SurfaceAny = Surface as any;
 import { getDshCaptainFlowPolicy } from '../dsh-captain-binding.contracts';
 import { getDshFlowPolicySummary } from '../../shared/runtime/dsh-flow-registry';
-import type { DshCaptainLifecycleStatus } from '../../shared/delivery';
+import { CAPTAIN_LOCATION_PUSH_INTERVAL_MS, type DshCaptainLifecycleStatus } from '../../shared/delivery';
 import { type DshOperationScreenState } from '../DshOperationScreen';
 
 type CaptainFieldStage = 'to-store' | 'to-customer' | 'near-customer' | 'at-door' | 'bell-rang' | 'proof';
-type CaptainHeartbeatState = { lastUpdateMinutesAgo: number; etaMinutes: number | null };
-
-const HEARTBEAT_INTERVAL_MS = 3 * 60 * 1000;
+type CaptainHeartbeatState = { lastUpdateMinutesAgo: number; etaMinutes: number | null; markPushed: () => void };
 
 const STAGE_COORDINATES: Record<CaptainFieldStage, { lat: number; lng: number }> = {
   'to-store': { lat: 15.3200, lng: 44.1200 },
@@ -37,23 +35,30 @@ const CAPTAIN_POSITIONS: Record<CaptainFieldStage, { x: number; y: number }> = {
 };
 
 function useCaptainHeartbeat(stage: CaptainFieldStage): CaptainHeartbeatState {
-  const [state, setState] = React.useState<CaptainHeartbeatState>({
-    lastUpdateMinutesAgo: 0,
-    etaMinutes: stage === 'to-store' ? 8 : stage === 'to-customer' ? 12 : stage === 'near-customer' ? 4 : 1,
-  });
+  // lastPushedAt reflects the real time of the last successful location
+  // push (see markPushed, called from advanceStage/handleStageSelect after
+  // onPushLocation resolves) rather than a synthetic counter, so "آخر
+  // تحديث" always reflects an actual push.
+  const [lastPushedAt, setLastPushedAt] = React.useState(() => Date.now());
+  const [etaMinutes, setEtaMinutes] = React.useState<number | null>(
+    stage === 'to-store' ? 8 : stage === 'to-customer' ? 12 : stage === 'near-customer' ? 4 : 1,
+  );
+  const [, forceTick] = React.useState(0);
 
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setState((prev) => ({
-        lastUpdateMinutesAgo: prev.lastUpdateMinutesAgo + 3,
-        etaMinutes: prev.etaMinutes !== null ? Math.max(0, prev.etaMinutes - 3) : null,
-      }));
-    }, HEARTBEAT_INTERVAL_MS);
+      setEtaMinutes((prev) => (prev !== null ? Math.max(0, prev - 3) : null));
+      forceTick((n) => n + 1);
+    }, CAPTAIN_LOCATION_PUSH_INTERVAL_MS);
 
     return () => clearInterval(timer);
   }, [stage]);
 
-  return state;
+  return {
+    lastUpdateMinutesAgo: Math.max(0, Math.round((Date.now() - lastPushedAt) / 60000)),
+    etaMinutes,
+    markPushed: () => setLastPushedAt(Date.now()),
+  };
 }
 
 const STAGE_CONFIG: Record<CaptainFieldStage, { title: string; description: string; nextStage: CaptainFieldStage | null; action: string; proximityLabel: string | null; lifecycleStatus: string }> = {
@@ -148,6 +153,7 @@ export function DshCaptainMapScreen({
         lifecycleStatus: STAGE_CONFIG[next].lifecycleStatus,
         orderStatus: nextOrderStatus as any,
       });
+      heartbeat.markPushed();
       setTaskStage(next);
       setScreenState('ready');
       setSuccessMessage(`تم تحديث المرحلة إلى ${STAGE_CONFIG[next].title} بنجاح.`);
@@ -178,6 +184,7 @@ export function DshCaptainMapScreen({
         lifecycleStatus: STAGE_CONFIG[stage].lifecycleStatus,
         orderStatus: nextOrderStatus as any,
       });
+      heartbeat.markPushed();
       setTaskStage(stage);
       setScreenState('ready');
       setSuccessMessage(`تم الانتقال إلى ${STAGE_CONFIG[stage].title} بنجاح.`);

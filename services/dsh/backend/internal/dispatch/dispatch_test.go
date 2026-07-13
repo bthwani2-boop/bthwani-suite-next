@@ -84,3 +84,23 @@ func TestUpdateDeliveryStatusRejectsUnsupportedStatus(t *testing.T) {
 		t.Fatalf("expected ErrInvalid for unsupported delivery status, got %v", err)
 	}
 }
+
+func TestPushLocationRejectsOutOfRangeLatitude(t *testing.T) {
+	cases := []float64{-90.1, 90.1, 1000}
+	for _, lat := range cases {
+		_, err := PushLocation(nil, "assignment-1", "captain-1", PushLocationInput{Latitude: lat, Longitude: 0})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid for latitude %v, got %v", lat, err)
+		}
+	}
+}
+
+func TestPushLocationRejectsOutOfRangeLongitude(t *testing.T) {
+	cases := []float64{-180.1, 180.1, 1000}
+	for _, lng := range cases {
+		_, err := PushLocation(nil, "assignment-1", "captain-1", PushLocationInput{Latitude: 0, Longitude: lng})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("expected ErrInvalid for longitude %v, got %v", lng, err)
+		}
+	}
+}

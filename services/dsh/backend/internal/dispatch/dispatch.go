@@ -45,6 +45,13 @@ type Assignment struct {
 	CompletedAt        *time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	// LastLatitude/LastLongitude/LocationRecordedAt hold only the captain's
+	// most recent foreground location sample (no history table, by design —
+	// register item 14 privacy decision). They are purged back to NULL the
+	// moment the assignment reaches a terminal state.
+	LastLatitude       *float64
+	LastLongitude      *float64
+	LocationRecordedAt *time.Time
 	Delivery           Delivery
 }
 
@@ -71,6 +78,12 @@ type PoDInput struct {
 	Method    string
 	Reference string
 	Note      string
+}
+
+type PushLocationInput struct {
+	Latitude   float64
+	Longitude  float64
+	RecordedAt *time.Time
 }
 
 func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, error) {
@@ -193,6 +206,50 @@ func UpdateDeliveryStatus(db *sql.DB, assignmentID, captainID string, status Del
 	}
 }
 
+// PushLocation records the captain's current foreground location as the
+// assignment's last-known point. It is only accepted while the assignment is
+// actively out for delivery (accepted, not yet declined/completed) — offered
+// and terminal assignments reject the push with ErrConflict. Only the latest
+// point is kept; there is no location history table by design.
+func PushLocation(db *sql.DB, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
+	if input.Latitude < -90 || input.Latitude > 90 {
+		return nil, fmt.Errorf("%w: latitude must be between -90 and 90", ErrInvalid)
+	}
+	if input.Longitude < -180 || input.Longitude > 180 {
+		return nil, fmt.Errorf("%w: longitude must be between -180 and 180", ErrInvalid)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	current, err := lockAssignment(tx, assignmentID, captainID)
+	if err != nil {
+		return nil, err
+	}
+	if current.Status != AssignmentAccepted {
+		return nil, fmt.Errorf("%w: location push requires an active accepted assignment", ErrConflict)
+	}
+
+	recordedAt := time.Now().UTC()
+	if input.RecordedAt != nil {
+		recordedAt = input.RecordedAt.UTC()
+	}
+	_, err = tx.Exec(`
+		UPDATE dsh_assignments
+		SET last_latitude = $1, last_longitude = $2, location_recorded_at = $3, updated_at = NOW()
+		WHERE id = $4::uuid AND captain_id = $5`,
+		input.Latitude, input.Longitude, recordedAt, assignmentID, captainID)
+	if err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetCaptainAssignment(db, assignmentID, captainID)
+}
+
 func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Assignment, error) {
 	if input.Method == "" || input.Reference == "" {
 		return nil, fmt.Errorf("%w: proof method and reference are required", ErrInvalid)
@@ -222,9 +279,12 @@ func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Ass
 	if err != nil {
 		return nil, err
 	}
+	// Assignment is now terminal (completed): purge the retained location —
+	// only the latest point was ever kept, and it does not outlive the order.
 	_, err = tx.Exec(`
 		UPDATE dsh_assignments
-		SET status = $1, completed_at = NOW(), updated_at = NOW()
+		SET status = $1, completed_at = NOW(), updated_at = NOW(),
+		    last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
 		WHERE id = $2::uuid AND captain_id = $3`,
 		string(AssignmentCompleted), assignmentID, captainID)
 	if err != nil {
@@ -285,9 +345,11 @@ func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status A
 		return nil, mapOrderError(err)
 	}
 	if status == AssignmentDeclined {
+		// Assignment is now terminal (declined): purge the retained location.
 		_, err = tx.Exec(`
 			UPDATE dsh_assignments
-			SET status = $1, declined_at = NOW(), updated_at = NOW()
+			SET status = $1, declined_at = NOW(), updated_at = NOW(),
+			    last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
 			WHERE id = $2::uuid AND captain_id = $3`, string(status), assignmentID, captainID)
 	} else {
 		_, err = tx.Exec(`
@@ -377,6 +439,7 @@ func assignmentSelectSQL() string {
 	return `
 		SELECT a.id::text, a.order_id::text, a.captain_id, a.assigned_by, a.status,
 		       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at,
+		       a.last_latitude, a.last_longitude, a.location_recorded_at,
 		       d.id::text, d.assignment_id::text, d.order_id::text, d.captain_id, d.status,
 		       COALESCE(d.pod_method, ''), COALESCE(d.pod_reference, ''), COALESCE(d.note, ''),
 		       d.created_at, d.updated_at
@@ -429,6 +492,7 @@ func scanAssignmentScanner(row scanner) (*Assignment, error) {
 	err := row.Scan(&a.ID, &a.OrderID, &a.CaptainID, &a.AssignedBy, &a.Status,
 		&a.ResponseDeadlineAt, &a.AcceptedAt, &a.DeclinedAt, &a.CompletedAt,
 		&a.CreatedAt, &a.UpdatedAt,
+		&a.LastLatitude, &a.LastLongitude, &a.LocationRecordedAt,
 		&d.ID, &d.AssignmentID, &d.OrderID, &d.CaptainID, &d.Status,
 		&d.PoDMethod, &d.PoDReference, &d.Note, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {

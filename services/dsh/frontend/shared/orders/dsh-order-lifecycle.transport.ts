@@ -235,8 +235,17 @@ export function createDshOrderLifecycleHttpClient(
       );
       return normalizeAssignmentResponse(resp);
     },
-    pushLocation: async () => {
-      unsupportedTransition('captain location push is not exposed by the current DSH backend contract');
+    pushLocation: async (assignmentId, req) => {
+      if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
+      const resp = await doFetch<{ assignment?: BackendDispatchAssignment }>(
+        baseUrl,
+        fetchFn,
+        'POST',
+        `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/location`,
+        { latitude: req.latitude, longitude: req.longitude },
+        orderAuthHeaders(auth),
+      );
+      return normalizeAssignmentResponse(resp);
     },
     getCaptainLocation: async (orderId) => {
       if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
@@ -250,8 +259,8 @@ export function createDshOrderLifecycleHttpClient(
       );
       const assignment = resp.assignment;
       return {
-        latitude: null,
-        longitude: null,
+        latitude: assignment?.lastLatitude ?? null,
+        longitude: assignment?.lastLongitude ?? null,
         lifecycle_status: assignment?.delivery?.status ?? assignment?.status ?? '',
         order_status: assignment?.delivery?.status ?? assignment?.status ?? '',
       };

@@ -12,6 +12,7 @@ x-bthwani-contracts:
   core:
     identity: ../core/identity/contracts/auth.openapi.yaml
     providers: ../core/providers/contracts/providers.openapi.yaml
+    workforce: ../core/workforce/contracts/workforce.openapi.yaml
   services:
     dsh: ../services/dsh/contracts/dsh.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml

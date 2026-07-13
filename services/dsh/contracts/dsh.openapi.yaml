@@ -2007,10 +2007,43 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /dsh/captain/dispatch/assignments/{assignmentId}/location:
+    post:
+      operationId: pushDshCaptainLocation
+      summary: >-
+        Captain pushes a foreground-only location sample for an active
+        assignment (register item 14 + 42 — no live tracking, no background
+        location). Rejected once the assignment is no longer accepted/active.
+      tags: [DshDispatch]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPushDispatchLocationRequest" }
+      responses:
+        "200":
+          description: Location recorded.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDispatchAssignmentResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /dsh/client/orders/{orderId}/tracking:
     get:
       operationId: getDshClientOrderTracking
-      summary: Client reads order delivery status updates for their own order. Does not expose captain coordinates or movement.
+      summary: >-
+        Client reads order delivery status updates for their own order,
+        including the captain's last known foreground location (if any) while
+        the delivery is active. No location history is kept or exposed.
       tags: [DshDispatch]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -5585,6 +5618,12 @@ components:
         completedAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        # Only the captain's latest foreground location sample is retained —
+        # no history — and it is purged (set back to null) once the
+        # assignment reaches a terminal state (declined/completed).
+        lastLatitude: { type: ["number", "null"] }
+        lastLongitude: { type: ["number", "null"] }
+        locationRecordedAt: { type: ["string", "null"], format: date-time }
         delivery: { $ref: "#/components/schemas/DshDelivery" }
 
     DshDispatchAssignmentResponse:
@@ -5633,6 +5672,26 @@ components:
           minLength: 2
         note:
           type: string
+
+    DshPushDispatchLocationRequest:
+      type: object
+      required: [latitude, longitude]
+      description: >-
+        Foreground-only location sample (register item 14 + 42 — no live
+        tracking, no background location). Sent by the captain app roughly
+        every 3 minutes while a delivery assignment is active.
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        recordedAt:
+          type: string
+          format: date-time
 
     # ── Field Readiness ──────────────────────────────────────────────
 

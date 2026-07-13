@@ -473,7 +473,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["patchCatalogPlatformPolicy"];
         trace?: never;
     };
     "/dsh/operator/catalog/seed-status": {
@@ -550,7 +550,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["deleteCatalogAsset"];
         options?: never;
         head?: never;
         patch: operations["updateCatalogAsset"];
@@ -599,6 +599,70 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["unlinkCatalogAsset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/reels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/reels/{reelId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewReel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/reels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submitReel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/public/reels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPublicReels"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1304,6 +1368,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Captain pushes a foreground-only location sample for an active assignment (register item 14 + 42 — no live tracking, no background location). Rejected once the assignment is no longer accepted/active. */
+        post: operations["pushDshCaptainLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/client/orders/{orderId}/tracking": {
         parameters: {
             query?: never;
@@ -1311,7 +1392,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Client reads order delivery status updates for their own order. Does not expose captain coordinates or movement. */
+        /** Client reads order delivery status updates for their own order, including the captain's last known foreground location (if any) while the delivery is active. No location history is kept or exposed. */
         get: operations["getDshClientOrderTracking"];
         put?: never;
         post?: never;
@@ -2945,6 +3026,64 @@ export interface components {
         DshStoreAuditResponse: {
             events: components["schemas"]["DshStoreAuditEvent"][];
         };
+        DshCatalogAsset: {
+            id: string;
+            objectKey: string;
+            publicUrl?: string | null;
+            mimeType: string;
+            sizeBytes: number;
+            widthPx?: number | null;
+            heightPx?: number | null;
+            checksum?: string | null;
+            altAr?: string;
+            altEn?: string;
+            dominantColor?: string | null;
+            /** @enum {string} */
+            status: "draft" | "uploaded" | "pending_review" | "approved" | "rejected" | "archived";
+            sourceSurface: string;
+            uploadedBy: string;
+            reviewedBy?: string | null;
+            reviewNote?: string;
+            intendedEntityType?: string | null;
+            intendedEntityId?: string | null;
+            intendedRole?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshReel: {
+            id: string;
+            assetId: string;
+            titleAr?: string;
+            titleEn?: string;
+            /** @enum {string} */
+            targetType: "master_product" | "store" | "offer";
+            targetId: string;
+            /** @enum {string} */
+            status: "pending_review" | "approved" | "rejected" | "archived";
+            sortOrder: number;
+            submittedBy: string;
+            submittedByRole: string;
+            sourceStoreId?: string | null;
+            reviewedBy?: string | null;
+            reviewNote?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPublicReel: {
+            id: string;
+            titleAr?: string;
+            titleEn?: string;
+            /** @description Public streaming URL from /dsh/public/media/{assetId}/original */
+            videoUrl: string;
+            /** @enum {string} */
+            targetType: "master_product" | "store" | "offer";
+            targetId: string;
+            sortOrder: number;
+        };
         DshCentralCatalogDomain: {
             id: string;
             slug: string;
@@ -2996,7 +3135,18 @@ export interface components {
             currency: string;
             /** @enum {string} */
             stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+            /**
+             * @deprecated
+             * @description Deprecated: use effectiveImage instead.
+             */
             imageObjectKey: string;
+            /** @description DAM-computed effective product image. Priority: approved store-assortment partner_custom_product_image (when policy allows) > approved master-product canonical_product_image > null. */
+            effectiveImage?: {
+                url?: string;
+                altAr?: string;
+                /** @enum {string} */
+                source?: "store_custom" | "canonical";
+            } | null;
         };
         DshCatalogAssetLink: {
             id: string;
@@ -3300,6 +3450,10 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            lastLatitude?: number | null;
+            lastLongitude?: number | null;
+            /** Format: date-time */
+            locationRecordedAt?: string | null;
             delivery: components["schemas"]["DshDelivery"];
         };
         DshDispatchAssignmentResponse: {
@@ -3324,6 +3478,13 @@ export interface components {
             method: "photo" | "code" | "signature";
             reference: string;
             note?: string;
+        };
+        /** @description Foreground-only location sample (register item 14 + 42 — no live tracking, no background location). Sent by the captain app roughly every 3 minutes while a delivery assignment is active. */
+        DshPushDispatchLocationRequest: {
+            latitude: number;
+            longitude: number;
+            /** Format: date-time */
+            recordedAt?: string;
         };
         /** @enum {string} */
         DshVisitType: "onboarding" | "periodic" | "escalation_followup";
@@ -4967,7 +5128,20 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    nameAr?: string;
+                    nameEn?: string;
+                    icon?: string;
+                    sortOrder?: number;
+                    isActive?: boolean;
+                    isClientVisible?: boolean;
+                    requiresProductCatalog?: boolean;
+                    isManualRequest?: boolean;
+                };
+            };
+        };
         responses: {
             /** @description Domain updated. */
             200: {
@@ -5026,7 +5200,18 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    nameAr?: string;
+                    nameEn?: string;
+                    icon?: string;
+                    sortOrder?: number;
+                    isActive?: boolean;
+                    isClientVisible?: boolean;
+                };
+            };
+        };
         responses: {
             /** @description Node updated. */
             200: {
@@ -5089,7 +5274,22 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    canonicalNameAr?: string;
+                    canonicalNameEn?: string;
+                    brand?: string;
+                    unit?: string;
+                    unitPrice?: number;
+                    currency?: string;
+                    /** @enum {string} */
+                    stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+                    isActive?: boolean;
+                    approvalStatus?: string;
+                };
+            };
+        };
         responses: {
             /** @description Master product updated. */
             200: {
@@ -5188,7 +5388,59 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    isActive?: boolean;
+                    requiresMarketingReview?: boolean;
+                    requiresProductImage?: boolean;
+                    requiresCategoryImage?: boolean;
+                    requiresDescription?: boolean;
+                    requiresBrand?: boolean;
+                    requiresUnit?: boolean;
+                    productDataQualityMinimumScore?: number;
+                    maxGalleryImages?: number;
+                    manualRequestMode?: boolean;
+                    allowsStoreProductCustomImage?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Policy updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchCatalogPlatformPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    isActive?: boolean;
+                    requiresMarketingReview?: boolean;
+                    requiresProductImage?: boolean;
+                    requiresCategoryImage?: boolean;
+                    requiresDescription?: boolean;
+                    requiresBrand?: boolean;
+                    requiresUnit?: boolean;
+                    productDataQualityMinimumScore?: number;
+                    maxGalleryImages?: number;
+                    manualRequestMode?: boolean;
+                    allowsStoreProductCustomImage?: boolean;
+                };
+            };
+        };
         responses: {
             /** @description Policy updated. */
             200: {
@@ -5250,11 +5502,17 @@ export interface operations {
             content: {
                 "application/json": {
                     fileName: string;
+                    /** @description For image assets: image/jpeg, image/png, or image/webp only. For reel videos: video/mp4 only. */
                     mimeType: string;
                     sizeBytes: number;
-                    sourceSurface: string;
                     altAr?: string;
                     altEn?: string;
+                    /** @description Optional target entity type (domain, node, master_product, store, store_assortment, product_proposal, campaign). */
+                    intendedEntityType?: string;
+                    /** @description Optional target entity ID. */
+                    intendedEntityId?: string;
+                    /** @description Optional DAM role for the target entity. */
+                    intendedRole?: string;
                 };
             };
         };
@@ -5266,8 +5524,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        asset?: Record<string, never>;
-                        /** @description Short-lived presigned MinIO PUT URL. */
+                        asset?: components["schemas"]["DshCatalogAsset"];
+                        /** @description Short-lived presigned MinIO PUT URL signed against the public endpoint. The client must PUT directly to this URL without modifying it. */
                         uploadUrl?: string;
                         /** Format: date-time */
                         expiresAt?: string;
@@ -5296,7 +5554,7 @@ export interface operations {
             };
         };
     };
-    updateCatalogAsset: {
+    deleteCatalogAsset: {
         parameters: {
             query?: never;
             header?: never;
@@ -5307,7 +5565,35 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Asset metadata updated. */
+            /** @description Asset deleted (only draft/uploaded/rejected with no active links). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateCatalogAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    altAr?: string;
+                    altEn?: string;
+                    dominantColor?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Asset alt text / dominant color updated. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5328,8 +5614,11 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    decision: "approved" | "rejected" | "pending_review" | "archived";
+                    /**
+                     * @description Valid transitions: uploaded→pending_review (automatic on complete), pending_review→approved|rejected, approved→archived. draft assets may not be approved directly.
+                     * @enum {string}
+                     */
+                    decision: "approved" | "rejected" | "archived";
                     reviewNote?: string;
                 };
             };
@@ -5340,7 +5629,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        asset?: components["schemas"]["DshCatalogAsset"];
+                    };
+                };
             };
         };
     };
@@ -5385,6 +5678,127 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listReels: {
+        parameters: {
+            query?: {
+                status?: "pending_review" | "approved" | "rejected" | "archived";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of reels (operator view). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reels?: components["schemas"]["DshReel"][];
+                    };
+                };
+            };
+        };
+    };
+    reviewReel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "approved" | "rejected" | "archived";
+                    reviewNote?: string;
+                    /** @enum {string} */
+                    targetType?: "master_product" | "store" | "offer";
+                    targetId?: string;
+                    sortOrder?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Reel reviewed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reel?: components["schemas"]["DshReel"];
+                    };
+                };
+            };
+        };
+    };
+    submitReel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    assetId: string;
+                    titleAr?: string;
+                    titleEn?: string;
+                    /** @enum {string} */
+                    targetType: "master_product" | "store" | "offer";
+                    targetId: string;
+                    sortOrder?: number;
+                    sourceStoreId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Reel submitted for review. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reel?: components["schemas"]["DshReel"];
+                    };
+                };
+            };
+        };
+    };
+    listPublicReels: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved reels for public home screen carousel. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reels?: components["schemas"]["DshPublicReel"][];
+                    };
+                };
             };
         };
     };
@@ -6440,6 +6854,36 @@ export interface operations {
         };
         responses: {
             /** @description Proof of delivery submitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    pushDshCaptainLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPushDispatchLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Location recorded. */
             200: {
                 headers: {
                     [name: string]: unknown;

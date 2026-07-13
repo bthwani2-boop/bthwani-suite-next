@@ -188,6 +188,11 @@ export type BackendDispatchAssignment = {
   readonly status?: string;
   readonly createdAt?: string;
   readonly updatedAt?: string;
+  // Only the captain's latest foreground location sample is retained (no
+  // history) and it is purged to null once the assignment closes.
+  readonly lastLatitude?: number | null;
+  readonly lastLongitude?: number | null;
+  readonly locationRecordedAt?: string | null;
   readonly delivery?: {
     readonly status?: string;
     readonly podReference?: string;

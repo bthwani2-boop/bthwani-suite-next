@@ -7,6 +7,7 @@ const contracts = [
   "contracts/master.openapi.yaml",
   "core/identity/contracts/auth.openapi.yaml",
   "core/providers/contracts/providers.openapi.yaml",
+  "core/workforce/contracts/workforce.openapi.yaml",
   "services/dsh/contracts/dsh.openapi.yaml",
   "services/wlt/contracts/wlt.openapi.yaml",
 ];

@@ -463,12 +463,14 @@ jobs:
         if: always()
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
 
-  # Not run on pull_request/push: it requires WLT_MUTATIONS_ENABLED=true, which
-  # is not an approved default (see services/wlt/service.manifest.ts
-  # mutationRuntimeReady/mutationJourneysApproved). Trigger manually only when
-  # the WLT payment-session mutation journey itself needs verification.
+  # Not run on pull_request/push: WLT_MUTATIONS_ENABLED=true is now the
+  # approved mock-provider default (see services/wlt/service.manifest.ts
+  # mutationRuntimeReady/mutationJourneysApproved and
+  # services/wlt/FINANCIAL_SCOPE_V1.md). This job stays manual-only because it
+  # additionally exercises the WLT provider-through-WLT smoke, on top of what
+  # the default full-reset job above already covers.
   wlt-mutation-lab-smoke:
-    name: WLT mutation lab smoke (manual, unapproved mutations)
+    name: WLT mutation lab smoke (manual, provider-through-WLT verification)
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30

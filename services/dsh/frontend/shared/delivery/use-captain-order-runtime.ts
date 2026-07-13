@@ -25,6 +25,13 @@ export type DshCaptainActiveLocationPushConfig = {
 
 const activeDeliveryStates = new Set(['offer-accepting', 'offer-accepted']);
 
+// Owner decision (register item 14 + 42): NO live tracking, NO background
+// location. The captain app samples and pushes its own location on this
+// fixed cadence, foreground-only, only while an active delivery assignment
+// exists. Shared here (instead of duplicated per-surface) so every caller —
+// this hook and any UI displaying "last update" — agrees on the cadence.
+export const CAPTAIN_LOCATION_PUSH_INTERVAL_MS = 3 * 60 * 1000;
+
 export function resolveDshRuntimeOrderId(orderId: string): string {
   return orderId.startsWith('captain-order-') ? orderId.replace('captain-order-', '') : orderId;
 }
@@ -109,15 +116,11 @@ export function useCaptainActiveLocationPush({
   const captainOrderRuntime = useCaptainOrderRuntime();
 
   React.useEffect(() => {
-    // Location push is not part of the DSH backend contract yet
-    // (DSH_CAPTAIN_CONTRACT_CAPABILITIES.locationPush === false). The feature
-    // is disabled explicitly here instead of firing requests that fail.
     if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.locationPush) return undefined;
     if (!lifecycleStatus || !activeDeliveryStates.has(lifecycleStatus)) return undefined;
     if (!activeAssignmentId || !captainId) return undefined;
 
     let cancelled = false;
-    let watchId: number | null = null;
 
     const postLocation = (latitude: number, longitude: number) => {
       if (cancelled) return;
@@ -135,19 +138,42 @@ export function useCaptainActiveLocationPush({
       });
     };
 
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => postLocation(pos.coords.latitude, pos.coords.longitude),
-        () => undefined,
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 },
-      );
-    }
+    // Owner decision: foreground-only, periodic sampling — no watchPosition,
+    // no background location, no expo-task-manager. Each tick takes a single
+    // fresh fix and pushes it; nothing runs while the app is backgrounded.
+    const sampleOnce = async () => {
+      if (cancelled) return;
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => postLocation(pos.coords.latitude, pos.coords.longitude),
+            () => undefined,
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 },
+          );
+        }
+        return;
+      }
+      try {
+        // Dynamic import keeps expo-location out of any web bundle of this
+        // shared module — only the native captain runtime ever loads it.
+        const Location = await import('expo-location');
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (cancelled || !permission.granted) return;
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        if (!cancelled) postLocation(position.coords.latitude, position.coords.longitude);
+      } catch (err) {
+        console.warn('[captain:location-push] failed to sample device location', err);
+      }
+    };
+
+    void sampleOnce();
+    const intervalId = setInterval(() => {
+      void sampleOnce();
+    }, CAPTAIN_LOCATION_PUSH_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      if (watchId !== null && Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchId);
-      }
+      clearInterval(intervalId);
     };
   }, [activeAssignmentId, captainId, captainOrderRuntime, lifecycleStatus]);
 }

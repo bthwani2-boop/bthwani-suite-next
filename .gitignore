@@ -105,6 +105,9 @@ node-gates*.log
 !tools/prompts/
 !tools/prompts/**/*.md
 
+# Explicitly track the WLT Minimum Viable Financial Scope v1 governance doc
+!services/wlt/FINANCIAL_SCOPE_V1.md
+
 *.pem
 *.key
 *.p8

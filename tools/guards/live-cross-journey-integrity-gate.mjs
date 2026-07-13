@@ -350,28 +350,57 @@ for (const transition of [
   );
 }
 
+// journeyRuntimeVerified stays false until the full runtime smoke (financial
+// simulators + mutations enabled) has actually been run and observed passing;
+// it is not implied by the mock-provider approval below.
+for (const flag of ["journeyRuntimeVerified: false"]) {
+  requireText(
+    wltManifestPath,
+    flag,
+    `WLT must not claim unverified journey runtime readiness: ${flag}`,
+  );
+}
+
+// The mock-provider financial mutation path is the approved local/staging
+// default (see services/wlt/FINANCIAL_SCOPE_V1.md); the generated API client
+// is checked into services/wlt/clients/generated/wlt-api.ts. Production
+// provider mode remains forbidden without WLT_ALLOW_PRODUCTION_PROVIDER=true.
 for (const flag of [
-  "generatedClientReady: false",
-  "journeyRuntimeVerified: false",
-  "mutationRuntimeReady: false",
-  "mutationJourneysApproved: false",
+  "generatedClientReady: true",
+  "mutationRuntimeReady: true",
+  "mutationJourneysApproved: true",
 ]) {
   requireText(
     wltManifestPath,
     flag,
-    `WLT must not claim unverified financial readiness: ${flag}`,
+    `WLT must reflect the approved mock-provider financial posture: ${flag}`,
   );
 }
 
 requireText(
   runtimeEnvPath,
-  "WLT_MUTATIONS_ENABLED=false",
-  "financial mutations must remain disabled by default",
+  "WLT_MUTATIONS_ENABLED=true",
+  "mock-provider financial mutations must be enabled by default (approved local/staging posture)",
+);
+requireText(
+  runtimeEnvPath,
+  "WLT_FINANCIAL_PROVIDER_MODE=mock",
+  "default runtime must use the mock financial provider, not a live one",
+);
+requireText(
+  runtimeEnvPath,
+  "WLT_ALLOW_PRODUCTION_PROVIDER=false",
+  "production provider access must remain disabled by default",
 );
 forbidText(
   runtimeEnvPath,
-  "WLT_MUTATIONS_ENABLED=true",
-  "default runtime must never enable unapproved financial mutations",
+  "WLT_FINANCIAL_PROVIDER_MODE=production",
+  "default runtime must never point at a production financial provider",
+);
+forbidText(
+  runtimeEnvPath,
+  "WLT_ALLOW_PRODUCTION_PROVIDER=true",
+  "default runtime must never enable the production financial provider",
 );
 
 for (const command of [
@@ -426,5 +455,5 @@ console.log(
   "[SAFE-BLOCKED] captain location/failure/return remain disabled until contracts exist",
 );
 console.log(
-  "[SAFE-BLOCKED] WLT financial mutations remain disabled until approved and verified",
+  "[ACTIVE] WLT mock-provider financial mutations are enabled by default; production provider remains blocked without WLT_ALLOW_PRODUCTION_PROVIDER=true",
 );

@@ -11,7 +11,7 @@ services:
       - "--global-response-templating"
       - "--verbose"
     ports:
-      - "${BTHWANI_WIREMOCK_FINANCIAL_PORT:-58090}:8080"
+      - "127.0.0.1:${BTHWANI_WIREMOCK_FINANCIAL_PORT:-58090}:8080"
     volumes:
       - ./financial-simulators/wiremock/mappings:/home/wiremock/mappings:ro
       - ./financial-simulators/wiremock/__files:/home/wiremock/__files:ro

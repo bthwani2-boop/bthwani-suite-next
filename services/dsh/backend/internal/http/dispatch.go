@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -113,6 +114,38 @@ func (s *protectedStoreServer) handleSubmitDispatchPoD(w http.ResponseWriter, r 
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
 
+// POST /dsh/captain/dispatch/assignments/{assignmentId}/location
+//
+// Foreground-only location push (register item 14 + 42): the captain app
+// samples its own location every ~3 minutes while a delivery is active and
+// posts it here. No background location, no history — only the latest
+// point is retained, and it is purged once the assignment closes.
+func (s *protectedStoreServer) handlePushDispatchLocation(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	var body struct {
+		Latitude   float64 `json:"latitude"`
+		Longitude  float64 `json:"longitude"`
+		RecordedAt string  `json:"recordedAt"`
+	}
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	input := dispatch.PushLocationInput{Latitude: body.Latitude, Longitude: body.Longitude}
+	if body.RecordedAt != "" {
+		parsed, err := time.Parse(time.RFC3339, body.RecordedAt)
+		if err != nil {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordedAt must be RFC3339")
+			return
+		}
+		input.RecordedAt = &parsed
+	}
+	assignment, err := dispatch.PushLocation(s.db, r.PathValue("assignmentId"), actor.ID, input)
+	s.writeDispatchResult(w, http.StatusOK, assignment, err)
+}
+
 // GET /dsh/client/orders/{orderId}/tracking
 func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
@@ -159,6 +192,11 @@ func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 		"completedAt":        a.CompletedAt,
 		"createdAt":          a.CreatedAt,
 		"updatedAt":          a.UpdatedAt,
+		// Only the latest foreground location sample is ever retained (no
+		// history, purged on closure) — see dsh-039 migration.
+		"lastLatitude":       a.LastLatitude,
+		"lastLongitude":      a.LastLongitude,
+		"locationRecordedAt": a.LocationRecordedAt,
 		"delivery": map[string]any{
 			"id":           a.Delivery.ID,
 			"assignmentId": a.Delivery.AssignmentID,
