@@ -99,9 +99,14 @@ type Partner struct {
 	CreatedByActorID    string           `json:"createdByActorId"`
 	CreatedBySurface    string           `json:"createdBySurface"`
 	Notes               string           `json:"notes"`
-	// Bank account metadata — captured by app-field onboarding as
-	// readiness/metadata only. Never mutated in WLT; WLT stays the sole
-	// owner of financial truth. Control-panel masks these on display.
+	// Payout destination reference — DSH holds only the WLT reference ID and
+	// masked display strings. Raw bank data is never stored in DSH after Phase 5.
+	PayoutDestinationID  string `json:"payoutDestinationId"`
+	MaskedAccountNumber  string `json:"maskedAccountNumber"`
+	MaskedIBAN           string `json:"maskedIban"`
+	MaskedMobileNumber   string `json:"maskedMobileNumber"`
+	// Legacy bank display fields retained for backward compatibility.
+	// New writes go through WLT; these are populated from masked values only.
 	BeneficiaryName               string `json:"beneficiaryName"`
 	BankName                      string `json:"bankName"`
 	BankBranch                    string `json:"bankBranch"`
@@ -384,7 +389,7 @@ type UpdatePartnerInput struct {
 	SecondaryPhone string `json:"secondaryPhone"`
 	Email          string `json:"email"`
 	Notes          string `json:"notes"`
-	// Bank account metadata (readiness/metadata only — never a WLT mutation).
+	// Bank account fields forwarded to WLT; never stored raw in DSH after Phase 5.
 	BeneficiaryName               string `json:"beneficiaryName"`
 	BankName                      string `json:"bankName"`
 	BankBranch                    string `json:"bankBranch"`
@@ -394,6 +399,13 @@ type UpdatePartnerInput struct {
 	SettlementPreference          string `json:"settlementPreference"`
 	BankAccountHolderMatchesOwner *bool  `json:"bankAccountHolderMatchesOwner"`
 	BankNotes                     string `json:"bankNotes"`
+	// WLT relay fields: populated by the repository after WLT upsert.
+	PayoutDestinationID  string `json:"-"`
+	MaskedAccountNumber  string `json:"-"`
+	MaskedIBAN           string `json:"-"`
+	MaskedMobileNumber   string `json:"-"`
+	// ActorID of the caller issuing the update — used for WLT audit.
+	UpdatedByActorID string `json:"-"`
 }
 
 type TransitionInput struct {

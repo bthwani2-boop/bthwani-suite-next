@@ -8,6 +8,7 @@ import (
 	"wlt-api/internal/health"
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/payment"
+	"wlt-api/internal/payout"
 	"wlt-api/internal/reference"
 	"wlt-api/internal/refund"
 	"wlt-api/internal/settlement"
@@ -76,6 +77,12 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/ledger/entries", gate(ledger.HandleAppendLedgerEntry(db)))
 	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", readGate(ledger.HandleGetLedgerEntry(db)))
 	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
+
+	// WLT Payout Destinations: DSH sends bank details here; WLT owns the
+	// financial truth and returns only masked display values to DSH.
+	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", readGate(payout.HandleUpsertPayoutDestination(db)))
+	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
+	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", readGate(payout.HandleDeactivatePayoutDestination(db)))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")
