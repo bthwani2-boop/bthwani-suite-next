@@ -121,6 +121,7 @@ export function useCaptainActiveLocationPush({
     if (!activeAssignmentId || !captainId) return undefined;
 
     let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
 
     const postLocation = (latitude: number, longitude: number) => {
       if (cancelled) return;
@@ -166,14 +167,47 @@ export function useCaptainActiveLocationPush({
       }
     };
 
-    void sampleOnce();
-    const intervalId = setInterval(() => {
+    const startInterval = () => {
+      if (cancelled || intervalId !== undefined) return;
       void sampleOnce();
-    }, CAPTAIN_LOCATION_PUSH_INTERVAL_MS);
+      intervalId = setInterval(() => {
+        void sampleOnce();
+      }, CAPTAIN_LOCATION_PUSH_INTERVAL_MS);
+    };
+
+    const stopInterval = () => {
+      if (intervalId !== undefined) {
+        clearInterval(intervalId);
+        intervalId = undefined;
+      }
+    };
+
+    // ── AppState guard: pause while backgrounded, resume when foregrounded ──
+    // Phase 6 policy: location sampling is foreground-only. When the OS moves
+    // the app to background/inactive the interval is torn down immediately.
+    // When the app returns to 'active' we take an immediate fix (so dispatch
+    // sees the captain's position without waiting a full interval) and restart
+    // the periodic timer.
+    const { AppState } = require('react-native') as typeof import('react-native');
+    const handleAppStateChange = (nextState: string) => {
+      if (nextState === 'active') {
+        startInterval();
+      } else {
+        stopInterval();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Only start if already in the foreground when this effect mounts.
+    if (AppState.currentState === 'active') {
+      startInterval();
+    }
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      stopInterval();
+      subscription.remove();
     };
   }, [activeAssignmentId, captainId, captainOrderRuntime, lifecycleStatus]);
 }
