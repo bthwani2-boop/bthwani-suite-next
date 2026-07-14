@@ -73,13 +73,9 @@ export function SubscriptionsCommandDeck() {
         <CpKpiCard label="مشتركون نشطون"    value={controller.summary.totalActiveSubscribers.toLocaleString("ar")} />
         <CpKpiCard label="إيرادات شهرية (MRR)" value={`${controller.summary.mrr.toLocaleString("ar")} ر.ي`} />
       </CpKpiStrip>
-      {!controller.summary.isBackedByApi && (
-        <p style={{ fontSize: "0.75rem", color: colorRoles.brandAction, margin: "0.5rem 0 1rem", opacity: 0.8 }}>
-          ⚠️ بيانات الاشتراكات تعمل على سجل محلي — سيتم ربطها بالـ API عند الإطلاق.
-        </p>
-      )}
 
       <div
+
         style={{
           display: "grid",
           gridTemplateColumns: controller.selected !== null ? "1fr 22rem" : "1fr 22rem",

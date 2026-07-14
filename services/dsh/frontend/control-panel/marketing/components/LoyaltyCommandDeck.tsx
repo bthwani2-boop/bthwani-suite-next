@@ -57,13 +57,9 @@ export function LoyaltyCommandDeck() {
         <CpKpiCard label="عملاء مشتركون"     value={controller.summary.totalEnrolledClients.toLocaleString("ar")} />
         <CpKpiCard label="نقاط مُصدَرة (الشهر)" value={controller.summary.pointsIssuedThisMonth.toLocaleString("ar")} />
       </CpKpiStrip>
-      {!controller.summary.isBackedByApi && (
-        <p style={{ fontSize: "0.75rem", color: colorRoles.brandAction, margin: "0.5rem 0 1rem", opacity: 0.8 }}>
-          ⚠️ تعمل بيانات الولاء حالياً على سجل محلي — سيتم ربطها بالـ API عند الإطلاق.
-        </p>
-      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 22rem", gap: "1.5rem" }}>
+
         {/* ── Tiers table ── */}
         <div>
           <h3 style={{ margin: "0 0 1rem", color: colorRoles.brandAction, fontSize: "1.15rem" }}>
