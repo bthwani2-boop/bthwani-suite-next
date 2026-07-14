@@ -406,7 +406,7 @@ export function DshFieldOnboardingScreen({
               أضف منتجات تجريبية لمتجر الشريك قبل إرسال الملف أو بعده.
             </Text>
             <Button
-              label="إضافة/إدارة منتجات المتجر"
+              label="رفع منتجات"
               tone="secondary"
               onPress={async () => {
                 let id = state.partnerId;

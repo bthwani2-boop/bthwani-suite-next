@@ -2195,6 +2195,51 @@ func syncStoreImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetID 
 	return nil
 }
 
+func syncProductImageProjection(ctx context.Context, tx *sql.Tx, productID string) error {
+	var primaryObjectKey sql.NullString
+	err := tx.QueryRowContext(ctx, `SELECT a.object_key FROM dsh_catalog_asset_links al
+		JOIN dsh_catalog_assets a ON al.asset_id = a.id
+		WHERE al.entity_type='master_product' AND al.entity_id=$1 AND al.role='canonical_product_image'
+		  AND al.status='approved' AND a.status='approved'
+		ORDER BY al.is_primary DESC, al.updated_at DESC LIMIT 1`, productID).Scan(&primaryObjectKey)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	var objectKey *string
+	if primaryObjectKey.Valid && primaryObjectKey.String != "" {
+		key := primaryObjectKey.String
+		objectKey = &key
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET canonical_image_object_key=$1, version=version+1, updated_at=now() WHERE id=$2`, objectKey, productID)
+	return err
+}
+
+func syncProductImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetID string) error {
+	rows, err := tx.QueryContext(ctx, `SELECT entity_id FROM dsh_catalog_asset_links
+		WHERE asset_id=$1 AND entity_type='master_product'`, assetID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var productIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		productIDs = append(productIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, id := range productIDs {
+		if err := syncProductImageProjection(ctx, tx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input AssetReviewInput) (CatalogAsset, error) {
 	if !validAssetStatus[input.Decision] {
 		return CatalogAsset{}, ErrInvalid
@@ -2233,12 +2278,18 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
 			return CatalogAsset{}, err
 		}
+		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
+			return CatalogAsset{}, err
+		}
 	} else if input.Decision == "rejected" || input.Decision == "archived" {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status=$1, is_primary=false, updated_at=now() WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
 			return CatalogAsset{}, err
 		}
 		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
+			return CatalogAsset{}, err
+		}
+		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
 			return CatalogAsset{}, err
 		}
 	}
@@ -2398,6 +2449,15 @@ func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInp
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder); err != nil {
 		return CatalogAssetLink{}, err
 	}
+	if input.EntityType == "store" {
+		if err := syncStoreImageProjection(ctx, tx, input.EntityID, input.Role); err != nil {
+			return CatalogAssetLink{}, err
+		}
+	} else if input.EntityType == "master_product" {
+		if err := syncProductImageProjection(ctx, tx, input.EntityID); err != nil {
+			return CatalogAssetLink{}, err
+		}
+	}
 	return scanAssetLink(tx.QueryRowContext(ctx, `SELECT `+assetLinkColumns+`
 		FROM dsh_catalog_asset_links WHERE entity_type=$1 AND entity_id=$2 AND role=$3 AND asset_id=$4`,
 		input.EntityType, input.EntityID, input.Role, input.AssetID))
@@ -2440,6 +2500,10 @@ func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID s
 	}
 	if entityType == "store" {
 		if err := syncStoreImageProjection(ctx, tx, entityID, role); err != nil {
+			return err
+		}
+	} else if entityType == "master_product" {
+		if err := syncProductImageProjection(ctx, tx, entityID); err != nil {
 			return err
 		}
 	}

@@ -118,6 +118,13 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     if (ok) setLinkingId(null);
   };
 
+  const startProposeWithSearch = () => {
+    setProposeNameAr(searchText.trim());
+    setProposeDomainId(selectedDomainId); // Pre-select current domain for convenience
+    setProposeNodeId(selectedNodeId);
+    setShowProposeForm(true);
+  };
+
   const handlePropose = async () => {
     if (!proposeNameAr.trim()) {
       setProposeError('اسم المنتج مطلوب لإرسال الاقتراح');
@@ -129,9 +136,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     }
     setProposeError(undefined);
 
-    // Only send a node that actually belongs to the chosen proposal domain —
-    // proposeNodes is already filtered to that domain, but this guards
-    // against a stale proposeNodeId surviving a domain switch.
+    // Only send a node that actually belongs to the chosen proposal domain
     const matchedNode = proposeNodes.find((node) => node.id === proposeNodeId);
     const categoryNodeId = matchedNode && matchedNode.domainId === proposeDomainId ? matchedNode.id : null;
 
@@ -167,9 +172,6 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     ? taxonomyState.nodes.filter((node) => node.domainId === selectedDomainId && node.isActive)
     : [];
   const activeDomains = taxonomyState.kind === 'success' ? taxonomyState.domains.filter((d) => d.isActive) : [];
-  // Nodes offered by the proposal form's own node picker — scoped to
-  // proposeDomainId (not selectedDomainId), so it never leaks a node from a
-  // different domain than the one the proposal will actually submit.
   const proposeNodes = taxonomyState.kind === 'success'
     ? taxonomyState.nodes.filter((node) => node.domainId === proposeDomainId && node.isActive)
     : [];
@@ -178,85 +180,105 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <Header title="منتجات المتجر" subtitle="اختر من كتالوج المنصة الموحّد أو اقترح منتجاً جديداً" />
 
+      {/* ── Search Input (Always at top, sticky outside ScrollView) ── */}
+      <View style={{ padding: spacing[4], paddingBottom: spacing[2], gap: spacing[2], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, zIndex: 10 }}>
+        <View style={{ flexDirection: 'row-reverse', gap: spacing[2], alignItems: 'flex-end' }}>
+          <View style={{ flex: 1 }}>
+            <TextField
+              label="بحث في منتجات الكتالوج"
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="ابحث بالاسم أو الباركود"
+            />
+          </View>
+          <Button label="بحث" tone="secondary" onPress={() => void handleSearch()} disabled={masterProductsState.kind === 'loading'} />
+        </View>
+        <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+          اربط منتجات المتجر بكتالوج المنصة الموحّد. المنتجات ستُضاف لمتجر الشريك.
+        </Text>
+      </View>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: 'flex-end', gap: spacing[1] }}>
-          <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-            اربط منتجات المتجر بكتالوج المنصة الموحّد. لن تظهر هذه المنتجات لدى العميل قبل اعتماد كتالوج المتجر.
-          </Text>
-        </View>
-
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-        <View style={{ gap: spacing[2] }}>
+        {/* ── Horizontal Taxonomy Chips ── */}
+        <View style={{ gap: spacing[3] }}>
           {taxonomyState.kind === 'error' ? (
             <StateView tone="danger" title="تعذر تحميل الفئات المركزية" description={taxonomyState.message} />
           ) : taxonomyState.kind === 'success' ? (
-            <>
-              <Text role="bodyStrong" style={{ textAlign: 'right' }}>المجال المركزي</Text>
-              {taxonomyState.domains.filter((domain) => domain.isActive).map((domain) => (
-                <Button
-                  key={domain.id}
-                  label={domain.nameAr}
-                  tone={selectedDomainId === domain.id ? 'primary' : 'ghost'}
-                  onPress={() => {
-                    setSelectedDomainId(domain.id);
-                    setSelectedNodeId('');
-                    void searchMasterProducts({
-                      domainId: domain.id,
-                      ...(searchText.trim() ? { search: searchText.trim() } : {}),
-                    });
-                  }}
-                />
-              ))}
-              {visibleNodes.length > 0 && (
-                <>
-                  <Text role="bodyStrong" style={{ textAlign: 'right' }}>الفئة المركزية</Text>
-                  <Button
-                    label="كل فئات المجال"
-                    tone={selectedNodeId ? 'ghost' : 'primary'}
-                    onPress={() => {
-                      setSelectedNodeId('');
-                      void searchMasterProducts({
-                        domainId: selectedDomainId,
-                        ...(searchText.trim() ? { search: searchText.trim() } : {}),
-                      });
-                    }}
-                  />
-                  {visibleNodes.map((node) => (
+            <View style={{ gap: spacing[3] }}>
+              <View style={{ gap: spacing[2] }}>
+                <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>المجال المركزي</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse', paddingHorizontal: 2 }}>
+                  {taxonomyState.domains.filter((domain) => domain.isActive).map((domain) => (
                     <Button
-                      key={node.id}
-                      label={node.nameAr}
-                      tone={selectedNodeId === node.id ? 'primary' : 'ghost'}
+                      key={domain.id}
+                      label={domain.nameAr}
+                      size="sm"
+                      pill={true}
+                      tone={selectedDomainId === domain.id ? 'primary' : 'ghost'}
                       onPress={() => {
-                        setSelectedNodeId(node.id);
+                        setSelectedDomainId(domain.id);
+                        setSelectedNodeId('');
                         void searchMasterProducts({
-                          domainId: selectedDomainId,
-                          categoryNodeId: node.id,
+                          domainId: domain.id,
                           ...(searchText.trim() ? { search: searchText.trim() } : {}),
                         });
                       }}
                     />
                   ))}
-                </>
+                </ScrollView>
+              </View>
+
+              {visibleNodes.length > 0 && (
+                <View style={{ gap: spacing[2] }}>
+                  <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>الفئة المركزية</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse', paddingHorizontal: 2 }}>
+                    <Button
+                      label="الكل"
+                      size="sm"
+                      pill={true}
+                      tone={selectedNodeId ? 'ghost' : 'primary'}
+                      onPress={() => {
+                        setSelectedNodeId('');
+                        void searchMasterProducts({
+                          domainId: selectedDomainId,
+                          ...(searchText.trim() ? { search: searchText.trim() } : {}),
+                        });
+                      }}
+                    />
+                    {visibleNodes.map((node) => (
+                      <Button
+                        key={node.id}
+                        label={node.nameAr}
+                        size="sm"
+                        pill={true}
+                        tone={selectedNodeId === node.id ? 'primary' : 'ghost'}
+                        onPress={() => {
+                          setSelectedNodeId(node.id);
+                          void searchMasterProducts({
+                            domainId: selectedDomainId,
+                            categoryNodeId: node.id,
+                            ...(searchText.trim() ? { search: searchText.trim() } : {}),
+                          });
+                        }}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
               )}
-            </>
+            </View>
           ) : null}
-          <TextField
-            label="بحث في منتجات الكتالوج"
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="ابحث بالاسم أو الباركود"
-          />
-          <Button label="بحث" tone="secondary" onPress={() => void handleSearch()} disabled={masterProductsState.kind === 'loading'} />
         </View>
 
+        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+
+        {/* ── Product List ── */}
         <View style={{ gap: spacing[3] }}>
-          <View style={{ gap: spacing[1], alignItems: 'flex-end' }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right' }}>
+          <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
               {`منتجات الكتالوج (${masterProducts.length})`}
             </Text>
           </View>
@@ -266,50 +288,73 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
           ) : masterProducts.length === 0 ? (
             <View
               style={{
-                paddingVertical: spacing[4],
-                gap: spacing[2],
+                paddingVertical: spacing[5],
+                paddingHorizontal: spacing[4],
+                gap: spacing[4],
                 borderWidth: 1.5,
                 borderStyle: 'dashed',
                 borderColor: colorRoles.borderStrong,
                 borderRadius: radius.md,
                 alignItems: 'center',
                 justifyContent: 'center',
+                backgroundColor: colorRoles.surfaceMuted,
               }}
             >
-              <Icon name="basket-outline" size={32} tone="muted" />
-              <Text role="bodyStrong" tone="muted" style={{ textAlign: 'center' }}>
-                لا توجد نتائج مطابقة
-              </Text>
+              <Icon name="search-outline" size={32} tone="muted" />
+              <View style={{ alignItems: 'center', gap: spacing[1] }}>
+                <Text role="bodyStrong" tone="muted" style={{ textAlign: 'center' }}>
+                  لا توجد نتائج مطابقة في الكتالوج الموحد
+                </Text>
+                {searchText.trim() && (
+                  <Text role="caption" tone="muted" style={{ textAlign: 'center' }}>
+                    لم يتم العثور على "{searchText}"
+                  </Text>
+                )}
+              </View>
+              {searchText.trim() && (
+                <Button 
+                  label="اقترح كمنتج جديد" 
+                  tone="primary" 
+                  onPress={startProposeWithSearch} 
+                  leading={<Icon name="add-circle-outline" size={18} tone="on-primary" />}
+                />
+              )}
             </View>
           ) : (
-            <View style={{ gap: spacing[2] }}>
+            <View style={{ gap: spacing[3] }}>
               {masterProducts.map((product) => {
                 const linked = assortmentItems.find((a) => a.masterProductId === product.id);
+                const isLinking = linkingId === product.id;
                 return (
                   <View
                     key={product.id}
                     style={{
                       padding: spacing[3],
-                      borderWidth: borders.hairline,
-                      borderColor: colorRoles.borderStrong,
-                      borderRadius: radius.sm,
-                      backgroundColor: colorRoles.surfaceBase,
+                      borderWidth: isLinking ? 2 : borders.hairline,
+                      borderColor: isLinking ? colorRoles.borderBrand : colorRoles.borderStrong,
+                      borderRadius: radius.md,
+                      backgroundColor: isLinking ? colorRoles.surfaceMuted : colorRoles.surfaceBase,
                       gap: spacing[2],
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 2,
+                      elevation: 1,
                     }}
                   >
                     <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
+                      <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary, flex: 1 }}>
                         {product.canonicalNameAr}
                       </Text>
-                      {linkingId !== product.id && (
-                        <Pressable onPress={() => startLinking(product)}>
-                          <Icon name={linked ? 'pencil-outline' : 'add-circle-outline'} size={18} tone="muted" />
+                      {!isLinking && (
+                        <Pressable onPress={() => startLinking(product)} style={{ padding: 4 }}>
+                          <Icon name={linked ? 'pencil-outline' : 'add-circle-outline'} size={24} tone={linked ? 'brand' : 'muted'} />
                         </Pressable>
                       )}
                     </View>
 
-                    {linkingId === product.id ? (
-                      <View style={{ gap: spacing[2] }}>
+                    {isLinking ? (
+                      <View style={{ gap: spacing[3], marginTop: spacing[1] }}>
                         <TextField
                           label="السعر"
                           value={linkPrice}
@@ -318,32 +363,35 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                           {...(linkError ? { error: linkError } : {})}
                         />
                         <TextField label="ملاحظة محلية" value={linkNote} onChangeText={setLinkNote} placeholder="اختياري" />
-                        <View style={{ flexDirection: 'row-reverse', gap: spacing[2] }}>
-                          {(['in_stock', 'low_stock', 'out_of_stock'] as const).map((stock) => (
-                            <Pressable key={stock} onPress={() => setLinkStock(stock)}>
-                              <Text
-                                role="bodySm"
-                                tone={linkStock === stock ? 'success' : 'muted'}
-                                style={{ textAlign: 'right', fontWeight: linkStock === stock ? 'bold' : 'normal' }}
-                              >
-                                {STOCK_STATUS_LABELS[stock]}
-                              </Text>
-                            </Pressable>
-                          ))}
+                        <View style={{ gap: spacing[2] }}>
+                          <Text role="caption" style={{ textAlign: 'right' }}>حالة المخزون</Text>
+                          <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
+                            {(['in_stock', 'low_stock', 'out_of_stock'] as const).map((stock) => (
+                              <Button
+                                key={stock}
+                                label={STOCK_STATUS_LABELS[stock]}
+                                size="sm"
+                                pill={true}
+                                tone={linkStock === stock ? (stock === 'in_stock' ? 'success' : stock === 'low_stock' ? 'brand' : 'danger') : 'ghost'}
+                                onPress={() => setLinkStock(stock)}
+                              />
+                            ))}
+                          </View>
                         </View>
-                        <View style={{ flexDirection: 'row-reverse', gap: spacing[2] }}>
+                        <View style={{ flexDirection: 'row-reverse', gap: spacing[2], paddingTop: spacing[2] }}>
                           <Button
-                            label="حفظ"
-                            tone="success"
+                            label="حفظ الارتباط"
+                            tone="primary"
                             onPress={() => void handleSaveLink(product.id)}
                             disabled={actionState.kind === 'submitting'}
+                            style={{ flex: 1 }}
                           />
                           <Button label="إلغاء" tone="ghost" onPress={() => setLinkingId(null)} />
                         </View>
                       </View>
                     ) : linked ? (
                       <View style={{ gap: spacing[1] }}>
-                        <Text role="bodySm" tone="success" style={{ textAlign: 'right' }}>
+                        <Text role="bodySm" tone="success" style={{ textAlign: 'right', fontWeight: 'bold' }}>
                           {`${linked.unitPrice} ${linked.currency}`}
                         </Text>
                         <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
@@ -352,7 +400,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                       </View>
                     ) : (
                       <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-                        غير مضاف لمتجر الشريك بعد
+                        غير مرتبط لمتجر الشريك بعد
                       </Text>
                     )}
                   </View>
@@ -362,43 +410,51 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
           )}
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+        {/* ── Proposal Form Card ── */}
+        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[2] }} />
 
-        <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[3], borderRadius: radius.md, gap: spacing[3] }}>
-          <Pressable onPress={() => setShowProposeForm((v) => !v)}>
-            <Text role="titleSm" style={{ textAlign: 'right', fontWeight: 'bold' }}>
+        <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[4], borderRadius: radius.lg, gap: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle }}>
+          <Pressable onPress={() => setShowProposeForm((v) => !v)} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
               {showProposeForm ? 'إلغاء اقتراح منتج جديد' : 'المنتج غير موجود؟ اقترح منتجاً جديداً'}
             </Text>
+            <Icon name={showProposeForm ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} tone="muted" />
           </Pressable>
 
           {showProposeForm && (
-            <View style={{ gap: spacing[2] }}>
+            <View style={{ gap: spacing[3], marginTop: spacing[2] }}>
               <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-                يُرسل الاقتراح لمراجعة قسم الكتالوج ولا يمكن إضافته للمتجر مباشرة قبل اعتماده.
+                يُرسل الاقتراح لمراجعة قسم الكتالوج ولا يمكن إضافته للمتجر مباشرة قبل اعتماده من الإدارة.
               </Text>
 
-              <Text role="bodyStrong" style={{ textAlign: 'right' }}>القسم *</Text>
-              <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
-                {activeDomains.map((domain) => (
-                  <Button
-                    key={domain.id}
-                    label={domain.nameAr}
-                    tone={proposeDomainId === domain.id ? 'primary' : 'ghost'}
-                    onPress={() => {
-                      setProposeDomainId(domain.id);
-                      setProposeNodeId('');
-                      if (domain.id) setProposeError(undefined);
-                    }}
-                  />
-                ))}
+              <View style={{ gap: spacing[2] }}>
+                <Text role="bodyStrong" style={{ textAlign: 'right' }}>القسم *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
+                  {activeDomains.map((domain) => (
+                    <Button
+                      key={domain.id}
+                      label={domain.nameAr}
+                      size="sm"
+                      pill={true}
+                      tone={proposeDomainId === domain.id ? 'primary' : 'ghost'}
+                      onPress={() => {
+                        setProposeDomainId(domain.id);
+                        setProposeNodeId('');
+                        if (domain.id) setProposeError(undefined);
+                      }}
+                    />
+                  ))}
+                </ScrollView>
               </View>
 
               {proposeDomainId && proposeNodes.length > 0 && (
-                <>
+                <View style={{ gap: spacing[2] }}>
                   <Text role="bodyStrong" style={{ textAlign: 'right' }}>الفئة (اختياري)</Text>
-                  <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
                     <Button
                       label="بدون فئة محددة"
+                      size="sm"
+                      pill={true}
                       tone={proposeNodeId ? 'ghost' : 'primary'}
                       onPress={() => setProposeNodeId('')}
                     />
@@ -406,16 +462,18 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                       <Button
                         key={node.id}
                         label={node.nameAr}
+                        size="sm"
+                        pill={true}
                         tone={proposeNodeId === node.id ? 'primary' : 'ghost'}
                         onPress={() => setProposeNodeId(node.id)}
                       />
                     ))}
-                  </View>
-                </>
+                  </ScrollView>
+                </View>
               )}
 
               {proposeError && (
-                <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>
+                <Text role="bodySm" tone="danger" style={{ textAlign: 'right', backgroundColor: colorRoles.surfaceDanger, padding: spacing[2], borderRadius: radius.sm }}>
                   {proposeError}
                 </Text>
               )}
@@ -450,29 +508,36 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
               />
             </View>
           )}
-
-          {proposals.length > 0 && (
-            <View style={{ gap: spacing[2] }}>
-              <Text role="bodyStrong" style={{ textAlign: 'right' }}>
-                {`الاقتراحات المرسلة (${proposals.length})`}
-              </Text>
-              {proposals.map((proposal) => (
-                <View
-                  key={proposal.id}
-                  style={{
-                    padding: spacing[2],
-                    borderWidth: borders.hairline,
-                    borderColor: colorRoles.borderSubtle,
-                    borderRadius: radius.sm,
-                  }}
-                >
-                  <Text role="bodySm" style={{ textAlign: 'right' }}>{proposal.proposedNameAr}</Text>
-                  <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>مُرسل للمراجعة</Text>
-                </View>
-              ))}
-            </View>
-          )}
         </View>
+
+        {/* ── Proposals List ── */}
+        {proposals.length > 0 && (
+          <View style={{ gap: spacing[2], marginTop: spacing[2] }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>
+              {`الاقتراحات المرسلة (${proposals.length})`}
+            </Text>
+            {proposals.map((proposal) => (
+              <View
+                key={proposal.id}
+                style={{
+                  padding: spacing[3],
+                  borderWidth: borders.hairline,
+                  borderColor: colorRoles.borderSubtle,
+                  borderRadius: radius.md,
+                  backgroundColor: colorRoles.surfaceBase,
+                  flexDirection: 'row-reverse',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text role="bodyStrong" style={{ textAlign: 'right', flex: 1 }}>{proposal.proposedNameAr}</Text>
+                <View style={{ backgroundColor: colorRoles.surfaceBrand, paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radius.full }}>
+                  <Text role="caption" tone="brand" style={{ textAlign: 'right', fontWeight: 'bold' }}>مُرسل للمراجعة</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View
@@ -484,7 +549,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
           backgroundColor: colorRoles.surfaceBase,
         }}
       >
-        <Button label="رجوع" tone="secondary" onPress={onBack} style={{ width: '100%' }} />
+        <Button label="رجوع للوراء" tone="secondary" onPress={onBack} style={{ width: '100%' }} />
       </View>
     </View>
   );

@@ -150,12 +150,13 @@ func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDelive
 // DSH is allowed to proxy for its own authenticated surfaces. Anything else
 // is rejected before an upstream request is made.
 var financeReadAllowlist = map[string]struct{}{
-	"/wlt/settlements":         {},
-	"/wlt/settlements/summary": {},
-	"/wlt/refunds":             {},
-	"/wlt/ledger/entries":      {},
-	"/wlt/cod-records":         {},
-	"/wlt/commissions":         {},
+	"/wlt/settlements":              {},
+	"/wlt/settlements/summary":      {},
+	"/wlt/refunds":                  {},
+	"/wlt/ledger/entries":           {},
+	"/wlt/cod-records":              {},
+	"/wlt/commissions":              {},
+	"/wlt/references/wallet-status": {},
 }
 
 func financeReadPathAllowed(path string) bool {

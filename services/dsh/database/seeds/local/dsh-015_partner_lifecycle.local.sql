@@ -59,8 +59,10 @@ INSERT INTO dsh_partners (
 UPDATE dsh_stores
 SET partner_id = 'prt_partner_local_001',
     partner_readiness = 'ready',
+    catalog_approval_status = 'approved',
+    marketing_visibility = 'visible',
     updated_at = now()
-WHERE id = 'store-test-grocery';
+WHERE id IN ('store-test-grocery', 'store-1002', 'store-1003', 'store-1005', 'store-1006', 'store-test-electronics');
 
 INSERT INTO dsh_partner_documents (
     id,
