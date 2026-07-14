@@ -1,13 +1,12 @@
 openapi: 3.1.0
 info:
-  title: BThwani Core External Provider Health API
+  title: BThwani Core External Provider API
   version: 0.1.0
-  description: External provider health contract baseline only. This file does not define provider runtime, registry implementation, adapters, audit, database, or mutation behavior.
+  description: External provider registry, health, and configuration API.
 
 x-bthwani-owner: core/providers
 x-bthwani-contract-state: CONTRACT_DRAFT
-x-bthwani-scope: external-provider-health-only
-x-bthwani-not-merchant-provider: true
+x-bthwani-scope: external-provider-management
 
 paths:
   /providers/health:
@@ -24,6 +23,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExternalProviderHealthResponse"
+
+  /providers:
+    get:
+      operationId: listProviders
+      summary: List all external providers and their configurations.
+      tags:
+        - ExternalProviderManagement
+      responses:
+        "200":
+          description: List of external providers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExternalProvider"
+
+  /providers/{providerId}:
+    get:
+      operationId: getProvider
+      summary: Get details of a single provider.
+      tags:
+        - ExternalProviderManagement
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Provider configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalProvider"
+        "404":
+          description: Provider not found.
+    patch:
+      operationId: updateProvider
+      summary: Update configuration/credentials for a provider.
+      tags:
+        - ExternalProviderManagement
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProviderRequest"
+      responses:
+        "200":
+          description: Updated provider configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalProvider"
+        "404":
+          description: Provider not found.
 
 components:
   schemas:
@@ -73,3 +136,41 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ExternalProviderHealthItem"
+
+    ExternalProvider:
+      type: object
+      required:
+        - providerId
+        - kind
+        - code
+        - active
+      properties:
+        providerId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/ExternalProviderKind"
+        code:
+          type: string
+        active:
+          type: boolean
+        credentials:
+          type: object
+          additionalProperties: true
+        parameters:
+          type: object
+          additionalProperties: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateProviderRequest:
+      type: object
+      properties:
+        active:
+          type: boolean
+        credentials:
+          type: object
+          additionalProperties: true
+        parameters:
+          type: object
+          additionalProperties: true

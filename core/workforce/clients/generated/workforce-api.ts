@@ -206,6 +206,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workforce/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Operator-only list of employee profiles. */
+        get: operations["listEmployees"];
+        put?: never;
+        /** @description Operator-only. Creates or attaches an employee profile. */
+        post: operations["createEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/employees/{actorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getEmployee"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateEmployee"];
+        trace?: never;
+    };
+    "/workforce/employees/{actorId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspendEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/employees/{actorId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reactivateEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workforce/me": {
         parameters: {
             query?: never;
@@ -304,7 +370,7 @@ export interface components {
         /** @enum {string} */
         EngagementStatus: "pending_activation" | "active" | "suspended" | "terminated";
         /** @enum {string} */
-        EngagementType: "independent_contractor" | "agency_contractor";
+        EngagementType: "independent_contractor" | "employee";
         CreateFieldAgentRequest: {
             fullNameAr: string;
             fullNameEn?: string;
@@ -367,6 +433,33 @@ export interface components {
             operatingScopeCode?: string;
             supervisorActorId?: string;
         };
+        CreateEmployeeRequest: {
+            fullNameAr: string;
+            fullNameEn?: string;
+            phoneE164: string;
+            engagementType?: components["schemas"]["EngagementType"];
+            /** Format: date */
+            engagementStartDate?: string;
+            photoMediaRef?: string;
+            department: string;
+            role: string;
+            officeLocation: string;
+            supervisorActorId?: string;
+            documentMediaRefs?: string[];
+        };
+        UpdateEmployeeRequest: {
+            expectedVersion: number;
+            fullNameAr?: string;
+            fullNameEn?: string;
+            engagementType?: components["schemas"]["EngagementType"];
+            /** Format: date */
+            engagementStartDate?: string;
+            photoMediaRef?: string;
+            department?: string;
+            role?: string;
+            officeLocation?: string;
+            supervisorActorId?: string;
+        };
         StatusChangeRequest: {
             expectedVersion: number;
             reason?: string;
@@ -380,7 +473,14 @@ export interface components {
             policyConsent?: boolean;
         };
         /** @enum {string} */
-        ProviderKind: "field" | "captain";
+        WorkforceKind: "field" | "captain" | "employee";
+        EmployeeProfile: {
+            department?: string;
+            role?: string;
+            officeLocation?: string;
+            supervisorActorId?: string;
+            documentMediaRefs: string[];
+        };
         FieldProfile: {
             cityCode?: string;
             serviceZoneId?: string;
@@ -407,8 +507,8 @@ export interface components {
             actorId: string;
             fullNameAr: string;
             fullNameEn?: string;
-            providerCode: string;
-            providerKind: components["schemas"]["ProviderKind"];
+            workforceCode: string;
+            workforceKind: components["schemas"]["WorkforceKind"];
             engagementType: components["schemas"]["EngagementType"];
             engagementStartDate?: string;
             engagementStatus: components["schemas"]["EngagementStatus"];
@@ -420,6 +520,7 @@ export interface components {
             updatedAt: string;
             fieldProfile?: components["schemas"]["FieldProfile"];
             captainProfile?: components["schemas"]["CaptainProfile"];
+            employeeProfile?: components["schemas"]["EmployeeProfile"];
         };
         FieldAgentDetail: components["schemas"]["FieldAgent"] & {
             phoneMasked?: string;
@@ -472,7 +573,7 @@ export interface components {
         };
         ApiError: {
             /** @enum {string} */
-            code: "INVALID_REQUEST" | "UNAUTHENTICATED" | "FORBIDDEN" | "PROFILE_NOT_PROVISIONED" | "PROFILE_INCOMPLETE" | "ENGAGEMENT_SUSPENDED" | "STATUS_NOT_ALLOWED" | "VERSION_CONFLICT" | "DUPLICATE_PHONE" | "DUPLICATE_PROVIDER_CODE" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "INVALID_REFERENCE_CODE" | "REFERENCE_EXISTS" | "REFERENCE_IN_USE" | "ACTOR_NOT_FOUND" | "ACTIVATION_RATE_LIMITED" | "INVALID_ACTOR_INPUT" | "IDENTITY_UNAVAILABLE" | "INVALID_SUPERVISOR" | "PROVIDER_KIND_CONFLICT" | "WORKFORCE_NOT_READY" | "WORKFORCE_INTERNAL_ERROR";
+            code: "INVALID_REQUEST" | "UNAUTHENTICATED" | "FORBIDDEN" | "PROFILE_NOT_PROVISIONED" | "PROFILE_INCOMPLETE" | "ENGAGEMENT_SUSPENDED" | "STATUS_NOT_ALLOWED" | "VERSION_CONFLICT" | "DUPLICATE_PHONE" | "DUPLICATE_WORKFORCE_CODE" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "INVALID_REFERENCE_CODE" | "REFERENCE_EXISTS" | "REFERENCE_IN_USE" | "ACTOR_NOT_FOUND" | "ACTIVATION_RATE_LIMITED" | "INVALID_ACTOR_INPUT" | "IDENTITY_UNAVAILABLE" | "INVALID_SUPERVISOR" | "WORKFORCE_KIND_CONFLICT" | "WORKFORCE_NOT_READY" | "WORKFORCE_INTERNAL_ERROR";
             message: string;
         };
     };
@@ -1174,6 +1275,198 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listEmployees: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["EngagementStatus"];
+                department?: string;
+                q?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching employees. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        employees: components["schemas"]["FieldAgent"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createEmployee: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKeyRequired"];
+                "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeRequest"];
+            };
+        };
+        responses: {
+            /** @description Idempotent replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAgent"];
+                };
+            };
+            /** @description Employee profile created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAgent"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employee detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAgentDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateEmployee: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated employee profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAgent"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    suspendEmployee: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Employee suspended. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAgent"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    reactivateEmployee: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationId"];
+            };
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Employee reactivated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAgent"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     getMyWorkforceProfile: {
         parameters: {
             query?: never;
@@ -1356,7 +1649,7 @@ export interface operations {
     searchWorkforceSupervisors: {
         parameters: {
             query?: {
-                kind?: components["schemas"]["ProviderKind"];
+                kind?: components["schemas"]["WorkforceKind"];
                 q?: string;
             };
             header?: never;

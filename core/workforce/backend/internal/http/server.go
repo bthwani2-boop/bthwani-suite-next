@@ -45,6 +45,13 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
 	mux.HandleFunc("DELETE /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
 
+	mux.HandleFunc("POST /workforce/employees", s.operatorOnly("provider:create", s.createEmployee))
+	mux.HandleFunc("GET /workforce/employees", s.operatorOnly("provider:read", s.listEmployees))
+	mux.HandleFunc("GET /workforce/employees/{actorId}", s.operatorOnly("provider:read", s.getEmployee))
+	mux.HandleFunc("PATCH /workforce/employees/{actorId}", s.operatorOnly("provider:update", s.updateEmployee))
+	mux.HandleFunc("POST /workforce/employees/{actorId}/suspend", s.operatorOnly("provider:suspend", s.suspendFieldAgent))
+	mux.HandleFunc("POST /workforce/employees/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
+
 	mux.HandleFunc("GET /workforce/me", s.providerSelf("provider:read", s.me))
 	mux.HandleFunc("PATCH /workforce/me", s.providerSelf("provider:update", s.updateMe))
 
@@ -176,12 +183,12 @@ func (s *server) listFieldAgents(w http.ResponseWriter, r *http.Request, _ auth.
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
 	people, err := s.repo.ListPeople(r.Context(), workforce.ListFilter{
-		Status:       strings.TrimSpace(query.Get("status")),
-		CityCode:     strings.TrimSpace(query.Get("city")),
-		Query:        strings.TrimSpace(query.Get("q")),
-		ProviderKind: "field",
-		Limit:        limit,
-		Offset:       offset,
+		Status:        strings.TrimSpace(query.Get("status")),
+		CityCode:      strings.TrimSpace(query.Get("city")),
+		Query:         strings.TrimSpace(query.Get("q")),
+		WorkforceKind: "field",
+		Limit:         limit,
+		Offset:        offset,
 	})
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -268,12 +275,19 @@ func activationActorType(r *http.Request) string {
 	if strings.Contains(r.URL.Path, "/workforce/captains/") {
 		return "captain"
 	}
+	if strings.Contains(r.URL.Path, "/workforce/employees/") {
+		return "employee"
+	}
 	return "field"
 }
 
 func activationSurface(r *http.Request) string {
-	if activationActorType(r) == "captain" {
+	actorType := activationActorType(r)
+	if actorType == "captain" {
 		return "app-captain"
+	}
+	if actorType == "employee" {
+		return "webapp"
 	}
 	return "app-field"
 }
@@ -474,8 +488,8 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusNotFound, "PROFILE_NOT_PROVISIONED", "no provider profile exists for this actor")
 	case errors.Is(err, workforce.ErrVersionConflict):
 		sendError(w, http.StatusConflict, "VERSION_CONFLICT", "profile was modified by someone else; reload and retry")
-	case errors.Is(err, workforce.ErrDuplicateProviderCode):
-		sendError(w, http.StatusConflict, "DUPLICATE_PROVIDER_CODE", "provider code is already used")
+	case errors.Is(err, workforce.ErrDuplicateWorkforceCode):
+		sendError(w, http.StatusConflict, "DUPLICATE_WORKFORCE_CODE", "workforce code is already used")
 	case errors.Is(err, workforce.ErrInvalidReference):
 		sendError(w, http.StatusUnprocessableEntity, "INVALID_REFERENCE_CODE", "city or shift code is unknown or inactive")
 	case errors.Is(err, workforce.ErrIdempotencyConflict):
@@ -494,12 +508,12 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "input validation failed")
 	case errors.Is(err, workforce.ErrInvalidSupervisor):
 		sendError(w, http.StatusUnprocessableEntity, "INVALID_SUPERVISOR", "supervisor actor is missing, inactive, or invalid")
-	case errors.Is(err, workforce.ErrProviderKindConflict):
-		sendError(w, http.StatusConflict, "PROVIDER_KIND_CONFLICT", "actor already holds a profile of the other provider kind")
+	case errors.Is(err, workforce.ErrWorkforceKindConflict):
+		sendError(w, http.StatusConflict, "WORKFORCE_KIND_CONFLICT", "actor already holds a profile of another workforce kind")
 	case errors.Is(err, identityclient.ErrPhoneAlreadyBound):
 		sendError(w, http.StatusConflict, "DUPLICATE_PHONE", "phone is already bound to another actor")
 	case errors.Is(err, identityclient.ErrUsernameTaken):
-		sendError(w, http.StatusConflict, "DUPLICATE_PROVIDER_CODE", "provider code is already used as a username")
+		sendError(w, http.StatusConflict, "DUPLICATE_WORKFORCE_CODE", "workforce code is already used as a username")
 	case errors.Is(err, identityclient.ErrActorNotFound):
 		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "identity actor was not found")
 	case errors.Is(err, identityclient.ErrRateLimited):
@@ -511,4 +525,68 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 	default:
 		sendError(w, http.StatusInternalServerError, "WORKFORCE_INTERNAL_ERROR", "workforce request failed")
 	}
+}
+
+func (s *server) createEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.CreateEmployeeInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
+		return
+	}
+	person, replayed, err := s.service.CreateEmployee(r.Context(), operatorOf(r, identity), input,
+		idempotencyKey, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	status := http.StatusCreated
+	if replayed {
+		status = http.StatusOK
+	}
+	sendJSON(w, status, person)
+}
+
+func (s *server) listEmployees(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	query := r.URL.Query()
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	offset, _ := strconv.Atoi(query.Get("offset"))
+	people, err := s.repo.ListEmployees(r.Context(), workforce.ListFilter{
+		Status:   strings.TrimSpace(query.Get("status")),
+		CityCode: strings.TrimSpace(query.Get("city")),
+		Query:    strings.TrimSpace(query.Get("q")),
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"employees": people})
+}
+
+func (s *server) getEmployee(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	detail, err := s.service.EmployeeByID(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, detail)
+}
+
+func (s *server) updateEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateEmployeeInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	person, err := s.service.UpdateEmployee(r.Context(), operatorOf(r, identity),
+		r.PathValue("actorId"), input, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, person)
 }

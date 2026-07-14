@@ -8,20 +8,21 @@ import "time"
 // fees) is owned by WLT and never modeled here. actor_id is the shared key
 // with Identity; no phone is stored here (Identity owns phones).
 type Person struct {
-	ActorID             string          `json:"actorId"`
-	FullNameAr          string          `json:"fullNameAr"`
-	FullNameEn          string          `json:"fullNameEn,omitempty"`
-	ProviderCode        string          `json:"providerCode"`
-	ProviderKind        string          `json:"providerKind"`
-	EngagementType      string          `json:"engagementType"`
-	EngagementStartDate string          `json:"engagementStartDate,omitempty"`
-	EngagementStatus    string          `json:"engagementStatus"`
-	PhotoMediaRef       string          `json:"photoMediaRef,omitempty"`
-	Version             int             `json:"version"`
-	CreatedAt           time.Time       `json:"createdAt"`
-	UpdatedAt           time.Time       `json:"updatedAt"`
-	FieldProfile        *FieldProfile   `json:"fieldProfile,omitempty"`
-	CaptainProfile      *CaptainProfile `json:"captainProfile,omitempty"`
+	ActorID             string           `json:"actorId"`
+	FullNameAr          string           `json:"fullNameAr"`
+	FullNameEn          string           `json:"fullNameEn,omitempty"`
+	WorkforceCode       string           `json:"workforceCode"`
+	WorkforceKind       string           `json:"workforceKind"`
+	EngagementType      string           `json:"engagementType"`
+	EngagementStartDate string           `json:"engagementStartDate,omitempty"`
+	EngagementStatus    string           `json:"engagementStatus"`
+	PhotoMediaRef       string           `json:"photoMediaRef,omitempty"`
+	Version             int              `json:"version"`
+	CreatedAt           time.Time        `json:"createdAt"`
+	UpdatedAt           time.Time        `json:"updatedAt"`
+	FieldProfile        *FieldProfile    `json:"fieldProfile,omitempty"`
+	CaptainProfile      *CaptainProfile  `json:"captainProfile,omitempty"`
+	EmployeeProfile     *EmployeeProfile `json:"employeeProfile,omitempty"`
 }
 
 type FieldProfile struct {
@@ -46,6 +47,14 @@ type CaptainProfile struct {
 	OperatingScopeCode string   `json:"operatingScopeCode,omitempty"`
 	SupervisorActorID  string   `json:"supervisorActorId,omitempty"`
 	DocumentMediaRefs  []string `json:"documentMediaRefs"`
+}
+
+type EmployeeProfile struct {
+	Department        string   `json:"department,omitempty"`
+	Role              string   `json:"role,omitempty"`
+	SupervisorActorID string   `json:"supervisorActorId,omitempty"`
+	OfficeLocation    string   `json:"officeLocation,omitempty"`
+	DocumentMediaRefs []string `json:"documentMediaRefs"`
 }
 
 type CreateFieldAgentInput struct {
@@ -106,6 +115,33 @@ type UpdateCaptainInput struct {
 	SupervisorActorID   *string `json:"supervisorActorId"`
 }
 
+type CreateEmployeeInput struct {
+	FullNameAr          string   `json:"fullNameAr"`
+	FullNameEn          string   `json:"fullNameEn"`
+	PhoneE164           string   `json:"phoneE164"`
+	EngagementType      string   `json:"engagementType"`
+	EngagementStartDate string   `json:"engagementStartDate"`
+	PhotoMediaRef       string   `json:"photoMediaRef"`
+	Department          string   `json:"department"`
+	Role                string   `json:"role"`
+	OfficeLocation      string   `json:"officeLocation"`
+	SupervisorActorID   string   `json:"supervisorActorId"`
+	DocumentMediaRefs   []string `json:"documentMediaRefs"`
+}
+
+type UpdateEmployeeInput struct {
+	ExpectedVersion     int     `json:"expectedVersion"`
+	FullNameAr          *string `json:"fullNameAr"`
+	FullNameEn          *string `json:"fullNameEn"`
+	EngagementType      *string `json:"engagementType"`
+	EngagementStartDate *string `json:"engagementStartDate"`
+	PhotoMediaRef       *string `json:"photoMediaRef"`
+	Department          *string `json:"department"`
+	Role                *string `json:"role"`
+	OfficeLocation      *string `json:"officeLocation"`
+	SupervisorActorID   *string `json:"supervisorActorId"`
+}
+
 // UpdateSelfInput carries the only fields a provider may edit about
 // themselves. Everything sovereign (name, code, status, shift, city,
 // supervisor) is operator-owned and rejected at the contract level.
@@ -125,12 +161,12 @@ type MeView struct {
 }
 
 type ListFilter struct {
-	Status       string
-	CityCode     string
-	Query        string
-	ProviderKind string
-	Limit        int
-	Offset       int
+	Status        string
+	CityCode      string
+	Query         string
+	WorkforceKind string
+	Limit         int
+	Offset        int
 }
 
 type City struct {

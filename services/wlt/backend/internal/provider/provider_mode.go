@@ -39,3 +39,22 @@ func LoadConfig() (Config, error) {
 
 	return Config{Mode: mode, BaseURL: baseURL}, nil
 }
+
+func NewPaymentProvider(config Config) (PaymentProvider, error) {
+	switch config.Mode {
+	case ModeMock, ModeSandbox:
+		return NewClient(config), nil
+	case ModeProduction:
+		return NewProductionPaymentAdapter(), nil
+	default:
+		return nil, fmt.Errorf("unsupported provider mode: %s", config.Mode)
+	}
+}
+
+func NewDefaultPaymentProvider() (PaymentProvider, error) {
+	config, err := LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return NewPaymentProvider(config)
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@bthwani/core-providers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "clients/generated/providers-api.ts",
+  "types": "clients/generated/providers-api.ts",
+  "scripts": {
+    "test": "cd backend && go test ./...",
+    "build": "cd backend && go build ./...",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "react": "19.2.3",
+    "typescript": "~6.0.3"
+  }
+}

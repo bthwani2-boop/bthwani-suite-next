@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	ErrNotFound              = errors.New("workforce person not found")
-	ErrVersionConflict       = errors.New("version conflict")
-	ErrDuplicateProviderCode = errors.New("provider code already used")
-	ErrInvalidReference      = errors.New("invalid reference code")
-	ErrIdempotencyConflict   = errors.New("idempotency key reused with different request")
-	ErrReferenceInUse        = errors.New("reference code is in use")
-	ErrReferenceExists       = errors.New("reference code already exists")
+	ErrNotFound               = errors.New("workforce person not found")
+	ErrVersionConflict        = errors.New("version conflict")
+	ErrDuplicateWorkforceCode = errors.New("workforce code already used")
+	ErrInvalidReference       = errors.New("invalid reference code")
+	ErrIdempotencyConflict    = errors.New("idempotency key reused with different request")
+	ErrReferenceInUse         = errors.New("reference code is in use")
+	ErrReferenceExists        = errors.New("reference code already exists")
 )
 
 type Repository struct {
@@ -106,7 +106,7 @@ func marshalNullable(state any) (any, error) {
 
 // ---- people ----
 
-func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode, cityCode string, input CreateFieldAgentInput) (Person, error) {
+func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, cityCode string, input CreateFieldAgentInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -122,10 +122,10 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode, ci
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, provider_code, provider_kind, engagement_type, engagement_start_date, photo_media_ref)
+			(actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
 		VALUES ($1, $2, NULLIF($3, ''), $4, 'field', $5, NULLIF($6, '')::date, NULLIF($7, ''))
 		ON CONFLICT (actor_id) DO NOTHING`,
-		actorID, input.FullNameAr, input.FullNameEn, providerCode,
+		actorID, input.FullNameAr, input.FullNameEn, workforceCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -149,7 +149,7 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, providerCode, ci
 	return r.PersonByActorID(ctx, actorID)
 }
 
-func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode, cityCode string, input CreateCaptainInput) (Person, error) {
+func (r *Repository) CreateCaptain(ctx context.Context, actorID, workforceCode, cityCode string, input CreateCaptainInput) (Person, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -162,10 +162,10 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode, c
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, provider_code, provider_kind, engagement_type, engagement_start_date, photo_media_ref)
+			(actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
 		VALUES ($1, $2, NULLIF($3, ''), $4, 'captain', $5, NULLIF($6, '')::date, NULLIF($7, ''))
 		ON CONFLICT (actor_id) DO NOTHING`,
-		actorID, input.FullNameAr, input.FullNameEn, providerCode,
+		actorID, input.FullNameAr, input.FullNameEn, workforceCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -196,16 +196,54 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, providerCode, c
 	return r.PersonByActorID(ctx, actorID)
 }
 
-// NextProviderCode draws a server-generated, human-readable provider code
-// from a per-kind sequence (FLD-000123 / CAP-000124). Existing legacy codes
+func (r *Repository) CreateEmployee(ctx context.Context, actorID, workforceCode string, input CreateEmployeeInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO workforce_people
+			(actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, NULLIF($3, ''), $4, 'employee', $5, NULLIF($6, '')::date, NULLIF($7, ''))
+		ON CONFLICT (actor_id) DO NOTHING`,
+		actorID, input.FullNameAr, input.FullNameEn, workforceCode,
+		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+
+	documents, err := json.Marshal(nonNil(input.DocumentMediaRefs))
+	if err != nil {
+		return Person{}, err
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO workforce_employee_profiles
+			(actor_id, department, role, supervisor_actor_id, office_location, document_media_refs)
+		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
+		actorID, input.Department, input.Role, input.SupervisorActorID, input.OfficeLocation, string(documents))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
+}
+
+// NextWorkforceCode draws a server-generated, human-readable provider code
+// from a per-kind sequence (FLD-000123 / CAP-000124 / EMP-000125). Existing legacy codes
 // are never reformatted; this only mints codes for new rows going forward.
-func (r *Repository) NextProviderCode(ctx context.Context, kind string) (string, error) {
+func (r *Repository) NextWorkforceCode(ctx context.Context, kind string) (string, error) {
 	var seq, prefix string
 	switch kind {
 	case "field":
 		seq, prefix = "workforce_field_code_seq", "FLD-"
 	case "captain":
 		seq, prefix = "workforce_captain_code_seq", "CAP-"
+	case "employee":
+		seq, prefix = "workforce_employee_code_seq", "EMP-"
 	default:
 		return "", ErrInvalidInput
 	}
@@ -225,7 +263,7 @@ func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Perso
 }
 
 const personSelect = `
-	SELECT p.actor_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.provider_code, p.provider_kind,
+	SELECT p.actor_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.workforce_code, p.workforce_kind,
 	       p.engagement_type, COALESCE(p.engagement_start_date::text, ''), p.engagement_status,
 	       COALESCE(p.photo_media_ref, ''), p.version, p.created_at, p.updated_at,
 	       COALESCE(f.city_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
@@ -235,10 +273,13 @@ const personSelect = `
 	       COALESCE(c.vehicle_type, ''), COALESCE(c.vehicle_identifier, ''), COALESCE(c.license_status, ''),
 	       COALESCE(c.license_expires_at::text, ''), COALESCE(c.operating_city_code, ''), COALESCE(c.service_zone_id, ''),
 	       COALESCE(c.operating_scope_code, ''), COALESCE(c.supervisor_actor_id, ''),
-	       COALESCE(c.document_media_refs, '[]'::jsonb), c.actor_id IS NOT NULL
+	       COALESCE(c.document_media_refs, '[]'::jsonb), c.actor_id IS NOT NULL,
+	       COALESCE(e.department, ''), COALESCE(e.role, ''), COALESCE(e.supervisor_actor_id, ''), COALESCE(e.office_location, ''),
+	       COALESCE(e.document_media_refs, '[]'::jsonb), e.actor_id IS NOT NULL
 	FROM workforce_people p
 	LEFT JOIN workforce_field_profiles f ON f.actor_id = p.actor_id
-	LEFT JOIN workforce_captain_profiles c ON c.actor_id = p.actor_id`
+	LEFT JOIN workforce_captain_profiles c ON c.actor_id = p.actor_id
+	LEFT JOIN workforce_employee_profiles e ON e.actor_id = p.actor_id`
 
 type rowScanner interface{ Scan(dest ...any) error }
 
@@ -246,12 +287,15 @@ func scanPerson(row rowScanner) (Person, error) {
 	var person Person
 	profile := FieldProfile{}
 	captainProfile := CaptainProfile{}
+	employeeProfile := EmployeeProfile{}
 	var documentsJSON []byte
 	var captainDocumentsJSON []byte
+	var employeeDocumentsJSON []byte
 	var hasFieldProfile bool
 	var hasCaptainProfile bool
+	var hasEmployeeProfile bool
 	err := row.Scan(
-		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.ProviderCode, &person.ProviderKind,
+		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.WorkforceCode, &person.WorkforceKind,
 		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
 		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
 		&profile.CityCode, &profile.ServiceZoneID, &profile.ShiftCode, &profile.SupervisorActorID,
@@ -260,6 +304,8 @@ func scanPerson(row rowScanner) (Person, error) {
 		&captainProfile.VehicleType, &captainProfile.VehicleIdentifier, &captainProfile.LicenseStatus,
 		&captainProfile.LicenseExpiresAt, &captainProfile.OperatingCityCode, &captainProfile.ServiceZoneID,
 		&captainProfile.OperatingScopeCode, &captainProfile.SupervisorActorID, &captainDocumentsJSON, &hasCaptainProfile,
+		&employeeProfile.Department, &employeeProfile.Role, &employeeProfile.SupervisorActorID, &employeeProfile.OfficeLocation,
+		&employeeDocumentsJSON, &hasEmployeeProfile,
 	)
 	if err != nil {
 		return Person{}, err
@@ -285,6 +331,15 @@ func scanPerson(row rowScanner) (Person, error) {
 		}
 		person.CaptainProfile = &captainProfile
 	}
+	if err := json.Unmarshal(employeeDocumentsJSON, &employeeProfile.DocumentMediaRefs); err != nil {
+		return Person{}, err
+	}
+	if employeeProfile.DocumentMediaRefs == nil {
+		employeeProfile.DocumentMediaRefs = []string{}
+	}
+	if hasEmployeeProfile {
+		person.EmployeeProfile = &employeeProfile
+	}
 	return person, nil
 }
 
@@ -302,14 +357,17 @@ func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Perso
 	if filter.Query != "" {
 		args = append(args, "%"+strings.TrimSpace(filter.Query)+"%")
 		clauses = append(clauses, fmt.Sprintf(
-			"(p.full_name_ar ILIKE $%d OR COALESCE(p.full_name_en,'') ILIKE $%d OR p.provider_code ILIKE $%d)",
+			"(p.full_name_ar ILIKE $%d OR COALESCE(p.full_name_en,'') ILIKE $%d OR p.workforce_code ILIKE $%d)",
 			len(args), len(args), len(args)))
 	}
-	if filter.ProviderKind == "field" {
+	if filter.WorkforceKind == "field" {
 		clauses = append(clauses, "f.actor_id IS NOT NULL")
 	}
-	if filter.ProviderKind == "captain" {
+	if filter.WorkforceKind == "captain" {
 		clauses = append(clauses, "c.actor_id IS NOT NULL")
+	}
+	if filter.WorkforceKind == "employee" {
+		clauses = append(clauses, "e.actor_id IS NOT NULL")
 	}
 	limit := filter.Limit
 	if limit <= 0 || limit > 100 {
@@ -339,8 +397,66 @@ func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Perso
 }
 
 func (r *Repository) ListCaptains(ctx context.Context, filter ListFilter) ([]Person, error) {
-	filter.ProviderKind = "captain"
+	filter.WorkforceKind = "captain"
 	return r.ListPeople(ctx, filter)
+}
+
+func (r *Repository) ListEmployees(ctx context.Context, filter ListFilter) ([]Person, error) {
+	filter.WorkforceKind = "employee"
+	return r.ListPeople(ctx, filter)
+}
+
+func (r *Repository) UpdateEmployee(ctx context.Context, actorID string, input UpdateEmployeeInput) (Person, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Person{}, err
+	}
+	defer tx.Rollback()
+
+	var currentVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT version FROM workforce_people WHERE actor_id = $1 FOR UPDATE`, actorID).Scan(&currentVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Person{}, ErrNotFound
+	}
+	if err != nil {
+		return Person{}, err
+	}
+	if currentVersion != input.ExpectedVersion {
+		return Person{}, ErrVersionConflict
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE workforce_people SET
+			full_name_ar = COALESCE($2, full_name_ar),
+			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
+			engagement_type = COALESCE($4, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($5, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($6, ''), photo_media_ref),
+			version = version + 1,
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, input.FullNameAr, deref(input.FullNameEn),
+		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	_, err = tx.ExecContext(ctx, `
+		UPDATE workforce_employee_profiles SET
+			department = COALESCE(NULLIF($2, ''), department),
+			role = COALESCE(NULLIF($3, ''), role),
+			supervisor_actor_id = COALESCE(NULLIF($4, ''), supervisor_actor_id),
+			office_location = COALESCE(NULLIF($5, ''), office_location),
+			updated_at = now()
+		WHERE actor_id = $1`,
+		actorID, deref(input.Department), deref(input.Role), deref(input.SupervisorActorID), deref(input.OfficeLocation))
+	if err != nil {
+		return Person{}, mapPersonWriteError(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return Person{}, err
+	}
+	return r.PersonByActorID(ctx, actorID)
 }
 
 // UpdatePerson applies sovereign edits with optimistic locking: the UPDATE is
@@ -679,8 +795,8 @@ func mapPersonWriteError(err error) error {
 	if errors.As(err, &pqErr) {
 		switch pqErr.Code {
 		case "23505":
-			if strings.Contains(pqErr.Constraint, "provider_code") {
-				return ErrDuplicateProviderCode
+			if strings.Contains(pqErr.Constraint, "workforce_code") {
+				return ErrDuplicateWorkforceCode
 			}
 		case "23503", "23514":
 			return ErrInvalidReference

@@ -24,10 +24,14 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /identity/health", s.health)
 	mux.HandleFunc("GET /identity/readiness", s.readiness)
 	mux.HandleFunc("POST /auth/login", s.login)
+	mux.HandleFunc("POST /auth/otp/request", s.requestOtp)
 	mux.HandleFunc("POST /auth/activate", s.activate)
 	mux.HandleFunc("POST /auth/refresh", s.refresh)
 	mux.HandleFunc("POST /auth/logout", s.logout)
 	mux.HandleFunc("GET /auth/session", s.session)
+	mux.HandleFunc("GET /auth/sessions", s.listSessions)
+	mux.HandleFunc("DELETE /auth/sessions/{sessionId}", s.revokeSession)
+	mux.HandleFunc("DELETE /auth/account", s.deleteAccount)
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
 	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
 	mux.HandleFunc("GET /internal/actors/search", s.serviceOnly(s.internalActorSearch))
@@ -322,6 +326,94 @@ func (s *server) internalActorLatestActivation(w http.ResponseWriter, r *http.Re
 func (s *server) internalActorRevokeActivations(w http.ResponseWriter, r *http.Request) {
 	if err := s.repository.RevokeActivationChallenges(r.Context(), r.PathValue("actorId")); err != nil {
 		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
+	var request identity.OtpInput
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	result, err := s.repository.RequestOtp(r.Context(), request)
+	if err != nil {
+		switch err {
+		case identity.ErrActivationRateLimited:
+			sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
+		case identity.ErrInvalidActivation:
+			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid phone or actor type")
+		case identity.ErrActivationUnavailable:
+			sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
+		default:
+			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
+		}
+		return
+	}
+	sendJSON(w, http.StatusOK, result)
+}
+
+func (s *server) listSessions(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
+		return
+	}
+	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return
+	}
+	sessions, err := s.repository.ListSessions(r.Context(), resolved.Subject)
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not list sessions")
+		return
+	}
+	if sessions == nil {
+		sessions = []identity.SessionInfo{}
+	}
+	sendJSON(w, http.StatusOK, sessions)
+}
+
+func (s *server) revokeSession(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
+		return
+	}
+	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return
+	}
+	if err := s.repository.RevokeSession(r.Context(), resolved.Subject, r.PathValue("sessionId")); err != nil {
+		if err.Error() == "session not found" {
+			sendError(w, http.StatusNotFound, "SESSION_NOT_FOUND", "session was not found")
+			return
+		}
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not revoke session")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) deleteAccount(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
+		return
+	}
+	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return
+	}
+	if err := s.repository.DeleteAccount(r.Context(), resolved.Subject); err != nil {
+		if err == identity.ErrActorNotFound {
+			sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "actor was not found")
+			return
+		}
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not delete account")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

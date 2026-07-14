@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 )
 
 type RequestMeta struct {
@@ -20,6 +21,17 @@ func NewRequestMeta(prefix string) RequestMeta {
 		CorrelationID:  fmt.Sprintf("%s-%s", prefix, randomToken()),
 		IdempotencyKey: fmt.Sprintf("%s-%s", prefix, randomToken()),
 	}
+}
+
+func RequestMetaFromHTTP(r *http.Request, prefix string) RequestMeta {
+	meta := NewRequestMeta(prefix)
+	if correlationID := r.Header.Get("X-Correlation-ID"); correlationID != "" {
+		meta.CorrelationID = correlationID
+	}
+	if idempotencyKey := r.Header.Get("Idempotency-Key"); idempotencyKey != "" {
+		meta.IdempotencyKey = idempotencyKey
+	}
+	return meta
 }
 
 func randomToken() string {

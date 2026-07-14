@@ -283,7 +283,13 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 	actorType := strings.TrimSpace(input.ActorType)
 	surface, ok := activationSurfaceFor(actorType)
 	if !ok {
-		return TokenPair{}, ErrInvalidActivation
+		if actorType == "client" {
+			surface = "app-client"
+		} else if actorType == "partner" {
+			surface = "app-partner"
+		} else {
+			return TokenPair{}, ErrInvalidActivation
+		}
 	}
 	phone, err := NormalizePhoneE164(input.Phone)
 	if err != nil {
@@ -965,4 +971,179 @@ func mapUniqueViolation(err error) error {
 		}
 	}
 	return err
+}
+
+func (r *Repository) RequestOtp(ctx context.Context, input OtpInput) (IssueActivationResult, error) {
+	phone, err := NormalizePhoneE164(input.Phone)
+	if err != nil {
+		return IssueActivationResult{}, err
+	}
+	role := strings.TrimSpace(input.ActorType)
+	surface, ok := activationSurfaceFor(role)
+	if !ok {
+		if role == "client" {
+			surface = "app-client"
+		} else if role == "partner" {
+			surface = "app-partner"
+		} else {
+			return IssueActivationResult{}, ErrInvalidActivation
+		}
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return IssueActivationResult{}, err
+	}
+	defer tx.Rollback()
+
+	actor, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return IssueActivationResult{}, err
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		suffix, err := randomToken(9)
+		if err != nil {
+			return IssueActivationResult{}, err
+		}
+		actorID := role + "-" + suffix
+		username := role + "-" + phone
+		var permissions []byte
+		if role == "client" {
+			permissions, _ = json.Marshal([]Permission{
+				{Service: "dsh", Surface: "app-client", Action: "store:read", Scope: "all"},
+			})
+		} else if role == "partner" {
+			permissions, _ = json.Marshal([]Permission{
+				{Service: "dsh", Surface: "app-partner", Action: "store:read", Scope: "own"},
+				{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
+			})
+		} else {
+			permissions, _ = providerPermissions(surface)
+		}
+
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO identity_actors
+				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+			VALUES ($1, $2, '', 'local-dsh', $3, $4, $5::jsonb, false, now())`,
+			actorID, username, phone, pq.Array([]string{role}), string(permissions))
+		if err != nil {
+			return IssueActivationResult{}, err
+		}
+		actor, err = actorByIDTx(ctx, tx, actorID)
+		if err != nil {
+			return IssueActivationResult{}, err
+		}
+	} else {
+		if !hasRole(actor.Roles, role) {
+			var permissions []byte
+			if role == "client" {
+				permissions, _ = json.Marshal([]Permission{
+					{Service: "dsh", Surface: "app-client", Action: "store:read", Scope: "all"},
+				})
+			} else if role == "partner" {
+				permissions, _ = json.Marshal([]Permission{
+					{Service: "dsh", Surface: "app-partner", Action: "store:read", Scope: "own"},
+					{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
+				})
+			} else {
+				permissions, _ = providerPermissions(surface)
+			}
+			_, err = tx.ExecContext(ctx, `
+				UPDATE identity_actors
+				SET roles = array_append(roles, $2),
+				    permissions = permissions || $3::jsonb,
+				    updated_at = now()
+				WHERE id = $1`, actor.ID, role, string(permissions))
+			if err != nil {
+				return IssueActivationResult{}, err
+			}
+			actor, err = actorByIDTx(ctx, tx, actor.ID)
+			if err != nil {
+				return IssueActivationResult{}, err
+			}
+		}
+	}
+
+	result, err := r.issueChallengeTx(ctx, tx, actor, role, surface, "system", "", "")
+	if err != nil {
+		return IssueActivationResult{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return IssueActivationResult{}, err
+	}
+
+	return result, nil
+}
+
+func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]SessionInfo, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, COALESCE(device_fingerprint, ''), created_at, access_expires_at
+		FROM identity_sessions
+		WHERE actor_id = $1 AND revoked_at IS NULL
+		ORDER BY created_at DESC`, actorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []SessionInfo
+	for rows.Next() {
+		var s SessionInfo
+		if err := rows.Scan(&s.SessionID, &s.DeviceFingerprint, &s.CreatedAt, &s.ExpiresAt); err != nil {
+			return nil, err
+		}
+		list = append(list, s)
+	}
+	return list, rows.Err()
+}
+
+func (r *Repository) RevokeSession(ctx context.Context, actorID string, sessionID string) error {
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE identity_sessions
+		SET revoked_at = now()
+		WHERE id = $1 AND actor_id = $2 AND revoked_at IS NULL`, sessionID, actorID)
+	if err != nil {
+		return err
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		return errors.New("session not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteAccount(ctx context.Context, actorID string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var phone string
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(phone_e164, '') FROM identity_actors WHERE id = $1`, actorID).Scan(&phone)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrActorNotFound
+		}
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO identity_account_deletions_outbox (actor_id, phone_e164)
+		VALUES ($1, $2)`, actorID, phone)
+	if err != nil {
+		return err
+	}
+
+	_, _ = tx.ExecContext(ctx, `UPDATE identity_sessions SET revoked_at = now() WHERE actor_id = $1 AND revoked_at IS NULL`, actorID)
+	_, _ = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'revoked', updated_at = now() WHERE actor_id = $1 AND status = 'pending'`, actorID)
+
+	_, err = tx.ExecContext(ctx, `DELETE FROM identity_actors WHERE id = $1`, actorID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

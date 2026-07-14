@@ -96,3 +96,15 @@ type ActivationMetadata struct {
 	MaskedPhone  string    `json:"maskedPhone"`
 }
 
+type OtpInput struct {
+	Phone     string `json:"phone"`
+	ActorType string `json:"actorType"`
+}
+
+type SessionInfo struct {
+	SessionID         string    `json:"sessionId"`
+	DeviceFingerprint string    `json:"deviceFingerprint"`
+	CreatedAt         time.Time `json:"createdAt"`
+	ExpiresAt         time.Time `json:"expiresAt"`
+}
+

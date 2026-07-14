@@ -593,6 +593,199 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /workforce/employees:
+    post:
+      operationId: createEmployee
+      description: Operator-only. Creates or attaches an employee profile.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyRequired"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeRequest"
+      responses:
+        "201":
+          description: Employee profile created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "200":
+          description: Idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    get:
+      operationId: listEmployees
+      description: Operator-only list of employee profiles.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/EngagementStatus"
+        - in: query
+          name: department
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Matching employees.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [employees]
+                properties:
+                  employees:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /workforce/employees/{actorId}:
+    get:
+      operationId: getEmployee
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+      responses:
+        "200":
+          description: Employee detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgentDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateEmployee
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmployeeRequest"
+      responses:
+        "200":
+          description: Updated employee profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /workforce/employees/{actorId}/suspend:
+    post:
+      operationId: suspendEmployee
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+      responses:
+        "200":
+          description: Employee suspended.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /workforce/employees/{actorId}/reactivate:
+    post:
+      operationId: reactivateEmployee
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusChangeRequest"
+      responses:
+        "200":
+          description: Employee reactivated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldAgent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /workforce/me:
     get:
       operationId: getMyWorkforceProfile
@@ -768,7 +961,7 @@ paths:
         - in: query
           name: kind
           schema:
-            $ref: "#/components/schemas/ProviderKind"
+            $ref: "#/components/schemas/WorkforceKind"
         - in: query
           name: q
           schema:
@@ -894,7 +1087,7 @@ components:
       enum: [pending_activation, active, suspended, terminated]
     EngagementType:
       type: string
-      enum: [independent_contractor, agency_contractor]
+      enum: [independent_contractor, employee]
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
@@ -1027,6 +1220,67 @@ components:
           type: string
         supervisorActorId:
           type: string
+    CreateEmployeeRequest:
+      type: object
+      additionalProperties: false
+      required: [fullNameAr, phoneE164, department, role, officeLocation]
+      properties:
+        fullNameAr:
+          type: string
+          minLength: 1
+        fullNameEn:
+          type: string
+        phoneE164:
+          type: string
+          minLength: 8
+          maxLength: 20
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+          format: date
+        photoMediaRef:
+          type: string
+        department:
+          type: string
+        role:
+          type: string
+        officeLocation:
+          type: string
+        supervisorActorId:
+          type: string
+        documentMediaRefs:
+          type: array
+          items:
+            type: string
+    UpdateEmployeeRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        fullNameAr:
+          type: string
+          minLength: 1
+        fullNameEn:
+          type: string
+        engagementType:
+          $ref: "#/components/schemas/EngagementType"
+        engagementStartDate:
+          type: string
+          format: date
+        photoMediaRef:
+          type: string
+        department:
+          type: string
+        role:
+          type: string
+        officeLocation:
+          type: string
+        supervisorActorId:
+          type: string
     StatusChangeRequest:
       type: object
       additionalProperties: false
@@ -1052,9 +1306,25 @@ components:
           enum: [ar, en]
         policyConsent:
           type: boolean
-    ProviderKind:
+    WorkforceKind:
       type: string
-      enum: [field, captain]
+      enum: [field, captain, employee]
+    EmployeeProfile:
+      type: object
+      required: [documentMediaRefs]
+      properties:
+        department:
+          type: string
+        role:
+          type: string
+        officeLocation:
+          type: string
+        supervisorActorId:
+          type: string
+        documentMediaRefs:
+          type: array
+          items:
+            type: string
     FieldProfile:
       type: object
       required: [documentMediaRefs]
@@ -1105,7 +1375,7 @@ components:
             type: string
     FieldAgent:
       type: object
-      required: [actorId, fullNameAr, providerCode, providerKind, engagementType, engagementStatus, version, createdAt, updatedAt]
+      required: [actorId, fullNameAr, workforceCode, workforceKind, engagementType, engagementStatus, version, createdAt, updatedAt]
       properties:
         actorId:
           type: string
@@ -1113,10 +1383,10 @@ components:
           type: string
         fullNameEn:
           type: string
-        providerCode:
+        workforceCode:
           type: string
-        providerKind:
-          $ref: "#/components/schemas/ProviderKind"
+        workforceKind:
+          $ref: "#/components/schemas/WorkforceKind"
         engagementType:
           $ref: "#/components/schemas/EngagementType"
         engagementStartDate:
@@ -1137,6 +1407,8 @@ components:
           $ref: "#/components/schemas/FieldProfile"
         captainProfile:
           $ref: "#/components/schemas/CaptainProfile"
+        employeeProfile:
+          $ref: "#/components/schemas/EmployeeProfile"
     FieldAgentDetail:
       allOf:
         - $ref: "#/components/schemas/FieldAgent"
@@ -1259,7 +1531,7 @@ components:
             - STATUS_NOT_ALLOWED
             - VERSION_CONFLICT
             - DUPLICATE_PHONE
-            - DUPLICATE_PROVIDER_CODE
+            - DUPLICATE_WORKFORCE_CODE
             - IDEMPOTENCY_CONFLICT
             - IDEMPOTENCY_KEY_REQUIRED
             - INVALID_REFERENCE_CODE
@@ -1270,7 +1542,7 @@ components:
             - INVALID_ACTOR_INPUT
             - IDENTITY_UNAVAILABLE
             - INVALID_SUPERVISOR
-            - PROVIDER_KIND_CONFLICT
+            - WORKFORCE_KIND_CONFLICT
             - WORKFORCE_NOT_READY
             - WORKFORCE_INTERNAL_ERROR
         message:

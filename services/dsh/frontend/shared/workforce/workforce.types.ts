@@ -5,8 +5,8 @@
 // Identity only and appear here masked.
 
 export type EngagementStatus = "pending_activation" | "active" | "suspended" | "terminated";
-export type EngagementType = "independent_contractor" | "agency_contractor";
-export type ProviderKind = "field" | "captain";
+export type EngagementType = "independent_contractor" | "employee";
+export type ProviderKind = "field" | "captain" | "employee";
 export type LicenseStatus = "missing" | "pending_review" | "valid" | "expired" | "rejected";
 
 export type WorkforceFieldProfile = {
@@ -33,12 +33,20 @@ export type WorkforceCaptainProfile = {
   readonly documentMediaRefs: readonly string[];
 };
 
+export type WorkforceEmployeeProfile = {
+  readonly department?: string;
+  readonly role?: string;
+  readonly officeLocation?: string;
+  readonly supervisorActorId?: string;
+  readonly documentMediaRefs: readonly string[];
+};
+
 export type FieldAgent = {
   readonly actorId: string;
   readonly fullNameAr: string;
   readonly fullNameEn?: string;
-  readonly providerCode: string;
-  readonly providerKind: ProviderKind;
+  readonly workforceCode: string;
+  readonly workforceKind: ProviderKind;
   readonly engagementType: EngagementType;
   readonly engagementStartDate?: string;
   readonly engagementStatus: EngagementStatus;
@@ -48,6 +56,7 @@ export type FieldAgent = {
   readonly updatedAt: string;
   readonly fieldProfile?: WorkforceFieldProfile;
   readonly captainProfile?: WorkforceCaptainProfile;
+  readonly employeeProfile?: WorkforceEmployeeProfile;
 };
 
 export type Captain = FieldAgent;
@@ -191,6 +200,7 @@ export type CaptainListFilter = FieldAgentListFilter;
 export const PROVIDER_KIND_LABEL_AR: Record<ProviderKind, string> = {
   field: "ميداني",
   captain: "كابتن",
+  employee: "موظف",
 };
 
 export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {
@@ -202,5 +212,5 @@ export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {
 
 export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
-  agency_contractor: "متعاقد عبر وكالة",
+  employee: "موظف رسمي",
 };

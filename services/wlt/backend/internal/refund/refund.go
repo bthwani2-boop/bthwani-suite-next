@@ -267,14 +267,14 @@ func HandleApproveRefund(db *sql.DB) http.HandlerFunc {
 
 func HandleCompleteRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		client, err := newProviderClient()
+		client, err := provider.NewDefaultPaymentProvider()
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
 		}
-		ref, err := CompleteRefundWithProvider(r.Context(), db, client, r.PathValue("refundId"), requestMeta(r, "wlt-refund"))
+		ref, err := CompleteRefundWithProvider(r.Context(), db, client, r.PathValue("refundId"), provider.RequestMetaFromHTTP(r, "wlt-refund"))
 		if err != nil {
-			sendProviderError(w, err)
+			shared.SendProviderError(w, err)
 			return
 		}
 		if ref == nil {
@@ -285,36 +285,7 @@ func HandleCompleteRefund(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func newProviderClient() (*provider.Client, error) {
-	config, err := provider.LoadConfig()
-	if err != nil {
-		return nil, err
-	}
-	return provider.NewClient(config), nil
-}
-
-func requestMeta(r *http.Request, prefix string) provider.RequestMeta {
-	meta := provider.NewRequestMeta(prefix)
-	if correlationID := r.Header.Get("X-Correlation-ID"); correlationID != "" {
-		meta.CorrelationID = correlationID
-	}
-	if idempotencyKey := r.Header.Get("Idempotency-Key"); idempotencyKey != "" {
-		meta.IdempotencyKey = idempotencyKey
-	}
-	return meta
-}
-
-func sendProviderError(w http.ResponseWriter, err error) {
-	if providerErr, ok := err.(provider.Error); ok {
-		message := providerErr.Message
-		if message == "" {
-			message = providerErr.Error()
-		}
-		shared.SendError(w, http.StatusBadGateway, "PROVIDER_ERROR", message)
-		return
-	}
-	shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-}
+// sendProviderError is handled by shared.SendProviderError.
 
 func HandleRejectRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

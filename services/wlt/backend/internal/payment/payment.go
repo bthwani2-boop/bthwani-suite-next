@@ -84,7 +84,7 @@ const selectCols = `
 	WHERE id = $1`
 
 func AuthorizeSession(db *sql.DB, sessionID string, amountMinorUnits int64, currency string) (*PaymentSession, error) {
-	client, err := newProviderClient()
+	client, err := provider.NewDefaultPaymentProvider()
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 }
 
 func CaptureSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	client, err := newProviderClient()
+	client, err := provider.NewDefaultPaymentProvider()
 	if err != nil {
 		return nil, err
 	}
@@ -241,36 +241,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 	return s, nil
 }
 
-func newProviderClient() (*provider.Client, error) {
-	config, err := provider.LoadConfig()
-	if err != nil {
-		return nil, err
-	}
-	return provider.NewClient(config), nil
-}
-
-func requestMeta(r *http.Request, prefix string) provider.RequestMeta {
-	meta := provider.NewRequestMeta(prefix)
-	if correlationID := r.Header.Get("X-Correlation-ID"); correlationID != "" {
-		meta.CorrelationID = correlationID
-	}
-	if idempotencyKey := r.Header.Get("Idempotency-Key"); idempotencyKey != "" {
-		meta.IdempotencyKey = idempotencyKey
-	}
-	return meta
-}
-
-func sendProviderError(w http.ResponseWriter, err error) {
-	if providerErr, ok := err.(provider.Error); ok {
-		message := providerErr.Message
-		if message == "" {
-			message = providerErr.Error()
-		}
-		shared.SendError(w, http.StatusBadGateway, "PROVIDER_ERROR", message)
-		return
-	}
-	shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-}
+// sendProviderError is handled by shared.SendProviderError.
 
 func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	if sessionID == "" {
@@ -356,14 +327,14 @@ func HandleAuthorizeSession(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		client, err := newProviderClient()
+		client, err := provider.NewDefaultPaymentProvider()
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
 		}
-		session, err := AuthorizeSessionWithProvider(r.Context(), db, client, sessionID, input.AmountMinorUnits, input.Currency, requestMeta(r, "wlt-authorize"))
+		session, err := AuthorizeSessionWithProvider(r.Context(), db, client, sessionID, input.AmountMinorUnits, input.Currency, provider.RequestMetaFromHTTP(r, "wlt-authorize"))
 		if err != nil {
-			sendProviderError(w, err)
+			shared.SendProviderError(w, err)
 			return
 		}
 		if session == nil {
@@ -376,14 +347,14 @@ func HandleAuthorizeSession(db *sql.DB) http.HandlerFunc {
 
 func HandleCaptureSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		client, err := newProviderClient()
+		client, err := provider.NewDefaultPaymentProvider()
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
 		}
-		session, err := CaptureSessionWithProvider(r.Context(), db, client, r.PathValue("paymentSessionId"), requestMeta(r, "wlt-capture"))
+		session, err := CaptureSessionWithProvider(r.Context(), db, client, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))
 		if err != nil {
-			sendProviderError(w, err)
+			shared.SendProviderError(w, err)
 			return
 		}
 		if session == nil {

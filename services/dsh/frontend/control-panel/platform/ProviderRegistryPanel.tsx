@@ -28,10 +28,41 @@ const HEALTH_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
   degraded: "warning",
   down: "danger",
   unknown: "neutral",
+  not_configured: "neutral",
 };
 
+import React, { useEffect, useState } from "react";
+
 export function ProviderRegistryPanel() {
-  const providers = PLATFORM_PROVIDER_REGISTRY.map(toProviderVisibleFields);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [health, setHealth] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+    const headers = token ? { "Authorization": `Bearer ${token}` } : undefined;
+
+    Promise.all([
+      fetch("http://localhost:8087/providers", { headers }).then(r => r.ok ? r.json() : []),
+      fetch("http://localhost:8087/providers/health", { headers }).then(r => r.ok ? r.json() : { providers: [] })
+    ])
+      .then(([providersData, healthData]) => {
+        if (Array.isArray(providersData) && providersData.length > 0) {
+          setProviders(providersData);
+        } else {
+          setProviders(PLATFORM_PROVIDER_REGISTRY.map(toProviderVisibleFields));
+        }
+        if (healthData && Array.isArray(healthData.providers)) {
+          setHealth(healthData.providers);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setProviders(PLATFORM_PROVIDER_REGISTRY.map(toProviderVisibleFields));
+        setLoading(false);
+      });
+  }, []);
+
   const mapsProvider = providers.find((p) => p.kind === "maps");
 
   return (
@@ -47,25 +78,39 @@ export function ProviderRegistryPanel() {
 
       <View style={styles.section}>
         <Text role="titleSm">جميع المزودين</Text>
-        <DataTable<ProviderVisibleFields & Record<string, unknown>>
+        <DataTable<any>
           columns={[
-            { key: "label", header: "المزود", render: (row) => row.label },
+            { key: "providerId", header: "المعرّف", render: (row) => row.providerId || row.id },
+            { key: "code", header: "المزود", render: (row) => row.code || row.label },
             { key: "kind", header: "النوع", render: (row) => row.kind },
             {
               key: "status",
               header: "الحالة",
-              render: (row) => <Badge label={row.status as string} tone={STATUS_TONE[row.status as string] ?? "neutral"} />,
+              render: (row) => {
+                const status = row.active !== undefined ? (row.active ? "active" : "inactive") : row.status;
+                return <Badge label={status as string} tone={STATUS_TONE[status as string] ?? "neutral"} />;
+              },
             },
             {
               key: "lastHealthStatus",
               header: "الصحة",
-              render: (row) => <Badge label={row.lastHealthStatus as string} tone={HEALTH_TONE[row.lastHealthStatus as string] ?? "neutral"} />,
+              render: (row) => {
+                const h = health.find(item => item.kind === row.kind);
+                const healthStatus = h ? h.status : (row.lastHealthStatus || "unknown");
+                return <Badge label={healthStatus as string} tone={HEALTH_TONE[healthStatus as string] ?? "neutral"} />;
+              },
             },
-            { key: "environment", header: "البيئة", render: (row) => row.environment },
-            { key: "maskedCredential", header: "المعرّف المُقنَّع", render: (row) => (row.maskedCredential as string | null) ?? "—" },
+            {
+              key: "message",
+              header: "تفاصيل الصحة",
+              render: (row) => {
+                const h = health.find(item => item.kind === row.kind);
+                return h?.message || "—";
+              }
+            }
           ]}
-          rows={providers as (ProviderVisibleFields & Record<string, unknown>)[]}
-          getRowKey={(row) => row.id as string}
+          rows={providers}
+          getRowKey={(row) => (row.providerId || row.id) as string}
         />
       </View>
 

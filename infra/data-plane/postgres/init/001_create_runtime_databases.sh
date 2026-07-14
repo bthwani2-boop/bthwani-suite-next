@@ -23,6 +23,10 @@ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'workforce_runtime') THEN
     CREATE ROLE workforce_runtime LOGIN PASSWORD 'workforce_runtime_password';
   END IF;
+
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'providers_runtime') THEN
+    CREATE ROLE providers_runtime LOGIN PASSWORD 'providers_runtime_password';
+  END IF;
 END
 $$;
 
@@ -40,4 +44,7 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'wlt_runtime')\gexec
 
 SELECT 'CREATE DATABASE workforce_runtime OWNER workforce_runtime'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'workforce_runtime')\gexec
+
+SELECT 'CREATE DATABASE providers_runtime OWNER providers_runtime'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'providers_runtime')\gexec
 SQL

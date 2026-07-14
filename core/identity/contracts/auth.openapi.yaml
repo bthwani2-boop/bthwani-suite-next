@@ -51,6 +51,26 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /auth/otp/request:
+    post:
+      operationId: requestOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpRequest"
+      responses:
+        "200":
+          description: One-time activation code/OTP issued successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueActivationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /auth/activate:
     post:
       operationId: activateActor
@@ -135,6 +155,53 @@ paths:
                 $ref: "#/components/schemas/ActorIdentity"
         "400":
           $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /auth/sessions:
+    get:
+      operationId: listSessions
+      summary: List all active sessions for the current authenticated actor.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionInfo"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /auth/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      summary: Revoke a specific session for the current actor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Session revoked.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /auth/account:
+    delete:
+      operationId: deleteAccount
+      summary: Anonymize/delete the current actor's account and queue outbox event.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Account deleted.
         "401":
           $ref: "#/components/responses/Unauthenticated"
   /internal/actors/provision:
@@ -441,7 +508,7 @@ components:
       properties:
         actorType:
           type: string
-          enum: [field, captain]
+          enum: [field, captain, client, partner]
         phone:
           type: string
           minLength: 8
@@ -622,4 +689,31 @@ components:
           format: date-time
         maskedPhone:
           type: string
+    OtpRequest:
+      type: object
+      additionalProperties: false
+      required: [phone, actorType]
+      properties:
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 20
+        actorType:
+          type: string
+          enum: [field, captain, client, partner]
+    SessionInfo:
+      type: object
+      additionalProperties: false
+      required: [sessionId, deviceFingerprint, createdAt, expiresAt]
+      properties:
+        sessionId:
+          type: string
+        deviceFingerprint:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
 
