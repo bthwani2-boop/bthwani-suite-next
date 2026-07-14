@@ -63,6 +63,12 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   const [proposeNameEn, setProposeNameEn] = React.useState('');
   const [proposeBrand, setProposeBrand] = React.useState('');
   const [proposeError, setProposeError] = React.useState<string | undefined>(undefined);
+  // The proposal form's domain/node choice is intentionally decoupled from
+  // selectedDomainId/selectedNodeId (which drive browsing/search below). The
+  // proposal form must start with no domain selected and force an explicit
+  // choice — it must never inherit the auto-selected browsing domain.
+  const [proposeDomainId, setProposeDomainId] = React.useState('');
+  const [proposeNodeId, setProposeNodeId] = React.useState('');
 
   React.useEffect(() => {
     if (taxonomyState.kind === 'success' && !selectedDomainId) {
@@ -116,19 +122,23 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       setProposeError('اسم المنتج مطلوب لإرسال الاقتراح');
       return;
     }
-    setProposeError(undefined);
-
-    const domainId = selectedDomainId;
-    if (!domainId) {
-      setProposeError('لا يوجد تصنيف متاح حالياً لإرسال الاقتراح');
+    if (!proposeDomainId) {
+      setProposeError('اختر القسم أولاً');
       return;
     }
+    setProposeError(undefined);
+
+    // Only send a node that actually belongs to the chosen proposal domain —
+    // proposeNodes is already filtered to that domain, but this guards
+    // against a stale proposeNodeId surviving a domain switch.
+    const matchedNode = proposeNodes.find((node) => node.id === proposeNodeId);
+    const categoryNodeId = matchedNode && matchedNode.domainId === proposeDomainId ? matchedNode.id : null;
 
     const proposal = await proposeNewProduct({
       proposedNameAr: proposeNameAr.trim(),
       proposedNameEn: proposeNameEn.trim(),
-      domainId,
-      categoryNodeId: selectedNodeId || null,
+      domainId: proposeDomainId,
+      categoryNodeId,
       brand: proposeBrand.trim(),
       barcode: null,
     });
@@ -136,6 +146,8 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       setProposeNameAr('');
       setProposeNameEn('');
       setProposeBrand('');
+      setProposeDomainId('');
+      setProposeNodeId('');
       setShowProposeForm(false);
     }
   };
@@ -150,6 +162,13 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   const masterProducts = masterProductsState.kind === 'success' ? masterProductsState.items : [];
   const visibleNodes = taxonomyState.kind === 'success'
     ? taxonomyState.nodes.filter((node) => node.domainId === selectedDomainId && node.isActive)
+    : [];
+  const activeDomains = taxonomyState.kind === 'success' ? taxonomyState.domains.filter((d) => d.isActive) : [];
+  // Nodes offered by the proposal form's own node picker — scoped to
+  // proposeDomainId (not selectedDomainId), so it never leaks a node from a
+  // different domain than the one the proposal will actually submit.
+  const proposeNodes = taxonomyState.kind === 'success'
+    ? taxonomyState.nodes.filter((node) => node.domainId === proposeDomainId && node.isActive)
     : [];
 
   return (
@@ -354,6 +373,50 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
               <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
                 يُرسل الاقتراح لمراجعة قسم الكتالوج ولا يمكن إضافته للمتجر مباشرة قبل اعتماده.
               </Text>
+
+              <Text role="bodyStrong" style={{ textAlign: 'right' }}>القسم *</Text>
+              <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
+                {activeDomains.map((domain) => (
+                  <Button
+                    key={domain.id}
+                    label={domain.nameAr}
+                    tone={proposeDomainId === domain.id ? 'primary' : 'ghost'}
+                    onPress={() => {
+                      setProposeDomainId(domain.id);
+                      setProposeNodeId('');
+                      if (domain.id) setProposeError(undefined);
+                    }}
+                  />
+                ))}
+              </View>
+
+              {proposeDomainId && proposeNodes.length > 0 && (
+                <>
+                  <Text role="bodyStrong" style={{ textAlign: 'right' }}>الفئة (اختياري)</Text>
+                  <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
+                    <Button
+                      label="بدون فئة محددة"
+                      tone={proposeNodeId ? 'ghost' : 'primary'}
+                      onPress={() => setProposeNodeId('')}
+                    />
+                    {proposeNodes.map((node) => (
+                      <Button
+                        key={node.id}
+                        label={node.nameAr}
+                        tone={proposeNodeId === node.id ? 'primary' : 'ghost'}
+                        onPress={() => setProposeNodeId(node.id)}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {proposeError && (
+                <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>
+                  {proposeError}
+                </Text>
+              )}
+
               <TextField
                 label="اسم المنتج (عربي)"
                 value={proposeNameAr}
@@ -361,7 +424,6 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                   setProposeNameAr(val);
                   if (val.trim()) setProposeError(undefined);
                 }}
-                {...(proposeError ? { error: proposeError } : {})}
                 placeholder="مثال: برجر دجاج كلاسيك"
               />
               <TextField
