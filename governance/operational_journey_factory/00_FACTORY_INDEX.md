@@ -19,25 +19,16 @@ This factory exists before journey execution. It forces every future journey to 
 - Classify every app, surface, section, tab, screen, page, route, backend route, API operation, database truth, generated client, shared controller, view model, adapter, permission, state, icon, label, action, test, guard, workflow, export, helper, runtime binding, and cleanup candidate.
 - Block journey start when any required item lacks owner, path, classification, required action, proof source, verification command, decision, status, or blocker type.
 
-## Template List
+## Schema List
 
 1. `01_TOTAL_DISCOVERY_PROTOCOL.md`
-2. `02_ATOMIC_SCOPE_TEMPLATE.md`
-3. `03_ATOMIC_FILE_DECISION_TEMPLATE.md`
-4. `04_SURFACE_TEMPLATE.md`
-5. `05_FEATURE_TEMPLATE.md`
-6. `06_BACKEND_API_DATABASE_TEMPLATE.md`
-7. `07_FRONTEND_BINDING_TEMPLATE.md`
-8. `08_UI_ICON_COMPONENT_TEMPLATE.md`
-9. `09_PERMISSION_STATE_AUDIT_TEMPLATE.md`
-10. `10_RUNTIME_DOCKER_ENV_TEMPLATE.md`
-11. `11_TOOLCHAIN_EXECUTION_TEMPLATE.md`
-12. `12_CLEANUP_MOVE_MERGE_DELETE_TEMPLATE.md`
-13. `13_EVIDENCE_AND_CLOSURE_TEMPLATE.md`
-14. `14_JOURNEY_TEMPLATE_MASTER.md`
-15. `15_GAP_LEDGER_TEMPLATE.md`
-16. `16_TEMPLATE_FILLING_RULES.md`
-17. `17_GENERATOR_OUTPUT_POLICY.md`
+2. `01_EXECUTION_LEDGER_SCHEMA.md`
+3. `02_VERIFICATION_CLOSURE_SCHEMA.md`
+4. `03_RUNTIME_EVIDENCE_INDEX_SCHEMA.md`
+5. `14_JOURNEY_TEMPLATE_MASTER.md`
+6. `17_GENERATOR_OUTPUT_POLICY.md`
+
+> **Note:** The old 17 templates have been moved to `legacy_templates/` and are no longer required.
 
 ## Generator List
 

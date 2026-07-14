@@ -14,6 +14,8 @@
 
 ## 17) matrices إلزامية — تابع
 
+> قاعدة: A matrix is a logical section, not necessarily a physical file.
+
 ### 17.5) backend_layer_matrix
 
 ```yaml
@@ -429,4 +431,33 @@ error_semantics_alignment_matrix:
     surface_state:
     retry_allowed:
     result:
+```
+
+```yaml
+object_authorization_record:
+  actor:
+  action:
+  entity:
+  ownership_scope:
+  frontend_visibility:
+  backend_enforcement:
+  forbidden_case_test:
+  unauthenticated_case_test:
+  audit_event:
+  result:
+```
+
+```yaml
+financial_operation_integrity:
+  sovereign_owner:
+  operation:
+  amount_currency_precision:
+  idempotency_key:
+  duplicate_request_behavior:
+  callback_deduplication:
+  transaction_boundary:
+  audit_event:
+  compensation_or_reversal:
+  readback:
+  result:
 ```

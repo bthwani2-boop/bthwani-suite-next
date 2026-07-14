@@ -430,17 +430,3 @@ ledger.gap_count = ledger.gaps.length;
 
 fs.writeFileSync(path.join(outDir, "gap-ledger.json"), JSON.stringify(ledger, null, 2), "utf8");
 
-const lines = [];
-lines.push("# Operational Gap Ledger");
-lines.push("");
-lines.push(`head_sha: \`${ledger.head_sha}\``);
-lines.push("status: `DISCOVERY_ONLY`");
-lines.push("");
-lines.push("| gap_id | source_tool | path | type | owner | risk_level | required_action | allowed_decision | verification_commands | status | blocks_journey_start |");
-lines.push("|---|---|---|---|---|---|---|---|---|---|---:|");
-for (const item of gaps) {
-  lines.push(`| \`${item.gap_id}\` | ${item.source_tool} | \`${item.path}\` | ${item.type} | ${item.owner} | ${item.risk_level} | ${item.required_action} | ${item.allowed_decision} | \`${item.verification_commands.join("; ")}\` | ${item.status} | ${item.blocks_journey_start} |`);
-}
-
-fs.writeFileSync(path.join(outDir, "gap-ledger.md"), lines.join("\n"), "utf8");
-console.log("Operational gap ledger written to .diagnostics/operational-journey-factory");

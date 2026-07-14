@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { repoRoot, isExcluded, toPosix } from "../guards/_guard-utils.mjs";
@@ -173,29 +173,5 @@ const inventory = {
 
 fs.writeFileSync(path.join(outDir, "journey-inventory.json"), JSON.stringify(inventory, null, 2), "utf8");
 
-const lines = [];
-lines.push("# Operational Journey Inventory");
-lines.push("");
-lines.push(`head_sha: \`${inventory.head_sha}\``);
-lines.push("status: `DISCOVERY_ONLY`");
-lines.push("");
-lines.push("## Source Files");
-for (const [key, value] of Object.entries(inventory.source_files)) {
-  lines.push(`- ${key}: \`${value.path}\` exists=${value.exists}`);
-}
-lines.push("");
-lines.push("## Counts");
-lines.push(`- OpenAPI files: ${openapiFiles.length}`);
-lines.push(`- generated clients: ${generatedClients.length}`);
-lines.push(`- backend route candidates: ${backendRoutes.length}`);
-lines.push(`- frontend surface candidates: ${frontendSurfaces.length}`);
-lines.push(`- proposed smart journey groups: ${inventory.proposed_journey_groups.length}`);
-lines.push(`- proposed unfilled journeys: ${proposedJourneys.length}`);
-lines.push("");
-lines.push("## Smart Segmentation Policy");
-lines.push("- Unit: business outcome across full-stack multi-surface scope.");
-lines.push("- Single-surface journey is allowed only with verified exclusion evidence.");
-lines.push("- Groups are proposals only and do not declare readiness.");
 
-fs.writeFileSync(path.join(outDir, "journey-inventory.md"), lines.join("\n"), "utf8");
 console.log("Operational journey inventory written to .diagnostics/operational-journey-factory");

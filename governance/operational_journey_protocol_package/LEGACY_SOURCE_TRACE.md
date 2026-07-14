@@ -45,6 +45,36 @@ legacy_sources:
     reason: >
       جميع البنود المفيدة وحراس التشغيل والأدلة تم حصدها ودمجها بالكامل داخل الحزمة،
       والحراس القديمة موحّدة وتعمل الآن عبر بوابات البنية والمسارات الحية.
+
+  rule_harvest_decisions:
+    - GENERALIZE_AND_MERGE
+    - ALREADY_COVERED
+    - KEEP_AS_NON_GOVERNING_EXAMPLE
+    - REJECT_STALE_OR_CONFLICTING
+    - BLOCKED_SOURCE_NOT_AVAILABLE
+
+source_deletion_readiness_gate:
+  source_files_discovered:
+  source_files_read:
+  total_source_rules:
+  generalized_and_merged:
+  already_covered:
+  rejected_with_reason:
+  blocked_unreadable:
+  unique_unmapped_rules:
+  unresolved_conflicts:
+  hardcoded_ref_values_in_package:
+  package_cross_reference_failures:
+  package_self_contained:
+  final_status:
+
+  # لا يسمح بالحذف إلا عندما:
+  # blocked_unreadable = 0
+  # unique_unmapped_rules = 0
+  # unresolved_conflicts = 0
+  # hardcoded_ref_values_in_package = 0
+  # package_cross_reference_failures = 0
+  # package_self_contained = true
 ```
 
 ---

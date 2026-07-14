@@ -217,20 +217,3 @@ const inventory = {
 
 fs.writeFileSync(path.join(outDir, "surface-inventory.json"), JSON.stringify(inventory, null, 2), "utf8");
 
-const lines = [];
-lines.push("# Operational Surface Inventory");
-lines.push("");
-lines.push(`head_sha: \`${inventory.head_sha}\``);
-lines.push("status: `DISCOVERY_ONLY`");
-lines.push("");
-lines.push("| Kind | Surface | Files | Screens | Pages | Routes | Direct API signs | Local logic candidates | UI/action candidates | State candidates |");
-lines.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
-for (const surface of inventory.surfaces) {
-  lines.push(`| ${surface.kind} | \`${surface.surface}\` | ${surface.files} | ${surface.screens.length} | ${surface.pages.length} | ${surface.route_bindings.length} | ${surface.direct_api_signs.length} | ${surface.local_business_logic_candidates.length} | ${surface.icons_components_actions_candidates} | ${surface.states_candidates} |`);
-}
-lines.push("");
-lines.push("## Missing Required UI Surfaces");
-for (const surface of missingRequiredSurfaces) lines.push(`- ${surface}`);
-
-fs.writeFileSync(path.join(outDir, "surface-inventory.md"), lines.join("\n"), "utf8");
-console.log("Operational surface inventory written to .diagnostics/operational-journey-factory");

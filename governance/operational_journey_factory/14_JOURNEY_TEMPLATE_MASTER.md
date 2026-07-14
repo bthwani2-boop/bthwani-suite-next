@@ -2,21 +2,11 @@
 
 This master template is used later to create real journey packages. It must not be manually filled before generated inventories and the gap ledger exist.
 
-## Required Imports
+## Execution Ledger Sections
 
-- Atomic scope: `02_ATOMIC_SCOPE_TEMPLATE.md`
-- File decisions: `03_ATOMIC_FILE_DECISION_TEMPLATE.md`
-- Surface inventory: `04_SURFACE_TEMPLATE.md`
-- Feature inventory: `05_FEATURE_TEMPLATE.md`
-- Backend/API/database: `06_BACKEND_API_DATABASE_TEMPLATE.md`
-- Frontend binding: `07_FRONTEND_BINDING_TEMPLATE.md`
-- UI/icon/component: `08_UI_ICON_COMPONENT_TEMPLATE.md`
-- Permission/state/audit: `09_PERMISSION_STATE_AUDIT_TEMPLATE.md`
-- Runtime/docker/env: `10_RUNTIME_DOCKER_ENV_TEMPLATE.md`
-- Toolchain: `11_TOOLCHAIN_EXECUTION_TEMPLATE.md`
-- Cleanup: `12_CLEANUP_MOVE_MERGE_DELETE_TEMPLATE.md`
-- Evidence/closure: `13_EVIDENCE_AND_CLOSURE_TEMPLATE.md`
-- Gap ledger: `15_GAP_LEDGER_TEMPLATE.md`
+All legacy sections (Atomic scope, Surface inventory, Feature inventory, Frontend binding, Backend/API, Runtime, Cleanup, etc.) must now be imported directly into `01_EXECUTION_LEDGER.yaml` as sections. Do not create one file per section.
+
+Journey output owns the files. Each surface is a section inside the journey ledger. Maximum 3 files for the scope.
 
 ## Journey Start Gate
 

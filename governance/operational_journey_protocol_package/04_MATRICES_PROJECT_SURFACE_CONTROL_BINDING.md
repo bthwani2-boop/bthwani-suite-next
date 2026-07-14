@@ -14,6 +14,8 @@
 
 ## 17) matrices إلزامية
 
+> قاعدة: A matrix is a logical section, not necessarily a physical file.
+
 أي رحلة لا تحتوي matrices التالية تصنف `FIX_REQUIRED`:
 
 ```text
@@ -726,3 +728,23 @@ orphan_backend_capability_matrix:
 ```
 
 > قاعدة: أي زر بلا endpoint صالح، أو endpoint داخل النطاق بلا مستهلك حي أو غرض موثق، يصنف FIX_REQUIRED.
+
+```yaml
+interactive_control_binding_record:
+  control:
+  surface:
+  user_intent:
+  handler:
+  shared_owner:
+  generated_client:
+  contract_operation:
+  backend_effect:
+  permission:
+  disabled_state:
+  loading_state:
+  duplicate_submission_protection:
+  failure_state:
+  state_readback:
+  runtime_proof:
+  final_status:
+```

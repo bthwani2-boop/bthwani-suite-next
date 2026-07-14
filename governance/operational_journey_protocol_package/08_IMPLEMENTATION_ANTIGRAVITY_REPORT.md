@@ -38,6 +38,20 @@
 حالات الواجهة المطلوب تغطيتها عند العلاقة:
 `loading` | `empty` | `error` | `success` | `blocked` | `disabled` | `retry` | `offline` | `forbidden` | `not_found` | `conflict` | `invalid_transition`.
 
+### 23.1) حلقة التنفيذ المستمرة (Continuous Remediation Loop)
+
+```text
+Discover
+→ Classify
+→ Trace Root Cause
+→ Fix Live Code
+→ Run Targeted Verification
+→ Reconcile
+→ Reinventory
+→ Repeat
+```
+
+التوقف لا يكون إلا عند `remaining_internal_gaps = 0` أو بقاء blockers خارجية مثبتة فقط.
 ---
 
 ## 26) Antigravity Command Output Standard
@@ -153,49 +167,15 @@ antigravity_command:
 
 ```yaml
 result:
-task_mode:
-ref: <REF>
-base_ref:
-local_branch: <LOCAL_BRANCH>
 resolved_commit_sha:
-journey_or_topic:
-final_decision_reason:
 scope:
-out_of_scope:
-topic_definition:
-ref_resolution_gate:
-remote_evidence_reviewed:
-legacy_sources_harvested:
-  - tools/plan/command_operational_journey_unified: deleted_and_harvested
-  - tools/plan/command_old_new: deleted_and_harvested
-self_containment_status: PASS
-internal_reference_integrity_status: PASS
-human_change_control_status:
-project_area_matrix:
-ssot_status:
-publishability_visibility_status:
-auth_permission_status:
-what_is_correct:
-what_is_wrong:
-what_is_missing:
-files_changed:
-files_rebuilt_from_legacy_history:
-files_not_restored_as_active:
-donor_value_used:
-donor_value_rejected:
-backend_api_database_status:
-dsh_shared_ownership_status:
-wlt_for_dsh_boundary_status:
-ui_surfaces_status:
-control_panel_sections_status:
-runtime_status:
-guards_status:
-tests_status:
-ci_status:
-evidence_status:
-merge_decision:
-remaining_blockers: []
-next_required_action:
+affected_surfaces:
+code_changes:
+fixed_gaps:
+verification:
+remaining_external_blockers:
+numeric_gate:
+final_decision:
 ```
 
 صيغة كل blocker نهائي:

@@ -102,6 +102,15 @@ legacy_harvest_matrix:
         - "منع القفز/التجاهل أثناء كتابة خطط التنفيذ (مدمج في 10)"
         - "قواعد cleanup-policy و UI-kit boundary (مدمجة في 10)"
   operational_use_of_legacy_files_allowed: false
+  rule_harvest_decisions:
+    - GENERALIZE_AND_MERGE
+    - ALREADY_COVERED
+    - KEEP_AS_NON_GOVERNING_EXAMPLE
+    - REJECT_STALE_OR_CONFLICTING
+    - BLOCKED_SOURCE_NOT_AVAILABLE
+
+> قاعدة حاكمة إضافية: لا يجوز ترحيل قاعدة تاريخية حرفيًا.
+> يجب إزالة أسماء الفروع والتواريخ والمراحل والأرقام الاعتباطية والمسارات المحلية.
 ```
 
 ---

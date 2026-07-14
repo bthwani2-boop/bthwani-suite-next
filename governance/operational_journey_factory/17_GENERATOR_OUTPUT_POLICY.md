@@ -6,5 +6,6 @@
 - Every generated output must contain `head_sha`.
 - Stale generated output is invalid.
 - Generated outputs do not declare journey readiness.
-- Outputs are used later to fill templates from evidence, not from opinion.
-- The committed factory contains templates, scripts, guard, package bindings, registry bindings, and `.gitkeep` only.
+- Outputs are used later to fill the 3 unified schemas (`01_EXECUTION_LEDGER`, `02_VERIFICATION_CLOSURE`, `03_RUNTIME_EVIDENCE_INDEX`), not from opinion.
+- Maximum committed output files per journey is 3. Fragmenting outputs into many files is strictly prohibited.
+- The committed factory contains templates, schemas, scripts, guard, package bindings, registry bindings, and `.gitkeep` only.

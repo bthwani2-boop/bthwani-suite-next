@@ -268,6 +268,20 @@ missing_item:
 
 ---
 
+## 9.1) بوابة جودة القاعدة العامة
+
+```yaml
+general_rule_quality_gate:
+  ref_neutral: required
+  journey_neutral: required
+  measurable: required
+  failure_result_defined: required
+  owner_defined_when_applicable: required
+  verification_defined: required
+  no_historical_runtime_claims: required
+  no_duplicate_rule: required
+```
+
 ## 10) مزامنة المحلي عند التنفيذ فقط
 
 لا تزامن المحلي إلا عند الحاجة لتنفيذ تعديل محلي.

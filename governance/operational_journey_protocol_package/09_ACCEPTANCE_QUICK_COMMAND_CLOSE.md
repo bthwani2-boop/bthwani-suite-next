@@ -14,6 +14,15 @@
 
 ## 28) معيار القبول النهائي
 
+```yaml
+live_code_closure_gate:
+  docs_only_changes_allowed_for_closure: false
+  governance_only_changes_allowed_for_closure: false
+  diagnostics_only_changes_allowed_for_closure: false
+  checklist_only_changes_allowed_for_closure: false
+  generated_output_only_changes_allowed_for_closure: false
+```
+
 لا يوجد قبول نهائي إلا إذا تحقق الآتي داخل النطاق:
 
 - كل منطق في مالكه الصحيح.
@@ -117,6 +126,17 @@ frontend_backend_acceptance_gate:
   generated_client_drift: 0
   untraced_contract_fields: 0
   unverified_runtime_bindings: 0
+```
+
+```yaml
+numeric_closure:
+  unbound_controls: 0
+  contract_mismatches: 0
+  permission_mismatches: 0
+  failed_required_checks: 0
+  unresolved_internal_gaps: 0
+  duplicate_truth_owners: 0
+  runtime_journeys_unverified: 0
 ```
 
 > قاعدة: لا يسمح بـIMPLEMENTATION_PASS إلا عند تحققها كلها.

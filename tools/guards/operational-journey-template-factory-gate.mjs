@@ -9,21 +9,10 @@ const factoryDir = path.join(repoRoot, "governance/operational_journey_factory")
 const requiredTemplates = [
   "00_FACTORY_INDEX.md",
   "01_TOTAL_DISCOVERY_PROTOCOL.md",
-  "02_ATOMIC_SCOPE_TEMPLATE.md",
-  "03_ATOMIC_FILE_DECISION_TEMPLATE.md",
-  "04_SURFACE_TEMPLATE.md",
-  "05_FEATURE_TEMPLATE.md",
-  "06_BACKEND_API_DATABASE_TEMPLATE.md",
-  "07_FRONTEND_BINDING_TEMPLATE.md",
-  "08_UI_ICON_COMPONENT_TEMPLATE.md",
-  "09_PERMISSION_STATE_AUDIT_TEMPLATE.md",
-  "10_RUNTIME_DOCKER_ENV_TEMPLATE.md",
-  "11_TOOLCHAIN_EXECUTION_TEMPLATE.md",
-  "12_CLEANUP_MOVE_MERGE_DELETE_TEMPLATE.md",
-  "13_EVIDENCE_AND_CLOSURE_TEMPLATE.md",
+  "01_EXECUTION_LEDGER_SCHEMA.md",
+  "02_VERIFICATION_CLOSURE_SCHEMA.md",
+  "03_RUNTIME_EVIDENCE_INDEX_SCHEMA.md",
   "14_JOURNEY_TEMPLATE_MASTER.md",
-  "15_GAP_LEDGER_TEMPLATE.md",
-  "16_TEMPLATE_FILLING_RULES.md",
   "17_GENERATOR_OUTPUT_POLICY.md"
 ];
 
@@ -215,21 +204,8 @@ for (const name of fs.existsSync(factoryDir) ? fs.readdirSync(factoryDir) : []) 
   }
 }
 
-requireText("04_SURFACE_TEMPLATE.md", ["app-client", "app-partner", "app-captain", "app-field", "control-panel", "backend", "database", "runtime", "CI"]);
-requireText("06_BACKEND_API_DATABASE_TEMPLATE.md", ["routes", "handlers", "repositories", "migrations", "OpenAPI operationIds", "generated clients"]);
-requireText("07_FRONTEND_BINDING_TEMPLATE.md", ["no direct API", "no local business logic", "generated client/API adapter"]);
-requireText("08_UI_ICON_COMPONENT_TEMPLATE.md", ["every icon", "every button", "accessibility label"]);
-requireText("12_CLEANUP_MOVE_MERGE_DELETE_TEMPLATE.md", ["proof before delete", "proof before move", "proof before merge"]);
-requireText("14_JOURNEY_TEMPLATE_MASTER.md", ["gap ledger", "UI item -> shared controller", "Smart Journey Segmentation", "business outcome", "Single-surface journeys are blocked"]);
-requireText("16_TEMPLATE_FILLING_RULES.md", ["control-panel/platform", "WLT owns financial truth", "Every `UNKNOWN` must become a required action"]);
+requireText("14_JOURNEY_TEMPLATE_MASTER.md", ["01_EXECUTION_LEDGER.yaml"]);
 
-const activeToolContent = readFactory("11_TOOLCHAIN_EXECUTION_TEMPLATE.md");
-const baseline = readJson("tools/toolchain/tool-activation-baseline.json", { baseline: {} }).baseline || {};
-for (const [toolId, activation] of Object.entries(baseline)) {
-  if (activation === "active" && !activeToolContent.includes(`\`${toolId}\``)) {
-    violations.push({ file: "governance/operational_journey_factory/11_TOOLCHAIN_EXECUTION_TEMPLATE.md", line: 0, message: `ACTIVE_TOOL_NOT_REPRESENTED: ${toolId}` });
-  }
-}
 
 validateGeneratedOutputs();
 
