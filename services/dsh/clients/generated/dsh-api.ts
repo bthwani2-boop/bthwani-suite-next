@@ -3069,6 +3069,80 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        DshCatalogAssetListResponse: {
+            assets: components["schemas"]["DshCatalogAsset"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        DshMasterProduct: {
+            id: string;
+            domainId: string;
+            categoryNodeId?: string | null;
+            canonicalNameAr: string;
+            canonicalNameEn: string;
+            brand: string;
+            barcode?: string | null;
+            gtin?: string | null;
+            sku?: string | null;
+            unit: string;
+            measurementType: string;
+            canonicalImageObjectKey?: string | null;
+            /** @enum {string} */
+            approvalStatus: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+            isActive: boolean;
+            duplicateGroupId?: string | null;
+            createdSource: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshMasterProductListResponse: {
+            masterProducts: components["schemas"]["DshMasterProduct"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        DshProductProposal: {
+            id: string;
+            proposedNameAr: string;
+            proposedNameEn: string;
+            domainId: string;
+            categoryNodeId?: string | null;
+            brand: string;
+            barcode?: string | null;
+            imageObjectKey?: string | null;
+            /** @enum {string} */
+            sourceSurface: "app-field" | "app-partner" | "control-panel-catalog" | "control-panel-platform";
+            sourceActorId: string;
+            sourceStoreId?: string | null;
+            /** @enum {string} */
+            status: "catalog-draft" | "partner-proposed" | "partner-review" | "marketing-review" | "catalog-adopted" | "catalog-approved" | "client-visible" | "needs-fix" | "rejected";
+            reviewNote: string;
+            adoptedMasterProductId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            reviewStage: string;
+            partnerReviewedBy?: string | null;
+            marketingReviewedBy?: string | null;
+            catalogAdoptedBy?: string | null;
+            catalogApprovedBy?: string | null;
+            /** Format: date-time */
+            clientVisibleAt?: string | null;
+            auditRequired: boolean;
+            blockedReason?: string | null;
+            resubmissionCount: number;
+            linkedStoreId?: string | null;
+        };
+        DshProductProposalListResponse: {
+            proposals: components["schemas"]["DshProductProposal"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
         DshReel: {
             id: string;
             assetId: string;
@@ -5295,7 +5369,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DshMasterProductListResponse"];
+                };
             };
         };
     };
@@ -5357,6 +5433,8 @@ export interface operations {
             query?: {
                 status?: string;
                 storeId?: string;
+                limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -5369,7 +5447,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DshProductProposalListResponse"];
+                };
             };
         };
     };
@@ -5539,7 +5619,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DshCatalogAssetListResponse"];
+                };
             };
         };
     };

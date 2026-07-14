@@ -22,11 +22,13 @@ export interface CentralCatalogControllerState {
   };
   readonly masterProducts: {
     readonly items: readonly MasterProduct[];
+    readonly total: number;
     readonly loading: boolean;
     readonly error: string | null;
   };
   readonly proposals: {
     readonly items: readonly ProductProposal[];
+    readonly total: number;
     readonly loading: boolean;
     readonly error: string | null;
   };
@@ -41,8 +43,8 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
   const [state, setState] = useState<CentralCatalogControllerState>({
     domains: { items: [], loading: false, error: null },
     nodes: { items: [], loading: false, error: null },
-    masterProducts: { items: [], loading: false, error: null },
-    proposals: { items: [], loading: false, error: null },
+    masterProducts: { items: [], total: 0, loading: false, error: null },
+    proposals: { items: [], total: 0, loading: false, error: null },
     policies: { items: [], loading: false, error: null },
   });
 
@@ -74,21 +76,21 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     }
   }, []);
 
-  const loadMasterProducts = useCallback(async (query?: Parameters<typeof api.fetchMasterProducts>[0]) => {
+  const loadMasterProducts = useCallback(async (query?: Parameters<typeof api.fetchMasterProductsPage>[0]) => {
     setState((prev) => ({ ...prev, masterProducts: { ...prev.masterProducts, loading: true, error: null } }));
     try {
-      const items = await api.fetchMasterProducts(query);
-      setState((prev) => ({ ...prev, masterProducts: { items, loading: false, error: null } }));
+      const { items, total } = await api.fetchMasterProductsPage(query);
+      setState((prev) => ({ ...prev, masterProducts: { items, total, loading: false, error: null } }));
     } catch (err: any) {
       setState((prev) => ({ ...prev, masterProducts: { ...prev.masterProducts, loading: false, error: err.message ?? "Failed to load master products" } }));
     }
   }, []);
 
-  const loadProposals = useCallback(async (query?: Parameters<typeof api.fetchProductProposals>[0]) => {
+  const loadProposals = useCallback(async (query?: Parameters<typeof api.fetchProductProposalsPage>[0]) => {
     setState((prev) => ({ ...prev, proposals: { ...prev.proposals, loading: true, error: null } }));
     try {
-      const items = await api.fetchProductProposals(query);
-      setState((prev) => ({ ...prev, proposals: { items, loading: false, error: null } }));
+      const { items, total } = await api.fetchProductProposalsPage(query);
+      setState((prev) => ({ ...prev, proposals: { items, total, loading: false, error: null } }));
     } catch (err: any) {
       setState((prev) => ({ ...prev, proposals: { ...prev.proposals, loading: false, error: err.message ?? "Failed to load proposals" } }));
     }

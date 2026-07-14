@@ -11,7 +11,9 @@ export interface ControllerCoreState {
   readonly domains: readonly CentralCatalogDomain[];
   readonly nodes: readonly CentralCatalogNode[];
   readonly masterProducts: readonly MasterProduct[];
+  readonly masterProductsTotal: number;
   readonly proposals: readonly ProductProposal[];
+  readonly proposalsTotal: number;
   readonly policies: readonly CatalogPlatformPolicy[];
 }
 
@@ -20,7 +22,9 @@ export class CentralCatalogControllerCore {
     domains: [],
     nodes: [],
     masterProducts: [],
+    masterProductsTotal: 0,
     proposals: [],
+    proposalsTotal: 0,
     policies: [],
   };
 
@@ -44,15 +48,23 @@ export class CentralCatalogControllerCore {
   }
 
   async loadAll() {
-    const [domains, nodes, masterProducts, proposals, policies] = await Promise.all([
+    const [domains, nodes, masterProductsPage, proposalsPage, policies] = await Promise.all([
       api.fetchCatalogDomains(),
       api.fetchCatalogNodes(),
-      api.fetchMasterProducts(),
-      api.fetchProductProposals(),
+      api.fetchMasterProductsPage(),
+      api.fetchProductProposalsPage(),
       api.fetchCatalogPlatformPolicies(),
     ]);
 
-    this.state = { domains, nodes, masterProducts, proposals, policies };
+    this.state = {
+      domains,
+      nodes,
+      masterProducts: masterProductsPage.items,
+      masterProductsTotal: masterProductsPage.total,
+      proposals: proposalsPage.items,
+      proposalsTotal: proposalsPage.total,
+      policies,
+    };
     this.emit();
   }
 }

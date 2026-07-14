@@ -21,7 +21,7 @@ import {
   type ProductProposalPipelineStatus,
   PRODUCT_PROPOSAL_PIPELINE_METADATA,
   fetchSeedStatus,
-  fetchCatalogAssets,
+  fetchCatalogAssetsPage,
   reviewCatalogAsset,
   putEntityImage,
   fetchCatalogAssetLinks,
@@ -267,8 +267,8 @@ export function CatalogDashboardScreen() {
         .catch(console.error);
 
       setAssetsLoading(true);
-      fetchCatalogAssets()
-        .then(setAssets)
+      fetchCatalogAssetsPage()
+        .then((page) => setAssets(page.items))
         .catch(console.error)
         .finally(() => setAssetsLoading(false));
     }
@@ -333,8 +333,8 @@ export function CatalogDashboardScreen() {
   const reloadAssets = async () => {
     setAssetsLoading(true);
     try {
-      const items = await fetchCatalogAssets();
-      setAssets(items);
+      const page = await fetchCatalogAssetsPage();
+      setAssets(page.items);
     } finally {
       setAssetsLoading(false);
     }

@@ -124,14 +124,21 @@ export async function updateCatalogNode(
   return resp.node;
 }
 
-export async function fetchMasterProducts(query?: {
+export interface PagedResult<T> {
+  readonly items: readonly T[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+export async function fetchMasterProductsPage(query?: {
   domainId?: string;
   categoryNodeId?: string;
   approvalStatus?: string;
   search?: string;
   limit?: number;
   offset?: number;
-}): Promise<readonly MasterProduct[]> {
+}): Promise<PagedResult<MasterProduct>> {
   const params = new URLSearchParams();
   if (query?.domainId) params.set("domainId", query.domainId);
   if (query?.categoryNodeId) params.set("categoryNodeId", query.categoryNodeId);
@@ -141,8 +148,17 @@ export async function fetchMasterProducts(query?: {
   if (query?.offset !== undefined) params.set("offset", String(query.offset));
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/master-products?${qs}` : "/dsh/operator/catalog/master-products";
-  const resp = await request<{ masterProducts: readonly MasterProduct[] }>(path);
-  return resp.masterProducts;
+  const resp = await request<{ masterProducts: readonly MasterProduct[]; total: number; limit: number; offset: number }>(path);
+  return { items: resp.masterProducts, total: resp.total, limit: resp.limit, offset: resp.offset };
+}
+
+// fetchMasterProducts is kept as a thin backward-compatible wrapper (items
+// only) so existing consumers — notably services/dsh/frontend/app-field,
+// which this work package must not touch — keep compiling against the
+// pre-pagination array shape. New consumers that need total/limit/offset
+// should call fetchMasterProductsPage instead.
+export async function fetchMasterProducts(query?: Parameters<typeof fetchMasterProductsPage>[0]): Promise<readonly MasterProduct[]> {
+  return (await fetchMasterProductsPage(query)).items;
 }
 
 export async function createMasterProduct(input: {
@@ -193,12 +209,12 @@ export async function updateMasterProduct(
   return resp.masterProduct;
 }
 
-export async function fetchProductProposals(query?: {
+export async function fetchProductProposalsPage(query?: {
   status?: string;
   storeId?: string;
   limit?: number;
   offset?: number;
-}): Promise<readonly ProductProposal[]> {
+}): Promise<PagedResult<ProductProposal>> {
   const params = new URLSearchParams();
   if (query?.status) params.set("status", query.status);
   if (query?.storeId) params.set("storeId", query.storeId);
@@ -206,8 +222,14 @@ export async function fetchProductProposals(query?: {
   if (query?.offset !== undefined) params.set("offset", String(query.offset));
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/product-proposals?${qs}` : "/dsh/operator/catalog/product-proposals";
-  const resp = await request<{ proposals: readonly ProductProposal[] }>(path);
-  return resp.proposals;
+  const resp = await request<{ proposals: readonly ProductProposal[]; total: number; limit: number; offset: number }>(path);
+  return { items: resp.proposals, total: resp.total, limit: resp.limit, offset: resp.offset };
+}
+
+// See fetchMasterProducts above: kept as an items-only wrapper for
+// backward compatibility with pre-pagination consumers.
+export async function fetchProductProposals(query?: Parameters<typeof fetchProductProposalsPage>[0]): Promise<readonly ProductProposal[]> {
+  return (await fetchProductProposalsPage(query)).items;
 }
 
 export async function decideProductProposal(
@@ -469,15 +491,21 @@ export async function fetchSeedStatus(): Promise<SeedStatus> {
   return request<SeedStatus>("/dsh/operator/catalog/seed-status");
 }
 
-export async function fetchCatalogAssets(query?: { status?: string; limit?: number; offset?: number }): Promise<readonly CatalogAsset[]> {
+export async function fetchCatalogAssetsPage(query?: { status?: string; limit?: number; offset?: number }): Promise<PagedResult<CatalogAsset>> {
   const params = new URLSearchParams();
   if (query?.status) params.set("status", query.status);
   if (query?.limit !== undefined) params.set("limit", String(query.limit));
   if (query?.offset !== undefined) params.set("offset", String(query.offset));
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/assets?${qs}` : "/dsh/operator/catalog/assets";
-  const resp = await request<{ assets: readonly CatalogAsset[] }>(path);
-  return resp.assets;
+  const resp = await request<{ assets: readonly CatalogAsset[]; total: number; limit: number; offset: number }>(path);
+  return { items: resp.assets, total: resp.total, limit: resp.limit, offset: resp.offset };
+}
+
+// See fetchMasterProducts above: kept as an items-only wrapper for
+// backward compatibility with pre-pagination consumers.
+export async function fetchCatalogAssets(query?: Parameters<typeof fetchCatalogAssetsPage>[0]): Promise<readonly CatalogAsset[]> {
+  return (await fetchCatalogAssetsPage(query)).items;
 }
 
 export interface AssetUploadIntent {

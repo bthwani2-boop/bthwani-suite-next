@@ -728,12 +728,17 @@ paths:
           schema: { type: string }
         - name: limit
           in: query
-          schema: { type: integer }
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
         - name: offset
           in: query
-          schema: { type: integer }
+          schema: { type: integer, minimum: 0, default: 0 }
       responses:
-        "200": { description: MASTER_PRODUCT (L5) list. }
+        "200":
+          description: MASTER_PRODUCT (L5) list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshMasterProductListResponse"
     post:
       operationId: createMasterProduct
       tags: [CentralCatalog]
@@ -783,8 +788,19 @@ paths:
         - name: storeId
           in: query
           schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
       responses:
-        "200": { description: Product proposal queue (requests to add to the master catalog). }
+        "200":
+          description: Product proposal queue (requests to add to the master catalog).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshProductProposalListResponse"
 
   /dsh/operator/catalog/product-proposals/{proposalId}/decision:
     post:
@@ -906,14 +922,18 @@ paths:
         - name: limit
           in: query
           required: false
-          schema: { type: integer }
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
         - name: offset
           in: query
           required: false
-          schema: { type: integer }
+          schema: { type: integer, minimum: 0, default: 0 }
       responses:
         "200":
           description: List of DAM assets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DshCatalogAssetListResponse"
 
   /dsh/operator/catalog/assets/upload-intents:
     post:
@@ -5009,6 +5029,99 @@ components:
         intendedRole: { type: [string, "null"] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    DshCatalogAssetListResponse:
+      type: object
+      required: [assets, total, limit, offset]
+      properties:
+        assets:
+          type: array
+          items: { $ref: "#/components/schemas/DshCatalogAsset" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    DshMasterProduct:
+      type: object
+      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        domainId: { type: string }
+        categoryNodeId: { type: [string, "null"] }
+        canonicalNameAr: { type: string }
+        canonicalNameEn: { type: string }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        gtin: { type: [string, "null"] }
+        sku: { type: [string, "null"] }
+        unit: { type: string }
+        measurementType: { type: string }
+        canonicalImageObjectKey: { type: [string, "null"] }
+        approvalStatus:
+          type: string
+          enum: [draft, pending_review, approved, rejected, archived]
+        isActive: { type: boolean }
+        duplicateGroupId: { type: [string, "null"] }
+        createdSource: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DshMasterProductListResponse:
+      type: object
+      required: [masterProducts, total, limit, offset]
+      properties:
+        masterProducts:
+          type: array
+          items: { $ref: "#/components/schemas/DshMasterProduct" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    DshProductProposal:
+      type: object
+      required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount]
+      properties:
+        id: { type: string }
+        proposedNameAr: { type: string }
+        proposedNameEn: { type: string }
+        domainId: { type: string }
+        categoryNodeId: { type: [string, "null"] }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        imageObjectKey: { type: [string, "null"] }
+        sourceSurface:
+          type: string
+          enum: [app-field, app-partner, control-panel-catalog, control-panel-platform]
+        sourceActorId: { type: string }
+        sourceStoreId: { type: [string, "null"] }
+        status:
+          type: string
+          enum: [catalog-draft, partner-proposed, partner-review, marketing-review, catalog-adopted, catalog-approved, client-visible, needs-fix, rejected]
+        reviewNote: { type: string }
+        adoptedMasterProductId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        reviewStage: { type: string }
+        partnerReviewedBy: { type: [string, "null"] }
+        marketingReviewedBy: { type: [string, "null"] }
+        catalogAdoptedBy: { type: [string, "null"] }
+        catalogApprovedBy: { type: [string, "null"] }
+        clientVisibleAt: { type: [string, "null"], format: date-time }
+        auditRequired: { type: boolean }
+        blockedReason: { type: [string, "null"] }
+        resubmissionCount: { type: integer }
+        linkedStoreId: { type: [string, "null"] }
+
+    DshProductProposalListResponse:
+      type: object
+      required: [proposals, total, limit, offset]
+      properties:
+        proposals:
+          type: array
+          items: { $ref: "#/components/schemas/DshProductProposal" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
 
     DshReel:
       type: object
