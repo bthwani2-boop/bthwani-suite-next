@@ -638,17 +638,35 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 		return ProductProposal{}, fmt.Errorf("%w: manual request domains bypass the product catalog", ErrInvalid)
 	}
 
-	// 2. Resolve effective catalog policy
+	// 2. Category node, if given, must belong to the submitted domain.
+	// ResolveEffectivePolicy resolves node-scoped policy purely by node_id and
+	// does not itself verify the node's domain, so a mismatched node could
+	// silently borrow another domain's policy (or the wrong node-scoped
+	// policy) unless this is checked here first.
 	var nodeID string
 	if input.CategoryNodeID != nil {
-		nodeID = *input.CategoryNodeID
+		nodeID = strings.TrimSpace(*input.CategoryNodeID)
 	}
+	if nodeID != "" {
+		node, err := GetNode(ctx, db, nodeID)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return ProductProposal{}, fmt.Errorf("%w: CATEGORY_NODE_NOT_IN_DOMAIN", ErrInvalid)
+			}
+			return ProductProposal{}, err
+		}
+		if node.DomainID != input.DomainID {
+			return ProductProposal{}, fmt.Errorf("%w: CATEGORY_NODE_NOT_IN_DOMAIN", ErrInvalid)
+		}
+	}
+
+	// 3. Resolve effective catalog policy
 	policy, err := ResolveEffectivePolicy(ctx, db, input.DomainID, nodeID)
 	if err != nil {
 		return ProductProposal{}, err
 	}
 
-	// 3. Enforce policy constraints
+	// 4. Enforce policy constraints
 	if !policy.AllowsProductProposal {
 		return ProductProposal{}, fmt.Errorf("%w: PRODUCT_PROPOSAL_NOT_ALLOWED_FOR_CATEGORY", ErrForbidden)
 	}
