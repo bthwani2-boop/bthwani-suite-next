@@ -933,18 +933,22 @@ func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Acto
 func actorByPhoneAnyRoleTx(ctx context.Context, tx *sql.Tx, phone string) (Actor, error) {
 	var actor Actor
 	var roles pq.StringArray
+	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, active
+		SELECT id, username, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors
 		WHERE phone_e164 = $1
 		LIMIT 1
 		FOR UPDATE`, phone).Scan(
-		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Active,
+		&actor.ID, &actor.Username, &actor.TenantID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
 		return Actor{}, err
 	}
 	actor.Roles = []string(roles)
+	if err := json.Unmarshal(permissionsJSON, &actor.Permissions); err != nil {
+		return Actor{}, err
+	}
 	return actor, nil
 }
 

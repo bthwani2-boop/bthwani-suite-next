@@ -97,8 +97,12 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
   const filteredStores = applyDiscoveryFilter(stores, activeFilter)
     .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId);
 
-  // Position logic (left: pageX - 60, bound to left: 16)
-  const leftPos = Math.max(16, dropdownPosition.x - 60);
+  // Position logic (center card under press position and bound to screen edges)
+  const dropdownWidth = 230;
+  const leftPos = Math.min(
+    screenWidth - dropdownWidth - 16,
+    Math.max(16, dropdownPosition.x - dropdownWidth / 2)
+  );
 
   return (
     <Screen padded={false}>
@@ -144,14 +148,22 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
                   position: 'absolute',
                   top: dropdownPosition.y,
                   left: leftPos,
+                  width: dropdownWidth,
                 },
               ]}
             >
+              {/* Header */}
+              <View style={styles.dropdownHeader}>
+                <Text style={styles.dropdownHeaderTitle}>الفئات</Text>
+              </View>
+              <View style={styles.dropdownDivider} />
+
               <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
                 {/* Clear Filter / All option */}
                 <Pressable
                   style={({ pressed }) => [
                     styles.dropdownItem,
+                    { flexDirection: isRtl ? 'row-reverse' : 'row' },
                     pressed && styles.dropdownItemPressed,
                     activeCategoryId === null && styles.dropdownItemActive,
                   ]}
@@ -160,10 +172,20 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
                     setShowDropdown(false);
                   }}
                 >
-                  <Text style={styles.dropdownEmoji}>🎛️</Text>
+                  {/* Leftmost Selection Indicator */}
+                  <View style={styles.selectionIndicator}>
+                    {activeCategoryId === null && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+
+                  {/* Middle Label */}
                   <Text style={[styles.dropdownLabel, activeCategoryId === null && styles.dropdownLabelActive]}>
                     جميع الفئات
                   </Text>
+
+                  {/* Rightmost Emoji Icon Container */}
+                  <View style={[styles.emojiContainer, activeCategoryId === null && styles.emojiContainerActive]}>
+                    <Text style={styles.dropdownEmoji}>🎛️</Text>
+                  </View>
                 </Pressable>
 
                 {categories.map((cat) => {
@@ -173,6 +195,7 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
                       key={cat.id}
                       style={({ pressed }) => [
                         styles.dropdownItem,
+                        { flexDirection: isRtl ? 'row-reverse' : 'row' },
                         pressed && styles.dropdownItemPressed,
                         isSelected && styles.dropdownItemActive,
                       ]}
@@ -181,10 +204,20 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
                         setShowDropdown(false);
                       }}
                     >
-                      <Text style={styles.dropdownEmoji}>{cat.iconUrl || '📦'}</Text>
+                      {/* Leftmost Selection Indicator */}
+                      <View style={styles.selectionIndicator}>
+                        {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+
+                      {/* Middle Label */}
                       <Text style={[styles.dropdownLabel, isSelected && styles.dropdownLabelActive]}>
                         {cat.label}
                       </Text>
+
+                      {/* Rightmost Emoji Icon Container */}
+                      <View style={[styles.emojiContainer, isSelected && styles.emojiContainerActive]}>
+                        <Text style={styles.dropdownEmoji}>{cat.iconUrl || '📦'}</Text>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -213,34 +246,59 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dropdownCard: {
-    width: 200,
     backgroundColor: colorRoles.surfaceBase,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    padding: spacing[1],
-    ...elevation.raised,
-    maxHeight: 280,
+    borderColor: alpha(colorRoles.brandStructure, 0.08),
+    padding: spacing[2],
+    ...elevation.overlay,
+    maxHeight: 320,
+  },
+  dropdownHeader: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  dropdownHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colorRoles.textMuted,
+    textAlign: 'right',
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: colorRoles.borderSubtle,
+    marginVertical: spacing[1],
   },
   dropdownScroll: {
     flexGrow: 0,
   },
   dropdownItem: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingVertical: spacing[3],
+    paddingVertical: spacing[2],
     paddingHorizontal: spacing[3],
     gap: spacing[3],
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
+    marginVertical: 2,
   },
   dropdownItemPressed: {
-    backgroundColor: colorRoles.surfaceInset,
+    backgroundColor: alpha(colorRoles.brandAction, 0.05),
   },
   dropdownItemActive: {
     backgroundColor: alpha(colorRoles.brandAction, 0.08),
   },
+  emojiContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    backgroundColor: colorRoles.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiContainerActive: {
+    backgroundColor: colorRoles.brandActionSoft,
+  },
   dropdownEmoji: {
-    fontSize: 18,
+    fontSize: 16,
   },
   dropdownLabel: {
     fontSize: 13,
@@ -252,5 +310,16 @@ const styles = StyleSheet.create({
   dropdownLabelActive: {
     color: colorRoles.brandAction,
     fontWeight: '700',
+  },
+  selectionIndicator: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colorRoles.brandAction,
   },
 });

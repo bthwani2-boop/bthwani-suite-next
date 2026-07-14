@@ -7,7 +7,6 @@ param(
     [ValidateRange(1024, 65535)]
     [int] $MetroPort,
 
-    [switch] $NeedsDevStoreId,
     [switch] $ClearCache,
     [switch] $MirrorDevice
 )
@@ -28,24 +27,6 @@ if (-not (Test-Path -LiteralPath $AdbHelper)) {
 
 . $AdbHelper
 
-# BTHWANI_WIFI_BOOTSTRAP:
-# Ensure the saved Wi-Fi device is connected before Expo starts.
-$WifiBootstrap = Join-Path $RepoRoot "apps\scrcpy-wifi.ps1"
-
-if (-not (Test-Path -LiteralPath $WifiBootstrap)) {
-    throw "Wi-Fi ADB bootstrap script not found: $WifiBootstrap"
-}
-
-& powershell.exe `
-    -NoLogo `
-    -NoProfile `
-    -ExecutionPolicy Bypass `
-    -File $WifiBootstrap `
-    -ConnectOnly
-
-if ($LASTEXITCODE -ne 0) {
-    throw "Wi-Fi ADB bootstrap failed."
-}
 
 Set-Location -LiteralPath $RuntimeDir
 
@@ -86,30 +67,6 @@ $env:EXPO_PUBLIC_WLT_API_BASE_URL      = "http://127.0.0.1:58083"
 $env:NEXT_PUBLIC_WLT_API_BASE_URL      = "http://127.0.0.1:58083"
 $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 $env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
-
-if ($NeedsDevStoreId) {
-    try {
-        $StoreResponse = Invoke-RestMethod `
-            -Uri "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" `
-            -TimeoutSec 3 `
-            -ErrorAction Stop
-
-        $StoreId = [string] $StoreResponse.stores[0].id
-        if ([string]::IsNullOrWhiteSpace($StoreId)) {
-            throw "DSH returned an empty store ID."
-        }
-        $env:EXPO_PUBLIC_DEV_STORE_ID = $StoreId
-    }
-    catch {
-        if ($env:BTHWANI_ALLOW_DEV_STORE_FALLBACK -eq "1") {
-            $env:EXPO_PUBLIC_DEV_STORE_ID = "store-1005"
-            Write-Warning "DSH store lookup failed; explicit fallback enabled: $($_.Exception.Message)"
-        }
-        else {
-            throw "DSH store lookup failed. Start the runtime services, or explicitly set BTHWANI_ALLOW_DEV_STORE_FALLBACK=1. Cause: $($_.Exception.Message)"
-        }
-    }
-}
 
 $AdbPath = Resolve-BthwaniAdb
 & $AdbPath start-server

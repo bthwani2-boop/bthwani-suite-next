@@ -211,7 +211,7 @@ Assert-Equal (Get-Scalar "SELECT COUNT(*)::text FROM dsh_catalog_legacy_archive 
 Assert-Equal (Get-Scalar "SELECT payload_json->>'action' FROM dsh_catalog_legacy_archive WHERE source_id = 'audit-legacy-1'") "create" "archive payload is a faithful JSONB snapshot"
 Assert-Equal (Get-Scalar "SELECT (to_regclass('public.dsh_catalog_products') IS NULL)::text") "true" "legacy tables dropped after gates"
 
-Write-Host "  applying dsh-036 (second run — idempotency)"
+Write-Host "  applying dsh-036 (second run - idempotency)"
 Invoke-TestPsql -Db $TestDb -File $Migration036 | Out-Null
 $secondRun = Get-ClosureCounts
 Assert-Equal $secondRun $firstRun "second dsh-036 run changes nothing"
