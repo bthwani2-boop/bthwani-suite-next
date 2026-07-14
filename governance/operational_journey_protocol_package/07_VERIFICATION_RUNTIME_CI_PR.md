@@ -210,7 +210,7 @@ merge_review_matrix:
 
 ## Frontend-Backend Runtime Journey Verification
 
-`yaml
+`````yaml
 frontend_backend_runtime_journey_matrix:
   - journey:
     source_surface:
@@ -240,7 +240,7 @@ frontend_backend_runtime_journey_matrix:
     duplicate_submission_test:
 
     final_result:
-`
+`````
 
 > القواعد:
 - Frontend unit test alone is insufficient.

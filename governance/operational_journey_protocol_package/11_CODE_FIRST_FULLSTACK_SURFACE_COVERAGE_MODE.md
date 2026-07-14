@@ -100,7 +100,7 @@
 
 أي فصل بين الطبقتين يعتبر P0 Systemic Disconnection.
 
-`yaml
+```yaml
 frontend_backend_integrity_gate:
   initial_status: FIX_REQUIRED
 
@@ -146,7 +146,7 @@ frontend_backend_integrity_gate:
     runtime_journeys_unverified: 0
 
   result_if_failed: FIX_REQUIRED
-`
+```
 
 ## النتيجة الحاكمة
 

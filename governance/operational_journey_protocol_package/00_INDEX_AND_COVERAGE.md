@@ -351,7 +351,7 @@ package_changelog:
 
 ## Frontend-Backend Integrity Terms
 
-`	ext
+```text
 frontend_backend_integrity_gate
 frontend_backend_parity_matrix
 endpoint_consumer_matrix
@@ -363,6 +363,6 @@ error_semantics_alignment_matrix
 frontend_backend_runtime_journey_matrix
 orphan_frontend_feature_matrix
 orphan_backend_capability_matrix
-`
+```
 
 > قاعدة: يجب منع إعلان أن تغطية الحزمة مكتملة ما لم تظهر جميع هذه البنود في خريطة التغطية.

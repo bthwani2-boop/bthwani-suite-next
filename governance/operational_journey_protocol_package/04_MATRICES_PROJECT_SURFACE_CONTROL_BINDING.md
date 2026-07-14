@@ -645,7 +645,7 @@ binding_chain_matrix:
 
 ## Frontend-Backend Parity Matrices
 
-`yaml
+```yaml
 frontend_backend_parity_matrix:
   - surface:
     route:
@@ -699,9 +699,9 @@ frontend_backend_parity_matrix:
 
     final_status:
       VERIFIED_BOUND | FIXED_AND_VERIFIED | BLOCKED_EXTERNAL_EVIDENCE
-`
+```
 
-`yaml
+```yaml
 orphan_frontend_feature_matrix:
   - surface:
     feature:
@@ -710,9 +710,9 @@ orphan_frontend_feature_matrix:
     contract_binding_found:
     database_effect_found:
     action:
-`
+```
 
-`yaml
+```yaml
 orphan_backend_capability_matrix:
   - endpoint:
     handler:
@@ -723,6 +723,6 @@ orphan_backend_capability_matrix:
     authorization:
     runtime_usage:
     action:
-`
+```
 
 > قاعدة: أي زر بلا endpoint صالح، أو endpoint داخل النطاق بلا مستهلك حي أو غرض موثق، يصنف FIX_REQUIRED.

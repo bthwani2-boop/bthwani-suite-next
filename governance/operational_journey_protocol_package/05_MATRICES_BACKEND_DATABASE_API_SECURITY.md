@@ -368,7 +368,7 @@ risk_based_test_matrix:
 
 ## Contract and State Traceability Matrices
 
-`yaml
+```yaml
 contract_field_traceability_matrix:
   - business_field:
     database_column:
@@ -382,9 +382,9 @@ contract_field_traceability_matrix:
     transformations:
     validation:
     alignment: PASS | FAIL
-`
+```
 
-`yaml
+```yaml
 request_response_alignment_matrix:
   - operation_id:
     frontend_request:
@@ -402,9 +402,9 @@ request_response_alignment_matrix:
     generated_response:
     frontend_adapter:
     response_alignment:
-`
+```
 
-`yaml
+```yaml
 state_status_alignment_matrix:
   - entity:
     database_states:
@@ -416,9 +416,9 @@ state_status_alignment_matrix:
     transition_owner:
     mismatch_count:
     result:
-`
+```
 
-`yaml
+```yaml
 error_semantics_alignment_matrix:
   - operation:
     backend_error:
@@ -429,4 +429,4 @@ error_semantics_alignment_matrix:
     surface_state:
     retry_allowed:
     result:
-`
+```
