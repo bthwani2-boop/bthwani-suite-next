@@ -98,3 +98,51 @@ export function buildClientBenefitItems(
 
   return [...tierItems, ...planItems];
 }
+
+// ─── BenefitRow: client-app display unit ──────────────────────────────────
+// Defined here (not in screen files) so screens contain zero fixture data.
+
+export type BenefitRowTone = 'success' | 'warning' | 'danger' | 'info' | 'action' | 'neutral';
+
+export type BenefitRow = {
+  readonly id: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly badgeLabel?: string;
+  readonly badgeTone?: BenefitRowTone;
+  readonly actionLabel?: string;
+  readonly helperText?: string;
+};
+
+// ─── Fallback rows (used when the registry has no active items yet) ───────
+// All fixture/seed data lives HERE — never in screen or component files.
+
+export const FALLBACK_LOYALTY_ROWS: readonly BenefitRow[] = [
+  {
+    id: 'loyalty-balance',
+    title: 'النقاط والمكافآت',
+    subtitle: 'سيتم عرض رصيدك ومستواك بعد إطلاق برنامج الولاء.',
+    badgeLabel: 'قريباً',
+    badgeTone: 'info',
+  },
+];
+
+export const FALLBACK_SUBSCRIPTION_ROWS: readonly BenefitRow[] = [
+  {
+    id: 'sub-placeholder',
+    title: 'خطط الاشتراك',
+    subtitle: 'ستظهر هنا خطط الاشتراك المتاحة بعد الإطلاق.',
+    badgeLabel: 'قريباً',
+    badgeTone: 'neutral',
+  },
+];
+
+export const FALLBACK_OFFERS_ROWS: readonly BenefitRow[] = [
+  {
+    id: 'offers-placeholder',
+    title: 'العروض والكوبونات',
+    subtitle: 'ستظهر هنا عروضك وكوباناتك النشطة بعد الإطلاق.',
+    badgeLabel: 'قريباً',
+    badgeTone: 'neutral',
+  },
+];

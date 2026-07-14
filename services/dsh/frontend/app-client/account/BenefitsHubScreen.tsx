@@ -1,6 +1,9 @@
 // Authority: services/dsh/frontend/app-client — benefits sub-screen.
 // Sovereign shared: services/dsh/frontend/shared/marketing
 // Sections: loyalty | subscription | offers (3 tabs from MySpaceScreen)
+//
+// RULE: This file contains ZERO fixture/seed data.
+// All data comes from the shared marketing registry (loyalty-subscriptions.types.ts).
 
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -16,20 +19,19 @@ import {
   radius,
   colorRoles,
 } from '@bthwani/ui-kit';
+import {
+  getLoyaltyTiers,
+  getSubscriptionPlans,
+  buildClientBenefitItems,
+  FALLBACK_LOYALTY_ROWS,
+  FALLBACK_SUBSCRIPTION_ROWS,
+  FALLBACK_OFFERS_ROWS,
+} from '../../shared/marketing';
+import type { BenefitRow } from '../../shared/marketing';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type BenefitsSection = 'loyalty' | 'subscription' | 'offers';
-
-type BenefitRow = {
-  id: string;
-  title: string;
-  subtitle: string;
-  badgeLabel?: string;
-  badgeTone?: 'success' | 'warning' | 'danger' | 'info' | 'action' | 'neutral';
-  actionLabel?: string;
-  helperText?: string;
-};
 
 export type BenefitsHubScreenProps = {
   initialSection?: BenefitsSection;
@@ -37,80 +39,7 @@ export type BenefitsHubScreenProps = {
   onAction?: (rowId: string, section: BenefitsSection) => void;
 };
 
-// ─── Seed data (replaced by controller props when backend is wired) ───────────
-
-const SEED_LOYALTY_ROWS: BenefitRow[] = [
-  {
-    id: 'loyalty-balance',
-    title: '٣٢٠ نقطة',
-    subtitle: 'مستوى فضي — مكافأتان متاحتان للاستبدال',
-    badgeLabel: 'نقاط',
-    badgeTone: 'info',
-    actionLabel: 'استبدل',
-    helperText: 'كل ١٠٠ نقطة تساوي ١ ريال خصم على طلبك القادم.',
-  },
-  {
-    id: 'loyalty-next',
-    title: 'المكافأة القادمة',
-    subtitle: 'تحتاج ١٨٠ نقطة إضافية للوصول للمستوى الذهبي',
-    badgeLabel: 'قريباً',
-    badgeTone: 'warning',
-    helperText: 'استمر في الطلب للوصول لمزايا المستوى الذهبي.',
-  },
-];
-
-const SEED_SUBSCRIPTION_ROWS: BenefitRow[] = [
-  {
-    id: 'sub-current',
-    title: 'خطة الأساسية',
-    subtitle: '٢٩ ريال / شهرياً — التوصيل المجاني على كل طلب',
-    badgeLabel: 'نشط',
-    badgeTone: 'success',
-    actionLabel: 'إدارة الخطة',
-    helperText: 'يتجدد في ١٥ يوليو ٢٠٢٦.',
-  },
-  {
-    id: 'sub-upgrade',
-    title: 'خطة المميزة',
-    subtitle: '٤٩ ريال / شهرياً — أولوية في التوصيل + ١٠٪ خصم',
-    badgeLabel: 'ترقية',
-    badgeTone: 'action',
-    actionLabel: 'ترقية',
-    helperText: 'جرّب مجاناً لمدة ١٤ يوماً.',
-  },
-];
-
-const SEED_OFFERS_ROWS: BenefitRow[] = [
-  {
-    id: 'offer-1',
-    title: 'خصم ١٥٪ على طلبك القادم',
-    subtitle: 'صالح حتى ٣٠ يونيو — يطبق تلقائياً عند الدفع',
-    badgeLabel: 'جاهز',
-    badgeTone: 'success',
-    actionLabel: 'استخدم الآن',
-    helperText: 'مقدم من المطعم الذهبي — الطلب الأدنى ٢٥ ريال.',
-  },
-  {
-    id: 'offer-2',
-    title: 'توصيل مجاني على ثلاث طلبات',
-    subtitle: 'مكافأة ولاء — تنتهي بعد ٧ أيام',
-    badgeLabel: 'حصري',
-    badgeTone: 'info',
-    actionLabel: 'تفعيل',
-    helperText: 'لأعضاء المستوى الفضي فما فوق.',
-  },
-  {
-    id: 'offer-3',
-    title: 'كوبون خاص بمناسبة رمضان',
-    subtitle: 'كود: RAMADAN26 — خصم ٢٠٪ على الحلويات',
-    badgeLabel: 'كوبون',
-    badgeTone: 'warning',
-    actionLabel: 'نسخ الكود',
-    helperText: 'يسري حتى نهاية الشهر الكريم.',
-  },
-];
-
-import { getLoyaltyTiers, getSubscriptionPlans, buildClientBenefitItems } from '../../shared/marketing';
+// ─── Section config (display strings only — no data) ──────────────────────
 
 const SECTION_CONFIG: Record<BenefitsSection, { label: string; subtitle: string }> = {
   loyalty:      { label: 'النقاط والمكافآت',  subtitle: 'مستويات ولائك ومكافآتك المتاحة للاستبدال' },
@@ -118,15 +47,10 @@ const SECTION_CONFIG: Record<BenefitsSection, { label: string; subtitle: string 
   offers:       { label: 'العروض والكوبونات', subtitle: 'العروض والكوبونات المتاحة لاستخدامها الآن' },
 };
 
-function useRegistryBenefitRows(): Record<BenefitsSection, BenefitRow[]> {
-  const [rows, setRows] = React.useState<Record<BenefitsSection, BenefitRow[]>>({
-    loyalty: SEED_LOYALTY_ROWS,
-    subscription: SEED_SUBSCRIPTION_ROWS,
-    offers: SEED_OFFERS_ROWS,
-  });
+// ─── Registry hook (derives rows from shared marketing registry) ──────────
 
-  React.useEffect(() => {
-    // Derive loyalty rows from active tiers in the shared marketing registry.
+function useRegistryBenefitRows(): Record<BenefitsSection, readonly BenefitRow[]> {
+  const derive = () => {
     const tiers = getLoyaltyTiers();
     const plans = getSubscriptionPlans();
     const benefitItems = buildClientBenefitItems(tiers, plans);
@@ -154,18 +78,24 @@ function useRegistryBenefitRows(): Record<BenefitsSection, BenefitRow[]> {
         helperText: 'مدار من قسم التسويق في لوحة التحكم.',
       }));
 
-    setRows({
-      loyalty:      loyaltyRows.length > 0 ? loyaltyRows : SEED_LOYALTY_ROWS,
-      subscription: subRows.length > 0 ? subRows : SEED_SUBSCRIPTION_ROWS,
-      offers:       SEED_OFFERS_ROWS,
-    });
+    return {
+      loyalty:      loyaltyRows.length > 0 ? loyaltyRows : FALLBACK_LOYALTY_ROWS,
+      subscription: subRows.length > 0 ? subRows : FALLBACK_SUBSCRIPTION_ROWS,
+      offers:       FALLBACK_OFFERS_ROWS,
+    };
+  };
+
+  const [rows, setRows] = React.useState<Record<BenefitsSection, readonly BenefitRow[]>>(derive);
+
+  React.useEffect(() => {
+    setRows(derive());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return rows;
 }
 
-
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function BenefitRowCard({
   row,
@@ -202,6 +132,8 @@ function BenefitRowCard({
     </Card>
   );
 }
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function BenefitsHubScreen({
   initialSection = 'loyalty',
@@ -328,5 +260,3 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
-
-// export default BenefitsHubScreen; // Unused default export
