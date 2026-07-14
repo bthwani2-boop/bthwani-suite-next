@@ -894,6 +894,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/catalog/product-proposals/{proposalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updatePartnerProductProposal"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/field/catalog/taxonomy": {
         parameters: {
             query?: never;
@@ -968,6 +984,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["createFieldProductProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateFieldProductProposal"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3097,9 +3129,31 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            version?: number;
+        };
+        MasterProductSummary: {
+            id: string;
+            domainId: string;
+            categoryNodeId?: string | null;
+            canonicalNameAr: string;
+            canonicalNameEn: string;
+            brand: string;
+            barcode?: string | null;
+            sku?: string | null;
+            unit: string;
+            measurementType: string;
+            approvalStatus: string;
+            isActive: boolean;
+            effectiveImage?: string | null;
+            thumbnailUrl?: string | null;
+            imageAltAr?: string | null;
+            imageStatus?: string;
+            /** Format: date-time */
+            updatedAt: string;
+            version: number;
         };
         DshMasterProductListResponse: {
-            masterProducts: components["schemas"]["DshMasterProduct"][];
+            masterProducts: components["schemas"]["MasterProductSummary"][];
             total: number;
             limit: number;
             offset: number;
@@ -5355,6 +5409,12 @@ export interface operations {
                 categoryNodeId?: string;
                 approvalStatus?: string;
                 search?: string;
+                isActive?: boolean;
+                imageStatus?: string;
+                sortBy?: "createdAt" | "updatedAt" | "nameAr" | "price";
+                sortDirection?: "asc" | "desc";
+                createdFrom?: string;
+                createdTo?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -6206,6 +6266,26 @@ export interface operations {
             };
         };
     };
+    updatePartnerProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product proposal updated and resubmitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getFieldCatalogTaxonomy: {
         parameters: {
             query?: never;
@@ -6299,6 +6379,27 @@ export interface operations {
         responses: {
             /** @description Product proposal submitted for the field-owned partner store — never a final sellable product. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateFieldProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+                proposalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product proposal updated and resubmitted. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

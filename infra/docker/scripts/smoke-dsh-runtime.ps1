@@ -25,10 +25,10 @@ Write-Host ($stores | ConvertTo-Json -Depth 5)
 if ($null -eq $stores.stores) { throw "DSH /stores response missing 'stores' field" }
 if ($null -eq $stores.pagination) { throw "DSH /stores response missing 'pagination' field" }
 
-Write-Host "`n--- GET /dsh/stores/store-1001 ---"
-$store = Invoke-RestMethod -Uri "http://localhost:58080/dsh/stores/store-1001" -Method GET -TimeoutSec 10
+Write-Host "`n--- GET /dsh/stores/store-test-grocery ---"
+$store = Invoke-RestMethod -Uri "http://localhost:58080/dsh/stores/store-test-grocery" -Method GET -TimeoutSec 10
 Write-Host ($store | ConvertTo-Json -Depth 5)
-if ($null -eq $store.store) { throw "DSH /stores/store-1001 response missing 'store' field" }
-if ($store.store.id -ne "store-1001") { throw "DSH /stores/store-1001 returned wrong store id: $($store.store.id)" }
+if ($null -eq $store.store) { throw "DSH /stores/store-test-grocery response missing 'store' field" }
+if ($store.store.id -ne "store-test-grocery") { throw "DSH /stores/store-test-grocery returned wrong store id: $($store.store.id)" }
 
 Write-Host "`nDSH runtime smoke: PASS"

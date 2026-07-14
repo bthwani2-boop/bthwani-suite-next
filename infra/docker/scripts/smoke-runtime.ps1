@@ -74,9 +74,9 @@ if ($ProfileList -contains "dsh") {
   }
   Write-Host "DSH /dsh/stores: PASS — $count stores"
 
-  $store1 = Invoke-RestMethod "$DshBaseUrl/dsh/stores/store-1001" -TimeoutSec 10 -ErrorAction Stop
-  if ($store1.store.id -ne "store-1001") { throw "DSH /dsh/stores/store-1001: FAIL — wrong id returned" }
-  Write-Host "DSH /dsh/stores/store-1001: PASS — $($store1.store.displayName)"
+  $store1 = Invoke-RestMethod "$DshBaseUrl/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop
+  if ($store1.store.id -ne "store-test-grocery") { throw "DSH /dsh/stores/store-test-grocery: FAIL — wrong id returned" }
+  Write-Host "DSH /dsh/stores/store-test-grocery: PASS — $($store1.store.displayName)"
 
   Write-Host "DSH API smoke: PASS"
 }

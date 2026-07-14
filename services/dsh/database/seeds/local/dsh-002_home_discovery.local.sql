@@ -20,7 +20,7 @@ VALUES
     'خصومات تصل إلى 50%',
     'http://localhost:59000/dsh-media/banner-002.png',
     'store',
-    'store-1001',
+    'store-test-grocery',
     2
   )
 ON CONFLICT (id) DO UPDATE SET

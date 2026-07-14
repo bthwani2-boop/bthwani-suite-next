@@ -31,3 +31,4 @@ export * from "./SegmentedControl";
 export * from "./FilterRail";
 
 
+export * from "./Checkbox";

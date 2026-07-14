@@ -530,7 +530,7 @@ function Invoke-WltSmoke {
   $sessionBody = @{
     checkoutIntentId = "checkout-smoke-0001"
     clientId = "client-local-001"
-    storeId = "store-1001"
+    storeId = "store-test-grocery"
     paymentMethod = "cod"
     amountMinorUnits = 1000
     currency = "YER"
@@ -610,7 +610,7 @@ function Invoke-DshMediaSeed {
     "node-medications.png", "node-baby-care.png", "node-pain-relief.png", "node-baby-milk.png",
     "node-headache-migraine.png", "node-infant-formula.png",
     "product-panadol-advance.png", "product-solpadeine-soluble.png", "product-aptamil-1.png",
-    "store-1001-hero.png", "store-1001-logo.png", "store-1002-hero.png", "store-1002-logo.png",
+    "store-test-grocery-hero.png", "store-test-grocery-logo.png", "store-1002-hero.png", "store-1002-logo.png",
     "store-1003-hero.png", "store-1003-logo.png", "store-1004-hero.png", "store-1004-logo.png",
     "store-1005-hero.png", "store-1005-logo.png", "store-1006-hero.png", "store-1006-logo.png",
     "banner-001.png", "banner-002.png", "promo-001.png"
@@ -642,6 +642,13 @@ function Invoke-DshMediaSeed {
   Write-Host "DSH media seed: PASS ($($ExpectedFiles.Count) objects verified)"
 }
 
+function Invoke-DshDevBootstrap {
+  Write-Host "`n--- DSH API Dev Bootstrap ---"
+  node tools/scripts/bootstrap-dev-data.mjs
+  if ($LASTEXITCODE -ne 0) { throw "DSH API Dev Bootstrap failed (exit $LASTEXITCODE)" }
+  Write-Host "DSH API Dev Bootstrap: PASS"
+}
+
 function Invoke-DshSmoke {
   Write-Host "`n--- DSH API smoke ---"
 
@@ -659,9 +666,9 @@ function Invoke-DshSmoke {
   if ($null -eq $stores.stores) { throw "/dsh/stores missing 'stores' field" }
   if ($count -eq 0) { throw "/dsh/stores returned 0 stores — seed may not have run" }
 
-  $store1 = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10 -ErrorAction Stop
-  Write-Host "  /dsh/stores/store-1001: $($store1.store.displayName)"
-  if ($store1.store.id -ne "store-1001") { throw "/dsh/stores/store-1001 returned wrong id" }
+  $store1 = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop
+  Write-Host "  /dsh/stores/store-test-grocery: $($store1.store.displayName)"
+  if ($store1.store.id -ne "store-test-grocery") { throw "/dsh/stores/store-test-grocery returned wrong id" }
 
   $identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
     "123456"
@@ -682,7 +689,7 @@ function Invoke-DshSmoke {
   $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
   $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
   if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
-  $operatorStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001" -Headers $operatorHeaders -TimeoutSec 10
+  $operatorStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery" -Headers $operatorHeaders -TimeoutSec 10
   $governanceHeaders = @{
     Authorization = "Bearer $operatorToken"
     "Idempotency-Key" = "smoke-operator-$([guid]::NewGuid())"
@@ -694,7 +701,7 @@ function Invoke-DshSmoke {
     value = "visible"
     reason = "runtime smoke verification"
   } | ConvertTo-Json
-  $governance = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $governanceHeaders -ContentType "application/json" -Body $governanceBody -TimeoutSec 10
+  $governance = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/governance" -Method Post -Headers $governanceHeaders -ContentType "application/json" -Body $governanceBody -TimeoutSec 10
   if ($governance.audit.actorRole -ne "operator") { throw "operator governance audit missing" }
 
   # DSH-JOURNEY-001: prove the publication gate changes persisted state.
@@ -709,9 +716,9 @@ function Invoke-DshSmoke {
     value = "hidden"
     reason = "runtime publication gate verification"
   } | ConvertTo-Json
-  $hidden = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
+  $hidden = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/governance" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
   try {
-    Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop | Out-Null
     throw "store remained publicly visible after marketing gate was hidden"
   } catch {
     if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
@@ -727,8 +734,8 @@ function Invoke-DshSmoke {
     value = "visible"
     reason = "restore runtime publication gate"
   } | ConvertTo-Json
-  $visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/governance" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
-  $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001" -TimeoutSec 10
+  $visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/governance" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
+  $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10
   if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
 
   # DSH-JOURNEY-002: product proposal, transition pipeline, and assortment management
@@ -779,14 +786,14 @@ function Invoke-DshSmoke {
     stockStatus = "in_stock"
     publicationStatus = "client_visible"
   } | ConvertTo-Json
-  $assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-1001/assortment/$($proposal.proposal.adoptedMasterProductId)" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
+  $assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
 
   # Transition to client-visible
   $transBody5 = @{ nextStatus = "client-visible"; note = "smoke publish" } | ConvertTo-Json
   $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
 
   # Verify catalog client exposure
-  $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-1001/catalog" -TimeoutSec 10
+  $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
   if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
 
   $smokeCatalogProductId = $proposal.proposal.adoptedMasterProductId
@@ -929,7 +936,7 @@ function Invoke-DshSmoke {
       "X-Correlation-ID" = "smoke-checkout-$([guid]::NewGuid())"
     }
     $cartBody = @{
-      storeId = "store-1001"
+      storeId = "store-test-grocery"
       fulfillmentMode = "bthwani_delivery"
       masterProductId = $smokeCatalogProductId
       quantity = 1
@@ -938,7 +945,7 @@ function Invoke-DshSmoke {
     if ([string]::IsNullOrWhiteSpace($cartItem.cartId)) { throw "cart item did not return cartId" }
     $checkoutBody = @{
       cartId = $cartItem.cartId
-      storeId = "store-1001"
+      storeId = "store-test-grocery"
       fulfillmentMode = "bthwani_delivery"
       paymentMethod = "cod"
       deliveryAddress = "runtime smoke checkout address"
@@ -1039,6 +1046,7 @@ elseif ($Action -eq "reset") {
   }
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
+    Invoke-DshDevBootstrap
     Invoke-DshSmoke
   }
   if ($ProfileList -contains "wlt") {

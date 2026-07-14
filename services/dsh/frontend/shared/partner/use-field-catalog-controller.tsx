@@ -61,6 +61,7 @@ export type FieldProductProposalInput = {
   readonly categoryNodeId: string | null;
   readonly brand: string;
   readonly barcode: string | null;
+  readonly imageObjectKey?: string | null;
 };
 
 export function useFieldCatalogController(partnerId: string) {
@@ -154,7 +155,7 @@ export function useFieldCatalogController(partnerId: string) {
           categoryNodeId: input.categoryNodeId,
           brand: input.brand,
           barcode: input.barcode,
-          imageObjectKey: null,
+          imageObjectKey: input.imageObjectKey || null,
           sourceSurface: "app-field",
         });
         setProposals((prev) => [proposal, ...prev]);

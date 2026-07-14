@@ -1,0 +1,58 @@
+.bthwani-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  position: relative;
+}
+
+.bthwani-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.bthwani-checkbox-control {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  background-color: var(--color-surface);
+}
+
+.bthwani-checkbox-input:checked + .bthwani-checkbox-control {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.bthwani-checkbox-input:checked + .bthwani-checkbox-control::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+.bthwani-checkbox-input:disabled + .bthwani-checkbox-control {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--color-surface-hover);
+}
+
+.bthwani-checkbox-label {
+  font-family: var(--font-primary);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  user-select: none;
+}
+
+.bthwani-checkbox-input:disabled ~ .bthwani-checkbox-label {
+  opacity: 0.5;
+}

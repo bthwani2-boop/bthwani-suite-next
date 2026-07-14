@@ -62,6 +62,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
   const [proposeNameAr, setProposeNameAr] = React.useState('');
   const [proposeNameEn, setProposeNameEn] = React.useState('');
   const [proposeBrand, setProposeBrand] = React.useState('');
+  const [proposeImageKey, setProposeImageKey] = React.useState('');
   const [proposeError, setProposeError] = React.useState<string | undefined>(undefined);
   // The proposal form's domain/node choice is intentionally decoupled from
   // selectedDomainId/selectedNodeId (which drive browsing/search below). The
@@ -141,11 +142,13 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       categoryNodeId,
       brand: proposeBrand.trim(),
       barcode: null,
+      imageObjectKey: proposeImageKey.trim() || null,
     });
     if (proposal) {
       setProposeNameAr('');
       setProposeNameEn('');
       setProposeBrand('');
+      setProposeImageKey('');
       setProposeDomainId('');
       setProposeNodeId('');
       setShowProposeForm(false);
@@ -433,6 +436,12 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                 placeholder="اختياري"
               />
               <TextField label="العلامة التجارية" value={proposeBrand} onChangeText={setProposeBrand} placeholder="اختياري" />
+              <TextField
+                label="معرف الصورة في DAM (اختياري)"
+                value={proposeImageKey}
+                onChangeText={setProposeImageKey}
+                placeholder="Asset ID من الكاميرا / مكتبة DAM"
+              />
               <Button
                 label="إرسال الاقتراح للمراجعة"
                 tone="primary"

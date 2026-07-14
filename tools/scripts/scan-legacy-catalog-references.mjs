@@ -29,6 +29,23 @@ const patterns = [
   /\bstore\.category\b/,
   /\bInventoryCatalogScreen\b/,
   /\b(create|update|delete)PartnerCatalog(Product|Category)\b/,
+  /\blegacyCatalog\b/,
+  /\blocalCatalog\b/,
+  /\bmockProducts\b/,
+  /\bmockCategories\b/,
+  /\bdemoProducts\b/,
+  /\bdemoCategories\b/,
+  /\bfixtureProducts\b/,
+  /\bfixtureCategories\b/,
+  /\bstaticProducts\b/,
+  /\bstaticCategories\b/,
+  /\bsampleProducts\b/,
+  /\bsampleCategories\b/,
+  /\bstore-1001\b/,
+  /fallback catalog/i,
+  /offline catalog source/i,
+  /local product repository/i,
+  /local category repository/i,
 ];
 
 const skipDirs = new Set([
@@ -41,6 +58,8 @@ const skipDirs = new Set([
   ".nx",
   "coverage",
   ".pnpm-store",
+  ".tmp",
+  "backups",
   // Generated, git-ignored analysis caches — never runtime truth.
   ".graphify",
 ]);

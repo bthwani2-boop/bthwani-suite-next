@@ -50,6 +50,7 @@ export function ProductEditScreen({
   const [selectedNodeId, setSelectedNodeId] = React.useState('');
   const [brand, setBrand] = React.useState('');
   const [barcode, setBarcode] = React.useState('');
+  const [imageObjectKey, setImageObjectKey] = React.useState('');
 
   React.useEffect(() => {
     setLoading(true);
@@ -124,7 +125,7 @@ export function ProductEditScreen({
         categoryNodeId: selectedNodeId || null,
         brand: brand.trim(),
         barcode: barcode.trim() || null,
-        imageObjectKey: null,
+        imageObjectKey: imageObjectKey.trim() || null,
         sourceSurface: 'app-partner',
       });
       setSuccessMessage('تم إرسال اقتراح المنتج بنجاح إلى قائمة مراجعة الإدارة.');
@@ -134,7 +135,7 @@ export function ProductEditScreen({
     } finally {
       setSaving(false);
     }
-  }, [proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
+  }, [proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, imageObjectKey, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
 
   if (loading) {
     return <StateView title="جاري تحميل البيانات..." loading />;
@@ -225,6 +226,14 @@ export function ProductEditScreen({
               value={barcode}
               onChangeText={setBarcode}
               placeholder="مثال: 6281007011477"
+              disabled={saving}
+            />
+
+            <TextField
+              label="معرف الصورة في DAM (اختياري)"
+              value={imageObjectKey}
+              onChangeText={setImageObjectKey}
+              placeholder="Asset ID من مكتبة DAM"
               disabled={saving}
             />
 

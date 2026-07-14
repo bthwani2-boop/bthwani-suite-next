@@ -144,18 +144,18 @@ func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 
-	// store-1001 is seeded as fully client_visible-eligible.
+	// store-test-grocery is seeded as fully client_visible-eligible.
 	c, err := CreateCampaign(db, CreateCampaignInput{
 		Title:         "Gate Pass Campaign " + suffix,
 		TargetType:    "store",
-		TargetID:      "store-1001",
+		TargetID:      "store-test-grocery",
 		CreatedBy:     "operator-local-001",
 		CorrelationID: "corr-" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("CreateCampaign with eligible store target: %v", err)
 	}
-	if c.TargetType != "store" || c.TargetID != "store-1001" {
+	if c.TargetType != "store" || c.TargetID != "store-test-grocery" {
 		t.Fatalf("expected target to persist, got type=%q id=%q", c.TargetType, c.TargetID)
 	}
 

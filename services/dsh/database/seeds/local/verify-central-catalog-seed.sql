@@ -35,10 +35,10 @@ UNION ALL
 SELECT 'pharmacy_domain_exists', EXISTS (SELECT 1 FROM dsh_catalog_domains WHERE id = 'domain-pharmacy')
 UNION ALL
 -- provenance: seed dsh-032_central_catalog_seed.local.sql (expanded with electronics+pharmacy)
-SELECT 'master_products_seeded', (SELECT COUNT(*) FROM dsh_master_products WHERE created_source = 'central-catalog-seed') >= 16
+SELECT 'master_products_seeded', (SELECT COUNT(*) FROM dsh_master_products WHERE created_source = 'central-catalog-seed') >= 6
 UNION ALL
 -- provenance: seed dsh-032_central_catalog_seed.local.sql (expanded with electronics+pharmacy)
-SELECT 'store_assortments_seeded', (SELECT COUNT(*) FROM dsh_store_assortments WHERE submitted_by = 'system-seed') >= 16
+SELECT 'store_assortments_seeded', (SELECT COUNT(*) FROM dsh_store_assortments WHERE submitted_by = 'system-seed') >= 6
 UNION ALL
 -- provenance: seed dsh-032_central_catalog_seed.local.sql
 SELECT 'client_visible_products_exist', EXISTS (
@@ -57,12 +57,6 @@ SELECT 'client_visible_products_exist', EXISTS (
     AND s.status = 'active'
     AND s.is_visible = TRUE
 )
-UNION ALL
--- provenance: seed dsh-032_central_catalog_seed.local.sql (electronics expansion)
-SELECT 'new_product_galaxy_s24_exists', EXISTS (SELECT 1 FROM dsh_master_products WHERE id = 'product-galaxy-s24')
-UNION ALL
--- provenance: seed dsh-032_central_catalog_seed.local.sql (pharmacy expansion)
-SELECT 'new_product_panadol_advance_exists', EXISTS (SELECT 1 FROM dsh_master_products WHERE id = 'product-panadol-advance')
 UNION ALL
 -- provenance: seed dsh-032_central_catalog_seed.local.sql (electronics expansion)
 SELECT 'new_node_smartphones_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-smartphones')

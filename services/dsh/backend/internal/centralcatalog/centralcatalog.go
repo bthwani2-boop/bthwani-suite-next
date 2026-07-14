@@ -327,6 +327,7 @@ type MasterProduct struct {
 	CreatedSource           string    `json:"createdSource"`
 	CreatedAt               time.Time `json:"createdAt"`
 	UpdatedAt               time.Time `json:"updatedAt"`
+	Version                 int       `json:"version"`
 }
 
 var validApprovalStatus = map[string]bool{"draft": true, "pending_review": true, "approved": true, "rejected": true, "archived": true}
@@ -364,13 +365,13 @@ type MasterProductPatchInput struct {
 
 const masterProductColumns = `id, domain_id, category_node_id, canonical_name_ar, canonical_name_en, brand,
 	barcode, gtin, sku, unit, measurement_type, canonical_image_object_key, approval_status, is_active,
-	duplicate_group_id, created_source, created_at, updated_at`
+	duplicate_group_id, created_source, created_at, updated_at, version`
 
 func scanMasterProduct(scanner interface{ Scan(...any) error }) (MasterProduct, error) {
 	var m MasterProduct
 	err := scanner.Scan(&m.ID, &m.DomainID, &m.CategoryNodeID, &m.CanonicalNameAr, &m.CanonicalNameEn, &m.Brand,
 		&m.Barcode, &m.GTIN, &m.SKU, &m.Unit, &m.MeasurementType, &m.CanonicalImageObjectKey, &m.ApprovalStatus,
-		&m.IsActive, &m.DuplicateGroupID, &m.CreatedSource, &m.CreatedAt, &m.UpdatedAt)
+		&m.IsActive, &m.DuplicateGroupID, &m.CreatedSource, &m.CreatedAt, &m.UpdatedAt, &m.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return m, ErrNotFound
 	}
@@ -493,7 +494,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 		canonical_name_en=COALESCE($3, canonical_name_en), brand=COALESCE($4, brand),
 		barcode=COALESCE($5, barcode), gtin=COALESCE($6, gtin), sku=COALESCE($7, sku),
 		unit=COALESCE(NULLIF($8::text,''), unit), measurement_type=COALESCE(NULLIF($9::text,''), measurement_type),
-		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now()
+		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now(), version=version+1
 		WHERE id=$12`,
 		input.CategoryNodeID, canonicalNameAr, input.CanonicalNameEn, input.Brand,
 		input.Barcode, input.GTIN, input.SKU, input.Unit, input.MeasurementType,
@@ -544,6 +545,42 @@ var validSourceSurface = map[string]bool{
 var validProposalStatus = map[string]bool{
 	"catalog-draft": true, "partner-proposed": true, "partner-review": true, "marketing-review": true,
 	"catalog-adopted": true, "catalog-approved": true, "client-visible": true, "needs-fix": true, "rejected": true,
+}
+
+
+type ProductProposalPatchInput struct {
+	ProposedNameAr *string `json:"proposedNameAr"`
+	ProposedNameEn *string `json:"proposedNameEn"`
+	Brand          *string `json:"brand"`
+	Barcode        *string `json:"barcode"`
+	ImageObjectKey *string `json:"imageObjectKey"`
+}
+
+func UpdateProposal(ctx context.Context, db *sql.DB, id string, actorID string, input ProductProposalPatchInput) (ProductProposal, error) {
+	proposal, err := GetProposal(ctx, db, id)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+	if proposal.SourceActorID != actorID {
+		return ProductProposal{}, ErrForbidden
+	}
+	if proposal.Status != "needs-fix" {
+		return ProductProposal{}, fmt.Errorf("%w: can only edit proposals in needs-fix status", ErrInvalid)
+	}
+
+	result, err := db.ExecContext(ctx, `UPDATE dsh_product_proposals SET
+		proposed_name_ar=COALESCE($1, proposed_name_ar), proposed_name_en=COALESCE($2, proposed_name_en),
+		brand=COALESCE($3, brand), barcode=COALESCE($4, barcode), image_object_key=COALESCE($5, image_object_key),
+		status='partner-proposed', resubmission_count=resubmission_count+1, updated_at=now()
+		WHERE id=$6`,
+		input.ProposedNameAr, input.ProposedNameEn, input.Brand, input.Barcode, input.ImageObjectKey, id)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return ProductProposal{}, ErrNotFound
+	}
+	return GetProposal(ctx, db, id)
 }
 
 type ProductProposalInput struct {
@@ -747,6 +784,7 @@ type StoreAssortment struct {
 	ApprovedBy           string    `json:"approvedBy"`
 	CreatedAt            time.Time `json:"createdAt"`
 	UpdatedAt            time.Time `json:"updatedAt"`
+	Version              int       `json:"version"`
 }
 
 var validStockStatus = map[string]bool{"in_stock": true, "low_stock": true, "out_of_stock": true}
@@ -765,13 +803,13 @@ type StoreAssortmentInput struct {
 }
 
 const assortmentColumns = `id, store_id, master_product_id, unit_price, currency, available, stock_status,
-	local_note, custom_image_object_key, publication_status, submitted_by, approved_by, created_at, updated_at`
+	local_note, custom_image_object_key, publication_status, submitted_by, approved_by, created_at, updated_at, version`
 
 func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, error) {
 	var a StoreAssortment
 	err := scanner.Scan(&a.ID, &a.StoreID, &a.MasterProductID, &a.UnitPrice, &a.Currency, &a.Available,
 		&a.StockStatus, &a.LocalNote, &a.CustomImageObjectKey, &a.PublicationStatus, &a.SubmittedBy,
-		&a.ApprovedBy, &a.CreatedAt, &a.UpdatedAt)
+		&a.ApprovedBy, &a.CreatedAt, &a.UpdatedAt, &a.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -1554,7 +1592,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			}
 		}
 
-		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now() WHERE store_id=$2 AND master_product_id=$3`,
+		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now(), version=dsh_store_assortments.version+1 WHERE store_id=$2 AND master_product_id=$3`,
 			actorID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID)
 		if err != nil {
 			return ProductProposal{}, err

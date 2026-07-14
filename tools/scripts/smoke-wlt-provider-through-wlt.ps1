@@ -42,7 +42,7 @@ if ($health.status -ne "healthy") { throw "WLT health failed" }
 $session = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions" -Body @{
   checkoutIntentId = "checkout-provider-smoke-$timestamp"
   clientId = "client-local-001"
-  storeId = "store-1001"
+  storeId = "store-test-grocery"
   paymentMethod = "official_wallet"
   amountMinorUnits = 1000
 }

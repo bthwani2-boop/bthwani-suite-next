@@ -350,6 +350,41 @@ func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusCreated, map[string]any{"proposal": p})
 }
 
+
+func (s *protectedStoreServer) handleUpdatePartnerProductProposal(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	var input centralcatalog.ProductProposalPatchInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	p, err := centralcatalog.UpdateProposal(r.Context(), s.db, r.PathValue("proposalId"), actor.ID, input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
+}
+
+func (s *protectedStoreServer) handleUpdateFieldProductProposal(w http.ResponseWriter, r *http.Request) {
+	actorID, _, ok := s.fieldPartnerStore(w, r)
+	if !ok {
+		return
+	}
+	var input centralcatalog.ProductProposalPatchInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	p, err := centralcatalog.UpdateProposal(r.Context(), s.db, r.PathValue("proposalId"), actorID, input)
+	if err != nil {
+		s.writeCentralCatalogError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"proposal": p})
+}
+
 func (s *protectedStoreServer) handlePartnerCreateProductProposal(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok {

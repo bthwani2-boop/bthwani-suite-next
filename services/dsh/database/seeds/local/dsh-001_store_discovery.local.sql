@@ -27,10 +27,10 @@ INSERT INTO dsh_stores (
   longitude
 ) VALUES
   (
-    'store-1001', 'haddah-central-market', 'أسواق حدة المركزية', 'active',
+    'store-test-grocery', 'haddah-central-market', 'أسواق حدة المركزية', 'active',
     'sana', 'haddah', 'serviceable', 4.80, 312, 25, 40, true,
-    'http://localhost:59000/dsh-media/store-1001-hero.png',
-    'http://localhost:59000/dsh-media/store-1001-logo.png',
+    'http://localhost:59000/dsh-media/store-test-grocery-hero.png',
+    'http://localhost:59000/dsh-media/store-test-grocery-logo.png',
     'domain-groceries', ARRAY['delivery','pickup','express'], true,
     2.10, 3100, true, false, 2, true,
     15.3400, 44.1900
@@ -77,6 +77,15 @@ INSERT INTO dsh_stores (
     'http://localhost:59000/dsh-media/store-1006-hero.png',
     'http://localhost:59000/dsh-media/store-1006-logo.png',
     'domain-pharmacy', ARRAY['delivery'], true,
+      4.10, 980, false, true, null, false,
+      15.3700, 44.1900
+  ),
+  (
+    'store-test-electronics', 'test-electronics', '???? ????????????', 'active',
+    'sana', 'haddah', 'serviceable', 4.90, 500, 30, 60, true,
+    'http://localhost:59000/dsh-media/store-test-grocery-hero.png',
+    'http://localhost:59000/dsh-media/store-test-grocery-logo.png',
+    'domain-electronics', ARRAY['delivery'], true,
     4.10, 980, false, true, null, false,
     15.3700, 44.1900
   )

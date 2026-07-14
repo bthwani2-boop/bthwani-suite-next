@@ -1,5 +1,5 @@
 "use client";
-import { colorRoles, neutralScale, statusScale } from '@bthwani/ui-kit';
+import { colorRoles, neutralScale, statusScale, DataTable } from '@bthwani/ui-kit';
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import {
   CpButton,
@@ -37,6 +37,9 @@ import {
 
 import { CategoryControlRoom } from "./products/CategoryControlRoom";
 import { ReelsReviewPanel } from "./ReelsReviewPanel";
+import { StorePicker } from "./components/StorePicker";
+import { CategoryPicker } from "./components/CategoryPicker";
+import { ProductPicker } from "./components/ProductPicker";
 
 
 type StatusTone = "warning" | "success" | "danger" | "neutral" | "info";
@@ -203,7 +206,7 @@ export function CatalogDashboardScreen() {
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStoreId, setSelectedStoreId] = useState("store-1001");
+  const [selectedStoreId, setSelectedStoreId] = useState("");
   const [assortmentProductId, setAssortmentProductId] = useState("");
   const [assortmentPrice, setAssortmentPrice] = useState("");
   const [assortmentSaving, setAssortmentSaving] = useState(false);
@@ -247,6 +250,9 @@ export function CatalogDashboardScreen() {
 
   // Missing-image indicator for the currently visible master products page
   const [missingImageProductIds, setMissingImageProductIds] = useState<ReadonlySet<string>>(new Set());
+
+  // Bulk selection for Master Products
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
   // CSV Import state
   const [csvText, setCsvText] = useState("");
@@ -484,14 +490,12 @@ export function CatalogDashboardScreen() {
         <CpFilterBar label="تصفية البيانات">
           {activeTab === "assortment" && (
             <div style={filterRowStyle}>
-              <span style={filterLabelStyle}>معرف المتجر:</span>
-              <CpTextInput
+              <StorePicker
                 value={selectedStoreId}
                 onChange={(v) => {
                   setSelectedStoreId(v);
                   if (v.trim()) void controller.reloadStoreAssortment(v.trim());
                 }}
-                placeholder="مثال: store-1001"
               />
               <CpButton onClick={() => void controller.reloadStoreAssortment(selectedStoreId)}>
                 جلب التشكيلة
@@ -568,64 +572,68 @@ export function CatalogDashboardScreen() {
                 link.setAttribute("download", `master_products_${Date.now()}.csv`);
                 link.click();
               }}>تصدير CSV</CpButton>
+              {selectedProductIds.size > 0 && (
+                <CpButton onClick={() => {
+                  alert(`سيتم تفعيل ${selectedProductIds.size} منتج. هذه ميزة تجريبية للإجراءات المجمعة.`);
+                  setSelectedProductIds(new Set());
+                }}>
+                  تفعيل المحدد ({selectedProductIds.size})
+                </CpButton>
+              )}
             </div>
-            <CpTable aria-label="جدول المنتجات المركزية">
-              <thead>
-                <tr dir="rtl">
-                  <CpTableHeaderCell>المعرف</CpTableHeaderCell>
-                  <CpTableHeaderCell>الاسم المركزي</CpTableHeaderCell>
-                  <CpTableHeaderCell>الماركة</CpTableHeaderCell>
-                  <CpTableHeaderCell>الباركود</CpTableHeaderCell>
-                  <CpTableHeaderCell>حالة الاعتماد</CpTableHeaderCell>
-                  <CpTableHeaderCell>مؤشر جودة المنتج</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody dir="rtl">
-                {visibleMasterProducts.map((m) => {
+            <DataTable
+              columns={[
+                { key: "id", header: "المعرف", render: (m: any) => m.id },
+                {
+                  key: "name",
+                  header: "الاسم المركزي",
+                  render: (m: any) => (
+                    <>
+                      {missingImageProductIds.has(m.id) && <span style={missingImageBadgeStyle}>صورة مفقودة</span>}
+                      <strong>{m.canonicalNameAr}</strong>
+                    </>
+                  ),
+                },
+                { key: "brand", header: "الماركة", render: (m: any) => m.brand || "—" },
+                { key: "barcode", header: "الباركود", render: (m: any) => <code>{m.barcode || "—"}</code> },
+                {
+                  key: "approval",
+                  header: "حالة الاعتماد",
+                  render: (m: any) => <StatusBadge label={m.approvalStatus} tone={m.approvalStatus === "approved" ? "success" : "warning"} />,
+                },
+                {
+                  key: "quality",
+                  header: "مؤشر جودة المنتج",
+                  render: (m: any) => {
                     const quality = auditProductQuality(m);
-                    const missingImage = missingImageProductIds.has(m.id);
                     return (
-                      <tr key={m.id}>
-                        <CpTableCell>{m.id}</CpTableCell>
-                        <CpTableCell>
-                          {missingImage && <span style={missingImageBadgeStyle}>صورة مفقودة</span>}
-                          <strong>{m.canonicalNameAr}</strong>
-                        </CpTableCell>
-                        <CpTableCell>{m.brand || "—"}</CpTableCell>
-                        <CpTableCell><code>{m.barcode || "—"}</code></CpTableCell>
-                        <CpTableCell>
-                          <StatusBadge label={m.approvalStatus} tone={m.approvalStatus === "approved" ? "success" : "warning"} />
-                        </CpTableCell>
-                        <CpTableCell>
-                          <span style={{ color: quality.score >= 80 ? "green" : quality.score >= 50 ? "orange" : "red", fontWeight: "bold" /* dynamic-exception: score-derived color */ }}>
-                            {quality.score}%
+                      <>
+                        <span style={{ color: quality.score >= 80 ? "green" : quality.score >= 50 ? "orange" : "red", fontWeight: "bold" }}>
+                          {quality.score}%
+                        </span>
+                        {quality.warnings.length > 0 && (
+                          <span style={qualityWarningsStyle}>
+                            ({quality.warnings.join(", ")})
                           </span>
-                          {quality.warnings.length > 0 && (
-                            <span style={qualityWarningsStyle}>
-                              ({quality.warnings.join(", ")})
-                            </span>
-                          )}
-                        </CpTableCell>
-                        <CpTableCell>
-                          <StatusBadge label={m.isActive ? "نشط" : "معطل"} tone={m.isActive ? "success" : "neutral"} />
-                        </CpTableCell>
-                      </tr>
+                        )}
+                      </>
                     );
-                  })}
-              </tbody>
-            </CpTable>
-            {/* Pagination Controls */}
-            <div style={paginationRowStyle}>
-              <CpButton disabled={productPage === 0} onClick={() => setProductPage((p) => p - 1)}>السابق</CpButton>
-              <span style={paginationPageLabelStyle}>صفحة {productPage + 1}</span>
-              <CpButton
-                disabled={(productPage + 1) * productsPerPage >= controller.state.masterProducts.items.length}
-                onClick={() => setProductPage((p) => p + 1)}
-              >
-                التالي
-              </CpButton>
-            </div>
+                  },
+                },
+                {
+                  key: "status",
+                  header: "الحالة",
+                  render: (m: any) => <StatusBadge label={m.isActive ? "نشط" : "معطل"} tone={m.isActive ? "success" : "neutral"} />,
+                },
+              ]}
+              rows={visibleMasterProducts}
+              getRowKey={(m) => m.id}
+              selectedRowKeys={selectedProductIds}
+              onSelectionChange={setSelectedProductIds}
+              page={productPage + 1}
+              totalPages={Math.ceil(controller.state.masterProducts.items.length / productsPerPage)}
+              onPageChange={(p) => setProductPage(p - 1)}
+            />
           </div>
         )}
 
@@ -693,11 +701,11 @@ export function CatalogDashboardScreen() {
                                   <span>إنشاء منتج مركزي جديد (Master Product)</span>
                                 </label>
                                 {!isCreate && (
-                                  <CpTextInput
+                                  <ProductPicker
                                     value={linkId}
                                     onChange={(val) => setSelectedAdoptedProductId((curr) => ({ ...curr, [p.id]: val }))}
-                                    placeholder="معرف المنتج المركزي للربط (L5 id)..."
-                                    aria-label={`ربط بمنتج مركزي موجود للاقتراح ${p.id}`}
+                                    label="ربط بمنتج مركزي موجود (L5)"
+                                    domainId={p.domainId}
                                   />
                                 )}
                               </div>
@@ -772,7 +780,13 @@ export function CatalogDashboardScreen() {
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-                <CpTextInput value={uploadEntityId} onChange={setUploadEntityId} placeholder="معرف العنصر المستهدف" aria-label="معرف العنصر المستهدف للرفع" />
+                {uploadEntityType === "master-products" ? (
+                  <ProductPicker value={uploadEntityId} onChange={setUploadEntityId} label="المنتج المستهدف" />
+                ) : uploadEntityType === "domains" || uploadEntityType === "nodes" ? (
+                  <CategoryPicker value={uploadEntityId} onChange={(id) => setUploadEntityId(id)} domains={controller.state.domains.items} nodes={controller.state.nodes.items} label="الفئة المستهدفة" />
+                ) : (
+                  <CpTextInput value={uploadEntityId} onChange={setUploadEntityId} placeholder="معرف العنصر المستهدف" aria-label="معرف العنصر المستهدف للرفع" />
+                )}
                 <CpTextInput value={uploadRole} onChange={setUploadRole} placeholder="الدور (gallery / canonical_product_image ...)" aria-label="دور الصورة" />
                 <CpTextInput value={uploadAltAr} onChange={setUploadAltAr} placeholder="نص بديل (Alt) بالعربية" aria-label="النص البديل للصورة" />
                 <CpButton disabled={uploading} onClick={() => void handleUploadAsset()}>{uploading ? "جاري الرفع..." : "رفع وربط"}</CpButton>
@@ -793,7 +807,13 @@ export function CatalogDashboardScreen() {
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-                <CpTextInput value={linkEntityId} onChange={setLinkEntityId} placeholder="معرف العنصر المستهدف" aria-label="معرف العنصر المستهدف للربط" />
+                {linkEntityType === "master-products" ? (
+                  <ProductPicker value={linkEntityId} onChange={setLinkEntityId} label="المنتج المستهدف" />
+                ) : linkEntityType === "domains" || linkEntityType === "nodes" ? (
+                  <CategoryPicker value={linkEntityId} onChange={(id) => setLinkEntityId(id)} domains={controller.state.domains.items} nodes={controller.state.nodes.items} label="الفئة المستهدفة" />
+                ) : (
+                  <CpTextInput value={linkEntityId} onChange={setLinkEntityId} placeholder="معرف العنصر المستهدف" aria-label="معرف العنصر المستهدف للربط" />
+                )}
                 <CpTextInput value={linkRole} onChange={setLinkRole} placeholder="الدور (canonical_product_image ...)" aria-label="دور الربط" />
                 <CpButton disabled={linking} onClick={() => void handleLinkExistingAsset()}>{linking ? "جاري الضبط..." : "ضبط كصورة العنصر"}</CpButton>
               </div>

@@ -60,7 +60,7 @@ UPDATE dsh_stores
 SET partner_id = 'prt_partner_local_001',
     partner_readiness = 'ready',
     updated_at = now()
-WHERE id = 'store-1001';
+WHERE id = 'store-test-grocery';
 
 INSERT INTO dsh_partner_documents (
     id,
@@ -156,7 +156,7 @@ INSERT INTO dsh_partner_field_visits (
 ) VALUES (
     'pfv_001',
     'prt_partner_local_001',
-    'store-1001',
+    'store-test-grocery',
     'field-local-001',
     'submitted',
     'تمت الزيارة الميدانية في حدة - صنعاء والتأكد من مطابقة العنوان واللوحة',

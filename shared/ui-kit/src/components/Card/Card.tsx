@@ -136,7 +136,9 @@ export const ProductCard = memo(function ProductCard({
           {imageSource ? (
             <Image source={imageSource} style={styles.productImage} alt="" />
           ) : (
-            <YStack style={styles.productImagePlaceholder} />
+            <YStack style={styles.productImagePlaceholder}>
+              <Text style={{ fontSize: 48, opacity: 0.2 }}>🛍️</Text>
+            </YStack>
           )}
         </YStack>
 
@@ -256,6 +258,8 @@ const styles = {
     width: "100%",
     height: "100%",
     backgroundColor: colorPalette.tanBg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   productFavoriteButton: {
     position: "absolute",

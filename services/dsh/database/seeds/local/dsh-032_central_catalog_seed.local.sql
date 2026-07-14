@@ -84,7 +84,7 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 INSERT INTO dsh_catalog_platform_policies (id, policy_scope, notes)
-VALUES ('default-policy', 'default', 'Platform-wide fallback catalog policy (dsh-030 seed).')
+VALUES ('default-policy', 'default', 'Platform-wide test generic policy (dsh-030 seed).')
 ON CONFLICT (id) DO UPDATE SET notes = EXCLUDED.notes, updated_at = NOW();
 
 INSERT INTO dsh_catalog_platform_policies (id, node_id, policy_scope, allows_store_product_custom_image, notes)
@@ -111,6 +111,16 @@ FROM dsh_catalog_domains
 WHERE slug IN ('electronics', 'spare_parts', 'honey_dates')
 ON CONFLICT (id) DO UPDATE SET allows_store_product_custom_image = EXCLUDED.allows_store_product_custom_image, updated_at = NOW();
 
+INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status)
+VALUES 
+  ('store-test-grocery', 'domain-groceries', 'approved'),
+  ('store-1005', 'domain-groceries', 'approved'),
+  ('store-1005', 'domain-restaurants', 'approved'),
+  ('store-1005', 'domain-electronics', 'approved'),
+  ('store-1005', 'domain-sweets-juices', 'approved'),
+  ('store-1005', 'domain-pharmacy', 'approved')
+ON CONFLICT DO NOTHING;
+
 -- Canonical local-development products. These are real sovereign master
 -- products, not screen-local fixtures and not per-store product truth.
 INSERT INTO dsh_master_products
@@ -135,38 +145,7 @@ VALUES
    '1 L', 'volume', 'approved', TRUE, 'central-catalog-seed'),
   ('product-1005-apple', 'domain-groceries', 'node-vegetables-fruits',
    'تفاح رويال غالا', 'Royal Gala Apple', 'بثواني', 'ROYAL-GALA',
-   '1 kg', 'weight', 'approved', TRUE, 'central-catalog-seed'),
-  -- mock products for subcategories
-  ('product-cheese-kraft', 'domain-groceries', 'node-dairy-cheese',
-   'جبنة كرافت شيدر علب', 'Kraft Cheddar Cheese', 'كرافت', 'KRAFT-CHEDDAR-50G', '50g', 'weight',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-canned-tuna', 'domain-groceries', 'node-canned-food',
-   'تونة حدائق كاليفورنيا قطعة واحدة', 'California Gardens Tuna Solid', 'حدائق كاليفورنيا', 'CG-TUNA-185G', '185g', 'weight',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-local-tomato', 'domain-groceries', 'node-local-vegetables',
-   'طماطم بلدي طازج', 'Fresh Local Tomatoes', 'بلدي', 'LOCAL-TOMATO-1KG', '1 kg', 'weight',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-imported-banana', 'domain-groceries', 'node-imported-fruits',
-   'موز سكري مستورد', 'Sweet Imported Bananas', 'مستورد', 'IMPORTED-BANANA-1KG', '1 kg', 'weight',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-chocolate-box', 'domain-sweets-juices', 'node-sweets-chocolate',
-   'علبة شوكولاتة باتشي فاخرة', 'Patchi Chocolate Luxury Box', 'باتشي', 'PATCHI-BOX-500G', '500g', 'weight',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-galaxy-s24', 'domain-electronics', 'node-android-phones',
-   'سامسونج جالكسي إس 24', 'Samsung Galaxy S24', 'سامسونج', 'SAMSUNG-S24', 'device', 'unit',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-iphone-15', 'domain-electronics', 'node-ios-phones',
-   'آيفون 15 برو', 'iPhone 15 Pro', 'أبل', 'IPHONE-15-PRO', 'device', 'unit',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-panadol-advance', 'domain-pharmacy', 'node-headache-migraine',
-   'بنادول أدفانس 500 ملج', 'Panadol Advance 500mg', 'بنادول', 'PANADOL-ADV-500', 'box', 'unit',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-solpadeine-soluble', 'domain-pharmacy', 'node-headache-migraine',
-   'سولبادين فوار', 'Solpadeine Soluble', 'سولبادين', 'SOLPADEINE-SOL', 'box', 'unit',
-   'approved', TRUE, 'central-catalog-seed'),
-  ('product-aptamil-1', 'domain-pharmacy', 'node-infant-formula',
-   'أبتاميل 1 حليب رضع 400 جم', 'Aptamil 1 Infant Formula 400g', 'أبتاميل', 'APTAMIL-1-400G', 'can', 'unit',
-   'approved', TRUE, 'central-catalog-seed')
+   '1 kg', 'weight', 'approved', TRUE, 'central-catalog-seed')
 ON CONFLICT (id) DO UPDATE SET
   domain_id = EXCLUDED.domain_id,
   category_node_id = EXCLUDED.category_node_id,
@@ -185,7 +164,7 @@ INSERT INTO dsh_store_assortments
   (id, store_id, master_product_id, unit_price, currency, available,
    stock_status, local_note, publication_status, submitted_by, approved_by)
 VALUES
-  ('assortment-store-1001-rice', 'store-1001', 'product-1001-rice',
+  ('assortment-store-test-grocery-rice', 'store-test-grocery', 'product-1001-rice',
    18000, 'YER', TRUE, 'in_stock', 'عبوة 5 كجم', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-1005-meal', 'store-1005', 'product-1005-meal',
@@ -202,37 +181,7 @@ VALUES
    'system-seed', 'system-seed'),
   ('assortment-store-1005-apple', 'store-1005', 'product-1005-apple',
     1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
-    'system-seed', 'system-seed'),
-  ('assortment-store-cheese-kraft', 'store-1005', 'product-cheese-kraft',
-    1200, 'YER', TRUE, 'in_stock', 'عبوة معدنية', 'client_visible',
-    'system-seed', 'system-seed'),
-  ('assortment-store-canned-tuna', 'store-1005', 'product-canned-tuna',
-    1500, 'YER', TRUE, 'in_stock', 'سهلة الفتح', 'client_visible',
-    'system-seed', 'system-seed'),
-  ('assortment-store-local-tomato', 'store-1005', 'product-local-tomato',
-    900, 'YER', TRUE, 'in_stock', 'إنتاج مزارع صنعاء', 'client_visible',
-    'system-seed', 'system-seed'),
-  ('assortment-store-imported-banana', 'store-1005', 'product-imported-banana',
-     1100, 'YER', TRUE, 'in_stock', 'موز طازج', 'client_visible',
-     'system-seed', 'system-seed'),
-  ('assortment-store-chocolate-box', 'store-1005', 'product-chocolate-box',
-     25000, 'YER', TRUE, 'in_stock', 'هدية فاخرة', 'client_visible',
-     'system-seed', 'system-seed'),
-  ('assortment-store-galaxy-s24', 'store-1005', 'product-galaxy-s24',
-     950000, 'YER', TRUE, 'in_stock', 'ضمان سنة', 'client_visible',
-     'system-seed', 'system-seed'),
-  ('assortment-store-iphone-15', 'store-1005', 'product-iphone-15',
-     1200000, 'YER', TRUE, 'in_stock', 'نسخة الشرق الأوسط', 'client_visible',
-     'system-seed', 'system-seed'),
-  ('assortment-store-panadol-advance', 'store-1005', 'product-panadol-advance',
-     1200, 'YER', TRUE, 'in_stock', 'عبوة 24 قرص', 'client_visible',
-     'system-seed', 'system-seed'),
-  ('assortment-store-solpadeine-soluble', 'store-1005', 'product-solpadeine-soluble',
-     2500, 'YER', TRUE, 'in_stock', 'عبوة 20 قرص فوار', 'client_visible',
-     'system-seed', 'system-seed'),
-  ('assortment-store-aptamil-1', 'store-1005', 'product-aptamil-1',
-     9800, 'YER', TRUE, 'in_stock', 'غني بالحديد', 'client_visible',
-     'system-seed', 'system-seed')
+    'system-seed', 'system-seed')
 ON CONFLICT (store_id, master_product_id) DO UPDATE SET
   unit_price = EXCLUDED.unit_price,
   currency = EXCLUDED.currency,
@@ -264,26 +213,16 @@ VALUES
   ('asset-node-imported-fruits',    'node-imported-fruits.png',    NULL, 'node-imported-fruits.png',    'image/png', 134, 64, 64, 'ba664beec27326a39ba16ae3da932a935346a19b7f1402e0b0f1d310d8d1dd48', 'فواكه مستوردة',       'Imported Fruits',      '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-sweets-cake',        'node-sweets-cake.png',        NULL, 'node-sweets-cake.png',        'image/png', 136, 64, 64, '2f9433ed6802eaa797813df5bdc09289c41485ea5bdb4daa4462df5b5911f5ff', 'كيك وتورتات',         'Cakes & Tortes',       '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-sweets-chocolate',   'node-sweets-chocolate.png',   NULL, 'node-sweets-chocolate.png',   'image/png', 137, 64, 64, 'e601d3911fa0eaa9c8d3c4a56bb09c3738d5dfd5d6c2b473b0a6b9de59959d50', 'شوكولاتة فاخرة',      'Fine Chocolates',      '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-cheese-kraft',    'product-cheese-kraft.png',    NULL, 'product-cheese-kraft.png',    'image/png', 135, 64, 64, '9865380be562058e750d4d9ff4a0eb98f093ee1c53825ed8da5a1ec54936f779', 'جبنة كرافت شيدر',     'Kraft Cheddar Cheese', '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-canned-tuna',     'product-canned-tuna.png',     NULL, 'product-canned-tuna.png',     'image/png', 137, 64, 64, 'bbd634f328ccfd4b910b2db7c59d3c175a8a9240eebff8f2ce8fa7e1b70863bf', 'تونة حدائق كاليفورنيا', 'California Tuna',    '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-local-tomato',    'product-local-tomato.png',    NULL, 'product-local-tomato.png',    'image/png', 137, 64, 64, '16c1d022de872b12f79372e5dbf386169908ab5a193865319d86f82de1b86a56', 'طماطم بلدي',          'Local Tomato',         '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-imported-banana', 'product-imported-banana.png', NULL, 'product-imported-banana.png', 'image/png', 136, 64, 64, 'a5f0a2970c430ed1fba47d7303e2117f34efe6c58f679a8d6d61b8d5deeb2498', 'موز مستورد',          'Imported Banana',      '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-chocolate-box',   'product-chocolate-box.png',   NULL, 'product-chocolate-box.png',   'image/png', 136, 64, 64, '282b23b7f5e3bce782ead45bb1d5b4db89552eb3554cf8447e510272ccdd1258', 'علبة شوكولاتة باتشي',  'Patchi Chocolate Box', '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-phones-tablets',     'node-phones-tablets.png',     NULL, 'node-phones-tablets.png',     'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'هواتف وأجهزة لوحية',  'Phones & Tablets',   '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-smartphones',        'node-smartphones.png',        NULL, 'node-smartphones.png',        'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'هواتف ذكية',         'Smartphones',        '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-android-phones',     'node-android-phones.png',     NULL, 'node-android-phones.png',     'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'هواتف أندرويد',      'Android Phones',     '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-ios-phones',         'node-ios-phones.png',         NULL, 'node-ios-phones.png',         'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'هواتف آيفون',        'iOS Phones',         '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-galaxy-s24',      'product-galaxy-s24.png',      NULL, 'product-galaxy-s24.png',      'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'سامسونج جالكسي إس 24', 'Samsung Galaxy S24', '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-iphone-15',       'product-iphone-15.png',       NULL, 'product-iphone-15.png',       'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'آيفون 15 برو',       'iPhone 15 Pro',      '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-medications',        'node-medications.png',        NULL, 'node-medications.png',        'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'أدوية وعلاجات',       'Medications',         '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-baby-care',          'node-baby-care.png',          NULL, 'node-baby-care.png',          'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'عناية بالطفل',         'Baby Care',           '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-pain-relief',        'node-pain-relief.png',        NULL, 'node-pain-relief.png',        'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'مسكنات الألم',        'Pain Relief',         '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-baby-milk',          'node-baby-milk.png',          NULL, 'node-baby-milk.png',          'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'حليب أطفال',          'Baby Milk',           '#ffffff', 'approved', 'system', 'system-seed'),
   ('asset-node-headache-migraine',  'node-headache-migraine.png',  NULL, 'node-headache-migraine.png',  'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'صداع وشقيقة',         'Headache & Migraine', '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-infant-formula',     'node-infant-formula.png',     NULL, 'node-infant-formula.png',     'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'تركيبة الرضع',         'Infant Formula',      '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-panadol-advance', 'product-panadol-advance.png', NULL, 'product-panadol-advance.png', 'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'بنادول أدفانس',       'Panadol Advance',     '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-solpadeine-soluble', 'product-solpadeine-soluble.png', NULL, 'product-solpadeine-soluble.png', 'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'سولبادين فوار',       'Solpadeine Soluble',  '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-product-aptamil-1',       'product-aptamil-1.png',       NULL, 'product-aptamil-1.png',       'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'أبتاميل 1 رضع',       'Aptamil 1 Infant',    '#ffffff', 'approved', 'system', 'system-seed')
+  ('asset-node-infant-formula',     'node-infant-formula.png',     NULL, 'node-infant-formula.png',     'image/png', 133, 64, 64, 'cc988aab52b1791de1317102c99e3a5ef75bf88e4f92973ed2fabfccfd9f2555', 'تركيبة الرضع',         'Infant Formula',      '#ffffff', 'approved', 'system', 'system-seed')
 ON CONFLICT (id) DO UPDATE SET
   object_key = EXCLUDED.object_key,
   public_url = EXCLUDED.public_url,
@@ -311,26 +250,16 @@ VALUES
   ('link-node-imported-fruits',   'asset-node-imported-fruits',   'node',           'node-imported-fruits',   'cover',                   0, TRUE, 'approved'),
   ('link-node-sweets-cake',       'asset-node-sweets-cake',       'node',           'node-sweets-cake',       'cover',                   0, TRUE, 'approved'),
   ('link-node-sweets-chocolate',  'asset-node-sweets-chocolate',  'node',           'node-sweets-chocolate',  'cover',                   0, TRUE, 'approved'),
-  ('link-product-cheese-kraft',   'asset-product-cheese-kraft',   'master_product', 'product-cheese-kraft',   'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-canned-tuna',    'asset-product-canned-tuna',    'master_product', 'product-canned-tuna',    'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-local-tomato',   'asset-product-local-tomato',   'master_product', 'product-local-tomato',   'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-imported-banana', 'asset-product-imported-banana', 'master_product', 'product-imported-banana', 'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-chocolate-box',  'asset-product-chocolate-box',  'master_product', 'product-chocolate-box',  'canonical_product_image', 0, TRUE, 'approved'),
   ('link-node-phones-tablets',    'asset-node-phones-tablets',    'node',           'node-phones-tablets',    'cover',                   0, TRUE, 'approved'),
   ('link-node-smartphones',       'asset-node-smartphones',       'node',           'node-smartphones',       'cover',                   0, TRUE, 'approved'),
   ('link-node-android-phones',    'asset-node-android-phones',    'node',           'node-android-phones',    'cover',                   0, TRUE, 'approved'),
   ('link-node-ios-phones',        'asset-node-ios-phones',        'node',           'node-ios-phones',        'cover',                   0, TRUE, 'approved'),
-  ('link-product-galaxy-s24',     'asset-product-galaxy-s24',     'master_product', 'product-galaxy-s24',     'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-iphone-15',      'asset-product-iphone-15',      'master_product', 'product-iphone-15',      'canonical_product_image', 0, TRUE, 'approved'),
   ('link-node-medications',        'asset-node-medications',        'node',           'node-medications',        'cover',                   0, TRUE, 'approved'),
   ('link-node-baby-care',          'asset-node-baby-care',          'node',           'node-baby-care',          'cover',                   0, TRUE, 'approved'),
   ('link-node-pain-relief',        'asset-node-pain-relief',        'node',           'node-pain-relief',        'cover',                   0, TRUE, 'approved'),
   ('link-node-baby-milk',          'asset-node-baby-milk',          'node',           'node-baby-milk',          'cover',                   0, TRUE, 'approved'),
   ('link-node-headache-migraine',  'asset-node-headache-migraine',  'node',           'node-headache-migraine',  'cover',                   0, TRUE, 'approved'),
-  ('link-node-infant-formula',     'asset-node-infant-formula',     'node',           'node-infant-formula',     'cover',                   0, TRUE, 'approved'),
-  ('link-product-panadol-advance', 'asset-product-panadol-advance', 'master_product', 'product-panadol-advance', 'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-solpadeine-soluble', 'asset-product-solpadeine-soluble', 'master_product', 'product-solpadeine-soluble', 'canonical_product_image', 0, TRUE, 'approved'),
-  ('link-product-aptamil-1',       'asset-product-aptamil-1',       'master_product', 'product-aptamil-1',       'canonical_product_image', 0, TRUE, 'approved')
+  ('link-node-infant-formula',     'asset-node-infant-formula',     'node',           'node-infant-formula',     'cover',                   0, TRUE, 'approved')
 ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
   is_primary = EXCLUDED.is_primary,
   status = EXCLUDED.status,

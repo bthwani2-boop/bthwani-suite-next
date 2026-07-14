@@ -726,6 +726,24 @@ paths:
         - name: search
           in: query
           schema: { type: string }
+        - name: isActive
+          in: query
+          schema: { type: boolean }
+        - name: imageStatus
+          in: query
+          schema: { type: string }
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [createdAt, updatedAt, nameAr, price] }
+        - name: sortDirection
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+        - name: createdFrom
+          in: query
+          schema: { type: string, format: date-time }
+        - name: createdTo
+          in: query
+          schema: { type: string, format: date-time }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
@@ -1418,6 +1436,19 @@ paths:
       responses:
         "201": { description: Product proposal submitted — never a final sellable product. }
 
+  /dsh/partner/catalog/product-proposals/{proposalId}:
+    put:
+      operationId: updatePartnerProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: proposalId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Product proposal updated and resubmitted. }
+
   /dsh/field/catalog/taxonomy:
     get:
       operationId: getFieldCatalogTaxonomy
@@ -1479,6 +1510,23 @@ paths:
           schema: { type: string }
       responses:
         "201": { description: Product proposal submitted for the field-owned partner store — never a final sellable product. }
+
+  /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
+    put:
+      operationId: updateFieldProductProposal
+      tags: [CentralCatalog]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: proposalId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Product proposal updated and resubmitted. }
 
   # ─── Cart & Serviceability Quote ────────────────────────────────
   # Runtime handlers registered in server.go. Client must be authenticated.
@@ -5065,6 +5113,30 @@ components:
         createdSource: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        version: { type: integer }
+
+    MasterProductSummary:
+      type: object
+      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, updatedAt, version]
+      properties:
+        id: { type: string }
+        domainId: { type: string }
+        categoryNodeId: { type: [string, "null"] }
+        canonicalNameAr: { type: string }
+        canonicalNameEn: { type: string }
+        brand: { type: string }
+        barcode: { type: [string, "null"] }
+        sku: { type: [string, "null"] }
+        unit: { type: string }
+        measurementType: { type: string }
+        approvalStatus: { type: string }
+        isActive: { type: boolean }
+        effectiveImage: { type: [string, "null"] }
+        thumbnailUrl: { type: [string, "null"] }
+        imageAltAr: { type: [string, "null"] }
+        imageStatus: { type: string }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer }
 
     DshMasterProductListResponse:
       type: object
@@ -5072,7 +5144,7 @@ components:
       properties:
         masterProducts:
           type: array
-          items: { $ref: "#/components/schemas/DshMasterProduct" }
+          items: { $ref: "#/components/schemas/MasterProductSummary" }
         total: { type: integer }
         limit: { type: integer }
         offset: { type: integer }
