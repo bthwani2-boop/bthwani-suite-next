@@ -641,3 +641,88 @@ binding_chain_matrix:
 ```
 
 أي حلقة مفقودة أو قفز في السلسلة = `FIX_REQUIRED`.
+
+
+## Frontend-Backend Parity Matrices
+
+`yaml
+frontend_backend_parity_matrix:
+  - surface:
+    route:
+    screen_or_page:
+    control:
+    user_intent:
+
+    frontend_handler:
+    shared_controller:
+    generated_client_method:
+    openapi_operation_id:
+
+    backend_http_method:
+    backend_route:
+    backend_handler:
+    backend_service:
+    repository_method:
+    database_tables:
+
+    frontend_request_type:
+    openapi_request_schema:
+    backend_request_type:
+    request_alignment: PASS | FAIL
+
+    backend_response_type:
+    openapi_response_schema:
+    generated_response_type:
+    frontend_view_model:
+    response_alignment: PASS | FAIL
+
+    frontend_statuses:
+    contract_statuses:
+    backend_statuses:
+    database_statuses:
+    status_alignment: PASS | FAIL
+
+    frontend_permission:
+    backend_permission:
+    permission_alignment: PASS | FAIL
+
+    frontend_errors:
+    contract_errors:
+    backend_errors:
+    error_alignment: PASS | FAIL
+
+    mutation_effect:
+    state_readback:
+    affected_surfaces:
+    cache_invalidation:
+    runtime_test:
+
+    final_status:
+      VERIFIED_BOUND | FIXED_AND_VERIFIED | BLOCKED_EXTERNAL_EVIDENCE
+`
+
+`yaml
+orphan_frontend_feature_matrix:
+  - surface:
+    feature:
+    control_or_route:
+    backend_binding_found:
+    contract_binding_found:
+    database_effect_found:
+    action:
+`
+
+`yaml
+orphan_backend_capability_matrix:
+  - endpoint:
+    handler:
+    service:
+    intended_consumers:
+    actual_consumers:
+    contract_exposed:
+    authorization:
+    runtime_usage:
+    action:
+`
+
+> قاعدة: أي زر بلا endpoint صالح، أو endpoint داخل النطاق بلا مستهلك حي أو غرض موثق، يصنف FIX_REQUIRED.

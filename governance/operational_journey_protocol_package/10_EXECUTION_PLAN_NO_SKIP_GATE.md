@@ -191,3 +191,24 @@ change_control_for_protocol_package_v2:
   no_unmapped_section: required
   result_if_broken: FIX_REQUIRED
 ```
+
+
+## Execution Plan Required Matrices and Failure Conditions
+
+يجب إضافة هذه المصفوفات إلى mandatory_outputs:
+- frontend_backend_parity_matrix
+- contract_field_traceability_matrix
+- request_response_alignment_matrix
+- state_status_alignment_matrix
+- error_semantics_alignment_matrix
+- orphan_frontend_feature_matrix
+- orphan_backend_capability_matrix
+- frontend_backend_runtime_journey_matrix
+
+شروط الفشل:
+- أي UI feature بلا backend chain.
+- أي backend capability بلا contract مطابق.
+- أي contract operation بلا backend implementation.
+- أي generated client method لا يستخدمه shared brain عند الحاجة.
+- أي request أو response أو enum أو permission أو error mismatch.
+- أي نجاح مثبت في طبقة واحدة فقط.

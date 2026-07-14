@@ -347,3 +347,22 @@ package_changelog:
       إضافة بند منع التنسيقات السطرية (No Inline CSS Styles) إلى الملف 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md.
     reason: توحيد سياسة التنسيق في الواجهات ومنع استخدام التنسيقات السطرية (inline CSS).
 ```
+
+
+## Frontend-Backend Integrity Terms
+
+`	ext
+frontend_backend_integrity_gate
+frontend_backend_parity_matrix
+endpoint_consumer_matrix
+contract_field_traceability_matrix
+request_response_alignment_matrix
+state_status_alignment_matrix
+permission_parity_matrix
+error_semantics_alignment_matrix
+frontend_backend_runtime_journey_matrix
+orphan_frontend_feature_matrix
+orphan_backend_capability_matrix
+`
+
+> قاعدة: يجب منع إعلان أن تغطية الحزمة مكتملة ما لم تظهر جميع هذه البنود في خريطة التغطية.

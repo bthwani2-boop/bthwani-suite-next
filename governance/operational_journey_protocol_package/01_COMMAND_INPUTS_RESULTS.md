@@ -165,3 +165,13 @@ PROTOCOL_VIOLATION
 ```
 
 إلا إذا كانت داخل تقرير مفسر ومربوطة بدليل عملي. أي لفظ نجاح غير مدعوم بدليل = `FIX_REQUIRED`.
+
+
+## Frontend-Backend Integrity Rules
+
+- الحالة الابتدائية لأي implementation_or_closure هي FIX_REQUIRED.
+- كل ميزة UI يجب أن تمتلك backend capability مثبتة.
+- كل backend capability داخل النطاق يجب أن تمتلك مستهلكًا حيًا أو تصنيفًا صريحًا.
+- نجاح typecheck أو build لا يثبت تطابق الفرونت إند والباك إند.
+- نجاح endpoint منفرد لا يثبت أن الواجهة تستهلكه بصورة صحيحة.
+- لا يسمح بـ IMPLEMENTATION_PASS عند وجود frontend/backend mismatch واحد.

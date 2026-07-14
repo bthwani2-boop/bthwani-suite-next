@@ -363,3 +363,22 @@ external_reference_record:
 ```
 
 ممنوع: نسخ كود عشوائي، أو إدخال dependency جديدة دون سبب وفحص أثر.
+
+
+## P0 Cleanup Cases (Frontend-Backend Mismatches)
+
+الحالات التالية تعتبر P0:
+
+- UI control with no backend execution
+- Frontend invents a state absent from backend
+- Backend returns fields ignored or reinterpreted inconsistently
+- Frontend sends fields backend does not accept
+- Backend requires fields frontend never sends
+- UI displays success before committed backend success
+- Backend mutation succeeds but frontend remains stale
+- Authorization differs between UI and backend
+- Database state cannot be represented by API contract
+- API contract describes behavior not implemented by backend
+- Manual frontend types duplicate generated contract types
+
+> قاعدة: أي compatibility adapter يخفي عدم تطابق العقد بدل إصلاح المصدر يعتبر FIX_REQUIRED.

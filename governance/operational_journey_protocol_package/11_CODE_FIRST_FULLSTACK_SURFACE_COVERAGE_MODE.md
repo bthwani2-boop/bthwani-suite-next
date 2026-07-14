@@ -82,3 +82,86 @@
 
 * **No Restatement Rule:**
   ممنوع إعادة سرد الحزمة في التقارير. الحزمة imported contract. التقرير النهائي يذكر فقط: ما تغير في الكود، ما تم إصلاحه، ما تحقق، وما بقي خارجيًا إن وجد.
+
+
+## Frontend–Backend Non-Separation Gate
+
+الفرونت إند والباك إند ليسا مشروعين مستقلين داخل الرحلة الواحدة.
+
+كل ميزة تعتبر وحدة رأسية واحدة تبدأ من نية المستخدم وتنتهي في الحقيقة
+السيادية والقراءة الراجعة.
+
+يُحظر تنفيذ frontend-first feature غير مربوط.
+يُحظر تنفيذ backend-first endpoint بلا عقد ومستهلك.
+يُحظر إنشاء نوع يدوي في الواجهة عند وجود نوع مولد.
+يُحظر تفسير statuses أو errors داخل surfaces تفسيرًا مستقلًا.
+يُحظر نجاح الواجهة قبل نجاح العملية الخلفية الحقيقي.
+يُحظر نجاح الخلفية دون تحديث الأسطح المستهلكة.
+
+أي فصل بين الطبقتين يعتبر P0 Systemic Disconnection.
+
+`yaml
+frontend_backend_integrity_gate:
+  initial_status: FIX_REQUIRED
+
+  required_chain:
+    - ui_control
+    - route_or_navigation
+    - surface_adapter
+    - shared_controller
+    - generated_api_client
+    - openapi_operation
+    - authentication
+    - authorization
+    - backend_route
+    - backend_handler
+    - validation
+    - domain_service
+    - repository
+    - database_transaction
+    - event_or_outbox
+    - state_readback
+    - affected_surface_refresh
+    - runtime_proof
+
+  zero_tolerance_conditions:
+    unbound_ui_controls: 0
+    frontend_only_features: 0
+    backend_only_features: 0
+    missing_backend_routes: 0
+    unused_backend_routes: 0
+    contract_client_drift: 0
+    request_schema_mismatches: 0
+    response_schema_mismatches: 0
+    enum_status_mismatches: 0
+    nullable_optional_mismatches: 0
+    permission_mismatches: 0
+    error_mapping_mismatches: 0
+    local_surface_business_logic: 0
+    raw_surface_api_calls: 0
+    ui_success_without_backend_effect: 0
+    backend_effect_without_ui_readback: 0
+    database_fields_without_contract_binding: 0
+    contract_fields_without_backend_binding: 0
+    runtime_journeys_unverified: 0
+
+  result_if_failed: FIX_REQUIRED
+`
+
+## النتيجة الحاكمة
+
+كل عنصر UI
++ مرتبط بعقل مشترك
++ يستخدم عميلًا مطابقًا للعقد
++ يصل إلى route وhandler حقيقيين
++ يطبق الصلاحية نفسها
++ يقرأ ويكتب الحقول نفسها
++ يستخدم الحالات والأخطاء نفسها
++ يحدث قاعدة البيانات الصحيحة
++ يعيد الحالة إلى جميع الأسطح
++ مثبت برحلة Runtime فعلية
+
+دون ذلك تكون النتيجة:
+FIX_REQUIRED
+
+وليست IMPLEMENTATION_PASS، حتى لو نجح typecheck وbuild وكل اختبارات الواجهة والباك إند المنفصلة.

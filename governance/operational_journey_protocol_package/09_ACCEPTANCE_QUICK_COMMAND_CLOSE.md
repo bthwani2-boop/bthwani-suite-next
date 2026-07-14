@@ -100,3 +100,23 @@ OUT_OF_SCOPE: <ما لا يجب لمسه مع السبب>
 result: PROTOCOL_VIOLATION
 reason: unable_to_follow_protocol_without_unsafe_or_unverified_claims
 ```
+
+
+## Frontend-Backend Acceptance Gate
+
+`yaml
+frontend_backend_acceptance_gate:
+  unbound_ui_controls: 0
+  frontend_only_routes: 0
+  backend_only_routes: 0
+  request_mismatches: 0
+  response_mismatches: 0
+  status_mismatches: 0
+  permission_mismatches: 0
+  error_mapping_mismatches: 0
+  generated_client_drift: 0
+  untraced_contract_fields: 0
+  unverified_runtime_bindings: 0
+`
+
+> قاعدة: لا يسمح بـIMPLEMENTATION_PASS إلا عند تحققها كلها.

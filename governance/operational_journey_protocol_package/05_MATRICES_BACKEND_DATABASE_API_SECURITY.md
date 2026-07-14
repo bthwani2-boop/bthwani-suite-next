@@ -364,3 +364,69 @@ risk_based_test_matrix:
 قواعد:
 
 - غياب اختبار مناسب لخطر داخل النطاق = `FIX_REQUIRED`.
+
+
+## Contract and State Traceability Matrices
+
+`yaml
+contract_field_traceability_matrix:
+  - business_field:
+    database_column:
+    backend_domain_field:
+    backend_transport_field:
+    openapi_field:
+    generated_client_field:
+    frontend_view_model_field:
+    ui_render_or_input:
+    direction: READ | WRITE | READ_WRITE
+    transformations:
+    validation:
+    alignment: PASS | FAIL
+`
+
+`yaml
+request_response_alignment_matrix:
+  - operation_id:
+    frontend_request:
+    generated_request:
+    openapi_request:
+    backend_decoder:
+    backend_validator:
+    service_input:
+    request_alignment:
+
+    repository_result:
+    service_output:
+    backend_response:
+    openapi_response:
+    generated_response:
+    frontend_adapter:
+    response_alignment:
+`
+
+`yaml
+state_status_alignment_matrix:
+  - entity:
+    database_states:
+    backend_states:
+    contract_enums:
+    generated_client_enums:
+    shared_frontend_states:
+    surface_labels:
+    transition_owner:
+    mismatch_count:
+    result:
+`
+
+`yaml
+error_semantics_alignment_matrix:
+  - operation:
+    backend_error:
+    http_status:
+    contract_error_code:
+    generated_client_behavior:
+    shared_controller_mapping:
+    surface_state:
+    retry_allowed:
+    result:
+`

@@ -206,3 +206,46 @@ merge_review_matrix:
   merge_decision: MERGE_READY | DO_NOT_MERGE | BLOCKED_NEEDS_EVIDENCE
   blockers:
 ```
+
+
+## Frontend-Backend Runtime Journey Verification
+
+`yaml
+frontend_backend_runtime_journey_matrix:
+  - journey:
+    source_surface:
+    source_control:
+
+    ui_input:
+    generated_request:
+    actual_http_request:
+    backend_decoded_request:
+    validation_result:
+
+    service_decision:
+    repository_operation:
+    database_before:
+    database_after:
+
+    actual_http_response:
+    generated_client_result:
+    shared_controller_state:
+    rendered_surface_state:
+
+    related_surface_readbacks:
+    permission_negative_test:
+    validation_negative_test:
+    backend_failure_test:
+    stale_state_test:
+    duplicate_submission_test:
+
+    final_result:
+`
+
+> القواعد:
+- Frontend unit test alone is insufficient.
+- Backend unit test alone is insufficient.
+- Contract validation alone is insufficient.
+- Generated-client compilation alone is insufficient.
+- Endpoint smoke alone is insufficient.
+- A valid proof must cross UI → contract → backend → database → UI readback.
