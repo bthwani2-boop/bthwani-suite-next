@@ -4,30 +4,43 @@
 -- check is FALSE — so runtime:seed and CI fail automatically instead of only
 -- printing results.
 CREATE OR REPLACE TEMP VIEW central_catalog_checks AS
+-- provenance: migration dsh-030
 SELECT 'domains_count_ge_12' AS check_name, (COUNT(*) >= 12) AS pass FROM dsh_catalog_domains
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'domain_manual_request_exists', EXISTS (SELECT 1 FROM dsh_catalog_domains WHERE id = 'domain-manual-request')
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'node_shay_in_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-shay-in')
 UNION ALL
+-- provenance: seed dsh-032_central_catalog_seed.local.sql
 SELECT 'node_awnak_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-awnak')
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'groceries_subdomains_exist', (SELECT COUNT(*) FROM dsh_catalog_nodes WHERE domain_id = 'domain-groceries') >= 6
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'sweets_juices_subdomains_exist', (SELECT COUNT(*) FROM dsh_catalog_nodes WHERE domain_id = 'domain-sweets-juices') >= 3
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'elegance_subdomains_exist', (SELECT COUNT(*) FROM dsh_catalog_nodes WHERE domain_id = 'domain-elegance') >= 3
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'image_policies_exist', (SELECT COUNT(*) FROM dsh_catalog_platform_policies WHERE policy_scope IN ('node', 'domain')) >= 5
 UNION ALL
+-- provenance: migration dsh-030
 SELECT 'default_policy_exists', EXISTS (SELECT 1 FROM dsh_catalog_platform_policies WHERE id = 'default-policy')
 UNION ALL
+-- provenance: seed dsh-032_central_catalog_seed.local.sql
 SELECT 'pharmacy_domain_exists', EXISTS (SELECT 1 FROM dsh_catalog_domains WHERE id = 'domain-pharmacy')
 UNION ALL
-SELECT 'master_products_seeded', (SELECT COUNT(*) FROM dsh_master_products WHERE created_source = 'central-catalog-seed') >= 6
+-- provenance: seed dsh-032_central_catalog_seed.local.sql (expanded with electronics+pharmacy)
+SELECT 'master_products_seeded', (SELECT COUNT(*) FROM dsh_master_products WHERE created_source = 'central-catalog-seed') >= 16
 UNION ALL
-SELECT 'store_assortments_seeded', (SELECT COUNT(*) FROM dsh_store_assortments WHERE submitted_by = 'system-seed') >= 6
+-- provenance: seed dsh-032_central_catalog_seed.local.sql (expanded with electronics+pharmacy)
+SELECT 'store_assortments_seeded', (SELECT COUNT(*) FROM dsh_store_assortments WHERE submitted_by = 'system-seed') >= 16
 UNION ALL
+-- provenance: seed dsh-032_central_catalog_seed.local.sql
 SELECT 'client_visible_products_exist', EXISTS (
   SELECT 1
   FROM dsh_store_assortments a
@@ -45,22 +58,37 @@ SELECT 'client_visible_products_exist', EXISTS (
     AND s.is_visible = TRUE
 )
 UNION ALL
--- dsh-036 corrective closure: the permanent legacy archive exists and every
--- archived row is well-formed. On a fresh database the archive is simply
--- empty; the row-count equality gates live inside dsh-036 itself, where the
--- source tables still exist.
+-- provenance: seed dsh-032_central_catalog_seed.local.sql (electronics expansion)
+SELECT 'new_product_galaxy_s24_exists', EXISTS (SELECT 1 FROM dsh_master_products WHERE id = 'product-galaxy-s24')
+UNION ALL
+-- provenance: seed dsh-032_central_catalog_seed.local.sql (pharmacy expansion)
+SELECT 'new_product_panadol_advance_exists', EXISTS (SELECT 1 FROM dsh_master_products WHERE id = 'product-panadol-advance')
+UNION ALL
+-- provenance: seed dsh-032_central_catalog_seed.local.sql (electronics expansion)
+SELECT 'new_node_smartphones_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-smartphones')
+UNION ALL
+-- provenance: seed dsh-032_central_catalog_seed.local.sql (pharmacy expansion)
+SELECT 'new_node_baby_milk_exists', EXISTS (SELECT 1 FROM dsh_catalog_nodes WHERE id = 'node-baby-milk')
+UNION ALL
+-- provenance: migration dsh-036 corrective closure
+-- The permanent legacy archive exists and every archived row is well-formed.
+-- On a fresh database the archive is simply empty; the row-count equality
+-- gates live inside dsh-036 itself, where the source tables still exist.
 SELECT 'legacy_archive_table_exists', to_regclass('public.dsh_catalog_legacy_archive') IS NOT NULL
 UNION ALL
+-- provenance: migration dsh-036
 SELECT 'legacy_audit_archived', NOT EXISTS (
   SELECT 1 FROM dsh_catalog_legacy_archive
   WHERE source_table = 'dsh_catalog_audit' AND (payload_json IS NULL OR source_id = '')
 )
 UNION ALL
+-- provenance: migration dsh-036
 SELECT 'legacy_revisions_archived', NOT EXISTS (
   SELECT 1 FROM dsh_catalog_legacy_archive
   WHERE source_table = 'dsh_catalog_revisions' AND (payload_json IS NULL OR source_id = '')
 )
 UNION ALL
+-- provenance: migration dsh-036
 SELECT 'legacy_media_assets_preserved',
   to_regclass('public.dsh_catalog_media') IS NULL
   AND NOT EXISTS (SELECT 1 FROM dsh_catalog_assets WHERE object_key = '' OR mime_type = '')
@@ -68,6 +96,7 @@ SELECT 'legacy_media_assets_preserved',
       >= (SELECT COUNT(*) FROM dsh_catalog_legacy_archive
           WHERE source_table = 'dsh_catalog_media' AND payload_json->>'state' <> 'deleted')
 UNION ALL
+-- provenance: migration dsh-036 (with referential integrity to seed dsh-032)
 SELECT 'legacy_media_links_valid', NOT EXISTS (
   SELECT 1 FROM dsh_catalog_asset_links l
   WHERE l.entity_id IS NULL
@@ -76,6 +105,7 @@ SELECT 'legacy_media_links_valid', NOT EXISTS (
          AND NOT EXISTS (SELECT 1 FROM dsh_master_products mp WHERE mp.id = l.entity_id))
 )
 UNION ALL
+-- provenance: migration dsh-036
 SELECT 'cart_items_fully_mapped', NOT EXISTS (
   SELECT 1
   FROM dsh_cart_items ci
@@ -87,17 +117,20 @@ SELECT 'cart_items_fully_mapped', NOT EXISTS (
     )
 )
 UNION ALL
+-- provenance: migration dsh-036 (with referential integrity to seed dsh-032)
 SELECT 'no_orphan_assortments', NOT EXISTS (
   SELECT 1 FROM dsh_store_assortments a
   WHERE NOT EXISTS (SELECT 1 FROM dsh_master_products mp WHERE mp.id = a.master_product_id)
      OR NOT EXISTS (SELECT 1 FROM dsh_stores s WHERE s.id = a.store_id)
 )
 UNION ALL
+-- provenance: migration dsh-036 (with referential integrity to seed dsh-032)
 SELECT 'no_orphan_asset_links', NOT EXISTS (
   SELECT 1 FROM dsh_catalog_asset_links l
   WHERE NOT EXISTS (SELECT 1 FROM dsh_catalog_assets a WHERE a.id = l.asset_id)
 )
 UNION ALL
+-- provenance: migration dsh-036
 SELECT 'local_catalog_tables_removed',
   to_regclass('public.dsh_catalog_categories') IS NULL
   AND to_regclass('public.dsh_catalog_products') IS NULL
@@ -106,6 +139,7 @@ SELECT 'local_catalog_tables_removed',
   AND to_regclass('public.dsh_catalog_audit') IS NULL
   AND to_regclass('public.dsh_catalog_revisions') IS NULL
 UNION ALL
+-- provenance: migration dsh-036
 SELECT 'local_store_category_columns_removed', NOT EXISTS (
   SELECT 1
   FROM information_schema.columns
