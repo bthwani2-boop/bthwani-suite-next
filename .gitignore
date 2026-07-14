@@ -45,6 +45,8 @@ graphify-out/
 !services/dsh/evidence/**/*.png
 services/dsh/evidence/DSH-002-home-discovery-fullstack/screenshots/
 services/dsh/database/seeds/local/media/
+!services/dsh/database/seeds/local/media/fixtures/
+!services/dsh/database/seeds/local/media/fixtures/**
 
 .gocache*/
 .gomodcache*/

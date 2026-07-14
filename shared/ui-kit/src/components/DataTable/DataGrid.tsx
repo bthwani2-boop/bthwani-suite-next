@@ -91,7 +91,7 @@ export function DataGrid<TRow>({
     <Block width="100%" borderWidth={1} borderColor="$borderColor" borderRadius="$lg" overflow="hidden" gap={0} style={{ position: "relative" }}>
       {selectedRowKeys && selectedRowKeys.size > 0 && batchActions && (
         <Inline backgroundColor="$surfaceInset" padding="$2" gap="$4" alignItems="center" borderBottomWidth={1} borderBottomColor="$borderColor">
-          <Text fontWeight="bold" tone="primary">{selectedRowKeys.size} محدد</Text>
+          <Text tone="action">{selectedRowKeys.size} محدد</Text>
           {batchActions}
         </Inline>
       )}
@@ -103,8 +103,8 @@ export function DataGrid<TRow>({
             <Checkbox
               checked={allSelected}
               // TODO: replace indeterminate when supported by Checkbox
-              onCheckedChange={(c) => {
-                if (c) onSelectionChange(new Set(rows.map(getRowKey)));
+              onChange={(e) => {
+                if (e.target.checked) onSelectionChange(new Set(rows.map(getRowKey)));
                 else onSelectionChange(new Set());
               }}
             />
@@ -136,7 +136,7 @@ export function DataGrid<TRow>({
                   }
                 }}
               >
-                <Text role="label" tone="secondary" fontWeight={sortBy === column.key ? "bold" : "normal"}>{column.header}</Text>
+                <Text role="label" tone="secondary">{column.header}</Text>
                 {sortBy === column.key && (
                   <Text tone="secondary">{sortDirection === "asc" ? "↑" : "↓"}</Text>
                 )}
@@ -169,9 +169,9 @@ export function DataGrid<TRow>({
               <Block width={40} onPress={(e: any) => e.stopPropagation()}>
                 <Checkbox
                   checked={selectedRowKeys?.has(getRowKey(row))}
-                  onCheckedChange={(c) => {
+                  onChange={(e) => {
                     const s = new Set(selectedRowKeys);
-                    if (c) s.add(getRowKey(row));
+                    if (e.target.checked) s.add(getRowKey(row));
                     else s.delete(getRowKey(row));
                     onSelectionChange(s);
                   }}
@@ -206,7 +206,7 @@ export function DataGrid<TRow>({
       {onPageChange && totalPages !== undefined && totalPages > 1 && (
         <Inline padding="$3" justifyContent="center" alignItems="center" gap="$4" borderTopWidth={1} borderTopColor="$borderColor">
           <Button
-            variant="ghost"
+            tone="ghost"
             disabled={page === 1 || isLoading}
             onPress={() => onPageChange(page ? page - 1 : 1)}
           >
@@ -216,7 +216,7 @@ export function DataGrid<TRow>({
             {page} / {totalPages}
           </Text>
           <Button
-            variant="ghost"
+            tone="ghost"
             disabled={page === totalPages || isLoading}
             onPress={() => onPageChange(page ? page + 1 : 1)}
           >

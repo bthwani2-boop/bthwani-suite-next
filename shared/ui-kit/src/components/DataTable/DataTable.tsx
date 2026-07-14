@@ -52,8 +52,8 @@ export function DataTable<TRow>({
           <Block width={40}>
             <Checkbox
               checked={selectedRowKeys?.size === rows.length && rows.length > 0}
-              onCheckedChange={(c) => {
-                if (c) onSelectionChange(new Set(rows.map(getRowKey)));
+              onChange={(e) => {
+                if (e.target.checked) onSelectionChange(new Set(rows.map(getRowKey)));
                 else onSelectionChange(new Set());
               }}
             />
@@ -81,9 +81,9 @@ export function DataTable<TRow>({
             <Block width={40} onPress={(e: any) => e.stopPropagation()}>
               <Checkbox
                 checked={selectedRowKeys?.has(getRowKey(row))}
-                onCheckedChange={(c) => {
+                onChange={(e) => {
                   const s = new Set(selectedRowKeys);
-                  if (c) s.add(getRowKey(row));
+                  if (e.target.checked) s.add(getRowKey(row));
                   else s.delete(getRowKey(row));
                   onSelectionChange(s);
                 }}
@@ -106,7 +106,7 @@ export function DataTable<TRow>({
       {onPageChange && totalPages && totalPages > 1 && (
         <Inline padding="$3" justifyContent="center" alignItems="center" gap="$4" borderTopWidth={1} borderTopColor="$borderColor">
           <Button
-            variant="ghost"
+            tone="ghost"
             disabled={page === 1}
             onPress={() => onPageChange(page ? page - 1 : 1)}
           >
@@ -116,7 +116,7 @@ export function DataTable<TRow>({
             {page} / {totalPages}
           </Text>
           <Button
-            variant="ghost"
+            tone="ghost"
             disabled={page === totalPages}
             onPress={() => onPageChange(page ? page + 1 : 1)}
           >

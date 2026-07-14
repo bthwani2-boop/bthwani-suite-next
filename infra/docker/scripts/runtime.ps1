@@ -610,7 +610,9 @@ function Invoke-DshMediaSeed {
     "node-medications.png", "node-baby-care.png", "node-pain-relief.png", "node-baby-milk.png",
     "node-headache-migraine.png", "node-infant-formula.png",
     "product-panadol-advance.png", "product-solpadeine-soluble.png", "product-aptamil-1.png",
-    "store-test-grocery-hero.png", "store-test-grocery-logo.png", "store-1002-hero.png", "store-1002-logo.png",
+    "store-test-grocery-hero.png", "store-test-grocery-logo.png",
+    "store-1001-hero.png", "store-1001-logo.png",
+    "store-1002-hero.png", "store-1002-logo.png",
     "store-1003-hero.png", "store-1003-logo.png", "store-1004-hero.png", "store-1004-logo.png",
     "store-1005-hero.png", "store-1005-logo.png", "store-1006-hero.png", "store-1006-logo.png",
     "banner-001.png", "banner-002.png", "promo-001.png"

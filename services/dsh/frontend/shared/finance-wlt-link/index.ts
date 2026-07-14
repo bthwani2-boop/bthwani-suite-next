@@ -24,3 +24,4 @@ export * from './wlt-settlement/wlt-settlement.types';
 
 export * from './payment';
 export * from './field-commission';
+export * from './field-finance';

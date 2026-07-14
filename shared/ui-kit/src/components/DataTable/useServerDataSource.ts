@@ -61,7 +61,13 @@ export function useServerDataSource<T>({
 
     try {
       const result = await fetcherRef.current(
-        { page, limit, sortBy, sortDirection, filters },
+        {
+          page,
+          limit,
+          filters,
+          ...(sortBy !== undefined ? { sortBy } : {}),
+          ...(sortDirection !== undefined ? { sortDirection } : {}),
+        },
         abortController.signal
       );
       setItems(result.items);

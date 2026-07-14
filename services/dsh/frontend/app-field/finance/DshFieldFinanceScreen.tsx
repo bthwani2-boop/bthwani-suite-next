@@ -1,70 +1,60 @@
 // app-field — DshFieldFinanceScreen
-// Read-only financial reference screen displaying commission references from WLT.
+// Displays the authenticated field agent's own financial data from DSH.
+// Never reads financial truth from WLT directly or via partnerId enumeration.
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Badge,
   Button,
-  IconButton,
   StateView,
   Text,
   spacing,
   colorRoles,
-  Icon,
   Header,
 } from '@bthwani/ui-kit';
-import { useWltDshFieldCommissionReferenceController, toFieldCommissionViewModel } from '../../shared/finance-wlt-link';
-import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
+import { useFieldFinanceController } from '../../shared/finance-wlt-link/field-finance';
 
 type DshFieldFinanceScreenProps = {
   readonly onBack: () => void;
 };
 
+function formatAmount(minorUnits: number, currency: string): string {
+  return `${(minorUnits / 100).toFixed(2)} ${currency}`;
+}
+
+function commissionStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    earned_pending_review: 'قيد المراجعة',
+    approved_pending_posting: 'معتمد - قيد الترحيل',
+    posted_pending_settlement: 'مرحّل - قيد التسوية',
+    held: 'محجوز',
+    rejected: 'مرفوض',
+    settled: 'مسوّى',
+    paid: 'مدفوع',
+    pending: 'قيد الانتظار',
+  };
+  return map[status] ?? status;
+}
+
+function commissionStatusTone(
+  status: string,
+): 'action' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  if (status === 'paid' || status === 'settled') return 'success';
+  if (status === 'rejected') return 'danger';
+  if (status === 'held') return 'warning';
+  return 'action';
+}
+
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
-  const partnerDrafts = useFieldPartnerDraftsController();
-  const partners = partnerDrafts.listState.kind === 'success' ? partnerDrafts.listState.partners : [];
+  const controller = useFieldFinanceController();
+  const { state } = controller;
 
-  const [selectedPartnerId, setSelectedPartnerId] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (partners.length > 0 && !selectedPartnerId) {
-      const first = partners[0];
-      if (first) {
-        setSelectedPartnerId(first.id);
-      }
-    }
-  }, [partners, selectedPartnerId]);
-
-  const activePartnerId = selectedPartnerId || partners[0]?.id;
-  const controller = useWltDshFieldCommissionReferenceController(activePartnerId ?? '');
-  const state = controller.state;
-
-  if (partnerDrafts.listState.kind === 'loading' || partnerDrafts.listState.kind === 'idle') {
+  if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <StateView
         loading
         title="جارٍ تحميل البيانات المالية"
-        description="نحسب المستحقات والعمولات للملفات المعتمدة من خادم العمولات البنكي المالي."
-      />
-    );
-  }
-
-  if (!activePartnerId) {
-    return (
-      <StateView
-        tone="neutral"
-        title="لا يوجد ملف شريك بعد"
-        description="أنشئ ملف الشريك أولاً من شاشة الانضمام الميدانية لعرض بيانات العمولات."
-      />
-    );
-  }
-
-  if (state.kind === 'loading') {
-    return (
-      <StateView
-        loading
-        title="جارٍ تحميل البيانات المالية"
-        description="نحسب المستحقات والعمولات للملفات المعتمدة من خادم العمولات البنكي المالي."
+        description="نجلب محفظتك وعمولاتك وطلبات الصرف من محرك WLT."
       />
     );
   }
@@ -76,91 +66,128 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
         title="تعذر الوصول للبيانات المالية"
         description={state.message}
         actionLabel="إعادة المحاولة"
-        onActionPress={controller.retry}
+        onActionPress={controller.refresh}
       />
     );
   }
 
+  const { wallet, commissions, payoutRequests } = state;
+
   return (
-    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+    <View style={styles.root}>
       <Header
-        title="المالية والعمولات الميدانية"
-        subtitle="مستحقات وعمولات تأهيل الشركاء (عرض فقط من محرك المحفظة)"
+        title="المحفظة والعمولات"
+        subtitle="بياناتك المالية الشخصية فقط — مصدرها WLT"
       />
+
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 96 }}
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: 'flex-end', gap: spacing[1] }}>
-          <Text role="titleMd" style={{ textAlign: 'right' }}>
-            المستحقات المالية
-          </Text>
-          <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-            جميع المبالغ والعمولات تُحسب وتُسجل في محرك WLT المالي كجهة وحيدة ومصدر وحيد للحقيقة المالية. لا تملك واجهة DSH أي صلاحيات تعديل أو تعديل حركي مالي.
-          </Text>
+        {/* Wallet Summary */}
+        <View style={styles.card}>
+          <Text role="titleMd" style={styles.rtl}>المحفظة</Text>
+          <View style={styles.balanceRow}>
+            <Text role="caption" tone="muted">متاح</Text>
+            <Text role="titleLg" style={styles.positiveAmount}>
+              {formatAmount(wallet.availableBalanceMinorUnits, wallet.currency)}
+            </Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text role="caption" tone="muted">معلّق</Text>
+            <Text role="bodyMd">{formatAmount(wallet.pendingBalanceMinorUnits, wallet.currency)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text role="caption" tone="muted">محجوز</Text>
+            <Text role="bodyMd">{formatAmount(wallet.heldBalanceMinorUnits, wallet.currency)}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.balanceRow}>
+            <Text role="caption" tone="muted">إجمالي المكتسب</Text>
+            <Text role="bodyMd">{formatAmount(wallet.earnedTotalMinorUnits, wallet.currency)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text role="caption" tone="muted">إجمالي المسوّى</Text>
+            <Text role="bodyMd">{formatAmount(wallet.settledTotalMinorUnits, wallet.currency)}</Text>
+          </View>
+          <View style={styles.balanceRow}>
+            <Text role="caption" tone="muted">إجمالي المدفوع</Text>
+            <Text role="bodyMd">{formatAmount(wallet.paidTotalMinorUnits, wallet.currency)}</Text>
+          </View>
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+        <Button
+          label="تحديث"
+          tone="secondary"
+          size="sm"
+          onPress={controller.refresh}
+        />
 
-        {partners.length > 1 && (
-          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2], marginVertical: spacing[1], alignSelf: 'stretch', justifyContent: 'flex-start' }}>
-            {partners.map((p) => {
-              const isSelected = p.id === activePartnerId;
-              return (
-                <Button
-                  key={p.id}
-                  label={p.displayName}
-                  tone={isSelected ? 'primary' : 'secondary'}
-                  onPress={() => setSelectedPartnerId(p.id)}
-                  size="sm"
-                />
-              );
-            })}
-          </View>
+        {/* Commissions */}
+        <Text role="titleSm" style={styles.sectionTitle}>العمولات</Text>
+        {commissions.length === 0 ? (
+          <StateView tone="neutral" title="لا توجد عمولات بعد" />
+        ) : (
+          commissions.map((c) => (
+            <View key={c.id} style={styles.card}>
+              <View style={styles.rowBetween}>
+                <Text role="bodyStrong">{formatAmount(c.amountMinorUnits, c.currency)}</Text>
+                <Badge label={commissionStatusLabel(c.status)} tone={commissionStatusTone(c.status)} />
+              </View>
+              {c.sourceType ? (
+                <Text role="caption" tone="muted" style={styles.rtl}>
+                  المصدر: {c.sourceType}
+                </Text>
+              ) : null}
+            </View>
+          ))
         )}
 
-        {state.kind === 'not_available' || !state.reference ? (
-          <StateView
-            tone="neutral"
-            title="لا توجد بيانات مالية معتمدة"
-            description="لم يتم إقرار عمولات تأهيل ميدانية نشطة لهذا الشريك بعد في لوحة التحكم."
-          />
+        {/* Payout Requests */}
+        <Text role="titleSm" style={styles.sectionTitle}>طلبات الصرف</Text>
+        {payoutRequests.length === 0 ? (
+          <StateView tone="neutral" title="لا توجد طلبات صرف" />
         ) : (
-          (() => {
-            const vm = toFieldCommissionViewModel(state.reference);
-            return (
-              <View
-                style={{
-                  backgroundColor: colorRoles.surfaceMuted,
-                  padding: spacing[4],
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: colorRoles.borderSubtle,
-                  gap: spacing[2],
-                }}
-              >
-                <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text role="bodyStrong" style={{ color: colorRoles.textPrimary }}>
-                    مستحقات تأهيل المتجر
-                  </Text>
-                  <Badge label={vm.statusLabel} tone="action" />
-                </View>
-                <Text role="titleLg" style={{ color: colorRoles.brandAction, textAlign: 'right', marginVertical: 8 }}>
-                  {vm.formattedAmount}
-                </Text>
-                <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-                  {vm.description}
-                </Text>
-                <Text role="caption" tone="muted" style={{ textAlign: 'right', marginTop: 4 }}>
-                  تاريخ المطابقة: {vm.createdAtFormatted}
-                </Text>
+          payoutRequests.map((p) => (
+            <View key={p.id} style={styles.card}>
+              <View style={styles.rowBetween}>
+                <Text role="bodyStrong">{formatAmount(p.amountMinorUnits, p.currency)}</Text>
+                <Badge label={p.status} tone={p.status === 'completed' ? 'success' : p.status === 'failed' ? 'danger' : 'action'} />
               </View>
-            );
-          })()
+              <Text role="caption" tone="muted" style={styles.rtl}>{p.requestedAt}</Text>
+            </View>
+          ))
         )}
       </ScrollView>
     </View>
   );
 }
-// export default DshFieldFinanceScreen; // Unused default export
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
+  scroll: { flex: 1 },
+  content: { padding: spacing[4], gap: spacing[3], paddingBottom: 96 },
+  card: {
+    backgroundColor: colorRoles.surfaceMuted,
+    padding: spacing[4],
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    gap: spacing[2],
+  },
+  balanceRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
+  rowBetween: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  positiveAmount: { color: colorRoles.brandAction },
+  rtl: { textAlign: 'right' },
+  sectionTitle: { textAlign: 'right', marginTop: spacing[2] },
+});

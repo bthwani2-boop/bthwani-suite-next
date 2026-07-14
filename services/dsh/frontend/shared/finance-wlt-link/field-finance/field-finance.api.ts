@@ -3,7 +3,7 @@ import { createDshHttpClient } from "../../_kernel/dsh-http-request";
 
 // Uses authenticated DSH proxy — never calls WLT directly from the field app.
 // Identity is resolved server-side from the bearer token; no actor id in query.
-const { request: fieldGet, requestWithBody: fieldPost } = createDshHttpClient(
+const { request: fieldGet } = createDshHttpClient(
   resolveDshApiBaseUrl(),
   "dsh-field-finance",
 );
@@ -96,9 +96,9 @@ export async function submitFieldMePayoutRequest(
   idempotencyKey: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    await fieldPost<{ status: string }>("/dsh/field/me/finance/payout-requests", {
-      amountMinorUnits,
-      currency,
+    await fieldGet<{ status: string }>("/dsh/field/me/finance/payout-requests", {
+      method: "POST",
+      body: { amountMinorUnits, currency, idempotencyKey },
       idempotencyKey,
     });
     return { ok: true };
