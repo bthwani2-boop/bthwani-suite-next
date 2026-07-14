@@ -20,7 +20,6 @@ export * from './operations';
 export * from './orders';
 export * from './partner';
 export * from './platform';
-export * from './platform-policies';
 export * from './store';
 export * from './support';
 export * from './hr';

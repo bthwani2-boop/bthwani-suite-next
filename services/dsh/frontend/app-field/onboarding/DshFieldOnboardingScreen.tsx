@@ -35,7 +35,7 @@ import {
 } from '../../shared/field-onboarding';
 import { REQUIRED_DOCUMENT_TYPES, type DshPartnerDocumentType } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
-import { useStoreOnboardingFeeReferenceController } from '../../shared/platform-policies';
+import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
 import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
 import { OnboardingEvidenceSection } from '../components/OnboardingEvidenceSection';

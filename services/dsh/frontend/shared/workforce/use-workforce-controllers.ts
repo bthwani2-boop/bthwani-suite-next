@@ -22,8 +22,8 @@ import {
   isSessionExpiredCode,
   workforceErrorMessage,
 } from "./workforce.api";
-import { fetchZones } from "../platform-policies/platform-policies.api";
-import type { DshZone } from "../platform-policies/platform-policies.types";
+import { fetchZones } from "../platform/platform-policies.api";
+import type { DshZone } from "../platform/platform-policies.types";
 import type {
   ActivationCodeResult,
   Captain,

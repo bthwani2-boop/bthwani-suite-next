@@ -11,7 +11,7 @@ import {
   STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS,
   STORE_ONBOARDING_FEE_ENABLED_ITEMS,
   useStoreOnboardingFeePolicyFormController,
-} from "../../shared/platform-policies";
+} from "../../shared/platform";
 
 
 export function StoreOnboardingFeePolicySection({ authKind }: { readonly authKind: string }) {

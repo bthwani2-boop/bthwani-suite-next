@@ -10,8 +10,8 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
-import { useZonesController, useSlaRulesController } from "../../shared/platform-policies";
-import type { DshZone, DshSlaRule } from "../../shared/platform-policies";
+import { useZonesController, useSlaRulesController } from "../../shared/platform";
+import type { DshZone, DshSlaRule } from "../../shared/platform";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
 export function PlatformPoliciesScreen() {

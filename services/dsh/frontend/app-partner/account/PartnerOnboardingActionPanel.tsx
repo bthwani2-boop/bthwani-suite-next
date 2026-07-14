@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
-import type { DshStoreOnboardingFeePolicy } from '../../shared/platform-policies';
+import type { DshStoreOnboardingFeePolicy } from '../../shared/platform';
 
 export type PartnerOnboardingFlowId = 'doc-upload' | 'intake-start' | 'store-nomination';
 

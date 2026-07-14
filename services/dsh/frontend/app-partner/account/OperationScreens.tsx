@@ -5,7 +5,7 @@ import { Box, Button, Chip, ListItem, Surface, Text, TextField,
   Badge,
 } from '@bthwani/ui-kit';
 import { ActorNotificationsPanel } from '../../shared/notifications';
-import { useStoreOnboardingFeeReferenceController } from '../../shared/platform-policies';
+import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
 import {
   mapDshPartnerOperationalFlowToSupportRoute,
   type DshPartnerOperationalFlowId,
