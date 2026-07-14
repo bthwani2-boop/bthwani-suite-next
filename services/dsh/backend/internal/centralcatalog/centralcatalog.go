@@ -387,31 +387,52 @@ type MasterProductFilter struct {
 	Offset         int
 }
 
-func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFilter) ([]MasterProduct, error) {
-	limit := filter.Limit
+// ClampListParams applies the pagination bounds shared by every catalog list
+// endpoint (default limit 50, cap 200, negative offset clamped to 0) so the
+// service and the HTTP layer agree on the effective limit/offset without
+// duplicating the rule.
+func ClampListParams(limit, offset int) (int, int) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	query := `SELECT ` + masterProductColumns + ` FROM dsh_master_products
-		WHERE ($1='' OR domain_id=$1) AND ($2='' OR category_node_id=$2) AND ($3='' OR approval_status=$3)
-		  AND (NOT $4 OR is_active=true)
-		  AND ($5='' OR canonical_name_ar ILIKE '%'||$5||'%' OR canonical_name_en ILIKE '%'||$5||'%' OR barcode=$5)
-		ORDER BY updated_at DESC LIMIT $6 OFFSET $7`
-	rows, err := db.QueryContext(ctx, query, filter.DomainID, filter.CategoryNodeID, filter.ApprovalStatus,
-		filter.ActiveOnly, filter.Search, limit, filter.Offset)
+	if offset < 0 {
+		offset = 0
+	}
+	return limit, offset
+}
+
+// masterProductFilterWhere is shared by the page query and the count query so
+// a total always reflects exactly the same filters as the returned page.
+const masterProductFilterWhere = `WHERE ($1='' OR domain_id=$1) AND ($2='' OR category_node_id=$2) AND ($3='' OR approval_status=$3)
+	  AND (NOT $4 OR is_active=true)
+	  AND ($5='' OR canonical_name_ar ILIKE '%'||$5||'%' OR canonical_name_en ILIKE '%'||$5||'%' OR barcode=$5)`
+
+func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFilter) ([]MasterProduct, int, error) {
+	limit, offset := ClampListParams(filter.Limit, filter.Offset)
+	filterArgs := []any{filter.DomainID, filter.CategoryNodeID, filter.ApprovalStatus, filter.ActiveOnly, filter.Search}
+
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_master_products `+masterProductFilterWhere,
+		filterArgs...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT ` + masterProductColumns + ` FROM dsh_master_products ` + masterProductFilterWhere +
+		` ORDER BY updated_at DESC LIMIT $6 OFFSET $7`
+	rows, err := db.QueryContext(ctx, query, append(append([]any{}, filterArgs...), limit, offset)...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	out := []MasterProduct{}
 	for rows.Next() {
 		m, err := scanMasterProduct(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, m)
 	}
-	return out, rows.Err()
+	return out, total, rows.Err()
 }
 
 func GetMasterProduct(ctx context.Context, db *sql.DB, id string) (MasterProduct, error) {
@@ -563,27 +584,34 @@ type ProposalFilter struct {
 	Offset  int
 }
 
-func ListProposals(ctx context.Context, db *sql.DB, filter ProposalFilter) ([]ProductProposal, error) {
-	limit := filter.Limit
-	if limit <= 0 || limit > 200 {
-		limit = 50
+// proposalFilterWhere is shared by the page query and the count query so a
+// total always reflects exactly the same filters as the returned page.
+const proposalFilterWhere = `WHERE ($1='' OR status=$1) AND ($2='' OR source_store_id=$2)`
+
+func ListProposals(ctx context.Context, db *sql.DB, filter ProposalFilter) ([]ProductProposal, int, error) {
+	limit, offset := ClampListParams(filter.Limit, filter.Offset)
+
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_product_proposals `+proposalFilterWhere,
+		filter.Status, filter.StoreID).Scan(&total); err != nil {
+		return nil, 0, err
 	}
-	rows, err := db.QueryContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals
-		WHERE ($1='' OR status=$1) AND ($2='' OR source_store_id=$2)
-		ORDER BY created_at DESC LIMIT $3 OFFSET $4`, filter.Status, filter.StoreID, limit, filter.Offset)
+
+	rows, err := db.QueryContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals `+proposalFilterWhere+`
+		ORDER BY created_at DESC LIMIT $3 OFFSET $4`, filter.Status, filter.StoreID, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	out := []ProductProposal{}
 	for rows.Next() {
 		p, err := scanProposal(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	return out, total, rows.Err()
 }
 
 func GetProposal(ctx context.Context, db *sql.DB, id string) (ProductProposal, error) {
@@ -1923,25 +1951,34 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	return asset, nil
 }
 
-func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset int) ([]CatalogAsset, error) {
-	if limit <= 0 || limit > 200 {
-		limit = 50
+// assetFilterWhere is shared by the page query and the count query so a
+// total always reflects exactly the same filter as the returned page.
+const assetFilterWhere = `WHERE ($1='' OR status=$1)`
+
+func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset int) ([]CatalogAsset, int, error) {
+	limit, offset = ClampListParams(limit, offset)
+
+	var total int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_catalog_assets `+assetFilterWhere,
+		status).Scan(&total); err != nil {
+		return nil, 0, err
 	}
-	rows, err := db.QueryContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets
-		WHERE ($1='' OR status=$1) ORDER BY created_at DESC LIMIT $2 OFFSET $3`, status, limit, offset)
+
+	rows, err := db.QueryContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets `+assetFilterWhere+`
+		ORDER BY created_at DESC LIMIT $2 OFFSET $3`, status, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	out := []CatalogAsset{}
 	for rows.Next() {
 		a, err := scanAsset(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		out = append(out, a)
 	}
-	return out, rows.Err()
+	return out, total, rows.Err()
 }
 
 type AssetUpdateInput struct {

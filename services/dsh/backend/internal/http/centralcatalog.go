@@ -204,12 +204,15 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 		Limit:          limit,
 		Offset:         offset,
 	}
-	items, err := centralcatalog.ListMasterProducts(r.Context(), s.db, filter)
+	items, total, err := centralcatalog.ListMasterProducts(r.Context(), s.db, filter)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"masterProducts": items})
+	effectiveLimit, effectiveOffset := centralcatalog.ClampListParams(limit, offset)
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"masterProducts": items, "total": total, "limit": effectiveLimit, "offset": effectiveOffset,
+	})
 }
 
 func (s *protectedStoreServer) handleCreateMasterProduct(w http.ResponseWriter, r *http.Request) {
@@ -252,14 +255,17 @@ func (s *protectedStoreServer) handleListProductProposals(w http.ResponseWriter,
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	items, err := centralcatalog.ListProposals(r.Context(), s.db, centralcatalog.ProposalFilter{
+	items, total, err := centralcatalog.ListProposals(r.Context(), s.db, centralcatalog.ProposalFilter{
 		Status: r.URL.Query().Get("status"), StoreID: r.URL.Query().Get("storeId"), Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"proposals": items})
+	effectiveLimit, effectiveOffset := centralcatalog.ClampListParams(limit, offset)
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"proposals": items, "total": total, "limit": effectiveLimit, "offset": effectiveOffset,
+	})
 }
 
 // decideProposalPermissionAction mirrors legacyDecisionToPipelineStatus's
@@ -517,12 +523,15 @@ func (s *protectedStoreServer) handleListCatalogAssets(w http.ResponseWriter, r 
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	items, err := centralcatalog.ListAssets(r.Context(), s.db, r.URL.Query().Get("status"), limit, offset)
+	items, total, err := centralcatalog.ListAssets(r.Context(), s.db, r.URL.Query().Get("status"), limit, offset)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"assets": items})
+	effectiveLimit, effectiveOffset := centralcatalog.ClampListParams(limit, offset)
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"assets": items, "total": total, "limit": effectiveLimit, "offset": effectiveOffset,
+	})
 }
 
 func (s *protectedStoreServer) handleCreateAssetUploadIntent(w http.ResponseWriter, r *http.Request) {
