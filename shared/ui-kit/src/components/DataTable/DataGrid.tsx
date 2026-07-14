@@ -1,3 +1,4 @@
+"use client";
 import { ReactNode } from "react";
 import { Block, Inline } from "../_shared";
 import { EmptyState } from "../EmptyState";
