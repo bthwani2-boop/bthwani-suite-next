@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Svg, Circle, Rect, Path } from "react-native-svg";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
-import { brandScale, colorRoles } from '@bthwani/ui-kit';
+import { brandScale, colorRoles, StateView } from '@bthwani/ui-kit';
 import { configureIdentitySession } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../shared/_kernel/identity-api-base-url";
 
@@ -168,7 +168,7 @@ export function DshClientSurface() {
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = useState<string>("lightPremium");
 
-  const commerceStoreId = selectedStoreId ?? "store-1001";
+  const commerceStoreId: string | null = selectedStoreId;
 
   const goBack = () => {
     if (showNotifications) {
@@ -282,14 +282,23 @@ export function DshClientSurface() {
             onOpenOrder={setActiveOrderId}
           />
         ) : activeTab === "wallet" ? (
-          <ClientCheckoutRoute
-            storeId={commerceStoreId}
-            serviceAreaCode="sana"
-            onBrowseCatalog={() => setActiveTab("stores")}
-            onSuccess={(intentId) => {
-              setActiveOrderId(intentId);
-            }}
-          />
+          commerceStoreId === null ? (
+            <StateView
+              title="اختر متجرًا للمتابعة"
+              description="يلزم اختيار متجر أولاً لعرض السلة وإتمام الطلب."
+              actionLabel="تصفح المتاجر"
+              onActionPress={() => setActiveTab("stores")}
+            />
+          ) : (
+            <ClientCheckoutRoute
+              storeId={commerceStoreId}
+              serviceAreaCode="sana"
+              onBrowseCatalog={() => setActiveTab("stores")}
+              onSuccess={(intentId) => {
+                setActiveOrderId(intentId);
+              }}
+            />
+          )
         ) : activeTab === "profile" ? (
           subroute === "appearance" ? (
             <AppearanceHubScreen

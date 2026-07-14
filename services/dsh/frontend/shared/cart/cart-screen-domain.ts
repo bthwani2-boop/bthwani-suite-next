@@ -89,32 +89,9 @@ export function buildExecutionScheduleOptions(referenceDate = new Date()): Execu
   return { dateOptions, timeOptions };
 }
 
-export type CartRecommendedItem = {
-  readonly id: string;
-  readonly name: string;
-  readonly price: number;
-  readonly icon: string;
-};
+// removed fixture recommendations — derive from central catalog when data is in scope (WP5)
 
-export const RECOMMENDED_ITEMS: readonly CartRecommendedItem[] = [
-  { id: "rec-1", name: "كعك بلدي فاخر", price: 1200, icon: "🍪" },
-  { id: "rec-2", name: "عصير مانجو طازج", price: 800, icon: "🥤" },
-  { id: "rec-3", name: "جبن بلدي طازج", price: 2500, icon: "🧀" },
-];
-
-export type CartStoreLocation = {
-  readonly id: string;
-  readonly name: string;
-  readonly lat: number;
-  readonly lng: number;
-  readonly x: number;
-  readonly y: number;
-};
-
-export const STORES_LOCATIONS: readonly CartStoreLocation[] = [
-  { id: "store-1001", name: "أسواق حدة", lat: 15.3400, lng: 44.1900, x: 220, y: 190 },
-  { id: "store-1005", name: "مطعم المدينة", lat: 15.3560, lng: 44.1800, x: 160, y: 120 },
-];
+// removed hardcoded store-location fixtures — derive from GET /dsh/stores when data is in scope, otherwise hide the map pins (WP5)
 
 export type CartMapPosition = {
   readonly x: number;
@@ -136,6 +113,7 @@ export type CartLandmark = {
   readonly y: number;
 };
 
+// UI heuristic for address entry — not catalog data (closure decision WP5)
 export const LANDMARKS: readonly CartLandmark[] = [
   { lat: 15.3560, lng: 44.1800, latitude: 15.3560, longitude: 44.1800, name: "صنعاء، المدينة القديمة، باب اليمن", x: 160, y: 120 },
   { lat: 15.3400, lng: 44.1900, latitude: 15.3400, longitude: 44.1900, name: "صنعاء، حي حدة، شارع بيروت", x: 220, y: 190 },

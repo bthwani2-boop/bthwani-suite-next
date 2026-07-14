@@ -15,7 +15,6 @@ import {
   Surface,
   TextField,
   colorRoles,
-  colorPalette,
   alpha,
   statusScale,
   neutralScale,
@@ -27,8 +26,6 @@ import { useCartController, useServiceabilityController } from "../../shared/car
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import {
   QUICK_ACTION_META,
-  RECOMMENDED_ITEMS,
-  STORES_LOCATIONS,
   buildCartPriceSummary,
   buildExecutionScheduleOptions,
   coordinatesToCartMapPosition,
@@ -456,13 +453,7 @@ export function CartScreen({
                       <View style={[styles.mapRoad, { height: 2, width: "100%", top: 120, left: 0 }]} />
                       <View style={[styles.mapRoad, { width: 2, height: "100%", left: 160, top: 0 }]} />
 
-                      {/* Store Pins */}
-                      {STORES_LOCATIONS.map(st => (
-                        <View key={st.id} style={[styles.storePin, { top: st.y - 12, left: st.x - 12 }]}>
-                          <Icon name="storefront" size={14} color={colorRoles.brandStructure} />
-                          <Text style={styles.storePinLabel}>{st.name}</Text>
-                        </View>
-                      ))}
+                      {/* Store pins removed — no store-location data source in scope; derive from GET /dsh/stores when available (WP5) */}
 
                       {/* User Pin */}
                       <View style={[styles.userPin, { top: userPinPos.y - 20, left: userPinPos.x - 10 }]}>
@@ -623,37 +614,7 @@ export function CartScreen({
           onSelectMethod={wltPayment.setPaymentMethod}
         />
 
-        {/* قد تعجبك هذه المنتجات أيضاً */}
-        <View style={{ gap: spacing[3], marginVertical: 4 }}>
-          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 4 }}>
-            <Text role="bodySm" weight="bold" style={{ color: colorRoles.textPrimary }}>قد تعجبك هذه المنتجات أيضاً</Text>
-            <Text role="caption" style={{ color: colorRoles.textSecondary }}>إضافة سريعة للسلة</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row-reverse", gap: 8, paddingVertical: 4 }}>
-            {RECOMMENDED_ITEMS.map((item) => {
-              const cartItem = cart.items.find((it) => it.productName === item.name);
-              const qty = cartItem?.quantity ?? 0;
-              return (
-                <Surface key={item.id} tone="default" style={styles.recCard}>
-                  {qty > 0 && (
-                    <View style={styles.recBadge}>
-                      <Badge label={`مضاف (${qty})`} tone="action" />
-                    </View>
-                  )}
-                  <Text style={{ fontSize: 24, textAlign: "center", marginVertical: 4 }}>{item.icon}</Text>
-                  <Text role="bodySm" weight="bold" style={{ color: colorRoles.textPrimary, textAlign: "center" }} numberOfLines={1}>{item.name}</Text>
-                  <Text role="caption" style={{ color: colorRoles.brandAction, textAlign: "center", marginBottom: 6 }}>{item.price} د.ي</Text>
-                  <Button
-                    label={qty > 0 ? "إضافة المزيد" : "أضف للسلة"}
-                    tone="secondary"
-                    size="sm"
-                    onPress={() => void controller.updateItemQuantity(item.id, item.name, qty + 1, `${item.price} د.ي`)}
-                  />
-                </Surface>
-              );
-            })}
-          </ScrollView>
-        </View>
+        {/* removed fixture recommendations — derive from central catalog when data is in scope (WP5) */}
 
         {/* مراجعة السلة (العناصر والكميات) */}
         <Surface tone="default" style={styles.cardFrame}>
@@ -1217,21 +1178,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colorRoles.borderSubtle,
   },
-  recCard: {
-    width: 120,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: radius.md,
-    padding: 10,
-    backgroundColor: colorRoles.surfaceBase,
-    position: "relative",
-  },
-  recBadge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    zIndex: 1,
-  },
   // Interactive Map Styles
   mapContainer: {
     width: 320,
@@ -1258,22 +1204,6 @@ const styles = StyleSheet.create({
   mapRoad: {
     position: "absolute",
     backgroundColor: colorRoles.surfaceBase,
-  },
-  storePin: {
-    position: "absolute",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-    zIndex: 2,
-  },
-  storePinLabel: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: colorRoles.brandStructure,
-    backgroundColor: alpha(colorPalette.white, 0.8),
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: radius.xs,
   },
   userPin: {
     position: "absolute",

@@ -24,6 +24,7 @@ export type StoreMeasurementSheetProps = {
   readonly onClose: () => void;
 };
 
+// Measurement-entry UI heuristic (no product ids/prices) — not catalog data (closure decision WP5)
 export function getProductMeasurementOptions(productName: string, categoryLabel: string) {
   const normalized = (productName + ' ' + categoryLabel).toLowerCase();
 
