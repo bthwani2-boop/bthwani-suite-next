@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = "C:\bthwani-suite-next",
+    [string]$RepoRoot = $(Split-Path -Parent (Split-Path -Parent $PSScriptRoot)),
     [string]$Branch = "onebyone",
     [switch]$SkipRuntime,
     [switch]$SkipSmoke
