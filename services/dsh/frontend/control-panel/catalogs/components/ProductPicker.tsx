@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
+import { useServerDataSource } from "@bthwani/ui-kit/src/components/DataTable/useServerDataSource";
 
 export type ProductPickerProps = {
   value: string;
@@ -10,31 +11,32 @@ export type ProductPickerProps = {
 
 export function ProductPicker({ value, onChange, label = "اختر المنتج المركزي (L5)", domainId }: ProductPickerProps) {
   const [query, setQuery] = useState("");
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    if (query.trim() === "") {
-      setProducts([]);
-      return;
-    }
-    const timeoutId = setTimeout(() => {
-      setLoading(true);
-      let url = `/api/dsh/admin/catalog/products?search=${encodeURIComponent(query)}&limit=10`;
-      if (domainId) url += `&domainId=${encodeURIComponent(domainId)}`;
+  const { items: products, isLoading, setFilter, setFilters } = useServerDataSource<any>({
+    fetcher: async (params, signal) => {
+      const search = params.filters.search || "";
+      const domain = params.filters.domainId || "";
+      if (!search) return { items: [], total: 0 };
       
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-           setProducts(data.masterProducts || []);
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }, 400);
+      let url = `/api/dsh/admin/catalog/products?search=${encodeURIComponent(search)}&limit=${params.limit}`;
+      if (domain) url += `&domainId=${encodeURIComponent(domain)}`;
+      
+      const res = await fetch(url, { signal });
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      return { items: data.masterProducts || [], total: data.total || data.masterProducts?.length || 0 };
+    },
+    initialFilters: { search: query, domainId },
+    limit: 10
+  });
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: query, domainId }));
+    }, 400);
     return () => clearTimeout(timeoutId);
-  }, [query, domainId]);
+  }, [query, domainId, setFilters]);
 
   return (
     <Box position="relative" width={300}>
@@ -55,8 +57,8 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
           backgroundColor="$surfaceBase" borderWidth={1} borderColor="$borderColor" 
           zIndex={30} maxHeight={250} overflow="auto" borderRadius="$md"
         >
-          {loading && <Box padding="$2"><Text tone="secondary">جاري البحث...</Text></Box>}
-          {!loading && products.length === 0 && query && <Box padding="$2"><Text tone="secondary">لا يوجد نتائج</Text></Box>}
+          {isLoading && <Box padding="$2"><Text tone="secondary">جاري البحث...</Text></Box>}
+          {!isLoading && products.length === 0 && query && <Box padding="$2"><Text tone="secondary">لا يوجد نتائج</Text></Box>}
           {products.map(p => (
             <Box 
               key={p.id} padding="$2" hoverStyle={{ backgroundColor: "$surfaceInset" }} cursor="pointer"

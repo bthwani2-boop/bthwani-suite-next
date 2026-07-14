@@ -114,11 +114,9 @@ ON CONFLICT (id) DO UPDATE SET allows_store_product_custom_image = EXCLUDED.allo
 INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status)
 VALUES 
   ('store-test-grocery', 'domain-groceries', 'approved'),
-  ('store-1005', 'domain-groceries', 'approved'),
   ('store-1005', 'domain-restaurants', 'approved'),
-  ('store-1005', 'domain-electronics', 'approved'),
-  ('store-1005', 'domain-sweets-juices', 'approved'),
-  ('store-1005', 'domain-pharmacy', 'approved')
+  ('store-1006', 'domain-pharmacy', 'approved'),
+  ('store-test-electronics', 'domain-electronics', 'approved')
 ON CONFLICT DO NOTHING;
 
 -- Canonical local-development products. These are real sovereign master
@@ -134,16 +132,16 @@ VALUES
   ('product-1005-meal', 'domain-restaurants', NULL,
    'وجبة المدينة', 'City Meal', 'مطعم المدينة', 'CITY-MEAL', 'meal', 'unit',
    'approved', TRUE, 'central-catalog-seed'),
-  ('product-1005-croissant', 'domain-groceries', 'node-bakeries',
+  ('product-1002-croissant', 'domain-groceries', 'node-bakeries',
    'كرواسون زبدة طازج', 'Fresh Butter Croissant', 'مخبز المدينة',
    'CROISSANT-01', 'piece', 'unit', 'approved', TRUE, 'central-catalog-seed'),
-  ('product-1005-wheatbread', 'domain-groceries', 'node-bakeries',
+  ('product-1002-wheatbread', 'domain-groceries', 'node-bakeries',
    'خبز قمح كامل', 'Whole Wheat Bread', 'مخبز المدينة', 'WHEATBREAD-01',
    'loaf', 'unit', 'approved', TRUE, 'central-catalog-seed'),
-  ('product-1005-milk', 'domain-groceries', 'node-supermarket',
+  ('product-1001-milk', 'domain-groceries', 'node-supermarket',
    'حليب كامل الدسم', 'Full Cream Milk', 'بثواني', 'ORGANIC-MILK',
    '1 L', 'volume', 'approved', TRUE, 'central-catalog-seed'),
-  ('product-1005-apple', 'domain-groceries', 'node-vegetables-fruits',
+  ('product-1001-apple', 'domain-groceries', 'node-vegetables-fruits',
    'تفاح رويال غالا', 'Royal Gala Apple', 'بثواني', 'ROYAL-GALA',
    '1 kg', 'weight', 'approved', TRUE, 'central-catalog-seed')
 ON CONFLICT (id) DO UPDATE SET
@@ -170,16 +168,16 @@ VALUES
   ('assortment-store-1005-meal', 'store-1005', 'product-1005-meal',
    1800, 'YER', TRUE, 'in_stock', 'وجبة رئيسية', 'client_visible',
    'system-seed', 'system-seed'),
-  ('assortment-store-1005-croissant', 'store-1005', 'product-1005-croissant',
+  ('assortment-store-1002-croissant', 'store-1002', 'product-1002-croissant',
    500, 'YER', TRUE, 'in_stock', 'طازج يومياً', 'client_visible',
    'system-seed', 'system-seed'),
-  ('assortment-store-1005-wheatbread', 'store-1005', 'product-1005-wheatbread',
+  ('assortment-store-1002-wheatbread', 'store-1002', 'product-1002-wheatbread',
    300, 'YER', TRUE, 'in_stock', 'خبز قمح كامل', 'client_visible',
    'system-seed', 'system-seed'),
-  ('assortment-store-1005-milk', 'store-1005', 'product-1005-milk',
+  ('assortment-store-test-grocery-milk', 'store-test-grocery', 'product-1001-milk',
    1100, 'YER', TRUE, 'in_stock', 'حليب طازج', 'client_visible',
    'system-seed', 'system-seed'),
-  ('assortment-store-1005-apple', 'store-1005', 'product-1005-apple',
+  ('assortment-store-test-grocery-apple', 'store-test-grocery', 'product-1001-apple',
     1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
     'system-seed', 'system-seed')
 ON CONFLICT (store_id, master_product_id) DO UPDATE SET

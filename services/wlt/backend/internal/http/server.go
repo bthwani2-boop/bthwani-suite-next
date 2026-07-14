@@ -35,7 +35,6 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/references/settlement-status", reference.HandleGetSettlementStatus(db))
 	mux.HandleFunc("GET /wlt/references/refund-status", reference.HandleGetRefundStatus(db))
 	mux.HandleFunc("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
-	mux.HandleFunc("GET /wlt/references/field-commission", reference.HandleGetFieldCommission(db))
 	mux.HandleFunc("POST /wlt/payment-sessions", reference.HandleCreatePaymentSession(db))
 	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSession(db))
 

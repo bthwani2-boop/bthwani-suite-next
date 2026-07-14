@@ -61,43 +61,105 @@ async function setStoreAssortment(token, storeId, masterProductId, unitPrice) {
   if (!res.ok) throw new Error(`Failed to set assortment: ${await res.text()}`);
 }
 
-const mockProducts = [
-  {
-    proposedNameAr: 'جبنة كرافت شيدر',
-    proposedNameEn: 'Kraft Cheddar Cheese',
-    domainId: 'domain-groceries',
-    categoryNodeId: 'node-dairy-cheese',
-    brand: 'كرافت',
-    sourceSurface: 'app-partner',
-    price: 1200
-  },
-  {
-    proposedNameAr: 'فاصوليا معلبة',
-    proposedNameEn: 'Canned Beans',
-    domainId: 'domain-groceries',
-    categoryNodeId: 'node-canned-food',
-    brand: 'لونا',
-    sourceSurface: 'app-partner',
-    price: 850
-  },
-  {
-    proposedNameAr: 'طماطم محلي',
-    proposedNameEn: 'Local Tomatoes',
-    domainId: 'domain-groceries',
-    categoryNodeId: 'node-local-vegetables',
-    brand: 'محلي',
-    sourceSurface: 'app-partner',
-    price: 1200
-  }
+const devProducts = [
+  { proposedNameAr: 'تفاح', proposedNameEn: 'Apple', domainId: 'domain-groceries', categoryNodeId: 'node-local-vegetables', brand: 'محلي', sourceSurface: 'app-partner', price: 500, imgKey: 'apple' },
+  { proposedNameAr: 'موز', proposedNameEn: 'Banana', domainId: 'domain-groceries', categoryNodeId: 'node-imported-fruits', brand: 'مستورد', sourceSurface: 'app-partner', price: 600, imgKey: 'banana' },
+  { proposedNameAr: 'برتقال', proposedNameEn: 'Orange', domainId: 'domain-groceries', categoryNodeId: 'node-local-vegetables', brand: 'محلي', sourceSurface: 'app-partner', price: 400, imgKey: 'orange' },
+  { proposedNameAr: 'حليب', proposedNameEn: 'Milk', domainId: 'domain-groceries', categoryNodeId: 'node-dairy-cheese', brand: 'المراعي', sourceSurface: 'app-partner', price: 1000, imgKey: 'milk' },
+  { proposedNameAr: 'خبز', proposedNameEn: 'Bread', domainId: 'domain-groceries', categoryNodeId: 'node-sweets-cake', brand: 'مخبز', sourceSurface: 'app-partner', price: 200, imgKey: 'bread' },
+  { proposedNameAr: 'جبنة كرافت شيدر', proposedNameEn: 'Kraft Cheddar Cheese', domainId: 'domain-groceries', categoryNodeId: 'node-dairy-cheese', brand: 'كرافت', sourceSurface: 'app-partner', price: 1200, imgKey: 'cheese' },
+  { proposedNameAr: 'زبدة', proposedNameEn: 'Butter', domainId: 'domain-groceries', categoryNodeId: 'node-dairy-cheese', brand: 'لورباك', sourceSurface: 'app-partner', price: 1500, imgKey: 'butter' },
+  { proposedNameAr: 'زبادي', proposedNameEn: 'Yogurt', domainId: 'domain-groceries', categoryNodeId: 'node-dairy-cheese', brand: 'المراعي', sourceSurface: 'app-partner', price: 300, imgKey: 'yogurt' },
+  { proposedNameAr: 'دجاج', proposedNameEn: 'Chicken', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'الوطنية', sourceSurface: 'app-partner', price: 1800, imgKey: 'chicken' },
+  { proposedNameAr: 'لحم بقري', proposedNameEn: 'Beef', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'محلي', sourceSurface: 'app-partner', price: 4000, imgKey: 'beef' },
+  { proposedNameAr: 'أرز', proposedNameEn: 'Rice', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'الوليمة', sourceSurface: 'app-partner', price: 3500, imgKey: 'rice' },
+  { proposedNameAr: 'معكرونة', proposedNameEn: 'Pasta', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'قودي', sourceSurface: 'app-partner', price: 450, imgKey: 'pasta' },
+  { proposedNameAr: 'حبوب', proposedNameEn: 'Cereal', domainId: 'domain-groceries', categoryNodeId: 'node-sweets-cake', brand: 'كيلوجز', sourceSurface: 'app-partner', price: 2200, imgKey: 'cereal' },
+  { proposedNameAr: 'قهوة', proposedNameEn: 'Coffee', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'نسكافيه', sourceSurface: 'app-partner', price: 3000, imgKey: 'coffee' },
+  { proposedNameAr: 'شاي', proposedNameEn: 'Tea', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'ليبتون', sourceSurface: 'app-partner', price: 1200, imgKey: 'tea' },
+  { proposedNameAr: 'سكر', proposedNameEn: 'Sugar', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'الأسرة', sourceSurface: 'app-partner', price: 500, imgKey: 'sugar' },
+  { proposedNameAr: 'ملح', proposedNameEn: 'Salt', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'ساسو', sourceSurface: 'app-partner', price: 150, imgKey: 'salt' },
+  { proposedNameAr: 'فلفل', proposedNameEn: 'Pepper', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'اسناد', sourceSurface: 'app-partner', price: 400, imgKey: 'pepper' },
+  { proposedNameAr: 'زيت', proposedNameEn: 'Oil', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'عافية', sourceSurface: 'app-partner', price: 2500, imgKey: 'oil' },
+  { proposedNameAr: 'ماء', proposedNameEn: 'Water', domainId: 'domain-groceries', categoryNodeId: 'node-canned-food', brand: 'نوفا', sourceSurface: 'app-partner', price: 100, imgKey: 'water' },
 ];
+
+async function uploadAsset(token, filePath, altAr, altEn, intendedEntityType, intendedEntityId, intendedRole) {
+  const fileStats = fs.statSync(filePath);
+  const fileName = path.basename(filePath);
+  
+  // 1. Create intent
+  const intentRes = await fetch(`${DSH_API_BASE}/dsh/operator/catalog/assets/upload-intents`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      fileName,
+      mimeType: 'image/png',
+      sizeBytes: fileStats.size,
+      altAr,
+      altEn,
+      intendedEntityType,
+      intendedEntityId,
+      intendedRole
+    }),
+  });
+  if (!intentRes.ok) throw new Error(`Intent failed: ${await intentRes.text()}`);
+  const intentData = await intentRes.json();
+  const assetId = intentData.asset.id;
+  
+  // 2. PUT file
+  const fileBuffer = fs.readFileSync(filePath);
+  const putRes = await fetch(intentData.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'image/png',
+      'Content-Length': fileStats.size
+    },
+    body: fileBuffer
+  });
+  if (!putRes.ok) throw new Error(`PUT failed: ${await putRes.text()}`);
+  
+  // 3. Complete
+  const completeRes = await fetch(`${DSH_API_BASE}/dsh/operator/catalog/assets/${assetId}/complete`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!completeRes.ok) throw new Error(`Complete failed: ${await completeRes.text()}`);
+  
+  // 4. Review
+  let reviewRes = await fetch(`${DSH_API_BASE}/dsh/operator/catalog/assets/${assetId}/review`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ decision: 'pending_review', reviewNote: 'Dev Bootstrap (submit)' })
+  });
+  if (!reviewRes.ok) throw new Error(`Submit failed: ${await reviewRes.text()}`);
+
+  reviewRes = await fetch(`${DSH_API_BASE}/dsh/operator/catalog/assets/${assetId}/review`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ decision: 'approved', reviewNote: 'Dev Bootstrap' })
+  });
+  if (!reviewRes.ok) throw new Error(`Approve failed: ${await reviewRes.text()}`);
+  
+  return assetId;
+}
 
 async function main() {
   try {
     const partnerToken = await getToken('bthwani');
     const operatorToken = await getToken('operator');
     
-    for (const p of mockProducts) {
-      const { price, ...proposalPayload } = p;
+    for (const p of devProducts) {
+      const { price, imgKey, ...proposalPayload } = p;
       const proposal = await proposeProduct(partnerToken, proposalPayload);
       console.log(`Transitioning ${proposal.id}...`);
       await transitionProposal(operatorToken, proposal.id, 'partner-review');
@@ -105,34 +167,28 @@ async function main() {
       const adopted = await transitionProposal(operatorToken, proposal.id, 'catalog-adopted');
       await transitionProposal(operatorToken, proposal.id, 'catalog-approved');
       
+      const fixturePath = path.join(__dirname, '..', '..', 'services', 'dsh', 'database', 'seeds', 'local', 'media', 'fixtures', `fixture-product-${imgKey}.png`);
+      
+      if (fs.existsSync(fixturePath)) {
+        console.log(`Uploading asset for ${adopted.adoptedMasterProductId}...`);
+        await uploadAsset(
+          operatorToken,
+          fixturePath,
+          p.proposedNameAr,
+          p.proposedNameEn,
+          'master_product',
+          adopted.adoptedMasterProductId,
+          'canonical_product_image'
+        );
+      } else {
+        console.warn(`Fixture ${fixturePath} missing. Skipping image upload.`);
+      }
+
       console.log(`Setting assortment for store-test-grocery...`);
       await setStoreAssortment(operatorToken, 'store-test-grocery', adopted.adoptedMasterProductId, p.price);
       
       console.log(`Making ${adopted.adoptedMasterProductId} client-visible...`);
       await transitionProposal(operatorToken, proposal.id, 'client-visible');
-      
-      try {
-        const { execSync } = await import('node:child_process');
-        let imgKey = '';
-        if (p.proposedNameEn.includes('Cheese')) imgKey = 'product-cheese-kraft.png';
-        if (p.proposedNameEn.includes('Beans')) imgKey = 'node-canned-food.png';
-        if (p.proposedNameEn.includes('Tomatoes')) imgKey = 'node-local-vegetables.png';
-        
-        if (imgKey) {
-          console.log(`Injecting image ${imgKey} for ${adopted.adoptedMasterProductId}...`);
-          const assetId = 'asset-' + adopted.adoptedMasterProductId;
-          const linkId = 'link-' + adopted.adoptedMasterProductId;
-          const sql = `
-            INSERT INTO dsh_catalog_assets (id, object_key, original_file_name, mime_type, size_bytes, width, height, checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by) 
-            VALUES ('${assetId}', '${imgKey}', '${imgKey}', 'image/png', 100, 64, 64, 'hash', '${p.proposedNameAr}', '${p.proposedNameEn}', '#ffffff', 'approved', 'system', 'system-seed') ON CONFLICT DO NOTHING;
-            INSERT INTO dsh_catalog_asset_links (id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
-            VALUES ('${linkId}', '${assetId}', 'master_product', '${adopted.adoptedMasterProductId}', 'canonical_product_image', 1, true, 'approved') ON CONFLICT DO NOTHING;
-          `;
-          execSync(`docker exec bthwani-postgres-runtime psql -U postgres -d bthwani -c "${sql}"`);
-        }
-      } catch (e) {
-        console.error('Failed to inject image', e);
-      }
     }
     
     console.log('Dev bootstrap complete.');

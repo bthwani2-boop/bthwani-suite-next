@@ -4,6 +4,75 @@
  */
 
 export interface paths {
+    "/dsh/field/me/finance/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated field agent's wallet balance. */
+        get: operations["getDshFieldMeWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/me/finance/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated field agent's commissions. */
+        get: operations["getDshFieldMeCommissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/me/finance/ledger-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated field agent's ledger entries. */
+        get: operations["getDshFieldMeLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/me/finance/payout-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated field agent's payout requests. */
+        get: operations["getDshFieldMePayoutRequests"];
+        put?: never;
+        /** Submit a new payout request for the authenticated field agent. */
+        post: operations["submitDshFieldMePayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/health": {
         parameters: {
             query?: never;
@@ -4644,6 +4713,142 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getDshFieldMeWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Wallet returned successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        actorId?: string;
+                        actorType?: string;
+                        status?: string;
+                        currency?: string;
+                        /** Format: int64 */
+                        availableBalanceMinorUnits?: number;
+                        /** Format: int64 */
+                        pendingBalanceMinorUnits?: number;
+                        /** Format: int64 */
+                        heldBalanceMinorUnits?: number;
+                        /** Format: int64 */
+                        earnedTotalMinorUnits?: number;
+                        /** Format: int64 */
+                        settledTotalMinorUnits?: number;
+                        /** Format: int64 */
+                        paidTotalMinorUnits?: number;
+                        /** Format: date-time */
+                        lastLedgerEntryAt?: string | null;
+                        /** Format: date-time */
+                        updatedAt?: string | null;
+                    };
+                };
+            };
+        };
+    };
+    getDshFieldMeCommissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Commissions list returned successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id?: string;
+                        beneficiaryActorId?: string;
+                        beneficiaryActorType?: string;
+                        sourceType?: string;
+                        sourceId?: string;
+                        visitId?: string | null;
+                        storeId?: string | null;
+                        partnerId?: string | null;
+                        commissionPolicyId?: string | null;
+                        /** Format: int64 */
+                        amountMinorUnits?: number;
+                        currency?: string;
+                        status?: string;
+                        idempotencyKey?: string | null;
+                    }[];
+                };
+            };
+        };
+    };
+    getDshFieldMeLedgerEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ledger entries returned successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    getDshFieldMePayoutRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payout requests returned successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    submitDshFieldMePayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payout request created successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
     getDshHealth: {
         parameters: {
             query?: never;

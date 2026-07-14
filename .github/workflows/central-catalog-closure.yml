@@ -6,15 +6,23 @@ on:
       - 'services/dsh/database/**'
       - 'services/dsh/backend/**'
       - 'services/dsh/contracts/**'
+      - 'services/dsh/clients/**'
+      - 'services/dsh/frontend/**'
       - 'services/dsh/tests/**'
       - 'infra/docker/scripts/runtime.ps1'
-      - 'tools/scripts/scan-legacy-catalog-references.mjs'
-      - 'tools/scripts/test-central-catalog-migration.ps1'
+      - 'infra/docker/**'
+      - 'tools/scripts/**'
       - '.github/workflows/central-catalog-closure.yml'
+      - 'apps/app-client/**'
+      - 'apps/app-partner/**'
+      - 'apps/app-field/**'
+      - 'apps/control-panel/**'
+      - 'shared/ui-kit/**'
   push:
     branches:
       - onebyone
       - master
+      - fix/onebyone-central-catalog-final-closure
   workflow_dispatch:
     inputs:
       reason:

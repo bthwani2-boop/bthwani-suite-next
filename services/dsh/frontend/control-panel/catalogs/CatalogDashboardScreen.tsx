@@ -1,6 +1,7 @@
 "use client";
-import { colorRoles, neutralScale, statusScale, DataTable } from '@bthwani/ui-kit';
+import { colorRoles, neutralScale, statusScale, DataGrid as DataTable } from '@bthwani/ui-kit';
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   CpButton,
   CpFilterBar,
@@ -14,7 +15,7 @@ import {
   CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { DataTablePageFrame, OperationsRoomFrame } from "@bthwani/control-panel/shell";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import {
   useCentralCatalogController,
@@ -204,7 +205,16 @@ export function CatalogDashboardScreen() {
   const { state } = useControlPanelSession();
   const controller = useCentralCatalogController(state.kind);
 
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const queryTab = searchParams.get("tab") as TabId | null;
+  const activeTab = queryTab && TABS.some(t => t.id === queryTab && !t.disabled) ? queryTab : "overview";
+  const setActiveTab = (tabId: TabId) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("tab", tabId);
+    router.replace(`${pathname}?${newParams.toString()}`);
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState("");
   const [assortmentProductId, setAssortmentProductId] = useState("");
@@ -423,8 +433,35 @@ export function CatalogDashboardScreen() {
   }, [controller.state.masterProducts.items]);
 
   return (
-    <DataTablePageFrame
+    <OperationsRoomFrame
       dir="rtl"
+      sidePanel={
+        <div style={{ width: 280, borderLeft: "1px solid var(--bth-colors-borderColor, #e5e5e5)", padding: "1rem", height: "100%", overflowY: "auto", backgroundColor: "var(--bth-colors-surfaceBase)" }}>
+          <nav dir="rtl" aria-label="تبويبات الكتالوج المركزي" style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                disabled={t.disabled}
+                onClick={() => setActiveTab(t.id)}
+                title={t.reason}
+                style={{
+                  ...tabButtonBaseStyle,
+                  textAlign: "right",
+                  background: activeTab === t.id ? colorRoles.brandAction : "transparent",
+                  color: t.disabled ? neutralScale[400] : activeTab === t.id ? colorRoles.surfaceBase : "currentColor",
+                  border: activeTab === t.id ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
+                  fontWeight: activeTab === t.id ? 700 : 500,
+                  cursor: t.disabled ? "not-allowed" : "pointer",
+                  opacity: t.disabled ? 0.5 : 1,
+                }}
+              >
+                {t.label}
+                {t.disabled && t.reason && <div style={tabDisabledReasonStyle}>{t.reason}</div>}
+              </button>
+            ))}
+          </nav>
+        </div>
+      }
       header={
         <CpPageHeader title="كتالوج DSH السيادي وPIM">
           <p style={pageDescStyle}>
@@ -456,34 +493,7 @@ export function CatalogDashboardScreen() {
       )}
 
       {/* Tab bar */}
-      <nav dir="rtl" aria-label="تبويبات الكتالوج المركزي" style={tabNavStyle}>
-        {TABS.map((t) => (
-          <div key={t.id} style={tabButtonContainerStyle}>
-            <button
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              disabled={t.disabled ?? false}
-              style={{
-                ...tabButtonBaseStyle,
-                // dynamic-exception: active/disabled tone depends on current tab selection
-                background: activeTab === t.id ? colorRoles.brandAction : "transparent",
-                color: t.disabled ? neutralScale[400] : activeTab === t.id ? colorRoles.surfaceBase : "currentColor",
-                border: activeTab === t.id ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
-                fontWeight: activeTab === t.id ? 700 : 500,
-                cursor: t.disabled ? "not-allowed" : "pointer",
-                opacity: t.disabled ? 0.5 : 1,
-              }}
-            >
-              {t.label}
-            </button>
-            {t.disabled && t.reason && (
-              <span style={tabDisabledReasonStyle}>
-                {t.reason}
-              </span>
-            )}
-          </div>
-        ))}
-      </nav>
+      
 
       {/* Filter and query options */}
       {activeTab !== "overview" && activeTab !== "import_export" && (
@@ -1093,6 +1103,6 @@ export function CatalogDashboardScreen() {
         )}
 
       </div>
-    </DataTablePageFrame>
+    </OperationsRoomFrame>
   );
 }

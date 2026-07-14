@@ -172,6 +172,7 @@ type Node struct {
 	AllowsStoreProductCustomImage bool      `json:"allowsStoreProductCustomImage"`
 	RequiresCatalogReview         bool      `json:"requiresCatalogReview"`
 	RequiresProductCatalog        bool      `json:"requiresProductCatalog"`
+	Version                       int       `json:"version"`
 	CreatedAt                     time.Time `json:"createdAt"`
 	UpdatedAt                     time.Time `json:"updatedAt"`
 }
@@ -208,19 +209,20 @@ type NodePatchInput struct {
 	AllowsStoreProductCustomImage *bool   `json:"allowsStoreProductCustomImage"`
 	RequiresCatalogReview         *bool   `json:"requiresCatalogReview"`
 	RequiresProductCatalog        *bool   `json:"requiresProductCatalog"`
+	ExpectedVersion               *int    `json:"expectedVersion"`
 }
 
 const nodeColumns = `id, domain_id, parent_id, level, slug, name_ar, name_en, icon, sort_order,
 	is_active, is_client_visible, requires_barcode, allows_product_proposal,
 	allows_store_product_custom_image, requires_catalog_review, requires_product_catalog,
-	created_at, updated_at`
+	version, created_at, updated_at`
 
 func scanNode(scanner interface{ Scan(...any) error }) (Node, error) {
 	var n Node
 	err := scanner.Scan(&n.ID, &n.DomainID, &n.ParentID, &n.Level, &n.Slug, &n.NameAr, &n.NameEn, &n.Icon,
 		&n.SortOrder, &n.IsActive, &n.IsClientVisible, &n.RequiresBarcode, &n.AllowsProductProposal,
 		&n.AllowsStoreProductCustomImage, &n.RequiresCatalogReview, &n.RequiresProductCatalog,
-		&n.CreatedAt, &n.UpdatedAt)
+		&n.Version, &n.CreatedAt, &n.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return n, ErrNotFound
 	}
@@ -285,6 +287,17 @@ func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput
 		}
 		nameAr = &trimmed
 	}
+	
+	if input.ExpectedVersion != nil {
+		current, err := GetNode(ctx, db, id)
+		if err != nil {
+			return Node{}, err
+		}
+		if current.Version != *input.ExpectedVersion {
+			return Node{}, ErrConflict
+		}
+	}
+
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_nodes SET
 		name_ar=COALESCE($1, name_ar), name_en=COALESCE($2, name_en), icon=COALESCE($3, icon),
 		sort_order=COALESCE($4, sort_order), is_active=COALESCE($5, is_active),
@@ -292,16 +305,16 @@ func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput
 		allows_product_proposal=COALESCE($8, allows_product_proposal),
 		allows_store_product_custom_image=COALESCE($9, allows_store_product_custom_image),
 		requires_catalog_review=COALESCE($10, requires_catalog_review),
-		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now()
-		WHERE id=$12`,
+		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now(), version=version+1
+		WHERE id=$12 AND ($13::int IS NULL OR version=$13)`,
 		nameAr, input.NameEn, input.Icon, input.SortOrder, input.IsActive,
 		input.IsClientVisible, input.RequiresBarcode, input.AllowsProductProposal,
-		input.AllowsStoreProductCustomImage, input.RequiresCatalogReview, input.RequiresProductCatalog, id)
+		input.AllowsStoreProductCustomImage, input.RequiresCatalogReview, input.RequiresProductCatalog, id, input.ExpectedVersion)
 	if err != nil {
 		return Node{}, err
 	}
-	if n, _ := result.RowsAffected(); n != 1 {
-		return Node{}, ErrNotFound
+	if n, _ := result.RowsAffected(); n == 0 {
+		return Node{}, ErrConflict
 	}
 	return GetNode(ctx, db, id)
 }
@@ -361,6 +374,7 @@ type MasterProductPatchInput struct {
 	MeasurementType *string `json:"measurementType"`
 	ApprovalStatus  *string `json:"approvalStatus"`
 	IsActive        *bool   `json:"isActive"`
+	ExpectedVersion *int    `json:"expectedVersion"`
 }
 
 const masterProductColumns = `id, domain_id, category_node_id, canonical_name_ar, canonical_name_en, brand,
@@ -489,21 +503,46 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 	if input.ApprovalStatus != nil && !validApprovalStatus[*input.ApprovalStatus] {
 		return MasterProduct{}, ErrInvalid
 	}
+
+	// Fetch current state if we need to validate against missing images
+	current, err := GetMasterProduct(ctx, db, id)
+	if err != nil {
+		return MasterProduct{}, err
+	}
+
+	if input.ExpectedVersion != nil && current.Version != *input.ExpectedVersion {
+		return MasterProduct{}, ErrConflict
+	}
+
+	newStatus := current.ApprovalStatus
+	if input.ApprovalStatus != nil {
+		newStatus = *input.ApprovalStatus
+	}
+	
+	// We might also check client_visible in StoreAssortment since the request mentioned "publication state",
+	// but just in case they meant MasterProduct as well:
+	// A MasterProduct cannot be approved (which makes it eligible for store publication) if it lacks an image.
+	if newStatus == "approved" {
+		if current.CanonicalImageObjectKey == nil || *current.CanonicalImageObjectKey == "" {
+			return MasterProduct{}, fmt.Errorf("%w: cannot approve product without canonical image", ErrInvalid)
+		}
+	}
+
 	result, err := db.ExecContext(ctx, `UPDATE dsh_master_products SET
 		category_node_id=COALESCE($1, category_node_id), canonical_name_ar=COALESCE($2, canonical_name_ar),
 		canonical_name_en=COALESCE($3, canonical_name_en), brand=COALESCE($4, brand),
 		barcode=COALESCE($5, barcode), gtin=COALESCE($6, gtin), sku=COALESCE($7, sku),
 		unit=COALESCE(NULLIF($8::text,''), unit), measurement_type=COALESCE(NULLIF($9::text,''), measurement_type),
 		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now(), version=version+1
-		WHERE id=$12`,
+		WHERE id=$12 AND ($13::int IS NULL OR version=$13)`,
 		input.CategoryNodeID, canonicalNameAr, input.CanonicalNameEn, input.Brand,
 		input.Barcode, input.GTIN, input.SKU, input.Unit, input.MeasurementType,
-		input.ApprovalStatus, input.IsActive, id)
+		input.ApprovalStatus, input.IsActive, id, input.ExpectedVersion)
 	if err != nil {
 		return MasterProduct{}, err
 	}
-	if n, _ := result.RowsAffected(); n != 1 {
-		return MasterProduct{}, ErrNotFound
+	if n, _ := result.RowsAffected(); n == 0 {
+		return MasterProduct{}, ErrConflict // Assuming id exists because we just fetched it
 	}
 	return GetMasterProduct(ctx, db, id)
 }
@@ -800,6 +839,7 @@ type StoreAssortmentInput struct {
 	LocalNote            string  `json:"localNote"`
 	CustomImageObjectKey *string `json:"customImageObjectKey"`
 	PublicationStatus    string  `json:"publicationStatus"`
+	ExpectedVersion      *int    `json:"expectedVersion"`
 }
 
 const assortmentColumns = `id, store_id, master_product_id, unit_price, currency, available, stock_status,
@@ -871,8 +911,24 @@ func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProdu
 	if input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != "" && !allowCustomImage {
 		return StoreAssortment{}, ErrForbidden
 	}
+	if publicationStatus == "client_visible" {
+		// A store assortment cannot be client_visible if it doesn't have an image (either custom or canonical)
+		var masterImage *string
+		err := db.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage)
+		if err != nil {
+			return StoreAssortment{}, err
+		}
+		
+		hasCustomImage := input.CustomImageObjectKey != nil && *input.CustomImageObjectKey != ""
+		hasMasterImage := masterImage != nil && *masterImage != ""
+		
+		if !hasCustomImage && !hasMasterImage {
+			return StoreAssortment{}, fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
+		}
+	}
+
 	id := entityID("assortment")
-	_, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortments
+	result, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortments
 		(id, store_id, master_product_id, unit_price, currency, available, stock_status, local_note,
 		 custom_image_object_key, publication_status, submitted_by)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
@@ -880,11 +936,15 @@ func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProdu
 		  unit_price=EXCLUDED.unit_price, currency=EXCLUDED.currency, available=EXCLUDED.available,
 		  stock_status=EXCLUDED.stock_status, local_note=EXCLUDED.local_note,
 		  custom_image_object_key=EXCLUDED.custom_image_object_key,
-		  publication_status=EXCLUDED.publication_status, updated_at=now()`,
+		  publication_status=EXCLUDED.publication_status, updated_at=now(), version=dsh_store_assortments.version+1
+		WHERE ($12::int IS NULL OR dsh_store_assortments.version=$12)`,
 		id, storeID, masterProductID, input.UnitPrice, currency, input.Available, stockStatus, input.LocalNote,
-		input.CustomImageObjectKey, publicationStatus, actorID)
+		input.CustomImageObjectKey, publicationStatus, actorID, input.ExpectedVersion)
 	if err != nil {
 		return StoreAssortment{}, err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return StoreAssortment{}, ErrConflict
 	}
 	var out StoreAssortment
 	return out, scanInto(&out, db.QueryRowContext(ctx, `SELECT `+assortmentColumns+`
@@ -1510,7 +1570,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 
 	case "catalog-approved":
 		if proposal.AdoptedMasterProductID != nil {
-			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now() WHERE id=$1`, *proposal.AdoptedMasterProductID)
+			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now(), version=version+1 WHERE id=$1`, *proposal.AdoptedMasterProductID)
 			if err != nil {
 				return ProductProposal{}, err
 			}

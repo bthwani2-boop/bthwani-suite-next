@@ -15,6 +15,107 @@ x-bthwani-client-generation: ENABLED
 x-bthwani-runtime-dependency: true
 
 paths:
+  /dsh/field/me/finance/wallet:
+    get:
+      operationId: getDshFieldMeWallet
+      summary: Return the authenticated field agent's wallet balance.
+      tags:
+        - DshFieldFinance
+      responses:
+        "200":
+          description: Wallet returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actorId: { type: string }
+                  actorType: { type: string }
+                  status: { type: string }
+                  currency: { type: string }
+                  availableBalanceMinorUnits: { type: integer, format: int64 }
+                  pendingBalanceMinorUnits: { type: integer, format: int64 }
+                  heldBalanceMinorUnits: { type: integer, format: int64 }
+                  earnedTotalMinorUnits: { type: integer, format: int64 }
+                  settledTotalMinorUnits: { type: integer, format: int64 }
+                  paidTotalMinorUnits: { type: integer, format: int64 }
+                  lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
+                  updatedAt: { type: string, format: date-time, nullable: true }
+
+  /dsh/field/me/finance/commissions:
+    get:
+      operationId: getDshFieldMeCommissions
+      summary: Return the authenticated field agent's commissions.
+      tags:
+        - DshFieldFinance
+      responses:
+        "200":
+          description: Commissions list returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    beneficiaryActorId: { type: string }
+                    beneficiaryActorType: { type: string }
+                    sourceType: { type: string }
+                    sourceId: { type: string }
+                    visitId: { type: string, nullable: true }
+                    storeId: { type: string, nullable: true }
+                    partnerId: { type: string, nullable: true }
+                    commissionPolicyId: { type: string, nullable: true }
+                    amountMinorUnits: { type: integer, format: int64 }
+                    currency: { type: string }
+                    status: { type: string }
+                    idempotencyKey: { type: string, nullable: true }
+
+  /dsh/field/me/finance/ledger-entries:
+    get:
+      operationId: getDshFieldMeLedgerEntries
+      summary: Return the authenticated field agent's ledger entries.
+      tags:
+        - DshFieldFinance
+      responses:
+        "200":
+          description: Ledger entries returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dsh/field/me/finance/payout-requests:
+    get:
+      operationId: getDshFieldMePayoutRequests
+      summary: Return the authenticated field agent's payout requests.
+      tags:
+        - DshFieldFinance
+      responses:
+        "200":
+          description: Payout requests returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      operationId: submitDshFieldMePayoutRequest
+      summary: Submit a new payout request for the authenticated field agent.
+      tags:
+        - DshFieldFinance
+      responses:
+        "200":
+          description: Payout request created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+
   /dsh/health:
     get:
       operationId: getDshHealth

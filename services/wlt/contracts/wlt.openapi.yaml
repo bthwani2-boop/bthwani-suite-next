@@ -147,30 +147,6 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /wlt/references/field-commission:
-    get:
-      operationId: getWltFieldCommissionRef
-      summary: Return field commission reference for a given partner. Read-only display surface for DSH.
-      tags:
-        - WltReferences
-      parameters:
-        - name: partnerId
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Field commission reference found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WltFieldCommissionRefResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
 
   /wlt/payment-sessions:
     post:

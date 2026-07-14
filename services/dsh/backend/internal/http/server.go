@@ -85,6 +85,13 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/control-panel/finance/commissions", protected.handleFinanceCommissions)
 	mux.HandleFunc("GET /dsh/captain/finance/cod-records", protected.handleCaptainFinanceCodRecords)
 
+	// Field Finance
+	mux.HandleFunc("GET /dsh/field/me/finance/wallet", protected.handleFieldMeWallet)
+	mux.HandleFunc("GET /dsh/field/me/finance/commissions", protected.handleFieldMeCommissions)
+	mux.HandleFunc("GET /dsh/field/me/finance/ledger-entries", protected.handleFieldMeLedgerEntries)
+	mux.HandleFunc("GET /dsh/field/me/finance/payout-requests", protected.handleFieldMePayoutRequests)
+	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", protected.handleSubmitFieldMePayoutRequest)
+
 	// Field Verification & Store Quality Assurance
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateFieldVisit)
 	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)

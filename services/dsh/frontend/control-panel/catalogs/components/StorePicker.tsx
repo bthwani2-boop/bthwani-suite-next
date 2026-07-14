@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
-import { CpButton } from "@bthwani/control-panel/components";
+import { useServerDataSource } from "@bthwani/ui-kit/src/components/DataTable/useServerDataSource";
 
 export type StorePickerProps = {
   value: string;
@@ -10,28 +10,28 @@ export type StorePickerProps = {
 
 export function StorePicker({ value, onChange, label = "اختر المتجر" }: StorePickerProps) {
   const [query, setQuery] = useState("");
-  const [stores, setStores] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    if (query.trim() === "") {
-      setStores([]);
-      return;
-    }
-    const timeoutId = setTimeout(() => {
-      setLoading(true);
-      fetch(`/api/dsh/admin/stores?search=${encodeURIComponent(query)}&limit=10`)
-        .then(res => res.json())
-        .then(data => {
-           setStores(data.stores || []);
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }, 400);
+  const { items: stores, isLoading, setFilter } = useServerDataSource<any>({
+    fetcher: async (params, signal) => {
+      const search = params.filters.search || "";
+      if (!search) return { items: [], total: 0 };
+      
+      const res = await fetch(`/api/dsh/admin/stores?search=${encodeURIComponent(search)}&limit=${params.limit}`, { signal });
+      if (!res.ok) throw new Error("Failed to fetch stores");
+      const data = await res.json();
+      return { items: data.stores || [], total: data.stores?.length || 0 };
+    },
+    initialFilters: { search: query },
+    limit: 10
+  });
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setFilter("search", query);
+    }, 400);
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, setFilter]);
 
   return (
     <Box position="relative" width={300}>
@@ -61,8 +61,8 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
           overflow="auto"
           borderRadius="$md"
         >
-          {loading && <Box padding="$2"><Text tone="secondary">جاري البحث...</Text></Box>}
-          {!loading && stores.length === 0 && query && <Box padding="$2"><Text tone="secondary">لم يتم العثور على نتائج</Text></Box>}
+          {isLoading && <Box padding="$2"><Text tone="secondary">جاري البحث...</Text></Box>}
+          {!isLoading && stores.length === 0 && query && <Box padding="$2"><Text tone="secondary">لم يتم العثور على نتائج</Text></Box>}
           {stores.map(store => (
             <Box 
               key={store.id} 

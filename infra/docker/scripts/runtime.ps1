@@ -994,6 +994,25 @@ function Invoke-DshSmoke {
 if ($Action -eq "up") {
   Write-Host "=== runtime:up (profiles: $($ProfileList -join ','))"
   docker info | Out-Null
+  
+  # Start postgres first to allow migrations
+  docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
+  Wait-ForPostgres
+
+  # Run database migrations safely (safe upgrade)
+  if ($ProfileList -contains "identity") {
+    Invoke-IdentityMigrate
+  }
+  if ($ProfileList -contains "workforce") {
+    Invoke-WorkforceMigrate
+  }
+  if ($ProfileList -contains "wlt") {
+    Invoke-WltMigrate
+  }
+  if ($ProfileList -contains "dsh") {
+    Invoke-Migrate
+  }
+
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d
   Write-Host "Containers started."
 }
