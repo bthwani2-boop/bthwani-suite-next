@@ -110,17 +110,60 @@ const SEED_OFFERS_ROWS: BenefitRow[] = [
   },
 ];
 
+import { getLoyaltyTiers, getSubscriptionPlans, buildClientBenefitItems } from '../../shared/marketing';
+
 const SECTION_CONFIG: Record<BenefitsSection, { label: string; subtitle: string }> = {
-  loyalty:      { label: 'النقاط والمكافآت',  subtitle: 'رصيدك الحالي ومكافآتك المتاحة للاستبدال' },
-  subscription: { label: 'الاشتراك',           subtitle: 'خطتك الحالية وخيار التعديل متى احتجت' },
+  loyalty:      { label: 'النقاط والمكافآت',  subtitle: 'مستويات ولائك ومكافآتك المتاحة للاستبدال' },
+  subscription: { label: 'الاشتراك',           subtitle: 'خطط الاشتراك المتاحة وخيار التعديل متى احتجت' },
   offers:       { label: 'العروض والكوبونات', subtitle: 'العروض والكوبونات المتاحة لاستخدامها الآن' },
 };
 
-const SECTION_DATA: Record<BenefitsSection, BenefitRow[]> = {
-  loyalty: SEED_LOYALTY_ROWS,
-  subscription: SEED_SUBSCRIPTION_ROWS,
-  offers: SEED_OFFERS_ROWS,
-};
+function useRegistryBenefitRows(): Record<BenefitsSection, BenefitRow[]> {
+  const [rows, setRows] = React.useState<Record<BenefitsSection, BenefitRow[]>>({
+    loyalty: SEED_LOYALTY_ROWS,
+    subscription: SEED_SUBSCRIPTION_ROWS,
+    offers: SEED_OFFERS_ROWS,
+  });
+
+  React.useEffect(() => {
+    // Derive loyalty rows from active tiers in the shared marketing registry.
+    const tiers = getLoyaltyTiers();
+    const plans = getSubscriptionPlans();
+    const benefitItems = buildClientBenefitItems(tiers, plans);
+
+    const loyaltyRows: BenefitRow[] = benefitItems
+      .filter((b) => b.kind === 'loyalty')
+      .map((b) => ({
+        id: b.id,
+        title: b.title,
+        subtitle: b.description,
+        badgeLabel: b.badgeLabel ?? 'ولاء',
+        badgeTone: 'info' as const,
+        helperText: 'مدار من قسم التسويق في لوحة التحكم.',
+      }));
+
+    const subRows: BenefitRow[] = benefitItems
+      .filter((b) => b.kind === 'subscription')
+      .map((b) => ({
+        id: b.id,
+        title: b.title,
+        subtitle: b.description,
+        badgeLabel: b.badgeLabel ?? 'اشتراك',
+        badgeTone: 'success' as const,
+        actionLabel: 'اشترك الآن',
+        helperText: 'مدار من قسم التسويق في لوحة التحكم.',
+      }));
+
+    setRows({
+      loyalty:      loyaltyRows.length > 0 ? loyaltyRows : SEED_LOYALTY_ROWS,
+      subscription: subRows.length > 0 ? subRows : SEED_SUBSCRIPTION_ROWS,
+      offers:       SEED_OFFERS_ROWS,
+    });
+  }, []);
+
+  return rows;
+}
+
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -167,7 +210,8 @@ export function BenefitsHubScreen({
 }: BenefitsHubScreenProps) {
   const [section, setSection] = React.useState<BenefitsSection>(initialSection);
   const config = SECTION_CONFIG[section];
-  const rows = SECTION_DATA[section];
+  const sectionData = useRegistryBenefitRows();
+  const rows = sectionData[section];
 
   return (
     <ScrollScreen>

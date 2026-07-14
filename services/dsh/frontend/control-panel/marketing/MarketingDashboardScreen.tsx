@@ -21,6 +21,8 @@ import { TickerCommandDeck } from "./components/TickerCommandDeck";
 import { CampaignsCommandDeck } from "./components/CampaignsCommandDeck";
 import { PartnerOffersCommandDeck } from "./components/PartnerOffersCommandDeck";
 import { SignalsMeasurementCommandDeck } from "./components/SignalsMeasurementCommandDeck";
+import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
+import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
 
 // Import split dashboard sections
 import { VisibilityGatesSection } from "./components/VisibilityGatesSection";
@@ -141,6 +143,10 @@ export function MarketingDashboardScreen() {
       {mainTab === "campaigns" && <CampaignsCommandDeck />}
       {mainTab === "partner-offers" && <PartnerOffersCommandDeck />}
       {mainTab === "signals-measurement" && <SignalsMeasurementCommandDeck />}
+
+      {/* ── Loyalty & Subscriptions tabs ── */}
+      {mainTab === "loyalty" && <LoyaltyCommandDeck />}
+      {mainTab === "subscriptions" && <SubscriptionsCommandDeck />}
     </DataTablePageFrame>
   );
 }

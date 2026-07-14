@@ -16,7 +16,9 @@ export type MarketingMainTabId =
   | "homepage-promos"
   | "campaigns"
   | "partner-offers"
-  | "signals-measurement";
+  | "signals-measurement"
+  | "loyalty"
+  | "subscriptions";
 
 export type MarketingMainTabMeta = {
   readonly id: MarketingMainTabId;
@@ -31,6 +33,8 @@ export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "campaigns",              label: "الحملات" },
   { id: "partner-offers",         label: "عروض الشركاء" },
   { id: "signals-measurement",    label: "الإشارات والقياس" },
+  { id: "loyalty",                label: "الولاء" },
+  { id: "subscriptions",          label: "الاشتراكات" },
 ] as const;
 
 // ─── Section Tab Registry ─────────────────────────────────────────────────────
