@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
-import { useServerDataSource } from "@bthwani/ui-kit/src/components/DataTable/useServerDataSource";
+import { useServerDataSource } from "@bthwani/ui-kit";
 
 export type ProductPickerProps = {
   value: string;
