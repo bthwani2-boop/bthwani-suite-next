@@ -5,7 +5,7 @@ import { DshOperationScreen } from '../DshOperationScreen';
 
 const SurfaceAny = Surface as any;
 import { getDshCaptainFlowPolicy } from '../dsh-captain-binding.contracts';
-import { getDshFlowPolicySummary } from '../../shared/runtime/dsh-flow-registry';
+import { getDshFlowPolicySummary } from '../../shared/operations/dsh-operational-registry';
 import { CAPTAIN_LOCATION_PUSH_INTERVAL_MS, type DshCaptainLifecycleStatus } from '../../shared/delivery';
 import { type DshOperationScreenState } from '../DshOperationScreen';
 

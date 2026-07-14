@@ -10,7 +10,7 @@ import { AWNAK_STAGE_LABELS } from '../../shared/orders';
 import { buildOperationsHref } from './operations.registry';
 import { Box } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/runtime';
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
 
 export type AwnakScreenProps = {
   hubHref?: string;

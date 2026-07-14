@@ -15,7 +15,7 @@ import type { PartnerOfferRecord, PartnerOfferStatus, PartnerOfferType } from '.
 import {
   getPartnerOfferVisibilityRecord,
 } from '../../shared/partner/marketing.visibility';
-import { getDshControlPanelGovernanceEntry } from '../../shared/runtime/dsh-control-panel-governance.map';
+import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
 import { usePartnerSelfOffersController } from '../../shared/marketing';
 
 type AnalyticsWorkspaceState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'no-analytics' | 'no-campaigns';

@@ -23,8 +23,8 @@ import type {
   DshPartnerSupportRouteId,
 } from '../dsh-partner.types';
 import { getPartnerOrderIssueCategorySpec } from '../orders/PartnerOrderIssuePanel';
-import { isDshHiddenCompatFlow } from '../../shared/runtime/dsh-flow-registry';
-import { resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-control-panel-governance.map';
+import { isDshHiddenCompatFlow } from '../../shared/operations/dsh-operational-registry';
+import { resolveDshControlPanelSectionLabel } from '../../shared/orders/orders.contract';
 import { DSH_ORDER_LIFECYCLE_HANDOFFS, getHandoffsForSurface, getSurfaceObservation } from '../../shared/orders';
 import { getSurfaceModeCapability } from '../../shared/identity-access/surface-visibility.policy';
 

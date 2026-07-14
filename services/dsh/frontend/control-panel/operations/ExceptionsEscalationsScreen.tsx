@@ -28,9 +28,9 @@ import {
   getDshFlowPolicySummary,
   getDshRenderableFlowsForSurface,
   type DshFlowRegistryEntry,
-} from '../../shared/runtime/dsh-flow-registry';
-import { findDshControlPanelGovernanceSectionByFlowId } from '../../shared/runtime';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/runtime';
+} from '../../shared/operations/dsh-operational-registry';
+import { findDshControlPanelGovernanceSectionByFlowId } from '../../shared/orders/orders.contract';
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
 
 export type ExceptionsEscalationsScreenProps = { hubHref: string; subGroup?: string; };
 

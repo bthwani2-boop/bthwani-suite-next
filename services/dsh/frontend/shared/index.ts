@@ -23,5 +23,4 @@ export * from './platform';
 export * from './platform-policies';
 export * from './store';
 export * from './support';
-export * from './runtime';
 export * from './hr';

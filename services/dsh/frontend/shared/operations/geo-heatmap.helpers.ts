@@ -4,7 +4,7 @@
 // All functions are stateless — no hooks, no imports from React.
 // Extracted to keep GeoHeatmapScreen under 330 lines.
 
-import type { DshSurfaceId } from '../runtime/dsh-flow-registry';
+import type { DshSurfaceId } from './dsh-operational.contract';
 
 type GeoLifecycleStep =
   | 'tracking'
@@ -152,4 +152,34 @@ export function buildRecommendation(zone: GeoHeatmapZone, subTabId: GeoSubTabId,
     counterpartRouteHint: resolveRouteHint(hubHref, zone.id),
     runtimeBindingStatus: 'NEEDS_RUNTIME_EVIDENCE' as const,
   };
+}
+
+export type DshRuntimeBindingStatus =
+  | 'UI_PREVIEW_ONLY'
+  | 'NEEDS_BINDING_LATER'
+  | 'API_CLIENT_BOUND__RUNTIME_EVIDENCE_PRESENT'
+  | 'NEEDS_RUNTIME_EVIDENCE'
+  | 'BLOCKED'
+  | 'BLOCKED_BY_CONTRACT'
+  | 'BLOCKED_BY_WLT';
+
+export function translateDshRuntimeBindingStatus(status: DshRuntimeBindingStatus): string {
+  switch (status) {
+    case 'UI_PREVIEW_ONLY':
+      return 'ربط قيد التنفيذ';
+    case 'NEEDS_BINDING_LATER':
+      return 'يحتاج ربطًا لاحقًا';
+    case 'API_CLIENT_BOUND__RUNTIME_EVIDENCE_PRESENT':
+      return 'عميل API مربوط مع دليل تشغيل';
+    case 'NEEDS_RUNTIME_EVIDENCE':
+      return 'يحتاج دليل تشغيل';
+    case 'BLOCKED':
+      return 'محجوب';
+    case 'BLOCKED_BY_CONTRACT':
+      return 'محجوب بسبب العقد';
+    case 'BLOCKED_BY_WLT':
+      return 'محجوب بسبب WLT';
+    default:
+      return status;
+  }
 }

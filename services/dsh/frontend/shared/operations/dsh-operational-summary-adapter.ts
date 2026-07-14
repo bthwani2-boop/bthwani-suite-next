@@ -4,7 +4,7 @@ import {
   getDshOperationalEntriesByWorkspace,
   getDshOperationalEntryById,
 } from './dsh-operational-registry';
-import type { DshSurfaceId } from '../runtime/dsh-flow-registry';
+import type { DshSurfaceId } from './dsh-operational.contract';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DshOperationalSummaryRecord = Record<string, any>;

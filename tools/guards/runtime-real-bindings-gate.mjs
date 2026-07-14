@@ -24,7 +24,14 @@ function inspect(relative, checks) {
   }
 }
 
-inspect("services/dsh/frontend/shared/runtime/ui-only-runtime-clients.ts", [
+inspect("services/dsh/frontend/shared/catalog/central-catalog.api.ts", [
+  {
+    pattern: /return\s+null\s*;/,
+    message: "Runtime client stubs returning null are forbidden.",
+  },
+]);
+
+inspect("services/dsh/frontend/shared/dispatch/dispatch.api.ts", [
   {
     pattern: /return\s+null\s*;/,
     message: "Runtime client stubs returning null are forbidden.",

@@ -16,7 +16,7 @@ import {
   useTheme,
   spacing,
 } from '@bthwani/ui-kit';
-import { resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-control-panel-governance.map';
+import { resolveDshControlPanelSectionLabel } from '../../shared/orders/orders.contract';
 import type {
   StoreCourierCompensation,
   StoreDeliveryPolicy,

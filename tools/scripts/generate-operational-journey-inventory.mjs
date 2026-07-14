@@ -106,7 +106,7 @@ const sourceFiles = {
   runtime_map: "services/dsh/runtime-map.ts",
   capability_map: "services/dsh/capability-map.ts",
   dsh_operational_registry: "services/dsh/frontend/shared/operations/dsh-operational-registry.ts",
-  cross_surface_closure_map: "services/dsh/frontend/shared/runtime/dsh-cross-surface-closure-map.ts",
+  cross_surface_closure_map: "services/dsh/frontend/shared/operations/geo-heatmap.helpers.ts",
   dsh_openapi: "services/dsh/contracts/dsh.openapi.yaml",
   wlt_openapi: "services/wlt/contracts/wlt.openapi.yaml",
   identity_openapi: "core/identity/contracts/auth.openapi.yaml"

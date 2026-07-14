@@ -13,7 +13,7 @@ import {
 import { Box, KeyValueList } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/runtime';
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
 
 export type AreaCapacityScreenProps = { hubHref: string; subGroup?: string; };
 

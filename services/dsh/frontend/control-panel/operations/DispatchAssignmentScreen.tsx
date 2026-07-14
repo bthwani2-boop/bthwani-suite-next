@@ -10,12 +10,12 @@ import {
 } from '@bthwani/ui-kit/web';
 import { fetchDshRuntimeOrders, type DshRuntimeOrderRow } from '../../shared/operations/dsh-operational-runtime-adapter';
 import { DISPATCH_LIFECYCLE_STATE_MAP } from '../../shared/orders';
-import { getDshOrderLifecycleRuntimeClient } from '../../shared';
+import { getDshOrderLifecycleRuntimeClient } from '../../shared/dispatch';
 import { Box, Text } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { buildOperationsHref } from './operations.registry';
 import { getDshLifecycleStateMetadata } from '../../shared/orders';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/runtime';
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
 // SSoT: dispatch queue visibility is owned by dsh-fulfillment-surface-visibility.
 // Do not duplicate delivery-mode dispatch logic inline — use these helpers.
 import {

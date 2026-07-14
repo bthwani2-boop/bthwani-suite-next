@@ -2,8 +2,8 @@
 // Authority: dsh/frontend/shared/delivery/captain — shared captain delivery contracts/runtime.
 
 import type { DshCaptainOrderAction, DshCaptainOrderId, DshCaptainOrderMode, DshCaptainOrderProofStatus, DshCaptainOrderStage } from '../orders/orders.contract';
-import type { DshOnDemandPolicy } from '../runtime/dsh-flow-registry';
-import { getDshFlowById } from '../runtime/dsh-flow-registry';
+import type { DshOnDemandPolicy } from '../operations/dsh-operational.contract';
+import { getDshFlowById } from '../operations/dsh-operational-registry';
 
 export type CaptainServiceType = 'dsh' | 'amn';
 export type CaptainAvailabilityStatus = 'available' | 'unavailable' | 'break' | 'planned-leave';

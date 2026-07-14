@@ -12,10 +12,10 @@ import { Box } from '@bthwani/ui-kit';
 import { AuditTrailDetailWorkspace } from './AuditTrailDetailWorkspace';
 import { getDynamicUiAudits } from '../../shared/partner/partner.workflow';
 import { resolveAuditEntry } from '../../shared/identity-access/dsh-role-permission.model';
-import { getDshControlPanelGovernanceEntry } from '../../shared/runtime';
+import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
 import { fetchDshRuntimeOrders, type DshRuntimeOrderRow } from '../../shared/operations/dsh-operational-runtime-adapter';
 import styles from '../shared/control-panel-surface.module.css';
-import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/runtime';
+import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
 
 export type AuditSupportSlaScreenProps = { hubHref: string; subGroup?: string; };
 

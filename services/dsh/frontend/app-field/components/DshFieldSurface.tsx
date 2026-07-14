@@ -11,8 +11,15 @@ import {
   useIdentitySession,
 } from '@bthwani/core-identity';
 import { DshFieldActivationCard } from './DshFieldActivationCard';
-import { useAndroidBackHandler } from '../../shared/runtime/useAndroidBackHandler';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
+
+function useAndroidBackHandler(onBackPress: () => boolean) {
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [onBackPress]);
+}
 
 // ─── Bottom Navigation (exact donor replica) ────────────────────────────────
 // RTL order visible on screen (left→right): حسابي | المالية | [FAB] | السجل | المهام

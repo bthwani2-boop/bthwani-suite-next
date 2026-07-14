@@ -11,7 +11,7 @@ import styles from '../shared/control-panel-surface.module.css';
 import type { DshFulfillmentOperationalMode } from './operations.types';
 import { DSH_FULFILLMENT_OPERATIONAL_MODE_META } from './operations.types';
 import { fetchDshRuntimeOrders, type DshRuntimeOrderRow } from '../../shared/operations/dsh-operational-runtime-adapter';
-import { resolveRuntimeOrderStatusTone } from '../../shared/runtime';
+import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';
 import { buildOperationsHref } from './operations.registry';
 import { opsTheme as theme } from '../../shared/operations';
 

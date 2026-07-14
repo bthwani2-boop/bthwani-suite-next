@@ -78,3 +78,11 @@ export function classifyDispatchError(error: unknown): {
   if (typed.kind === "network") return { kind: "offline" };
   return { kind: "error" };
 }
+
+export function getDshOrderLifecycleRuntimeClient() {
+  return {
+    assignCaptain(orderId: string, input: { readonly captain_id: string }) {
+      return createDispatchAssignment({ orderId, captainId: input.captain_id });
+    },
+  };
+}

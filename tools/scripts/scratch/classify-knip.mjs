@@ -25,7 +25,7 @@ const realDeadCode = filesWithExports.filter(i => !isEntryPath(i.file));
 
 console.log('Files with unused exports:', filesWithExports.length);
 console.log('  False positives (entry/screen files):', falsePositive.length);
-console.log('  Potential real dead code (shared/runtime):', realDeadCode.length);
+console.log('  Potential real dead code (shared modules):', realDeadCode.length);
 console.log('\nREAL DEAD CODE FILES:');
 for (const f of realDeadCode) {
   console.log(`  ${f.file}: ${f.exports.map(e => e.name).join(', ')}`);

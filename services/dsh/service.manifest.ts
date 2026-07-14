@@ -271,7 +271,7 @@ export const dshServiceManifest = {
       "control-panel operations-support",
     ],
     crossSurfaceDependencyMap:
-      "services/dsh/frontend/shared/runtime/dsh-cross-surface-closure-map.ts",
+      "services/dsh/frontend/shared/operations/geo-heatmap.helpers.ts",
   },
   nextOperationalJourney: {
     id: "notifications",

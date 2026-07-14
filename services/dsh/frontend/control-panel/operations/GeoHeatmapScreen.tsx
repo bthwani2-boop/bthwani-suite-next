@@ -19,7 +19,6 @@ import {
   WebControlPanelTertiaryFilters,
   WebControlPanelWorkbench,
 } from '@bthwani/ui-kit/web';
-import { translateDshRuntimeBindingStatus } from '../../shared/runtime';
 import type { GeoHeatmapZone } from './geo-heatmap.helpers';
 
 const GEO_HEATMAP_ZONES: GeoHeatmapZone[] = [];
@@ -33,6 +32,7 @@ import {
   resolveRouteHint,
   resolveStatusLabel,
   resolveStatusTone,
+  translateDshRuntimeBindingStatus,
   type GeoFilterId,
   type GeoSubTabId,
 } from './geo-heatmap.helpers';

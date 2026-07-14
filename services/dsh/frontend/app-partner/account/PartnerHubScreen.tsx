@@ -73,7 +73,7 @@ type DshCanonicalStoreCard = {
 import { mapPublishStageToPartnerActivationStatus, resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client-visibility.model';
 import { WltDshPartnerBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_partner.facade';
 import type { DshPartnerHubSurfaceProps, PartnerHubSection } from '../dsh-partner.types';
-import { getDshControlPanelGovernanceEntry, resolveDshControlPanelSectionLabel } from '../../shared/runtime/dsh-control-panel-governance.map';
+import { getDshControlPanelGovernanceEntry, resolveDshControlPanelSectionLabel } from '../../shared/orders/orders.contract';
 import {
   getDshPartnerJourneyStep,
   resolveDshPartnerLifecycleStageLabel,

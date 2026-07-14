@@ -17,7 +17,7 @@ import {
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 import { getDshCaptainFlowPolicy } from '../dsh-captain-binding.contracts';
-import { getDshFlowPolicySummary, resolveDshOnDemandPolicyLabel } from '../../shared/runtime/dsh-flow-registry';
+import { getDshFlowPolicySummary, resolveDshOnDemandPolicyLabel } from '../../shared/operations/dsh-operational-registry';
 import { resolveDshControlPanelSectionLabel } from '../../shared';
 
 export type DshCaptainPoDSubmissionScreenProps = {

@@ -1,7 +1,7 @@
 // useDshEntityMedia — shared media runtime binding
 import { useState, useEffect } from 'react';
 import type { DshMediaAsset } from './dsh-media-api.client';
-import { getDshMediaRuntimeClient } from '../runtime/ui-only-runtime-clients';
+import { getDshMediaRuntimeClient } from '../catalog/central-catalog.api';
 
 export type DshEntityMediaState =
   | { kind: 'idle' }

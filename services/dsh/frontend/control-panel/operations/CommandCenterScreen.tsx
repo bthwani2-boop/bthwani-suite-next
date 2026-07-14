@@ -7,7 +7,7 @@ import {
   WebControlPanelRecommendation,
   WebControlPanelDecisionRow,
 } from '@bthwani/ui-kit/web';
-import { getDshControlPanelGovernanceEntry } from '../../shared/runtime';
+import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
 import type { AnyOperationsWorkspaceId } from './operations.registry';
 import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from './operations.registry';
 import styles from '../shared/control-panel-surface.module.css';
