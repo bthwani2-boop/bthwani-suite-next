@@ -1,6 +1,7 @@
-import { createDshStoreClient } from "../../../clients/store-discovery-client";
+import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import type { OperatorStoreListResponse, OperatorStoreDetailResponse } from "./store-discovery.types";
 import {
   toAdminTableRow,
   toAdminDetail,
@@ -16,8 +17,8 @@ import {
 const DSH_ADMIN_API_BASE_URL = resolveDshApiBaseUrl();
 const isBffMode = DSH_ADMIN_API_BASE_URL.startsWith("/");
 
-const adminClient = validateDshApiBaseUrl(DSH_ADMIN_API_BASE_URL)
-  ? createDshStoreClient(DSH_ADMIN_API_BASE_URL)
+const adminHttpClient = validateDshApiBaseUrl(DSH_ADMIN_API_BASE_URL)
+  ? createDshFlexibleHttpClient(DSH_ADMIN_API_BASE_URL)
   : null;
 
 export { adminLoadingState };
@@ -26,7 +27,7 @@ export async function fetchAdminStoreList(params?: {
   limit?: number;
   offset?: number;
 }): Promise<DshStoreAdminListState> {
-  if (!adminClient) {
+  if (!adminHttpClient) {
     return adminErrorState(
       `API_CONFIG_ERROR: DSH API base URL is invalid ("${DSH_ADMIN_API_BASE_URL}"). ` +
       `Set NEXT_PUBLIC_DSH_API_BASE_URL in apps/control-panel/runtime/.env.local`,
@@ -36,7 +37,10 @@ export async function fetchAdminStoreList(params?: {
   if (!isBffMode && token === null) return adminPermissionDeniedState(401);
 
   try {
-    const response = await adminClient.listOperatorStores(token ?? undefined);
+    const response = await adminHttpClient.request<OperatorStoreListResponse>(
+      "/dsh/operator/stores",
+      { ...(token ? { token } : {}) },
+    );
 
     if (!response || !Array.isArray(response.stores)) {
       return adminErrorState("INVALID_RESPONSE: stores array missing");
@@ -57,14 +61,17 @@ export async function fetchAdminStoreList(params?: {
 export async function fetchAdminStoreDetail(
   storeId: string,
 ): Promise<DshStoreAdminDetailState> {
-  if (!adminClient) {
+  if (!adminHttpClient) {
     return { kind: "error", message: "API_CONFIG_ERROR: DSH admin client not initialized" };
   }
   const token = isBffMode ? undefined : getIdentityAccessToken();
   if (!isBffMode && token === null) return { kind: "permission_denied", statusCode: 401 };
 
   try {
-    const response = await adminClient.getOperatorStore(storeId, token ?? undefined);
+    const response = await adminHttpClient.request<OperatorStoreDetailResponse>(
+      `/dsh/operator/stores/${encodeURIComponent(storeId)}`,
+      { ...(token ? { token } : {}) },
+    );
     if (!response || !response.store) {
       return { kind: "not_found" };
     }

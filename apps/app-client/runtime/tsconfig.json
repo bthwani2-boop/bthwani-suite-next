@@ -10,7 +10,6 @@
     "../../../services/dsh/frontend/app-client/**/*.ts",
     "../../../services/dsh/frontend/app-client/**/*.tsx",
     "../../../services/dsh/frontend/shared/**/*.ts",
-    "../../../services/dsh/clients/**/*.ts",
-    "../../../services/dsh/domain/**/*.ts"
+    "../../../services/dsh/clients/**/*.ts"
   ]
 }

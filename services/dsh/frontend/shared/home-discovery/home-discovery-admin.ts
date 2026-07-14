@@ -1,16 +1,19 @@
 import {
   getIdentityAccessToken,
 } from "@bthwani/core-identity";
-import {
-  createDshHomeDiscoveryClient,
-  type DshHomeAdminContentInput,
-  type DshHomeAdminContentItem,
-  type DshHomeAdminKind,
-  type DshHomeDiscoveryClientError,
-} from "../../../clients/home-discovery-client";
+import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
+import type {
+  DshHomeAdminContentInput,
+  DshHomeAdminContentItem,
+  DshHomeAdminKind,
+} from "./home-discovery.types";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 
-const client = createDshHomeDiscoveryClient(resolveDshApiBaseUrl());
+const httpClient = createDshFlexibleHttpClient(resolveDshApiBaseUrl());
+
+type DshHomeDiscoveryAdminClientError =
+  | { kind: 'http'; status: number; body: unknown }
+  | { kind: 'network'; message: string };
 
 export type HomeDiscoveryAdminState =
   | { readonly kind: "loading" }
@@ -29,7 +32,10 @@ export async function fetchHomeDiscoveryAdmin(kind: DshHomeAdminKind): Promise<H
   const token = getIdentityAccessToken();
   if (token === null) return { kind: "permission_denied" };
   try {
-    const response = await client.listAdminContent(kind, token);
+    const response = await httpClient.request<{ items: DshHomeAdminContentItem[] }>(
+      `/dsh/operator/home-discovery/${kind}`,
+      { token },
+    );
     return response.items.length === 0
       ? { kind: "empty" }
       : { kind: "success", items: response.items };
@@ -45,18 +51,32 @@ export async function saveHomeDiscoveryAdmin(
 ): Promise<void> {
   const token = getIdentityAccessToken();
   if (token === null) throw { kind: "http", status: 401 };
-  if (itemId === null) await client.createAdminContent(kind, input, token);
-  else await client.updateAdminContent(kind, itemId, input, token);
+  if (itemId === null) {
+    await httpClient.request(`/dsh/operator/home-discovery/${kind}`, {
+      method: "POST",
+      body: input,
+      token,
+    });
+  } else {
+    await httpClient.request(`/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`, {
+      method: "PATCH",
+      body: input,
+      token,
+    });
+  }
 }
 
 export async function removeHomeDiscoveryAdmin(kind: DshHomeAdminKind, itemId: string): Promise<void> {
   const token = getIdentityAccessToken();
   if (token === null) throw { kind: "http", status: 401 };
-  await client.deleteAdminContent(kind, itemId, token);
+  await httpClient.request(`/dsh/operator/home-discovery/${kind}/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    token,
+  });
 }
 
 export function classifyAdminError(error: unknown): HomeDiscoveryAdminState {
-  const typed = error as DshHomeDiscoveryClientError;
+  const typed = error as DshHomeDiscoveryAdminClientError;
   if (typed?.kind === "http" && (typed.status === 401 || typed.status === 403)) {
     return { kind: "permission_denied" };
   }

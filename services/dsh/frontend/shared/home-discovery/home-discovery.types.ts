@@ -3,80 +3,28 @@
  * Derived from OpenAPI-generated types; DB-backed runtime data only.
  */
 
-export type DshHomeBannerDto = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  imageUrl: string;
-  actionType: 'store' | 'category' | 'external' | 'none';
-  actionTarget: string;
-};
+import type { paths } from '../../../clients/generated/dsh-api';
 
-export type DshHomePromoDto = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  badgeLabel?: string;
-  imageUrl: string;
-  actionType: 'store' | 'category' | 'external' | 'none';
-  actionTarget: string;
-};
+export type DshHomeDiscoveryResponseDto =
+  paths['/dsh/home-discovery']['get']['responses']['200']['content']['application/json'];
 
-export type DshHomeFilterDto = {
-  id: string;
-  label: string;
-  kind: 'all' | 'favorites' | 'nearest' | 'new' | 'offers';
-  isActive: boolean;
-};
-
-export type DshHomeCategoryDto = {
-  id: string;
-  label: string;
-  iconUrl?: string;
-  sortOrder: number;
-};
-
-export type DshHomeStoreDto = {
-  id: string;
-  slug: string;
-  displayName: string;
-  status: string;
-  serviceability: { status: string };
-  ratingAverage?: number;
-  ratingCount: number;
-  deliveryEtaMin?: number;
-  deliveryEtaMax?: number;
-  heroImageUrl?: string;
-  logoUrl?: string;
-  category: string;
-  categoryLabel: string;
-  isFreeDelivery: boolean;
-  hasProBadge: boolean;
-  hasCouponBadge: boolean;
-  isPopular: boolean;
-  followerCount: number;
-  pointsMultiplier?: number;
-  cityCode: string;
-  serviceAreaCode: string;
-  isVisible: boolean;
-  deliveryModes: string[];
-  distanceKm?: number;
-};
-
-export type DshHomePaginationDto = {
-  limit: number;
-  offset: number;
-  total: number;
-};
-
-type DshHomeDiscoveryDto = {
-  banners: DshHomeBannerDto[];
-  promos: DshHomePromoDto[];
-  filters: DshHomeFilterDto[];
-  categories: DshHomeCategoryDto[];
-  stores: DshHomeStoreDto[];
-  pagination: DshHomePaginationDto;
-  generatedAt: string;
-};
+export type DshHomeBannerDto = DshHomeDiscoveryResponseDto['banners'][number];
+export type DshHomePromoDto = DshHomeDiscoveryResponseDto['promos'][number];
+export type DshHomeFilterDto = DshHomeDiscoveryResponseDto['filters'][number];
+export type DshHomeCategoryDto = DshHomeDiscoveryResponseDto['categories'][number];
+export type DshHomeStoreDto = DshHomeDiscoveryResponseDto['stores'][number];
+export type DshHomePaginationDto = DshHomeDiscoveryResponseDto['pagination'];
 
 export type DiscoveryFilterKind = DshHomeFilterDto['kind'];
+
+export type DshHomeDiscoveryParams =
+  paths['/dsh/home-discovery']['get']['parameters']['query'];
+
+export type DshHomeAdminKind =
+  paths['/dsh/operator/home-discovery/{kind}']['get']['parameters']['path']['kind'];
+
+export type DshHomeAdminContentItem =
+  paths['/dsh/operator/home-discovery/{kind}']['get']['responses']['200']['content']['application/json']['items'][number];
+
+export type DshHomeAdminContentInput =
+  paths['/dsh/operator/home-discovery/{kind}']['post']['requestBody']['content']['application/json'];

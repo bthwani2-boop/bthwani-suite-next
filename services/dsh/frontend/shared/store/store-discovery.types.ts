@@ -1,12 +1,21 @@
 import type { paths } from "../../../clients/generated/dsh-api";
-import type {
-  CaptainPickupReadinessRequest,
-  FieldStoreVerificationRequest,
-  OperatorStoreGovernanceRequest,
-  PartnerStoreSettingsRequest,
-} from "../../../clients/store-discovery-client";
 
-export type { OperatorStoreGovernanceRequest };
+export type PartnerStoreSettingsRequest =
+  paths["/dsh/partner/stores/{storeId}/settings"]["patch"]["requestBody"]["content"]["application/json"];
+export type FieldStoreVerificationRequest =
+  paths["/dsh/field/stores/{storeId}/verifications"]["post"]["requestBody"]["content"]["application/json"];
+export type CaptainPickupReadinessRequest =
+  paths["/dsh/captain/stores/{storeId}/pickup-readiness"]["post"]["requestBody"]["content"]["application/json"];
+export type OperatorStoreGovernanceRequest =
+  paths["/dsh/operator/stores/{storeId}/governance"]["post"]["requestBody"]["content"]["application/json"];
+export type StoreActionResponse =
+  paths["/dsh/partner/stores/{storeId}/settings"]["patch"]["responses"]["200"]["content"]["application/json"];
+export type GetDshStoreContextResponse =
+  paths["/dsh/store-context"]["get"]["responses"]["200"]["content"]["application/json"];
+export type OperatorStoreListResponse =
+  paths["/dsh/operator/stores"]["get"]["responses"]["200"]["content"]["application/json"];
+export type OperatorStoreDetailResponse =
+  paths["/dsh/operator/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"];
 
 export type StoreRoleAction =
   | { readonly kind: "partner"; readonly storeId: string; readonly input: PartnerStoreSettingsRequest }

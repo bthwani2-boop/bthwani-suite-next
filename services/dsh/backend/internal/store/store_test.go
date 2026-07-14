@@ -1,6 +1,7 @@
 package store
 
 import (
+	"net/url"
 	"testing"
 	"time"
 )
@@ -82,6 +83,135 @@ func TestPublicationEligibilityRequiresAllGates(t *testing.T) {
 
 func ptrFloat(value float64) *float64 { return &value }
 func ptrInt(value int) *int           { return &value }
+
+func TestValidateListQuery(t *testing.T) {
+	boolPtr := func(v bool) *bool { return &v }
+
+	cases := []struct {
+		name      string
+		query     url.Values
+		wantErr   string
+		wantLimit int
+		wantOff   int
+		wantVis   *bool
+		wantStat  DshStoreStatus
+	}{
+		{
+			name:      "defaults",
+			query:     url.Values{},
+			wantLimit: 20,
+			wantOff:   0,
+		},
+		{
+			name:      "limit=20&offset=0 accepted",
+			query:     url.Values{"limit": {"20"}, "offset": {"0"}},
+			wantLimit: 20,
+			wantOff:   0,
+		},
+		{
+			name:    "limit=0 rejected",
+			query:   url.Values{"limit": {"0"}},
+			wantErr: "limit must be between 1 and 100",
+		},
+		{
+			name:    "limit=101 rejected",
+			query:   url.Values{"limit": {"101"}},
+			wantErr: "limit must be between 1 and 100",
+		},
+		{
+			name:    "offset=-1 rejected",
+			query:   url.Values{"offset": {"-1"}},
+			wantErr: "offset must be >= 0",
+		},
+		{
+			name:    "non-numeric limit rejected",
+			query:   url.Values{"limit": {"abc"}},
+			wantErr: "limit and offset must be integers",
+		},
+		{
+			name:    "non-numeric offset rejected",
+			query:   url.Values{"offset": {"abc"}},
+			wantErr: "limit and offset must be integers",
+		},
+		{
+			name:    "unknown status rejected",
+			query:   url.Values{"status": {"bogus"}},
+			wantErr: "invalid status: bogus",
+		},
+		{
+			name:      "status active accepted",
+			query:     url.Values{"status": {"active"}},
+			wantLimit: 20,
+			wantStat:  StatusActive,
+		},
+		{
+			name:      "status inactive accepted",
+			query:     url.Values{"status": {"inactive"}},
+			wantLimit: 20,
+			wantStat:  StatusInactive,
+		},
+		{
+			name:      "status temporarily_closed accepted",
+			query:     url.Values{"status": {"temporarily_closed"}},
+			wantLimit: 20,
+			wantStat:  StatusTemporarilyClosed,
+		},
+		{
+			name:      "status unavailable accepted",
+			query:     url.Values{"status": {"unavailable"}},
+			wantLimit: 20,
+			wantStat:  StatusUnavailable,
+		},
+		{
+			name:      "isVisible true",
+			query:     url.Values{"isVisible": {"true"}},
+			wantLimit: 20,
+			wantVis:   boolPtr(true),
+		},
+		{
+			name:      "isVisible false",
+			query:     url.Values{"isVisible": {"false"}},
+			wantLimit: 20,
+			wantVis:   boolPtr(false),
+		},
+		{
+			name:      "isVisible unset",
+			query:     url.Values{},
+			wantLimit: 20,
+			wantVis:   nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, errMsg := validateListQuery(tc.query)
+			if errMsg != tc.wantErr {
+				t.Fatalf("expected error %q, got %q", tc.wantErr, errMsg)
+			}
+			if tc.wantErr != "" {
+				return
+			}
+			if got.Limit != tc.wantLimit {
+				t.Errorf("expected limit %d, got %d", tc.wantLimit, got.Limit)
+			}
+			if got.Offset != tc.wantOff {
+				t.Errorf("expected offset %d, got %d", tc.wantOff, got.Offset)
+			}
+			if tc.wantStat != "" && got.Status != tc.wantStat {
+				t.Errorf("expected status %q, got %q", tc.wantStat, got.Status)
+			}
+			if tc.wantVis == nil {
+				if got.IsVisible != nil {
+					t.Errorf("expected isVisible nil, got %v", *got.IsVisible)
+				}
+			} else {
+				if got.IsVisible == nil || *got.IsVisible != *tc.wantVis {
+					t.Errorf("expected isVisible %v, got %v", *tc.wantVis, got.IsVisible)
+				}
+			}
+		})
+	}
+}
 
 func TestRowToDetail(t *testing.T) {
 	row := DshStoreRow{

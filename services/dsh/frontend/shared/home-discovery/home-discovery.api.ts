@@ -1,4 +1,4 @@
-import { createDshHomeDiscoveryClient } from '../../../clients/home-discovery-client';
+import { createDshFlexibleHttpClient } from '../_kernel/dsh-http-request';
 import {
   toBannerViewModel,
   toPromoViewModel,
@@ -13,7 +13,7 @@ import {
   emptyState,
   type HomeDiscoveryState,
 } from './home-discovery.states';
-import type { DshHomeDiscoveryParams } from '../../../clients/home-discovery-client';
+import type { DshHomeDiscoveryParams, DshHomeDiscoveryResponseDto } from './home-discovery.types';
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 
 export { loadingState };
@@ -24,10 +24,25 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
     return errorState(`DSH_API_BASE_URL_INVALID: "${baseUrl}" is not a valid URL`);
   }
 
-  const client = createDshHomeDiscoveryClient(baseUrl);
+  const httpClient = createDshFlexibleHttpClient(baseUrl);
 
   try {
-    const dto = await client.getHomeDiscovery(params);
+    const dto = await httpClient.request<DshHomeDiscoveryResponseDto>('/dsh/home-discovery', {
+      query: {
+        cityCode: params?.cityCode,
+        serviceAreaCode: params?.serviceAreaCode,
+        limit: params?.limit != null ? String(params.limit) : undefined,
+      },
+    });
+
+    if (
+      !dto ||
+      typeof dto !== 'object' ||
+      !Array.isArray((dto as Record<string, unknown>)['banners']) ||
+      !Array.isArray((dto as Record<string, unknown>)['stores'])
+    ) {
+      return errorState('DSH_INVALID_RESPONSE: response missing required fields: banners, stores');
+    }
 
     const banners = dto.banners.map(toBannerViewModel);
     const promos = dto.promos.map(toPromoViewModel);
@@ -58,9 +73,6 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
       }
       if (clientErr.kind === 'network') {
         return serviceUnavailableState();
-      }
-      if (clientErr.kind === 'invalid_response') {
-        return errorState(`DSH_INVALID_RESPONSE: ${clientErr.message ?? 'unexpected response shape'}`);
       }
     }
     return errorState('DSH_UNKNOWN_ERROR: unexpected error fetching home discovery');

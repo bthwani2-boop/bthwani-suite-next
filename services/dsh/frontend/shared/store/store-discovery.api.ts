@@ -1,4 +1,5 @@
-import { createDshStoreClient } from "../../../clients/store-discovery-client";
+import type { paths } from "../../../clients/generated/dsh-api";
+import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
 import { toCardViewModel, toDetailViewModel } from "./store-discovery.view-model";
 import {
   loadingState,
@@ -10,15 +11,20 @@ import {
 } from "./store-discovery.states";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 
+type ListDshStoresResponse =
+  paths["/dsh/stores"]["get"]["responses"]["200"]["content"]["application/json"];
+type GetDshStoreResponse =
+  paths["/dsh/stores/{storeId}"]["get"]["responses"]["200"]["content"]["application/json"];
+
 const DSH_API_BASE_URL = resolveDshApiBaseUrl();
 
-const client = validateDshApiBaseUrl(DSH_API_BASE_URL)
-  ? createDshStoreClient(DSH_API_BASE_URL)
+const httpClient = validateDshApiBaseUrl(DSH_API_BASE_URL)
+  ? createDshFlexibleHttpClient(DSH_API_BASE_URL)
   : null;
 
 export { loadingState };
 
-type StoreListResponse = Awaited<ReturnType<NonNullable<typeof client>["listStores"]>>;
+type StoreListResponse = ListDshStoresResponse;
 
 function hasRuntimeCardContract(
   store: unknown,
@@ -45,7 +51,7 @@ export async function fetchStoreList(params?: {
   limit?: number;
   offset?: number;
 }): Promise<DshStoreListState> {
-  if (!client) {
+  if (!httpClient) {
     return errorState(
       `API_CONFIG_ERROR: DSH API base URL is invalid ("${DSH_API_BASE_URL}"). ` +
       `Set EXPO_PUBLIC_DSH_API_BASE_URL (mobile) or NEXT_PUBLIC_DSH_API_BASE_URL (web) in your .env and restart.`,
@@ -53,15 +59,15 @@ export async function fetchStoreList(params?: {
   }
 
   try {
-    const listParams: Parameters<typeof client.listStores>[0] = {
-      isVisible: true,
-      limit: params?.limit ?? 20,
-      offset: params?.offset ?? 0,
+    const query: Record<string, string | undefined> = {
+      isVisible: String(true),
+      limit: String(params?.limit ?? 20),
+      offset: String(params?.offset ?? 0),
     };
-    if (params?.cityCode !== undefined) listParams.cityCode = params.cityCode;
-    if (params?.serviceAreaCode !== undefined) listParams.serviceAreaCode = params.serviceAreaCode;
+    if (params?.cityCode !== undefined) query.cityCode = params.cityCode;
+    if (params?.serviceAreaCode !== undefined) query.serviceAreaCode = params.serviceAreaCode;
 
-    const response = await client.listStores(listParams);
+    const response = await httpClient.request<ListDshStoresResponse>("/dsh/stores", { query });
 
     return normalizeStoreListResponse(response);
   } catch (err: unknown) {
@@ -109,7 +115,7 @@ export function classifyStoreDiscoveryError(err: unknown): DshStoreListState {
 }
 
 export async function fetchStoreDetail(storeId: string): Promise<DshStoreDetailState> {
-  if (!client) {
+  if (!httpClient) {
     return {
       kind: "error",
       message: `API_CONFIG_ERROR: DSH API base URL is invalid ("${DSH_API_BASE_URL}").`,
@@ -117,7 +123,9 @@ export async function fetchStoreDetail(storeId: string): Promise<DshStoreDetailS
   }
 
   try {
-    const response = await client.getStore(storeId);
+    const response = await httpClient.request<GetDshStoreResponse>(
+      `/dsh/stores/${encodeURIComponent(storeId)}`,
+    );
     if (!response || !response.store) {
       return { kind: "error", message: "INVALID_RESPONSE: store detail missing" };
     }

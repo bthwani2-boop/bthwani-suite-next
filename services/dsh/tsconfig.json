@@ -20,7 +20,6 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "domain/**/*.ts",
     "clients/**/*.ts",
     "frontend/**/*.d.ts",
     "frontend/shared/**/*.ts",

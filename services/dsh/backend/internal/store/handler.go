@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 )
@@ -24,68 +25,76 @@ func SendError(w http.ResponseWriter, status int, code, message string) {
 	SendJSON(w, status, ApiError{Code: code, Message: message})
 }
 
+// validateListQuery parses and validates the query parameters for the store
+// list endpoint. It returns the parsed query and an error message; an empty
+// error message means the query is valid. Behavior:
+//   - limit defaults to 20, must be an integer in [1, 100]
+//   - offset defaults to 0, must be an integer >= 0
+//   - status, if present, must be one of the known DshStoreStatus values
+//   - isVisible is tri-state: "true" -> true, "false" -> false, otherwise unset
+func validateListQuery(q url.Values) (DshStoreListQuery, string) {
+	limitStr := q.Get("limit")
+	offsetStr := q.Get("offset")
+
+	limit := 20
+	offset := 0
+	var err error
+
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil {
+			return DshStoreListQuery{}, "limit and offset must be integers"
+		}
+	}
+
+	if offsetStr != "" {
+		offset, err = strconv.Atoi(offsetStr)
+		if err != nil {
+			return DshStoreListQuery{}, "limit and offset must be integers"
+		}
+	}
+
+	var isVisible *bool
+	isVisibleStr := q.Get("isVisible")
+	if isVisibleStr == "true" {
+		v := true
+		isVisible = &v
+	} else if isVisibleStr == "false" {
+		v := false
+		isVisible = &v
+	}
+
+	status := DshStoreStatus(q.Get("status"))
+
+	// Validate query params
+	if limit < 1 || limit > 100 {
+		return DshStoreListQuery{}, "limit must be between 1 and 100"
+	}
+	if offset < 0 {
+		return DshStoreListQuery{}, "offset must be >= 0"
+	}
+	if status != "" {
+		if status != StatusActive && status != StatusInactive && status != StatusTemporarilyClosed && status != StatusUnavailable {
+			return DshStoreListQuery{}, "invalid status: " + string(status)
+		}
+	}
+
+	return DshStoreListQuery{
+		CityCode:        q.Get("cityCode"),
+		ServiceAreaCode: q.Get("serviceAreaCode"),
+		Status:          status,
+		IsVisible:       isVisible,
+		Limit:           limit,
+		Offset:          offset,
+	}, ""
+}
+
 func HandleListStores(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-
-		limitStr := q.Get("limit")
-		offsetStr := q.Get("offset")
-
-		limit := 20
-		offset := 0
-		var err error
-
-		if limitStr != "" {
-			limit, err = strconv.Atoi(limitStr)
-			if err != nil {
-				SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "limit and offset must be integers")
-				return
-			}
-		}
-
-		if offsetStr != "" {
-			offset, err = strconv.Atoi(offsetStr)
-			if err != nil {
-				SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "limit and offset must be integers")
-				return
-			}
-		}
-
-		var isVisible *bool
-		isVisibleStr := q.Get("isVisible")
-		if isVisibleStr == "true" {
-			v := true
-			isVisible = &v
-		} else if isVisibleStr == "false" {
-			v := false
-			isVisible = &v
-		}
-
-		status := DshStoreStatus(q.Get("status"))
-
-		// Validate query params
-		if limit < 1 || limit > 100 {
-			SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "limit must be between 1 and 100")
+		listQuery, errMsg := validateListQuery(r.URL.Query())
+		if errMsg != "" {
+			SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMsg)
 			return
-		}
-		if offset < 0 {
-			SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "offset must be >= 0")
-			return
-		}
-		if status != "" {
-			if status != StatusActive && status != StatusInactive && status != StatusTemporarilyClosed && status != StatusUnavailable {
-				SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "invalid status: "+string(status))
-				return
-			}
-		}
-
-		listQuery := DshStoreListQuery{
-			CityCode:        q.Get("cityCode"),
-			ServiceAreaCode: q.Get("serviceAreaCode"),
-			Status:          status,
-			IsVisible:       isVisible,
-			Limit:           limit,
-			Offset:          offset,
 		}
 
 		result, err := ListStores(db, listQuery)

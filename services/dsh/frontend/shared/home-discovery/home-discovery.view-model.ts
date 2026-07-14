@@ -85,12 +85,12 @@ function formatFollowerCount(count: number): string {
   return String(count);
 }
 
-function formatRating(avg?: number): string {
+function formatRating(avg?: number | null): string {
   if (avg == null) return '—';
   return avg.toFixed(1);
 }
 
-function formatEta(min?: number, max?: number): string {
+function formatEta(min?: number | null, max?: number | null): string {
   if (min == null || max == null) return '—';
   return `${min}–${max} د`;
 }
@@ -120,8 +120,8 @@ export function toPromoViewModel(dto: DshHomePromoDto): PromoViewModel {
     subtitle: dto.subtitle ?? '',
     badgeLabel: dto.badgeLabel ?? '',
     imageUrl: resolveDshMediaUrl(dto.imageUrl) ?? '',
-    actionType: dto.actionType,
-    actionTarget: dto.actionTarget,
+    actionType: dto.actionType ?? 'none',
+    actionTarget: dto.actionTarget ?? '',
   };
 }
 

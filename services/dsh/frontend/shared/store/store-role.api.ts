@@ -1,32 +1,32 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
-import {
-  createDshStoreClient,
-  type CaptainPickupReadinessRequest,
-  type FieldStoreVerificationRequest,
-  type OperatorStoreGovernanceRequest,
-  type PartnerStoreSettingsRequest,
-  type StoreActionResponse,
-} from "../../../clients/store-discovery-client";
+import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
 
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { type StoreRoleAction } from "./store-discovery.types";
+import {
+  type StoreRoleAction,
+  type GetDshStoreContextResponse,
+  type StoreActionResponse,
+} from "./store-discovery.types";
 import { toAdminDetail } from "./store-admin.view-model";
 import type { StoreRoleContextState } from "./store-role-context.controller-core";
 
 const baseUrl = resolveDshApiBaseUrl();
 const isBffMode = baseUrl.startsWith("/");
-const client = validateDshApiBaseUrl(baseUrl) ? createDshStoreClient(baseUrl) : null;
+const httpClient = validateDshApiBaseUrl(baseUrl) ? createDshFlexibleHttpClient(baseUrl) : null;
 
 export async function fetchStoreRoleContext(storeId?: string): Promise<StoreRoleContextState> {
   const token = isBffMode ? undefined : getIdentityAccessToken();
   if (!isBffMode && token === null) {
     return { kind: "permission_denied", statusCode: 401 };
   }
-  if (client === null) {
+  if (httpClient === null) {
     return { kind: "error", message: "API_CONFIG_ERROR" };
   }
   try {
-    const response = await client.getStoreContext(token ?? undefined, storeId);
+    const response = await httpClient.request<GetDshStoreContextResponse>("/dsh/store-context", {
+      ...(token ? { token } : {}),
+      ...(storeId ? { query: { storeId } } : {}),
+    });
     return {
       kind: "success",
       actorRole: response.actorRole,
@@ -42,7 +42,7 @@ export async function fetchStoreRoleContext(storeId?: string): Promise<StoreRole
 
 export async function submitStoreRoleAction(action: StoreRoleAction): Promise<StoreActionResponse> {
   const accessToken = isBffMode ? undefined : getIdentityAccessToken();
-  if ((!isBffMode && accessToken === null) || client === null) {
+  if ((!isBffMode && accessToken === null) || httpClient === null) {
     throw { kind: "http", status: 401 };
   }
   const auth = {
@@ -52,13 +52,25 @@ export async function submitStoreRoleAction(action: StoreRoleAction): Promise<St
   };
   switch (action.kind) {
     case "partner":
-      return client.updatePartnerSettings(action.storeId, action.input, auth);
+      return httpClient.request<StoreActionResponse>(
+        `/dsh/partner/stores/${encodeURIComponent(action.storeId)}/settings`,
+        { method: "PATCH", body: action.input, auth },
+      );
     case "field":
-      return client.submitFieldVerification(action.storeId, action.input, auth);
+      return httpClient.request<StoreActionResponse>(
+        `/dsh/field/stores/${encodeURIComponent(action.storeId)}/verifications`,
+        { method: "POST", body: action.input, auth },
+      );
     case "captain":
-      return client.reportCaptainReadiness(action.storeId, action.input, auth);
+      return httpClient.request<StoreActionResponse>(
+        `/dsh/captain/stores/${encodeURIComponent(action.storeId)}/pickup-readiness`,
+        { method: "POST", body: action.input, auth },
+      );
     case "operator":
-      return client.governStore(action.storeId, action.input, auth);
+      return httpClient.request<StoreActionResponse>(
+        `/dsh/operator/stores/${encodeURIComponent(action.storeId)}/governance`,
+        { method: "POST", body: action.input, auth },
+      );
   }
 }
 

@@ -20,7 +20,7 @@ import {
   previousStoreAdminOffset,
 } from "./store-admin.controller-core";
 import { submitStoreRoleAction } from "./store-role.api";
-import type { OperatorStoreGovernanceRequest } from "../../../clients/store-discovery-client";
+import type { OperatorStoreGovernanceRequest } from "./store-discovery.types";
 import type { StoreActionState } from "./use-store-role-context-controller";
 
 export type StoreAdminController = {
