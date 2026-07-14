@@ -163,6 +163,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/DshErrorResponse"
 
+  /dsh/operator/workforce/media/uploads:
+    post:
+      operationId: uploadWorkforceMedia
+      summary: Operator-only. Upload workforce media document (license, photo, etc.).
+      tags:
+        - DshWorkforce
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [actorId, actorRole, file]
+              properties:
+                actorId:
+                  type: string
+                actorRole:
+                  type: string
+                  enum: [field, captain]
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Media uploaded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mediaRef]
+                properties:
+                  mediaRef:
+                    type: string
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /dsh/operator/home-discovery/{kind}:
     parameters:
       - $ref: "#/components/parameters/HomeContentKind"

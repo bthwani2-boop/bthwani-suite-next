@@ -1147,3 +1147,18 @@ func (r *Repository) DeleteAccount(ctx context.Context, actorID string) error {
 
 	return tx.Commit()
 }
+
+func (r *Repository) ChangePassword(ctx context.Context, actorID string, newPassword string) error {
+	if len(newPassword) < 6 {
+		return errors.New("password must contain at least 6 characters")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `
+		UPDATE identity_actors
+		SET password_hash = $2, updated_at = now()
+		WHERE id = $1`, actorID, string(hash))
+	return err
+}

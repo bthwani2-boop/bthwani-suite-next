@@ -32,6 +32,7 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /auth/sessions", s.listSessions)
 	mux.HandleFunc("DELETE /auth/sessions/{sessionId}", s.revokeSession)
 	mux.HandleFunc("DELETE /auth/account", s.deleteAccount)
+	mux.HandleFunc("POST /auth/password/change", s.changePassword)
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
 	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
 	mux.HandleFunc("GET /internal/actors/search", s.serviceOnly(s.internalActorSearch))
@@ -418,6 +419,31 @@ func (s *server) deleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (s *server) changePassword(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "bearer token is required")
+		return
+	}
+	resolved, err := s.repository.ResolveAccessToken(r.Context(), token)
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return
+	}
+	var request struct {
+		Password string `json:"password"`
+	}
+	if !decodeJSON(w, r, &request) {
+		return
+	}
+	if err := s.repository.ChangePassword(r.Context(), resolved.Subject, request.Password); err != nil {
+		sendError(w, http.StatusBadRequest, "INVALID_PASSWORD", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 
 func writeInternalActorError(w http.ResponseWriter, err error) {
 	switch err {

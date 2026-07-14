@@ -5,6 +5,8 @@ import {
   loginIdentity,
   activateIdentity,
   logoutIdentity,
+  changePasswordIdentity,
+  deleteAccountIdentity,
 } from "./identity-session-store.ts";
 
 export function useIdentitySession() {
@@ -22,5 +24,16 @@ export function useIdentitySession() {
     [],
   );
   const logout = useCallback(() => logoutIdentity(), []);
-  return { state, login, activate, logout };
+
+  const changePassword = useCallback(
+    (password: string) => changePasswordIdentity(password),
+    [],
+  );
+
+  const deleteAccount = useCallback(
+    () => deleteAccountIdentity(),
+    [],
+  );
+
+  return { state, login, activate, logout, changePassword, deleteAccount };
 }

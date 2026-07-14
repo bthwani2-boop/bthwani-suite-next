@@ -4,6 +4,7 @@ export * from "./client-catalog.api";
 export * from "./catalog.states";
 export * from "./catalog.view-model";
 export * from "./use-catalog-controller";
+export * from "./use-catalog-approval-controller";
 export * from "./catalog-registry";
 export * from "./central-catalog.types";
 export * from "./central-catalog.api";

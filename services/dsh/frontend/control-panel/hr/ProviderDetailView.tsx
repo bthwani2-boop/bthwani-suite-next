@@ -56,8 +56,8 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
   const agent = controller.state.agent;
   const rows: Array<[string, string]> = [
     ["الاسم", agent.fullNameAr],
-    ["رقم مقدم الخدمة", agent.providerCode],
-    ["النوع", PROVIDER_KIND_LABEL_AR[agent.providerKind]],
+    ["رقم مقدم الخدمة", agent.workforceCode],
+    ["النوع", PROVIDER_KIND_LABEL_AR[agent.workforceKind]],
     ["الهاتف", agent.phoneMasked ?? "—"],
     ["نوع الارتباط", ENGAGEMENT_TYPE_LABEL_AR[agent.engagementType]],
     ["تاريخ البداية", agent.engagementStartDate || "—"],
@@ -120,8 +120,8 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
   const profile = captain.captainProfile;
   const rows: Array<[string, string]> = [
     ["الاسم", captain.fullNameAr],
-    ["رقم مقدم الخدمة", captain.providerCode],
-    ["النوع", PROVIDER_KIND_LABEL_AR[captain.providerKind]],
+    ["رقم مقدم الخدمة", captain.workforceCode],
+    ["النوع", PROVIDER_KIND_LABEL_AR[captain.workforceKind]],
     ["الهاتف", captain.phoneMasked ?? "—"],
     ["نطاق الخدمة", reference.cityLabel(profile?.operatingCityCode)],
     ["نوع المركبة", profile?.vehicleType || "—"],

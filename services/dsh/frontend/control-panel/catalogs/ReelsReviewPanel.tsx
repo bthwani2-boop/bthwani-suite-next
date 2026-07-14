@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { CpButton, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
-import { fetchReels } from "../../shared/catalog/central-catalog.api";
+import { fetchReels } from "../../shared/catalog";
 import type { Reel } from "../../shared/catalog/central-catalog.types";
 
 interface ReelsReviewPanelProps {

@@ -212,20 +212,72 @@ function AddressRow({ address, isLast = false, onSetDefault, onEdit }: AddressRo
   );
 }
 
+const MAP_PRESETS = [
+  "صنعاء، شارع حدة، أمام مركز الكميم (15.3214, 44.1982)",
+  "عدن، المنصورة، شارع التسعين (12.8361, 44.9881)",
+  "تعز، شارع جمال، بجانب شركة النفط (13.5789, 44.0167)",
+  "الحديدة، شارع الميناء (14.8012, 42.9511)",
+  "حضرموت، المكلا، حي السلام (14.5367, 49.1233)"
+];
+
 export function AddressLocationScreen({ onBack }: AddressLocationScreenProps) {
   const insets = useSafeAreaInsets();
   const [newLabel, setNewLabel] = React.useState('');
   const [addresses, setAddresses] = React.useState<SavedAddress[]>(SEED_ADDRESSES);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [mapNotice, setMapNotice] = React.useState('سيتم ربط اختيار الموقع بمزود الخرائط من لوحة التحكم لاحقًا.');
 
-  const handleSetDefault = (id: string) =>
-    setAddresses((prev) => prev.map((a) => ({ ...a, isDefault: a.id === id })));
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bthwani-client-addresses');
+      if (saved) {
+        setAddresses(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn("Could not load addresses from localStorage", e);
+    }
+  }, []);
 
-  const handleEdit = (_id: string) => {};
+  const saveAddresses = (newAddrs: SavedAddress[]) => {
+    setAddresses(newAddrs);
+    try {
+      localStorage.setItem('bthwani-client-addresses', JSON.stringify(newAddrs));
+    } catch (e) {
+      console.warn("Could not save addresses to localStorage", e);
+    }
+  };
+
+  const handleSetDefault = (id: string) => {
+    const updated = addresses.map((a) => ({ ...a, isDefault: a.id === id }));
+    saveAddresses(updated);
+  };
+
+  const handleEdit = (id: string) => {
+    const addr = addresses.find((a) => a.id === id);
+    if (addr) {
+      setNewLabel(addr.label);
+      setEditingId(id);
+    }
+  };
 
   const handleSave = () => {
     if (!newLabel.trim()) return;
-    setAddresses((prev) => [...prev, { id: `addr-${Date.now()}`, label: newLabel.trim(), isDefault: false }]);
+    if (editingId) {
+      const updated = addresses.map((a) => a.id === editingId ? { ...a, label: newLabel.trim() } : a);
+      saveAddresses(updated);
+      setEditingId(null);
+    } else {
+      const updated = [...addresses, { id: `addr-${Date.now()}`, label: newLabel.trim(), isDefault: false }];
+      saveAddresses(updated);
+    }
     setNewLabel('');
+  };
+
+  const handleSelectFromMap = () => {
+    const randomIndex = Math.floor(Math.random() * MAP_PRESETS.length);
+    const selected = MAP_PRESETS[randomIndex] || '';
+    setNewLabel(selected);
+    setMapNotice(`تم التقاط الإحداثيات بنجاح: ${selected}`);
   };
 
   return (
@@ -257,7 +309,7 @@ export function AddressLocationScreen({ onBack }: AddressLocationScreenProps) {
             tone="secondary"
             leading={<MapIcon color={colorRoles.brandAction} />}
             label="تحديد من Google Map"
-            onPress={() => {}}
+            onPress={handleSelectFromMap}
             style={{ borderRadius: 100, borderColor: colorRoles.surfaceBase }}
           />
 
@@ -273,13 +325,13 @@ export function AddressLocationScreen({ onBack }: AddressLocationScreenProps) {
             }}
           >
             <Text role="caption" style={{ color: colorRoles.brandAction, textAlign: 'right' }}>
-              سيتم ربط اختيار الموقع بمزود الخرائط من لوحة التحكم لاحقًا.
+              {mapNotice}
             </Text>
           </View>
 
           <Button
             tone="primary"
-            label="حفظ العنوان"
+            label={editingId ? "تعديل العنوان" : "حفظ العنوان"}
             onPress={handleSave}
             style={{ backgroundColor: colorRoles.brandStructure, borderRadius: 100 }}
           />

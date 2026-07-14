@@ -6,7 +6,7 @@
 // keep its existing city_code foreign key satisfied.
 import React, { useEffect, useState } from "react";
 import { Box, Button, Text, spacing } from "@bthwani/ui-kit";
-import { fetchZones } from "../../shared/platform-policies/platform-policies.api";
+import { fetchZones } from "../../shared/platform-policies";
 import type { DshZone } from "../../shared/platform-policies/platform-policies.types";
 
 export function ZonePicker(props: {

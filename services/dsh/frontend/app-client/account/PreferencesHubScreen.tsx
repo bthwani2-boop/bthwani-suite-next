@@ -213,6 +213,8 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
   const [highPrivacy, setHighPrivacy]         = React.useState(false);
   const [accessMode, setAccessMode]           = React.useState(false);
 
+  const [successMsg, setSuccessMsg] = React.useState('');
+
   const toggle = (s: PrefsSection) => setExpanded((prev) => (prev === s ? null : s));
 
   const quickSuggestions = [
@@ -221,12 +223,58 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
     'سلم الطلب يدوياً للمستلم فقط.',
   ];
 
-  const handleSave = () => {};
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bthwani-client-preferences');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.deliveryInstructions === 'string') setDeliveryInstructions(parsed.deliveryInstructions);
+        if (typeof parsed.orderAlerts === 'boolean') setOrderAlerts(parsed.orderAlerts);
+        if (typeof parsed.arrivalBell === 'boolean') setArrivalBell(parsed.arrivalBell);
+        if (typeof parsed.promoAlerts === 'boolean') setPromoAlerts(parsed.promoAlerts);
+        if (typeof parsed.systemAlerts === 'boolean') setSystemAlerts(parsed.systemAlerts);
+        if (typeof parsed.quickOrder === 'boolean') setQuickOrder(parsed.quickOrder);
+        if (typeof parsed.autoSaveAddr === 'boolean') setAutoSaveAddr(parsed.autoSaveAddr);
+        if (typeof parsed.highPrivacy === 'boolean') setHighPrivacy(parsed.highPrivacy);
+        if (typeof parsed.accessMode === 'boolean') setAccessMode(parsed.accessMode);
+      }
+    } catch (e) {
+      console.warn("Could not load preferences from localStorage", e);
+    }
+  }, []);
+
+  const handleSave = () => {
+    try {
+      const payload = {
+        deliveryInstructions,
+        orderAlerts,
+        arrivalBell,
+        promoAlerts,
+        systemAlerts,
+        quickOrder,
+        autoSaveAddr,
+        highPrivacy,
+        accessMode,
+      };
+      localStorage.setItem('bthwani-client-preferences', JSON.stringify(payload));
+      setSuccessMsg('تم حفظ التفضيلات بنجاح في جهازك.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      console.warn("Could not save preferences", e);
+    }
+  };
 
   const handleReset = () => {
     setDeliveryInstructions('اتصل قبل الوصول بدقيقتين واترك الطلب عند الباب عند عدم الرد.');
     setOrderAlerts(true); setArrivalBell(true); setPromoAlerts(true); setSystemAlerts(false);
     setQuickOrder(true); setAutoSaveAddr(true); setHighPrivacy(false); setAccessMode(false);
+    try {
+      localStorage.removeItem('bthwani-client-preferences');
+      setSuccessMsg('تمت إعادة تعيين التفضيلات إلى الافتراضي.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e) {
+      console.warn("Could not reset preferences in localStorage", e);
+    }
   };
 
   return (
@@ -339,6 +387,25 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
 
         {/* Actions */}
         <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
+          {successMsg ? (
+            <View
+              style={{
+                backgroundColor: alpha(colorRoles.brandAction, 0.08),
+                borderWidth: 1,
+                borderColor: colorRoles.brandAction,
+                borderRadius: 16,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                alignItems: 'center',
+                marginBottom: spacing[2],
+              }}
+            >
+              <Text role="bodyStrong" style={{ color: colorRoles.brandAction, textAlign: 'center' }}>
+                {successMsg}
+              </Text>
+            </View>
+          ) : null}
+
           <Button
             tone="primary"
             label="حفظ كل التفضيلات والتغييرات"

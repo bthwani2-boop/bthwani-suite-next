@@ -4,7 +4,7 @@
  * them and relying on a runtime failure.
  */
 export const DSH_CAPTAIN_CONTRACT_CAPABILITIES = {
-  locationPush: true,
+  locationPush: false,
   failDelivery: false,
   confirmReturn: false,
 } as const;

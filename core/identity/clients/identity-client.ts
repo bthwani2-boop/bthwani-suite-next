@@ -17,13 +17,15 @@ export type IdentityClient = {
   session(accessToken: string): Promise<ActorIdentity>;
   refresh(refreshToken: string): Promise<TokenResponse>;
   logout(accessToken: string): Promise<void>;
+  changePassword(accessToken: string, password: string): Promise<void>;
+  deleteAccount(accessToken: string): Promise<void>;
 };
 
 export function createIdentityClient(baseUrl: string): IdentityClient {
   async function request<T>(
     path: string,
     options: {
-      method: "GET" | "POST";
+      method: "GET" | "POST" | "DELETE";
       token?: string;
       body?: unknown;
       idempotencyKey?: string;
@@ -80,6 +82,12 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
     },
     logout(accessToken) {
       return request("/auth/logout", { method: "POST", token: accessToken });
+    },
+    changePassword(accessToken, password) {
+      return request("/auth/password/change", { method: "POST", token: accessToken, body: { password } });
+    },
+    deleteAccount(accessToken) {
+      return request("/auth/account", { method: "DELETE", token: accessToken });
     },
   };
 }

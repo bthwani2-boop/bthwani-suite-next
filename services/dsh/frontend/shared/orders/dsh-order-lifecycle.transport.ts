@@ -235,17 +235,8 @@ export function createDshOrderLifecycleHttpClient(
       );
       return normalizeAssignmentResponse(resp);
     },
-    pushLocation: async (assignmentId, req) => {
-      if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
-      const resp = await doFetch<{ assignment?: BackendDispatchAssignment }>(
-        baseUrl,
-        fetchFn,
-        'POST',
-        `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/location`,
-        { latitude: req.latitude, longitude: req.longitude },
-        orderAuthHeaders(auth),
-      );
-      return normalizeAssignmentResponse(resp);
+    pushLocation: async () => {
+      unsupportedTransition('captain location push is not exposed');
     },
     getCaptainLocation: async (orderId) => {
       if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;

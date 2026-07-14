@@ -163,7 +163,7 @@ export function ProviderListView(props: {
               <Box style={{ alignItems: "flex-end", gap: 2 }}>
                 <Text role="bodyStrong">{agent.fullNameAr}</Text>
                 <Text role="caption" tone="muted">
-                  {agent.providerCode} · {PROVIDER_KIND_LABEL_AR[agent.providerKind]} ·{" "}
+                  {agent.workforceCode} · {PROVIDER_KIND_LABEL_AR[agent.workforceKind]} ·{" "}
                   {reference.cityLabel(agent.fieldProfile?.cityCode ?? agent.captainProfile?.operatingCityCode)}
                 </Text>
               </Box>
@@ -171,7 +171,7 @@ export function ProviderListView(props: {
                 <Text role="bodySm" tone={statusTone(agent.engagementStatus)}>
                   {ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]}
                 </Text>
-                <Button label="فتح" tone="secondary" onPress={() => props.onOpen(agent.actorId, agent.providerKind)} />
+                <Button label="فتح" tone="secondary" onPress={() => props.onOpen(agent.actorId, agent.workforceKind)} />
               </Box>
             </Box>
           </Card>

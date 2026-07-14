@@ -34,7 +34,7 @@ export function DshFieldProfileHomeScreen({
 }: DshFieldProfileHomeScreenProps) {
   const me = useWorkforceMeOrNull();
   const username = me ? me.fullNameAr : 'ميداني';
-  const roleName = me ? (me.providerKind === 'captain' ? 'كابتن' : 'موظف ميداني') : 'عضو فريق الميدان';
+  const roleName = me ? (me.workforceKind === 'captain' ? 'كابتن' : 'موظف ميداني') : 'عضو فريق الميدان';
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>

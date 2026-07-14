@@ -550,6 +550,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/payout-destinations/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get active payout destination for a partner. */
+        get: operations["getWltPayoutDestination"];
+        /**
+         * Create or replace active payout destination for a partner.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+         */
+        put: operations["upsertWltPayoutDestination"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-destinations/{partnerId}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate active payout destination for a partner.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+         */
+        post: operations["deactivateWltPayoutDestination"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -911,6 +952,31 @@ export interface components {
         };
         WltLedgerEntryListResponse: {
             ledgerEntries: components["schemas"]["WltLedgerEntry"][];
+        };
+        WltUpsertPayoutDestinationRequest: {
+            beneficiaryName: string;
+            bankName: string;
+            bankBranch: string;
+            accountNumber: string;
+            iban: string;
+            payoutMobileNumber: string;
+            settlementPreference: string;
+            bankAccountHolderMatchesOwner?: boolean;
+            bankNotes?: string;
+            createdByActorId?: string;
+        };
+        WltPayoutDestinationRefResponse: {
+            id: string;
+            partnerId: string;
+            settlementPreference: string;
+            maskedAccountNumber: string;
+            maskedIban: string;
+            maskedMobileNumber: string;
+            beneficiaryName: string;
+            bankName: string;
+            bankBranch: string;
+            active: boolean;
+            updatedAt: string;
         };
     };
     responses: {
@@ -1856,6 +1922,80 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getWltPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payout destination found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutDestinationRefResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    upsertWltPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltUpsertPayoutDestinationRequest"];
+            };
+        };
+        responses: {
+            /** @description Payout destination upserted. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutDestinationRefResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deactivateWltPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payout destination deactivated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

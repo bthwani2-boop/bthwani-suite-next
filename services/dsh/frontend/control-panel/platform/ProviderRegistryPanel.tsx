@@ -32,47 +32,64 @@ const HEALTH_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
 };
 
 import React, { useEffect, useState } from "react";
+import { listProviders, getProviderHealth } from "../../shared/platform";
+import type { ExternalProvider, ExternalProviderHealthItem } from "../../shared/platform";
+
+function externalToVisibleProvider(ep: ExternalProvider): ProviderVisibleFields {
+  return {
+    id: ep.providerId,
+    kind: ep.kind,
+    label: ep.kind === "maps" ? "خرائط قوقل وسحابة الموقع (Google Maps)" : ep.code,
+    selectedProvider: ep.code,
+    fallbackProvider: null,
+    environment: "production",
+    status: ep.active ? "active" : "inactive",
+    credentialVisibility: "backend_secret_only",
+    maskedCredential: "••••••••",
+    lastHealthStatus: "healthy",
+    lastHealthCheckedAt: ep.updatedAt ?? null,
+    affectedSurfaces: ep.kind === "maps" ? ["dsh-client", "dsh-captain", "dsh-operator"] : [],
+    wltBoundary: false,
+    auditRequired: false,
+    rollbackTarget: null,
+    publicRuntimeConfig: {},
+  };
+}
 
 export function ProviderRegistryPanel() {
-  const [providers, setProviders] = useState<any[]>([]);
-  const [health, setHealth] = useState<any[]>([]);
+  const [providers, setProviders] = useState<ExternalProvider[]>([]);
+  const [health, setHealth] = useState<ExternalProviderHealthItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-    const headers = token ? { "Authorization": `Bearer ${token}` } : undefined;
-
     Promise.all([
-      fetch("http://localhost:8087/providers", { headers }).then(r => r.ok ? r.json() : []),
-      fetch("http://localhost:8087/providers/health", { headers }).then(r => r.ok ? r.json() : { providers: [] })
+      listProviders(),
+      getProviderHealth()
     ])
       .then(([providersData, healthData]) => {
-        if (Array.isArray(providersData) && providersData.length > 0) {
-          setProviders(providersData);
-        } else {
-          setProviders(PLATFORM_PROVIDER_REGISTRY.map(toProviderVisibleFields));
-        }
-        if (healthData && Array.isArray(healthData.providers)) {
-          setHealth(healthData.providers);
-        }
+        setProviders(providersData || []);
+        setHealth(healthData?.providers || []);
         setLoading(false);
       })
-      .catch(() => {
-        setProviders(PLATFORM_PROVIDER_REGISTRY.map(toProviderVisibleFields));
+      .catch((err) => {
+        console.error("Failed to load providers from backend", err);
+        setProviders([]);
+        setHealth([]);
         setLoading(false);
       });
   }, []);
 
   const mapsProvider = providers.find((p) => p.kind === "maps");
+  const mappedMapsProvider = mapsProvider ? externalToVisibleProvider(mapsProvider) : null;
 
   return (
     <ScrollScreen>
       <Header title="سجل مزودي المنصة" subtitle="إدارة مزودي الخرائط والمدفوعات والبنية التحتية" />
 
-      {mapsProvider && (
+      {mappedMapsProvider && (
         <View style={styles.section}>
           <Text role="titleSm">مزود الخرائط</Text>
-          <MapsProviderInspector provider={mapsProvider} />
+          <MapsProviderInspector provider={mappedMapsProvider} />
         </View>
       )}
 

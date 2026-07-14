@@ -5,7 +5,7 @@ info:
   description: External provider registry, health, and configuration API.
 
 x-bthwani-owner: core/providers
-x-bthwani-contract-state: CONTRACT_DRAFT
+x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-scope: external-provider-management
 
 paths:

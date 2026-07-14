@@ -37,12 +37,13 @@ function loadOpenApiPaths(relPath) {
 const dshPaths = loadOpenApiPaths("services/dsh/contracts/dsh.openapi.yaml");
 const wltPaths = loadOpenApiPaths("services/wlt/contracts/wlt.openapi.yaml");
 const identityPaths = loadOpenApiPaths("core/identity/contracts/auth.openapi.yaml");
+const providersPaths = loadOpenApiPaths("core/providers/contracts/providers.openapi.yaml");
 
 function isKnownPath(rawPath) {
   // Strip query string and template params for matching
   const normalized = rawPath.replace(/\?.*$/, "").replace(/\$\{[^}]+\}/g, "{param}").replace(/`/g, "");
   // Try exact match first, then param-normalized match
-  for (const known of [...dshPaths, ...wltPaths, ...identityPaths]) {
+  for (const known of [...dshPaths, ...wltPaths, ...identityPaths, ...providersPaths]) {
     const knownNorm = known.replace(/\{[^}]+\}/g, "{param}");
     if (knownNorm === normalized || known === rawPath) return true;
     // prefix match for paths with trailing query params still in the literal

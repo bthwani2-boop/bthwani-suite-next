@@ -1,6 +1,5 @@
 // Authority: services/dsh/frontend/app-client — identity sub-screen.
 // Sovereign shared: services/dsh/frontend/shared
-// No backend wiring — profile save/delete are surfaced as callback props for the host to bind.
 
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,6 +13,7 @@ import {
   spacing,
   colorRoles,
 } from '@bthwani/ui-kit';
+import { useIdentitySession } from '@bthwani/core-identity';
 
 export type IdentityHubScreenProps = {
   onBack?: () => void;
@@ -22,6 +22,8 @@ export type IdentityHubScreenProps = {
 };
 
 export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: IdentityHubScreenProps) {
+  const { state: sessionState, changePassword, deleteAccount } = useIdentitySession();
+
   const [displayName, setDisplayName] = React.useState('');
   const [phone, setPhone] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -35,7 +37,15 @@ export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: Id
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const [deleteConfirm, setDeleteConfirm] = React.useState('');
 
-  const handleSavePassword = () => {
+  React.useEffect(() => {
+    if (sessionState.kind === 'authenticated') {
+      setDisplayName(sessionState.identity.subject);
+      setPhone(sessionState.identity.subject);
+      setEmail(sessionState.identity.subject + '@bthwani.yemen');
+    }
+  }, [sessionState]);
+
+  const handleSavePassword = async () => {
     if (!password || !confirmPassword) {
       setPasswordMsg('يرجى ملء جميع الحقول المطلوبة');
       setPasswordTone('danger');
@@ -46,14 +56,20 @@ export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: Id
       setPasswordTone('danger');
       return;
     }
-    setPasswordMsg('تم تحديث كلمة المرور بنجاح');
-    setPasswordTone('success');
-    setTimeout(() => {
-      setIsChangingPassword(false);
-      setPassword('');
-      setConfirmPassword('');
-      setPasswordMsg('');
-    }, 2000);
+    try {
+      await changePassword(password);
+      setPasswordMsg('تم تحديث كلمة المرور بنجاح في قاعدة البيانات');
+      setPasswordTone('success');
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setPassword('');
+        setConfirmPassword('');
+        setPasswordMsg('');
+      }, 2000);
+    } catch (err: any) {
+      setPasswordMsg(`فشل تحديث كلمة المرور: ${err.message || 'خطأ غير معروف'}`);
+      setPasswordTone('danger');
+    }
   };
 
   return (
@@ -188,10 +204,17 @@ export function IdentityHubScreen({ onBack, onSaveProfile, onDeleteAccount }: Id
                   label="حذف الحساب نهائياً"
                   disabled={deleteConfirm !== 'حذف'}
                   tone="danger"
-                  onPress={() => {
-                    onDeleteAccount?.();
-                    setIsDeletingAccount(false);
-                    setDeleteConfirm('');
+                  onPress={async () => {
+                    try {
+                      await deleteAccount();
+                      onDeleteAccount?.();
+                      setIsDeletingAccount(false);
+                      setDeleteConfirm('');
+                    } catch (err: any) {
+                      console.error('Failed to delete account', err);
+                      setIsDeletingAccount(false);
+                      setDeleteConfirm('');
+                    }
                   }}
                 />
                 <Button

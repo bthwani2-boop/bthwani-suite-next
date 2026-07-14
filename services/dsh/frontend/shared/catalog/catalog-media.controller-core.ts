@@ -1,4 +1,4 @@
-﻿/**
+/**
  * catalog-media.controller-core.ts
  *
  * Pure-function controller logic for catalog media operations.
@@ -225,11 +225,11 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
 
   const input: CreateReelSubmissionInput = {
     assetId: intent.asset.id,
-    titleAr,
-    titleEn,
     targetType,
     targetId,
-    sourceStoreId,
+    ...(titleAr !== undefined ? { titleAr } : {}),
+    ...(titleEn !== undefined ? { titleEn } : {}),
+    ...(sourceStoreId !== undefined ? { sourceStoreId } : {}),
   };
 
   const reel = await catalogMediaApi.submitReel(input);

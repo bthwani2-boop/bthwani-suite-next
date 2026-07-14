@@ -31,8 +31,8 @@ import {
   exportProductsToCSV,
   uploadAndLinkAsset,
   type CatalogAsset,
+  reviewReel,
 } from "../../shared/catalog";
-import { reviewReel } from "../../shared/catalog/central-catalog.api";
 
 
 import { CategoryControlRoom } from "./products/CategoryControlRoom";

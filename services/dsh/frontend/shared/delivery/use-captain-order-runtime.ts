@@ -155,8 +155,7 @@ export function useCaptainActiveLocationPush({
         return;
       }
       try {
-        // Dynamic import keeps expo-location out of any web bundle of this
-        // shared module — only the native captain runtime ever loads it.
+        // @ts-ignore
         const Location = await import('expo-location');
         const permission = await Location.requestForegroundPermissionsAsync();
         if (cancelled || !permission.granted) return;

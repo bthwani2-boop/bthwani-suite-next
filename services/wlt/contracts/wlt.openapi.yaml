@@ -1094,6 +1094,84 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wlt/payout-destinations/{partnerId}:
+    put:
+      operationId: upsertWltPayoutDestination
+      summary: Create or replace active payout destination for a partner.
+      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+      x-bthwani-mutation-approved: true
+      x-bthwani-default-enabled: true
+      tags:
+        - WltPayoutDestinations
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltUpsertPayoutDestinationRequest"
+      responses:
+        "201":
+          description: Payout destination upserted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutDestinationRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      operationId: getWltPayoutDestination
+      summary: Get active payout destination for a partner.
+      tags:
+        - WltPayoutDestinations
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payout destination found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutDestinationRefResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/payout-destinations/{partnerId}/deactivate:
+    post:
+      operationId: deactivateWltPayoutDestination
+      summary: Deactivate active payout destination for a partner.
+      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+      x-bthwani-mutation-approved: true
+      x-bthwani-default-enabled: true
+      tags:
+        - WltPayoutDestinations
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Payout destination deactivated.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 components:
   responses:
     BadRequest:
@@ -2041,3 +2119,55 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WltLedgerEntry"
+
+    WltUpsertPayoutDestinationRequest:
+      type: object
+      required: [beneficiaryName, bankName, bankBranch, accountNumber, iban, payoutMobileNumber, settlementPreference]
+      properties:
+        beneficiaryName:
+          type: string
+        bankName:
+          type: string
+        bankBranch:
+          type: string
+        accountNumber:
+          type: string
+        iban:
+          type: string
+        payoutMobileNumber:
+          type: string
+        settlementPreference:
+          type: string
+        bankAccountHolderMatchesOwner:
+          type: boolean
+        bankNotes:
+          type: string
+        createdByActorId:
+          type: string
+
+    WltPayoutDestinationRefResponse:
+      type: object
+      required: [id, partnerId, settlementPreference, maskedAccountNumber, maskedIban, maskedMobileNumber, beneficiaryName, bankName, bankBranch, active, updatedAt]
+      properties:
+        id:
+          type: string
+        partnerId:
+          type: string
+        settlementPreference:
+          type: string
+        maskedAccountNumber:
+          type: string
+        maskedIban:
+          type: string
+        maskedMobileNumber:
+          type: string
+        beneficiaryName:
+          type: string
+        bankName:
+          type: string
+        bankBranch:
+          type: string
+        active:
+          type: boolean
+        updatedAt:
+          type: string

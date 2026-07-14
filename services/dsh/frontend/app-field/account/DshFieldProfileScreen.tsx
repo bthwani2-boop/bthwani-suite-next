@@ -38,7 +38,7 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
 
   const items: Array<{ label: string; value: string; color?: string }> = [
     { label: 'الاسم الكامل', value: me.fullNameAr },
-    { label: 'رقم مقدم الخدمة', value: me.providerCode },
+    { label: 'رقم مقدم الخدمة', value: me.workforceCode },
     { label: 'منطقة الخدمة', value: me.fieldProfile?.serviceZoneId || 'غير محدد' },
     { label: 'الوردية', value: me.fieldProfile?.shiftCode || 'غير محدد' },
     { label: 'المشرف', value: me.fieldProfile?.supervisorActorId || 'بدون مشرف' },

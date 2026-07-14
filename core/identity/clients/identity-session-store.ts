@@ -373,5 +373,21 @@ export async function logoutIdentity(): Promise<void> {
   }
 }
 
+export async function changePasswordIdentity(password: string): Promise<void> {
+  const token = getIdentityAccessToken();
+  if (!token) throw new Error("UNAUTHENTICATED");
+  if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  await client.changePassword(token, password);
+}
+
+export async function deleteAccountIdentity(): Promise<void> {
+  const token = getIdentityAccessToken();
+  if (!token) throw new Error("UNAUTHENTICATED");
+  if (client === null) throw new Error("IDENTITY_NOT_CONFIGURED");
+  await client.deleteAccount(token);
+  clearSession();
+}
+
+
 // Compliance markers:
 // message: "IDENTITY_SESSION_INVALID"

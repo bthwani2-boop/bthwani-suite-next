@@ -159,7 +159,7 @@ function ProviderList({ providers, providerKind, selectedActorId, onSelect, city
           <Box style={styles.providerInfo}>
             <Text role="bodyStrong">{provider.fullNameAr}</Text>
             <Text role="caption" tone="muted">
-              {provider.providerCode} ·{" "}
+              {provider.workforceCode} ·{" "}
               {providerKind === "captain"
                 ? cityLabel(provider.captainProfile?.operatingCityCode)
                 : cityLabel(provider.fieldProfile?.cityCode)}{" "}
@@ -249,7 +249,7 @@ function ProviderActivationWorkspaceInner({
 
   const missingReasons: string[] = [];
   if (!detail.fullNameAr) missingReasons.push("الاسم الكامل باللغة العربية مطلوب");
-  if (!detail.providerCode) missingReasons.push("رقم مقدم الخدمة مطلوب");
+  if (!detail.workforceCode) missingReasons.push("رقم مقدم الخدمة مطلوب");
 
   if (providerKind === "field") {
     if (!detail.fieldProfile?.serviceZoneId) missingReasons.push("منطقة الخدمة مطلوبة");

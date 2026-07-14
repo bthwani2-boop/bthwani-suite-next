@@ -49,13 +49,15 @@ async function listProductMedia(storeId: string | undefined, productId: string):
       const links = await fetchCatalogAssetLinks({ entityType: "store_assortment", entityId: assortmentId });
       const customImage = links.find((link) => link.role === "partner_custom_product_image" && link.status === "approved");
       if (customImage) {
+        const variant = "original";
+        const mediaPath = `/dsh/public/media/${customImage.assetId}/${variant}`;
         return [{
           id: customImage.assetId,
           entity_id: productId,
           entity_type: "product",
           media_key: customImage.assetId,
-          url: toPublicUrl(`/dsh/public/media/${customImage.assetId}/original`),
-          public_url: toPublicUrl(`/dsh/public/media/${customImage.assetId}/original`),
+          url: toPublicUrl(mediaPath),
+          public_url: toPublicUrl(mediaPath),
           mime_type: "image/webp",
           created_at: customImage.createdAt,
           purpose: "partner_custom_product_image",

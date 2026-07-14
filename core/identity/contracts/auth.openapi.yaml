@@ -204,6 +204,30 @@ paths:
           description: Account deleted.
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /auth/password/change:
+    post:
+      operationId: changePassword
+      summary: Change the current actor's password.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        "204":
+          description: Password changed successfully.
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
   /internal/actors/provision:
     post:
       operationId: provisionActor
@@ -244,6 +268,37 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+  /internal/actors/search:
+    get:
+      operationId: searchInternalActors
+      tags: [internal]
+      description: Service-to-service only. Search actors by role and query.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of matching actors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActorAdminView"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
   /internal/actors/{actorId}:
     get:
       operationId: getInternalActor

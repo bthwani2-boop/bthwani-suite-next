@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/workforce/media/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Operator-only. Upload workforce media document (license, photo, etc.). */
+        post: operations["uploadWorkforceMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/home-discovery/{kind}": {
         parameters: {
             query?: never;
@@ -4640,6 +4657,41 @@ export interface operations {
                     "application/json": components["schemas"]["DshErrorResponse"];
                 };
             };
+        };
+    };
+    uploadWorkforceMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    actorId: string;
+                    /** @enum {string} */
+                    actorRole: "field" | "captain";
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Media uploaded successfully. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mediaRef: string;
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listOperatorHomeDiscoveryContent: {

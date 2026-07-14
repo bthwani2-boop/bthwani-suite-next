@@ -19,6 +19,7 @@
       "@bthwani/app-shell": ["../../../shared/app-shell/src/index.ts"],
       "@bthwani/core-identity": ["../../../core/identity/clients/index.ts"],
       "@bthwani/core-identity/server": ["../../../core/identity/clients/identity-client.ts"],
+      "@bthwani/core-providers": ["../../../core/providers/clients/generated/providers-api.ts"],
       "@bthwani/ui-kit": ["../../../shared/ui-kit/src/index.ts"],
       "@bthwani/ui-kit/web": ["../../../shared/ui-kit/src/web.ts"],
       "@bthwani/ui-kit/tokens": ["../../../shared/ui-kit/src/tokens/index.ts"],
