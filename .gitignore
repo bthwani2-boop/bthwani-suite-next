@@ -121,3 +121,8 @@ passwords.local.*
 credentials.local.*
 
 .tmp/
+
+# Database backups and generated environment files
+infra/data-plane/backups/
+**/*.env
+!**/*.env.example
