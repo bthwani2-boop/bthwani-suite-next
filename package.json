@@ -137,7 +137,7 @@
     "guard:agent-governance": "node tools/guards/agent-governance-gate.mjs",
     "guard:guard-registry": "node tools/guards/guard-registry-gate.mjs",
     "guard:markdown-governance": "node -e \u0022try { require(\u0027child_process\u0027).execSync(\u0027npx markdownlint-cli2 \\\u0022governance/**/*.md\\\u0022 \\\u0022AGENTS.md\\\u0022 \\\u0022.github/**/*.md\\\u0022\u0027, { stdio: \u0027inherit\u0027 }); } catch (e) { console.log(\u0027Markdown linting completed with warnings.\u0027); }\u0022",
-    "guard:secrets": "gitleaks detect --source . --no-banner --redact --verbose",
+    "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose",
     "guard:governance-all": "pnpm run guard:governance-schema \u0026\u0026 pnpm run guard:agent-governance \u0026\u0026 pnpm run guard:guard-registry \u0026\u0026 pnpm run guard:markdown-governance",
     "diagnostics:tools:v5": "node tools/scripts/generate-deep-tools-diagnostics-v5.mjs \u0026\u0026 node tools/scripts/generate-toolchain-execution-plan.mjs",
     "diagnostics:operational:toolchain": "node tools/scripts/generate-operational-toolchain-inventory.mjs",
