@@ -129,7 +129,11 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 	}
 	result, err := authorizeProvider(ctx, client, current, amountMinorUnits, currency, meta)
 	if err != nil {
-		_ = markSessionFailedAndNotify(db, current)
+		if isAmbiguousProviderError(err) {
+			_ = markSessionResultUnknownAndOpenCase(db, current, "authorize", err)
+		} else {
+			_ = markSessionFailedAndNotify(db, current)
+		}
 		return nil, err
 	}
 	const q = `
@@ -168,7 +172,11 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 	}
 	result, err := captureProvider(ctx, client, current, meta)
 	if err != nil {
-		_ = markSessionFailedAndNotify(db, current)
+		if isAmbiguousProviderError(err) {
+			_ = markSessionResultUnknownAndOpenCase(db, current, "capture", err)
+		} else {
+			_ = markSessionFailedAndNotify(db, current)
+		}
 		return nil, err
 	}
 	return captureSessionAndNotify(db, sessionID, result.ProviderReference)
@@ -210,6 +218,26 @@ func captureProvider(ctx context.Context, client financialProvider, session *Pay
 	return result, nil
 }
 
+// isAmbiguousProviderError distinguishes a clean provider decline from a
+// genuinely ambiguous outcome.
+//
+//   - A provider.Error means the provider's HTTP response actually came back
+//     (status >= 400) with a decoded error body: the provider explicitly
+//     rejected the request, so the session can safely be marked 'failed'.
+//   - Anything else -- a transport-level error from the HTTP round trip
+//     (context.DeadlineExceeded, connection refused/reset, a body that
+//     failed to decode), or authorizeProvider/captureProvider's own local
+//     validation error when the provider responded 2xx but with an
+//     unexpected status/missing reference -- means WLT sent the request but
+//     does not know whether the provider actually processed it. Marking
+//     that 'failed' risks silently losing a real charge, and letting a
+//     naive retry re-fire the same provider call risks a double charge.
+//     Both cases are treated as ambiguous here.
+func isAmbiguousProviderError(err error) bool {
+	var providerErr provider.Error
+	return !errors.As(err, &providerErr)
+}
+
 // markSessionFailedAndNotify marks sessionID failed and enqueues the DSH
 // outbox event in the same transaction, so a lost DSH webhook can never
 // happen without the WLT-side status transition also being rolled back.
@@ -226,6 +254,45 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession) error {
 		return err
 	}
 	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.CheckoutIntentID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// markSessionResultUnknownAndOpenCase marks sessionID 'provider_result_unknown'
+// and opens a wlt_reconciliation_cases row in the same transaction, for the
+// ambiguous case where a provider call errored without a clean decline
+// response (see isAmbiguousProviderError) -- we sent the request but don't
+// know if the provider actually processed it.
+//
+// Deliberately, this does NOT enqueue any DSH outbox event. DSH's checkout
+// intent simply remains in its existing 'payment_pending' (awaiting-outcome)
+// state rather than being told anything definitive, because we genuinely do
+// not know the outcome yet. That is correct until a human resolves the
+// reconciliation case out-of-band and the session transitions to its true
+// final state through the existing authorize/capture/expire paths -- do not
+// "fix" this by adding a notification here.
+func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, operation string, cause error) error {
+	if session == nil {
+		return nil
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', updated_at = NOW() WHERE id = $1`, session.ID); err != nil {
+		return err
+	}
+	reason := ""
+	if cause != nil {
+		reason = cause.Error()
+	}
+	if _, err := tx.Exec(`
+		INSERT INTO wlt_reconciliation_cases (payment_session_id, operation, trigger_reason)
+		VALUES ($1, $2, $3)`,
+		session.ID, operation, reason,
+	); err != nil {
 		return err
 	}
 	return tx.Commit()

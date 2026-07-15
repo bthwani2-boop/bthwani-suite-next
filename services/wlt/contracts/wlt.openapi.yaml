@@ -1717,6 +1717,7 @@ components:
             - cod_collected
             - failed
             - expired
+            - provider_result_unknown
         providerReference:
           type: string
           description: Empty unless a future WLT-owned provider integration attaches an external reference.

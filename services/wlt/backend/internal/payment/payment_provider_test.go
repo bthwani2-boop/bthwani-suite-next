@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"wlt-api/internal/provider"
@@ -95,5 +96,25 @@ func TestProviderFailureMappingIsReturned(t *testing.T) {
 	_, err := authorizeProvider(context.Background(), client, session, 1000, "YER", provider.RequestMeta{})
 	if !errors.As(err, &providerErr) {
 		t.Fatalf("expected provider error to be returned, got %v", err)
+	}
+}
+
+// TestIsAmbiguousProviderError verifies the classification used to decide
+// between marking a session 'failed' (a clean provider decline) and
+// 'provider_result_unknown' (a genuinely ambiguous outcome).
+func TestIsAmbiguousProviderError(t *testing.T) {
+	declineErr := provider.Error{Code: "CARD_DECLINED", StatusCode: 402, Message: "declined"}
+	if isAmbiguousProviderError(declineErr) {
+		t.Fatalf("expected a provider.Error decline to NOT be ambiguous")
+	}
+
+	transportErr := errors.New("connection reset")
+	if !isAmbiguousProviderError(transportErr) {
+		t.Fatalf("expected a plain transport error to be ambiguous")
+	}
+
+	validationErr := fmt.Errorf("provider authorization returned invalid status or reference")
+	if !isAmbiguousProviderError(validationErr) {
+		t.Fatalf("expected a local validation error to be ambiguous")
 	}
 }
