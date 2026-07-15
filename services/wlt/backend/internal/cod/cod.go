@@ -1,12 +1,14 @@
 package cod
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 	"wlt-api/internal/wallet"
@@ -40,7 +42,12 @@ type Commission struct {
 	Currency             string  `json:"currency"`
 	Status               string  `json:"status"`
 	SettledAt            *string `json:"settledAt"`
+	ConfirmedAt          *string `json:"confirmedAt"`
+	RejectedAt           *string `json:"rejectedAt"`
+	ReversedAt           *string `json:"reversedAt"`
+	ResolutionNote       string  `json:"resolutionNote"`
 	CreatedAt            string  `json:"createdAt"`
+	UpdatedAt            string  `json:"updatedAt"`
 }
 
 type CreateCommissionInput struct {
@@ -73,7 +80,7 @@ const codCols = `id, order_id, captain_id, partner_id, amount_minor_units, curre
 	status, collected_at, remitted_at, created_at, updated_at`
 
 const commissionCols = `id, beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, visit_id, store_id, commission_policy_id, commission_type,
-	amount_minor_units, currency, status, settled_at, created_at`
+	amount_minor_units, currency, status, settled_at, confirmed_at, rejected_at, reversed_at, resolution_note, created_at, updated_at`
 
 func scanCodRecord(row *sql.Row) (*CodRecord, error) {
 	var c CodRecord
@@ -103,29 +110,35 @@ func scanCodRecordRow(rows *sql.Rows) (*CodRecord, error) {
 
 func scanCommission(row *sql.Row) (*Commission, error) {
 	var c Commission
+	var resolutionNote sql.NullString
 	err := row.Scan(
 		&c.ID, &c.BeneficiaryActorID, &c.BeneficiaryActorType,
 		&c.SourceType, &c.SourceID, &c.VisitID, &c.StoreID, &c.CommissionPolicyID,
 		&c.CommissionType, &c.AmountMinorUnits, &c.Currency,
-		&c.Status, &c.SettledAt, &c.CreatedAt,
+		&c.Status, &c.SettledAt, &c.ConfirmedAt, &c.RejectedAt, &c.ReversedAt, &resolutionNote,
+		&c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	c.ResolutionNote = resolutionNote.String
 	return &c, nil
 }
 
 func scanCommissionRow(rows *sql.Rows) (*Commission, error) {
 	var c Commission
+	var resolutionNote sql.NullString
 	err := rows.Scan(
 		&c.ID, &c.BeneficiaryActorID, &c.BeneficiaryActorType,
 		&c.SourceType, &c.SourceID, &c.VisitID, &c.StoreID, &c.CommissionPolicyID,
 		&c.CommissionType, &c.AmountMinorUnits, &c.Currency,
-		&c.Status, &c.SettledAt, &c.CreatedAt,
+		&c.Status, &c.SettledAt, &c.ConfirmedAt, &c.RejectedAt, &c.ReversedAt, &resolutionNote,
+		&c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	c.ResolutionNote = resolutionNote.String
 	return &c, nil
 }
 
@@ -428,6 +441,18 @@ func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, err
 		if _, err := tx.Exec(walletQ, amountMinorUnits, input.BeneficiaryActorType, input.BeneficiaryActorID); err != nil {
 			return nil, fmt.Errorf("update wallet balance: %w", err)
 		}
+		// Ledger: the wallet's pending_balance column above is a fast-read
+		// projection; this posts the same event as a balanced double-entry
+		// transaction (debit platform_commission_receivable, credit the
+		// beneficiary's wallet account) so the earn is journaled, not just a
+		// direct column mutation with no audit trail.
+		ledgerLines := []ledger.LedgerLine{
+			{AccountType: "platform_commission_receivable", DebitCredit: "debit", AmountMinorUnits: amountMinorUnits, Currency: currency},
+			{AccountType: "wallet", ActorType: input.BeneficiaryActorType, ActorID: input.BeneficiaryActorID, DebitCredit: "credit", AmountMinorUnits: amountMinorUnits, Currency: currency},
+		}
+		if _, err := ledger.PostLedgerTransaction(context.Background(), tx, "commission_earned", "commission", c.ID, ledgerLines, ledger.Actor{ID: "system", Type: "system"}); err != nil {
+			return nil, fmt.Errorf("post commission ledger transaction: %w", err)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -465,6 +490,217 @@ func ListCommissions(db *sql.DB, sourceID, beneficiaryActorID, beneficiaryActorT
 		commissions = append(commissions, c)
 	}
 	return commissions, rows.Err()
+}
+
+// ErrCommissionNotInExpectedState is returned by the commission lifecycle
+// transitions below when the commission's current status is not one of the
+// caller's allowed source statuses.
+var ErrCommissionNotInExpectedState = errors.New("commission is not in the expected state for this transition")
+
+func getCommissionForUpdateTx(tx *sql.Tx, commissionID string) (*Commission, error) {
+	row := tx.QueryRow(`SELECT `+commissionCols+` FROM wlt_commissions WHERE id = $1 FOR UPDATE`, commissionID)
+	c, err := scanCommission(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return c, err
+}
+
+// ConfirmCommission moves a commission from 'pending' to 'confirmed' -- a
+// pure recognition step (no wallet/ledger effect) marking that the
+// underlying source event (field visit, order, etc.) has been verified.
+func ConfirmCommission(db *sql.DB, commissionID string) (*Commission, error) {
+	if commissionID == "" {
+		return nil, fmt.Errorf("commissionId is required")
+	}
+	row := db.QueryRow(`
+		UPDATE wlt_commissions SET status = 'confirmed', confirmed_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND status = 'pending'
+		RETURNING `+commissionCols, commissionID)
+	c, err := scanCommission(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		existing, getErr := GetCommission(db, commissionID)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if existing == nil {
+			return nil, nil
+		}
+		return nil, ErrCommissionNotInExpectedState
+	}
+	return c, err
+}
+
+// SettleCommission moves a confirmed commission to 'settled', reclassifying
+// the beneficiary's own wallet balance from pending to available (no
+// cross-account ledger transaction is posted here: this is a wallet-internal
+// bucket reclassification, not money moving between accounts -- the original
+// earn was already journaled in CreateCommission).
+func SettleCommission(db *sql.DB, commissionID string) (*Commission, error) {
+	if commissionID == "" {
+		return nil, fmt.Errorf("commissionId is required")
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	c, err := getCommissionForUpdateTx(tx, commissionID)
+	if err != nil {
+		return nil, err
+	}
+	if c == nil {
+		return nil, nil
+	}
+	if c.Status != "confirmed" {
+		return nil, ErrCommissionNotInExpectedState
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE wlt_wallets
+		SET pending_balance_minor_units = pending_balance_minor_units - $1,
+		    available_balance_minor_units = available_balance_minor_units + $1,
+		    settled_total_minor_units = settled_total_minor_units + $1,
+		    updated_at = NOW()
+		WHERE actor_type = $2 AND actor_id = $3`,
+		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
+	); err != nil {
+		return nil, fmt.Errorf("update wallet balance: %w", err)
+	}
+
+	row := tx.QueryRow(`
+		UPDATE wlt_commissions SET status = 'settled', settled_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND status = 'confirmed'
+		RETURNING `+commissionCols, commissionID)
+	updated, err := scanCommission(row)
+	if err != nil {
+		return nil, err
+	}
+	return updated, tx.Commit()
+}
+
+// RejectCommission moves a 'pending' commission to 'rejected', reversing any
+// wallet/ledger effect from its original posting -- only field-visit
+// commissions (the only source type that currently posts to the wallet in
+// CreateCommission) have anything to reverse; checkout-linked commissions
+// with no wallet effect simply flip status.
+func RejectCommission(db *sql.DB, commissionID, note string) (*Commission, error) {
+	if commissionID == "" {
+		return nil, fmt.Errorf("commissionId is required")
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	c, err := getCommissionForUpdateTx(tx, commissionID)
+	if err != nil {
+		return nil, err
+	}
+	if c == nil {
+		return nil, nil
+	}
+	if c.Status != "pending" {
+		return nil, ErrCommissionNotInExpectedState
+	}
+
+	if c.SourceType == "field_visit" {
+		if _, err := tx.Exec(`
+			UPDATE wlt_wallets
+			SET pending_balance_minor_units = pending_balance_minor_units - $1,
+			    earned_total_minor_units = earned_total_minor_units - $1,
+			    updated_at = NOW()
+			WHERE actor_type = $2 AND actor_id = $3`,
+			c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
+		); err != nil {
+			return nil, fmt.Errorf("update wallet balance: %w", err)
+		}
+		ledgerLines := []ledger.LedgerLine{
+			{AccountType: "wallet", ActorType: c.BeneficiaryActorType, ActorID: c.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
+			{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
+		}
+		if _, err := ledger.PostLedgerTransaction(context.Background(), tx, "commission_rejected", "commission", c.ID, ledgerLines, ledger.Actor{ID: "system", Type: "system"}); err != nil {
+			return nil, fmt.Errorf("post commission reversal ledger transaction: %w", err)
+		}
+	}
+
+	row := tx.QueryRow(`
+		UPDATE wlt_commissions SET status = 'rejected', rejected_at = NOW(), resolution_note = $2, updated_at = NOW()
+		WHERE id = $1 AND status = 'pending'
+		RETURNING `+commissionCols, commissionID, note)
+	updated, err := scanCommission(row)
+	if err != nil {
+		return nil, err
+	}
+	return updated, tx.Commit()
+}
+
+// ReverseCommission moves a 'settled' commission to 'reversed' -- e.g. a
+// commission discovered to be fraudulent or erroneous after settlement.
+// Reverses the settled wallet effect (available_balance/settled_total) and
+// posts a reversing ledger transaction.
+func ReverseCommission(db *sql.DB, commissionID, note string) (*Commission, error) {
+	if commissionID == "" {
+		return nil, fmt.Errorf("commissionId is required")
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	c, err := getCommissionForUpdateTx(tx, commissionID)
+	if err != nil {
+		return nil, err
+	}
+	if c == nil {
+		return nil, nil
+	}
+	if c.Status != "settled" {
+		return nil, ErrCommissionNotInExpectedState
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE wlt_wallets
+		SET available_balance_minor_units = available_balance_minor_units - $1,
+		    settled_total_minor_units = settled_total_minor_units - $1,
+		    updated_at = NOW()
+		WHERE actor_type = $2 AND actor_id = $3`,
+		c.AmountMinorUnits, c.BeneficiaryActorType, c.BeneficiaryActorID,
+	); err != nil {
+		return nil, fmt.Errorf("update wallet balance: %w", err)
+	}
+	ledgerLines := []ledger.LedgerLine{
+		{AccountType: "wallet", ActorType: c.BeneficiaryActorType, ActorID: c.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
+		{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: c.AmountMinorUnits, Currency: c.Currency},
+	}
+	if _, err := ledger.PostLedgerTransaction(context.Background(), tx, "commission_reversed", "commission", c.ID, ledgerLines, ledger.Actor{ID: "system", Type: "system"}); err != nil {
+		return nil, fmt.Errorf("post commission reversal ledger transaction: %w", err)
+	}
+
+	row := tx.QueryRow(`
+		UPDATE wlt_commissions SET status = 'reversed', reversed_at = NOW(), resolution_note = $2, updated_at = NOW()
+		WHERE id = $1 AND status = 'settled'
+		RETURNING `+commissionCols, commissionID, note)
+	updated, err := scanCommission(row)
+	if err != nil {
+		return nil, err
+	}
+	return updated, tx.Commit()
+}
+
+func GetCommission(db *sql.DB, commissionID string) (*Commission, error) {
+	if commissionID == "" {
+		return nil, fmt.Errorf("commissionId is required")
+	}
+	row := db.QueryRow(`SELECT `+commissionCols+` FROM wlt_commissions WHERE id = $1`, commissionID)
+	c, err := scanCommission(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return c, err
 }
 
 // HTTP handlers
@@ -603,5 +839,83 @@ func HandleListCommissions(db *sql.DB) http.HandlerFunc {
 			commissions = []*Commission{}
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"commissions": commissions})
+	}
+}
+
+func handleCommissionTransitionError(w http.ResponseWriter, err error) bool {
+	if errors.Is(err, ErrCommissionNotInExpectedState) {
+		shared.SendError(w, http.StatusConflict, "INVALID_STATE", "commission is not in a state that allows this transition")
+		return true
+	}
+	if err != nil {
+		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return true
+	}
+	return false
+}
+
+func HandleConfirmCommission(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := ConfirmCommission(db, r.PathValue("commissionId"))
+		if handleCommissionTransitionError(w, err) {
+			return
+		}
+		if c == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
+	}
+}
+
+func HandleSettleCommission(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := SettleCommission(db, r.PathValue("commissionId"))
+		if handleCommissionTransitionError(w, err) {
+			return
+		}
+		if c == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
+	}
+}
+
+func decodeCommissionResolutionNote(w http.ResponseWriter, r *http.Request) string {
+	var body struct {
+		Note string `json:"resolutionNote"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 4*1024)).Decode(&body)
+	return body.Note
+}
+
+func HandleRejectCommission(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		note := decodeCommissionResolutionNote(w, r)
+		c, err := RejectCommission(db, r.PathValue("commissionId"), note)
+		if handleCommissionTransitionError(w, err) {
+			return
+		}
+		if c == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
+	}
+}
+
+func HandleReverseCommission(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		note := decodeCommissionResolutionNote(w, r)
+		c, err := ReverseCommission(db, r.PathValue("commissionId"), note)
+		if handleCommissionTransitionError(w, err) {
+			return
+		}
+		if c == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"commission": c})
 	}
 }

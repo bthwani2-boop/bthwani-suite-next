@@ -2625,6 +2625,102 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /dsh/control-panel/finance/reconciliation-cases:
+    get:
+      operationId: listDshControlPanelFinanceReconciliationCases
+      summary: Operator reads governed WLT reconciliation cases view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved]
+      responses:
+        "200":
+          description: WLT reconciliation cases view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/reconciliation-cases/{caseId}:
+    get:
+      operationId: getDshControlPanelFinanceReconciliationCase
+      summary: Operator reads one governed WLT reconciliation case through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT reconciliation case view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign:
+    post:
+      operationId: assignDshControlPanelFinanceReconciliationCase
+      summary: Operator assigns a reconciliation case to himself/another operator.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT reconciliation case assignment result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
+    post:
+      operationId: resolveDshControlPanelFinanceReconciliationCase
+      summary: Operator resolves a reconciliation case.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionAction, resolutionNote]
+              properties:
+                resolutionAction:
+                  type: string
+                  enum: [confirmed_success, confirmed_failed, manual_adjustment, ignored]
+                resolutionNote:
+                  type: string
+      responses:
+        "200":
+          description: WLT reconciliation case resolution result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /dsh/captain/finance/cod-records:
     get:
       operationId: listDshCaptainFinanceCodRecords
@@ -5946,6 +6042,26 @@ components:
           type: string
           enum: [serviceable, store_unavailable, out_of_area, catalog_unavailable]
         reason: { type: string }
+        availableModes:
+          type: array
+          description: >-
+            Per-mode availability for this store+location, derived from the
+            store's enabled delivery modes and the same zone/distance check as
+            `serviceable`/`code`. Never a static three-mode list.
+          items:
+            $ref: "#/components/schemas/FulfillmentModeAvailability"
+
+    FulfillmentModeAvailability:
+      type: object
+      required: [mode, available]
+      properties:
+        mode:
+          type: string
+          enum: [bthwani_delivery, partner_delivery, pickup]
+        available: { type: boolean }
+        unavailableReasonCode:
+          type: string
+          enum: [mode_not_enabled, out_of_area, store_unavailable]
 
     # ─── Checkout Intent schemas ────────────────────────────────────
 

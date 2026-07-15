@@ -237,8 +237,6 @@ export const DOCUMENT_TYPE_LABELS: Record<DshPartnerDocumentType, string> = {
   other: "مستند آخر",
 };
 
-type DshFulfillmentDeliveryMode = 'partner_delivery' | 'bthwani_delivery' | 'pickup';
-
 export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
   'order-accept',
   'order-get',

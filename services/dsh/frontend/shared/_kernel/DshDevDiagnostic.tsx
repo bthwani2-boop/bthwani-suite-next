@@ -42,9 +42,9 @@ export function DshDevDiagnostic() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: colorRoles.surfaceWarning,
+    backgroundColor: colorRoles.surfaceWarm,
     borderWidth: 1,
-    borderColor: colorRoles.borderWarning,
+    borderColor: colorRoles.warning,
     borderRadius: 8,
     marginVertical: 16,
   },
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: colorRoles.textWarning,
+    color: colorRoles.warning,
   },
   text: {
     fontSize: 14,

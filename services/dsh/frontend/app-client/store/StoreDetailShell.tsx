@@ -46,7 +46,11 @@ export function StoreDetailShell({
 }: Props) {
   const isRTL = I18nManager.isRTL;
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
-  const [selectedMode, setSelectedMode] = useState('bthwani_delivery');
+  // Default to whichever fulfillment mode this store actually has enabled —
+  // never assume bthwani_delivery is available.
+  const [selectedMode, setSelectedMode] = useState<string>(
+    () => store.availableFulfillmentModes[0] ?? 'pickup',
+  );
 
   // Measurement Sheet State (Donor Replica)
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);

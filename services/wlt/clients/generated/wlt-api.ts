@@ -123,6 +123,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/reconciliation-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List reconciliation cases. */
+        get: operations["listWltReconciliationCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/reconciliation-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a reconciliation case by ID. */
+        get: operations["getWltReconciliationCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/reconciliation-cases/{caseId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign a reconciliation case. */
+        post: operations["assignWltReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/reconciliation-cases/{caseId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a reconciliation case. */
+        post: operations["resolveWltReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payout-requests": {
         parameters: {
             query?: never;
@@ -658,6 +726,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/commissions/{commissionId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a commission record.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+         */
+        post: operations["confirmWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Settle a commission record.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+         */
+        post: operations["settleWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a commission record.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+         */
+        post: operations["rejectWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reverse a commission record.
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+         */
+        post: operations["reverseWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/ledger/entries": {
         parameters: {
             query?: never;
@@ -827,7 +975,7 @@ export interface components {
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
             /** @enum {string} */
-            status: "reference_created" | "pending_provider" | "authorized" | "captured" | "cod_pending" | "cod_collected" | "failed" | "expired";
+            status: "reference_created" | "pending_provider" | "authorized" | "captured" | "cod_pending" | "cod_collected" | "failed" | "expired" | "provider_result_unknown";
             /** @description Empty unless a future WLT-owned provider integration attaches an external reference. */
             providerReference: string;
             /** Format: int64 */
@@ -1189,6 +1337,42 @@ export interface components {
             active: boolean;
             updatedAt: string;
         };
+        WltReconciliationCase: {
+            id: string;
+            paymentSessionId: string;
+            operation: string;
+            triggerReason: string;
+            /** @enum {string} */
+            status: "open" | "resolved";
+            assignedToOperatorId?: string;
+            /** Format: date-time */
+            assignedAt?: string | null;
+            resolvedByOperatorId?: string;
+            resolutionAction?: string;
+            resolutionNote?: string;
+            resolution?: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WltReconciliationCaseResponse: {
+            reconciliationCase: components["schemas"]["WltReconciliationCase"];
+        };
+        WltReconciliationCaseListResponse: {
+            reconciliationCases: components["schemas"]["WltReconciliationCase"][];
+        };
+        WltAssignReconciliationCaseRequest: {
+            operatorId: string;
+        };
+        WltResolveReconciliationCaseRequest: {
+            operatorId: string;
+            /** @enum {string} */
+            resolutionAction: "confirmed_success" | "confirmed_failed" | "manual_adjustment" | "ignored";
+            resolutionNote?: string;
+        };
     };
     responses: {
         /** @description Invalid request parameters. */
@@ -1411,6 +1595,110 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listWltReconciliationCases: {
+        parameters: {
+            query?: {
+                status?: "open" | "resolved";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of reconciliation cases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltReconciliationCaseListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    getWltReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reconciliation case details. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltReconciliationCaseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    assignWltReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltAssignReconciliationCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Reconciliation case assigned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltReconciliationCaseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    resolveWltReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltResolveReconciliationCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Reconciliation case resolved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltReconciliationCaseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listWltPayoutRequests: {
@@ -2272,6 +2560,118 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    confirmWltCommission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                commissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Commission confirmed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCommissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    settleWltCommission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                commissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Commission settled. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCommissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    rejectWltCommission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                commissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    resolutionNote: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Commission rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCommissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reverseWltCommission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                commissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    resolutionNote: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Commission reversed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCommissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWltLedgerEntries: {

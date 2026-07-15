@@ -14,21 +14,26 @@ type PartnerOrdersState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 
 
 export function usePartnerOrdersRuntime(route: string) {
   const { dshClientId } = usePlatformVars();
-  const partnerClientId = dshClientId || 'partner-dev-001';
 
   const [orders, setOrders] = React.useState<readonly PartnerOrderItemLike[]>([]);
-  const [state, setState] = React.useState<PartnerOrdersState>('loading');
+  const [state, setState] = React.useState<PartnerOrdersState>(dshClientId ? 'loading' : 'disabled');
 
   const orderLifecycleClient = React.useMemo(
-    () => createDshOrderLifecycleHttpClient(resolveDshOrderApiBaseUrl(), undefined, { clientId: partnerClientId }),
-    [partnerClientId],
+    () => (dshClientId
+      ? createDshOrderLifecycleHttpClient(resolveDshOrderApiBaseUrl(), undefined, { clientId: dshClientId })
+      : null),
+    [dshClientId],
   );
 
   React.useEffect(() => {
     if (route !== 'inbox') return;
+    if (!dshClientId) {
+      setState('disabled');
+      return;
+    }
     let cancelled = false;
     setState('loading');
-    fetchDshRuntimeOrders({ limit: 100, scope: 'partner' }, partnerClientId, 'partner').then((result) => {
+    fetchDshRuntimeOrders({ limit: 100, scope: 'partner' }, dshClientId, 'partner').then((result) => {
       if (cancelled) return;
       if (result.kind === 'ok') {
         const nextOrders = result.orders.map(mapRuntimeRowToPartnerOrderItem);
@@ -45,10 +50,11 @@ export function usePartnerOrdersRuntime(route: string) {
     return () => {
       cancelled = true;
     };
-  }, [route]);
+  }, [route, dshClientId]);
 
   const markReady = React.useCallback(
     (orderId: string) => {
+      if (!orderLifecycleClient) return;
       orderLifecycleClient
         .updateOrderStatus(orderId, { actor: 'partner', status: 'ready_for_pickup' })
         .then(() => {

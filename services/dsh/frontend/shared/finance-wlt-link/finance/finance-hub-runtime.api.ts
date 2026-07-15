@@ -103,3 +103,50 @@ export async function rejectPayoutRequest(payoutId: string): Promise<boolean> {
     return false;
   }
 }
+
+export type ReconciliationCase = {
+  readonly id: string;
+  readonly paymentSessionId: string;
+  readonly operation: string;
+  readonly triggerReason: string;
+  readonly status: string;
+  readonly assignedToOperatorId: string;
+  readonly resolvedByOperatorId: string;
+  readonly resolutionAction: string;
+  readonly resolutionNote: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export async function loadOpenReconciliationCases(): Promise<LoadResult<readonly ReconciliationCase[]>> {
+  return tryGet("/dsh/control-panel/finance/reconciliation-cases?status=open", (body: any) => (body.reconciliationCases ?? []) as readonly ReconciliationCase[]);
+}
+
+export async function assignReconciliationCase(caseId: string): Promise<boolean> {
+  try {
+    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
+    await financePost(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/assign`, { method: "POST" });
+    return true;
+  } catch (e) {
+    console.error("Failed to assign reconciliation case", e);
+    return false;
+  }
+}
+
+export async function resolveReconciliationCase(
+  caseId: string,
+  resolutionAction: "confirmed_success" | "confirmed_failed" | "manual_adjustment" | "ignored",
+  resolutionNote: string,
+): Promise<boolean> {
+  try {
+    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
+    await financePost(`/dsh/control-panel/finance/reconciliation-cases/${encodeURIComponent(caseId)}/resolve`, {
+      method: "POST",
+      body: { resolutionAction, resolutionNote },
+    });
+    return true;
+  } catch (e) {
+    console.error("Failed to resolve reconciliation case", e);
+    return false;
+  }
+}

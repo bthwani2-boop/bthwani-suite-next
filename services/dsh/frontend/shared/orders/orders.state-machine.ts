@@ -10,6 +10,8 @@
  * All 22 original statuses kept for backward compatibility.
  */
 
+import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
+
 // ─── Journey stage identifiers ────────────────────────────────────────────────
 
 export type DshOrderJourneyStageId =
@@ -240,9 +242,7 @@ export type DshOrderLifecycleWltImplication =
 
 /** Which delivery mode(s) can enter this lifecycle state. */
 export type DshOrderLifecycleDeliveryModeImpact =
-  | 'bthwani_delivery'
-  | 'partner_delivery'
-  | 'pickup'
+  | DshFulfillmentDeliveryMode
   | 'all'
   | 'none';
 

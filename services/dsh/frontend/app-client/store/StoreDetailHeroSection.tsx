@@ -2,12 +2,13 @@ import React from 'react';
 import { type Animated } from 'react-native';
 import { StoreHero } from './StoreHero';
 import type { DshStoreDetailViewModel, StoreHeroFulfillmentMode } from '../../shared/store';
+import type { DshFulfillmentDeliveryMode } from '../../shared/delivery/delivery.contract';
 
-const DELIVERY_MODES: readonly StoreHeroFulfillmentMode[] = [
-  { id: 'bthwani_delivery', label: 'توصيل بثواني', icon: '🚲' },
-  { id: 'partner_delivery', label: 'توصيل المتجر', icon: '🛵' },
-  { id: 'pickup', label: 'استلم بنفسك', icon: '🏪' },
-];
+const DELIVERY_MODE_PRESENTATION: Record<DshFulfillmentDeliveryMode, StoreHeroFulfillmentMode> = {
+  bthwani_delivery: { id: 'bthwani_delivery', label: 'توصيل بثواني', icon: '🚲' },
+  partner_delivery: { id: 'partner_delivery', label: 'توصيل المتجر', icon: '🛵' },
+  pickup: { id: 'pickup', label: 'استلم بنفسك', icon: '🏪' },
+};
 
 type Props = Readonly<{
   store: DshStoreDetailViewModel;
@@ -18,17 +19,13 @@ type Props = Readonly<{
 }>;
 
 export function StoreDetailHeroSection({ store, selectedMode, onModeChange, onBack, scrollY }: Props) {
-  const visibleModes = React.useMemo(() => {
-    const filtered = DELIVERY_MODES.filter((m) =>
-      store.deliveryModeLabels.some((label) => {
-        if (m.id === 'bthwani_delivery') return label.includes('بثواني') || label.includes('المنصة') || label.includes('express');
-        if (m.id === 'partner_delivery') return label.includes('المتجر') || label.includes('الشريك') || label.includes('delivery');
-        if (m.id === 'pickup') return label.includes('استلم') || label.includes('استلام') || label.includes('pickup');
-        return false;
-      }),
-    );
-    return filtered.length > 0 ? filtered : DELIVERY_MODES;
-  }, [store.deliveryModeLabels]);
+  // Modes come from the store's own enabled fulfillment modes (already mapped
+  // from the store-publication vocabulary via toFulfillmentModes()) — never a
+  // static three-mode list, and never guessed from formatted display labels.
+  const visibleModes = React.useMemo(
+    () => store.availableFulfillmentModes.map((mode) => DELIVERY_MODE_PRESENTATION[mode]),
+    [store.availableFulfillmentModes],
+  );
 
   return (
     <StoreHero

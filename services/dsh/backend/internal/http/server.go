@@ -163,13 +163,16 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/assortment", protected.handlePartnerGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}", protected.handlePartnerUpsertStoreAssortment)
 	mux.HandleFunc("POST /dsh/partner/catalog/product-proposals", protected.handlePartnerCreateProductProposal)
+	mux.HandleFunc("PUT /dsh/partner/catalog/product-proposals/{proposalId}", protected.handleUpdatePartnerProductProposal)
 	mux.HandleFunc("POST /dsh/partner/reels", protected.handleSubmitReel)
 
+	// Field catalog
 	mux.HandleFunc("GET /dsh/field/catalog/taxonomy", protected.handleCatalogTaxonomy)
 	mux.HandleFunc("GET /dsh/field/catalog/master-products", protected.handleListMasterProducts)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", protected.handleFieldGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", protected.handleFieldUpsertStoreAssortment)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/catalog/product-proposals", protected.handleFieldCreateProductProposal)
+	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", protected.handleUpdateFieldProductProposal)
 
 	// Support, Incidents & Escalation Room
 	mux.HandleFunc("POST /dsh/support/tickets", protected.handleCreateSupportTicket)

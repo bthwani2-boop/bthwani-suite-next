@@ -87,6 +87,10 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/remit", gate(serviceAuth(cod.HandleRemitCod(db))))
 	mux.HandleFunc("POST /wlt/commissions", gate(serviceAuth(cod.HandleCreateCommission(db))))
 	mux.HandleFunc("GET /wlt/commissions", readGate(cod.HandleListCommissions(db)))
+	mux.HandleFunc("POST /wlt/commissions/{commissionId}/confirm", gate(serviceAuth(cod.HandleConfirmCommission(db))))
+	mux.HandleFunc("POST /wlt/commissions/{commissionId}/settle", gate(serviceAuth(cod.HandleSettleCommission(db))))
+	mux.HandleFunc("POST /wlt/commissions/{commissionId}/reject", gate(serviceAuth(cod.HandleRejectCommission(db))))
+	mux.HandleFunc("POST /wlt/commissions/{commissionId}/reverse", gate(serviceAuth(cod.HandleReverseCommission(db))))
 
 	// WLT Ledger: all ledger surfaces are financial internals.
 	mux.HandleFunc("POST /wlt/ledger/entries", gate(serviceAuth(ledger.HandleAppendLedgerEntry(db))))

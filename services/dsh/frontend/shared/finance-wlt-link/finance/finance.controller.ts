@@ -18,6 +18,9 @@ import {
   loadDshFinanceRuntimeReadModel,
   approvePayoutRequest,
   rejectPayoutRequest,
+  assignReconciliationCase,
+  loadOpenReconciliationCases,
+  resolveReconciliationCase,
 } from './finance-hub-runtime.api';
 import type {
   WltDshFinanceRuntimeResult,
@@ -156,4 +159,11 @@ export function useFinanceController({
   };
 }
 
-export { approvePayoutRequest, rejectPayoutRequest };
+export {
+  approvePayoutRequest,
+  rejectPayoutRequest,
+  assignReconciliationCase,
+  loadOpenReconciliationCases,
+  resolveReconciliationCase,
+};
+export type { ReconciliationCase } from './finance-hub-runtime.api';

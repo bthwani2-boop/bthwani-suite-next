@@ -19,13 +19,15 @@ const nextConfig: NextConfig = {
       // Note: Turbopack on Windows does not support absolute paths in resolveAlias,
       // so we use a relative path from the project root (next.config.ts location).
       "@expo/vector-icons/Ionicons": "./stubs/ionicons-stub.js",
-    },
+      "@react-native-community/netinfo": "./stubs/netinfo-stub.js",
+    },
   },
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       "react-native$": "react-native-web",
       "@expo/vector-icons/Ionicons": require.resolve("./stubs/ionicons-stub.js"),
+      "@react-native-community/netinfo": require.resolve("./stubs/netinfo-stub.js"),
     };
     return config;
   },

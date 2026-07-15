@@ -12,7 +12,8 @@ import type {
   DshHomeStoreDto,
 } from './home-discovery.types';
 import { resolveDshMediaUrl } from '../_kernel/dsh-media-url';
-import type { DshStoreCardViewModel } from '../store';
+import { toFulfillmentModes, type DshStoreCardViewModel, type DshDeliveryMode } from '../store';
+import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
 
 export type BannerViewModel = {
   id: string;
@@ -68,6 +69,8 @@ export type HomeStoreCardViewModel = {
   distanceDisplay: string | null;
   /** Human-readable delivery mode labels e.g. ["⚡ ثواني", "توصيل", "استلم"] */
   deliveryModeLabels: readonly string[];
+  /** Canonical checkout fulfillment modes this store has enabled. */
+  availableFulfillmentModes: readonly DshFulfillmentDeliveryMode[];
   /** Semantic role for open/closed indicator, resolved by UI via ui-kit tokens */
   openStatusRole: 'storeOpen' | 'storeClosed' | 'storeTemporaryClosed' | 'storeUnavailable';
 };
@@ -155,6 +158,7 @@ export function toHomeStoreCardViewModel(dto: DshHomeStoreDto): HomeStoreCardVie
     pointsMultiplier: dto.pointsMultiplier ?? null,
     distanceDisplay: dto.distanceKm != null ? `${dto.distanceKm.toFixed(1)} كم` : null,
     deliveryModeLabels: (dto.deliveryModes ?? []).map((m) => DELIVERY_MODE_LABELS[m] ?? m),
+    availableFulfillmentModes: toFulfillmentModes((dto.deliveryModes ?? []) as readonly DshDeliveryMode[]),
     openStatusRole: resolveOpenStatusRole(dto.status, dto.serviceability.status),
   };
 }
@@ -181,6 +185,7 @@ export function toSharedStoreCardViewModel(
     placeholderEmoji: "🏪",
     placeholderTone: "brandAction",
     deliveryModeLabels: vm.deliveryModeLabels,
+    availableFulfillmentModes: vm.availableFulfillmentModes,
     distanceLabel: vm.distanceDisplay,
     distanceKm: null,
     followerCountLabel: vm.followerCountDisplay,

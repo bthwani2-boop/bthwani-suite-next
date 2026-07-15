@@ -1,4 +1,4 @@
-﻿openapi: 3.1.0
+openapi: 3.1.0
 info:
   title: BThwani WLT Service API
   version: 0.2.0
@@ -181,6 +181,114 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /wlt/reconciliation-cases:
+    get:
+      operationId: listWltReconciliationCases
+      summary: List reconciliation cases.
+      tags:
+        - WltReconciliation
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, resolved]
+      responses:
+        "200":
+          description: List of reconciliation cases.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltReconciliationCaseListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /wlt/reconciliation-cases/{caseId}:
+    get:
+      operationId: getWltReconciliationCase
+      summary: Get a reconciliation case by ID.
+      tags:
+        - WltReconciliation
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reconciliation case details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltReconciliationCaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/reconciliation-cases/{caseId}/assign:
+    post:
+      operationId: assignWltReconciliationCase
+      summary: Assign a reconciliation case.
+      tags:
+        - WltReconciliation
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltAssignReconciliationCaseRequest"
+      responses:
+        "200":
+          description: Reconciliation case assigned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltReconciliationCaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/reconciliation-cases/{caseId}/resolve:
+    post:
+      operationId: resolveWltReconciliationCase
+      summary: Resolve a reconciliation case.
+      tags:
+        - WltReconciliation
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltResolveReconciliationCaseRequest"
+      responses:
+        "200":
+          description: Reconciliation case resolved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltReconciliationCaseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /wlt/payout-requests:
     post:
@@ -1226,6 +1334,136 @@ paths:
                 $ref: "#/components/schemas/WltCommissionListResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+
+  /wlt/commissions/{commissionId}/confirm:
+    post:
+      operationId: confirmWltCommission
+      summary: Confirm a commission record.
+      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+      tags:
+        - WltCod
+      parameters:
+        - name: commissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Commission confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltCommissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/commissions/{commissionId}/settle:
+    post:
+      operationId: settleWltCommission
+      summary: Settle a commission record.
+      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+      tags:
+        - WltCod
+      parameters:
+        - name: commissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Commission settled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltCommissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/commissions/{commissionId}/reject:
+    post:
+      operationId: rejectWltCommission
+      summary: Reject a commission record.
+      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+      tags:
+        - WltCod
+      parameters:
+        - name: commissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resolutionNote
+              properties:
+                resolutionNote:
+                  type: string
+      responses:
+        "200":
+          description: Commission rejected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltCommissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/commissions/{commissionId}/reverse:
+    post:
+      operationId: reverseWltCommission
+      summary: Reverse a commission record.
+      description: Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true.
+      tags:
+        - WltCod
+      parameters:
+        - name: commissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resolutionNote
+              properties:
+                resolutionNote:
+                  type: string
+      responses:
+        "200":
+          description: Commission reversed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltCommissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /wlt/ledger/entries:
     post:
@@ -2543,4 +2781,87 @@ components:
         updatedAt:
           type: string
 
+    WltReconciliationCase:
+      type: object
+      required:
+        - id
+        - paymentSessionId
+        - operation
+        - triggerReason
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        paymentSessionId:
+          type: string
+        operation:
+          type: string
+        triggerReason:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved]
+        assignedToOperatorId:
+          type: string
+        assignedAt:
+          type: [string, 'null']
+          format: date-time
+        resolvedByOperatorId:
+          type: string
+        resolutionAction:
+          type: string
+        resolutionNote:
+          type: string
+        resolution:
+          type: string
+        resolvedAt:
+          type: [string, 'null']
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
+    WltReconciliationCaseResponse:
+      type: object
+      required:
+        - reconciliationCase
+      properties:
+        reconciliationCase:
+          $ref: "#/components/schemas/WltReconciliationCase"
+
+    WltReconciliationCaseListResponse:
+      type: object
+      required:
+        - reconciliationCases
+      properties:
+        reconciliationCases:
+          type: array
+          items:
+            $ref: "#/components/schemas/WltReconciliationCase"
+
+    WltAssignReconciliationCaseRequest:
+      type: object
+      required:
+        - operatorId
+      properties:
+        operatorId:
+          type: string
+
+    WltResolveReconciliationCaseRequest:
+      type: object
+      required:
+        - operatorId
+        - resolutionAction
+      properties:
+        operatorId:
+          type: string
+        resolutionAction:
+          type: string
+          enum: [confirmed_success, confirmed_failed, manual_adjustment, ignored]
+        resolutionNote:
+          type: string

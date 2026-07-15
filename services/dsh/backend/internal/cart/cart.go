@@ -10,6 +10,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/lib/pq"
 )
 
 var (
@@ -60,9 +61,34 @@ type Cart struct {
 }
 
 type ServiceabilityResult struct {
-	Serviceable bool   `json:"serviceable"`
-	Code        string `json:"code"`
-	Reason      string `json:"reason,omitempty"`
+	Serviceable    bool                          `json:"serviceable"`
+	Code           string                        `json:"code"`
+	Reason         string                        `json:"reason,omitempty"`
+	AvailableModes []FulfillmentModeAvailability `json:"availableModes,omitempty"`
+}
+
+// FulfillmentModeAvailability reports, for one canonical checkout fulfillment
+// mode, whether this store+location combination can actually use it right
+// now, with a machine-readable reason code when it cannot. DSH never returns
+// a static three-mode list: every mode not enabled by the store, or blocked
+// by the same zone/distance check CheckServiceability applies, is reported
+// unavailable with why.
+type FulfillmentModeAvailability struct {
+	Mode                  FulfillmentMode `json:"mode"`
+	Available             bool            `json:"available"`
+	UnavailableReasonCode string          `json:"unavailableReasonCode,omitempty"`
+}
+
+// storeDeliveryModeToFulfillmentMode maps the store-publication delivery-mode
+// vocabulary ("delivery" | "pickup" | "express", DshStoreDeliveryMode in the
+// OpenAPI contract) to the canonical checkout FulfillmentMode. This is the
+// single authoritative mapping between the two — mirrors
+// services/dsh/frontend/shared/store/store-discovery.formatters.ts
+// (toFulfillmentMode) and must stay in sync with it.
+var storeDeliveryModeToFulfillmentMode = map[string]FulfillmentMode{
+	"delivery": ModePartnerDelivery,
+	"express":  ModeBthwaniDelivery,
+	"pickup":   ModePickup,
 }
 
 type UpsertItemInput struct {
@@ -224,15 +250,18 @@ func calculateDistanceKM(lat1, lon1, lat2, lon2 float64) float64 {
 	return earthRadius * c
 }
 
-// CheckServiceability verifies that the store is active and in the serviceable state.
-// DSH only checks store-level availability — delivery fee and zone pricing are WLT concerns.
+// CheckServiceability verifies that the store is active and in the serviceable state,
+// and reports which canonical checkout fulfillment modes are actually usable for this
+// store+location combination. DSH only checks store-level and zone-level availability —
+// delivery fee and zone pricing are WLT concerns.
 func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) ServiceabilityResult {
 	var storeStatus, serviceabilityStatus, storeServiceArea, storeCity string
 	var distanceKM, storeLat, storeLng *float64
+	var deliveryModes []string
 	err := db.QueryRowContext(ctx,
-		`SELECT status, serviceability_status, service_area_code, city_code, distance_km, latitude, longitude FROM dsh_stores WHERE id = $1`,
+		`SELECT status, serviceability_status, service_area_code, city_code, distance_km, latitude, longitude, delivery_modes FROM dsh_stores WHERE id = $1`,
 		storeID,
-	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea, &storeCity, &distanceKM, &storeLat, &storeLng)
+	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea, &storeCity, &distanceKM, &storeLat, &storeLng, pq.Array(&deliveryModes))
 	if errors.Is(err, sql.ErrNoRows) {
 		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store not found"}
 	}
@@ -240,10 +269,16 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store lookup failed"}
 	}
 	if storeStatus != "active" {
-		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store is not active"}
+		return ServiceabilityResult{
+			Serviceable: false, Code: "store_unavailable", Reason: "store is not active",
+			AvailableModes: allModesUnavailable("store_unavailable"),
+		}
 	}
 	if serviceabilityStatus == "out_of_area" || serviceabilityStatus == "unavailable" {
-		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store is not serviceable"}
+		return ServiceabilityResult{
+			Serviceable: false, Code: "store_unavailable", Reason: "store is not serviceable",
+			AvailableModes: allModesUnavailable("store_unavailable"),
+		}
 	}
 
 	// Calculate physical distance between client and store coordinates if both are provided
@@ -258,11 +293,54 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 	// Check if store is within delivery range (<= 5.0 km) or matches the zone/city name fallback
 	isWithinDistance := calculatedDistance != nil && *calculatedDistance > 0 && *calculatedDistance <= 5.0
 	matchesZone := serviceAreaCode != "" && (storeServiceArea == serviceAreaCode || storeCity == serviceAreaCode)
+	inZone := isWithinDistance || matchesZone
 
-	if !isWithinDistance && !matchesZone {
-		return ServiceabilityResult{Serviceable: false, Code: "out_of_area", Reason: "store outside requested service area"}
+	availableModes := computeFulfillmentModeAvailability(deliveryModes, inZone)
+
+	if !inZone {
+		return ServiceabilityResult{
+			Serviceable: false, Code: "out_of_area", Reason: "store outside requested service area",
+			AvailableModes: availableModes,
+		}
 	}
-	return ServiceabilityResult{Serviceable: true, Code: "serviceable"}
+	return ServiceabilityResult{Serviceable: true, Code: "serviceable", AvailableModes: availableModes}
+}
+
+// computeFulfillmentModeAvailability derives per-mode availability from the
+// store's enabled delivery modes and whether the client is in the store's
+// serviceable zone. pickup never requires zone coverage — the customer
+// travels to the store; bthwani_delivery/partner_delivery both require it.
+func computeFulfillmentModeAvailability(storeDeliveryModes []string, inZone bool) []FulfillmentModeAvailability {
+	enabled := make(map[FulfillmentMode]bool, len(storeDeliveryModes))
+	for _, raw := range storeDeliveryModes {
+		if mode, ok := storeDeliveryModeToFulfillmentMode[raw]; ok {
+			enabled[mode] = true
+		}
+	}
+
+	result := make([]FulfillmentModeAvailability, 0, 3)
+	for _, mode := range []FulfillmentMode{ModeBthwaniDelivery, ModePartnerDelivery, ModePickup} {
+		if !enabled[mode] {
+			result = append(result, FulfillmentModeAvailability{Mode: mode, Available: false, UnavailableReasonCode: "mode_not_enabled"})
+			continue
+		}
+		if mode != ModePickup && !inZone {
+			result = append(result, FulfillmentModeAvailability{Mode: mode, Available: false, UnavailableReasonCode: "out_of_area"})
+			continue
+		}
+		result = append(result, FulfillmentModeAvailability{Mode: mode, Available: true})
+	}
+	return result
+}
+
+// allModesUnavailable reports every canonical mode as unavailable with the
+// same store-level reason code, for the early-exit store_unavailable paths.
+func allModesUnavailable(reasonCode string) []FulfillmentModeAvailability {
+	return []FulfillmentModeAvailability{
+		{Mode: ModeBthwaniDelivery, Available: false, UnavailableReasonCode: reasonCode},
+		{Mode: ModePartnerDelivery, Available: false, UnavailableReasonCode: reasonCode},
+		{Mode: ModePickup, Available: false, UnavailableReasonCode: reasonCode},
+	}
 }
 
 func ListOperatorCarts(ctx context.Context, db *sql.DB, state string) ([]Cart, error) {
