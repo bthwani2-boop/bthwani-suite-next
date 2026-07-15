@@ -140,3 +140,13 @@ numeric_closure:
 ```
 
 > قاعدة: لا يسمح بـIMPLEMENTATION_PASS إلا عند تحققها كلها.
+
+## Required CI Acceptance
+
+```yaml
+required_ci_acceptance:
+  final_protocol_gate: PASS
+  standard_ci: PASS
+  runtime_gate: PASS | NOT_REQUIRED_WITH_PROOF
+  unresolved_internal_gaps: 0
+```

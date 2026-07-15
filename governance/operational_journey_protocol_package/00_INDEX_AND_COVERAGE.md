@@ -375,3 +375,18 @@ orphan_backend_capability_matrix
 ```
 
 > قاعدة: يجب منع إعلان أن تغطية الحزمة مكتملة ما لم تظهر جميع هذه البنود في خريطة التغطية.
+
+## 9) Executable Rule Registry
+
+```yaml
+executable_rule_registry:
+  - rule_id:
+    source_file:
+    source_section:
+    automation_level: FULL | PARTIAL | HUMAN_ONLY
+    guard_command:
+    workflow_job:
+    applies_when:
+    failure_result:
+    required_check:
+```

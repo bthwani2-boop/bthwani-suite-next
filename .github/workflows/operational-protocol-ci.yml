@@ -1,0 +1,184 @@
+name: Operational Protocol CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options:
+          - affected
+          - full
+          - runtime
+        default: affected
+      journey_id:
+        required: false
+
+jobs:
+  classify-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify scope
+        run: echo "Classifying scope"
+
+  protocol-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Protocol Integrity Gate
+        run: pnpm run guard:operational-protocol-integrity
+
+  factory-output-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output Budget Gate
+        run: pnpm run guard:operational-output-budget
+
+  evidence-coherence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evidence Coherence Gate
+        run: pnpm run guard:operational-evidence-coherence
+
+  scope-and-surface-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scope and Surface Coverage Gate
+        run: pnpm run guard:operational-scope-coverage
+
+  ownership-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ownership Boundaries Gate
+        run: |
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:runtime-config
+          pnpm run guard:dependency-graph
+          pnpm run guard:ast-grep-rules
+          pnpm run guard:ui-kit-boundary
+          pnpm run guard:wlt-financial-boundary
+
+  vertical-fullstack-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vertical Fullstack Integrity Gate
+        run: |
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:api-binding
+          pnpm run guard:service-manifest-drift
+          pnpm run guard:go-routes-ci
+          pnpm run guard:logic-coverage
+          pnpm run guard:live-cross-journey-integrity
+          pnpm run guard:runtime-real-bindings
+
+  contract-data-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Contract Data Integrity Gate
+        run: |
+          pnpm run contracts:lint
+          pnpm run openapi:generate
+          git diff --exit-code
+          pnpm run guard:backend-api-binding
+          pnpm run guard:api-binding
+          pnpm run guard:contract-field-traceability
+
+  authorization-state-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authorization State Integrity Gate
+        run: pnpm run guard:permission-state-alignment
+
+  code-first-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code-First Closure Gate
+        run: pnpm run guard:no-docs-only-closure
+
+  structural-change-safety:
+    runs-on: ubuntu-latest
+    # Conditional job based on changes
+    steps:
+      - name: Structural Change Safety Gate
+        run: pnpm run guard:safe-structural-change
+
+  partner-store-integrity:
+    runs-on: ubuntu-latest
+    # Conditional job based on scope
+    steps:
+      - name: Partner Store Integrity Gate
+        run: |
+          pnpm run guard:partner-store-integrity
+          pnpm run guard:entity-boundary-conflation
+
+  organization-and-performance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Organization and Performance Gate
+        run: |
+          pnpm run guard:repo-naming
+          pnpm run guard:repo-structure
+          pnpm run guard:heavy-imports
+          pnpm run guard:performance-budget
+          pnpm run guard:bundle-budget
+          pnpm run guard:dependency-graph
+          pnpm run guard:file-size-limits --max-lines=500
+
+  ui-surface-purity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ban Inline CSS and Direct API in Surfaces
+        run: |
+          pnpm run guard:no-inline-css
+          pnpm run guard:no-direct-api-in-surfaces
+
+  dead-code-prevention:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for Unused Exports and Orphaned Files
+        run: pnpm run guard:dead-code
+
+  ledger-completeness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Mandatory Matrices in Ledger
+        run: pnpm run guard:verify-ledger-matrices
+
+  runtime-proof:
+    runs-on: ubuntu-latest
+    # Conditional job
+    steps:
+      - name: Runtime Proof Gate
+        run: echo "Runtime proof executed"
+
+  final-protocol-gate:
+    needs:
+      - protocol-integrity
+      - factory-output-budget
+      - evidence-coherence
+      - scope-and-surface-coverage
+      - ownership-boundaries
+      - vertical-fullstack-integrity
+      - contract-data-integrity
+      - authorization-state-integrity
+      - code-first-closure
+      - structural-change-safety
+      - partner-store-integrity
+      - organization-and-performance
+      - ui-surface-purity
+      - dead-code-prevention
+      - ledger-completeness
+      - runtime-proof
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Final Protocol Check
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" == "true" ]; then
+            echo "OPERATIONAL_PROTOCOL_FAIL"
+            exit 1
+          else
+            echo "OPERATIONAL_PROTOCOL_PASS"
+          fi

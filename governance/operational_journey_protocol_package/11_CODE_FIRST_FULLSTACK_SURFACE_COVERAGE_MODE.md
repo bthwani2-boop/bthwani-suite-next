@@ -165,3 +165,5 @@ frontend_backend_integrity_gate:
 FIX_REQUIRED
 
 وليست IMPLEMENTATION_PASS، حتى لو نجح typecheck وbuild وكل اختبارات الواجهة والباك إند المنفصلة.
+
+> نجاح Workflow لا يعوض غياب تعديل الكود عند وجود فجوة قابلة للإصلاح.

@@ -58,6 +58,15 @@ reason: REF غير موجود أو غير قابل للحل في GitHub Remote
 stop: true
 ```
 
+### 4.4 سلامة الـREF والأدلة في CI
+
+```yaml
+ci_ref_integrity:
+  checkout_matches_event_sha: required
+  base_sha_dynamic: required
+  hardcoded_base_branch: forbidden
+```
+
 ---
 
 ## 5) بوابة التحكم البشري بالتغييرات

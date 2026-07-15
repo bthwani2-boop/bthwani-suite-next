@@ -192,7 +192,6 @@ change_control_for_protocol_package_v2:
   result_if_broken: FIX_REQUIRED
 ```
 
-
 ## Execution Plan Required Matrices and Failure Conditions
 
 يجب إضافة هذه المصفوفات إلى mandatory_outputs:
@@ -212,3 +211,12 @@ change_control_for_protocol_package_v2:
 - أي generated client method لا يستخدمه shared brain عند الحاجة.
 - أي request أو response أو enum أو permission أو error mismatch.
 - أي نجاح مثبت في طبقة واحدة فقط.
+
+## Output Budget
+
+```yaml
+output_budget:
+  max_committed_files: 3
+  default_files: 2
+  third_file_condition: runtime_visual_or_external_evidence
+```

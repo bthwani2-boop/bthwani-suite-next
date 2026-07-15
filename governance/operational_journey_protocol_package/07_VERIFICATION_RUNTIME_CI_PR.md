@@ -249,3 +249,14 @@ frontend_backend_runtime_journey_matrix:
 - Generated-client compilation alone is insufficient.
 - Endpoint smoke alone is insufficient.
 - A valid proof must cross UI → contract → backend → database → UI readback.
+
+## 23) Operational Protocol Workflow Contract
+
+```yaml
+operational_protocol_workflow_contract:
+  workflow_path: .github/workflows/operational-protocol-ci.yml
+  default_mode: affected
+  heavy_checks: conditional
+  runtime_proof: conditional
+  final_job: final-protocol-gate
+```
