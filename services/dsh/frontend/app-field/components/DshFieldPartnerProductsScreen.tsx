@@ -316,7 +316,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                   label="اقترح كمنتج جديد" 
                   tone="primary" 
                   onPress={startProposeWithSearch} 
-                  leading={<Icon name="add-circle-outline" size={18} tone="on-primary" />}
+                  leading={<Icon name="add-circle-outline" size={18} />}
                 />
               )}
             </View>
@@ -331,7 +331,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                     style={{
                       padding: spacing[3],
                       borderWidth: isLinking ? 2 : borders.hairline,
-                      borderColor: isLinking ? colorRoles.borderBrand : colorRoles.borderStrong,
+                      borderColor: isLinking ? colorRoles.borderStrong : colorRoles.borderSubtle,
                       borderRadius: radius.md,
                       backgroundColor: isLinking ? colorRoles.surfaceMuted : colorRoles.surfaceBase,
                       gap: spacing[2],
@@ -473,7 +473,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
               )}
 
               {proposeError && (
-                <Text role="bodySm" tone="danger" style={{ textAlign: 'right', backgroundColor: colorRoles.surfaceDanger, padding: spacing[2], borderRadius: radius.sm }}>
+                <Text role="bodySm" tone="danger" style={{ textAlign: 'right', backgroundColor: colorRoles.surfaceMuted, padding: spacing[2], borderRadius: radius.sm }}>
                   {proposeError}
                 </Text>
               )}
@@ -531,8 +531,8 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                 }}
               >
                 <Text role="bodyStrong" style={{ textAlign: 'right', flex: 1 }}>{proposal.proposedNameAr}</Text>
-                <View style={{ backgroundColor: colorRoles.surfaceBrand, paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radius.full }}>
-                  <Text role="caption" tone="brand" style={{ textAlign: 'right', fontWeight: 'bold' }}>مُرسل للمراجعة</Text>
+                <View style={{ backgroundColor: colorRoles.surfaceMuted, paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radius.round }}>
+                  <Text role="caption" tone="action" style={{ textAlign: 'right', fontWeight: 'bold' }}>مُرسل للمراجعة</Text>
                 </View>
               </View>
             ))}

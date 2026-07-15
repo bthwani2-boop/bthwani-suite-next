@@ -173,7 +173,7 @@ export function FinanceDashboardScreen() {
     }
 
     if (activeGroup === 'settlements-payouts') {
-      const requests = runtimeFinance?.data?.payoutRequests || [];
+      const requests = (runtimeFinance as any)?.data?.payoutRequests || [];
       return (
         <Card style={{ padding: '1.5rem' }}>
           <Text role="titleMd" style={{ marginBottom: '1rem' }}>طلبات الدفع والتسويات الميدانية (Payout Requests)</Text>

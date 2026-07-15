@@ -39,7 +39,7 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
   }, [query, domainId, setFilters]);
 
   return (
-    <Box position="relative" width={300}>
+    <Box style={{ position: "relative", width: 300, zIndex: 10 }}>
       <Text role="label">{label}</Text>
       <TextField
         value={value || query}
@@ -48,29 +48,26 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
           setQuery(val);
           setIsOpen(true);
         }}
-        onFocus={() => setIsOpen(true)}
+        
         placeholder="ابحث باسم المنتج أو الباركود..."
       />
       {isOpen && (
-        <Box 
-          position="absolute" top="100%" left={0} right={0} 
-          backgroundColor="$surfaceBase" borderWidth={1} borderColor="$borderColor" 
-          zIndex={30} maxHeight={250} overflow="auto" borderRadius="$md"
-        >
-          {isLoading && <Box padding="$2"><Text tone="secondary">جاري البحث...</Text></Box>}
-          {!isLoading && products.length === 0 && query && <Box padding="$2"><Text tone="secondary">لا يوجد نتائج</Text></Box>}
+        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "white", borderWidth: 1, borderColor: "#ccc", zIndex: 30, maxHeight: 250, overflow: "hidden", borderRadius: 8 }}>
+          {isLoading && <Box padding={8}><Text tone="secondary">جاري البحث...</Text></Box>}
+          {!isLoading && products.length === 0 && query && <Box padding={8}><Text tone="secondary">لا يوجد نتائج</Text></Box>}
           {products.map(p => (
-            <Box 
-              key={p.id} padding="$2" hoverStyle={{ backgroundColor: "$surfaceInset" }} cursor="pointer"
-              onPress={() => {
+            <div
+              key={p.id}
+              style={{ padding: 8, cursor: "pointer" }}
+              onClick={() => {
                 onChange(p.id);
                 setQuery("");
                 setIsOpen(false);
               }}
             >
               <Text>{p.canonicalNameAr}</Text>
-              <Text tone="secondary" size="sm">{p.barcode ? `باركود: ${p.barcode}` : "بدون باركود"} | {p.id}</Text>
-            </Box>
+              <Text tone="secondary" role="bodySm">{p.barcode ? `باركود: ${p.barcode}` : "بدون باركود"} | {p.id}</Text>
+            </div>
           ))}
         </Box>
       )}

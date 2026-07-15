@@ -46,7 +46,7 @@ export function CategoryPicker({ value, onChange, domains, nodes, label = "اخ�
   }, [value, domains, nodes]);
 
   return (
-    <Box position="relative" width={300}>
+    <Box style={{ position: "relative", width: 300, zIndex: 10 }}>
       <Text role="label">{label}</Text>
       <TextField
         value={query || (selectedItem ? (selectedItem.nameAr + (selectedItem.type === "domain" ? " (فئة)" : " (تصنيف)")) : value)}
@@ -55,30 +55,27 @@ export function CategoryPicker({ value, onChange, domains, nodes, label = "اخ�
           setQuery(val);
           setIsOpen(true);
         }}
-        onFocus={() => setIsOpen(true)}
+        
         placeholder="ابحث عن فئة أو تصنيف..."
       />
       {isOpen && (
-        <Box 
-          position="absolute" top="100%" left={0} right={0} 
-          backgroundColor="$surfaceBase" borderWidth={1} borderColor="$borderColor" 
-          zIndex={20} maxHeight={250} overflow="auto" borderRadius="$md"
-        >
+        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "white", borderWidth: 1, borderColor: "#ccc", zIndex: 20, maxHeight: 250, overflow: "hidden", borderRadius: 8 }}>
           {options.length === 0 && (
-            <Box padding="$2"><Text tone="secondary">لا يوجد نتائج</Text></Box>
+            <Box padding={8}><Text tone="secondary">لا يوجد نتائج</Text></Box>
           )}
           {options.map(opt => (
-            <Box 
-              key={opt.id} padding="$2" hoverStyle={{ backgroundColor: "$surfaceInset" }} cursor="pointer"
-              onPress={() => {
+            <div
+              key={opt.id}
+              style={{ padding: 8, cursor: "pointer" }}
+              onClick={() => {
                 onChange(opt.id, opt.type);
                 setQuery("");
                 setIsOpen(false);
               }}
             >
               <Text>{opt.name}</Text>
-              <Text tone="secondary" size="sm">{opt.path}</Text>
-            </Box>
+              <Text tone="secondary" role="bodySm">{opt.path}</Text>
+            </div>
           ))}
         </Box>
       )}

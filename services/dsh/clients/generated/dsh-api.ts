@@ -335,6 +335,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/operator/diagnostics/stores/{storeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get store publication diagnostics */
+        get: operations["getStoreDiagnostics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/stores/{storeId}/audit": {
         parameters: {
             query?: never;
@@ -3198,7 +3215,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-            version?: number;
+            version: number;
         };
         MasterProductSummary: {
             id: string;
@@ -5398,6 +5415,34 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    getStoreDiagnostics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store diagnostics. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        isReady?: boolean;
+                        blockers?: string[];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listDshStoreAudit: {
         parameters: {
             query?: never;
@@ -5516,6 +5561,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     nameAr?: string;
                     nameEn?: string;
                     icon?: string;
@@ -5588,6 +5634,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     nameAr?: string;
                     nameEn?: string;
                     icon?: string;
@@ -5670,6 +5717,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     canonicalNameAr?: string;
                     canonicalNameEn?: string;
                     brand?: string;
@@ -5788,6 +5836,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     isActive?: boolean;
                     requiresMarketingReview?: boolean;
                     requiresProductImage?: boolean;
@@ -5824,6 +5873,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    expectedVersion?: number;
                     isActive?: boolean;
                     requiresMarketingReview?: boolean;
                     requiresProductImage?: boolean;

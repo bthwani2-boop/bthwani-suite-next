@@ -653,6 +653,34 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /dsh/operator/diagnostics/stores/{storeId}:
+    get:
+      operationId: getStoreDiagnostics
+      summary: Get store publication diagnostics
+      tags: [Operator Store Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Store diagnostics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isReady: { type: boolean }
+                  blockers:
+                    type: array
+                    items: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /dsh/operator/stores/{storeId}/audit:
     get:
       operationId: listDshStoreAudit
@@ -750,6 +778,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated.
               properties:
+                expectedVersion: { type: integer }
                 nameAr: { type: string }
                 nameEn: { type: string }
                 icon: { type: string }
@@ -800,6 +829,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated.
               properties:
+                expectedVersion: { type: integer }
                 nameAr: { type: string }
                 nameEn: { type: string }
                 icon: { type: string }
@@ -883,6 +913,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated. Do NOT send canonicalImageObjectKey — images are managed via DAM asset links.
               properties:
+                expectedVersion: { type: integer }
                 canonicalNameAr: { type: string }
                 canonicalNameEn: { type: string }
                 brand: { type: string }
@@ -975,6 +1006,7 @@ paths:
                 All fields must be sent (PUT semantics — omitted fields will be cleared).
                 This prevents unintentional zeroing of booleans and integers.
               properties:
+                expectedVersion: { type: integer }
                 isActive: { type: boolean }
                 requiresMarketingReview: { type: boolean }
                 requiresProductImage: { type: boolean }
@@ -1005,6 +1037,7 @@ paths:
               type: object
               description: All fields are optional. Only provided fields are updated.
               properties:
+                expectedVersion: { type: integer }
                 isActive: { type: boolean }
                 requiresMarketingReview: { type: boolean }
                 requiresProductImage: { type: boolean }
@@ -5155,8 +5188,6 @@ components:
       type: object
       required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt, version]
       properties:
-        
-        version: { type: integer }
         id: { type: string }
         objectKey: { type: string }
         publicUrl: { type: [string, "null"] }
@@ -5196,8 +5227,6 @@ components:
       type: object
       required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt, version]
       properties:
-        
-        version: { type: integer }
         id: { type: string }
         domainId: { type: string }
         categoryNodeId: { type: [string, "null"] }
@@ -5258,8 +5287,6 @@ components:
       type: object
       required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount, version]
       properties:
-        
-        version: { type: integer }
         id: { type: string }
         proposedNameAr: { type: string }
         proposedNameEn: { type: string }
@@ -5341,8 +5368,6 @@ components:
       type: object
       required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest, version]
       properties:
-        
-        version: { type: integer }
         id: { type: string }
         slug: { type: string }
         nameAr: { type: string }
@@ -5360,8 +5385,6 @@ components:
       type: object
       required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, version]
       properties:
-        
-        version: { type: integer }
         id: { type: string }
         domainId: { type: string }
         parentId: { type: ["string", "null"] }
@@ -5425,8 +5448,6 @@ components:
       type: object
       required: [id, policyScope, isActive, version]
       properties:
-        
-        version: { type: integer }
         id: { type: string }
         domainId: { type: ["string", "null"] }
         nodeId: { type: ["string", "null"] }

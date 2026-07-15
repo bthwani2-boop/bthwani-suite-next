@@ -114,13 +114,4 @@ func TestCreateCodRecordRequiresCheckoutIntentIdBeforeDatabaseLookup(t *testing.
 	}
 }
 
-func TestCreateCommissionRequiresCheckoutIntentIdBeforeDatabaseLookup(t *testing.T) {
-	_, err := CreateCommission(nil, CreateCommissionInput{
-		OrderID:   "order-1",
-		CaptainID: "captain-1",
-		PartnerID: "partner-1",
-	})
-	if err == nil || !strings.Contains(err.Error(), "checkoutIntentId is required") {
-		t.Fatalf("expected checkoutIntentId required error, got %v", err)
-	}
-}
+

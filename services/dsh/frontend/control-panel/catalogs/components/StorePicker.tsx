@@ -34,7 +34,7 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
   }, [query, setFilter]);
 
   return (
-    <Box position="relative" width={300}>
+    <Box style={{ position: "relative", width: 300, zIndex: 10 }}>
       <Text role="label">{label}</Text>
       <TextField
         value={value || query}
@@ -48,35 +48,21 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
         placeholder="ابحث باسم المتجر أو المعرف..."
       />
       {isOpen && (
-        <Box 
-          position="absolute" 
-          top="100%" 
-          left={0} 
-          right={0} 
-          backgroundColor="$surfaceBase" 
-          borderWidth={1} 
-          borderColor="$borderColor" 
-          zIndex={10} 
-          maxHeight={200} 
-          overflow="auto"
-          borderRadius="$md"
-        >
-          {isLoading && <Box padding="$2"><Text tone="secondary">جاري البحث...</Text></Box>}
-          {!isLoading && stores.length === 0 && query && <Box padding="$2"><Text tone="secondary">لم يتم العثور على نتائج</Text></Box>}
+        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "white", borderWidth: 1, borderColor: "#ccc", zIndex: 10, maxHeight: 200, overflow: "hidden", borderRadius: 8 }}>
+          {isLoading && <Box padding={8}><Text tone="secondary">جاري البحث...</Text></Box>}
+          {!isLoading && stores.length === 0 && query && <Box padding={8}><Text tone="secondary">لم يتم العثور على نتائج</Text></Box>}
           {stores.map(store => (
-            <Box 
-              key={store.id} 
-              padding="$2" 
-              hoverStyle={{ backgroundColor: "$surfaceInset" }}
-              onPress={() => {
+            <div
+              key={store.id}
+              style={{ padding: 8, cursor: "pointer" }}
+              onClick={() => {
                 onChange(store.id);
                 setQuery("");
                 setIsOpen(false);
               }}
-              cursor="pointer"
             >
               <Text>{store.nameAr} ({store.id})</Text>
-            </Box>
+            </div>
           ))}
         </Box>
       )}
