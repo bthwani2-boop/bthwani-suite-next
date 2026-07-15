@@ -16,12 +16,14 @@
 
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all")]
+  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog")]
   [string]$Action,
 
   [string]$Profiles = "",
 
-  [string]$Service = ""
+  [string]$Service = "",
+
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -564,7 +566,7 @@ function Wait-ForMinIO {
       Write-Host "  /minio/health/live: PASS"
       break
     } catch {
-      if ($i -eq $max) { throw "/minio/health/live: FAIL — $_" }
+      if ($i -eq $max) { throw "/minio/health/live: FAIL - $_" }
       Start-Sleep -Seconds 3
     }
   }
@@ -787,6 +789,7 @@ function Invoke-DshSmoke {
     available = $true
     stockStatus = "in_stock"
     publicationStatus = "client_visible"
+    customImageObjectKey = "local/dsh-media/product-galaxy-s24.png"
   } | ConvertTo-Json
   $assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
 
@@ -1017,6 +1020,23 @@ if ($Action -eq "up") {
 
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d
   Write-Host "Containers started."
+
+  if ($ProfileList -contains "identity") {
+    Wait-ForIdentityApi
+  }
+  if ($ProfileList -contains "workforce") {
+    Wait-ForWorkforceApi
+  }
+  if ($ProfileList -contains "wlt") {
+    Wait-ForWltApi
+  }
+  if ($ProfileList -contains "dsh") {
+    Wait-ForDshApi
+  }
+  if (($ProfileList -contains "media") -or ($ProfileList -contains "dsh")) {
+    Wait-ForMinIO
+  }
+  Write-Host "runtime:up: PASS"
 }
 
 # ── Action: down ──────────────────────────────────────────────────────────────
@@ -1027,6 +1047,9 @@ elseif ($Action -eq "down") {
 
 # ── Action: reset ─────────────────────────────────────────────────────────────
 elseif ($Action -eq "reset") {
+  if (-not $Force) {
+    throw "runtime reset is a destructive operation. You must provide the -Force flag to proceed."
+  }
   Write-Host "=== runtime:reset (profiles: $($ProfileList -join ','))"
   docker info | Out-Null
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) down -v --remove-orphans
@@ -1067,7 +1090,6 @@ elseif ($Action -eq "reset") {
   }
   if ($ProfileList -contains "dsh") {
     Wait-ForDshApi
-    Invoke-DshDevBootstrap
     Invoke-DshSmoke
   }
   if ($ProfileList -contains "wlt") {
@@ -1088,6 +1110,36 @@ elseif ($Action -eq "reset") {
     Invoke-ValkeySmoke
   }
   Write-Host "reset: PASS"
+}
+
+elseif ($Action -eq "bootstrap-dev") {
+  if ($env:NODE_ENV -eq "production") {
+    throw "bootstrap-dev is not allowed in production."
+  }
+  if (-not $Force) {
+    throw "bootstrap-dev requires -Force flag."
+  }
+  Write-Host "=== runtime:bootstrap-dev (profiles: $($ProfileList -join ','))"
+  if ($ProfileList -contains "identity") {
+    Wait-ForIdentityApi
+  }
+  if ($ProfileList -contains "dsh") {
+    Wait-ForMinIO
+    Invoke-MinioInit
+    Invoke-DshMediaSeed
+    Wait-ForDshApi
+    Invoke-DshDevBootstrap
+  } else {
+    Write-Host "DSH profile is not active. Skipping bootstrap."
+  }
+}
+
+# ── Action: verify-catalog ────────────────────────────────────────────────────
+elseif ($Action -eq "verify-catalog") {
+  Write-Host "=== runtime:verify-catalog"
+  pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/verify-catalog.ps1
+  if ($LASTEXITCODE -ne 0) { throw "verify-catalog failed (exit $LASTEXITCODE)" }
+  Write-Host "verify-catalog: PASS"
 }
 
 # ── Action: status ────────────────────────────────────────────────────────────
