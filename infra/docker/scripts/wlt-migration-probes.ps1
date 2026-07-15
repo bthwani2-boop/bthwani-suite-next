@@ -1,0 +1,85 @@
+<#
+.SYNOPSIS
+  Shared, dot-sourceable WLT migration-ledger legacy-backfill logic.
+
+.DESCRIPTION
+  Extracted out of runtime.ps1's Invoke-WltMigrate so that both the real
+  runtime (docker-exec'd psql) and tools/scripts/test-wlt-migration-ledger.ps1
+  (native psql) exercise the exact same probe map and backfill decision,
+  instead of the test re-implementing logic that could silently drift from
+  production. This file has no side effects when dot-sourced: it only defines
+  data and pure-ish functions.
+#>
+
+# Per-migration "does this migration's schema already exist" probe, used only
+# to decide which prefix of migrations may be safely ledger-backfilled for a
+# legacy pre-ledger database (see Get-WltLegacyBackfillList). Every WLT
+# migration file must have exactly one entry here; Invoke-WltMigrate refuses
+# to run if a file is missing one. Each probe is a SQL boolean expression
+# evaluated as `SELECT (<expr>)::text;` and must return 't' or 'f'.
+#
+# wlt-007 is deliberately probed as "false": it only re-asserts a column
+# DEFAULT 'YER' and backfills stray SAR rows on tables that already declared
+# DEFAULT 'YER' at CREATE TABLE time (wlt-002..wlt-006), so there is no
+# schema state that distinguishes "wlt-007 ran" from "it didn't". Rather than
+# guess, it is always left to genuinely (re-)run via the normal apply loop,
+# which is safe because its SQL is idempotent (ALTER COLUMN SET DEFAULT and
+# an UPDATE ... WHERE currency = 'SAR' that matches zero rows if already
+# clean).
+$script:WltMigrationProbes = [ordered]@{
+  "wlt-000_financial_references.sql"             = "to_regclass('public.wlt_field_commission_refs') IS NOT NULL"
+  "wlt-001_payment_sessions.sql"                  = "to_regclass('public.wlt_payment_sessions') IS NOT NULL"
+  "wlt-002_payment_capture.sql"                   = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'captured_at')"
+  "wlt-003_refunds.sql"                           = "to_regclass('public.wlt_refunds') IS NOT NULL"
+  "wlt-004_settlements.sql"                       = "to_regclass('public.wlt_settlements') IS NOT NULL"
+  "wlt-005_cod.sql"                               = "to_regclass('public.wlt_cod_records') IS NOT NULL AND to_regclass('public.wlt_commissions') IS NOT NULL"
+  "wlt-006_ledger.sql"                            = "to_regclass('public.wlt_ledger_entries') IS NOT NULL"
+  "wlt-007_default_currency_yer.sql"              = "false"
+  "wlt-008_payment_session_handoff_controls.sql"  = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'idempotency_key')"
+  "wlt-009_dsh_notify_outbox.sql"                 = "to_regclass('public.wlt_dsh_outbox_events') IS NOT NULL"
+  "wlt-010_payout_destinations.sql"               = "to_regclass('public.wlt_payout_destinations') IS NOT NULL"
+  "wlt-011_field_finance.sql"                     = "to_regclass('public.wlt_payout_requests') IS NOT NULL"
+  "wlt-012_payout_idempotency_hash.sql"           = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'payload_hash')"
+  "wlt-013_wallet_actor_unique_and_field_commission_effect.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_wallets_actor_type_actor_id_key')"
+  "wlt-014_refund_session_idempotency.sql"        = "to_regclass('public.wlt_refunds_active_session_idx') IS NOT NULL"
+  "wlt-015_provider_result_unknown_and_reconciliation.sql" = "to_regclass('public.wlt_reconciliation_cases') IS NOT NULL"
+  "wlt-017_ledger_kernel.sql"                     = "to_regclass('public.wlt_ledger_accounts') IS NOT NULL"
+  "wlt-018_payout_destination_encryption.sql"     = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_destinations' AND column_name = 'account_number_encrypted')"
+  "wlt-019_payout_operator_audit.sql"             = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'approved_by_operator_id')"
+  "wlt-020_payment_pending_states.sql"            = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_payment_sessions_status_chk' AND pg_get_constraintdef(oid) LIKE '%authorization_pending%')"
+  "wlt-021_reconciliation_resolution.sql"         = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_reconciliation_cases' AND column_name = 'assigned_to_operator_id')"
+  "wlt-022_commission_lifecycle.sql"              = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commissions' AND column_name = 'updated_at')"
+}
+
+function Test-WltMigrationProbeCoverage {
+  param([System.IO.FileInfo[]]$MigrationFiles)
+  foreach ($f in $MigrationFiles) {
+    if (-not $script:WltMigrationProbes.Contains($f.Name)) {
+      throw "No legacy-detection probe registered for $($f.Name) in `$script:WltMigrationProbes (infra/docker/scripts/wlt-migration-probes.ps1). Add one before merging a new WLT migration."
+    }
+  }
+}
+
+# Returns the ordered prefix of $MigrationFiles whose schema objects already
+# exist (per $script:WltMigrationProbes), stopping at the first migration
+# whose probe is false. Migrations apply in file order, so a gap means every
+# later migration must be genuinely (re-)applied rather than assumed present.
+# $PsqlRunner is a [scriptblock] taking a single SQL string and returning its
+# scalar text result, so this stays testable against either a docker-exec'd
+# psql (production) or a native psql connection (tests).
+function Get-WltLegacyBackfillList {
+  param(
+    [System.IO.FileInfo[]]$MigrationFiles,
+    [scriptblock]$PsqlRunner
+  )
+  $backfillList = @()
+  foreach ($f in $MigrationFiles) {
+    $probe = $script:WltMigrationProbes[$f.Name]
+    $probeResult = & $PsqlRunner "SELECT ($probe)::text;"
+    if ($probeResult -ne "t") {
+      break
+    }
+    $backfillList += $f
+  }
+  return $backfillList
+}

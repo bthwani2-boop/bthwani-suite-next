@@ -20,7 +20,7 @@ on:
           - "false"
           - "true"
   push:
-    branches: [implementing, journy, master]
+    branches: [implementing, journy, master, sam]
     paths:
       - "tools/performance/**"
       - "tools/guards/heavy-import-gate.mjs"
@@ -28,6 +28,8 @@ on:
       - "tools/guards/performance-budget-gate.mjs"
       - "services/**/backend/**/*.go"
       - "apps/control-panel/**"
+      - "infra/docker/scripts/runtime.ps1"
+      - "services/wlt/database/migrations/**"
   schedule:
     - cron: "0 4 * * 1"
 
@@ -113,15 +115,30 @@ jobs:
   k6-api-smoke:
     name: k6 API Smoke Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     if: github.event.inputs.run_k6 == 'true'
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start runtime (DSH + WLT)
-        run: echo "Runtime start would go here — requires docker compose"
-        # In real usage: docker compose -f infra/docker/docker-compose.yml up -d
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start runtime (identity, workforce, DSH, WLT, financial simulators)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Force -Profiles identity,workforce,dsh,wlt,financial-simulators
 
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
@@ -134,12 +151,28 @@ jobs:
       - name: k6 — WLT API smoke
         run: k6 run tools/performance/k6/wlt-smoke.js
         env:
-          BASE_URL: http://localhost:58090
+          BASE_URL: http://localhost:58083
 
       - name: k6 — Identity smoke
         run: k6 run tools/performance/k6/identity-smoke.js
         env:
           BASE_URL: http://localhost:58000
+
+      - name: Docker compose logs on failure
+        if: failure()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml logs --tail=200 | tee /tmp/docker-logs.txt
+
+      - name: Upload docker logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-docker-logs-${{ github.run_id }}
+          path: /tmp/docker-logs.txt
+          retention-days: 7
+
+      - name: Docker compose down
+        if: always()
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.financial-simulators.yml down -v --remove-orphans
 
   # ── Lighthouse CI (manual only — requires Next.js build) ──────────────────
   lighthouse-ci:

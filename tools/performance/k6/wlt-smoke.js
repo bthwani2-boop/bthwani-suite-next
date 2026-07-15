@@ -5,7 +5,7 @@
  *
  * Usage (requires runtime up):
  *   k6 run tools/performance/k6/wlt-smoke.js
- *   k6 run --env BASE_URL=http://localhost:58090 tools/performance/k6/wlt-smoke.js
+ *   k6 run --env BASE_URL=http://localhost:58083 tools/performance/k6/wlt-smoke.js
  *
  * Thresholds sourced from tools/performance/performance-budgets.json api.wlt
  */
@@ -14,7 +14,7 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend, Rate } from "k6/metrics";
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:58090";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:58083";
 
 const healthTrend  = new Trend("wlt_health_duration");
 const readTrend    = new Trend("wlt_read_duration");

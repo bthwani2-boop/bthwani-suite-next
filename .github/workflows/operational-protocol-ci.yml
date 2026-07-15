@@ -15,6 +15,9 @@ on:
       journey_id:
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   protocol-integrity:
     runs-on: ubuntu-latest

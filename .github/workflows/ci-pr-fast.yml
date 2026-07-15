@@ -15,6 +15,7 @@ on:
       - branch-validation
       - starting
       - front-backend
+      - sam
 
 permissions:
   contents: read

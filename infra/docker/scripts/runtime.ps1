@@ -484,10 +484,15 @@ function Invoke-WltPsql {
   return ($result -join "`n").Trim()
 }
 
+# Probe map + backfill-decision logic shared with
+# tools/scripts/test-wlt-migration-ledger.ps1 (see that file's header comment).
+. (Join-Path $ScriptDir "wlt-migration-probes.ps1")
+
 function Invoke-WltMigrate {
   $MigrationDir = "services/wlt/database/migrations"
   $MigrationFiles = Get-ChildItem -LiteralPath $MigrationDir -Filter "*.sql" | Sort-Object Name
   if ($MigrationFiles.Count -eq 0) { throw "No migration files found in $MigrationDir" }
+  Test-WltMigrationProbeCoverage -MigrationFiles $MigrationFiles
   Write-Host "`n--- Applying WLT migrations ---"
 
   # Migration ledger: each applied file is recorded with its checksum so a
@@ -500,24 +505,25 @@ CREATE TABLE IF NOT EXISTS runtime_schema_migrations (
 );
 "@ | Out-Null
 
-  # Some historical WLT migrations contain non-idempotent statements (e.g. bare
-  # ADD CONSTRAINT with no prior existence check), so on an environment where
-  # migrations already ran before this ledger existed, replaying them from
-  # scratch would fail. Detect that case via a sentinel table created by the
-  # earliest migration and backfill the ledger with the currently-known files
-  # (without executing their SQL) instead of replaying history.
+  # On an environment where migrations already ran before this ledger
+  # existed, backfill the ledger (without replaying history) only for the
+  # contiguous prefix of migrations whose schema objects are verified
+  # present via $script:WltMigrationProbes. Any migration beyond that
+  # verified prefix falls through to the normal apply loop below and is
+  # genuinely executed, exactly as it would be on a fresh database.
   $LedgerRowCount = Invoke-WltPsql "SELECT COUNT(*) FROM runtime_schema_migrations;"
   $SentinelExists = Invoke-WltPsql "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'wlt_payment_sessions';"
   if ($LedgerRowCount -eq "0" -and $SentinelExists -ne "0") {
-    Write-Host "  Detected pre-existing WLT schema with no migration ledger; backfilling ledger without replaying history."
-    foreach ($f in $MigrationFiles) {
+    Write-Host "  Detected pre-existing WLT schema with no migration ledger; probing each migration's schema objects before backfilling."
+    $backfillList = Get-WltLegacyBackfillList -MigrationFiles $MigrationFiles -PsqlRunner ${function:Invoke-WltPsql}
+    foreach ($f in $backfillList) {
       $checksum = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
       Invoke-WltPsql @"
 INSERT INTO runtime_schema_migrations (migration_name, checksum)
 VALUES ('$($f.Name)', '$checksum')
 ON CONFLICT (migration_name) DO NOTHING;
 "@ | Out-Null
-      Write-Host "  Backfilled: $($f.Name)"
+      Write-Host "  Backfilled (schema already present): $($f.Name)"
     }
   }
 
