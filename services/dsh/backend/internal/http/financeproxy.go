@@ -116,3 +116,51 @@ func (s *protectedStoreServer) handleCaptainFinanceCodRecords(w http.ResponseWri
 	query.Set("captainId", actor.ID)
 	s.proxyFinanceRead(w, r, "/wlt/cod-records", query)
 }
+
+// GET /dsh/control-panel/finance/payout-requests
+func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	s.proxyFinanceRead(w, r, "/wlt/payout-requests", financeQuery(r, "status", "limit", "cursor", "beneficiaryActorId"))
+}
+
+// POST /dsh/control-panel/finance/payout-requests/{payoutId}/approve
+func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	payoutId := r.PathValue("payoutId")
+	if payoutId == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
+		return
+	}
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutId)+"/approve", []byte(`{}`), r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(body)
+}
+
+// POST /dsh/control-panel/finance/payout-requests/{payoutId}/reject
+func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	payoutId := r.PathValue("payoutId")
+	if payoutId == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
+		return
+	}
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutId)+"/reject", []byte(`{}`), r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(body)
+}

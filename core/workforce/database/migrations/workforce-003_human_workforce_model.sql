@@ -15,14 +15,23 @@ WHERE engagement_type = 'agency_contractor';
 ALTER TABLE workforce_people DROP CONSTRAINT IF EXISTS workforce_people_engagement_type_check;
 ALTER TABLE workforce_people DROP CONSTRAINT IF EXISTS workforce_people_provider_kind_check;
 
--- Rename columns
-ALTER TABLE workforce_people RENAME COLUMN provider_kind TO workforce_kind;
-ALTER TABLE workforce_people RENAME COLUMN provider_code TO workforce_code;
+-- Rename columns idempotently
+DO $$
+BEGIN
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='workforce_people' AND column_name='provider_kind') AND NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='workforce_people' AND column_name='workforce_kind') THEN
+    ALTER TABLE workforce_people RENAME COLUMN provider_kind TO workforce_kind;
+  END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='workforce_people' AND column_name='provider_code') AND NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='workforce_people' AND column_name='workforce_code') THEN
+    ALTER TABLE workforce_people RENAME COLUMN provider_code TO workforce_code;
+  END IF;
+END $$;
 
 -- Re-add check constraints with employee expansions
+ALTER TABLE workforce_people DROP CONSTRAINT IF EXISTS workforce_people_engagement_type_check;
 ALTER TABLE workforce_people ADD CONSTRAINT workforce_people_engagement_type_check
   CHECK (engagement_type IN ('independent_contractor', 'employee'));
 
+ALTER TABLE workforce_people DROP CONSTRAINT IF EXISTS workforce_people_workforce_kind_check;
 ALTER TABLE workforce_people ADD CONSTRAINT workforce_people_workforce_kind_check
   CHECK (workforce_kind IN ('field', 'captain', 'employee'));
 

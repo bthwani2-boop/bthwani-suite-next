@@ -5153,8 +5153,10 @@ components:
 
     DshCatalogAsset:
       type: object
-      required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt]
+      required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt, version]
       properties:
+        
+        version: { type: integer }
         id: { type: string }
         objectKey: { type: string }
         publicUrl: { type: [string, "null"] }
@@ -5192,8 +5194,10 @@ components:
 
     DshMasterProduct:
       type: object
-      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt]
+      required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt, version]
       properties:
+        
+        version: { type: integer }
         id: { type: string }
         domainId: { type: string }
         categoryNodeId: { type: [string, "null"] }
@@ -5252,8 +5256,10 @@ components:
 
     DshProductProposal:
       type: object
-      required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount]
+      required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount, version]
       properties:
+        
+        version: { type: integer }
         id: { type: string }
         proposedNameAr: { type: string }
         proposedNameEn: { type: string }
@@ -5333,8 +5339,10 @@ components:
     DshCentralCatalogDomain:
 
       type: object
-      required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
+      required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest, version]
       properties:
+        
+        version: { type: integer }
         id: { type: string }
         slug: { type: string }
         nameAr: { type: string }
@@ -5350,8 +5358,10 @@ components:
 
     DshCentralCatalogNode:
       type: object
-      required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible]
+      required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, version]
       properties:
+        
+        version: { type: integer }
         id: { type: string }
         domainId: { type: string }
         parentId: { type: ["string", "null"] }
@@ -5413,8 +5423,10 @@ components:
 
     DshCatalogPolicySnapshot:
       type: object
-      required: [id, policyScope, isActive]
+      required: [id, policyScope, isActive, version]
       properties:
+        
+        version: { type: integer }
         id: { type: string }
         domainId: { type: ["string", "null"] }
         nodeId: { type: ["string", "null"] }

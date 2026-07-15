@@ -1,4 +1,4 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info:
   title: BThwani WLT Service API
   version: 0.2.0
@@ -147,6 +147,203 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+
+  /wlt/wallets/{actorType}/{actorId}:
+    get:
+      operationId: getWltWallet
+      summary: Return the full operational wallet for an actor.
+      tags:
+        - WltWallets
+      parameters:
+        - name: actorType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - client
+              - partner
+              - captain
+              - field
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Wallet returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltWalletResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/payout-requests:
+    post:
+      operationId: createWltPayoutRequest
+      summary: Create a payout request.
+      tags:
+        - WltPayouts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCreatePayoutRequest"
+      responses:
+        "201":
+          description: Payout request created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      operationId: listWltPayoutRequests
+      summary: List payout requests.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: actorId
+          in: query
+          schema: { type: string }
+        - name: actorType
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of payout requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /wlt/payout-requests/{payoutId}:
+    get:
+      operationId: getWltPayoutRequest
+      summary: Get a payout request.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Payout request found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wlt/payout-requests/{payoutId}/approve:
+    post:
+      operationId: approveWltPayoutRequest
+      summary: Approve a payout request.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Approved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
+
+  /wlt/payout-requests/{payoutId}/reject:
+    post:
+      operationId: rejectWltPayoutRequest
+      summary: Reject a payout request.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Rejected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
+
+  /wlt/payout-requests/{payoutId}/process:
+    post:
+      operationId: processWltPayoutRequest
+      summary: Start processing payout request.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Processing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
+
+  /wlt/payout-requests/{payoutId}/complete:
+    post:
+      operationId: completeWltPayoutRequest
+      summary: Complete payout request.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
+
+  /wlt/payout-requests/{payoutId}/fail:
+    post:
+      operationId: failWltPayoutRequest
+      summary: Fail payout request.
+      tags:
+        - WltPayouts
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltPayoutRequestResponse"
 
   /wlt/payment-sessions:
     post:
@@ -1515,6 +1712,96 @@ components:
         reference:
           $ref: "#/components/schemas/WltRefundStatusRef"
 
+    WltWalletResponse:
+      type: object
+      required:
+        - wallet
+      properties:
+        wallet:
+          $ref: "#/components/schemas/WltWallet"
+
+    WltWallet:
+      type: object
+      required:
+        - id
+        - actorId
+        - actorType
+        - status
+        - currency
+        - availableBalanceMinorUnits
+        - pendingBalanceMinorUnits
+        - heldBalanceMinorUnits
+        - earnedTotalMinorUnits
+        - settledTotalMinorUnits
+        - paidTotalMinorUnits
+        - updatedAt
+      properties:
+        id: { type: string }
+        actorId: { type: string }
+        actorType: { type: string }
+        status: { type: string }
+        currency: { type: string }
+        availableBalanceMinorUnits: { type: integer, format: int64 }
+        pendingBalanceMinorUnits: { type: integer, format: int64 }
+        heldBalanceMinorUnits: { type: integer, format: int64 }
+        earnedTotalMinorUnits: { type: integer, format: int64 }
+        settledTotalMinorUnits: { type: integer, format: int64 }
+        paidTotalMinorUnits: { type: integer, format: int64 }
+        lastLedgerEntryAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    WltCreatePayoutRequest:
+      type: object
+      required: [beneficiaryActorId, beneficiaryActorType, amountMinorUnits, currency, idempotencyKey]
+      properties:
+        beneficiaryActorId: { type: string }
+        beneficiaryActorType: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        idempotencyKey: { type: string }
+
+    WltPayoutRequestResponse:
+      type: object
+      required: [payoutRequest]
+      properties:
+        payoutRequest:
+          $ref: "#/components/schemas/WltPayoutRequest"
+
+    WltPayoutRequestListResponse:
+      type: object
+      required: [payoutRequests, total]
+      properties:
+        payoutRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/WltPayoutRequest"
+        total: { type: integer }
+
+    WltPayoutRequest:
+      type: object
+      required:
+        - id
+        - beneficiaryActorId
+        - beneficiaryActorType
+        - amountMinorUnits
+        - currency
+        - status
+        - requestedAt
+      properties:
+        id: { type: string }
+        beneficiaryActorId: { type: string }
+        beneficiaryActorType: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        status: { type: string }
+        requestedAt: { type: string, format: date-time }
+        approvedAt: { type: string, format: date-time }
+        rejectedAt: { type: string, format: date-time }
+        processedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        failedAt: { type: string, format: date-time }
+        failureReason: { type: string }
+
     WltWalletStatusRefResponse:
       type: object
       required:
@@ -2147,3 +2434,5 @@ components:
           type: boolean
         updatedAt:
           type: string
+
+

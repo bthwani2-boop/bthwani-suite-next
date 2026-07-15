@@ -78,18 +78,37 @@ CREATE TABLE IF NOT EXISTS wlt_payout_requests (
 CREATE UNIQUE INDEX IF NOT EXISTS wlt_payout_requests_idempotency_idx ON wlt_payout_requests(idempotency_key) WHERE idempotency_key IS NOT NULL;
 
 -- Upgrade wlt_wallet_refs to a full read model (or rename to wlt_wallets)
-ALTER TABLE wlt_wallet_refs
-  ADD COLUMN IF NOT EXISTS available_balance_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS pending_balance_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS held_balance_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS earned_total_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS settled_total_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS paid_total_minor_units bigint NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS last_ledger_entry_at timestamptz;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'wlt_wallets' AND relkind = 'r') THEN
+    ALTER TABLE wlt_wallet_refs
+      ADD COLUMN IF NOT EXISTS available_balance_minor_units bigint NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS pending_balance_minor_units bigint NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS held_balance_minor_units bigint NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS earned_total_minor_units bigint NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS settled_total_minor_units bigint NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS paid_total_minor_units bigint NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_ledger_entry_at timestamptz;
 
--- Also rename it to wlt_wallets for clarity if not already done, but to avoid breaking existing queries, we might just keep the name or add a view
-ALTER TABLE wlt_wallet_refs RENAME TO wlt_wallets;
+    -- Also rename it to wlt_wallets for clarity if not already done
+    ALTER TABLE wlt_wallet_refs RENAME TO wlt_wallets;
+  END IF;
+END $$;
 
 -- For backward compatibility with things expecting wlt_wallet_refs
 CREATE OR REPLACE VIEW wlt_wallet_refs AS SELECT * FROM wlt_wallets;
 
+
+CREATE TABLE IF NOT EXISTS wlt_commission_policies (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    commission_type text NOT NULL,
+    description text,
+    status text NOT NULL DEFAULT 'active',
+    calculation_type text NOT NULL DEFAULT 'fixed',
+    amount_minor_units bigint NOT NULL,
+    currency text NOT NULL DEFAULT 'YER',
+    created_by_actor_id text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);

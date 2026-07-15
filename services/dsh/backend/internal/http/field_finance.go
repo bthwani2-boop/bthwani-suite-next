@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -13,7 +14,7 @@ func (s *protectedStoreServer) handleFieldMeWallet(w http.ResponseWriter, r *htt
 		return
 	}
 	query := url.Values{"actorId": {actor.ID}, "actorType": {"field"}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/references/wallet-status", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/wallets", query, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -28,7 +29,7 @@ func (s *protectedStoreServer) handleFieldMeCommissions(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	query := url.Values{"actorId": {actor.ID}, "actorType": {"field"}}
+	query := url.Values{"beneficiaryActorId": {actor.ID}}
 	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
@@ -60,8 +61,8 @@ func (s *protectedStoreServer) handleFieldMePayoutRequests(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	query := url.Values{"actorId": {actor.ID}, "actorType": {"field"}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/settlements", query, r.Header.Get("X-Correlation-ID"))
+	query := url.Values{"beneficiaryActorId": {actor.ID}}
+	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -72,10 +73,46 @@ func (s *protectedStoreServer) handleFieldMePayoutRequests(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleSubmitFieldMePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "field")
+	actor, ok := s.requireActor(w, r, "field")
 	if !ok {
 		return
 	}
+	
+	type requestBody struct {
+		AmountMinorUnits int64  `json:"amountMinorUnits"`
+		Currency         string `json:"currency"`
+		IdempotencyKey   string `json:"idempotencyKey"`
+	}
+
+	var req requestBody
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+	if err := decoder.Decode(&req); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid payload")
+		return
+	}
+
+	// Payload expected by WLT
+	payload := map[string]any{
+		"beneficiaryActorId":   actor.ID,
+		"beneficiaryActorType": "field",
+		"amountMinorUnits":     req.AmountMinorUnits,
+		"currency":             req.Currency,
+		"idempotencyKey":       req.IdempotencyKey,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal request")
+		return
+	}
+
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payloadBytes, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"pending"}`))
+	w.WriteHeader(status)
+	w.Write(body)
 }

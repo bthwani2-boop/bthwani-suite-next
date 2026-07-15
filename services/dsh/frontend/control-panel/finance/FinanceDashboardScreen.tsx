@@ -16,6 +16,7 @@ import {
 } from "@bthwani/ui-kit";
 import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
 import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "@bthwani/wlt";
+import { approvePayoutRequest, rejectPayoutRequest } from "../../shared/finance-wlt-link/finance/finance-hub-runtime.api";
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 
@@ -167,6 +168,51 @@ export function FinanceDashboardScreen() {
           <Text role="body" tone="muted" style={{ marginTop: '0.5rem' }}>
             {`الوضع التشغيلي: ${financeHubView.operationalRisk} · حظر الصرف/التسوية: ${financeHubView.holdsStatus} · الإجراء المطلوب: ${financeHubView.requiredAction}`}
           </Text>
+        </Card>
+      );
+    }
+
+    if (activeGroup === 'settlements-payouts') {
+      const requests = runtimeFinance?.data?.payoutRequests || [];
+      return (
+        <Card style={{ padding: '1.5rem' }}>
+          <Text role="titleMd" style={{ marginBottom: '1rem' }}>طلبات الدفع والتسويات الميدانية (Payout Requests)</Text>
+          {requests.length === 0 ? (
+            <Text role="body" tone="muted">لا توجد طلبات دفع معلقة.</Text>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {requests.map((req: any) => (
+                <Card key={req.id} style={{ padding: '1rem', borderLeft: `4px solid ${lightThemeColors.warning}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <Text role="body" style={{ fontWeight: 'bold' }}>طلب دفع: {req.id}</Text>
+                      <Text role="caption" tone="muted">المستفيد: {req.beneficiaryActorId} ({req.beneficiaryActorType})</Text>
+                      <Text role="caption" tone="muted">المبلغ: {(req.amountMinorUnits / 100).toFixed(2)} {req.currency}</Text>
+                      <Text role="caption" tone="muted">الحالة: {req.status}</Text>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Button
+                        label="اعتماد الدفع"
+                        tone="success"
+                        onPress={async () => {
+                          const ok = await approvePayoutRequest(req.id);
+                          if (ok) reload();
+                        }}
+                      />
+                      <Button
+                        label="رفض الدفع"
+                        tone="danger"
+                        onPress={async () => {
+                          const ok = await rejectPayoutRequest(req.id);
+                          if (ok) reload();
+                        }}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </Card>
       );
     }

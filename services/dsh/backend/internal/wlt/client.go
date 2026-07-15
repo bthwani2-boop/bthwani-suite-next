@@ -157,6 +157,8 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/cod-records":              {},
 	"/wlt/commissions":              {},
 	"/wlt/references/wallet-status": {},
+	"/wlt/wallets":                  {},
+	"/wlt/payout-requests":          {},
 }
 
 func financeReadPathAllowed(path string) bool {
@@ -206,4 +208,50 @@ func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values,
 		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
 	}
 	return response.StatusCode, body, nil
+}
+
+// FinanceWrite performs a service-authenticated POST/PUT against an allowlisted WLT path.
+func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []byte, correlationID string) (int, []byte, error) {
+	if !c.Configured() {
+		return 0, nil, fmt.Errorf("WLT integration is not configured")
+	}
+	
+	allowed := false
+	if path == "/wlt/payout-requests" {
+		allowed = true
+	} else if strings.HasPrefix(path, "/wlt/payout-requests/") {
+		parts := strings.Split(path, "/")
+		// e.g. /wlt/payout-requests/{id}/approve
+		if len(parts) == 5 && (parts[4] == "approve" || parts[4] == "reject" || parts[4] == "process" || parts[4] == "complete" || parts[4] == "fail") {
+			allowed = true
+		}
+	}
+
+	if !allowed {
+		return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path)
+	}
+
+	target := c.baseURL + path
+	req, err := http.NewRequestWithContext(ctx, method, target, bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, fmt.Errorf("build WLT finance write request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if correlationID != "" {
+		req.Header.Set("X-Correlation-ID", correlationID)
+	}
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("call WLT finance write: %w", err)
+	}
+	defer response.Body.Close()
+	respBody, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
+	if err != nil {
+		return 0, nil, fmt.Errorf("read WLT finance write response: %w", err)
+	}
+	return response.StatusCode, respBody, nil
 }

@@ -48,18 +48,20 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
     };
   }
 
-  const [overview, ledger, refunds] = await Promise.all([
+  const [overview, ledger, refunds, payoutRequests] = await Promise.all([
     tryGet("/dsh/control-panel/finance/settlements", (body: any) => body),
     tryGet("/dsh/control-panel/finance/ledger/entries?limit=250", (body: any) => (body.entries ?? []) as readonly any[]),
     tryGet("/dsh/control-panel/finance/refunds", (body: any) => (body.refunds ?? []) as readonly any[]),
+    tryGet("/dsh/control-panel/finance/payout-requests?status=pending", (body: any) => (body.payoutRequests ?? []) as readonly any[]),
   ]);
 
   const failures: { key: string; message: string }[] = [];
   if (!overview.ok) failures.push({ key: "overview_err", message: overview.message });
   if (!ledger.ok) failures.push({ key: "ledger_err", message: ledger.message });
   if (!refunds.ok) failures.push({ key: "refunds_err", message: refunds.message });
+  if (!payoutRequests.ok) failures.push({ key: "payoutRequests_err", message: payoutRequests.message });
 
-  if (!overview.ok || !ledger.ok || !refunds.ok) {
+  if (!overview.ok || !ledger.ok || !refunds.ok || !payoutRequests.ok) {
     return {
       state: "blocked",
       runtimeApiUrl: baseUrl,
@@ -74,7 +76,30 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
       overview: overview.data,
       ledgerEntries: ledger.data,
       refunds: refunds.data,
+      payoutRequests: payoutRequests.data,
       fetchedAt: new Date().toISOString(),
     },
   };
+}
+
+export async function approvePayoutRequest(payoutId: string): Promise<boolean> {
+  try {
+    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
+    await financePost(`/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/approve`, { method: "POST" });
+    return true;
+  } catch (e) {
+    console.error("Failed to approve payout request", e);
+    return false;
+  }
+}
+
+export async function rejectPayoutRequest(payoutId: string): Promise<boolean> {
+  try {
+    const { request: financePost } = createDshHttpClient(resolveDshApiBaseUrl(), "finance-hub");
+    await financePost(`/dsh/control-panel/finance/payout-requests/${encodeURIComponent(payoutId)}/reject`, { method: "POST" });
+    return true;
+  } catch (e) {
+    console.error("Failed to reject payout request", e);
+    return false;
+  }
 }

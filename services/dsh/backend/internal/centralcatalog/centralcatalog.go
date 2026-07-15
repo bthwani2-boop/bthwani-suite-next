@@ -31,6 +31,35 @@ var (
 	ErrNotFound  = errors.New("central catalog entity not found")
 	ErrInvalid   = errors.New("invalid central catalog input")
 	ErrConflict  = errors.New("central catalog conflict")
+)
+
+type ConflictError struct {
+	EntityID        string
+	ExpectedVersion *int
+	CurrentVersion  int
+	Message         string
+}
+
+func (e *ConflictError) Error() string { return e.Message }
+
+type DBQuerier interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+func NewConflictError(db DBQuerier, ctx context.Context, table, id string, expected *int) error {
+	var current int
+	if err := db.QueryRowContext(ctx, "SELECT version FROM "+table+" WHERE id=$1", id).Scan(&current); err != nil {
+		return ErrNotFound
+	}
+	return &ConflictError{
+		EntityID:        id,
+		ExpectedVersion: expected,
+		CurrentVersion:  current,
+		Message:         "version mismatch",
+	}
+}
+
+var (
 	ErrForbidden = errors.New("action not permitted by platform policy")
 )
 
@@ -64,7 +93,8 @@ type DomainInput struct {
 }
 
 type DomainPatchInput struct {
-	NameAr                 *string `json:"nameAr"`
+		ExpectedVersion *int `json:"expectedVersion"`
+NameAr                 *string `json:"nameAr"`
 	NameEn                 *string `json:"nameEn"`
 	Icon                   *string `json:"icon"`
 	SortOrder              *int    `json:"sortOrder"`
@@ -148,7 +178,7 @@ func UpdateDomain(ctx context.Context, db *sql.DB, id string, input DomainPatchI
 		return Domain{}, err
 	}
 	if n, _ := result.RowsAffected(); n != 1 {
-		return Domain{}, ErrNotFound
+		return Domain{}, NewConflictError(db, ctx, "dsh_catalog_domains", id, input.ExpectedVersion)
 	}
 	return GetDomain(ctx, db, id)
 }
@@ -2121,6 +2151,7 @@ func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateIn
 }
 
 type AssetReviewInput struct {
+	ExpectedVersion *int `json:"expectedVersion"`
 	Decision   string `json:"decision"` // approved | rejected | pending_review | archived
 	ReviewNote string `json:"reviewNote"`
 }
@@ -2268,7 +2299,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 		return CatalogAsset{}, err
 	}
 	if n, _ := result.RowsAffected(); n != 1 {
-		return CatalogAsset{}, ErrConflict
+		return CatalogAsset{}, NewConflictError(tx, ctx, "dsh_catalog_assets", id, input.ExpectedVersion)
 	}
 	if input.Decision == "approved" {
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET

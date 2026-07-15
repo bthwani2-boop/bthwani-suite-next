@@ -13,6 +13,7 @@ import (
 	"wlt-api/internal/refund"
 	"wlt-api/internal/settlement"
 	"wlt-api/internal/shared"
+	"wlt-api/internal/wallet"
 )
 
 // NewRouter builds the WLT HTTP router. mutationsEnabled gates every
@@ -35,6 +36,9 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/references/settlement-status", reference.HandleGetSettlementStatus(db))
 	mux.HandleFunc("GET /wlt/references/refund-status", reference.HandleGetRefundStatus(db))
 	mux.HandleFunc("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
+	
+	// WLT Wallets: authentic financial view
+	mux.HandleFunc("GET /wlt/wallets/{actorType}/{actorId}", readGate(wallet.HandleGetWallet(db)))
 	mux.HandleFunc("POST /wlt/payment-sessions", reference.HandleCreatePaymentSession(db))
 	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSession(db))
 
@@ -82,6 +86,16 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", readGate(payout.HandleUpsertPayoutDestination(db)))
 	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
 	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", readGate(payout.HandleDeactivatePayoutDestination(db)))
+
+	// WLT Payout Requests
+	mux.HandleFunc("POST /wlt/payout-requests", gate(payout.HandleCreatePayoutRequest(db)))
+	mux.HandleFunc("GET /wlt/payout-requests", readGate(payout.HandleListPayoutRequests(db)))
+	mux.HandleFunc("GET /wlt/payout-requests/{payoutId}", readGate(payout.HandleGetPayoutRequest(db)))
+	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/approve", gate(payout.HandleApprovePayoutRequest(db)))
+	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/reject", gate(payout.HandleRejectPayoutRequest(db)))
+	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/process", gate(payout.HandleProcessPayoutRequest(db)))
+	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/complete", gate(payout.HandleCompletePayoutRequest(db)))
+	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/fail", gate(payout.HandleFailPayoutRequest(db)))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "Route not found")

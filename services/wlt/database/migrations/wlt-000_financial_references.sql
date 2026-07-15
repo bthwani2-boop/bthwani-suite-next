@@ -40,22 +40,32 @@ CREATE TABLE IF NOT EXISTS wlt_refund_status_refs (
 CREATE INDEX IF NOT EXISTS wlt_refund_status_refs_order_id_idx
   ON wlt_refund_status_refs (order_id, updated_at DESC);
 
-CREATE TABLE IF NOT EXISTS wlt_wallet_refs (
-  id         text PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  actor_id   text NOT NULL,
-  actor_type text NOT NULL,
-  status     text NOT NULL,
-  currency   text NOT NULL DEFAULT 'YER',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT wlt_wallet_refs_status_chk
-    CHECK (status IN ('active', 'suspended', 'frozen', 'closed')),
-  CONSTRAINT wlt_wallet_refs_actor_type_chk
-    CHECK (actor_type IN ('client', 'partner', 'captain', 'field'))
-);
-
-CREATE INDEX IF NOT EXISTS wlt_wallet_refs_actor_idx
-  ON wlt_wallet_refs (actor_id, actor_type, updated_at DESC);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'wlt_wallet_refs' AND relkind = 'v') THEN
+    CREATE TABLE IF NOT EXISTS wlt_wallet_refs (
+      id         text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      actor_id   text NOT NULL,
+      actor_type text NOT NULL,
+      status     text NOT NULL,
+      currency   text NOT NULL DEFAULT 'YER',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT wlt_wallet_refs_status_chk
+        CHECK (status IN ('active', 'suspended', 'frozen', 'closed')),
+      CONSTRAINT wlt_wallet_refs_actor_type_chk
+        CHECK (actor_type IN ('client', 'partner', 'captain', 'field'))
+    );
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE tablename = 'wlt_wallet_refs'
+        AND indexname = 'wlt_wallet_refs_actor_idx'
+    ) THEN
+        EXECUTE 'CREATE INDEX wlt_wallet_refs_actor_idx ON wlt_wallet_refs (actor_id, actor_type, updated_at DESC)';
+    END IF;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS wlt_field_commission_refs (
   id                  text PRIMARY KEY DEFAULT gen_random_uuid()::text,

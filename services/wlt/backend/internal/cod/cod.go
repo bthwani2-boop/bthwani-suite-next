@@ -26,16 +26,35 @@ type CodRecord struct {
 }
 
 type Commission struct {
-	ID               string  `json:"id"`
-	OrderID          string  `json:"orderId"`
-	CaptainID        string  `json:"captainId"`
-	PartnerID        string  `json:"partnerId"`
-	CommissionType   string  `json:"commissionType"`
-	AmountMinorUnits int64   `json:"amountMinorUnits"`
-	Currency         string  `json:"currency"`
-	Status           string  `json:"status"`
-	SettledAt        *string `json:"settledAt"`
-	CreatedAt        string  `json:"createdAt"`
+	ID                   string  `json:"id"`
+	BeneficiaryActorID   string  `json:"beneficiaryActorId"`
+	BeneficiaryActorType string  `json:"beneficiaryActorType"`
+	SourceType           string  `json:"sourceType"`
+	SourceID             string  `json:"sourceId"`
+	VisitID              *string `json:"visitId"`
+	StoreID              *string `json:"storeId"`
+	CommissionPolicyID   *string `json:"commissionPolicyId"`
+	CommissionType       string  `json:"commissionType"`
+	AmountMinorUnits     int64   `json:"amountMinorUnits"`
+	Currency             string  `json:"currency"`
+	Status               string  `json:"status"`
+	SettledAt            *string `json:"settledAt"`
+	CreatedAt            string  `json:"createdAt"`
+}
+
+type CreateCommissionInput struct {
+	BeneficiaryActorID   string  `json:"beneficiaryActorId"`
+	BeneficiaryActorType string  `json:"beneficiaryActorType"`
+	SourceType           string  `json:"sourceType"`
+	SourceID             string  `json:"sourceId"`
+	VisitID              *string `json:"visitId"`
+	StoreID              *string `json:"storeId"`
+	CommissionType       string  `json:"commissionType"`
+	AmountMinorUnits     int64   `json:"amountMinorUnits"`
+	Currency             string  `json:"currency"`
+	IdempotencyKey       string  `json:"idempotencyKey"`
+	// CheckoutIntentID can still be passed for order commissions
+	CheckoutIntentID     string  `json:"checkoutIntentId"`
 }
 
 type CreateCodRecordInput struct {
@@ -48,18 +67,11 @@ type CreateCodRecordInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId"`
 }
 
-type CreateCommissionInput struct {
-	OrderID          string `json:"orderId"`
-	CaptainID        string `json:"captainId"`
-	PartnerID        string `json:"partnerId"`
-	CommissionType   string `json:"commissionType"`
-	CheckoutIntentID string `json:"checkoutIntentId"`
-}
 
 const codCols = `id, order_id, captain_id, partner_id, amount_minor_units, currency,
 	status, collected_at, remitted_at, created_at, updated_at`
 
-const commissionCols = `id, order_id, captain_id, partner_id, commission_type,
+const commissionCols = `id, beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, visit_id, store_id, commission_policy_id, commission_type,
 	amount_minor_units, currency, status, settled_at, created_at`
 
 func scanCodRecord(row *sql.Row) (*CodRecord, error) {
@@ -91,7 +103,8 @@ func scanCodRecordRow(rows *sql.Rows) (*CodRecord, error) {
 func scanCommission(row *sql.Row) (*Commission, error) {
 	var c Commission
 	err := row.Scan(
-		&c.ID, &c.OrderID, &c.CaptainID, &c.PartnerID,
+		&c.ID, &c.BeneficiaryActorID, &c.BeneficiaryActorType,
+		&c.SourceType, &c.SourceID, &c.VisitID, &c.StoreID, &c.CommissionPolicyID,
 		&c.CommissionType, &c.AmountMinorUnits, &c.Currency,
 		&c.Status, &c.SettledAt, &c.CreatedAt,
 	)
@@ -104,7 +117,8 @@ func scanCommission(row *sql.Row) (*Commission, error) {
 func scanCommissionRow(rows *sql.Rows) (*Commission, error) {
 	var c Commission
 	err := rows.Scan(
-		&c.ID, &c.OrderID, &c.CaptainID, &c.PartnerID,
+		&c.ID, &c.BeneficiaryActorID, &c.BeneficiaryActorType,
+		&c.SourceType, &c.SourceID, &c.VisitID, &c.StoreID, &c.CommissionPolicyID,
 		&c.CommissionType, &c.AmountMinorUnits, &c.Currency,
 		&c.Status, &c.SettledAt, &c.CreatedAt,
 	)
@@ -238,48 +252,56 @@ func MarkCodRemitted(db *sql.DB, codRecordID string) (*CodRecord, error) {
 }
 
 func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, error) {
-	if input.OrderID == "" || input.CaptainID == "" || input.PartnerID == "" {
-		return nil, fmt.Errorf("orderId, captainId, and partnerId are required")
+	if input.BeneficiaryActorID == "" || input.BeneficiaryActorType == "" || input.SourceType == "" || input.SourceID == "" {
+		return nil, fmt.Errorf("beneficiaryActorId, beneficiaryActorType, sourceType, sourceId are required")
 	}
 	commType := input.CommissionType
 	if commType == "" {
 		commType = "delivery_fee"
 	}
-	if input.CheckoutIntentID == "" {
-		return nil, fmt.Errorf("checkoutIntentId is required")
+	
+	amountMinorUnits := input.AmountMinorUnits
+	currency := input.Currency
+
+	if input.CheckoutIntentID != "" {
+		session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+		if err != nil {
+			return nil, err
+		}
+		if session == nil {
+			return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
+		}
+		currency = session.Currency
+		if currency == "" {
+			currency = "YER"
+		}
+		amountMinorUnits = session.AmountMinorUnits
 	}
-	session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
-	if err != nil {
-		return nil, err
-	}
-	if session == nil {
-		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
-	}
-	currency := session.Currency
+
 	if currency == "" {
 		currency = "YER"
 	}
-	amountMinorUnits := session.AmountMinorUnits
+
 	const q = `
 		INSERT INTO wlt_commissions
-			(order_id, captain_id, partner_id, commission_type, amount_minor_units, currency)
-		VALUES ($1, $2, $3, $4, $5, $6)
+			(beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, visit_id, store_id, commission_type, amount_minor_units, currency, idempotency_key)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING ` + commissionCols
-	row := db.QueryRow(q, input.OrderID, input.CaptainID, input.PartnerID, commType, amountMinorUnits, currency)
+	row := db.QueryRow(q, input.BeneficiaryActorID, input.BeneficiaryActorType, input.SourceType, input.SourceID, input.VisitID, input.StoreID, commType, amountMinorUnits, currency, input.IdempotencyKey)
 	return scanCommission(row)
 }
 
-func ListCommissions(db *sql.DB, orderID, captainID string) ([]*Commission, error) {
+func ListCommissions(db *sql.DB, sourceID, beneficiaryActorID string) ([]*Commission, error) {
 	var q string
 	var arg string
-	if orderID != "" {
-		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE order_id = $1 ORDER BY created_at DESC`
-		arg = orderID
-	} else if captainID != "" {
-		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE captain_id = $1 ORDER BY created_at DESC`
-		arg = captainID
+	if sourceID != "" {
+		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE source_id = $1 ORDER BY created_at DESC`
+		arg = sourceID
+	} else if beneficiaryActorID != "" {
+		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE beneficiary_actor_id = $1 ORDER BY created_at DESC`
+		arg = beneficiaryActorID
 	} else {
-		return nil, fmt.Errorf("orderId or captainId query parameter is required")
+		return nil, fmt.Errorf("sourceId or beneficiaryActorId query parameter is required")
 	}
 	rows, err := db.Query(q, arg)
 	if err != nil {
@@ -408,7 +430,7 @@ func HandleCreateCommission(db *sql.DB) http.HandlerFunc {
 func HandleListCommissions(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		commissions, err := ListCommissions(db, q.Get("orderId"), q.Get("captainId"))
+		commissions, err := ListCommissions(db, q.Get("sourceId"), q.Get("beneficiaryActorId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

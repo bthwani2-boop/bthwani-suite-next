@@ -106,6 +106,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/wallets/{actorType}/{actorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the full operational wallet for an actor. */
+        get: operations["getWltWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List payout requests. */
+        get: operations["listWltPayoutRequests"];
+        put?: never;
+        /** Create a payout request. */
+        post: operations["createWltPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests/{payoutId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a payout request. */
+        get: operations["getWltPayoutRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests/{payoutId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a payout request. */
+        post: operations["approveWltPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests/{payoutId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a payout request. */
+        post: operations["rejectWltPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests/{payoutId}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start processing payout request. */
+        post: operations["processWltPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests/{payoutId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete payout request. */
+        post: operations["completeWltPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/payout-requests/{payoutId}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fail payout request. */
+        post: operations["failWltPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payment-sessions": {
         parameters: {
             query?: never;
@@ -698,6 +835,69 @@ export interface components {
         WltRefundStatusRefResponse: {
             reference: components["schemas"]["WltRefundStatusRef"];
         };
+        WltWalletResponse: {
+            wallet: components["schemas"]["WltWallet"];
+        };
+        WltWallet: {
+            id: string;
+            actorId: string;
+            actorType: string;
+            status: string;
+            currency: string;
+            /** Format: int64 */
+            availableBalanceMinorUnits: number;
+            /** Format: int64 */
+            pendingBalanceMinorUnits: number;
+            /** Format: int64 */
+            heldBalanceMinorUnits: number;
+            /** Format: int64 */
+            earnedTotalMinorUnits: number;
+            /** Format: int64 */
+            settledTotalMinorUnits: number;
+            /** Format: int64 */
+            paidTotalMinorUnits: number;
+            /** Format: date-time */
+            lastLedgerEntryAt?: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WltCreatePayoutRequest: {
+            beneficiaryActorId: string;
+            beneficiaryActorType: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            idempotencyKey: string;
+        };
+        WltPayoutRequestResponse: {
+            payoutRequest: components["schemas"]["WltPayoutRequest"];
+        };
+        WltPayoutRequestListResponse: {
+            payoutRequests: components["schemas"]["WltPayoutRequest"][];
+            total: number;
+        };
+        WltPayoutRequest: {
+            id: string;
+            beneficiaryActorId: string;
+            beneficiaryActorType: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            status: string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: date-time */
+            rejectedAt?: string;
+            /** Format: date-time */
+            processedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+            /** Format: date-time */
+            failedAt?: string;
+            failureReason?: string;
+        };
         WltWalletStatusRefResponse: {
             reference: components["schemas"]["WltWalletStatusRef"];
         };
@@ -1158,6 +1358,215 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getWltWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorType: "client" | "partner" | "captain" | "field";
+                actorId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Wallet returned successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltWalletResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWltPayoutRequests: {
+        parameters: {
+            query?: {
+                actorId?: string;
+                actorType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of payout requests. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    createWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCreatePayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Payout request created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payout request found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    approveWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
+        };
+    };
+    rejectWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
+        };
+    };
+    processWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Processing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
+        };
+    };
+    completeWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Completed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
+        };
+    };
+    failWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Failed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltPayoutRequestResponse"];
+                };
+            };
         };
     };
     createWltPaymentSessionReference: {
