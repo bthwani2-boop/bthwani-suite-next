@@ -22,10 +22,7 @@ type BThwaniAppearanceMode = 'lightPremium' | 'darkPremium';
 import { BottomNavBar } from './components/BottomNavBar';
 import { MobileWorkspaceHeader } from './components/MobileWorkspaceHeader';
 import { ModernPremiumHeader } from './components/ModernPremiumHeader';
-import { configureIdentitySession, useIdentitySession } from '@bthwani/core-identity';
-import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
-
-configureIdentitySession(resolveIdentityApiBaseUrl());
+import { useIdentitySession } from '@bthwani/core-identity';
 
 const SurfaceAny = Surface as any;
 

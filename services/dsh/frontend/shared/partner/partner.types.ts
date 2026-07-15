@@ -383,18 +383,14 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_TO_SUPPORT_ROUTE: Record<DshPartnerOpe
   'partner-commission-summary': null,
 };
 
-export type PartnerStoreScopeOption = {
-  id: string;
-  label: string;
-  description: string;
+export type DshPartnerOperationalScope = {
+  readonly scopeId: string;
+  readonly storeId: string;
+  readonly partnerId: string;
+  readonly displayName: string;
+  readonly role: 'owner' | 'manager' | 'staff';
+  readonly permissions: string[];
 };
-
-export const storeScopeOptions: readonly PartnerStoreScopeOption[] = [
-  { id: 'all', label: 'كل الفروع', description: 'إظهار لوحة موحدة لكل فروع الشريك.' },
-  { id: 'fakhama-1', label: 'فرع الفخامة 1', description: 'الفرع التشغيلي الأساسي الحالي.' },
-  { id: 'fakhama-2', label: 'فرع الفخامة 2', description: 'فرع مدينة الرياض الحيوي للشريك.' },
-  { id: 'fakhama-3', label: 'فرع الفخامة 3', description: 'فرع طريق الملك عبد العزيز المطور.' },
-] as const;
 
 export type PartnerRuntimeProfile = {
   storeName: string;
@@ -507,4 +503,13 @@ type UiAuditRow = {
   id: string; who: string; why: string; when: string; permissionResult: string;
   slaBreachReason: string; supportTicketLink: string; proofRequired: string;
   evidenceState: string; resolutionPath: string; note: string; statusTone: string;
+};
+
+export type DshPartnerPerformanceResponse = {
+  readonly storeId: string;
+  readonly totalOrders: number;
+  readonly acceptedOrders: number;
+  readonly rejectedOrders: number;
+  readonly period: string;
+  readonly generatedAt: string;
 };

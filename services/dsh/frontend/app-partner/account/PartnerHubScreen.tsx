@@ -130,24 +130,6 @@ type NotificationPreferenceId =
 
 type NotificationPreferenceState = Record<NotificationPreferenceId, boolean>;
 
-type PartnerTeamRole = 'owner' | 'supervisor' | 'staff' | 'courier';
-type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
-
-type PartnerTeamMember = {
-  id: string;
-  name: string;
-  role: PartnerTeamRole;
-  roleLabel: string;
-  status: PartnerTeamStatus;
-  statusLabel: string;
-  branchAssignment: string;
-  permissionsSummary: string;
-  deliveryAssignment: string;
-  inviteLifecycle: string;
-  operationalImpact: string;
-  auditNote: string;
-  inlineActionLabel: string;
-};
 
 type PartnerCoverageZoneStatus = 'active' | 'pending' | 'blocked';
 
@@ -168,7 +150,6 @@ type PartnerCoverageZone = {
   auditNote: string;
 };
 
-const runtimePartnerTeamMembers: readonly PartnerTeamMember[] = [];
 const runtimePartnerCoverageZones: readonly PartnerCoverageZone[] = [];
 
 const runtimePartnerAnalytics = {
@@ -189,42 +170,12 @@ const runtimePartnerAnalytics = {
   smartRecommendation: 'لا توجد توصية تشغيلية قبل ربط analytics runtime.',
 } as const;
 
-
-
-function resolveTeamStatusTone(status: PartnerTeamStatus): 'success' | 'warning' | 'info' | 'danger' {
-  if (status === 'active') return 'success';
-  if (status === 'paused') return 'warning';
-  if (status === 'invited') return 'info';
-  if (status === 'review-needed') return 'warning';
-  return 'danger';
-}
-
-function resolveTeamRoleTone(role: PartnerTeamRole): 'action' | 'info' | 'success' | 'neutral' {
-  if (role === 'owner') return 'action';
-  if (role === 'supervisor') return 'info';
-  if (role === 'courier') return 'success';
-  return 'neutral';
-}
-
 function resolveZoneStatusTone(status: PartnerCoverageZoneStatus): 'success' | 'warning' | 'danger' {
   if (status === 'active') return 'success';
   if (status === 'pending') return 'warning';
   return 'danger';
 }
 
-function resolveMemberActionLabel(member: PartnerTeamMember): string {
-  if (member.status === 'active') return member.role === 'supervisor' ? 'تعطيل' : 'عرض الدور';
-  if (member.status === 'paused') return 'إعادة تفعيل';
-  if (member.status === 'invited') return 'إعادة إرسال الدعوة';
-  if (member.status === 'blocked') return 'طلب مراجعة';
-  return 'إرسال للمراجعة';
-}
-
-const defaultOperationalModes: readonly PartnerOperationalMode[] = [
-  { id: 'pickup', title: 'استلم بنفسك', subtitle: 'استلام من الفرع مباشرة.', commission: getWltDshPartnerOperationalModeCommission('pickup'), enabled: true },
-  { id: 'partner_delivery', title: 'توصيل المتجر', subtitle: 'قناة توصيل داخلية بموصل الشريك.', commission: getWltDshPartnerOperationalModeCommission('partner_delivery'), enabled: true },
-  { id: 'bthwani_delivery', title: 'توصيل بثواني', subtitle: 'توصيل عبر كابتن بثواني.', commission: getWltDshPartnerOperationalModeCommission('bthwani_delivery'), enabled: false },
-] as const;
 
 const partnerHubBottomInset = 144;
 
@@ -738,6 +689,8 @@ function OperationsPanel({
   storeOpen,
   activeZoneLabel,
   serviceModes,
+  coverageZonesToUse,
+  teamMembers,
   onBack,
   onOpenStoreCourierSetup,
   listingEnabled,
@@ -750,7 +703,9 @@ function OperationsPanel({
   todayHoursLabel: string;
   storeOpen: boolean;
   activeZoneLabel: string;
-  serviceModes: readonly { id: string; label: string; description: string; enabled: boolean }[];
+  serviceModes: readonly PartnerOperationalMode[];
+  coverageZonesToUse: readonly PartnerCoverageZone[];
+  teamMembers: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
   onBack: () => void;
   onOpenStoreCourierSetup?: () => void;
   listingEnabled: boolean;
@@ -759,24 +714,13 @@ function OperationsPanel({
 }) {
   const { direction } = useDirection();
 
-  const teamMembers = runtimePartnerTeamMembers;
-  const coverageZones = runtimePartnerCoverageZones;
+
   const [selectedModeId, setSelectedModeId] = React.useState<PartnerOperationalMode['id'] | ''>('pickup');
-  const [teamPanelOpen, setTeamPanelOpen] = React.useState(false);
   const [coveragePanelOpen, setCoveragePanelOpen] = React.useState(false);
-  const [selectedMemberId, setSelectedMemberId] = React.useState<string>(teamMembers.find((member) => member.role === 'supervisor')?.id ?? teamMembers[0]?.id ?? '');
-  const [selectedZoneId, setSelectedZoneId] = React.useState<string>(coverageZones.find((zone) => zone.status === 'active')?.id ?? coverageZones[0]?.id ?? '');
-  const [inviteDraft, setInviteDraft] = React.useState('');
+  const [selectedZoneId, setSelectedZoneId] = React.useState<string>(coverageZonesToUse.find((zone) => zone.status === 'active')?.id ?? coverageZonesToUse[0]?.id ?? '');
   const [lastSaveLabel, setLastSaveLabel] = React.useState<string | null>(null);
 
-  const resolvedModes = React.useMemo(
-    () =>
-      defaultOperationalModes.map((mode) => ({
-        ...mode,
-        enabled: resolveServiceModeEnabled(serviceModes, mode.id, mode.enabled),
-      })),
-    [serviceModes],
-  );
+  const resolvedModes = serviceModes;
 
   const activeModesCount = resolvedModes.filter((mode) => mode.enabled).length;
       const activeSupervisorCount = teamMembers.filter((member) => member.role === 'supervisor' && member.status === 'active').length;
@@ -785,9 +729,9 @@ function OperationsPanel({
       const invitedTeamCount = teamMembers.filter((member) => member.status === 'invited').length;
       const blockedTeamCount = teamMembers.filter((member) => member.status === 'blocked').length;
       const reviewTeamCount = teamMembers.filter((member) => member.status === 'review-needed').length;
-      const activeZoneCount = coverageZones.filter((zone) => zone.status === 'active').length;
-      const pendingZoneCount = coverageZones.filter((zone) => zone.status === 'pending').length;
-      const blockedZoneCount = coverageZones.filter((zone) => zone.status === 'blocked').length;
+      const activeZoneCount = coverageZonesToUse.filter((zone) => zone.status === 'active').length;
+      const pendingZoneCount = coverageZonesToUse.filter((zone) => zone.status === 'pending').length;
+      const blockedZoneCount = coverageZonesToUse.filter((zone) => zone.status === 'blocked').length;
       const teamRoleSummary = `مالك ${teamMembers.filter((member) => member.role === 'owner').length} · مشرف ${teamMembers.filter((member) => member.role === 'supervisor').length} · موظف ${teamMembers.filter((member) => member.role === 'staff').length} · موصل ${teamMembers.filter((member) => member.role === 'courier').length}`;
       const teamStatusSummary = `نشط ${activeTeamCount} · موقوف ${pausedTeamCount} · مدعو ${invitedTeamCount} · محظور ${blockedTeamCount} · قيد المراجعة ${reviewTeamCount}`;
       const zoneStatusSummary = `نشطة ${activeZoneCount} · قيد المراجعة ${pendingZoneCount} · محجوبة ${blockedZoneCount}`;
@@ -947,11 +891,11 @@ function OperationsPanel({
             <Text role="caption" tone="muted" align="start">{teamRoleSummary} · {teamStatusSummary}</Text>
           </Box>
           <Button
-            label={teamPanelOpen ? 'إخفاء الأعضاء' : 'إدارة الفريق'}
+            label="إدارة الفريق"
             tone="secondary"
             size="sm"
             fullWidth={false}
-            onPress={() => setTeamPanelOpen((current) => !current)}
+            onPress={props.onOpenTeamManagement}
           />
         </Box>
 
@@ -960,138 +904,6 @@ function OperationsPanel({
           <SummaryCell label="موقوف" value={String(pausedTeamCount)} tone="warning" />
           <SummaryCell label="قيد المراجعة" value={String(reviewTeamCount)} tone="info" />
         </Box>
-
-        {teamPanelOpen && (
-          <Box gap={3} style={{ paddingHorizontal: spacing[1], marginTop: spacing[1] }}>
-            <Box layoutDirection="row" style={{ alignItems: 'center', gap: 6 }}>
-              <Icon name="information-circle-outline" size={14} tone="muted" />
-              <Text role="caption" tone="muted" align="start" style={{ flex: 1 }}>
-                الأدوار والدعوات هنا محلية حتى يتصل مسار إدارة الأعضاء في Control Panel.
-              </Text>
-            </Box>
-
-            <Box gap={0}>
-              {teamMembers.map((member) => {
-                const isMemberSelected = selectedMemberId === member.id;
-                const roleTone = resolveTeamRoleTone(member.role);
-                const statusTone = resolveTeamStatusTone(member.status);
-                const memberActionLabel = resolveMemberActionLabel(member);
-                const isLastSupervisor = member.role === 'supervisor' && member.status === 'active' && activeSupervisorCount <= 1;
-
-                return (
-                  <Box key={member.id} style={{ borderBottomWidth: 1, borderBottomColor: theme.line + '22', paddingVertical: spacing[2] }}>
-                    <Pressable
-                      onPress={() => setSelectedMemberId(isMemberSelected ? '' : member.id)}
-                      style={({ pressed }) => ({
-                        flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-                        alignItems: 'center',
-                        backgroundColor: pressed ? theme.surfaceInset : undefined,
-                        padding: spacing[1],
-                      })}
-                    >
-                      <Box layoutDirection="row" style={{ alignItems: 'center', gap: spacing[2], flexShrink: 1, minWidth: 0 }}>
-                        <Icon
-                          name={member.role === 'courier' ? 'bicycle-outline' : member.role === 'owner' ? 'shield-checkmark-outline' : member.role === 'supervisor' ? 'person-circle-outline' : 'person-outline'}
-                          size={16}
-                          tone={roleTone === 'neutral' ? 'muted' : roleTone === 'info' ? 'action' : roleTone}
-                        />
-                        <Box style={{ gap: 2, flexShrink: 1, minWidth: 0 }}>
-                          <Text role="bodyStrong" align="start">{member.name}</Text>
-                          <Text role="caption" tone="muted" align="start">{member.branchAssignment}</Text>
-                        </Box>
-                      </Box>
-                      <Box style={{ alignItems: direction === 'rtl' ? 'flex-start' : 'flex-end', gap: 2, marginStart: spacing[2] }}>
-                        <Badge label={member.roleLabel} tone={roleTone} />
-                        <Badge label={member.statusLabel} tone={statusTone} />
-                        <Text role="caption" tone="muted">{memberActionLabel}</Text>
-                      </Box>
-                      <Icon name={isMemberSelected ? 'chevron-down' : 'chevron-forward-outline'} mirrored tone="muted" size={14} style={{ marginStart: spacing[2] }} />
-                    </Pressable>
-
-                    {isMemberSelected && (
-                      <Box paddingX={4} gap={2} style={{ paddingTop: spacing[3] }}>
-                        <KeyValueList
-                          dense
-                          items={[
-                            { label: 'الحالة', value: member.statusLabel, tone: statusTone },
-                            { label: 'تعيين الفرع', value: member.branchAssignment },
-                            { label: 'ملخص الصلاحيات', value: member.permissionsSummary },
-                            { label: 'إسناد التوصيل', value: member.deliveryAssignment },
-                            { label: 'دورة الدعوة', value: member.inviteLifecycle },
-                            { label: 'المراجعة/الأثر', value: member.operationalImpact },
-                          ]}
-                        />
-                        <Text role="bodySm" tone="muted" align="start">
-                          {member.auditNote}
-                        </Text>
-                        {isLastSupervisor ? (
-                          <Text role="caption" tone="warning" align="start">
-                            لا يمكن تعطيل آخر مشرف.
-                          </Text>
-                        ) : null}
-                        <Box layoutDirection="row" gap={2} style={{ flexWrap: 'wrap' }}>
-                          <Button
-                            label={memberActionLabel}
-                            tone={member.status === 'blocked' ? 'secondary' : 'brand'}
-                            size="sm"
-                            fullWidth={false}
-                            disabled={isLastSupervisor}
-                            onPress={() => {
-                              if (isLastSupervisor) {
-                                setLastSaveLabel('لا يمكن تعطيل آخر مشرف.');
-                                return;
-                              }
-
-                              setLastSaveLabel(`${memberActionLabel}: ${member.name}`);
-                            }}
-                          />
-                          <Button
-                            label={member.status === 'invited' ? 'إعادة إرسال الدعوة' : member.status === 'blocked' ? 'طلب مراجعة' : 'مراجعة الصلاحيات'}
-                            tone="secondary"
-                            size="sm"
-                            fullWidth={false}
-                            onPress={() => {
-                              setLastSaveLabel(`${member.statusLabel}: ${member.name}`);
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                );
-              })}
-            </Box>
-
-            <Box gap={3} style={{ marginTop: spacing[2] }}>
-              <TextField
-                label="اسم العضو أو البريد"
-                placeholder="مثال: staff@bthwani.sa"
-                value={inviteDraft}
-                onChangeText={setInviteDraft}
-                hint="إنشاء دعوة محلية — مسار العضوية المركزي قيد الربط (J-006)."
-              />
-              <Button
-                label="إضافة عضو"
-                tone="secondary"
-                size="sm"
-                fullWidth={false}
-                onPress={() => {
-                  if (!inviteDraft.trim()) {
-                    return;
-                  }
-
-                  setLastSaveLabel(`دعوة محلية: ${inviteDraft.trim()}`);
-                  setInviteDraft('');
-                }}
-              />
-              {lastSaveLabel && (
-                <Text role="caption" tone="success" align="start">
-                  {lastSaveLabel}
-                </Text>
-              )}
-            </Box>
-          </Box>
-        )}
       </Box>
 
       <Divider />
@@ -1132,7 +944,7 @@ function OperationsPanel({
             </Text>
 
             <Box gap={0}>
-              {coverageZones.map((zone) => {
+              {coverageZonesToUse.map((zone) => {
                 const isZoneSelected = selectedZoneId === zone.id;
                 const statusTone = resolveZoneStatusTone(zone.status);
 
@@ -1256,10 +1068,34 @@ function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { labe
   );
 }
 
-function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
+function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: string; canonicalStoreId?: string }) {
   const { direction } = useDirection();
+  const theme = useTheme() as any;
 
-  const d = runtimePartnerAnalytics;
+  const [performance, setPerformance] = React.useState<import('../../../shared/partner/partner.types').DshPartnerPerformanceResponse | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!canonicalStoreId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    import('../../../shared/partner/partner.api').then(({ fetchPartnerPerformance }) => {
+      fetchPartnerPerformance('today').then(res => {
+        setPerformance(res);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+    }).catch(() => setLoading(false));
+  }, [canonicalStoreId]);
+
+  if (loading) {
+    return (
+      <Box padding={4} align="center">
+        <ActivityIndicator color={theme.brand} />
+      </Box>
+    );
+  }
 
   return (
     <Box gap={4}>
@@ -1269,7 +1105,7 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
           ملخص الأداء — {storeName}
         </Text>
         <Text role="bodySm" tone="muted" align="start">
-          مؤشرات موجزة للتفاعل والنمو. لا تتضمن بيانات عملاء تفصيلية.
+          مؤشرات موجزة للطلبات. لا تتضمن بيانات عملاء تفصيلية.
         </Text>
       </Box>
 
@@ -1277,97 +1113,14 @@ function AnalyticsInsightsPanel({ storeName }: { storeName: string }) {
 
       {/* Engagement metrics grid */}
       <Box gap={3} paddingY={2}>
-        <Text role="bodyStrong" align="start">مؤشرات التفاعل</Text>
+        <Text role="bodyStrong" align="start">الطلبات اليوم ({performance?.period || 'اليوم'})</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-          <AnalyticsInsightMetric label="حفظ المتجر في المفضلة" value={d.storeFavoritesCount.toLocaleString('ar')} tone="action" icon="heart-outline" />
-          <AnalyticsInsightMetric label="متابعو المتجر" value={d.followersCount.toLocaleString('ar')} tone="info" icon="people-outline" />
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-          <AnalyticsInsightMetric label="حفظ المنتجات في المفضلة" value={d.productFavoritesCount.toLocaleString('ar')} tone="success" icon="bookmark-outline" />
-          <AnalyticsInsightMetric label="عدد التقييمات" value={d.totalRatings.toLocaleString('ar')} tone="muted" icon="star-half-outline" />
+          <AnalyticsInsightMetric label="إجمالي الطلبات" value={(performance?.totalOrders || 0).toLocaleString('ar')} tone="action" icon="receipt-outline" />
+          <AnalyticsInsightMetric label="الطلبات المقبولة" value={(performance?.acceptedOrders || 0).toLocaleString('ar')} tone="success" icon="checkmark-circle-outline" />
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-          <AnalyticsInsightMetric label="متوسط التقييم" value={`${d.averageRating} ⭐`} tone="action" icon="star" />
+          <AnalyticsInsightMetric label="الطلبات المرفوضة" value={(performance?.rejectedOrders || 0).toLocaleString('ar')} tone="danger" icon="close-circle-outline" />
         </View>
-      </Box>
-
-      <Divider />
-
-      {/* Top products */}
-      <Box gap={3} paddingY={2}>
-        <Text role="bodyStrong" align="start">أبرز المنتجات</Text>
-        <KeyValueList
-          dense
-          items={[
-            { label: 'الأكثر طلبًا', value: `${d.topOrderedProduct.name} (${d.topOrderedProduct.ordersCount} طلب)`, tone: 'brand' },
-            { label: 'الأكثر تفضيلًا', value: `${d.topFavoritedProduct.name} (${d.topFavoritedProduct.favoritesCount} حفظ)`, tone: 'success' },
-            { label: 'الأعلى مشاهدة', value: `${d.topViewedProduct.name} (${d.topViewedProduct.viewsCount} مشاهدة)`, tone: 'info' },
-          ]}
-        />
-      </Box>
-
-      <Divider />
-
-      {/* Opportunity spotlight */}
-      <Box
-        padding={3}
-        gap={3}
-        background="surfaceRaised"
-        radiusToken="md"
-        border={false}
-        style={{
-          borderStartWidth: 4,
-          borderStartColor: theme.warning,
-        }}
-      >
-        <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
-          <Icon name="bulb-outline" size={18} tone="warning" />
-          <Text role="bodyStrong" tone="warning">فرصة تسويقية</Text>
-        </View>
-        <Text role="bodySm" align="start">
-          <Text role="bodySm" tone="muted">{d.opportunityProduct.name}: </Text>
-          {d.opportunityProduct.insight}
-        </Text>
-        <KeyValueList
-          dense
-          items={[
-            { label: 'المفضلات', value: String(d.opportunityProduct.favoritesCount), tone: 'success' },
-            { label: 'الطلبات الفعلية', value: String(d.opportunityProduct.ordersCount), tone: 'warning' },
-          ]}
-        />
-      </Box>
-
-      <Divider />
-
-      {/* Smart recommendation */}
-      <Box
-        padding={3}
-        gap={3}
-        background="surfaceRaised"
-        radiusToken="md"
-        border={false}
-        style={{
-          borderStartWidth: 4,
-          borderStartColor: theme.brand,
-        }}
-      >
-        <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
-          <Icon name="trending-up-outline" size={18} tone="brand" />
-          <Text role="bodyStrong" tone="action">توصية ذكية</Text>
-        </View>
-        <Text role="bodySm" align="start">{d.smartRecommendation}</Text>
-      </Box>
-
-      {/* Promotion and marketing decisions are operator-owned (control-panel marketing
-          section over runtime APIs). No local promotion action is exposed here. */}
-      <Box padding={3} gap={2} background="surfaceRaised" radiusToken="md" border={false}>
-        <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
-          <Icon name="megaphone-outline" size={18} tone="muted" />
-          <Text role="bodyStrong" tone="muted">الترويج والعروض</Text>
-        </View>
-        <Text role="bodySm" tone="muted" align="start">
-          تُدار الحملات والعروض الترويجية من فريق التسويق عبر لوحة التحكم. لا توجد إجراءات ترويج محلية من تطبيق الشريك.
-        </Text>
       </Box>
     </Box>
   );
@@ -1388,7 +1141,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     listingEnabled = true,
     activeZoneLabel = 'الياسمين / الندى',
     activeOrdersCount = 13,
-    serviceModes = [],
+
     onOpenOrdersBoard,
     onOpenOrdersSearch,
     onOpenStoreScope,
@@ -1470,6 +1223,37 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     return hubNavigationItems.filter((item) => item.id !== 'profile');
   }, []);
 
+  const [fetchedServiceModes, setFetchedServiceModes] = React.useState<PartnerOperationalMode[]>([]);
+  const [fetchedCoverageZones, setFetchedCoverageZones] = React.useState<PartnerCoverageZone[]>([]);
+
+  React.useEffect(() => {
+    if (!canonicalStoreId) return;
+
+    import('../../../shared/partner/partner.api').then(({ fetchPartnerStoreSettings, fetchPartnerStoreCoverageZones }) => {
+      fetchPartnerStoreSettings(canonicalStoreId).then((res: any) => {
+        const backendModes = res?.deliveryModes || [];
+        const mappedModes: PartnerOperationalMode[] = [
+          { id: 'pickup', title: 'استلم بنفسك', subtitle: 'استلام من الفرع مباشرة.', commission: getWltDshPartnerOperationalModeCommission('pickup'), enabled: backendModes.includes('pickup') },
+          { id: 'partner_delivery', title: 'توصيل المتجر', subtitle: 'قناة توصيل داخلية بموصل الشريك.', commission: getWltDshPartnerOperationalModeCommission('partner_delivery'), enabled: backendModes.includes('delivery') },
+          { id: 'bthwani_delivery', title: 'توصيل بثواني', subtitle: 'توصيل عبر كابتن بثواني.', commission: getWltDshPartnerOperationalModeCommission('bthwani_delivery'), enabled: backendModes.includes('express') },
+        ];
+        setFetchedServiceModes(mappedModes);
+      }).catch(() => {});
+
+      fetchPartnerStoreCoverageZones(canonicalStoreId).then((res: any) => {
+        if (Array.isArray(res)) setFetchedCoverageZones(res);
+      }).catch(() => {});
+    }).catch(() => {});
+  }, [canonicalStoreId]);
+
+  const serviceModes = fetchedServiceModes.length > 0 ? fetchedServiceModes : [
+    { id: 'pickup', title: 'استلم بنفسك', subtitle: 'استلام من الفرع مباشرة.', commission: getWltDshPartnerOperationalModeCommission('pickup'), enabled: true },
+    { id: 'partner_delivery', title: 'توصيل المتجر', subtitle: 'قناة توصيل داخلية بموصل الشريك.', commission: getWltDshPartnerOperationalModeCommission('partner_delivery'), enabled: true },
+    { id: 'bthwani_delivery', title: 'توصيل بثواني', subtitle: 'توصيل عبر كابتن بثواني.', commission: getWltDshPartnerOperationalModeCommission('bthwani_delivery'), enabled: false },
+  ] as PartnerOperationalMode[];
+
+  const coverageZonesToUse = fetchedCoverageZones.length > 0 ? fetchedCoverageZones : runtimePartnerCoverageZones;
+
   const storeVisibility = React.useMemo(() => {
     return resolveDshStoreClientVisibility({
       ...(activeCanonicalStore?.publishStage !== undefined ? { publishStage: activeCanonicalStore.publishStage } : {}),
@@ -1489,10 +1273,21 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   );
 
   function updateNotificationPreference(preferenceId: NotificationPreferenceId, nextValue: boolean) {
+    // Optimistic UI update
     setNotificationPreferences((current) => ({
       ...current,
       [preferenceId]: nextValue,
     }));
+    // Wire to backend
+    import('../../../shared/notifications/notifications.api').then(({ updateNotificationPreferences }) => {
+      updateNotificationPreferences(preferenceId, nextValue).catch(() => {
+        // Rollback on failure (simplified)
+        setNotificationPreferences((current) => ({
+          ...current,
+          [preferenceId]: !nextValue,
+        }));
+      });
+    }).catch(console.error);
   }
 
   function openOrderAlerts() {
@@ -1678,6 +1473,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onOpenFinancialReport={onOpenWalletHub}
           dshAuthBearerToken={dshAuthBearerToken}
           dshClientId={dshClientId}
+          canonicalStoreId={canonicalStoreId}
         />
       );
     }
@@ -2022,6 +1818,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           storeOpen={isAvailable}
           activeZoneLabel={resolvedActiveZoneLabel}
           serviceModes={serviceModes}
+          coverageZonesToUse={coverageZonesToUse}
+          teamMembers={props.teamMembers ?? []}
           onBack={() => updateSection('hub')}
           {...(onOpenStoreCourierSetup !== undefined ? { onOpenStoreCourierSetup } : {})}
           listingEnabled={listingEnabled}

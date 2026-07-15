@@ -1,5 +1,4 @@
-export type { PartnerStoreScopeOption } from '../shared/partner/partner.types';
-export { storeScopeOptions } from '../shared/partner/partner.types';
+export type { DshPartnerOperationalScope } from '../shared/partner/partner.types';
 
 export { defaultServiceModes } from '../shared/delivery';
 

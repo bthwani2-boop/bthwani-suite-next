@@ -3,7 +3,28 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
+import { Platform, ActivityIndicator } from "react-native";
+import * as SecureStore from "expo-secure-store";
+import {
+  configureIdentitySession,
+  configureIdentitySessionStorage,
+  useIdentitySession,
+  type SessionStorageAdapter,
+} from "@bthwani/core-identity";
+import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 
+function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
+  return {
+    getItem: (key: string) => SecureStore.getItemAsync(key),
+    setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+    removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+  };
+}
+
+if (Platform.OS !== "web") {
+  configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
+}
+configureIdentitySession(resolveIdentityApiBaseUrl());
 function AppContent() {
   const insets = useSafeAreaInsets();
 

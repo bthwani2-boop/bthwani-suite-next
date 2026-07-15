@@ -571,6 +571,27 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   /dsh/partner/stores/{storeId}/settings:
+    get:
+      operationId: getPartnerStoreSettings
+      summary: Get bounded operating settings for the authenticated partner's own store.
+      tags: [DshStoreGovernance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "200":
+          description: Store settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerStoreSettingsRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
       operationId: updatePartnerStoreSettings
       summary: Update bounded operating settings for the authenticated partner's own store.
@@ -604,6 +625,71 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /dsh/partner/stores/{storeId}/courier-settings:
+    get:
+      operationId: getDshPartnerStoreCourierSettings
+      summary: Get store courier settings.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Courier settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerStoreCourierSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    put:
+      operationId: updateDshPartnerStoreCourierSettings
+      summary: Update store courier settings.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshPartnerStoreCourierSettings" }
+      responses:
+        "200":
+          description: Courier settings updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerStoreCourierSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/coverage-zones:
+    get:
+      operationId: getDshPartnerStoreCoverageZones
+      summary: Get store coverage zones.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of coverage zones.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DshPartnerCoverageZone" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/stores/{storeId}/verifications:
     post:
@@ -2429,6 +2515,43 @@ paths:
       responses:
         "200":
           description: WLT refunds view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/me/finance/settlements:
+    get:
+      operationId: listDshPartnerFinanceSettlements
+      summary: Partner reads their own governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT settlements view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/me/finance/settlements/summary:
+    get:
+      operationId: getDshPartnerFinanceSettlementSummary
+      summary: Partner reads their own governed WLT settlement summary through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: WLT settlement summary (verbatim passthrough).
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -4438,18 +4561,139 @@ paths:
   /dsh/partner/activation/readiness:
     get:
       operationId: getDshPartnerSelfReadiness
-      summary: Partner reads their own readiness checklist.
+      summary: Get own partner readiness status.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readiness object.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/team:
+    get:
+      operationId: listDshPartnerTeam
+      summary: List team members for a store.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of team members.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DshPartnerTeamMember"
+                required: [members]
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/team/invites:
+    post:
+      operationId: inviteDshPartnerTeamMember
+      summary: Invite a new team member.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identity:
+                  type: string
+              required: [identity]
+      responses:
+        "200":
+          description: Invite sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/stores/{storeId}/team/members/{memberId}/action:
+    post:
+      operationId: executeDshPartnerTeamMemberAction
+      summary: Execute an action on a team member.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: memberId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actionLabel:
+                  type: string
+              required: [actionLabel]
+      responses:
+        "200":
+          description: Action executed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/scopes:
+    get:
+      operationId: listPartnerScopes
+      summary: Partner lists their authorized operational scopes (stores/branches).
       tags: [DshPartnerActivation]
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Partner readiness checklist.
+          description: Authorized operational scopes.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DshPartnerReadiness" }
+              schema:
+                type: object
+                required: [scopes]
+                properties:
+                  scopes:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerOperationalScope" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
-        "404": { $ref: "#/components/responses/NotFound" }
 
   /dsh/field/partners:
     get:
@@ -5147,6 +5391,28 @@ components:
         - delivery
         - pickup
         - express
+
+    DshPartnerOperationalScope:
+      type: object
+      required:
+        - scopeId
+        - storeId
+        - partnerId
+        - displayName
+        - role
+        - permissions
+      properties:
+        scopeId: { type: string }
+        storeId: { type: string }
+        partnerId: { type: string }
+        displayName: { type: string }
+        role:
+          type: string
+          enum: [owner, manager, staff]
+        permissions:
+          type: array
+          items:
+            type: string
 
     DshStoreDetail:
       allOf:
@@ -7033,6 +7299,57 @@ components:
         email: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+    DshPartnerTeamMember:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [owner, supervisor, staff, courier] }
+        roleLabel: { type: string }
+        status: { type: string, enum: [active, paused, invited, blocked, review-needed] }
+        statusLabel: { type: string }
+        branchAssignment: { type: string }
+        permissionsSummary: { type: string }
+        deliveryAssignment: { type: string }
+        inviteLifecycle: { type: string }
+        operationalImpact: { type: string }
+        auditNote: { type: string }
+        inlineActionLabel: { type: string }
+      required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel]
+
+    DshPartnerStoreCourierSettings:
+      type: object
+      properties:
+        courierName: { type: string }
+        courierPhone: { type: string }
+        isActive: { type: boolean }
+        policy: { type: string }
+        pricingSource: { type: string }
+        compensation: { type: string }
+        selectedBranchIds:
+          type: array
+          items: { type: string }
+      required: [courierName, courierPhone, isActive, policy, pricingSource, compensation, selectedBranchIds]
+
+    DshPartnerCoverageZone:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [active, pending, blocked] }
+        statusLabel: { type: string }
+        branchRelation: { type: string }
+        serviceModeRelation: { type: string }
+        policySummary: { type: string }
+        policyReason: { type: string }
+        operationalImpact: { type: string }
+        pricingReference: { type: string }
+        commissionReference: { type: string }
+        payoutReference: { type: string }
+        reviewActionLabel: { type: string }
+        auditNote: { type: string }
+      required: [id, name, status, statusLabel, branchRelation, serviceModeRelation, policySummary, policyReason, operationalImpact, pricingReference, commissionReference, payoutReference, reviewActionLabel, auditNote]
 
     DshPartnerReadiness:
       type: object

@@ -50,7 +50,6 @@ export type DshPartnerHubSurfaceProps = {
   activeZoneLabel?: string;
   storeOpen?: boolean;
   listingEnabled?: boolean;
-  serviceModes?: readonly { id: string; label: string; description: string; enabled: boolean }[];
   activeOrdersCount?: number;
   urgentOrdersCount?: number;
   pendingActionsCount?: number;
@@ -64,6 +63,8 @@ export type DshPartnerHubSurfaceProps = {
   onOpenOperationalFlow?: (screenId: DshPartnerOperationalFlowId) => void;
   onOpenSupportScreen?: (screenId: DshPartnerSupportRouteId) => void;
   onOpenStoreCourierSetup?: () => void;
+  onOpenTeamManagement?: () => void;
+  teamMembers?: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
   onToggleAvailability?: (isAvailable: boolean) => void;
   canonicalStoreId?: string;
   dshAuthBearerToken?: string | null;

@@ -5,10 +5,6 @@ import { Svg, Circle, Rect, Path } from "react-native-svg";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
 import { brandScale, colorRoles, StateView } from '@bthwani/ui-kit';
-import { configureIdentitySession } from "@bthwani/core-identity";
-import { resolveIdentityApiBaseUrl } from "../shared/_kernel/identity-api-base-url";
-
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 // Import routes/screens
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";

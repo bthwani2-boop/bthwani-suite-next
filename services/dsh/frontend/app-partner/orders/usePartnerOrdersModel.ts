@@ -20,10 +20,11 @@ export function usePartnerOrdersModel({
   const [editingProductId, setEditingProductId] = React.useState<string | undefined>(undefined);
   const [activeOrderId, setActiveOrderId] = React.useState(initialOrderId);
 
-  const { orders: partnerOrders, state: partnerOrdersState, markReady: handleMarkReady } = usePartnerOrdersRuntime(route) as {
+  const { orders: partnerOrders, state: partnerOrdersState, markReady: handleMarkReady, refresh } = usePartnerOrdersRuntime(route) as {
     orders: readonly PartnerOrderItem[];
     state: 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
     markReady: (orderId: string) => void;
+    refresh: () => void;
   };
 
   const openOrdersBoard = React.useCallback(() => {
@@ -46,6 +47,7 @@ export function usePartnerOrdersModel({
     partnerOrders,
     partnerOrdersState,
     handleMarkReady,
+    refresh,
     openOrdersBoard,
     openOrdersSearch,
   };

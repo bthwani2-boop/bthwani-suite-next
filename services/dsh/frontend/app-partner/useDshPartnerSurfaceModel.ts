@@ -9,8 +9,8 @@ import type {
   DshPartnerSupportCommandContext,
   DshPartnerOperationalFlowId,
   PartnerHubSection,
+  DshPartnerOperationalScope,
 } from '../shared/partner/partner.types';
-import { storeScopeOptions } from '../shared/partner/partner.types';
 import type { PartnerOrderItem } from '../shared/orders';
 
 // Topic models
@@ -19,6 +19,7 @@ import { useStoreScopeModel } from '../shared/partner/store-scope.model';
 import { usePartnerOrdersModel } from './orders/usePartnerOrdersModel';
 import { usePartnerSupportModel } from '../shared/support/partner-support.model';
 import { usePartnerOpsSummaryModel } from '../shared/operations/partner-ops-summary.model';
+import { usePartnerTeamModel } from './teammanagement/usePartnerTeamModel';
 import type { PartnerDeliveryOpsSummary } from '../shared/partner/partner.adapters';
 
 export type DshPartnerSurfaceState = {
@@ -58,13 +59,17 @@ export type DshPartnerSurfaceActions = {
   openStoreScope: () => void;
   openSupportScreen: (screenId: DshPartnerSupportRouteId, source?: DshPartnerSupportCommandContext['source']) => void;
   handleMarkReady: (orderId: string) => void;
+  refreshOrders: () => void;
+  onInviteMember: (identity: string) => void;
+  onMemberAction: (memberId: string, actionLabel: string) => void;
   handleHardwareBackPress: () => boolean;
 };
 
 export type DshPartnerSurfaceModel = {
   state: DshPartnerSurfaceState;
   actions: DshPartnerSurfaceActions;
-  selectedStoreScope: { id: string; label: string; description: string };
+  scopes: DshPartnerOperationalScope[];
+  selectedStoreScope: DshPartnerOperationalScope | undefined;
   runtimePartnerProfile: {
     storeName: string;
     branchLabel: string;
@@ -77,6 +82,8 @@ export type DshPartnerSurfaceModel = {
   partnerOrders: readonly PartnerOrderItem[];
   deliveryOpsSummary: PartnerDeliveryOpsSummary;
   isCommandCenterInline: boolean;
+  teamMembers: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
+  isTeamLoading: boolean;
 };
 
 export function useDshPartnerSurfaceModel(
@@ -96,6 +103,10 @@ export function useDshPartnerSurfaceModel(
     setRoute: profile.setRoute,
   });
   const opsSummary = usePartnerOpsSummaryModel(orders.partnerOrders);
+  const team = usePartnerTeamModel({
+    route: profile.route,
+    selectedStoreScopeId: storeScope.selectedStoreScopeId,
+  });
 
   // ── Sync order search mode when route changes ─────────────────────────────
   React.useEffect(() => {
@@ -161,17 +172,23 @@ export function useDshPartnerSurfaceModel(
     openStoreScope: storeScope.openStoreScope,
     openSupportScreen: support.openSupportScreen,
     handleMarkReady: orders.handleMarkReady,
+    refreshOrders: orders.refresh,
+    onInviteMember: team.onInviteMember,
+    onMemberAction: team.onMemberAction,
     handleHardwareBackPress,
   };
 
   return {
     state,
     actions,
+    scopes: storeScope.scopes,
     selectedStoreScope: storeScope.selectedStoreScope,
     runtimePartnerProfile: storeScope.runtimePartnerProfile,
     partnerOrdersState: orders.partnerOrdersState,
     partnerOrders: orders.partnerOrders,
     deliveryOpsSummary: opsSummary.deliveryOpsSummary,
     isCommandCenterInline: support.isCommandCenterInline,
+    teamMembers: team.teamMembers,
+    isTeamLoading: team.isTeamLoading,
   };
 }

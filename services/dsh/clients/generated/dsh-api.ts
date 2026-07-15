@@ -274,7 +274,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get bounded operating settings for the authenticated partner's own store. */
+        get: operations["getPartnerStoreSettings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -282,6 +283,41 @@ export interface paths {
         head?: never;
         /** Update bounded operating settings for the authenticated partner's own store. */
         patch: operations["updatePartnerStoreSettings"];
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/courier-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get store courier settings. */
+        get: operations["getDshPartnerStoreCourierSettings"];
+        /** Update store courier settings. */
+        put: operations["updateDshPartnerStoreCourierSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/coverage-zones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get store coverage zones. */
+        get: operations["getDshPartnerStoreCoverageZones"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/dsh/field/stores/{storeId}/verifications": {
@@ -1588,6 +1624,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/partner/me/finance/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own governed WLT settlements view through the DSH finance proxy. WLT service auth stays server-side. */
+        get: operations["listDshPartnerFinanceSettlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner reads their own governed WLT settlement summary through the DSH finance proxy. */
+        get: operations["getDshPartnerFinanceSettlementSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/control-panel/finance/refunds/{refundId}": {
         parameters: {
             query?: never;
@@ -2824,8 +2894,76 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Partner reads their own readiness checklist. */
+        /** Get own partner readiness status. */
         get: operations["getDshPartnerSelfReadiness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List team members for a store. */
+        get: operations["listDshPartnerTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/team/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Invite a new team member. */
+        post: operations["inviteDshPartnerTeamMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/team/members/{memberId}/action": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute an action on a team member. */
+        post: operations["executeDshPartnerTeamMemberAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Partner lists their authorized operational scopes (stores/branches). */
+        get: operations["listPartnerScopes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3177,6 +3315,15 @@ export interface components {
         DshStoreCategory: string;
         /** @enum {string} */
         DshStoreDeliveryMode: "delivery" | "pickup" | "express";
+        DshPartnerOperationalScope: {
+            scopeId: string;
+            storeId: string;
+            partnerId: string;
+            displayName: string;
+            /** @enum {string} */
+            role: "owner" | "manager" | "staff";
+            permissions: string[];
+        };
         DshStoreDetail: components["schemas"]["DshStoreSummary"] & {
             /** Format: date-time */
             createdAt: string;
@@ -4347,6 +4494,49 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        DshPartnerTeamMember: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            role: "owner" | "supervisor" | "staff" | "courier";
+            roleLabel: string;
+            /** @enum {string} */
+            status: "active" | "paused" | "invited" | "blocked" | "review-needed";
+            statusLabel: string;
+            branchAssignment: string;
+            permissionsSummary: string;
+            deliveryAssignment: string;
+            inviteLifecycle: string;
+            operationalImpact: string;
+            auditNote: string;
+            inlineActionLabel: string;
+        };
+        DshPartnerStoreCourierSettings: {
+            courierName: string;
+            courierPhone: string;
+            isActive: boolean;
+            policy: string;
+            pricingSource: string;
+            compensation: string;
+            selectedBranchIds: string[];
+        };
+        DshPartnerCoverageZone: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            status: "active" | "pending" | "blocked";
+            statusLabel: string;
+            branchRelation: string;
+            serviceModeRelation: string;
+            policySummary: string;
+            policyReason: string;
+            operationalImpact: string;
+            pricingReference: string;
+            commissionReference: string;
+            payoutReference: string;
+            reviewActionLabel: string;
+            auditNote: string;
+        };
         DshPartnerReadiness: {
             partnerId: string;
             canActivate: boolean;
@@ -5475,6 +5665,31 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getPartnerStoreSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerStoreSettingsRequest"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     updatePartnerStoreSettings: {
         parameters: {
             query?: never;
@@ -5507,6 +5722,79 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getDshPartnerStoreCourierSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Courier settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerStoreCourierSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    updateDshPartnerStoreCourierSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshPartnerStoreCourierSettings"];
+            };
+        };
+        responses: {
+            /** @description Courier settings updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerStoreCourierSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshPartnerStoreCoverageZones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of coverage zones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPartnerCoverageZone"][];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     submitFieldStoreVerification: {
@@ -7674,6 +7962,55 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description WLT refunds view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listDshPartnerFinanceSettlements: {
+        parameters: {
+            query?: {
+                limit?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT settlements view (verbatim passthrough). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshPartnerFinanceSettlementSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT settlement summary (verbatim passthrough). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10091,7 +10428,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Partner readiness checklist. */
+            /** @description Readiness object. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10101,7 +10438,117 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshPartnerTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of team members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        members: components["schemas"]["DshPartnerTeamMember"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    inviteDshPartnerTeamMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    identity: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Invite sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    executeDshPartnerTeamMemberAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    actionLabel: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Action executed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listPartnerScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized operational scopes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        scopes: components["schemas"]["DshPartnerOperationalScope"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
         };
     };
     listFieldPartnerDrafts: {

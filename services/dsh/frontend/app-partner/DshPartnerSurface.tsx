@@ -7,10 +7,6 @@ import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
-import { configureIdentitySession } from '@bthwani/core-identity';
-import { resolveIdentityApiBaseUrl } from '../shared/_kernel/identity-api-base-url';
-
-configureIdentitySession(resolveIdentityApiBaseUrl());
 
 const COLORS = {
   background: colorRoles.surfaceBase,
@@ -40,6 +36,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   const {
     state,
     actions,
+    scopes,
     selectedStoreScope,
     runtimePartnerProfile,
     partnerOrdersState,
@@ -125,8 +122,8 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     <PartnerStoreScopeSheet
       visible={storeScopeVisible}
       onClose={() => setStoreScopeVisible(false)}
-      options={storeScopeOptions}
-      selectedId={selectedStoreScopeId}
+      options={scopes}
+      selectedId={selectedStoreScopeId ?? ''}
       onSelect={setSelectedStoreScopeId}
     />
   );
@@ -249,8 +246,14 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       openSupportScreen={openSupportScreen}
       openInventoryManagement={openInventoryManagement}
       openStoreCourier={openStoreCourier}
+      openStoreScope={() => setStoreScopeVisible(true)}
       openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
       handleMarkReady={handleMarkReady}
+      refreshOrders={actions.refreshOrders}
+      teamMembers={model.teamMembers}
+      onInviteMember={actions.onInviteMember}
+      onMemberAction={actions.onMemberAction}
+      scopes={model.scopes}
     />
   );
 }

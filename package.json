@@ -149,6 +149,7 @@
     "diagnostics:operational:gaps": "node tools/scripts/generate-operational-gap-ledger.mjs",
     "diagnostics:operational:reconcile": "node tools/scripts/reconcile-operational-diagnostics.mjs",
     "guard:app-role-isolation": "node tools/guards/app-role-isolation-gate.mjs",
+    "guard:dsh-runtime-gaps": "node tools/guards/dsh-runtime-gap-gate.mjs",
     "guard:unified-wlt-dsh-boundary": "node tools/guards/unified-wlt-dsh-boundary-gate.mjs",
     "guard:tool-catalog-coverage": "node tools/guards/tool-catalog-coverage-gate.mjs",
     "guard:toolchain-activation": "node tools/guards/toolchain-activation-gate.mjs",

@@ -21,6 +21,7 @@ import { OrdersInboxScreen } from './orders/OrdersInboxScreen';
 import { DshPartnerOrderRejectionScreen, type DshPartnerOrderRejectionScreenProps } from './orders/DshPartnerOrderRejectionScreen';
 import { DshPartnerStoreCourierScreen } from './store/DshPartnerStoreCourierScreen';
 import { PartnerStoreScreen } from './store/PartnerStoreScreen';
+import { PartnerTeamManagementScreen } from './teammanagement/PartnerTeamManagementScreen';
 import { PartnerEntryScreen } from './account/PartnerEntryScreen';
 import { PartnerSupportScreen } from './account/PartnerSupportScreen';
 import { PartnerCatalogManagementScreen } from './Catalog/PartnerCatalogManagementScreen';
@@ -82,8 +83,14 @@ type Props = {
   openSupportScreen: (screenId: DshPartnerSupportRouteId, source?: DshPartnerSupportCommandContext['source']) => void;
   openInventoryManagement: () => void;
   openStoreCourier: () => void;
+  openStoreScope: () => void;
   openSupportCommandFromOperationalFlow: (flowId: DshPartnerOperationalFlowId, source?: DshPartnerSupportCommandContext['source']) => void;
   handleMarkReady: (orderId: string) => void;
+  refreshOrders: () => void;
+  teamMembers: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
+  onInviteMember: (identity: string) => void;
+  onMemberAction: (memberId: string, actionLabel: string) => void;
+  scopes: readonly import('../shared/partner/partner.types').DshPartnerOperationalScope[];
 };
 
 const PARTNER_ORDER_REJECTION_REASONS = [
@@ -123,7 +130,9 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     goBackToHub, openSupportDirectory, returnToSupportDirectory, openSupportScreen,
     openInventoryManagement, openStoreCourier, openSupportCommandFromOperationalFlow,
     handleMarkReady, setEditingProductId,
-    selectedStoreScopeId,
+    selectedStoreScopeId, openStoreScope, refreshOrders,
+    teamMembers, onInviteMember, onMemberAction,
+    scopes,
   } = props;
 
   const activeStoreRuntimeId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
@@ -142,16 +151,17 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
         storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.label}
         cityLabel={runtimePartnerProfile.cityLabel} managerLabel={runtimePartnerProfile.managerLabel}
         todayHoursLabel={runtimePartnerProfile.todayHoursLabel} activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
-        storeOpen listingEnabled serviceModes={defaultServiceModes}
+        storeOpen listingEnabled
         activeOrdersCount={deliveryOpsSummary.outForDelivery + deliveryOpsSummary.handoffReady}
         urgentOrdersCount={deliveryOpsSummary.delayedRisk} pendingActionsCount={deliveryOpsSummary.handoffReady}
         onOpenOrdersBoard={openOrdersBoard} onOpenOrdersSearch={openOrdersSearch}
-        onOpenInventoryManagement={openInventoryManagement} onOpenStoreScope={() => {}}
+        onOpenInventoryManagement={openInventoryManagement} onOpenStoreScope={openStoreScope}
         onOpenSupportDirectory={() => openSupportDirectory({ source: 'hub' })} onOpenWalletHub={() => openAccountHub('wallet')}
         onOpenBell={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}
         onOpenOperationalFlow={(flowId) => openSupportCommandFromOperationalFlow(flowId, 'hub')}
         onOpenSupportScreen={(screenId) => openSupportScreen(screenId, 'hub')}
         onOpenStoreCourierSetup={openStoreCourier}
+        canonicalStoreId={activeStoreRuntimeId}
         dshAuthBearerToken={dshAuthBearerToken ?? null} dshClientId={dshClientId ?? null}
       />,
     ) as React.ReactElement;
@@ -184,7 +194,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
       <OrdersInboxScreen
         state={partnerOrdersState} items={partnerOrders} searchMode={ordersSearchMode}
         onCloseSearch={() => setOrdersSearchMode(false)} onMarkReady={handleMarkReady}
-        onRetry={() => setRoute('inbox')}
+        onRetry={refreshOrders}
       />,
     ) as React.ReactElement;
   }
@@ -207,8 +217,16 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === 'category-management') return renderSurfaceShell(<CategoryManagementScreen storeId={activeStoreRuntimeId} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} storeId={activeStoreRuntimeId} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'product-overrides') return renderSurfaceShell(<ProductOverridesScreen storeId={activeStoreRuntimeId} productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
-  if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen onBack={() => openAccountHub('operations')} />) as React.ReactElement;
-  if (route === 'team-management') return renderSurfaceShell(<PartnerStoreScreen />) as React.ReactElement;
+  if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen storeId={activeStoreRuntimeId} scopes={scopes} onBack={() => openAccountHub('operations')} />) as React.ReactElement;
+  if (route === 'team-management') return renderSurfaceShell(
+    <PartnerTeamManagementScreen
+      storeName={runtimePartnerProfile.storeName}
+      branchLabel={runtimePartnerProfile.branchLabel}
+      members={teamMembers}
+      onInviteMember={onInviteMember}
+      onMemberAction={onMemberAction}
+    />
+  ) as React.ReactElement;
 
   if (route === 'support-directory') {
     return renderSurfaceShell(
@@ -271,7 +289,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
       cityLabel={runtimePartnerProfile.cityLabel} managerLabel={runtimePartnerProfile.managerLabel}
       todayHoursLabel={runtimePartnerProfile.todayHoursLabel} activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
       onOpenOrdersBoard={openOrdersBoard} onOpenInventoryManagement={openInventoryManagement}
-      onOpenStoreScope={() => {}} onOpenWalletHub={() => openAccountHub('wallet')}
+      onOpenStoreScope={openStoreScope} onOpenWalletHub={() => openAccountHub('wallet')}
       onOpenSupportDirectory={() => openSupportDirectory({ source: 'hub' })}
       onOpenOperationalFlow={(flowId) => openSupportCommandFromOperationalFlow(flowId, 'hub')}
       onOpenSupportScreen={(screenId) => openSupportScreen(screenId, 'hub')}

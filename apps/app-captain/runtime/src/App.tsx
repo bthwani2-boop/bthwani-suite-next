@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator } from "react-native";
 import { DshCaptainSurface } from "../../../../services/dsh/frontend/app-captain";
 import * as SecureStore from "expo-secure-store";
 import { configureIdentitySessionStorage, useIdentitySession } from "@bthwani/core-identity";
+import { colorRoles } from "@bthwani/ui-kit";
 
 configureIdentitySessionStorage({
   getItem: async (key: string) => SecureStore.getItemAsync(key),
@@ -16,7 +17,7 @@ export default function App() {
   if (session.state.kind === 'restoring' || session.state.kind === 'authenticating') {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color={colorRoles.textPrimary} />
       </View>
     );
   }
