@@ -263,6 +263,17 @@ jobs:
             psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
           done
 
+      - name: Seed WLT local fixtures (commission policies)
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGPASSWORD: bthwani_runtime_password
+        run: |
+          for f in services/wlt/database/seeds/local/*.sql; do
+            echo "Seeding $f"
+            psql -h localhost -U wlt_runtime -d wlt_runtime -v ON_ERROR_STOP=1 -f "$f"
+          done
+
       - name: Run WLT tests with DB required
         working-directory: services/wlt/backend
         env:
