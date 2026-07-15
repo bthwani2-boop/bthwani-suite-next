@@ -602,23 +602,9 @@ function Invoke-DshMediaSeed {
   # keys. If any file listed here is missing, those SQL seeds would create rows
   # pointing at a MinIO object that was never uploaded -- the exact drift this
   # check exists to prevent.
-  $ExpectedFiles = @(
-    "node-dairy-cheese.png", "node-canned-food.png", "node-local-vegetables.png",
-    "node-imported-fruits.png", "node-sweets-cake.png", "node-sweets-chocolate.png",
-    "product-cheese-kraft.png", "product-canned-tuna.png", "product-local-tomato.png",
-    "product-imported-banana.png", "product-chocolate-box.png",
-    "node-phones-tablets.png", "node-smartphones.png", "node-android-phones.png", "node-ios-phones.png",
-    "product-galaxy-s24.png", "product-iphone-15.png",
-    "node-medications.png", "node-baby-care.png", "node-pain-relief.png", "node-baby-milk.png",
-    "node-headache-migraine.png", "node-infant-formula.png",
-    "product-panadol-advance.png", "product-solpadeine-soluble.png", "product-aptamil-1.png",
-    "store-test-grocery-hero.png", "store-test-grocery-logo.png",
-    "store-1001-hero.png", "store-1001-logo.png",
-    "store-1002-hero.png", "store-1002-logo.png",
-    "store-1003-hero.png", "store-1003-logo.png", "store-1004-hero.png", "store-1004-logo.png",
-    "store-1005-hero.png", "store-1005-logo.png", "store-1006-hero.png", "store-1006-logo.png",
-    "banner-001.png", "banner-002.png", "promo-001.png"
-  )
+  $ManifestPath = (Resolve-Path "services/dsh/database/seeds/local/media/media-manifest.json").Path
+  $Manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
+  $ExpectedFiles = $Manifest.media | Select-Object -ExpandProperty relativeSourcePath
 
   $MediaDirectory = (Resolve-Path "services/dsh/database/seeds/local/media").Path
   $Missing = $ExpectedFiles | Where-Object { -not (Test-Path (Join-Path $MediaDirectory $_)) }
@@ -778,6 +764,10 @@ function Invoke-DshSmoke {
   $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody3 -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { throw "master product was not created during adoption" }
 
+  # Attach an image to the Master Product so it can be approved and client-visible
+  $imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
+  Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/primary" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10
+
   # Transition to catalog-approved
   $transBody4 = @{ nextStatus = "catalog-approved"; note = "smoke approve" } | ConvertTo-Json
   $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody4 -TimeoutSec 10
@@ -789,7 +779,6 @@ function Invoke-DshSmoke {
     available = $true
     stockStatus = "in_stock"
     publicationStatus = "client_visible"
-    customImageObjectKey = "local/dsh-media/product-galaxy-s24.png"
   } | ConvertTo-Json
   $assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
 
