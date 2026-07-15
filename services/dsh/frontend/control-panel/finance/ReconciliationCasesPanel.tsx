@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
+import { CpTextInput } from "@bthwani/control-panel/components";
 import {
   assignReconciliationCase,
   loadOpenReconciliationCases,
@@ -82,11 +83,11 @@ export function ReconciliationCasesPanel() {
                     if (ok) void load();
                   }}
                 />
-                <input
+                <CpTextInput
                   placeholder="ملاحظة القرار"
                   value={noteDrafts[c.id] ?? ""}
-                  onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                  style={{ flex: 1, minWidth: "180px", padding: "0.4rem" }}
+                  onChange={(value) => setNoteDrafts((prev) => ({ ...prev, [c.id]: value }))}
+                  aria-label={`ملاحظة القرار لقضية ${c.id}`}
                 />
                 <Button
                   label="تأكيد النجاح"

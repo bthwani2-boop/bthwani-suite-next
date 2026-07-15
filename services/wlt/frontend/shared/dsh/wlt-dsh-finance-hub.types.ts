@@ -63,6 +63,7 @@ export type WltFinancialCenterBlockingVariance = {
 export type WltFinancialCenter = {
   readonly businessDate: string;
   readonly sections: readonly WltFinancialCenterSection[];
+  readonly dataCompletenessNotes: readonly string[];
   readonly allEntries: readonly WltLedgerEntryFormatted[];
   readonly totalAssets: number;
   readonly totalAssetsLabel: string;
@@ -82,6 +83,33 @@ export type WltFinancialCenter = {
   readonly isPreview: boolean;
 };
 
+// Raw shape of GET /wlt/ledger/financial-summary (services/wlt/backend
+// internal/ledger/kernel_read.go FinancialSummary), passed through verbatim
+// by the DSH proxy. Account-type-aware balances and categorization are
+// computed server-side; this type only describes the wire shape.
+export type WltFinancialSummaryAccountBalance = {
+  readonly accountType: 'wallet' | 'platform_revenue' | 'platform_payable' | 'provider_clearing' | 'platform_commission_receivable';
+  readonly category: 'asset' | 'liability' | 'revenue' | 'expense';
+  readonly normalBalanceSide: 'debit' | 'credit';
+  readonly currency: string;
+  readonly balanceMinorUnits: number;
+};
+
+export type WltFinancialSummaryCurrency = {
+  readonly currency: string;
+  readonly assetsMinorUnits: number;
+  readonly liabilitiesMinorUnits: number;
+  readonly revenueMinorUnits: number;
+  readonly expensesMinorUnits: number;
+  readonly netPositionMinorUnits: number;
+  readonly accounts: readonly WltFinancialSummaryAccountBalance[];
+};
+
+export type WltFinancialSummaryRaw = {
+  readonly currencies: readonly WltFinancialSummaryCurrency[];
+  readonly dataCompleteness: readonly string[];
+};
+
 export type WltCloseStatus = {
   readonly id?: string | null;
   readonly status: 'open' | 'closed' | string;
@@ -91,9 +119,10 @@ export type WltCloseStatus = {
 export type WltDshFinanceRuntimeReadModel = {
   readonly runtimeApiUrl: string;
   readonly overview: any; // settlements list
-  readonly ledgerEntries: readonly any[]; // raw ledger entries
+  readonly ledgerEntries: readonly any[]; // raw legacy ledger entries (individual movements, not accounting truth)
   readonly refunds: readonly any[]; // raw refunds queue
   readonly payoutRequests: readonly any[]; // raw payout requests queue
+  readonly financialSummary: WltFinancialSummaryRaw | null; // kernel-backed Assets/Liabilities/Revenue/Net Position
   // Optional: WLT does not expose a reconciliation close-status endpoint yet,
   // so runtime read models omit it. Consumers must treat "absent" as open.
   readonly closeStatus?: WltCloseStatus;

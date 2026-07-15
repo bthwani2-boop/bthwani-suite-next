@@ -89,6 +89,13 @@ export function FinanceDashboardScreen() {
   const renderFinancialCenterPosition = (center: WltFinancialCenter) => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
+        {center.dataCompletenessNotes.length > 0 ? (
+          <Card style={{ padding: '1rem', borderLeft: `4px solid ${lightThemeColors.warning}` }}>
+            <Text role="body" tone="muted">
+              ملاحظة اكتمال البيانات: هذا الملخص لا يشمل بعد {center.dataCompletenessNotes.join('، ')} — الأرقام أقل من الواقع لتلك الأحداث حتى تُنقل إلى Ledger Kernel.
+            </Text>
+          </Card>
+        ) : null}
         {center.sections.map((section: WltFinancialCenterSection) => (
           <Card key={section.sectionType} style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `2px solid ${lightThemeColors.borderColor}`, paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>

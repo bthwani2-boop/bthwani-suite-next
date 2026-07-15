@@ -1585,6 +1585,39 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wlt/ledger/financial-summary:
+    get:
+      operationId: getWltLedgerFinancialSummary
+      summary: >-
+        Account-type-aware financial summary (Assets/Liabilities/Revenue/
+        Expense/Net Position per currency) computed from the double-entry
+        ledger kernel (wlt_ledger_accounts/transactions/lines), with each
+        account type's normal balance side applied server-side. Consumers
+        must not re-derive debit/credit or account categorization
+        client-side.
+      tags:
+        - WltLedger
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [dsh]
+      responses:
+        "200":
+          description: Financial summary grouped by currency.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltFinancialSummaryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /wlt/payout-destinations/{partnerId}:
     put:
       operationId: upsertWltPayoutDestination
@@ -2728,6 +2761,102 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WltLedgerEntry"
+
+    WltLedgerAccountBalance:
+      type: object
+      required:
+        - accountType
+        - category
+        - normalBalanceSide
+        - currency
+        - balanceMinorUnits
+      properties:
+        accountType:
+          type: string
+          enum:
+            - wallet
+            - platform_revenue
+            - platform_payable
+            - provider_clearing
+            - platform_commission_receivable
+        category:
+          type: string
+          enum:
+            - asset
+            - liability
+            - revenue
+            - expense
+        normalBalanceSide:
+          type: string
+          enum:
+            - debit
+            - credit
+        currency:
+          type: string
+        balanceMinorUnits:
+          type: integer
+          format: int64
+          description: Correctly signed per accountType's normal balance side, not the raw debit-adds/credit-subtracts kernel column.
+
+    WltLedgerCurrencySummary:
+      type: object
+      required:
+        - currency
+        - assetsMinorUnits
+        - liabilitiesMinorUnits
+        - revenueMinorUnits
+        - expensesMinorUnits
+        - netPositionMinorUnits
+        - accounts
+      properties:
+        currency:
+          type: string
+        assetsMinorUnits:
+          type: integer
+          format: int64
+        liabilitiesMinorUnits:
+          type: integer
+          format: int64
+        revenueMinorUnits:
+          type: integer
+          format: int64
+        expensesMinorUnits:
+          type: integer
+          format: int64
+        netPositionMinorUnits:
+          type: integer
+          format: int64
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/WltLedgerAccountBalance"
+
+    WltFinancialSummary:
+      type: object
+      required:
+        - currencies
+        - dataCompleteness
+      properties:
+        currencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/WltLedgerCurrencySummary"
+        dataCompleteness:
+          type: array
+          description: >-
+            Known financial events not yet posted to this kernel (e.g.
+            payment capture), so consumers can render a caveat instead of
+            treating the summary as complete.
+          items:
+            type: string
+
+    WltFinancialSummaryResponse:
+      type: object
+      required:
+        - financialSummary
+      properties:
+        financialSummary:
+          $ref: "#/components/schemas/WltFinancialSummary"
 
     WltUpsertPayoutDestinationRequest:
       type: object

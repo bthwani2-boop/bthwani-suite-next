@@ -5,6 +5,7 @@ import type {
   WltFinancialCenter,
   WltFinancialCenterSection,
   WltAccountPositionLine,
+  WltFinancialSummaryRaw,
   WltLedgerEntryFormatted,
   WltLedgerEntryKind,
   WltLedgerEntryStatus,
@@ -37,25 +38,77 @@ function mapEntryStatus(status: string): WltLedgerEntryStatus {
   return 'pending';
 }
 
-function accountForDebit(referenceType: string): { code: string; label: string; type: WltFinancialCenterSection['sectionType'] } {
-  if (referenceType === 'refund') return { code: '5001', label: 'مصروف الاسترداد', type: 'expense' };
-  if (referenceType === 'settlement') return { code: '1030', label: 'مقاصة التسوية', type: 'asset' };
-  return { code: '1010', label: 'رصيد المقاصة البنكية', type: 'asset' };
-}
+// Human-readable Arabic labels for the fixed, real wlt_ledger_accounts
+// account types (see services/wlt/database/migrations/wlt-017_ledger_kernel.sql).
+// Unlike the account codes this file used to invent (5001/2001/1010/...),
+// these keys are the actual backend account_type values -- this map only
+// supplies display text, it does not decide category or debit/credit
+// direction (the backend's /wlt/ledger/financial-summary response already
+// carries category + normalBalanceSide computed server-side).
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  wallet: 'محافظ المستخدمين',
+  platform_revenue: 'إيرادات المنصة',
+  platform_payable: 'مستحقات الدفع',
+  provider_clearing: 'مقاصة مزود الدفع',
+  platform_commission_receivable: 'عمولات مستحقة القبض',
+};
 
-function accountForCredit(referenceType: string): { code: string; label: string; type: WltFinancialCenterSection['sectionType'] } {
-  if (referenceType === 'payment_session') return { code: '2001', label: 'رصيد محفظة العميل', type: 'liability' };
-  if (referenceType === 'settlement') return { code: '2020', label: 'مستحقات الشريك', type: 'liability' };
-  if (referenceType === 'refund') return { code: '2050', label: 'التزام الاسترداد للعميل', type: 'liability' };
-  return { code: '4001', label: 'إيرادات WLT', type: 'revenue' };
-}
+const SECTION_LABELS: Record<WltFinancialCenterSection['sectionType'], string> = {
+  asset: 'الأصول',
+  liability: 'الالتزامات',
+  revenue: 'الإيرادات',
+  expense: 'المصروفات',
+};
 
-function accountTypeByCode(code: string): WltFinancialCenterSection['sectionType'] {
-  if (code.startsWith('1')) return 'asset';
-  if (code.startsWith('2')) return 'liability';
-  if (code.startsWith('4')) return 'revenue';
-  if (code.startsWith('5')) return 'expense';
-  return 'asset';
+// Builds the Assets/Liabilities/Revenue/Expense sections and net position
+// directly from the WLT ledger-kernel summary (GET /wlt/ledger/financial-summary) --
+// no client-side debit/credit inference, no invented account codes, no *100
+// unit conversion. Picks the YER currency bucket (the platform's primary
+// currency); if that is ever multi-currency in practice, this intentionally
+// does not sum across currencies (that would be meaningless) -- it falls
+// back to the first available currency bucket instead.
+function buildFinancialCenterSections(summary: WltFinancialSummaryRaw | null): {
+  sections: WltFinancialCenterSection[];
+  totalAssets: number;
+  totalLiabilities: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  netPosition: number;
+  dataCompletenessNotes: readonly string[];
+} {
+  const currencySummary = summary?.currencies.find((c) => c.currency === 'YER') ?? summary?.currencies[0] ?? null;
+
+  const section = (type: WltFinancialCenterSection['sectionType']): WltFinancialCenterSection => {
+    const accounts = (currencySummary?.accounts ?? []).filter((a) => a.category === type);
+    const lines: WltAccountPositionLine[] = accounts.map((a) => ({
+      accountCode: a.accountType,
+      accountLabel: ACCOUNT_TYPE_LABELS[a.accountType] ?? a.accountType,
+      accountType: type,
+      totalMinorUnits: a.balanceMinorUnits,
+      totalLabel: formatWltYer(a.balanceMinorUnits),
+      entryCount: 0,
+      pendingCount: 0,
+      entries: [],
+      isPreview: false,
+    }));
+    const totalMinorUnits = lines.reduce((sum, line) => sum + line.totalMinorUnits, 0);
+    return { sectionType: type, sectionLabel: SECTION_LABELS[type], totalMinorUnits, totalLabel: formatWltYer(totalMinorUnits), lines };
+  };
+
+  const assetSection = section('asset');
+  const liabilitySection = section('liability');
+  const revenueSection = section('revenue');
+  const expenseSection = section('expense');
+
+  return {
+    sections: [assetSection, liabilitySection, revenueSection, expenseSection],
+    totalAssets: assetSection.totalMinorUnits,
+    totalLiabilities: liabilitySection.totalMinorUnits,
+    totalRevenue: revenueSection.totalMinorUnits,
+    totalExpenses: expenseSection.totalMinorUnits,
+    netPosition: currencySummary?.netPositionMinorUnits ?? 0,
+    dataCompletenessNotes: summary?.dataCompleteness ?? [],
+  };
 }
 
 function partyLabel(entry: any): string {
@@ -76,26 +129,31 @@ function partyKind(entry: any): WltLedgerEntryFormatted['partyKind'] {
   return 'platform';
 }
 
+// A wlt_ledger_entries row is a single-sided movement (one actor, one
+// debitCredit direction) -- it was never a two-leg journal entry, so unlike
+// the old code this does not invent a second "credit account" to pair it
+// with. Only the side the entry actually records is populated; the other is
+// left empty rather than fabricated. Real fields (amountMinorUnits,
+// debitCredit) are read directly -- no *100 conversion, no inference from
+// referenceType.
 function toFinancialCenterEntry(entry: any): WltLedgerEntryFormatted {
-  const debit = accountForDebit(entry.reference_type ?? entry.referenceType ?? '');
-  const credit = accountForCredit(entry.reference_type ?? entry.referenceType ?? '');
-  // standard raw amount is major, let's parse and get minor
-  const rawAmt = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount ?? '0');
-  const amount = Math.round(rawAmt * 100);
+  const amount: number = typeof entry.amountMinorUnits === 'number' ? entry.amountMinorUnits : 0;
+  const debitCredit: string = entry.debitCredit ?? '';
   const status = mapEntryStatus(entry.status ?? '');
+  const sideLabel = ACCOUNT_TYPE_LABELS[entry.actorType] ?? entry.entryType ?? entry.referenceType ?? '';
 
   return {
     id: entry.id,
-    debitAccountCode: debit.code,
-    debitAccountLabel: debit.label,
-    creditAccountCode: credit.code,
-    creditAccountLabel: credit.label,
+    debitAccountCode: debitCredit === 'debit' ? entry.actorType ?? '' : '',
+    debitAccountLabel: debitCredit === 'debit' ? sideLabel : '',
+    creditAccountCode: debitCredit === 'credit' ? entry.actorType ?? '' : '',
+    creditAccountLabel: debitCredit === 'credit' ? sideLabel : '',
     amountMinorUnits: amount,
     amountLabel: formatWltYer(amount),
-    entryKind: mapEntryKind(entry.reference_type ?? entry.referenceType ?? ''),
+    entryKind: mapEntryKind(entry.referenceType ?? ''),
     party: partyLabel(entry),
     partyKind: partyKind(entry),
-    sourceRef: entry.reference_id ?? entry.referenceId ?? entry.orderId ?? entry.id,
+    sourceRef: entry.referenceId ?? entry.orderId ?? entry.id,
     statusLabel: status === 'posted' ? 'مرحّل من WLT' : 'يتطلب مراجعة WLT',
     status,
     isPending: status !== 'posted',
@@ -109,59 +167,17 @@ export function buildWltRuntimeFinancialCenter(
   runtime: WltDshFinanceRuntimeReadModel,
 ): WltFinancialCenter {
   const allEntries = (runtime.ledgerEntries ?? []).map(toFinancialCenterEntry);
-  const accountLines = new Map<string, {
-    readonly type: WltFinancialCenterSection['sectionType'];
-    readonly label: string;
-    total: number;
-    entries: WltLedgerEntryFormatted[];
-  }>();
 
-  for (const entry of allEntries) {
-    for (const account of [
-      { code: entry.debitAccountCode, label: entry.debitAccountLabel, type: accountTypeByCode(entry.debitAccountCode) },
-      { code: entry.creditAccountCode, label: entry.creditAccountLabel, type: accountTypeByCode(entry.creditAccountCode) },
-    ]) {
-      const existing = accountLines.get(account.code);
-      if (existing) {
-        existing.total += entry.amountMinorUnits;
-        existing.entries.push(entry);
-      } else {
-        accountLines.set(account.code, {
-          type: account.type,
-          label: account.label,
-          total: entry.amountMinorUnits,
-          entries: [entry],
-        });
-      }
-    }
-  }
+  const {
+    sections,
+    totalAssets,
+    totalLiabilities,
+    totalRevenue,
+    totalExpenses,
+    netPosition,
+    dataCompletenessNotes,
+  } = buildFinancialCenterSections(runtime.financialSummary);
 
-  const section = (type: WltFinancialCenterSection['sectionType'], sectionLabel: string): WltFinancialCenterSection => {
-    const lines: WltAccountPositionLine[] = [];
-    for (const [accountCode, account] of accountLines) {
-      if (account.type !== type) continue;
-      lines.push({
-        accountCode,
-        accountLabel: account.label,
-        accountType: type,
-        totalMinorUnits: account.total,
-        totalLabel: formatWltYer(account.total),
-        entryCount: account.entries.length,
-        pendingCount: account.entries.filter((e) => e.isPending).length,
-        entries: account.entries,
-        isPreview: false,
-      });
-    }
-
-    const totalMinorUnits = lines.reduce((sum, line) => sum + line.totalMinorUnits, 0);
-    return { sectionType: type, sectionLabel, totalMinorUnits, totalLabel: formatWltYer(totalMinorUnits), lines };
-  };
-
-  const assetSection = section('asset', 'الأصول');
-  const liabilitySection = section('liability', 'الالتحامات والالتزامات');
-  const revenueSection = section('revenue', 'الإيرادات');
-  const expenseSection = section('expense', 'المصروفات');
-  const netPosition = assetSection.totalMinorUnits - liabilitySection.totalMinorUnits;
   const blockingVariances = allEntries
     .filter((entry) => entry.needsReconciliation)
     .map((entry) => ({
@@ -175,16 +191,17 @@ export function buildWltRuntimeFinancialCenter(
 
   return {
     businessDate,
-    sections: [assetSection, liabilitySection, revenueSection, expenseSection],
+    sections,
+    dataCompletenessNotes,
     allEntries,
-    totalAssets: assetSection.totalMinorUnits,
-    totalAssetsLabel: assetSection.totalLabel,
-    totalLiabilities: liabilitySection.totalMinorUnits,
-    totalLiabilitiesLabel: liabilitySection.totalLabel,
-    totalRevenue: revenueSection.totalMinorUnits,
-    totalRevenueLabel: revenueSection.totalLabel,
-    totalExpenses: expenseSection.totalMinorUnits,
-    totalExpensesLabel: expenseSection.totalLabel,
+    totalAssets,
+    totalAssetsLabel: formatWltYer(totalAssets),
+    totalLiabilities,
+    totalLiabilitiesLabel: formatWltYer(totalLiabilities),
+    totalRevenue,
+    totalRevenueLabel: formatWltYer(totalRevenue),
+    totalExpenses,
+    totalExpensesLabel: formatWltYer(totalExpenses),
     netPosition,
     netPositionLabel: formatWltYer(Math.abs(netPosition)),
     blockingVariances,

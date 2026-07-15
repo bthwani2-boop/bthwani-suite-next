@@ -844,6 +844,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/ledger/financial-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Account-type-aware financial summary (Assets/Liabilities/Revenue/ Expense/Net Position per currency) computed from the double-entry ledger kernel (wlt_ledger_accounts/transactions/lines), with each account type's normal balance side applied server-side. Consumers must not re-derive debit/credit or account categorization client-side. */
+        get: operations["getWltLedgerFinancialSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payout-destinations/{partnerId}": {
         parameters: {
             query?: never;
@@ -1311,6 +1328,42 @@ export interface components {
         };
         WltLedgerEntryListResponse: {
             ledgerEntries: components["schemas"]["WltLedgerEntry"][];
+        };
+        WltLedgerAccountBalance: {
+            /** @enum {string} */
+            accountType: "wallet" | "platform_revenue" | "platform_payable" | "provider_clearing" | "platform_commission_receivable";
+            /** @enum {string} */
+            category: "asset" | "liability" | "revenue" | "expense";
+            /** @enum {string} */
+            normalBalanceSide: "debit" | "credit";
+            currency: string;
+            /**
+             * Format: int64
+             * @description Correctly signed per accountType's normal balance side, not the raw debit-adds/credit-subtracts kernel column.
+             */
+            balanceMinorUnits: number;
+        };
+        WltLedgerCurrencySummary: {
+            currency: string;
+            /** Format: int64 */
+            assetsMinorUnits: number;
+            /** Format: int64 */
+            liabilitiesMinorUnits: number;
+            /** Format: int64 */
+            revenueMinorUnits: number;
+            /** Format: int64 */
+            expensesMinorUnits: number;
+            /** Format: int64 */
+            netPositionMinorUnits: number;
+            accounts: components["schemas"]["WltLedgerAccountBalance"][];
+        };
+        WltFinancialSummary: {
+            currencies: components["schemas"]["WltLedgerCurrencySummary"][];
+            /** @description Known financial events not yet posted to this kernel (e.g. payment capture), so consumers can render a caveat instead of treating the summary as complete. */
+            dataCompleteness: string[];
+        };
+        WltFinancialSummaryResponse: {
+            financialSummary: components["schemas"]["WltFinancialSummary"];
         };
         WltUpsertPayoutDestinationRequest: {
             beneficiaryName: string;
@@ -2756,6 +2809,30 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getWltLedgerFinancialSummary: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Financial summary grouped by currency. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltFinancialSummaryResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
         };
     };
     getWltPayoutDestination: {

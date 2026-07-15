@@ -96,6 +96,14 @@ func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter,
 	s.proxyFinanceRead(w, r, "/wlt/ledger/entries", financeQuery(r, "actorId", "actorType", "orderId", "entryType", "limit", "cursor"))
 }
 
+// GET /dsh/control-panel/finance/financial-summary
+func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	s.proxyFinanceRead(w, r, "/wlt/ledger/financial-summary", nil)
+}
+
 // GET /dsh/control-panel/finance/cod-records
 func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {

@@ -82,6 +82,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/control-panel/finance/refunds", protected.handleFinanceRefunds)
 	mux.HandleFunc("GET /dsh/control-panel/finance/refunds/{refundId}", protected.handleFinanceRefundDetail)
 	mux.HandleFunc("GET /dsh/control-panel/finance/ledger/entries", protected.handleFinanceLedgerEntries)
+		mux.HandleFunc("GET /dsh/control-panel/finance/financial-summary", protected.handleFinanceFinancialSummary)
 	mux.HandleFunc("GET /dsh/control-panel/finance/cod-records", protected.handleFinanceCodRecords)
 	mux.HandleFunc("GET /dsh/control-panel/finance/commissions", protected.handleFinanceCommissions)
 	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests", protected.handleFinancePayoutRequests)

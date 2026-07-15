@@ -48,11 +48,12 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
     };
   }
 
-  const [overview, ledger, refunds, payoutRequests] = await Promise.all([
+  const [overview, ledger, refunds, payoutRequests, financialSummary] = await Promise.all([
     tryGet("/dsh/control-panel/finance/settlements", (body: any) => body),
     tryGet("/dsh/control-panel/finance/ledger/entries?limit=250", (body: any) => (body.ledgerEntries ?? []) as readonly any[]),
     tryGet("/dsh/control-panel/finance/refunds", (body: any) => (body.refunds ?? []) as readonly any[]),
     tryGet("/dsh/control-panel/finance/payout-requests?status=pending", (body: any) => (body.payoutRequests ?? []) as readonly any[]),
+    tryGet("/dsh/control-panel/finance/financial-summary", (body: any) => body.financialSummary ?? null),
   ]);
 
   const failures: { key: string; message: string }[] = [];
@@ -60,8 +61,9 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
   if (!ledger.ok) failures.push({ key: "ledger_err", message: ledger.message });
   if (!refunds.ok) failures.push({ key: "refunds_err", message: refunds.message });
   if (!payoutRequests.ok) failures.push({ key: "payoutRequests_err", message: payoutRequests.message });
+  if (!financialSummary.ok) failures.push({ key: "financialSummary_err", message: financialSummary.message });
 
-  if (!overview.ok || !ledger.ok || !refunds.ok || !payoutRequests.ok) {
+  if (!overview.ok || !ledger.ok || !refunds.ok || !payoutRequests.ok || !financialSummary.ok) {
     return {
       state: "blocked",
       runtimeApiUrl: baseUrl,
@@ -77,6 +79,7 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
       ledgerEntries: ledger.data,
       refunds: refunds.data,
       payoutRequests: payoutRequests.data,
+      financialSummary: financialSummary.data,
       fetchedAt: new Date().toISOString(),
     },
   };

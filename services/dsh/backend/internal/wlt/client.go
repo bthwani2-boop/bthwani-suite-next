@@ -304,6 +304,7 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/settlements/summary":      {},
 	"/wlt/refunds":                  {},
 	"/wlt/ledger/entries":           {},
+	"/wlt/ledger/financial-summary": {},
 	"/wlt/cod-records":              {},
 	"/wlt/commissions":              {},
 	"/wlt/references/wallet-status": {},

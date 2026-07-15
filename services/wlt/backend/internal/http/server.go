@@ -96,6 +96,11 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/ledger/entries", gate(serviceAuth(ledger.HandleAppendLedgerEntry(db))))
 	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", readGate(ledger.HandleGetLedgerEntry(db)))
 	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
+	// WLT Ledger Kernel: account-type-aware read model built from
+	// wlt_ledger_accounts/wlt_ledger_transactions/wlt_ledger_lines (see
+	// kernel_read.go) -- the source the Financial Center should read from
+	// instead of inferring accounting client-side off /wlt/ledger/entries.
+	mux.HandleFunc("GET /wlt/ledger/financial-summary", readGate(ledger.HandleFinancialSummary(db)))
 
 	// WLT Payout Destinations: DSH sends bank details here; WLT owns the
 	// financial truth and returns only masked display values to DSH. The
