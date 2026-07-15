@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
 import { useServerDataSource } from "@bthwani/ui-kit";
+import { createDshSessionHttpClient } from "../../shared/_kernel/dsh-http-request";
 
+const { request } = createDshSessionHttpClient("product-picker");
 export type ProductPickerProps = {
   value: string;
   onChange: (productId: string) => void;
@@ -22,9 +24,9 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
       let url = `/api/dsh/admin/catalog/products?search=${encodeURIComponent(search)}&limit=${params.limit}`;
       if (domain) url += `&domainId=${encodeURIComponent(domain)}`;
       
-      const res = await fetch(url, { signal });
-      if (!res.ok) throw new Error("Failed to fetch products");
-      const data = await res.json();
+      const res = await request<any>(url, { signal });
+      if (!res.ok || !res.body) throw new Error("Failed to fetch products");
+      const data = res.body;
       return { items: data.masterProducts || [], total: data.total || data.masterProducts?.length || 0 };
     },
     initialFilters: { search: query, domainId },

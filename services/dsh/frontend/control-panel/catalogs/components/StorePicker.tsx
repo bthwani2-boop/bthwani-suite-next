@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
 import { useServerDataSource } from "@bthwani/ui-kit";
+import { createDshSessionHttpClient } from "../../shared/_kernel/dsh-http-request";
 
+const { request } = createDshSessionHttpClient("store-picker");
 export type StorePickerProps = {
   value: string;
   onChange: (storeId: string) => void;
@@ -17,9 +19,9 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
       const search = params.filters.search || "";
       if (!search) return { items: [], total: 0 };
       
-      const res = await fetch(`/api/dsh/admin/stores?search=${encodeURIComponent(search)}&limit=${params.limit}`, { signal });
-      if (!res.ok) throw new Error("Failed to fetch stores");
-      const data = await res.json();
+      const res = await request<any>(`/api/dsh/admin/stores?search=${encodeURIComponent(search)}&limit=${params.limit}`, { signal });
+      if (!res.ok || !res.body) throw new Error("Failed to fetch stores");
+      const data = res.body;
       return { items: data.stores || [], total: data.stores?.length || 0 };
     },
     initialFilters: { search: query },

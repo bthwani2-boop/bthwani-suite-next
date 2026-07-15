@@ -14,8 +14,9 @@ import {
 import {
   buildWltDshFinanceHubViewModel,
 } from '@bthwani/wlt';
-import {
   loadDshFinanceRuntimeReadModel,
+  approvePayoutRequest,
+  rejectPayoutRequest,
 } from './finance-hub-runtime.api';
 import type {
   WltDshFinanceRuntimeResult,
@@ -153,3 +154,5 @@ export function useFinanceController({
     onSubTabSelect,
   };
 }
+
+export { approvePayoutRequest, rejectPayoutRequest };

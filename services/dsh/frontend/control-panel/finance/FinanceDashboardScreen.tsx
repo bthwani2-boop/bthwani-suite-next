@@ -14,9 +14,8 @@ import {
   colorPalette,
   alpha,
 } from "@bthwani/ui-kit";
-import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
+import { approvePayoutRequest, rejectPayoutRequest, useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
 import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "@bthwani/wlt";
-import { approvePayoutRequest, rejectPayoutRequest } from "../../shared/finance-wlt-link/finance/finance-hub-runtime.api";
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 

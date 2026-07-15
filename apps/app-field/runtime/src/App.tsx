@@ -1,5 +1,5 @@
 import { Platform, StyleSheet, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
@@ -110,11 +110,9 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <WorkforceProfileProvider>
-        <AppContent />
-      </WorkforceProfileProvider>
-    </SafeAreaProvider>
+    <WorkforceProfileProvider>
+      <AppContent />
+    </WorkforceProfileProvider>
   );
 }
 
