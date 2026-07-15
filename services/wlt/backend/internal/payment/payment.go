@@ -3,12 +3,14 @@ package payment
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"wlt-api/internal/dshoutbox"
 	"wlt-api/internal/provider"
+	"wlt-api/internal/refund"
 	"wlt-api/internal/shared"
 )
 
@@ -17,6 +19,13 @@ import (
 // (i.e. not reference_created or pending_provider) -- for example, a session
 // that is already authorized/captured, or one already failed/expired.
 var ErrNotAuthorizable = errors.New("payment session is not in an authorizable state")
+
+// ErrNotExpirable is returned when ExpireSession (or the expire branch of
+// CancelSessionForOrder) is called on a session that is not in a state from
+// which expiry can proceed (i.e. not reference_created, pending_provider, or
+// authorized) -- for example, a session that is already captured, which must
+// never be silently flipped to expired and lose its true captured state.
+var ErrNotExpirable = errors.New("payment session is not in an expirable state")
 
 // dshNotifier delivery is handled by the durable outbox (internal/dshoutbox):
 // each terminal transition below enqueues an event in the same transaction
@@ -295,7 +304,10 @@ func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
 }
 
 // ExpireSession commits the expired transition and enqueues the DSH outbox
-// event atomically.
+// event atomically. Only sessions in reference_created, pending_provider, or
+// authorized may be expired; anything else (already captured, already
+// expired, failed, cod_collected, etc.) returns ErrNotExpirable instead of
+// unconditionally overwriting the session's true status.
 func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
@@ -305,6 +317,35 @@ func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		return nil, err
 	}
 	defer tx.Rollback()
+	s, err := expireSessionTx(tx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// expireSessionTx performs the guarded expire transition within an
+// already-open transaction. It is shared by ExpireSession and the expire
+// branch of CancelSessionForOrder so the guard/UPDATE/outbox-enqueue SQL is
+// defined in exactly one place.
+func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
+	var status string
+	err := tx.QueryRow(`SELECT status FROM wlt_payment_sessions WHERE id = $1 FOR UPDATE`, sessionID).Scan(&status)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if status != "reference_created" && status != "pending_provider" && status != "authorized" {
+		return nil, ErrNotExpirable
+	}
 	const q = `
 		UPDATE wlt_payment_sessions
 		SET status = 'expired', updated_at = NOW()
@@ -323,10 +364,92 @@ func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.CheckoutIntentID); err != nil {
 		return nil, err
 	}
-	if err := tx.Commit(); err != nil {
+	return s, nil
+}
+
+// CancelForOrderResult is the response shape for CancelSessionForOrder: the
+// action taken ("expired", "refund_requested", or "none") plus whichever of
+// PaymentSession/Refund/SessionStatus is relevant for that action.
+type CancelForOrderResult struct {
+	Action         string          `json:"action"`
+	PaymentSession *PaymentSession `json:"paymentSession,omitempty"`
+	Refund         *refund.Refund  `json:"refund,omitempty"`
+	SessionStatus  string          `json:"sessionStatus,omitempty"`
+}
+
+// CancelSessionForOrder lets DSH signal "this order was cancelled" without
+// itself deciding whether the underlying payment needs to be expired (not
+// yet captured) or refunded (already captured) -- that decision belongs to
+// WLT, which owns the session's true state:
+//   - reference_created/pending_provider/authorized: expire the session.
+//   - captured/cod_collected (funds already received): create a
+//     requested-status refund for human review (never auto-completes).
+//   - anything else (already expired/failed/etc.): no action is needed; a
+//     cancellation racing with an already-terminal session is normal, not
+//     an error.
+func CancelSessionForOrder(db *sql.DB, sessionID, orderID, clientID, reason string) (*CancelForOrderResult, error) {
+	if sessionID == "" {
+		return nil, fmt.Errorf("paymentSessionId is required")
+	}
+	if orderID == "" || clientID == "" {
+		return nil, fmt.Errorf("orderId and clientId are required")
+	}
+	current, err := getSession(db, sessionID)
+	if err != nil || current == nil {
 		return nil, err
 	}
-	return s, nil
+
+	switch current.Status {
+	case "reference_created", "pending_provider", "authorized":
+		tx, err := db.Begin()
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback()
+		s, err := expireSessionTx(tx, sessionID)
+		if errors.Is(err, ErrNotExpirable) {
+			// Raced with another transition between our read above and the
+			// guarded update; report the session's actual current state
+			// rather than surfacing an error for a harmless race.
+			latest, ferr := getSession(db, sessionID)
+			if ferr != nil || latest == nil {
+				return nil, ferr
+			}
+			return &CancelForOrderResult{Action: "none", SessionStatus: latest.Status}, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if s == nil {
+			return nil, nil
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return &CancelForOrderResult{Action: "expired", PaymentSession: s}, nil
+
+	case "captured", "cod_collected":
+		ref, err := refund.CreateRefund(db, refund.CreateRefundInput{
+			PaymentSessionID: sessionID,
+			OrderID:          orderID,
+			ClientID:         clientID,
+			Reason:           reason,
+		})
+		if errors.Is(err, refund.ErrSessionNotRefundable) {
+			latest, ferr := getSession(db, sessionID)
+			if ferr != nil || latest == nil {
+				return nil, ferr
+			}
+			return &CancelForOrderResult{Action: "none", SessionStatus: latest.Status}, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		return &CancelForOrderResult{Action: "refund_requested", Refund: ref}, nil
+
+	default:
+		return &CancelForOrderResult{Action: "none", SessionStatus: current.Status}, nil
+	}
 }
 
 // HTTP handlers
@@ -382,6 +505,10 @@ func HandleCaptureSession(db *sql.DB) http.HandlerFunc {
 func HandleExpireSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := ExpireSession(db, r.PathValue("paymentSessionId"))
+		if errors.Is(err, ErrNotExpirable) {
+			shared.SendError(w, http.StatusConflict, "NOT_EXPIRABLE", "payment session is not in an expirable state")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -391,6 +518,46 @@ func HandleExpireSession(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
+	}
+}
+
+// HandleCancelSessionForOrder handles the new orchestration endpoint DSH
+// calls to signal an order was cancelled, without DSH itself needing to know
+// whether the underlying session should be expired or refunded -- see
+// CancelSessionForOrder. Response envelope:
+//   - {"action": "expired", "paymentSession": {...}}
+//   - {"action": "refund_requested", "refund": {...}}
+//   - {"action": "none", "sessionStatus": "<status>"}
+func HandleCancelSessionForOrder(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sessionID := r.PathValue("paymentSessionId")
+		var input struct {
+			OrderID  string `json:"orderId"`
+			ClientID string `json:"clientId"`
+			Reason   string `json:"reason"`
+		}
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+			return
+		}
+		result, err := CancelSessionForOrder(db, sessionID, input.OrderID, input.ClientID, input.Reason)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		if result == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
+			return
+		}
+		switch result.Action {
+		case "expired":
+			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "expired", "paymentSession": result.PaymentSession})
+		case "refund_requested":
+			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "refund_requested", "refund": result.Refund})
+		default:
+			shared.SendJSON(w, http.StatusOK, map[string]any{"action": "none", "sessionStatus": result.SessionStatus})
+		}
 	}
 }
 

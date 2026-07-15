@@ -9,6 +9,7 @@ import (
 
 	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
+	"wlt-api/internal/wallet"
 )
 
 type CodRecord struct {
@@ -270,44 +271,169 @@ func MarkCodRemitted(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	return c, err
 }
 
+// ErrNoActiveCommissionPolicy is returned when a field-visit commission is
+// requested but no active 'field_visit_fee' policy exists in
+// wlt_commission_policies. The HTTP handler maps this to 503 -- the caller
+// (DSH's outbox worker) should retry once a policy is configured, rather
+// than the amount silently falling back to caller-supplied/zero.
+var ErrNoActiveCommissionPolicy = errors.New("no active commission policy found")
+
+// ErrUnsupportedCommissionCalculation is returned when an active policy is
+// found but its calculation_type isn't one we know how to apply yet (only
+// 'fixed' is implemented). Guessing a percentage/tiered formula here would
+// silently mis-pay a real person, so we reject instead.
+var ErrUnsupportedCommissionCalculation = errors.New("commission policy calculation_type is not supported")
+
+type commissionPolicy struct {
+	ID               string
+	CommissionType   string
+	CalculationType  string
+	AmountMinorUnits int64
+	Currency         string
+}
+
+func getActiveCommissionPolicy(db interface {
+	QueryRow(query string, args ...any) *sql.Row
+}, commissionType string) (*commissionPolicy, error) {
+	const q = `
+		SELECT id, commission_type, calculation_type, amount_minor_units, currency
+		FROM wlt_commission_policies
+		WHERE commission_type = $1 AND status = 'active'
+		ORDER BY updated_at DESC
+		LIMIT 1`
+	var p commissionPolicy
+	err := db.QueryRow(q, commissionType).Scan(&p.ID, &p.CommissionType, &p.CalculationType, &p.AmountMinorUnits, &p.Currency)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func getCommissionByIdempotencyKeyTx(tx *sql.Tx, idempotencyKey string) (*Commission, error) {
+	const q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE idempotency_key = $1`
+	c, err := scanCommission(tx.QueryRow(q, idempotencyKey))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return c, err
+}
+
 func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, error) {
 	if input.BeneficiaryActorID == "" || input.BeneficiaryActorType == "" || input.SourceType == "" || input.SourceID == "" {
 		return nil, fmt.Errorf("beneficiaryActorId, beneficiaryActorType, sourceType, sourceId are required")
 	}
-	commType := input.CommissionType
-	if commType == "" {
-		commType = "delivery_fee"
-	}
-	
-	amountMinorUnits := input.AmountMinorUnits
-	currency := input.Currency
 
-	if input.CheckoutIntentID != "" {
-		session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Idempotency check first: if a commission with this key already exists,
+	// return it as-is without touching the wallet again. This is what makes
+	// retries (e.g. from the DSH outbox worker) safe.
+	if input.IdempotencyKey != "" {
+		existing, err := getCommissionByIdempotencyKeyTx(tx, input.IdempotencyKey)
 		if err != nil {
 			return nil, err
 		}
-		if session == nil {
-			return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
+		if existing != nil {
+			if err := tx.Commit(); err != nil {
+				return nil, fmt.Errorf("commit tx: %w", err)
+			}
+			return existing, nil
 		}
-		currency = session.Currency
+	}
+
+	commType := input.CommissionType
+	amountMinorUnits := input.AmountMinorUnits
+	currency := input.Currency
+	var commissionPolicyID *string
+
+	isFieldVisit := input.SourceType == "field_visit"
+
+	if isFieldVisit {
+		// Field-visit commissions carry NO amount from DSH's outbox event --
+		// the amount MUST come from WLT's own policy lookup, never from the
+		// caller. Ignore any caller-supplied amount/currency/commissionType.
+		policy, err := getActiveCommissionPolicy(tx, "field_visit_fee")
+		if err != nil {
+			return nil, err
+		}
+		if policy == nil {
+			return nil, ErrNoActiveCommissionPolicy
+		}
+		if policy.CalculationType != "fixed" {
+			return nil, ErrUnsupportedCommissionCalculation
+		}
+		commType = policy.CommissionType
+		amountMinorUnits = policy.AmountMinorUnits
+		currency = policy.Currency
+		commissionPolicyID = &policy.ID
+	} else {
+		// Existing checkout-linked / caller-supplied-amount paths, unchanged:
+		// no real commission-rate policy exists yet for order/captain
+		// commissions, so this remains a known, separately-tracked gap.
+		if commType == "" {
+			commType = "delivery_fee"
+		}
+		if input.CheckoutIntentID != "" {
+			session, err := reference.GetPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+			if err != nil {
+				return nil, err
+			}
+			if session == nil {
+				return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
+			}
+			currency = session.Currency
+			if currency == "" {
+				currency = "YER"
+			}
+			amountMinorUnits = session.AmountMinorUnits
+		}
 		if currency == "" {
 			currency = "YER"
 		}
-		amountMinorUnits = session.AmountMinorUnits
-	}
-
-	if currency == "" {
-		currency = "YER"
 	}
 
 	const q = `
 		INSERT INTO wlt_commissions
-			(beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, visit_id, store_id, commission_type, amount_minor_units, currency, idempotency_key)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			(beneficiary_actor_id, beneficiary_actor_type, source_type, source_id, visit_id, store_id, commission_policy_id, commission_type, amount_minor_units, currency, idempotency_key)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING ` + commissionCols
-	row := db.QueryRow(q, input.BeneficiaryActorID, input.BeneficiaryActorType, input.SourceType, input.SourceID, input.VisitID, input.StoreID, commType, amountMinorUnits, currency, input.IdempotencyKey)
-	return scanCommission(row)
+	row := tx.QueryRow(q, input.BeneficiaryActorID, input.BeneficiaryActorType, input.SourceType, input.SourceID, input.VisitID, input.StoreID, commissionPolicyID, commType, amountMinorUnits, currency, input.IdempotencyKey)
+	c, err := scanCommission(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only field-visit commissions post to the wallet: their amount is now
+	// policy-derived and therefore trustworthy. Checkout-linked commissions
+	// still don't touch the wallet -- their amount-derivation is a known,
+	// separate gap (see comment above), so posting it to a balance the actor
+	// can see would be premature.
+	if isFieldVisit {
+		if _, err := wallet.EnsureWalletTx(tx, input.BeneficiaryActorType, input.BeneficiaryActorID, currency); err != nil {
+			return nil, err
+		}
+		const walletQ = `
+			UPDATE wlt_wallets
+			SET pending_balance_minor_units = pending_balance_minor_units + $1,
+				earned_total_minor_units = earned_total_minor_units + $1,
+				updated_at = NOW()
+			WHERE actor_type = $2 AND actor_id = $3`
+		if _, err := tx.Exec(walletQ, amountMinorUnits, input.BeneficiaryActorType, input.BeneficiaryActorID); err != nil {
+			return nil, fmt.Errorf("update wallet balance: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+	return c, nil
 }
 
 func ListCommissions(db *sql.DB, sourceID, beneficiaryActorID, beneficiaryActorType string) ([]*Commission, error) {
@@ -449,6 +575,14 @@ func HandleCreateCommission(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		c, err := CreateCommission(db, input)
+		if errors.Is(err, ErrNoActiveCommissionPolicy) {
+			shared.SendError(w, http.StatusServiceUnavailable, "NO_ACTIVE_COMMISSION_POLICY", "no active commission policy is configured for this commission type")
+			return
+		}
+		if errors.Is(err, ErrUnsupportedCommissionCalculation) {
+			shared.SendError(w, http.StatusServiceUnavailable, "UNSUPPORTED_COMMISSION_CALCULATION", "the active commission policy uses a calculation type that is not yet supported")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

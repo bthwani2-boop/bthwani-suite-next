@@ -524,6 +524,59 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
+    post:
+      operationId: cancelWltPaymentSessionForOrder
+      summary: >-
+        Signal that the order behind this payment session was cancelled;
+        WLT decides whether to expire (not yet captured) or request a refund
+        (already captured/cod_collected).
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime. WLT
+        -- not the caller -- owns the session's true state, so this endpoint
+        lets DSH signal a cancellation without itself having to decide
+        between expiring an unfunded session or refunding a funded one. If
+        the session is captured or cod_collected, this creates a
+        requested-status refund for human review; it never auto-completes
+        or moves money. If the session is already in a terminal state
+        (expired/failed/etc.), this returns action "none" rather than an
+        error, since a cancellation racing an already-terminal session is
+        normal, not a client error.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      tags:
+        - WltPaymentSessions
+      parameters:
+        - name: paymentSessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltCancelPaymentSessionForOrderRequest"
+      responses:
+        "200":
+          description: >-
+            Either the session was expired, a refund was requested, or no
+            action was needed because the session was already terminal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WltCancelPaymentSessionForOrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /wlt/payment-sessions/{paymentSessionId}/cod-collect:
     post:
@@ -584,6 +637,10 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
     get:
       operationId: listWltRefunds
       summary: List refunds by orderId or clientId.
@@ -1908,11 +1965,15 @@ components:
 
     WltCreateRefundRequest:
       type: object
+      description: >-
+        amountMinorUnits/currency are intentionally not accepted here -- the
+        refunded amount is always derived from the referenced payment
+        session's own row, never from caller input, to prevent amount
+        tampering. The session must be captured or cod_collected.
       required:
         - paymentSessionId
         - orderId
         - clientId
-        - amountMinorUnits
       properties:
         paymentSessionId:
           type: string
@@ -1920,13 +1981,38 @@ components:
           type: string
         clientId:
           type: string
-        amountMinorUnits:
-          type: integer
-          format: int64
-        currency:
-          type: string
-          default: YER
         reason:
+          type: string
+
+    WltCancelPaymentSessionForOrderRequest:
+      type: object
+      required:
+        - orderId
+        - clientId
+      properties:
+        orderId:
+          type: string
+        clientId:
+          type: string
+        reason:
+          type: string
+
+    WltCancelPaymentSessionForOrderResponse:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - expired
+            - refund_requested
+            - none
+        paymentSession:
+          $ref: "#/components/schemas/WltPaymentSession"
+        refund:
+          $ref: "#/components/schemas/WltRefund"
+        sessionStatus:
           type: string
 
     WltRefundResponse:

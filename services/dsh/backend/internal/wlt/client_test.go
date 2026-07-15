@@ -299,6 +299,211 @@ func TestFinanceReadRejectsBareWalletsPathNowThatItRequiresActorSegments(t *test
 	}
 }
 
+func TestDeliverFieldCommissionSendsExactBodyAndHeaders(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", r.Method)
+		}
+		if r.URL.Path != "/wlt/commissions" {
+			t.Fatalf("expected /wlt/commissions, got %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-service-token" {
+			t.Fatalf("expected Authorization=Bearer test-service-token, got %q", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
+		}
+		if r.Header.Get("X-Correlation-ID") != "corr-visit-1" {
+			t.Fatalf("expected X-Correlation-ID=corr-visit-1, got %q", r.Header.Get("X-Correlation-ID"))
+		}
+		var raw map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		expected := map[string]any{
+			"beneficiaryActorId":   "field-1",
+			"beneficiaryActorType": "field",
+			"sourceType":           "field_visit",
+			"sourceId":             "visit-1",
+			"visitId":              "visit-1",
+			"storeId":              "store-1",
+			"idempotencyKey":       "field_visit_commission:visit-1",
+		}
+		for k, v := range expected {
+			if raw[k] != v {
+				t.Fatalf("expected %s=%v, got %v", k, v, raw[k])
+			}
+		}
+		for _, forbidden := range []string{"amount", "amountMinorUnits", "currency", "commissionType"} {
+			if _, ok := raw[forbidden]; ok {
+				t.Fatalf("did not expect %q field in field commission request body", forbidden)
+			}
+		}
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	err := c.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{
+		BeneficiaryActorID: "field-1",
+		SourceID:           "visit-1",
+		VisitID:            "visit-1",
+		StoreID:            "store-1",
+		IdempotencyKey:     "field_visit_commission:visit-1",
+		CorrelationID:      "corr-visit-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDeliverFieldCommissionNotConfigured(t *testing.T) {
+	c := NewClient("", "")
+	err := c.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{})
+	if err == nil || !strings.Contains(err.Error(), "not configured") {
+		t.Fatalf("expected 'not configured' error, got: %v", err)
+	}
+}
+
+func TestDeliverFieldCommissionNonSuccessStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	err := c.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{VisitID: "visit-1"})
+	if err == nil || !strings.Contains(err.Error(), "500") {
+		t.Fatalf("expected error mentioning status 500, got: %v", err)
+	}
+}
+
+func TestExpireSessionSendsServiceHeadersAndPath(t *testing.T) {
+	var gotPath, gotMethod string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		if r.Header.Get("Authorization") != "Bearer test-service-token" {
+			t.Fatalf("expected Authorization=Bearer test-service-token, got %q", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
+		}
+		if r.Header.Get("X-Correlation-ID") != "corr-1" {
+			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	if err := c.ExpireSession(context.Background(), "ps-1", "corr-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotMethod != http.MethodPost {
+		t.Fatalf("expected POST, got %s", gotMethod)
+	}
+	if gotPath != "/wlt/payment-sessions/ps-1/expire" {
+		t.Fatalf("expected /wlt/payment-sessions/ps-1/expire, got %q", gotPath)
+	}
+}
+
+func TestExpireSessionTreats409AsTerminalSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusConflict)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	if err := c.ExpireSession(context.Background(), "ps-1", "corr-1"); err != nil {
+		t.Fatalf("expected 409 to be treated as terminal success (session already not expirable), got error: %v", err)
+	}
+}
+
+func TestExpireSessionNonSuccessStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	err := c.ExpireSession(context.Background(), "ps-1", "corr-1")
+	if err == nil || !strings.Contains(err.Error(), "500") {
+		t.Fatalf("expected error mentioning status 500, got: %v", err)
+	}
+}
+
+func TestExpireSessionNotConfigured(t *testing.T) {
+	c := NewClient("", "")
+	err := c.ExpireSession(context.Background(), "ps-1", "corr-1")
+	if err == nil || !strings.Contains(err.Error(), "not configured") {
+		t.Fatalf("expected 'not configured' error, got: %v", err)
+	}
+}
+
+func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
+	var gotPath string
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", r.Method)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-service-token" {
+			t.Fatalf("expected Authorization=Bearer test-service-token, got %q", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
+		}
+		if r.Header.Get("X-Correlation-ID") != "order-1" {
+			t.Fatalf("expected X-Correlation-ID=order-1, got %q", r.Header.Get("X-Correlation-ID"))
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]any{"action": "refund_pending"})
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{
+		OrderID:  "order-1",
+		ClientID: "client-1",
+		Reason:   "store rejected order",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotPath != "/wlt/payment-sessions/ps-1/cancel-for-order" {
+		t.Fatalf("expected /wlt/payment-sessions/ps-1/cancel-for-order, got %q", gotPath)
+	}
+	if gotBody["orderId"] != "order-1" || gotBody["clientId"] != "client-1" || gotBody["reason"] != "store rejected order" {
+		t.Fatalf("unexpected request body: %+v", gotBody)
+	}
+}
+
+func TestCancelSessionForOrderNonSuccessStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{OrderID: "order-1"})
+	if err == nil || !strings.Contains(err.Error(), "500") {
+		t.Fatalf("expected error mentioning status 500, got: %v", err)
+	}
+}
+
+func TestCancelSessionForOrderNotConfigured(t *testing.T) {
+	c := NewClient("", "")
+	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{OrderID: "order-1"})
+	if err == nil || !strings.Contains(err.Error(), "not configured") {
+		t.Fatalf("expected 'not configured' error, got: %v", err)
+	}
+}
+
 func TestNotifyDeliveryCompletedNonSuccessStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

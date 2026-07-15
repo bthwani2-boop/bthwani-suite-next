@@ -146,6 +146,156 @@ func (c *Client) NotifyDeliveryCompleted(ctx context.Context, input NotifyDelive
 	return nil
 }
 
+type DeliverFieldCommissionInput struct {
+	BeneficiaryActorID   string `json:"beneficiaryActorId"`
+	BeneficiaryActorType string `json:"beneficiaryActorType"`
+	SourceType           string `json:"sourceType"`
+	SourceID             string `json:"sourceId"`
+	VisitID              string `json:"visitId"`
+	StoreID              string `json:"storeId"`
+	IdempotencyKey       string `json:"idempotencyKey"`
+	CorrelationID        string `json:"-"`
+}
+
+// DeliverFieldCommission tells WLT a field agent completed an onboarding
+// visit so it can derive the commission amount itself from a commission
+// policy and post the effect to the beneficiary's wallet. WLT re-derives the
+// amount from its own commission policy for the visit; DSH never computes or
+// forwards a financial amount here.
+func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldCommissionInput) error {
+	if !c.Configured() {
+		return fmt.Errorf("WLT payment-session handoff is not configured")
+	}
+	if input.BeneficiaryActorType == "" {
+		input.BeneficiaryActorType = "field"
+	}
+	if input.SourceType == "" {
+		input.SourceType = "field_visit"
+	}
+	body, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("encode WLT field commission request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/commissions", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build WLT field commission request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if input.CorrelationID != "" {
+		req.Header.Set("X-Correlation-ID", input.CorrelationID)
+	} else {
+		req.Header.Set("X-Correlation-ID", input.VisitID)
+	}
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("call WLT field commission: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("WLT field commission returned HTTP %d", response.StatusCode)
+	}
+	return nil
+}
+
+// ExpireSession tells WLT to expire a payment session that was created but
+// never captured — e.g. because the checkout intent it belonged to was
+// cancelled by the client before any order existed. WLT owns the decision of
+// whether the session is still in an expirable state.
+//
+// A 409 response means WLT considers the session already past the point
+// where it can be expired (e.g. it was already captured, expired, or
+// cancelled by some other path). That is treated as a terminal, non-retryable
+// success rather than an error: retrying forever against a session that has
+// already moved on would just waste outbox attempts, and the *outcome* DSH
+// cares about — the session no longer being left dangling in an open state —
+// already holds true whenever WLT reports 409 here.
+func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlationID string) error {
+	if !c.Configured() {
+		return fmt.Errorf("WLT payment-session handoff is not configured")
+	}
+	if paymentSessionID == "" {
+		return fmt.Errorf("paymentSessionID is required")
+	}
+	path := "/wlt/payment-sessions/" + url.PathEscape(paymentSessionID) + "/expire"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, nil)
+	if err != nil {
+		return fmt.Errorf("build WLT expire-session request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if correlationID != "" {
+		req.Header.Set("X-Correlation-ID", correlationID)
+	}
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("call WLT expire-session: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusConflict {
+		// Already not expirable (captured/expired/cancelled elsewhere): the
+		// outcome DSH needs already holds, so treat as terminal success.
+		return nil
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("WLT expire-session returned HTTP %d", response.StatusCode)
+	}
+	return nil
+}
+
+// CancelSessionForOrderInput is the payload for CancelSessionForOrder.
+type CancelSessionForOrderInput struct {
+	OrderID  string `json:"orderId"`
+	ClientID string `json:"clientId"`
+	Reason   string `json:"reason"`
+}
+
+// CancelSessionForOrder tells WLT that the order backed by paymentSessionID
+// has been rejected or cancelled. WLT decides internally whether to expire
+// the session (not yet captured), open a pending refund for review (already
+// captured), or no-op (already terminal); DSH treats any 2xx response as
+// success regardless of which internal action WLT took.
+func (c *Client) CancelSessionForOrder(ctx context.Context, paymentSessionID string, input CancelSessionForOrderInput) error {
+	if !c.Configured() {
+		return fmt.Errorf("WLT payment-session handoff is not configured")
+	}
+	if paymentSessionID == "" {
+		return fmt.Errorf("paymentSessionID is required")
+	}
+	body, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("encode WLT cancel-for-order request: %w", err)
+	}
+	path := "/wlt/payment-sessions/" + url.PathEscape(paymentSessionID) + "/cancel-for-order"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build WLT cancel-for-order request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("X-Correlation-ID", input.OrderID)
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("call WLT cancel-for-order: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("WLT cancel-for-order returned HTTP %d", response.StatusCode)
+	}
+	// Response body shape (e.g. an "action" field indicating which internal
+	// path WLT took) is not load-bearing for DSH's logic here; any 2xx is
+	// success, same treatment as NotifyDeliveryCompleted.
+	return nil
+}
+
 // financeReadAllowlist enumerates the WLT internal financial read collections
 // DSH is allowed to proxy for its own authenticated surfaces. Anything else
 // is rejected before an upstream request is made.
@@ -259,7 +409,7 @@ func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []b
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
-	
+
 	allowed := false
 	if path == "/wlt/payout-requests" {
 		allowed = true

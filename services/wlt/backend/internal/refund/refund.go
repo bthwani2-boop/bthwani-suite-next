@@ -4,12 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"wlt-api/internal/provider"
+	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 )
+
+// ErrSessionNotRefundable is returned when CreateRefund is called for a
+// payment session that has not actually received funds (i.e. its status is
+// not captured or cod_collected). The amount/currency for a refund are
+// always derived from that session's own row -- never from caller input --
+// so a refund can only be requested once the session is in a state where
+// those stored values are the true captured amount.
+var ErrSessionNotRefundable = errors.New("payment session is not in a refundable state")
 
 type Refund struct {
 	ID               string  `json:"id"`
@@ -25,12 +35,14 @@ type Refund struct {
 	UpdatedAt        string  `json:"updatedAt"`
 }
 
+// CreateRefundInput intentionally has no AmountMinorUnits/Currency fields --
+// those are always derived from the referenced payment session's own row
+// (see CreateRefund), never from caller input, so a client cannot tamper
+// with the amount actually refunded by supplying a different value.
 type CreateRefundInput struct {
 	PaymentSessionID string `json:"paymentSessionId"`
 	OrderID          string `json:"orderId"`
 	ClientID         string `json:"clientId"`
-	AmountMinorUnits int64  `json:"amountMinorUnits"`
-	Currency         string `json:"currency"`
 	Reason           string `json:"reason"`
 }
 
@@ -83,22 +95,78 @@ func scanRefundRow(rows *sql.Rows) (*Refund, error) {
 const refundCols = `id, payment_session_id, order_id, client_id, amount_minor_units,
 	currency, reason, status, resolved_at, created_at, updated_at`
 
+// CreateRefund creates a refund for input.PaymentSessionID. The refunded
+// amount/currency are always read from that session's own row (never from
+// caller input -- see CreateRefundInput). The session must already be in a
+// funds-received state (captured, from a card capture, or cod_collected,
+// from a completed COD collection); anything else returns
+// ErrSessionNotRefundable. Calling this twice for the same session (e.g. a
+// retried DSH request) is idempotent: any existing non-rejected refund for
+// that session is returned instead of inserting a duplicate row, and the
+// check-then-insert runs inside a transaction (plus a partial unique index
+// as a defense-in-depth backstop -- see migration wlt-014) to avoid a race
+// between two concurrent requests both creating a refund for the session.
 func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
 	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" {
 		return nil, fmt.Errorf("paymentSessionId, orderId, and clientId are required")
 	}
-	currency := input.Currency
-	if currency == "" {
-		currency = "YER"
+	session, err := reference.GetPaymentSession(db, input.PaymentSessionID)
+	if err != nil {
+		return nil, err
 	}
+	if session == nil {
+		return nil, fmt.Errorf("payment session not found")
+	}
+	if session.Status != "captured" && session.Status != "cod_collected" {
+		return nil, ErrSessionNotRefundable
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	existing, err := getActiveRefundForSessionTx(tx, input.PaymentSessionID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return existing, nil
+	}
+
 	const q = `
 		INSERT INTO wlt_refunds
 			(payment_session_id, order_id, client_id, amount_minor_units, currency, reason)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING ` + refundCols
-	row := db.QueryRow(q, input.PaymentSessionID, input.OrderID, input.ClientID,
-		input.AmountMinorUnits, currency, input.Reason)
-	return scanRefund(row)
+	row := tx.QueryRow(q, input.PaymentSessionID, input.OrderID, input.ClientID,
+		session.AmountMinorUnits, session.Currency, input.Reason)
+	r, err := scanRefund(row)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// getActiveRefundForSessionTx looks up a non-rejected refund already
+// existing for paymentSessionID within tx, locking the row (if any) so a
+// concurrent CreateRefund call for the same session serializes against this
+// check instead of racing it.
+func getActiveRefundForSessionTx(tx *sql.Tx, paymentSessionID string) (*Refund, error) {
+	const q = `SELECT ` + refundCols + ` FROM wlt_refunds WHERE payment_session_id = $1 AND status != 'rejected' FOR UPDATE`
+	row := tx.QueryRow(q, paymentSessionID)
+	r, err := scanRefund(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return r, err
 }
 
 func GetRefund(db *sql.DB, refundID string) (*Refund, error) {
@@ -211,6 +279,10 @@ func HandleCreateRefund(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		ref, err := CreateRefund(db, input)
+		if errors.Is(err, ErrSessionNotRefundable) {
+			shared.SendError(w, http.StatusConflict, "SESSION_NOT_REFUNDABLE", "payment session is not in a refundable state (must be captured or cod_collected)")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

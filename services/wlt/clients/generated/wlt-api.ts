@@ -343,6 +343,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/payment-sessions/{paymentSessionId}/cancel-for-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signal that the order behind this payment session was cancelled; WLT decides whether to expire (not yet captured) or request a refund (already captured/cod_collected).
+         * @description Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime. WLT -- not the caller -- owns the session's true state, so this endpoint lets DSH signal a cancellation without itself having to decide between expiring an unfunded session or refunding a funded one. If the session is captured or cod_collected, this creates a requested-status refund for human review; it never auto-completes or moves money. If the session is already in a terminal state (expired/failed/etc.), this returns action "none" rather than an error, since a cancellation racing an already-terminal session is normal, not a client error.
+         */
+        post: operations["cancelWltPaymentSessionForOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payment-sessions/{paymentSessionId}/cod-collect": {
         parameters: {
             query?: never;
@@ -933,15 +953,24 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description amountMinorUnits/currency are intentionally not accepted here -- the refunded amount is always derived from the referenced payment session's own row, never from caller input, to prevent amount tampering. The session must be captured or cod_collected. */
         WltCreateRefundRequest: {
             paymentSessionId: string;
             orderId: string;
             clientId: string;
-            /** Format: int64 */
-            amountMinorUnits: number;
-            /** @default YER */
-            currency: string;
             reason?: string;
+        };
+        WltCancelPaymentSessionForOrderRequest: {
+            orderId: string;
+            clientId: string;
+            reason?: string;
+        };
+        WltCancelPaymentSessionForOrderResponse: {
+            /** @enum {string} */
+            action: "expired" | "refund_requested" | "none";
+            paymentSession?: components["schemas"]["WltPaymentSession"];
+            refund?: components["schemas"]["WltRefund"];
+            sessionStatus?: string;
         };
         WltRefundResponse: {
             refund: components["schemas"]["WltRefund"];
@@ -1704,6 +1733,36 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    cancelWltPaymentSessionForOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paymentSessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WltCancelPaymentSessionForOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Either the session was expired, a refund was requested, or no action was needed because the session was already terminal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCancelPaymentSessionForOrderResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     markWltCodCollected: {
@@ -1782,6 +1841,8 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getWltRefund: {

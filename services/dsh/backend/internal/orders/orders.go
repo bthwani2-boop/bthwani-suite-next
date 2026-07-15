@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"dsh-api/internal/checkoutfinanceoutbox"
 )
 
 var (
@@ -332,10 +334,35 @@ func RejectOrder(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
 		return nil, err
 	}
 
+	if err = enqueueOrderFinancialClosure(tx, order, reason); err != nil {
+		return nil, err
+	}
+
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	return order, nil
+}
+
+// enqueueOrderFinancialClosure enqueues a durable cancel_for_order outbox
+// event, inside the same transaction that commits the order rejection/
+// cancellation, whenever the order has a WLT payment session reference.
+// Without this, rejecting/cancelling an order never triggers any WLT
+// financial action, even though the linkage (wlt_payment_ref_id) is already
+// available on the order row.
+func enqueueOrderFinancialClosure(tx *sql.Tx, order *Order, reason string) error {
+	if order.WltPaymentRefID == "" {
+		return nil
+	}
+	orderID := order.ID
+	return checkoutfinanceoutbox.Enqueue(tx, checkoutfinanceoutbox.EnqueueInput{
+		EventType:        checkoutfinanceoutbox.EventTypeCancelForOrder,
+		CheckoutIntentID: order.CheckoutIntentID,
+		PaymentSessionID: order.WltPaymentRefID,
+		OrderID:          &orderID,
+		ClientID:         order.ClientID,
+		Reason:           reason,
+	})
 }
 
 // CancelOrderByOperator lets an operator cancel an order that is stuck before
@@ -434,6 +461,16 @@ func transitionOrderTx(tx *sql.Tx, orderID, actorRole string,
 		VALUES ($1::uuid, $2, $3, $4, NULLIF($5, ''))`,
 		order.ID, actorRole, fromStatus, string(toStatus), note); err != nil {
 		return nil, err
+	}
+
+	// Cancelling an order (e.g. CancelOrderByOperator) must also close out
+	// any WLT payment session tied to it. Other transitions driven through
+	// this shared helper (accept, prepare, dispatch, deliver, ...) never move
+	// to StatusCancelled, so this only fires on the cancellation path.
+	if toStatus == StatusCancelled {
+		if err = enqueueOrderFinancialClosure(tx, order, note); err != nil {
+			return nil, err
+		}
 	}
 
 	return order, nil
