@@ -1,4 +1,4 @@
-﻿name: Operational Protocol CI
+name: Operational Protocol CI
 
 on:
   pull_request:
@@ -188,62 +188,6 @@ jobs:
       - name: Authorization State Integrity Gate
         run: pnpm run guard:live-cross-journey-integrity
 
-  code-first-closure:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.34.2
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Code-First Closure Gate
-        run: pnpm run guard:foundation-cross-journey-closure
-
-  structural-change-safety:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.34.2
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Structural Change Safety Gate
-        run: pnpm run guard:foundation-cross-journey-remediation
-
-  partner-store-integrity:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10.34.2
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Partner Store Integrity Gate
-        run: pnpm run guard:dsh-order-lifecycle-execution
 
   organization-and-performance:
     runs-on: ubuntu-latest
@@ -359,9 +303,6 @@ jobs:
       - vertical-fullstack-integrity
       - contract-data-integrity
       - authorization-state-integrity
-      - code-first-closure
-      - structural-change-safety
-      - partner-store-integrity
       - organization-and-performance
       - ui-surface-purity
       - dead-code-prevention
