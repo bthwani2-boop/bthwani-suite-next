@@ -12,6 +12,11 @@ import {
 } from '@bthwani/core-identity';
 import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
+import {
+  useFieldOfflineSync,
+  completeFieldVisit,
+  upsertReadinessCheck,
+} from '../../shared/field-readiness';
 
 function useAndroidBackHandler(onBackPress: () => boolean) {
   React.useEffect(() => {
@@ -146,6 +151,22 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
 
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
+
+  // Drain offline queue when connectivity is restored.
+  useFieldOfflineSync(
+    identity.state.kind === 'authenticated'
+      ? {
+          complete_visit: async (op) => {
+            const payload = op.payload as { visitId: string; completionLocation: Parameters<typeof completeFieldVisit>[1] };
+            await completeFieldVisit(payload.visitId, payload.completionLocation);
+          },
+          upsert_readiness_check: async (op) => {
+            const payload = op.payload as { visitId: string; input: Parameters<typeof upsertReadinessCheck>[1] };
+            await upsertReadinessCheck(payload.visitId, payload.input);
+          },
+        }
+      : undefined,
+  );
 
   useAndroidBackHandler(
     React.useCallback(() => {
