@@ -29,8 +29,8 @@ INSERT INTO dsh_stores (
   (
     'store-test-grocery', 'haddah-central-market', 'أسواق حدة المركزية', 'active',
     'sana', 'haddah', 'serviceable', 4.80, 312, 25, 40, true,
-    '/dsh-media/store-test-grocery-hero.png',
-    '/dsh-media/store-test-grocery-logo.png',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-logo.jpg',
     'domain-groceries', ARRAY['delivery','pickup','express'], true,
     2.10, 3100, true, false, 2, true,
     15.3400, 44.1900
@@ -38,8 +38,8 @@ INSERT INTO dsh_stores (
   (
     'store-1002', 'al-sabeen-bakery', 'مخبز السبعين', 'active',
     'sana', 'sabeen', 'serviceable', 4.60, 189, 20, 35, true,
-    '/dsh-media/store-1002-hero.png',
-    '/dsh-media/store-1002-logo.png',
+    '/dsh-media/realistic/store-test-sweets-hero.jpg',
+    '/dsh-media/realistic/store-test-sweets-logo.jpg',
     'domain-groceries', ARRAY['delivery','pickup'], true,
     1.80, 1200, true, true, null, false,
     15.3300, 44.2000
@@ -47,8 +47,8 @@ INSERT INTO dsh_stores (
   (
     'store-1003', 'taiz-street-market', 'سوق شارع تعز', 'active',
     'sana', 'taiz-st', 'limited', 4.20, 97, 35, 55, true,
-    '/dsh-media/store-1003-hero.png',
-    '/dsh-media/store-1003-logo.png',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-logo.jpg',
     'domain-groceries', ARRAY['delivery','pickup'], false,
     3.50, 850, false, false, null, false,
     15.3200, 44.1800
@@ -56,8 +56,8 @@ INSERT INTO dsh_stores (
   (
     'store-1004', 'al-zubairi-grocery', 'بقالة الزبيري', 'temporarily_closed',
     'sana', 'zubairi', 'unavailable', 4.50, 241, null, null, true,
-    '/dsh-media/store-1004-hero.png',
-    '/dsh-media/store-1004-logo.png',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-logo.jpg',
     'domain-groceries', ARRAY['delivery'], false,
     1.20, 2400, true, false, null, false,
     15.3600, 44.1700
@@ -65,8 +65,8 @@ INSERT INTO dsh_stores (
   (
     'store-1005', 'old-city-restaurant', 'مطعم المدينة القديمة', 'active',
     'sana', 'old-city', 'serviceable', 4.90, 524, 15, 30, true,
-    '/dsh-media/store-1005-hero.png',
-    '/dsh-media/store-1005-logo.png',
+    '/dsh-media/realistic/store-test-restaurant-hero.jpg',
+    '/dsh-media/realistic/store-test-restaurant-logo.jpg',
     'domain-restaurants', ARRAY['delivery','pickup','express'], true,
     0.50, 5200, true, true, 3, true,
     15.3560, 44.1800
@@ -74,8 +74,8 @@ INSERT INTO dsh_stores (
   (
     'store-1006', 'maeen-pharmacy', 'صيدلية معين', 'active',
     'sana', 'maeen', 'serviceable', 4.70, 88, 20, 35, true,
-    '/dsh-media/store-1006-hero.png',
-    '/dsh-media/store-1006-logo.png',
+    '/dsh-media/realistic/store-test-pharmacy-hero.jpg',
+    '/dsh-media/realistic/store-test-pharmacy-logo.jpg',
     'domain-pharmacy', ARRAY['delivery'], true,
       4.10, 980, false, true, null, false,
       15.3700, 44.1900
@@ -83,8 +83,8 @@ INSERT INTO dsh_stores (
   (
     'store-test-electronics', 'test-electronics', 'إلكترونيات المستقبل', 'active',
     'sana', 'haddah', 'serviceable', 4.90, 500, 30, 60, true,
-    '/dsh-media/store-test-grocery-hero.png',
-    '/dsh-media/store-test-grocery-logo.png',
+    '/dsh-media/realistic/store-test-electronics-hero.jpg',
+    '/dsh-media/realistic/store-test-electronics-logo.jpg',
     'domain-electronics', ARRAY['delivery'], true,
     4.10, 980, false, true, null, false,
     15.3700, 44.1900
