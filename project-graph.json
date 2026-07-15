@@ -1,0 +1,1371 @@
+{
+  "graph": {
+    "nodes": {
+      "control-panel": {
+        "name": "control-panel",
+        "type": "app",
+        "data": {
+          "root": "apps/control-panel/runtime",
+          "name": "control-panel",
+          "tags": [
+            "npm:private",
+            "scope:control-panel type:app"
+          ],
+          "metadata": {
+            "targetGroups": {
+              "NPM Scripts": [
+                "lint"
+              ]
+            },
+            "js": {
+              "packageName": "@bthwani/control-panel",
+              "packageExports": {
+                "./shell": "./src/shell/index.ts",
+                "./components": "./src/components/index.ts"
+              },
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "lint": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "lint"
+              },
+              "metadata": {
+                "scriptContent": "pnpm --dir ../../.. run guard:ui-kit-boundary",
+                "runCommand": "pnpm run lint"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/control-panel/runtime typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/control-panel/runtime build"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/dist",
+                "{projectRoot}/.next",
+                "{projectRoot}/build"
+              ]
+            },
+            "dev": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/control-panel/runtime dev"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "cache": false
+            }
+          },
+          "sourceRoot": "apps/control-panel/runtime",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "app-captain": {
+        "name": "app-captain",
+        "type": "app",
+        "data": {
+          "root": "apps/app-captain/runtime",
+          "name": "app-captain",
+          "tags": [
+            "npm:private",
+            "scope:app-captain type:app"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/app-captain-runtime",
+              "packageVersion": "0.0.0",
+              "packageMain": "src/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/app-captain/runtime typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "apps/app-captain/runtime",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "app-partner": {
+        "name": "app-partner",
+        "type": "app",
+        "data": {
+          "root": "apps/app-partner/runtime",
+          "name": "app-partner",
+          "tags": [
+            "npm:private",
+            "scope:app-partner type:app"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/app-partner-runtime",
+              "packageVersion": "0.0.0",
+              "packageMain": "src/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/app-partner/runtime typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "apps/app-partner/runtime",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "app-client": {
+        "name": "app-client",
+        "type": "app",
+        "data": {
+          "root": "apps/app-client/runtime",
+          "name": "app-client",
+          "tags": [
+            "npm:private",
+            "scope:app-client type:app"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/app-client-runtime",
+              "packageVersion": "0.0.0",
+              "packageMain": "src/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/app-client/runtime typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "apps/app-client/runtime",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "app-field": {
+        "name": "app-field",
+        "type": "app",
+        "data": {
+          "root": "apps/app-field/runtime",
+          "name": "app-field",
+          "tags": [
+            "npm:private",
+            "scope:app-field type:app"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/app-field-runtime",
+              "packageVersion": "0.0.0",
+              "packageMain": "src/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/app-field/runtime typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "apps/app-field/runtime",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "website": {
+        "name": "website",
+        "type": "app",
+        "data": {
+          "root": "apps/website/runtime",
+          "name": "website",
+          "tags": [
+            "npm:private",
+            "scope:website type:app"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/website-runtime",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "apps/website/runtime",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/website/runtime typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/website/runtime build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/website/runtime lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/website/runtime test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:51.1936181+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "webapp": {
+        "name": "webapp",
+        "type": "app",
+        "data": {
+          "root": "apps/webapp/runtime",
+          "name": "webapp",
+          "tags": [
+            "npm:private",
+            "scope:webapp type:app"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/webapp-runtime",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "apps/webapp/runtime",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/webapp/runtime typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/webapp/runtime build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/webapp/runtime lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir apps/webapp/runtime test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:51.3699933+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "app-shell": {
+        "name": "app-shell",
+        "type": "lib",
+        "data": {
+          "root": "shared/app-shell",
+          "name": "app-shell",
+          "tags": [
+            "npm:private",
+            "scope:shared",
+            "type:library"
+          ],
+          "metadata": {
+            "targetGroups": {
+              "NPM Scripts": [
+                "lint"
+              ]
+            },
+            "js": {
+              "packageName": "@bthwani/app-shell",
+              "packageVersion": "0.0.0",
+              "packageMain": "src/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "lint": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "lint"
+              },
+              "metadata": {
+                "scriptContent": "pnpm --dir ../.. run guard:ui-kit-boundary",
+                "runCommand": "pnpm run lint"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir shared/app-shell typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "shared/app-shell",
+          "projectType": "library",
+          "implicitDependencies": []
+        }
+      },
+      "@bthwani/core-workforce": {
+        "name": "@bthwani/core-workforce",
+        "type": "lib",
+        "data": {
+          "root": "core/workforce",
+          "name": "@bthwani/core-workforce",
+          "tags": [
+            "npm:private"
+          ],
+          "metadata": {
+            "targetGroups": {
+              "NPM Scripts": [
+                "test",
+                "build",
+                "typecheck"
+              ]
+            },
+            "js": {
+              "packageName": "@bthwani/core-workforce",
+              "packageVersion": "0.0.0",
+              "packageMain": "clients/generated/workforce-api.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "test": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "test"
+              },
+              "metadata": {
+                "scriptContent": "cd backend && go test ./...",
+                "runCommand": "pnpm run test"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/coverage"
+              ]
+            },
+            "build": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "build"
+              },
+              "metadata": {
+                "scriptContent": "cd backend && go build ./...",
+                "runCommand": "pnpm run build"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/dist",
+                "{projectRoot}/.next",
+                "{projectRoot}/build"
+              ]
+            },
+            "typecheck": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "typecheck"
+              },
+              "metadata": {
+                "scriptContent": "tsc --noEmit -p tsconfig.json",
+                "runCommand": "pnpm run typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "implicitDependencies": []
+        }
+      },
+      "@bthwani/core-identity": {
+        "name": "@bthwani/core-identity",
+        "type": "lib",
+        "data": {
+          "root": "core/identity",
+          "name": "@bthwani/core-identity",
+          "tags": [
+            "npm:private"
+          ],
+          "metadata": {
+            "targetGroups": {
+              "NPM Scripts": [
+                "test",
+                "build",
+                "typecheck"
+              ]
+            },
+            "js": {
+              "packageName": "@bthwani/core-identity",
+              "packageVersion": "0.0.0",
+              "packageMain": "clients/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "test": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "test"
+              },
+              "metadata": {
+                "scriptContent": "cd backend && go test ./...",
+                "runCommand": "pnpm run test"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/coverage"
+              ]
+            },
+            "build": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "build"
+              },
+              "metadata": {
+                "scriptContent": "cd backend && go build ./...",
+                "runCommand": "pnpm run build"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/dist",
+                "{projectRoot}/.next",
+                "{projectRoot}/build"
+              ]
+            },
+            "typecheck": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "typecheck"
+              },
+              "metadata": {
+                "scriptContent": "tsc --noEmit -p tsconfig.json",
+                "runCommand": "pnpm run typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "implicitDependencies": []
+        }
+      },
+      "ui-kit": {
+        "name": "ui-kit",
+        "type": "lib",
+        "data": {
+          "root": "shared/ui-kit",
+          "name": "ui-kit",
+          "tags": [
+            "npm:private",
+            "scope:shared",
+            "type:library"
+          ],
+          "metadata": {
+            "targetGroups": {
+              "NPM Scripts": [
+                "typecheck:contracts",
+                "lint"
+              ]
+            },
+            "js": {
+              "packageName": "@bthwani/ui-kit",
+              "packageVersion": "0.0.0",
+              "packageExports": {
+                ".": "./src/index.ts",
+                "./web": "./src/web.ts",
+                "./mobile": "./src/mobile.tsx",
+                "./next": "./src/next.ts",
+                "./tokens": "./src/tokens/index.ts"
+              },
+              "packageMain": "src/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck:contracts": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "typecheck:contracts"
+              },
+              "metadata": {
+                "scriptContent": "tsc --noEmit -p tsconfig.contracts.json",
+                "runCommand": "pnpm run typecheck:contracts"
+              },
+              "configurations": {},
+              "parallelism": true
+            },
+            "lint": {
+              "executor": "nx:run-script",
+              "options": {
+                "script": "lint"
+              },
+              "metadata": {
+                "scriptContent": "pnpm --dir ../.. run guard:ui-kit-boundary",
+                "runCommand": "pnpm run lint"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir shared/ui-kit typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "shared/ui-kit",
+          "projectType": "library",
+          "implicitDependencies": []
+        }
+      },
+      "amn": {
+        "name": "amn",
+        "type": "app",
+        "data": {
+          "root": "services/amn",
+          "name": "amn",
+          "tags": [
+            "npm:private",
+            "scope:amn type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/amn",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/amn",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/amn typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/amn build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/amn lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/amn test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.4952861+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "arb": {
+        "name": "arb",
+        "type": "app",
+        "data": {
+          "root": "services/arb",
+          "name": "arb",
+          "tags": [
+            "npm:private",
+            "scope:arb type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/arb",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/arb",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/arb typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/arb build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/arb lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/arb test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.5999880+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "dsh": {
+        "name": "dsh",
+        "type": "app",
+        "data": {
+          "root": "services/dsh",
+          "name": "dsh",
+          "tags": [
+            "npm:private",
+            "scope:dsh type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/dsh",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/dsh typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/dsh build"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/dist",
+                "{projectRoot}/.next",
+                "{projectRoot}/build"
+              ]
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/dsh lint"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/dsh test"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/coverage"
+              ]
+            }
+          },
+          "sourceRoot": "services/dsh",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "esf": {
+        "name": "esf",
+        "type": "app",
+        "data": {
+          "root": "services/esf",
+          "name": "esf",
+          "tags": [
+            "npm:private",
+            "scope:esf type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/esf",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/esf",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/esf typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/esf build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/esf lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/esf test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.6826109+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "knz": {
+        "name": "knz",
+        "type": "app",
+        "data": {
+          "root": "services/knz",
+          "name": "knz",
+          "tags": [
+            "npm:private",
+            "scope:knz type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/knz",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/knz",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/knz typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/knz build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/knz lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/knz test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.7802953+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "kwd": {
+        "name": "kwd",
+        "type": "app",
+        "data": {
+          "root": "services/kwd",
+          "name": "kwd",
+          "tags": [
+            "npm:private",
+            "scope:kwd type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/kwd",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/kwd",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/kwd typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/kwd build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/kwd lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/kwd test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:49.9578240+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "mrf": {
+        "name": "mrf",
+        "type": "app",
+        "data": {
+          "root": "services/mrf",
+          "name": "mrf",
+          "tags": [
+            "npm:private",
+            "scope:mrf type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/mrf",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/mrf",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/mrf typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/mrf build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/mrf lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/mrf test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:50.3757205+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "snd": {
+        "name": "snd",
+        "type": "app",
+        "data": {
+          "root": "services/snd",
+          "name": "snd",
+          "tags": [
+            "npm:private",
+            "scope:snd type:service"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/snd",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {},
+          "sourceRoot": "services/snd",
+          "projectType": "application",
+          "x_bthwani_disabledTargets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/snd typecheck"
+              }
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/snd build"
+              }
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/snd lint"
+              }
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/snd test"
+              }
+            }
+          },
+          "x_bthwani_nxDisabled": true,
+          "x_bthwani_nxDisabledReason": "Deferred project; intentionally disabled from Nx task execution until activated.",
+          "x_bthwani_nxDisabledAt": "2026-06-20T00:07:51.0597467+03:00",
+          "implicitDependencies": []
+        }
+      },
+      "wlt": {
+        "name": "wlt",
+        "type": "app",
+        "data": {
+          "root": "services/wlt",
+          "name": "wlt",
+          "tags": [
+            "npm:private",
+            "scope:wlt",
+            "type:service",
+            "domain:finance"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/wlt",
+              "packageVersion": "0.0.0",
+              "packageMain": "frontend/shared/dsh/index.ts",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/wlt typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "build": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/wlt build"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/dist",
+                "{projectRoot}/.next",
+                "{projectRoot}/build"
+              ]
+            },
+            "lint": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/wlt lint"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            },
+            "test": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir services/wlt test"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true,
+              "outputs": [
+                "{projectRoot}/coverage"
+              ]
+            }
+          },
+          "sourceRoot": "services/wlt",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "contracts": {
+        "name": "contracts",
+        "type": "lib",
+        "data": {
+          "root": "contracts",
+          "name": "contracts",
+          "tags": [
+            "npm:private",
+            "scope:contracts",
+            "type:contracts"
+          ],
+          "metadata": {
+            "targetGroups": {},
+            "js": {
+              "packageName": "@bthwani/contracts",
+              "packageVersion": "0.0.0",
+              "isInPackageManagerWorkspaces": true
+            }
+          },
+          "targets": {
+            "typecheck": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "pnpm --dir contracts typecheck"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "inputs": [
+                "default"
+              ],
+              "cache": true
+            }
+          },
+          "sourceRoot": "contracts",
+          "projectType": "library",
+          "implicitDependencies": []
+        }
+      }
+    },
+    "dependencies": {
+      "control-panel": [
+        {
+          "source": "control-panel",
+          "target": "app-shell",
+          "type": "static"
+        },
+        {
+          "source": "control-panel",
+          "target": "@bthwani/core-identity",
+          "type": "static"
+        }
+      ],
+      "app-captain": [
+        {
+          "source": "app-captain",
+          "target": "app-shell",
+          "type": "static"
+        },
+        {
+          "source": "app-captain",
+          "target": "@bthwani/core-identity",
+          "type": "static"
+        },
+        {
+          "source": "app-captain",
+          "target": "ui-kit",
+          "type": "static"
+        }
+      ],
+      "app-partner": [
+        {
+          "source": "app-partner",
+          "target": "app-shell",
+          "type": "static"
+        },
+        {
+          "source": "app-partner",
+          "target": "@bthwani/core-identity",
+          "type": "static"
+        },
+        {
+          "source": "app-partner",
+          "target": "ui-kit",
+          "type": "static"
+        }
+      ],
+      "app-client": [
+        {
+          "source": "app-client",
+          "target": "app-shell",
+          "type": "static"
+        },
+        {
+          "source": "app-client",
+          "target": "@bthwani/core-identity",
+          "type": "static"
+        },
+        {
+          "source": "app-client",
+          "target": "ui-kit",
+          "type": "static"
+        }
+      ],
+      "app-field": [
+        {
+          "source": "app-field",
+          "target": "app-shell",
+          "type": "static"
+        },
+        {
+          "source": "app-field",
+          "target": "@bthwani/core-identity",
+          "type": "static"
+        },
+        {
+          "source": "app-field",
+          "target": "ui-kit",
+          "type": "static"
+        }
+      ],
+      "website": [],
+      "webapp": [],
+      "app-shell": [],
+      "@bthwani/core-workforce": [],
+      "@bthwani/core-identity": [],
+      "ui-kit": [],
+      "amn": [],
+      "arb": [],
+      "dsh": [
+        {
+          "source": "dsh",
+          "target": "@bthwani/core-identity",
+          "type": "static"
+        },
+        {
+          "source": "dsh",
+          "target": "ui-kit",
+          "type": "static"
+        },
+        {
+          "source": "dsh",
+          "target": "control-panel",
+          "type": "static"
+        },
+        {
+          "source": "dsh",
+          "target": "wlt",
+          "type": "static"
+        }
+      ],
+      "esf": [],
+      "knz": [],
+      "kwd": [],
+      "mrf": [],
+      "snd": [],
+      "wlt": [],
+      "contracts": []
+    }
+  }
+}

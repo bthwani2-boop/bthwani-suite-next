@@ -6153,11 +6153,14 @@ components:
 
     DshOrder:
       type: object
-      required: [id, checkoutIntentId, storeId, clientId, status, wltPaymentRefId, createdAt, updatedAt]
+      required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: string }
         storeId: { type: string }
+        fulfillmentMode:
+          type: string
+          enum: [bthwani_delivery, partner_delivery, pickup]
         clientId: { type: string }
         status: { $ref: "#/components/schemas/DshOrderStatus" }
         rejectionReason: { type: string }

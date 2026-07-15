@@ -1,0 +1,1132 @@
+{
+  "head_sha": "14f94843e33636141e5cad212947ea01d4ee92c3",
+  "status": "DISCOVERY_ONLY",
+  "required_gap_fields": [
+    "gap_id",
+    "type",
+    "path",
+    "owner",
+    "affected_surface",
+    "affected_journeys",
+    "root_cause",
+    "pattern_group",
+    "risk_level",
+    "required_action",
+    "target_files",
+    "allowed_decision",
+    "forbidden_actions",
+    "verification_commands",
+    "proof_required",
+    "status",
+    "blocks_journey_start"
+  ],
+  "gap_count": 33,
+  "gaps": [
+    {
+      "gap_id": "CI_NOT_PROVEN:.diagnostics/operational-journey-factory/toolchain-inventory.json",
+      "type": "CI_NOT_PROVEN",
+      "source_tool": "generate-operational-toolchain-inventory",
+      "path": ".diagnostics/operational-journey-factory/toolchain-inventory.json",
+      "reason": "Toolchain inventory missing.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "operational_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "foundation",
+      "root_cause": "toolchain_execution_not_proven",
+      "pattern_group": "toolchain_binding",
+      "required_action": "run diagnostics:operational:toolchain",
+      "target_files": [
+        "package.json",
+        "tools/toolchain/**",
+        "tools/scripts/**",
+        ".github/workflows/**"
+      ],
+      "allowed_decision": "BLOCKED_NEEDS_TOOL",
+      "forbidden_actions": [
+        "mark_pass_without_command",
+        "ignore_active_fail_policy_tool"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:toolchain"
+      ],
+      "proof_required": [
+        "command_record_has_classification",
+        "tool_activation_policy_respected"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:toolchain",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "UNBOUND_SCREEN:.diagnostics/operational-journey-factory/surface-inventory.json",
+      "type": "UNBOUND_SCREEN",
+      "source_tool": "generate-operational-surface-inventory",
+      "path": ".diagnostics/operational-journey-factory/surface-inventory.json",
+      "reason": "Surface inventory missing.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "foundation",
+      "root_cause": "unclassified_foundation_gap",
+      "pattern_group": "foundation_classification",
+      "required_action": "run diagnostics:operational:surfaces",
+      "target_files": [
+        ".diagnostics/operational-journey-factory/surface-inventory.json"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "delete_without_proof",
+        "move_without_import_proof",
+        "merge_without_duplication_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:surfaces"
+      ],
+      "proof_required": [
+        "current_head_sha",
+        "targeted_guard_exit_code"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:surfaces",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "MISSING_BACKEND_ROUTE:.diagnostics/operational-journey-factory/journey-inventory.json",
+      "type": "MISSING_BACKEND_ROUTE",
+      "source_tool": "generate-operational-journey-inventory",
+      "path": ".diagnostics/operational-journey-factory/journey-inventory.json",
+      "reason": "Journey inventory missing.",
+      "severity": "HIGH",
+      "risk_level": "P1",
+      "journey": "factory",
+      "affected_journeys": [
+        "cross_journey_foundation"
+      ],
+      "affected_surface": "multi-surface",
+      "owner": "foundation",
+      "root_cause": "unclassified_foundation_gap",
+      "pattern_group": "foundation_classification",
+      "required_action": "run diagnostics:operational:inventory",
+      "target_files": [
+        ".diagnostics/operational-journey-factory/journey-inventory.json"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "delete_without_proof",
+        "move_without_import_proof",
+        "merge_without_duplication_proof"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:inventory"
+      ],
+      "proof_required": [
+        "current_head_sha",
+        "targeted_guard_exit_code"
+      ],
+      "decision": "BLOCKED_NEEDS_EVIDENCE",
+      "verification": "pnpm run diagnostics:operational:inventory",
+      "status": "OPEN",
+      "blocks_journey_start": true
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog.controller-core.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/catalog.controller-core.ts",
+      "reason": "Unused exports: runCatalogAction, resolveCatalogSubmissionError, beginCatalogAuditLoad, resolveCatalogAuditSuccess, resolveCatalogAuditError",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/catalog.controller-core.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/catalog.controller-core.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog.states.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/catalog.states.ts",
+      "reason": "Unused exports: catalogActionIdleState",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/catalog.states.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/catalog.states.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/delivery/delivery.contract.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/delivery/delivery.contract.ts",
+      "reason": "Unused exports: isDshFulfillmentDeliveryMode",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/delivery/delivery.contract.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/delivery/delivery.contract.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/dashboard/DshOperationalDashboardScreen.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/dashboard/DshOperationalDashboardScreen.tsx",
+      "reason": "Unused exports: DshOperationalDashboardScreen",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/dashboard/DshOperationalDashboardScreen.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/dashboard/DshOperationalDashboardScreen.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/WorkforceHrScreen.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/WorkforceHrScreen.tsx",
+      "reason": "Unused exports: WorkforceHrScreen",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/WorkforceHrScreen.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/WorkforceHrScreen.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/partner/partner.workflow.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/partner/partner.workflow.ts",
+      "reason": "Unused exports: isPartnerOwnedException, translateEntityType",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/partner/partner.workflow.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/partner/partner.workflow.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/use-catalog-approval-controller.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/use-catalog-approval-controller.tsx",
+      "reason": "Unused exports: useCatalogApprovalController",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/use-catalog-approval-controller.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/use-catalog-approval-controller.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog-registry.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/catalog-registry.ts",
+      "reason": "Unused exports: getCatalogSubTabsForMain, CATALOG_SMART_FILTERS, CATALOG_TOOLBAR_ACTIONS, buildCatalogBreadcrumb, CATALOG_SCOPES, buildCatalogKpiMetrics, buildCatalogPublicationReadiness, buildCatalogSubmissionViewModel, filterSubmissionsByScope",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/catalog-registry.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/catalog-registry.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/central-catalog.api.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
+      "reason": "Unused exports: fetchMasterProducts, fetchProductProposals, fetchPartnerTaxonomy, upsertPartnerStoreAssortment, createPartnerProductProposal, fetchSeedStatus, fetchCatalogAssets, updateCatalogAsset, reviewCatalogAsset, putEntityImage, submitReel, fetchReels, reviewReel, fetchPublicReels",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/central-catalog.api.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/central-catalog.controller-core.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/central-catalog.controller-core.ts",
+      "reason": "Unused exports: centralCatalogControllerCore",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/central-catalog.controller-core.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/central-catalog.controller-core.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/central-catalog.errors.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/central-catalog.errors.ts",
+      "reason": "Unused exports: getLocalizedCatalogError",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/central-catalog.errors.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/central-catalog.errors.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/client-visible-catalog.adapter.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/client-visible-catalog.adapter.ts",
+      "reason": "Unused exports: ClientVisibleCatalogAdapter",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/client-visible-catalog.adapter.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/client-visible-catalog.adapter.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/store-assortment.adapter.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/store-assortment.adapter.ts",
+      "reason": "Unused exports: StoreAssortmentAdapter",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/store-assortment.adapter.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/store-assortment.adapter.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/product-proposal.adapter.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/product-proposal.adapter.ts",
+      "reason": "Unused exports: ProductProposalAdapter",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/product-proposal.adapter.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/product-proposal.adapter.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/catalog/catalog-search.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/catalog/catalog-search.ts",
+      "reason": "Unused exports: filterMasterProducts",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/catalog/catalog-search.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/catalog/catalog-search.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/ProviderListView.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/ProviderListView.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/ProviderListView.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/ProviderListView.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/FieldAgentCreateView.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/FieldAgentCreateView.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/FieldAgentCreateView.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/FieldAgentCreateView.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/CaptainCreateView.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/CaptainCreateView.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/CaptainCreateView.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/CaptainCreateView.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/ProviderDetailView.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/ProviderDetailView.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/ProviderDetailView.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/ProviderDetailView.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/WorkforceReferenceView.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/WorkforceReferenceView.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/WorkforceReferenceView.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/WorkforceReferenceView.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/app-partner/Catalog/PartnerCatalogReadinessPanel.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/app-partner/Catalog/PartnerCatalogReadinessPanel.tsx",
+      "reason": "Unused exports: PartnerCatalogReadinessPanel",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/app-partner/Catalog/PartnerCatalogReadinessPanel.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/app-partner/Catalog/PartnerCatalogReadinessPanel.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/workforce/workforce.api.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/workforce/workforce.api.ts",
+      "reason": "Unused exports: createWorkforceCity, updateWorkforceCity, getWorkforceMe, updateWorkforceMe",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/workforce/workforce.api.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/workforce/workforce.api.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/workforce/use-workforce-controllers.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/workforce/use-workforce-controllers.ts",
+      "reason": "Unused exports: useServiceZoneReference",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/workforce/use-workforce-controllers.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/workforce/use-workforce-controllers.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/workforce/WorkforceErrorState.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/workforce/WorkforceErrorState.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/workforce/WorkforceErrorState.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/workforce/WorkforceErrorState.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/SupervisorPicker.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/SupervisorPicker.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/SupervisorPicker.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/SupervisorPicker.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/hr/ZonePicker.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/hr/ZonePicker.tsx",
+      "reason": "Unused exports: default",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/hr/ZonePicker.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/hr/ZonePicker.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/operations/dsh-operational-summary-adapter.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/operations/dsh-operational-summary-adapter.ts",
+      "reason": "Unused exports: buildDshOperationalSummaryForSurface",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/operations/dsh-operational-summary-adapter.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/operations/dsh-operational-summary-adapter.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts",
+      "reason": "Unused exports: useCaptainDeliveryController, useOperatorDispatchController, useClientTrackingController",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/dispatch/use-dispatch-controller.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+      "reason": "Unused exports: enqueueFieldOperation, getPendingCount, getAllOperations",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    },
+    {
+      "gap_id": "UNUSED_EXPORT:services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
+      "type": "UNUSED_EXPORT",
+      "source_tool": "knip",
+      "path": "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
+      "reason": "Unused exports: ControlPanelDshWorkspaceFrame",
+      "severity": "MEDIUM",
+      "risk_level": "P2",
+      "journey": "dsh-order-lifecycle-journey",
+      "affected_journeys": [
+        "dsh-order-lifecycle-journey"
+      ],
+      "affected_surface": "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx",
+      "owner": "toolchain",
+      "root_cause": "dead_code",
+      "pattern_group": "knip",
+      "required_action": "Remove dead exports",
+      "target_files": [
+        "services/dsh/frontend/control-panel/shared/ControlPanelDshWorkspaceFrame.tsx"
+      ],
+      "allowed_decision": "REMOVE_OR_KEEP",
+      "forbidden_actions": [
+        "leave_dead_code"
+      ],
+      "verification_commands": [
+        "pnpm run diagnostics:operational:reconcile"
+      ],
+      "proof_required": [
+        "exports removed or resolved"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false
+    }
+  ]
+}

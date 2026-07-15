@@ -96,6 +96,18 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 	}
 	defer tx.Rollback()
 
+	var fulfillmentMode string
+	err = tx.QueryRow(`SELECT fulfillment_mode FROM dsh_orders WHERE id = $1::uuid`, input.OrderID).Scan(&fulfillmentMode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if fulfillmentMode != "bthwani_delivery" {
+		return nil, fmt.Errorf("%w: only bthwani_delivery orders can be assigned to platform captains", ErrConflict)
+	}
+
 	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "captain assigned"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {

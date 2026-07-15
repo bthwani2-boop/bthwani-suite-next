@@ -3766,6 +3766,8 @@ export interface components {
             id: string;
             checkoutIntentId: string;
             storeId: string;
+            /** @enum {string} */
+            fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
             clientId: string;
             status: components["schemas"]["DshOrderStatus"];
             rejectionReason?: string;
