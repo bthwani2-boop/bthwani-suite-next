@@ -6,6 +6,7 @@ import type {
   DshReadinessEscalation,
   DshOnboardingStatus,
   DshCreateVisitInput,
+  DshCompleteVisitInput,
   DshUpsertCheckInput,
   DshCreateEscalationInput,
   DshUpdateEscalationInput,
@@ -41,10 +42,10 @@ export async function fetchFieldVisits(storeId: string): Promise<readonly DshFie
   return data.visits ?? [];
 }
 
-export async function completeFieldVisit(visitId: string): Promise<DshFieldVisit> {
+export async function completeFieldVisit(visitId: string, input: DshCompleteVisitInput): Promise<DshFieldVisit> {
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/complete`,
-    { method: "POST", ...mutationHeaders("complete-visit") },
+    { method: "POST", body: input, ...mutationHeaders("complete-visit") },
   );
   return data.visit;
 }

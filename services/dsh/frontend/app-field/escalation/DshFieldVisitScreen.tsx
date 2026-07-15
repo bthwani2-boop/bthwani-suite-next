@@ -1,7 +1,8 @@
 // app-field — DshFieldVisitScreen
 // Screen for managing field visits and launching the readiness checklist.
-import React from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import React, { useCallback, useState } from "react";
+import { StyleSheet, View, ScrollView, Alert } from "react-native";
+import * as Location from "expo-location";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
@@ -30,6 +31,38 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
   const identity = useIdentitySession();
   const { listState, actionState, reload, startVisit, completeVisit, resetAction } =
     useFieldVisitController(storeId, identity.state.kind);
+  const [locationBusy, setLocationBusy] = useState(false);
+
+  const handleCompleteVisit = useCallback(async (visitId: string) => {
+    setLocationBusy(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "صلاحية الموقع مطلوبة",
+          "يجب منح صلاحية الوصول للموقع لإتمام الزيارة. يرجى تفعيلها من إعدادات التطبيق.",
+        );
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      await completeVisit(visitId, {
+        completionLocation: {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracyMeters: pos.coords.accuracy ?? 0,
+          capturedAt: new Date(pos.timestamp).toISOString(),
+          provider: "device",
+          isMocked: pos.mocked ?? false,
+        },
+      });
+    } catch {
+      Alert.alert("خطأ في الموقع", "تعذر تحديد موقعك الحالي. يرجى المحاولة مجدداً.");
+    } finally {
+      setLocationBusy(false);
+    }
+  }, [completeVisit]);
 
   if (identity.state.kind !== "authenticated") {
     return (
@@ -163,8 +196,8 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
                           label="إتمام الزيارة"
                           tone="success"
                           size="sm"
-                          disabled={actionState.kind === "submitting"}
-                          onPress={() => void completeVisit(vm.id)}
+                          disabled={actionState.kind === "submitting" || locationBusy}
+                          onPress={() => void handleCompleteVisit(vm.id)}
                         />
                       </View>
                     )}

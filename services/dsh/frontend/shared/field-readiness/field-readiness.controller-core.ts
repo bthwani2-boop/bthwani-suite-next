@@ -19,7 +19,7 @@ import {
   createReadinessEscalation, fetchOperatorEscalations, updateEscalation,
   fetchPartnerOnboardingStatus, classifyFieldReadinessError,
 } from "./field-readiness.api";
-import type { DshCreateVisitInput, DshUpsertCheckInput, DshCreateEscalationInput, DshUpdateEscalationInput } from "./field-readiness.types";
+import type { DshCreateVisitInput, DshCompleteVisitInput, DshUpsertCheckInput, DshCreateEscalationInput, DshUpdateEscalationInput } from "./field-readiness.types";
 
 export type FieldVisitControllerState = {
   readonly listState: DshVisitListState;
@@ -60,10 +60,10 @@ export function makeFieldVisitController(
     }
   }
 
-  async function completeVisit(visitId: string): Promise<void> {
+  async function completeVisit(visitId: string, input: DshCompleteVisitInput): Promise<void> {
     setState({ ...state, actionState: visitActionSubmittingState() });
     try {
-      const visit = await completeFieldVisit(visitId);
+      const visit = await completeFieldVisit(visitId, input);
       setState({ ...state, actionState: visitActionSuccessState(visit) });
     } catch (err) {
       setState({ ...state, actionState: visitActionErrorState(resolveMessage(err)) });

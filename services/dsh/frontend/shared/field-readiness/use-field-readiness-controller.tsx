@@ -17,6 +17,7 @@ import {
 } from "./field-readiness.states";
 import type {
   DshCreateVisitInput,
+  DshCompleteVisitInput,
   DshUpsertCheckInput,
   DshCreateEscalationInput,
   DshUpdateEscalationInput,
@@ -65,10 +66,10 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
     }
   }, [storeId, load]);
 
-  const completeVisit = useCallback(async (visitId: string) => {
+  const completeVisit = useCallback(async (visitId: string, input: DshCompleteVisitInput) => {
     setActionState(visitActionSubmittingState());
     try {
-      const visit = await completeFieldVisit(visitId);
+      const visit = await completeFieldVisit(visitId, input);
       setActionState(visitActionSuccessState(visit));
       await load();
     } catch (err) {
