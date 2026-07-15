@@ -438,7 +438,7 @@ jobs:
       - name: Full runtime reset and smoke
         shell: pwsh
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Force -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke
@@ -498,7 +498,7 @@ jobs:
         env:
           WLT_MUTATIONS_ENABLED: "true"
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
+          pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Force -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media
 
       - name: WireMock financial provider smoke
         run: pnpm run runtime:wiremock:financial:smoke

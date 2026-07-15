@@ -37,12 +37,12 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
     const parsed = Linking.parse(url);
     const path = parsed.path ?? parsed.scheme ?? "";
     const p = parsed.queryParams ?? {};
-    const base: Omit<DshFieldNavigationCommand, "target"> = {
+    const base: Partial<DshFieldNavigationCommand> = {
       token: Date.now(),
-      storeId: typeof p.storeId === "string" ? p.storeId : undefined,
-      visitId: typeof p.visitId === "string" ? p.visitId : undefined,
-      partnerId: typeof p.partnerId === "string" ? p.partnerId : undefined,
     };
+    if (typeof p.storeId === "string") base.storeId = p.storeId;
+    if (typeof p.visitId === "string") base.visitId = p.visitId;
+    if (typeof p.partnerId === "string") base.partnerId = p.partnerId;
     const routeMap: Record<string, DshFieldNavigationCommand["target"]> = {
       "work-queue": "work-queue",
       visit: "visit",
@@ -55,7 +55,7 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
     };
     const target = routeMap[path];
     if (!target) return null;
-    return { ...base, target };
+    return { ...base, target } as DshFieldNavigationCommand;
   } catch {
     return null;
   }
@@ -102,7 +102,7 @@ function AppContent() {
   return (
     <View style={styles.root}>
       <View style={styles.screen}>
-        <DshFieldSurface command={navCommand} />
+        <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
       </View>
     </View>
   );

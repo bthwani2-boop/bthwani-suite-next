@@ -335,7 +335,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                       borderRadius: radius.md,
                       backgroundColor: isLinking ? colorRoles.surfaceMuted : colorRoles.surfaceBase,
                       gap: spacing[2],
-                      shadowColor: '#000',
+                      shadowColor: colorRoles.textPrimary,
                       shadowOffset: { width: 0, height: 1 },
                       shadowOpacity: 0.05,
                       shadowRadius: 2,

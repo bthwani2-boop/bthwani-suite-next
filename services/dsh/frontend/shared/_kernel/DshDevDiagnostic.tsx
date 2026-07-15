@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colorRoles } from '@bthwani/ui-kit';
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from './dsh-api-base-url';
 
 export function DshDevDiagnostic() {
@@ -41,9 +42,9 @@ export function DshDevDiagnostic() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#fffbe6',
+    backgroundColor: colorRoles.surfaceWarning,
     borderWidth: 1,
-    borderColor: '#ffe58f',
+    borderColor: colorRoles.borderWarning,
     borderRadius: 8,
     marginVertical: 16,
   },
@@ -51,11 +52,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#faad14',
+    color: colorRoles.textWarning,
   },
   text: {
     fontSize: 14,
-    color: '#595959',
+    color: colorRoles.textPrimary,
   },
   url: {
     fontSize: 16,
@@ -63,14 +64,14 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   valid: {
-    color: '#52c41a',
+    color: colorRoles.success,
   },
   invalid: {
-    color: '#f5222d',
+    color: colorRoles.danger,
   },
   note: {
     fontSize: 12,
-    color: '#f5222d',
+    color: colorRoles.danger,
     marginTop: 8,
     fontStyle: 'italic',
   }

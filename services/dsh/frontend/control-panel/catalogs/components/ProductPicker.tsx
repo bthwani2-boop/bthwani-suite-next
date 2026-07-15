@@ -52,7 +52,7 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
         placeholder="ابحث باسم المنتج أو الباركود..."
       />
       {isOpen && (
-        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "white", borderWidth: 1, borderColor: "#ccc", zIndex: 30, maxHeight: 250, overflow: "hidden", borderRadius: 8 }}>
+        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "var(--bth-colors-surfaceBase)", borderWidth: 1, borderColor: "var(--bth-colors-borderColor)", zIndex: 30, maxHeight: 250, overflow: "hidden", borderRadius: 8 }}>
           {isLoading && <Box padding={8}><Text tone="secondary">جاري البحث...</Text></Box>}
           {!isLoading && products.length === 0 && query && <Box padding={8}><Text tone="secondary">لا يوجد نتائج</Text></Box>}
           {products.map(p => (

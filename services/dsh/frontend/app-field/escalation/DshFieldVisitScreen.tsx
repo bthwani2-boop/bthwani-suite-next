@@ -64,6 +64,38 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
     }
   }, [completeVisit]);
 
+  const handleStartVisit = useCallback(async (visitType: "onboarding") => {
+    setLocationBusy(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "صلاحية الموقع مطلوبة",
+          "يجب منح صلاحية الوصول للموقع لبدء الزيارة. يرجى تفعيلها من إعدادات التطبيق.",
+        );
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      await startVisit({
+        visitType,
+        startLocation: {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracyMeters: pos.coords.accuracy ?? 0,
+          capturedAt: new Date(pos.timestamp).toISOString(),
+          provider: "device",
+          isMocked: pos.mocked ?? false,
+        },
+      });
+    } catch {
+      Alert.alert("خطأ في الموقع", "تعذر تحديد موقعك الحالي. يرجى المحاولة مجدداً.");
+    } finally {
+      setLocationBusy(false);
+    }
+  }, [startVisit]);
+
   if (identity.state.kind !== "authenticated") {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
@@ -119,7 +151,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
               label="بدء زيارة جديدة"
               tone="primary"
               disabled={actionState.kind === "submitting"}
-              onPress={() => void startVisit({ visitType: "onboarding" })}
+              onPress={() => void handleStartVisit("onboarding")}
             />
           </View>
           <Text role="caption" tone="muted" style={styles.headerSubtitle}>
@@ -161,7 +193,7 @@ export function DshFieldVisitScreen({ storeId, onBack, onGoToChecklist, onGoToVe
             title="لا توجد زيارات مسجّلة"
             description="ابدأ أول زيارة ميدانية لتأهيل هذا الشريك."
             actionLabel="بدء الزيارة"
-            onActionPress={() => void startVisit({ visitType: "onboarding" })}
+            onActionPress={() => void handleStartVisit("onboarding")}
           />
         )}
 

@@ -48,7 +48,7 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
         placeholder="ابحث باسم المتجر أو المعرف..."
       />
       {isOpen && (
-        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "white", borderWidth: 1, borderColor: "#ccc", zIndex: 10, maxHeight: 200, overflow: "hidden", borderRadius: 8 }}>
+        <Box style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "var(--bth-colors-surfaceBase)", borderWidth: 1, borderColor: "var(--bth-colors-borderColor)", zIndex: 10, maxHeight: 200, overflow: "hidden", borderRadius: 8 }}>
           {isLoading && <Box padding={8}><Text tone="secondary">جاري البحث...</Text></Box>}
           {!isLoading && stores.length === 0 && query && <Box padding={8}><Text tone="secondary">لم يتم العثور على نتائج</Text></Box>}
           {stores.map(store => (
