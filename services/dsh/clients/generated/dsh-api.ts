@@ -3578,7 +3578,7 @@ export interface components {
             /** @enum {string} */
             fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
             /** @enum {string} */
-            state: "pending" | "wlt_handoff_failed" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+            state: "pending" | "wlt_handoff_failed" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
             /** @enum {string} */
             paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
             /** @description Opaque WLT-owned payment-session reference. DSH never mutates financial truth. */
@@ -6899,7 +6899,7 @@ export interface operations {
     listOperatorCheckoutIntents: {
         parameters: {
             query?: {
-                state?: "pending" | "payment_pending" | "confirmed" | "cancelled" | "expired";
+                state?: "pending" | "wlt_handoff_failed" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
             };
             header?: never;
             path?: never;

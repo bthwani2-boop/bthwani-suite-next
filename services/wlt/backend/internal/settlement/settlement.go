@@ -3,11 +3,16 @@ package settlement
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"wlt-api/internal/shared"
 )
+
+// ErrAlreadySettled is returned when PostSettlement is called on a
+// settlement that is already in the 'settled' state (double-post).
+var ErrAlreadySettled = errors.New("settlement is already settled")
 
 type Settlement struct {
 	ID          string  `json:"id"`
@@ -196,15 +201,22 @@ func PostSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	if settlementID == "" {
 		return nil, fmt.Errorf("settlementId is required")
 	}
+	existing, err := GetSettlement(db, settlementID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, nil
+	}
 	const q = `
 		UPDATE wlt_settlements
 		SET status = 'settled', settled_at = NOW(), updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND status != 'settled'
 		RETURNING ` + settlementCols
 	row := db.QueryRow(q, settlementID)
 	s, err := scanSettlement(row)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, ErrAlreadySettled
 	}
 	return s, err
 }
@@ -261,6 +273,10 @@ func HandleListSettlements(db *sql.DB) http.HandlerFunc {
 func HandlePostSettlement(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s, err := PostSettlement(db, r.PathValue("settlementId"))
+		if errors.Is(err, ErrAlreadySettled) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "settlement is already settled")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

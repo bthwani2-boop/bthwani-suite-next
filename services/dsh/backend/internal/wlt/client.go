@@ -157,7 +157,6 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/cod-records":              {},
 	"/wlt/commissions":              {},
 	"/wlt/references/wallet-status": {},
-	"/wlt/wallets":                  {},
 	"/wlt/payout-requests":          {},
 }
 
@@ -170,6 +169,51 @@ func financeReadPathAllowed(path string) bool {
 		return rest != "" && !strings.Contains(rest, "/")
 	}
 	return false
+}
+
+// financeReadWalletAllowlist enumerates the actor types DSH may look up a
+// wallet for via the path-parameterized WLT wallet route
+// GET /wlt/wallets/{actorType}/{actorId}.
+var financeReadWalletAllowlist = map[string]struct{}{
+	"field": {},
+}
+
+// FinanceReadWallet performs a service-authenticated GET against WLT's
+// path-parameterized wallet lookup route: GET /wlt/wallets/{actorType}/{actorId}.
+// actorType must be allowlisted and actorId is URL-escaped before being
+// embedded in the path so untrusted input can never alter the route shape.
+func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
+	if !c.Configured() {
+		return 0, nil, fmt.Errorf("WLT integration is not configured")
+	}
+	if _, ok := financeReadWalletAllowlist[actorType]; !ok {
+		return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType)
+	}
+	if actorID == "" {
+		return 0, nil, fmt.Errorf("WLT wallet actor id must not be empty")
+	}
+	path := "/wlt/wallets/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return 0, nil, fmt.Errorf("build WLT finance read request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if correlationID != "" {
+		req.Header.Set("X-Correlation-ID", correlationID)
+	}
+
+	response, err := c.http.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("call WLT finance read: %w", err)
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
+	if err != nil {
+		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
+	}
+	return response.StatusCode, body, nil
 }
 
 // FinanceRead performs a service-authenticated GET against an allowlisted WLT

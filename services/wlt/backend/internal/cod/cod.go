@@ -217,19 +217,31 @@ func ListCodRecords(db *sql.DB, captainID, partnerID string) ([]*CodRecord, erro
 	return records, rows.Err()
 }
 
+// ErrCodStateConflict is returned when a COD record is not in the expected
+// prior state for the requested transition (e.g. remit before collect, or a
+// duplicate collect/remit call). Handlers map it to 409, not 400/404.
+var ErrCodStateConflict = errors.New("cod record is not in the expected state for this transition")
+
 func MarkCodCollected(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	if codRecordID == "" {
 		return nil, fmt.Errorf("codRecordId is required")
 	}
+	existing, err := GetCodRecord(db, codRecordID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, nil
+	}
 	const q = `
 		UPDATE wlt_cod_records
 		SET status = 'collected', collected_at = NOW(), updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND status = 'pending_collection'
 		RETURNING ` + codCols
 	row := db.QueryRow(q, codRecordID)
 	c, err := scanCodRecord(row)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, ErrCodStateConflict
 	}
 	return c, err
 }
@@ -238,15 +250,22 @@ func MarkCodRemitted(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	if codRecordID == "" {
 		return nil, fmt.Errorf("codRecordId is required")
 	}
+	existing, err := GetCodRecord(db, codRecordID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, nil
+	}
 	const q = `
 		UPDATE wlt_cod_records
 		SET status = 'remitted', remitted_at = NOW(), updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND status = 'collected'
 		RETURNING ` + codCols
 	row := db.QueryRow(q, codRecordID)
 	c, err := scanCodRecord(row)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, ErrCodStateConflict
 	}
 	return c, err
 }
@@ -291,19 +310,22 @@ func CreateCommission(db *sql.DB, input CreateCommissionInput) (*Commission, err
 	return scanCommission(row)
 }
 
-func ListCommissions(db *sql.DB, sourceID, beneficiaryActorID string) ([]*Commission, error) {
+func ListCommissions(db *sql.DB, sourceID, beneficiaryActorID, beneficiaryActorType string) ([]*Commission, error) {
 	var q string
-	var arg string
-	if sourceID != "" {
+	var args []any
+	switch {
+	case sourceID != "":
 		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE source_id = $1 ORDER BY created_at DESC`
-		arg = sourceID
-	} else if beneficiaryActorID != "" {
-		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE beneficiary_actor_id = $1 ORDER BY created_at DESC`
-		arg = beneficiaryActorID
-	} else {
-		return nil, fmt.Errorf("sourceId or beneficiaryActorId query parameter is required")
+		args = []any{sourceID}
+	case beneficiaryActorID != "" && beneficiaryActorType != "":
+		q = `SELECT ` + commissionCols + ` FROM wlt_commissions WHERE beneficiary_actor_id = $1 AND beneficiary_actor_type = $2 ORDER BY created_at DESC`
+		args = []any{beneficiaryActorID, beneficiaryActorType}
+	case beneficiaryActorID != "" || beneficiaryActorType != "":
+		return nil, fmt.Errorf("beneficiaryActorId and beneficiaryActorType must be supplied together")
+	default:
+		return nil, fmt.Errorf("sourceId or beneficiaryActorId+beneficiaryActorType query parameters are required")
 	}
-	rows, err := db.Query(q, arg)
+	rows, err := db.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -380,6 +402,10 @@ func HandleListCodRecords(db *sql.DB) http.HandlerFunc {
 func HandleCollectCod(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := MarkCodCollected(db, r.PathValue("codRecordId"))
+		if errors.Is(err, ErrCodStateConflict) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "COD record is not pending collection")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -395,6 +421,10 @@ func HandleCollectCod(db *sql.DB) http.HandlerFunc {
 func HandleRemitCod(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := MarkCodRemitted(db, r.PathValue("codRecordId"))
+		if errors.Is(err, ErrCodStateConflict) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "COD record is not collected")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -430,7 +460,7 @@ func HandleCreateCommission(db *sql.DB) http.HandlerFunc {
 func HandleListCommissions(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		commissions, err := ListCommissions(db, q.Get("sourceId"), q.Get("beneficiaryActorId"))
+		commissions, err := ListCommissions(db, q.Get("sourceId"), q.Get("beneficiaryActorId"), q.Get("beneficiaryActorType"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

@@ -114,4 +114,45 @@ func TestCreateCodRecordRequiresCheckoutIntentIdBeforeDatabaseLookup(t *testing.
 	}
 }
 
+func TestListCommissionsRequiresBeneficiaryTypeWithId(t *testing.T) {
+	if _, err := ListCommissions(nil, "", "beneficiary-1", ""); err == nil {
+		t.Fatalf("expected error when beneficiaryActorId is supplied without beneficiaryActorType")
+	}
+}
+
+func TestListCommissionsRequiresBeneficiaryIdWithType(t *testing.T) {
+	if _, err := ListCommissions(nil, "", "", "captain"); err == nil {
+		t.Fatalf("expected error when beneficiaryActorType is supplied without beneficiaryActorId")
+	}
+}
+
+func TestListCommissionsRequiresSomeFilter(t *testing.T) {
+	if _, err := ListCommissions(nil, "", "", ""); err == nil {
+		t.Fatalf("expected error when no filter is supplied")
+	}
+}
+
+func TestHandleListCommissionsRejectsPartialBeneficiaryFilter(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/wlt/commissions?beneficiaryActorId=captain-1", nil)
+	rec := httptest.NewRecorder()
+
+	HandleListCommissions(nil).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for partial beneficiary filter, got %d", rec.Code)
+	}
+}
+
+func TestMarkCodCollectedRequiresCodRecordId(t *testing.T) {
+	if _, err := MarkCodCollected(nil, ""); err == nil {
+		t.Fatalf("expected error for missing codRecordId")
+	}
+}
+
+func TestMarkCodRemittedRequiresCodRecordId(t *testing.T) {
+	if _, err := MarkCodRemitted(nil, ""); err == nil {
+		t.Fatalf("expected error for missing codRecordId")
+	}
+}
+
 

@@ -94,14 +94,17 @@ export async function submitFieldMePayoutRequest(
   amountMinorUnits: number,
   currency: string,
   idempotencyKey: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; payoutRequest: FieldPayoutRequest }
+  | { ok: false; message: string }
+> {
   try {
-    await fieldGet<{ status: string }>("/dsh/field/me/finance/payout-requests", {
+    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>("/dsh/field/me/finance/payout-requests", {
       method: "POST",
       body: { amountMinorUnits, currency, idempotencyKey },
       idempotencyKey,
     });
-    return { ok: true };
+    return { ok: true, payoutRequest: data.payoutRequest };
   } catch (e) {
     const err = e as { status?: number; message?: string };
     return { ok: false, message: err.message ?? `HTTP ${err.status ?? "error"}` };

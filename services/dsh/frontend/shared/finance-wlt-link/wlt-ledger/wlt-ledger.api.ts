@@ -65,12 +65,12 @@ export async function fetchDshWltLedgerEntries(params: DshWltLedgerParams): Prom
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.cursor) query.set("cursor", params.cursor);
     const qs = query.toString();
-    const body = await wltGet<{ entries: WltLedgerEntryRaw[]; nextCursor?: string }>(
+    const body = await wltGet<{ ledgerEntries: WltLedgerEntryRaw[]; nextCursor?: string }>(
       `/dsh/control-panel/finance/ledger/entries${qs ? `?${qs}` : ""}`,
     );
     return {
       ok: true,
-      entries: body.entries.map(toView),
+      entries: body.ledgerEntries.map(toView),
       nextCursor: body.nextCursor,
     };
   } catch (e) {

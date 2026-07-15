@@ -1,7 +1,9 @@
 package payout
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +11,14 @@ import (
 
 	"wlt-api/internal/shared"
 )
+
+// payloadHash computes a stable hash over the fields that define a payout
+// request's financial intent, so a reused Idempotency-Key with a different
+// payload can be detected instead of silently returning the earlier request.
+func payloadHash(beneficiaryActorID, beneficiaryActorType string, amountMinorUnits int64, currency string) string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%d|%s", beneficiaryActorID, beneficiaryActorType, amountMinorUnits, currency)))
+	return hex.EncodeToString(sum[:])
+}
 
 const requestCols = `id, beneficiary_actor_id, beneficiary_actor_type, amount_minor_units, currency, status,
 	requested_at, approved_at, rejected_at, processed_at, completed_at, failed_at, failure_reason, operator_id, idempotency_key`
@@ -69,6 +79,8 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		newHash := payloadHash(input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency)
+
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start tx")
@@ -76,16 +88,29 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 
-		// Check idempotency
-		rows, err := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE idempotency_key = $1 LIMIT 1", input.IdempotencyKey)
-		if err == nil && rows.Next() {
-			existing, _ := scanPayoutRequest(rows)
-			rows.Close()
-			shared.SendJSON(w, http.StatusCreated, PayoutRequestResponse{PayoutRequest: existing})
+		// Check idempotency. A matching key with a matching payload hash
+		// returns the earlier request (safe retry); a matching key with a
+		// different payload is a conflict, not a silent success.
+		var existingHash sql.NullString
+		hashErr := tx.QueryRowContext(r.Context(), "SELECT payload_hash FROM wlt_payout_requests WHERE idempotency_key = $1 LIMIT 1", input.IdempotencyKey).Scan(&existingHash)
+		if hashErr == nil {
+			if existingHash.Valid && existingHash.String != newHash {
+				shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different payload")
+				return
+			}
+			rows, err := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE idempotency_key = $1 LIMIT 1", input.IdempotencyKey)
+			if err == nil && rows.Next() {
+				existing, _ := scanPayoutRequest(rows)
+				rows.Close()
+				shared.SendJSON(w, http.StatusCreated, PayoutRequestResponse{PayoutRequest: existing})
+				return
+			}
+			if rows != nil {
+				rows.Close()
+			}
+		} else if hashErr != sql.ErrNoRows {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to check idempotency key")
 			return
-		}
-		if rows != nil {
-			rows.Close()
 		}
 
 		// Verify balance
@@ -118,19 +143,19 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Create request
-		rows, err = tx.QueryContext(r.Context(), `
-			INSERT INTO wlt_payout_requests (beneficiary_actor_id, beneficiary_actor_type, amount_minor_units, currency, status, idempotency_key)
-			VALUES ($1, $2, $3, $4, 'pending', $5)
+		insertRows, err := tx.QueryContext(r.Context(), `
+			INSERT INTO wlt_payout_requests (beneficiary_actor_id, beneficiary_actor_type, amount_minor_units, currency, status, idempotency_key, payload_hash)
+			VALUES ($1, $2, $3, $4, 'pending', $5, $6)
 			RETURNING `+requestCols,
-			input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency, input.IdempotencyKey,
+			input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency, input.IdempotencyKey, newHash,
 		)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to create payout request")
 			return
 		}
-		defer rows.Close()
-		rows.Next()
-		req, _ := scanPayoutRequest(rows)
+		defer insertRows.Close()
+		insertRows.Next()
+		req, _ := scanPayoutRequest(insertRows)
 		
 		tx.Commit()
 		shared.SendJSON(w, http.StatusCreated, PayoutRequestResponse{PayoutRequest: req})
@@ -139,15 +164,25 @@ func HandleCreatePayoutRequest(db *sql.DB) http.HandlerFunc {
 
 func HandleListPayoutRequests(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		actorID := r.URL.Query().Get("actorId")
-		actorType := r.URL.Query().Get("actorType")
+		beneficiaryActorID := r.URL.Query().Get("beneficiaryActorId")
+		beneficiaryActorType := r.URL.Query().Get("beneficiaryActorType")
 
 		query := "SELECT " + requestCols + " FROM wlt_payout_requests"
 		args := []any{}
-		
-		if actorID != "" && actorType != "" {
+
+		switch {
+		case beneficiaryActorID != "" && beneficiaryActorType != "":
 			query += " WHERE beneficiary_actor_id = $1 AND beneficiary_actor_type = $2"
-			args = append(args, actorID, actorType)
+			args = append(args, beneficiaryActorID, beneficiaryActorType)
+		case beneficiaryActorID != "" || beneficiaryActorType != "":
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryActorId and beneficiaryActorType must be supplied together")
+			return
+		default:
+			// No beneficiary scoping supplied: only an internal/service caller
+			// (e.g. an operator console) may list across all beneficiaries.
+			if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
+				return
+			}
 		}
 		query += " ORDER BY requested_at DESC"
 

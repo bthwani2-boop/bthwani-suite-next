@@ -202,6 +202,103 @@ func TestNotifyDeliveryCompletedNotConfigured(t *testing.T) {
 	}
 }
 
+func TestFinanceReadWalletBuildsPathParameterizedURL(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		if r.URL.RawQuery != "" {
+			t.Fatalf("expected no query string for path-based wallet lookup, got %q", r.URL.RawQuery)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-service-token" {
+			t.Fatalf("expected Authorization=Bearer test-service-token, got %q", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"balanceMinorUnits":0}`))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	status, body, err := c.FinanceReadWallet(context.Background(), "field", "field-123", "corr-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
+	}
+	if gotPath != "/wlt/wallets/field/field-123" {
+		t.Fatalf("expected path /wlt/wallets/field/field-123, got %q", gotPath)
+	}
+	if !strings.Contains(string(body), "balanceMinorUnits") {
+		t.Fatalf("expected body to be forwarded verbatim, got %q", body)
+	}
+}
+
+func TestFinanceReadWalletEscapesActorIDSegment(t *testing.T) {
+	var gotEscapedPath string
+	var gotSegmentCount int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// r.URL.Path is the *decoded* path (Go transparently decodes %2F back
+		// into "/"), so the wire-level escaping must be verified against the
+		// raw request target / escaped path, not the decoded one.
+		gotEscapedPath = r.URL.EscapedPath()
+		gotSegmentCount = len(strings.Split(strings.TrimPrefix(r.URL.EscapedPath(), "/"), "/"))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "test-service-token")
+	// An actor id containing a path separator must not be able to alter the
+	// route shape (e.g. escape into another WLT collection) once the WLT
+	// server routes on path segments.
+	if _, _, err := c.FinanceReadWallet(context.Background(), "field", "../admin", "corr-1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotEscapedPath != "/wlt/wallets/field/..%2Fadmin" {
+		t.Fatalf("expected escaped path /wlt/wallets/field/..%%2Fadmin, got %q", gotEscapedPath)
+	}
+	if gotSegmentCount != 4 {
+		t.Fatalf("expected exactly 4 path segments (wlt, wallets, field, <escaped actor id>), got %d from %q", gotSegmentCount, gotEscapedPath)
+	}
+}
+
+func TestFinanceReadWalletRejectsUnknownActorType(t *testing.T) {
+	c := NewClient("https://wlt.internal", "test-service-token")
+	_, _, err := c.FinanceReadWallet(context.Background(), "captain", "captain-1", "corr-1")
+	if err == nil || !strings.Contains(err.Error(), "not allowlisted") {
+		t.Fatalf("expected not-allowlisted error, got: %v", err)
+	}
+}
+
+func TestFinanceReadWalletRejectsEmptyActorID(t *testing.T) {
+	c := NewClient("https://wlt.internal", "test-service-token")
+	_, _, err := c.FinanceReadWallet(context.Background(), "field", "", "corr-1")
+	if err == nil {
+		t.Fatalf("expected error for empty actor id")
+	}
+}
+
+func TestFinanceReadWalletNotConfigured(t *testing.T) {
+	c := NewClient("", "")
+	_, _, err := c.FinanceReadWallet(context.Background(), "field", "field-1", "corr-1")
+	if err == nil || !strings.Contains(err.Error(), "not configured") {
+		t.Fatalf("expected 'not configured' error, got: %v", err)
+	}
+}
+
+func TestFinanceReadRejectsBareWalletsPathNowThatItRequiresActorSegments(t *testing.T) {
+	// /wlt/wallets was removed from the query-based allowlist because the
+	// real WLT route is path-parameterized (/wlt/wallets/{actorType}/{actorId}).
+	c := NewClient("https://wlt.internal", "test-service-token")
+	_, _, err := c.FinanceRead(context.Background(), "/wlt/wallets", nil, "corr-1")
+	if err == nil || !strings.Contains(err.Error(), "not allowlisted") {
+		t.Fatalf("expected not-allowlisted error for bare /wlt/wallets, got: %v", err)
+	}
+}
+
 func TestNotifyDeliveryCompletedNonSuccessStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

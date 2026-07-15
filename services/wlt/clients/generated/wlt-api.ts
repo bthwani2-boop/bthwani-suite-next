@@ -130,7 +130,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List payout requests. */
+        /**
+         * List payout requests.
+         * @description beneficiaryActorId and beneficiaryActorType must be supplied together and scope results to that beneficiary. If neither is supplied, the caller must be an internal/service caller (e.g. X-Service-Caller: dsh) to list across all beneficiaries.
+         */
         get: operations["listWltPayoutRequests"];
         put?: never;
         /** Create a payout request. */
@@ -618,7 +621,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List commissions by orderId or captainId. */
+        /**
+         * List commissions by sourceId, or by beneficiaryActorId+beneficiaryActorType.
+         * @description beneficiaryActorId and beneficiaryActorType must be supplied together; supplying only one is rejected with 400.
+         */
         get: operations["listWltCommissions"];
         put?: never;
         /**
@@ -904,15 +910,8 @@ export interface components {
         WltPaymentSessionResponse: {
             paymentSession: components["schemas"]["WltPaymentSession"];
         };
-        WltAuthorizePaymentSessionRequest: {
-            /**
-             * Format: int64
-             * @description Amount in minor units (e.g. 1000 = 10.00 YER)
-             */
-            amountMinorUnits: number;
-            /** @default YER */
-            currency: string;
-        };
+        /** @description Intentionally empty: the amount/currency to authorize are always read from the payment session's own row (set at reference-creation time), never from the request body -- this prevents amount tampering by the caller. Any body is ignored. */
+        WltAuthorizePaymentSessionRequest: Record<string, never>;
         WltCapturePaymentSessionResponse: {
             paymentSession: components["schemas"]["WltPaymentSession"];
         };
@@ -1094,7 +1093,7 @@ export interface components {
             entryType: string;
             actorId: string;
             /** @enum {string} */
-            actorType: "client" | "partner" | "captain" | "system" | "platform";
+            actorType: "client" | "partner" | "captain" | "system" | "platform" | "field";
             orderId?: string | null;
             referenceId: string;
             referenceType: string;
@@ -1116,7 +1115,7 @@ export interface components {
              * @default system
              * @enum {string}
              */
-            actorType: "client" | "partner" | "captain" | "system" | "platform";
+            actorType: "client" | "partner" | "captain" | "system" | "platform" | "field";
             orderId?: string | null;
             referenceId?: string;
             referenceType?: string;
@@ -1388,8 +1387,8 @@ export interface operations {
     listWltPayoutRequests: {
         parameters: {
             query?: {
-                actorId?: string;
-                actorType?: string;
+                beneficiaryActorId?: string;
+                beneficiaryActorType?: string;
             };
             header?: never;
             path?: never;
@@ -1433,6 +1432,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     getWltPayoutRequest: {
@@ -1635,7 +1635,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["WltAuthorizePaymentSessionRequest"];
             };
@@ -1653,6 +1653,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     captureWltPaymentSession: {
@@ -2015,6 +2016,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listWltCodRecords: {
@@ -2124,6 +2126,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     remitWltCod: {
@@ -2149,13 +2152,15 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listWltCommissions: {
         parameters: {
             query?: {
-                orderId?: string;
-                captainId?: string;
+                sourceId?: string;
+                beneficiaryActorId?: string;
+                beneficiaryActorType?: string;
             };
             header: {
                 Authorization: string;
@@ -2212,7 +2217,7 @@ export interface operations {
         parameters: {
             query?: {
                 actorId?: string;
-                actorType?: "client" | "partner" | "captain" | "system" | "platform";
+                actorType?: "client" | "partner" | "captain" | "system" | "platform" | "field";
                 orderId?: string;
                 entryType?: string;
                 limit?: number;

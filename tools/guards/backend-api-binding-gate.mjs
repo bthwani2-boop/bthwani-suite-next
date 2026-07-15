@@ -312,7 +312,7 @@ function verifyOutboundCall(targetService, method, pathValue, sourceFile, line) 
       (operation) =>
         operation.method === method &&
         operation.path.startsWith(pathValue) &&
-        operation.path.slice(pathValue.length).match(/^\{[^}]+\}$/),
+        operation.path.slice(pathValue.length).match(/^\{[^}]+\}(\/\{[^}]+\})*$/),
     )
   ) {
     return;

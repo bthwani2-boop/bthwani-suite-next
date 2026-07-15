@@ -19,6 +19,7 @@ export type DshCapability = {
     | "dsh.client.orders"
     | "dsh.client.dispatch"
     | "dsh.field.readiness"
+    | "dsh.field.finance"
     | "dsh.support.hub"
     | "dsh.operator.analytics"
     | "dsh.notifications"
@@ -73,6 +74,7 @@ export type DshCapability = {
     | "support-analytics"
     | "store-analytics"
     | "partner-performance"
+    | "field-finance"
   )[];
 };
 
@@ -292,6 +294,23 @@ export const DSH_CAPABILITY_MAP = [
     closureState: "FIX_REQUIRED",
     topic: "field-ops",
     topicScope: ["field-visits", "readiness-checklist", "escalation", "partner-onboarding"],
+  },
+  // ── Field Finance (WLT-owned wallet/commissions/payouts, DSH BFF) ──────────
+  {
+    id: "dsh.field.finance",
+    status: "experience-fix-required",
+    contractOperations: [
+      "getDshFieldMeWallet",
+      "getDshFieldMeCommissions",
+      "getDshFieldMeLedgerEntries",
+      "getDshFieldMePayoutRequests",
+      "submitDshFieldMePayoutRequest",
+    ],
+    surfaces: ["app-field"],
+    runtimeBound: true,
+    closureState: "FIX_REQUIRED",
+    topic: "field-ops",
+    topicScope: ["field-finance"],
   },
   // ── Support, Incidents & Escalation Room ───────────────────────────────────
   {

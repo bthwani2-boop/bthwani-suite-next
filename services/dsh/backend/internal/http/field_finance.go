@@ -13,8 +13,7 @@ func (s *protectedStoreServer) handleFieldMeWallet(w http.ResponseWriter, r *htt
 	if !ok {
 		return
 	}
-	query := url.Values{"actorId": {actor.ID}, "actorType": {"field"}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/wallets", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWallet(r.Context(), "field", actor.ID, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -29,7 +28,7 @@ func (s *protectedStoreServer) handleFieldMeCommissions(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	query := url.Values{"beneficiaryActorId": {actor.ID}}
+	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {"field"}}
 	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
@@ -61,7 +60,7 @@ func (s *protectedStoreServer) handleFieldMePayoutRequests(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	query := url.Values{"beneficiaryActorId": {actor.ID}}
+	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {"field"}}
 	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())

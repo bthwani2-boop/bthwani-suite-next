@@ -50,7 +50,7 @@ export async function loadDshFinanceRuntimeReadModel(): Promise<WltDshFinanceRun
 
   const [overview, ledger, refunds, payoutRequests] = await Promise.all([
     tryGet("/dsh/control-panel/finance/settlements", (body: any) => body),
-    tryGet("/dsh/control-panel/finance/ledger/entries?limit=250", (body: any) => (body.entries ?? []) as readonly any[]),
+    tryGet("/dsh/control-panel/finance/ledger/entries?limit=250", (body: any) => (body.ledgerEntries ?? []) as readonly any[]),
     tryGet("/dsh/control-panel/finance/refunds", (body: any) => (body.refunds ?? []) as readonly any[]),
     tryGet("/dsh/control-panel/finance/payout-requests?status=pending", (body: any) => (body.payoutRequests ?? []) as readonly any[]),
   ]);

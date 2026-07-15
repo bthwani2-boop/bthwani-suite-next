@@ -205,16 +205,23 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
     get:
       operationId: listWltPayoutRequests
       summary: List payout requests.
+      description: >-
+        beneficiaryActorId and beneficiaryActorType must be supplied
+        together and scope results to that beneficiary. If neither is
+        supplied, the caller must be an internal/service caller (e.g.
+        X-Service-Caller: dsh) to list across all beneficiaries.
       tags:
         - WltPayouts
       parameters:
-        - name: actorId
+        - name: beneficiaryActorId
           in: query
           schema: { type: string }
-        - name: actorType
+        - name: beneficiaryActorType
           in: query
           schema: { type: string }
       responses:
@@ -435,7 +442,7 @@ paths:
           schema:
             type: string
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -453,6 +460,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /wlt/payment-sessions/{paymentSessionId}/capture:
     post:
@@ -901,6 +910,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /wlt/cod-records:
     post:
@@ -1041,6 +1052,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /wlt/cod-records/{codRecordId}/remit:
     post:
@@ -1072,6 +1085,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /wlt/commissions:
     post:
@@ -1116,7 +1131,10 @@ paths:
           $ref: "#/components/responses/Forbidden"
     get:
       operationId: listWltCommissions
-      summary: List commissions by orderId or captainId.
+      summary: List commissions by sourceId, or by beneficiaryActorId+beneficiaryActorType.
+      description: >-
+        beneficiaryActorId and beneficiaryActorType must be supplied
+        together; supplying only one is rejected with 400.
       tags:
         - WltCod
       parameters:
@@ -1130,11 +1148,15 @@ paths:
           schema:
             type: string
             enum: [dsh]
-        - name: orderId
+        - name: sourceId
           in: query
           schema:
             type: string
-        - name: captainId
+        - name: beneficiaryActorId
+          in: query
+          schema:
+            type: string
+        - name: beneficiaryActorType
           in: query
           schema:
             type: string
@@ -1206,6 +1228,7 @@ paths:
               - captain
               - system
               - platform
+              - field
         - name: orderId
           in: query
           schema:
@@ -1820,16 +1843,12 @@ components:
 
     WltAuthorizePaymentSessionRequest:
       type: object
-      required:
-        - amountMinorUnits
-      properties:
-        amountMinorUnits:
-          type: integer
-          format: int64
-          description: Amount in minor units (e.g. 1000 = 10.00 YER)
-        currency:
-          type: string
-          default: YER
+      description: >-
+        Intentionally empty: the amount/currency to authorize are always
+        read from the payment session's own row (set at reference-creation
+        time), never from the request body -- this prevents amount
+        tampering by the caller. Any body is ignored.
+      properties: {}
 
     WltCapturePaymentSessionResponse:
       type: object
@@ -2295,6 +2314,7 @@ components:
             - captain
             - system
             - platform
+            - field
         orderId:
           type: [string, 'null']
         referenceId:
@@ -2341,6 +2361,7 @@ components:
             - captain
             - system
             - platform
+            - field
           default: system
         orderId:
           type: [string, 'null']

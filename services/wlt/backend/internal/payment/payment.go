@@ -3,7 +3,7 @@ package payment
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -11,6 +11,12 @@ import (
 	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
+
+// ErrNotAuthorizable is returned when AuthorizeSessionWithProvider is called
+// on a session that is not in a state from which authorization can proceed
+// (i.e. not reference_created or pending_provider) -- for example, a session
+// that is already authorized/captured, or one already failed/expired.
+var ErrNotAuthorizable = errors.New("payment session is not in an authorizable state")
 
 // dshNotifier delivery is handled by the durable outbox (internal/dshoutbox):
 // each terminal transition below enqueues an event in the same transaction
@@ -31,11 +37,6 @@ type PaymentSession struct {
 	CapturedAt        *string `json:"capturedAt"`
 	CreatedAt         string  `json:"createdAt"`
 	UpdatedAt         string  `json:"updatedAt"`
-}
-
-type AuthorizeInput struct {
-	AmountMinorUnits int64  `json:"amountMinorUnits"`
-	Currency         string `json:"currency"`
 }
 
 type financialProvider interface {
@@ -83,27 +84,39 @@ const selectCols = `
 	FROM wlt_payment_sessions
 	WHERE id = $1`
 
-func AuthorizeSession(db *sql.DB, sessionID string, amountMinorUnits int64, currency string) (*PaymentSession, error) {
+func AuthorizeSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	client, err := provider.NewDefaultPaymentProvider()
 	if err != nil {
 		return nil, err
 	}
-	return AuthorizeSessionWithProvider(context.Background(), db, client, sessionID, amountMinorUnits, currency, provider.NewRequestMeta("wlt-authorize"))
+	return AuthorizeSessionWithProvider(context.Background(), db, client, sessionID, provider.NewRequestMeta("wlt-authorize"))
 }
 
-func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, amountMinorUnits int64, currency string, meta provider.RequestMeta) (*PaymentSession, error) {
+// AuthorizeSessionWithProvider authorizes sessionID with the payment
+// provider. The amount and currency are always read from the session's own
+// row (never from caller input) so a client cannot tamper with the amount
+// actually authorized by supplying a different value in the request body.
+// The session must be in an authorizable status (reference_created or
+// pending_provider); anything else -- already authorized/captured, or
+// failed/expired -- returns ErrNotAuthorizable (409, not silently retried).
+func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
-	}
-	if currency == "" {
-		currency = "YER"
-	}
-	if amountMinorUnits <= 0 {
-		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")
 	}
 	current, err := getSession(db, sessionID)
 	if err != nil || current == nil {
 		return current, err
+	}
+	if current.Status != "reference_created" && current.Status != "pending_provider" {
+		return nil, ErrNotAuthorizable
+	}
+	amountMinorUnits := current.AmountMinorUnits
+	currency := current.Currency
+	if currency == "" {
+		currency = "YER"
+	}
+	if amountMinorUnits <= 0 {
+		return nil, fmt.Errorf("payment session has no amount to authorize")
 	}
 	result, err := authorizeProvider(ctx, client, current, amountMinorUnits, currency, meta)
 	if err != nil {
@@ -112,12 +125,12 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 	}
 	const q = `
 		UPDATE wlt_payment_sessions
-		SET status = 'authorized', provider_reference = $2, amount_minor_units = $3, currency = $4, updated_at = NOW()
+		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
-	row := db.QueryRow(q, sessionID, result.ProviderReference, amountMinorUnits, currency)
+	row := db.QueryRow(q, sessionID, result.ProviderReference)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -321,18 +334,19 @@ func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 func HandleAuthorizeSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID := r.PathValue("paymentSessionId")
-		var input AuthorizeInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
+		// The amount/currency to authorize are the payment session's own
+		// values (set at reference-creation time), never caller input --
+		// see AuthorizeSessionWithProvider. Any request body is ignored.
 		client, err := provider.NewDefaultPaymentProvider()
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
 		}
-		session, err := AuthorizeSessionWithProvider(r.Context(), db, client, sessionID, input.AmountMinorUnits, input.Currency, provider.RequestMetaFromHTTP(r, "wlt-authorize"))
+		session, err := AuthorizeSessionWithProvider(r.Context(), db, client, sessionID, provider.RequestMetaFromHTTP(r, "wlt-authorize"))
+		if errors.Is(err, ErrNotAuthorizable) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "payment session is not in an authorizable state")
+			return
+		}
 		if err != nil {
 			shared.SendProviderError(w, err)
 			return
