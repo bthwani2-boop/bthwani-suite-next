@@ -2,6 +2,7 @@ package payout
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -116,5 +117,166 @@ func TestHandleListPayoutRequests_PartialBeneficiaryFilter_Rejected(t *testing.T
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for partial beneficiary filter, got %d", rec.Code)
+	}
+}
+
+func createTestPayoutRequest(t *testing.T, db *sql.DB, actorID string, amount int64) string {
+	idemKey := fmt.Sprintf("idem-%d", time.Now().UnixNano())
+	body := fmt.Sprintf(`{"beneficiaryActorId":%q,"beneficiaryActorType":"captain","amountMinorUnits":%d,"currency":"YER","idempotencyKey":%q}`, actorID, amount, idemKey)
+	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	HandleCreatePayoutRequest(db).ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("failed to create test payout request: %d %s", rec.Code, rec.Body.String())
+	}
+	var resp PayoutRequestResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode create response: %v", err)
+	}
+	return resp.PayoutRequest.ID
+}
+
+func withPathValue(req *http.Request, key, value string) *http.Request {
+	req.SetPathValue(key, value)
+	return req
+}
+
+// TestPayoutApproveComplete_RecordsOperatorIds verifies that approving and
+// completing a payout request records the operator id supplied in the
+// request body against the transition-specific column (approved_by /
+// completed_by), not just the legacy shared operator_id column.
+func TestPayoutApproveComplete_RecordsOperatorIds(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	actorID := fmt.Sprintf("actor-%d", time.Now().UnixNano())
+	insertTestWallet(t, db, actorID, "captain", 10000)
+	payoutID := createTestPayoutRequest(t, db, actorID, 1000)
+
+	approveReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/approve", strings.NewReader(`{"operatorId":"operator-alice"}`)), "payoutId", payoutID)
+	approveRec := httptest.NewRecorder()
+	HandleApprovePayoutRequest(db).ServeHTTP(approveRec, approveReq)
+	if approveRec.Code != http.StatusOK {
+		t.Fatalf("approve failed: %d %s", approveRec.Code, approveRec.Body.String())
+	}
+	var approveResp PayoutRequestResponse
+	if err := json.Unmarshal(approveRec.Body.Bytes(), &approveResp); err != nil {
+		t.Fatalf("failed to decode approve response: %v", err)
+	}
+	if approveResp.PayoutRequest.ApprovedByOperatorID != "operator-alice" {
+		t.Fatalf("expected approvedByOperatorId 'operator-alice', got %q", approveResp.PayoutRequest.ApprovedByOperatorID)
+	}
+
+	processReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/process", strings.NewReader(`{"operatorId":"operator-alice"}`)), "payoutId", payoutID)
+	processRec := httptest.NewRecorder()
+	HandleProcessPayoutRequest(db).ServeHTTP(processRec, processReq)
+	if processRec.Code != http.StatusOK {
+		t.Fatalf("process failed: %d %s", processRec.Code, processRec.Body.String())
+	}
+
+	completeReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/complete", strings.NewReader(`{"operatorId":"operator-bob"}`)), "payoutId", payoutID)
+	completeRec := httptest.NewRecorder()
+	HandleCompletePayoutRequest(db).ServeHTTP(completeRec, completeReq)
+	if completeRec.Code != http.StatusOK {
+		t.Fatalf("complete failed: %d %s", completeRec.Code, completeRec.Body.String())
+	}
+	var completeResp PayoutRequestResponse
+	if err := json.Unmarshal(completeRec.Body.Bytes(), &completeResp); err != nil {
+		t.Fatalf("failed to decode complete response: %v", err)
+	}
+	if completeResp.PayoutRequest.CompletedByOperatorID != "operator-bob" {
+		t.Fatalf("expected completedByOperatorId 'operator-bob', got %q", completeResp.PayoutRequest.CompletedByOperatorID)
+	}
+}
+
+// TestPayoutComplete_PostsBalancedLedgerTransaction verifies that completing
+// a payout request posts a balanced (debit == credit) ledger transaction
+// referencing the payout request, rather than only mutating wallet counters.
+func TestPayoutComplete_PostsBalancedLedgerTransaction(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	actorID := fmt.Sprintf("actor-%d", time.Now().UnixNano())
+	insertTestWallet(t, db, actorID, "captain", 10000)
+	payoutID := createTestPayoutRequest(t, db, actorID, 2500)
+
+	approveReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/approve", strings.NewReader(`{}`)), "payoutId", payoutID)
+	HandleApprovePayoutRequest(db).ServeHTTP(httptest.NewRecorder(), approveReq)
+	processReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/process", strings.NewReader(`{}`)), "payoutId", payoutID)
+	HandleProcessPayoutRequest(db).ServeHTTP(httptest.NewRecorder(), processReq)
+	completeReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/complete", strings.NewReader(`{}`)), "payoutId", payoutID)
+	completeRec := httptest.NewRecorder()
+	HandleCompletePayoutRequest(db).ServeHTTP(completeRec, completeReq)
+	if completeRec.Code != http.StatusOK {
+		t.Fatalf("complete failed: %d %s", completeRec.Code, completeRec.Body.String())
+	}
+
+	var txnID string
+	if err := db.QueryRow("SELECT id FROM wlt_ledger_transactions WHERE reference_type = 'payout_request' AND reference_id = $1", payoutID).Scan(&txnID); err != nil {
+		t.Fatalf("expected a ledger transaction referencing this payout request: %v", err)
+	}
+
+	var debitTotal, creditTotal int64
+	if err := db.QueryRow("SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'debit'", txnID).Scan(&debitTotal); err != nil {
+		t.Fatalf("failed to sum debit lines: %v", err)
+	}
+	if err := db.QueryRow("SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'credit'", txnID).Scan(&creditTotal); err != nil {
+		t.Fatalf("failed to sum credit lines: %v", err)
+	}
+	if debitTotal != 2500 || creditTotal != 2500 {
+		t.Fatalf("expected balanced 2500/2500 debit/credit, got debit=%d credit=%d", debitTotal, creditTotal)
+	}
+}
+
+// TestPayoutComplete_MakerCheckerViolation_RejectedWhenEnforced verifies that
+// when WLT_MAKER_CHECKER_ENFORCED=true, the same operator id cannot both
+// approve and complete a payout request.
+func TestPayoutComplete_MakerCheckerViolation_RejectedWhenEnforced(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	t.Setenv("WLT_MAKER_CHECKER_ENFORCED", "true")
+
+	actorID := fmt.Sprintf("actor-%d", time.Now().UnixNano())
+	insertTestWallet(t, db, actorID, "captain", 10000)
+	payoutID := createTestPayoutRequest(t, db, actorID, 1000)
+
+	approveReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/approve", strings.NewReader(`{"operatorId":"operator-alice"}`)), "payoutId", payoutID)
+	approveRec := httptest.NewRecorder()
+	HandleApprovePayoutRequest(db).ServeHTTP(approveRec, approveReq)
+	if approveRec.Code != http.StatusOK {
+		t.Fatalf("approve failed: %d %s", approveRec.Code, approveRec.Body.String())
+	}
+
+	processReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/process", strings.NewReader(`{"operatorId":"operator-alice"}`)), "payoutId", payoutID)
+	processRec := httptest.NewRecorder()
+	HandleProcessPayoutRequest(db).ServeHTTP(processRec, processReq)
+	if processRec.Code != http.StatusOK {
+		t.Fatalf("process failed: %d %s", processRec.Code, processRec.Body.String())
+	}
+
+	// Same operator ("operator-alice") tries to complete what they approved.
+	completeReq := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/complete", strings.NewReader(`{"operatorId":"operator-alice"}`)), "payoutId", payoutID)
+	completeRec := httptest.NewRecorder()
+	HandleCompletePayoutRequest(db).ServeHTTP(completeRec, completeReq)
+	if completeRec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 maker/checker violation, got %d: %s", completeRec.Code, completeRec.Body.String())
+	}
+
+	// A different operator can complete it.
+	completeReq2 := withPathValue(httptest.NewRequest(http.MethodPost, "/wlt/payout-requests/"+payoutID+"/complete", strings.NewReader(`{"operatorId":"operator-bob"}`)), "payoutId", payoutID)
+	completeRec2 := httptest.NewRecorder()
+	HandleCompletePayoutRequest(db).ServeHTTP(completeRec2, completeReq2)
+	if completeRec2.Code != http.StatusOK {
+		t.Fatalf("expected a different operator to be able to complete, got %d: %s", completeRec2.Code, completeRec2.Body.String())
 	}
 }

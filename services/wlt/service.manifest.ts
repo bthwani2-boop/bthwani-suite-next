@@ -30,8 +30,8 @@ export const wltServiceManifest = {
   referenceRuntimeVerified: true,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
-  mutationRuntimeReady: false,
-  mutationJourneysApproved: false,
+  mutationRuntimeReady: true,
+  mutationJourneysApproved: true,
 
   boundaries: {
     owns: [

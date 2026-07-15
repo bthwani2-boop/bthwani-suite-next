@@ -172,3 +172,171 @@ func TestCreateRefund_Idempotent_SameSession_ReturnsSameRefund(t *testing.T) {
 		t.Fatalf("expected exactly 1 refund row for the session, got %d", count)
 	}
 }
+
+func createTestRefund(t *testing.T, db *sql.DB, sessionStatus string) *Refund {
+	t.Helper()
+	sessionID := insertTestSession(t, db, sessionStatus, 1000, "YER")
+	orderID := fmt.Sprintf("order-%d", time.Now().UnixNano())
+	r, err := CreateRefund(db, CreateRefundInput{
+		PaymentSessionID: sessionID,
+		OrderID:          orderID,
+		ClientID:         "client-test",
+		Reason:           "test",
+	})
+	if err != nil {
+		t.Fatalf("failed to create test refund: %v", err)
+	}
+	return r
+}
+
+// TestCompleteRefund_WithoutApproval_Rejected verifies a refund cannot be
+// completed while still 'requested' -- Complete now requires the refund to
+// have gone through Approve first.
+func TestCompleteRefund_WithoutApproval_Rejected(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	r := createTestRefund(t, db, "captured")
+	if r.Status != "requested" {
+		t.Fatalf("expected new refund to start 'requested', got %q", r.Status)
+	}
+
+	_, err := CompleteRefund(db, r.ID)
+	if !errors.Is(err, ErrRefundNotInExpectedState) {
+		t.Fatalf("expected ErrRefundNotInExpectedState completing an unapproved refund, got %v", err)
+	}
+}
+
+// TestApproveThenComplete_Succeeds verifies the correct sequence works.
+func TestApproveThenComplete_Succeeds(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	r := createTestRefund(t, db, "captured")
+
+	approved, err := ApproveRefund(db, r.ID)
+	if err != nil {
+		t.Fatalf("expected approve to succeed, got error: %v", err)
+	}
+	if approved.Status != "approved" {
+		t.Fatalf("expected status 'approved', got %q", approved.Status)
+	}
+
+	completed, err := CompleteRefund(db, r.ID)
+	if err != nil {
+		t.Fatalf("expected complete to succeed after approval, got error: %v", err)
+	}
+	if completed.Status != "completed" {
+		t.Fatalf("expected status 'completed', got %q", completed.Status)
+	}
+}
+
+// TestCompleteRefund_ConcurrentCalls_OnlyOneSucceeds fires two concurrent
+// CompleteRefund calls against the same approved refund and asserts only one
+// succeeds -- the old unconditional UPDATE with no status guard would have
+// let both succeed (and, via CompleteRefundWithProvider, both call the
+// provider).
+func TestCompleteRefund_ConcurrentCalls_OnlyOneSucceeds(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	r := createTestRefund(t, db, "captured")
+	if _, err := ApproveRefund(db, r.ID); err != nil {
+		t.Fatalf("failed to approve test refund: %v", err)
+	}
+
+	type result struct {
+		err error
+	}
+	results := make(chan result, 2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			_, err := CompleteRefund(db, r.ID)
+			results <- result{err: err}
+		}()
+	}
+
+	successCount := 0
+	conflictCount := 0
+	for i := 0; i < 2; i++ {
+		res := <-results
+		if res.err == nil {
+			successCount++
+		} else if errors.Is(res.err, ErrRefundNotInExpectedState) {
+			conflictCount++
+		} else {
+			t.Fatalf("unexpected error: %v", res.err)
+		}
+	}
+	if successCount != 1 || conflictCount != 1 {
+		t.Fatalf("expected exactly 1 success and 1 conflict, got %d successes and %d conflicts", successCount, conflictCount)
+	}
+}
+
+// TestApproveThenComplete_PostsBalancedLedgerTransaction verifies that
+// completing a refund posts a balanced ledger transaction referencing the
+// refund, not just a status flip.
+func TestApproveThenComplete_PostsBalancedLedgerTransaction(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	r := createTestRefund(t, db, "captured")
+	if _, err := ApproveRefund(db, r.ID); err != nil {
+		t.Fatalf("failed to approve test refund: %v", err)
+	}
+	completed, err := CompleteRefund(db, r.ID)
+	if err != nil {
+		t.Fatalf("failed to complete test refund: %v", err)
+	}
+
+	var txnID string
+	if err := db.QueryRow("SELECT id FROM wlt_ledger_transactions WHERE reference_type = 'refund' AND reference_id = $1", r.ID).Scan(&txnID); err != nil {
+		t.Fatalf("expected a ledger transaction referencing this refund: %v", err)
+	}
+
+	var debitTotal, creditTotal int64
+	if err := db.QueryRow("SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'debit'", txnID).Scan(&debitTotal); err != nil {
+		t.Fatalf("failed to sum debit lines: %v", err)
+	}
+	if err := db.QueryRow("SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_ledger_lines WHERE ledger_transaction_id = $1 AND debit_credit = 'credit'", txnID).Scan(&creditTotal); err != nil {
+		t.Fatalf("failed to sum credit lines: %v", err)
+	}
+	if debitTotal != completed.AmountMinorUnits || creditTotal != completed.AmountMinorUnits {
+		t.Fatalf("expected balanced %d/%d debit/credit, got debit=%d credit=%d", completed.AmountMinorUnits, completed.AmountMinorUnits, debitTotal, creditTotal)
+	}
+}
+
+// TestRejectRefund_AfterCompleted_Rejected verifies a completed refund
+// cannot be rejected after the fact.
+func TestRejectRefund_AfterCompleted_Rejected(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	r := createTestRefund(t, db, "captured")
+	if _, err := ApproveRefund(db, r.ID); err != nil {
+		t.Fatalf("failed to approve test refund: %v", err)
+	}
+	if _, err := CompleteRefund(db, r.ID); err != nil {
+		t.Fatalf("failed to complete test refund: %v", err)
+	}
+
+	_, err := RejectRefund(db, r.ID)
+	if !errors.Is(err, ErrRefundNotInExpectedState) {
+		t.Fatalf("expected ErrRefundNotInExpectedState rejecting a completed refund, got %v", err)
+	}
+}

@@ -1,15 +1,24 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
 	"dsh-api/internal/store"
 )
 
-// Finance permission action on the control-panel surface. "operator"
+// Finance permission actions on the control-panel surface. "operator"
 // remains a valid fallback role during RBAC data migration.
-const FinancePermissionRead = "finance.read"
+//
+// FinancePermissionManage is required for money-moving actions (payout
+// approve/reject) -- these previously shared FinancePermissionRead with
+// every other read-only finance route, meaning any actor granted read
+// access could also approve or reject payouts.
+const (
+	FinancePermissionRead   = "finance.read"
+	FinancePermissionManage = "finance.manage"
+)
 
 // Read-only finance proxy.
 //
@@ -125,9 +134,23 @@ func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter
 	s.proxyFinanceRead(w, r, "/wlt/payout-requests", financeQuery(r, "status", "limit", "cursor", "beneficiaryActorId"))
 }
 
+// operatorWriteBody builds the JSON body sent to WLT for a payout-request
+// status transition, carrying the resolved operator's identity so WLT can
+// record who performed each transition (approved_by/completed_by/... ) and
+// enforce maker/checker separation.
+func operatorWriteBody(operatorID string) []byte {
+	body, _ := json.Marshal(map[string]string{"operatorId": operatorID})
+	return body
+}
+
 // POST /dsh/control-panel/finance/payout-requests/{payoutId}/approve
 func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok {
+		return
+	}
+	if !s.wlt.Configured() {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
 	}
 	payoutId := r.PathValue("payoutId")
@@ -135,7 +158,7 @@ func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.Response
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutId)+"/approve", []byte(`{}`), r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutId)+"/approve", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -147,7 +170,12 @@ func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.Response
 
 // POST /dsh/control-panel/finance/payout-requests/{payoutId}/reject
 func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok {
+		return
+	}
+	if !s.wlt.Configured() {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
 	}
 	payoutId := r.PathValue("payoutId")
@@ -155,7 +183,7 @@ func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseW
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutId)+"/reject", []byte(`{}`), r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests/"+url.PathEscape(payoutId)+"/reject", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -163,4 +191,83 @@ func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseW
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	w.Write(body)
+}
+
+// GET /dsh/control-panel/finance/reconciliation-cases
+func (s *protectedStoreServer) handleFinanceReconciliationCases(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	s.proxyFinanceRead(w, r, "/wlt/reconciliation-cases", financeQuery(r, "status"))
+}
+
+// GET /dsh/control-panel/finance/reconciliation-cases/{caseId}
+func (s *protectedStoreServer) handleFinanceReconciliationCaseDetail(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	s.proxyFinanceRead(w, r, "/wlt/reconciliation-cases/"+url.PathEscape(r.PathValue("caseId")), nil)
+}
+
+// POST /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign
+func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok {
+		return
+	}
+	if !s.wlt.Configured() {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
+		return
+	}
+	caseId := r.PathValue("caseId")
+	if caseId == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
+		return
+	}
+	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseId)+"/assign", operatorWriteBody(actor.ID), r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(body)
+}
+
+// POST /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve
+func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok {
+		return
+	}
+	if !s.wlt.Configured() {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
+		return
+	}
+	caseId := r.PathValue("caseId")
+	if caseId == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
+		return
+	}
+	var input struct {
+		ResolutionAction string `json:"resolutionAction"`
+		ResolutionNote   string `json:"resolutionNote"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8*1024)).Decode(&input); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	body, _ := json.Marshal(map[string]string{
+		"operatorId":       actor.ID,
+		"resolutionAction": input.ResolutionAction,
+		"resolutionNote":   input.ResolutionNote,
+	})
+	status, respBody, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseId)+"/resolve", body, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(respBody)
 }

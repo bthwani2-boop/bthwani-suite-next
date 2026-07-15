@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
 import { useServerDataSource } from "@bthwani/ui-kit";
-import { createDshSessionHttpClient } from "../../shared/_kernel/dsh-http-request";
+import { createDshSessionHttpClient } from "../../../shared/_kernel/dsh-http-request";
 
 const { request } = createDshSessionHttpClient("product-picker");
 export type ProductPickerProps = {

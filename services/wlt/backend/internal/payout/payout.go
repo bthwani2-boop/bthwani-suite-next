@@ -3,34 +3,50 @@ package payout
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"wlt-api/internal/shared"
 )
 
+// payoutEncryptionKey returns the symmetric key used to encrypt bank
+// account/IBAN/mobile-money fields at rest via pgcrypto's pgp_sym_encrypt.
+// The key is only ever bound as a query parameter -- it is never
+// interpolated into SQL text or written to a migration file.
+func payoutEncryptionKey() (string, error) {
+	key := os.Getenv("WLT_PAYOUT_ENCRYPTION_KEY")
+	if key == "" {
+		return "", fmt.Errorf("WLT_PAYOUT_ENCRYPTION_KEY is not configured")
+	}
+	return key, nil
+}
+
 // ─── Model ─────────────────────────────────────────────────────────────────
 
+// PayoutDestination is the internal (never externally serialized) row shape.
+// Account number, IBAN, and mobile number are stored only in the
+// *_encrypted columns (see wlt-018_payout_destination_encryption.sql) and are
+// intentionally not loaded here -- nothing in this package currently needs
+// the decrypted value, since only masked fields are ever returned to DSH.
 type PayoutDestination struct {
-	ID                           string `json:"id"`
-	PartnerID                    string `json:"partnerId"`
-	BeneficiaryName              string `json:"beneficiaryName"`
-	BankName                     string `json:"bankName"`
-	BankBranch                   string `json:"bankBranch"`
-	AccountNumber                string `json:"accountNumber"`
-	IBAN                         string `json:"iban"`
-	PayoutMobileNumber           string `json:"payoutMobileNumber"`
-	SettlementPreference         string `json:"settlementPreference"`
+	ID                            string `json:"id"`
+	PartnerID                     string `json:"partnerId"`
+	BeneficiaryName               string `json:"beneficiaryName"`
+	BankName                      string `json:"bankName"`
+	BankBranch                    string `json:"bankBranch"`
+	SettlementPreference          string `json:"settlementPreference"`
 	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                    string `json:"bankNotes"`
+	BankNotes                     string `json:"bankNotes"`
 	// Masked fields returned to DSH for display — real values never leave WLT.
-	MaskedAccountNumber  string `json:"maskedAccountNumber"`
-	MaskedIBAN           string `json:"maskedIban"`
-	MaskedMobileNumber   string `json:"maskedMobileNumber"`
-	Active               bool   `json:"active"`
-	CreatedByActorID     string `json:"createdByActorId"`
-	CreatedAt            string `json:"createdAt"`
-	UpdatedAt            string `json:"updatedAt"`
+	MaskedAccountNumber string `json:"maskedAccountNumber"`
+	MaskedIBAN          string `json:"maskedIban"`
+	MaskedMobileNumber  string `json:"maskedMobileNumber"`
+	Active              bool   `json:"active"`
+	CreatedByActorID    string `json:"createdByActorId"`
+	CreatedAt           string `json:"createdAt"`
+	UpdatedAt           string `json:"updatedAt"`
 }
 
 // PayoutDestinationRef is returned to DSH — contains the reference ID and
@@ -50,17 +66,17 @@ type PayoutDestinationRef struct {
 }
 
 type UpsertPayoutDestinationInput struct {
-	PartnerID                    string `json:"partnerId"`
-	BeneficiaryName              string `json:"beneficiaryName"`
-	BankName                     string `json:"bankName"`
-	BankBranch                   string `json:"bankBranch"`
-	AccountNumber                string `json:"accountNumber"`
-	IBAN                         string `json:"iban"`
-	PayoutMobileNumber           string `json:"payoutMobileNumber"`
-	SettlementPreference         string `json:"settlementPreference"`
+	PartnerID                     string `json:"partnerId"`
+	BeneficiaryName               string `json:"beneficiaryName"`
+	BankName                      string `json:"bankName"`
+	BankBranch                    string `json:"bankBranch"`
+	AccountNumber                 string `json:"accountNumber"`
+	IBAN                          string `json:"iban"`
+	PayoutMobileNumber            string `json:"payoutMobileNumber"`
+	SettlementPreference          string `json:"settlementPreference"`
 	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                    string `json:"bankNotes"`
-	CreatedByActorID             string `json:"createdByActorId"`
+	BankNotes                     string `json:"bankNotes"`
+	CreatedByActorID              string `json:"createdByActorId"`
 }
 
 // ─── Masking helpers ────────────────────────────────────────────────────────
@@ -78,7 +94,7 @@ func maskLast4(s string) string {
 // ─── Repository helpers ─────────────────────────────────────────────────────
 
 const cols = `id, partner_id, beneficiary_name, bank_name, bank_branch,
-	account_number, iban, payout_mobile_number, settlement_preference,
+	settlement_preference,
 	bank_account_holder_matches_owner, bank_notes,
 	masked_account_number, masked_iban, masked_mobile_number,
 	active, created_by_actor_id, created_at, updated_at`
@@ -87,7 +103,7 @@ func scanDestination(rows *sql.Rows) (*PayoutDestination, error) {
 	var d PayoutDestination
 	err := rows.Scan(
 		&d.ID, &d.PartnerID, &d.BeneficiaryName, &d.BankName, &d.BankBranch,
-		&d.AccountNumber, &d.IBAN, &d.PayoutMobileNumber, &d.SettlementPreference,
+		&d.SettlementPreference,
 		&d.BankAccountHolderMatchesOwner, &d.BankNotes,
 		&d.MaskedAccountNumber, &d.MaskedIBAN, &d.MaskedMobileNumber,
 		&d.Active, &d.CreatedByActorID, &d.CreatedAt, &d.UpdatedAt,
@@ -140,8 +156,23 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 		maskedIBAN := maskLast4(input.IBAN)
 		maskedMobile := maskLast4(input.PayoutMobileNumber)
 
-		// Deactivate existing active destination for this partner first.
-		_, err := db.ExecContext(r.Context(), `
+		key, err := payoutEncryptionKey()
+		if err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout encryption is not configured")
+			return
+		}
+
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "failed to start tx")
+			return
+		}
+		defer tx.Rollback()
+
+		// Deactivate the existing active destination and insert the new one
+		// atomically: if the insert fails, the old destination must not be
+		// left deactivated with no active replacement.
+		_, err = tx.ExecContext(r.Context(), `
 			UPDATE wlt_payout_destinations
 			SET active = false, updated_at = now()
 			WHERE partner_id = $1 AND active = true`, partnerID)
@@ -150,17 +181,20 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		row, err := db.QueryContext(r.Context(), `
+		row, err := tx.QueryContext(r.Context(), `
 			INSERT INTO wlt_payout_destinations
-				(partner_id, beneficiary_name, bank_name, bank_branch, account_number,
-				 iban, payout_mobile_number, settlement_preference,
+				(partner_id, beneficiary_name, bank_name, bank_branch,
+				 account_number_encrypted, iban_encrypted, payout_mobile_number_encrypted,
+				 settlement_preference,
 				 bank_account_holder_matches_owner, bank_notes,
 				 masked_account_number, masked_iban, masked_mobile_number,
 				 active, created_by_actor_id)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,$14)
+			VALUES ($1,$2,$3,$4,
+			        pgp_sym_encrypt($5, $6), pgp_sym_encrypt($7, $6), pgp_sym_encrypt($8, $6),
+			        $9,$10,$11,$12,$13,$14,true,$15)
 			RETURNING `+cols,
 			input.PartnerID, input.BeneficiaryName, input.BankName, input.BankBranch,
-			input.AccountNumber, input.IBAN, input.PayoutMobileNumber, input.SettlementPreference,
+			input.AccountNumber, key, input.IBAN, input.PayoutMobileNumber, input.SettlementPreference,
 			input.BankAccountHolderMatchesOwner, input.BankNotes,
 			maskedAccount, maskedIBAN, maskedMobile,
 			input.CreatedByActorID,
@@ -177,6 +211,11 @@ func HandleUpsertPayoutDestination(db *sql.DB) http.HandlerFunc {
 		dest, err := scanDestination(row)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "could not scan payout destination")
+			return
+		}
+		row.Close()
+		if err := tx.Commit(); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "could not commit payout destination")
 			return
 		}
 		shared.SendJSON(w, http.StatusCreated, toRef(dest))

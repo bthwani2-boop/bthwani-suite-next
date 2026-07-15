@@ -9,6 +9,7 @@ import (
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/payment"
 	"wlt-api/internal/payout"
+	"wlt-api/internal/reconciliation"
 	"wlt-api/internal/reference"
 	"wlt-api/internal/refund"
 	"wlt-api/internal/settlement"
@@ -93,10 +94,21 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
 
 	// WLT Payout Destinations: DSH sends bank details here; WLT owns the
-	// financial truth and returns only masked display values to DSH.
-	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", readGate(payout.HandleUpsertPayoutDestination(db)))
+	// financial truth and returns only masked display values to DSH. The
+	// upsert and deactivate routes mutate stored bank/IBAN/mobile-money data,
+	// so (unlike the plain GET below) they must sit behind the mutation gate
+	// like every other financial-mutation route, not just service-caller auth.
+	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPayoutDestination(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
-	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", readGate(payout.HandleDeactivatePayoutDestination(db)))
+	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestination(db))))
+
+	// WLT Reconciliation Cases: resolution surface for provider_result_unknown
+	// sessions (wlt-015 added the open-case record only; this closes the
+	// missing assign/resolve routes).
+	mux.HandleFunc("GET /wlt/reconciliation-cases", readGate(reconciliation.HandleListCases(db)))
+	mux.HandleFunc("GET /wlt/reconciliation-cases/{caseId}", readGate(reconciliation.HandleGetCase(db)))
+	mux.HandleFunc("POST /wlt/reconciliation-cases/{caseId}/assign", gate(serviceAuth(reconciliation.HandleAssignCase(db))))
+	mux.HandleFunc("POST /wlt/reconciliation-cases/{caseId}/resolve", gate(serviceAuth(reconciliation.HandleResolveCase(db))))
 
 	// WLT Payout Requests
 	mux.HandleFunc("POST /wlt/payout-requests", gate(serviceAuth(payout.HandleCreatePayoutRequest(db))))
@@ -127,7 +139,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller")
 			w.Header().Set("Vary", "Origin")
 		}

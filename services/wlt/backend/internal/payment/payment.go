@@ -27,6 +27,12 @@ var ErrNotAuthorizable = errors.New("payment session is not in an authorizable s
 // never be silently flipped to expired and lose its true captured state.
 var ErrNotExpirable = errors.New("payment session is not in an expirable state")
 
+// ErrSessionClaimConflict is returned by claimSession when the session is
+// not currently in one of the caller's allowed source statuses -- either
+// because it was never eligible, or because a concurrent request already
+// claimed it first (see claimSession's doc comment).
+var ErrSessionClaimConflict = errors.New("payment session could not be claimed for this operation")
+
 // dshNotifier delivery is handled by the durable outbox (internal/dshoutbox):
 // each terminal transition below enqueues an event in the same transaction
 // as its status update, and a background worker drains the outbox and calls
@@ -93,6 +99,56 @@ const selectCols = `
 	FROM wlt_payment_sessions
 	WHERE id = $1`
 
+// claimSession locks sessionID (SELECT ... FOR UPDATE), verifies its status
+// is one of allowedFrom, and atomically flips it to pendingStatus -- all
+// inside a transaction that commits before this function returns, so the
+// row lock is released quickly rather than held across the subsequent
+// provider network call (holding a Postgres lock across a slow external
+// HTTP call would itself be a availability/contention risk).
+//
+// A concurrent claim attempt on the same session blocks on the
+// SELECT ... FOR UPDATE until this transaction commits, then observes the
+// new pendingStatus and fails the allowedFrom check (ErrSessionClaimConflict)
+// -- so at most one caller can ever successfully claim a session for a given
+// operation, closing the authorize/capture double-call race.
+func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingStatus string) (*PaymentSession, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	row := tx.QueryRow(selectCols+` FOR UPDATE`, sessionID)
+	s, err := scanSession(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	allowed := false
+	for _, st := range allowedFrom {
+		if s.Status == st {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return nil, ErrSessionClaimConflict
+	}
+
+	if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = $2, updated_at = NOW() WHERE id = $1`, sessionID, pendingStatus); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	s.Status = pendingStatus
+	return s, nil
+}
+
+
 func AuthorizeSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	client, err := provider.NewDefaultPaymentProvider()
 	if err != nil {
@@ -108,47 +164,61 @@ func AuthorizeSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 // The session must be in an authorizable status (reference_created or
 // pending_provider); anything else -- already authorized/captured, or
 // failed/expired -- returns ErrNotAuthorizable (409, not silently retried).
+//
+// The session is first claimed into 'authorization_pending' (see
+// claimSession) before the provider is ever called, so two concurrent
+// requests on the same session cannot both reach the provider call below --
+// the second one's claim fails with ErrSessionClaimConflict.
 func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
-	current, err := getSession(db, sessionID)
-	if err != nil || current == nil {
-		return current, err
-	}
-	if current.Status != "reference_created" && current.Status != "pending_provider" {
+	claimed, err := claimSession(db, sessionID, []string{"reference_created", "pending_provider"}, "authorization_pending")
+	if errors.Is(err, ErrSessionClaimConflict) {
 		return nil, ErrNotAuthorizable
 	}
-	amountMinorUnits := current.AmountMinorUnits
-	currency := current.Currency
+	if err != nil || claimed == nil {
+		return claimed, err
+	}
+	amountMinorUnits := claimed.AmountMinorUnits
+	currency := claimed.Currency
 	if currency == "" {
 		currency = "YER"
 	}
 	if amountMinorUnits <= 0 {
+		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
 		return nil, fmt.Errorf("payment session has no amount to authorize")
 	}
-	result, err := authorizeProvider(ctx, client, current, amountMinorUnits, currency, meta)
+	result, err := authorizeProvider(ctx, client, claimed, amountMinorUnits, currency, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, current, "authorize", err)
+			_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
 		} else {
-			_ = markSessionFailedAndNotify(db, current)
+			_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
 		}
 		return nil, err
 	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 	const q = `
 		UPDATE wlt_payment_sessions
 		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND status = 'authorization_pending'
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
-	row := db.QueryRow(q, sessionID, result.ProviderReference)
+	row := tx.QueryRow(q, sessionID, result.ProviderReference)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, fmt.Errorf("session %s was no longer authorization_pending when finalizing authorize", sessionID)
 	}
-	return s, err
+	if err != nil {
+		return nil, err
+	}
+	return s, tx.Commit()
 }
 
 func CaptureSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
@@ -159,23 +229,26 @@ func CaptureSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	return CaptureSessionWithProvider(context.Background(), db, client, sessionID, provider.NewRequestMeta("wlt-capture"))
 }
 
+// CaptureSessionWithProvider claims the session into 'capture_pending' (see
+// claimSession) before calling the provider, closing the same double-call
+// race described on AuthorizeSessionWithProvider.
 func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
-	current, err := getSession(db, sessionID)
-	if err != nil || current == nil {
-		return current, err
-	}
-	if current.Status != "authorized" {
+	claimed, err := claimSession(db, sessionID, []string{"authorized"}, "capture_pending")
+	if errors.Is(err, ErrSessionClaimConflict) {
 		return nil, fmt.Errorf("payment session must be authorized before capture")
 	}
-	result, err := captureProvider(ctx, client, current, meta)
+	if err != nil || claimed == nil {
+		return claimed, err
+	}
+	result, err := captureProvider(ctx, client, claimed, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, current, "capture", err)
+			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
 		} else {
-			_ = markSessionFailedAndNotify(db, current)
+			_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
 		}
 		return nil, err
 	}
@@ -241,7 +314,10 @@ func isAmbiguousProviderError(err error) bool {
 // markSessionFailedAndNotify marks sessionID failed and enqueues the DSH
 // outbox event in the same transaction, so a lost DSH webhook can never
 // happen without the WLT-side status transition also being rolled back.
-func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession) error {
+// expectedStatus guards the UPDATE (e.g. 'authorization_pending' or
+// 'capture_pending') so this only ever affects the session this caller
+// actually claimed via claimSession.
+func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedStatus string) error {
 	if session == nil {
 		return nil
 	}
@@ -250,8 +326,12 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', updated_at = NOW() WHERE id = $1`, session.ID); err != nil {
+	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
+	if err != nil {
 		return err
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		return fmt.Errorf("session %s was no longer %s when marking failed", session.ID, expectedStatus)
 	}
 	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.CheckoutIntentID); err != nil {
 		return err
@@ -272,7 +352,7 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession) error {
 // reconciliation case out-of-band and the session transitions to its true
 // final state through the existing authorize/capture/expire paths -- do not
 // "fix" this by adding a notification here.
-func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, operation string, cause error) error {
+func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, operation string, cause error, expectedStatus string) error {
 	if session == nil {
 		return nil
 	}
@@ -281,8 +361,12 @@ func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, op
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', updated_at = NOW() WHERE id = $1`, session.ID); err != nil {
+	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
+	if err != nil {
 		return err
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		return fmt.Errorf("session %s was no longer %s when marking provider_result_unknown", session.ID, expectedStatus)
 	}
 	reason := ""
 	if cause != nil {
@@ -299,7 +383,8 @@ func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, op
 }
 
 // captureSessionAndNotify commits the captured transition and enqueues the
-// DSH outbox event atomically.
+// DSH outbox event atomically. Guarded on status = 'capture_pending' so it
+// only finalizes the session this caller actually claimed via claimSession.
 func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*PaymentSession, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -309,14 +394,14 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 	const q = `
 		UPDATE wlt_payment_sessions
 		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND status = 'capture_pending'
 		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID, providerReference)
 	s, err := scanSession(row)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, fmt.Errorf("session %s was no longer capture_pending when finalizing capture", sessionID)
 	}
 	if err != nil {
 		return nil, err

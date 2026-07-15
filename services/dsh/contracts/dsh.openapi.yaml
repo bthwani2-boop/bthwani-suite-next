@@ -21,6 +21,7 @@ paths:
       summary: Return the authenticated field agent's wallet balance.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Wallet returned successfully.
@@ -29,18 +30,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  actorId: { type: string }
-                  actorType: { type: string }
-                  status: { type: string }
-                  currency: { type: string }
-                  availableBalanceMinorUnits: { type: integer, format: int64 }
-                  pendingBalanceMinorUnits: { type: integer, format: int64 }
-                  heldBalanceMinorUnits: { type: integer, format: int64 }
-                  earnedTotalMinorUnits: { type: integer, format: int64 }
-                  settledTotalMinorUnits: { type: integer, format: int64 }
-                  paidTotalMinorUnits: { type: integer, format: int64 }
-                  lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
-                  updatedAt: { type: string, format: date-time, nullable: true }
+                  wallet:
+                    type: object
+                    properties:
+                      actorId: { type: string }
+                      actorType: { type: string }
+                      status: { type: string }
+                      currency: { type: string }
+                      availableBalanceMinorUnits: { type: integer, format: int64 }
+                      pendingBalanceMinorUnits: { type: integer, format: int64 }
+                      heldBalanceMinorUnits: { type: integer, format: int64 }
+                      earnedTotalMinorUnits: { type: integer, format: int64 }
+                      settledTotalMinorUnits: { type: integer, format: int64 }
+                      paidTotalMinorUnits: { type: integer, format: int64 }
+                      lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
+                      updatedAt: { type: string, format: date-time, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/me/finance/commissions:
     get:
@@ -48,29 +53,34 @@ paths:
       summary: Return the authenticated field agent's commissions.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Commissions list returned successfully.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id: { type: string }
-                    beneficiaryActorId: { type: string }
-                    beneficiaryActorType: { type: string }
-                    sourceType: { type: string }
-                    sourceId: { type: string }
-                    visitId: { type: string, nullable: true }
-                    storeId: { type: string, nullable: true }
-                    partnerId: { type: string, nullable: true }
-                    commissionPolicyId: { type: string, nullable: true }
-                    amountMinorUnits: { type: integer, format: int64 }
-                    currency: { type: string }
-                    status: { type: string }
-                    idempotencyKey: { type: string, nullable: true }
+                type: object
+                properties:
+                  commissions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        beneficiaryActorId: { type: string }
+                        beneficiaryActorType: { type: string }
+                        sourceType: { type: string }
+                        sourceId: { type: string }
+                        visitId: { type: string, nullable: true }
+                        storeId: { type: string, nullable: true }
+                        partnerId: { type: string, nullable: true }
+                        commissionPolicyId: { type: string, nullable: true }
+                        amountMinorUnits: { type: integer, format: int64 }
+                        currency: { type: string }
+                        status: { type: string }
+                        idempotencyKey: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/me/finance/ledger-entries:
     get:
@@ -78,6 +88,7 @@ paths:
       summary: Return the authenticated field agent's ledger entries.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Ledger entries returned successfully.
@@ -87,6 +98,7 @@ paths:
                 type: array
                 items:
                   type: object
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/field/me/finance/payout-requests:
     get:
@@ -94,27 +106,72 @@ paths:
       summary: Return the authenticated field agent's payout requests.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Payout requests returned successfully.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
+                type: object
+                properties:
+                  payoutRequests:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        beneficiaryActorId: { type: string }
+                        beneficiaryActorType: { type: string }
+                        amountMinorUnits: { type: integer, format: int64 }
+                        currency: { type: string }
+                        status: { type: string }
+                        requestedAt: { type: string, format: date-time }
+                        completedAt: { type: string, format: date-time, nullable: true }
+                        failureReason: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
     post:
       operationId: submitDshFieldMePayoutRequest
       summary: Submit a new payout request for the authenticated field agent.
       tags:
         - DshFieldFinance
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amountMinorUnits
+                - currency
+                - idempotencyKey
+              properties:
+                amountMinorUnits: { type: integer, format: int64 }
+                currency: { type: string }
+                idempotencyKey: { type: string }
       responses:
-        "200":
+        "201":
           description: Payout request created successfully.
           content:
             application/json:
               schema:
                 type: object
+                properties:
+                  payoutRequest:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      beneficiaryActorId: { type: string }
+                      beneficiaryActorType: { type: string }
+                      amountMinorUnits: { type: integer, format: int64 }
+                      currency: { type: string }
+                      status: { type: string }
+                      requestedAt: { type: string, format: date-time }
+                      completedAt: { type: string, format: date-time, nullable: true }
+                      failureReason: { type: string, nullable: true }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 
   /dsh/health:
     get:
@@ -2497,6 +2554,77 @@ paths:
             application/json:
               schema: { type: object, additionalProperties: true }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/control-panel/finance/payout-requests:
+    get:
+      operationId: listDshControlPanelFinancePayoutRequests
+      summary: Operator reads the governed WLT payout requests view through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: beneficiaryActorId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout requests view (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/approve:
+    post:
+      operationId: approveDshControlPanelFinancePayoutRequest
+      summary: Operator approves a governed WLT payout request through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout request approval result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/control-panel/finance/payout-requests/{payoutId}/reject:
+    post:
+      operationId: rejectDshControlPanelFinancePayoutRequest
+      summary: Operator rejects a governed WLT payout request through the DSH finance proxy.
+      tags: [DshFinanceProxy]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: WLT payout request rejection result (verbatim passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/captain/finance/cod-records:
     get:
       operationId: listDshCaptainFinanceCodRecords

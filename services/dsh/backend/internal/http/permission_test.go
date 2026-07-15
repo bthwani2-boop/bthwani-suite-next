@@ -148,6 +148,7 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 		{"administration", AdministrationPermissionRead, "operator", AdministrationPermissionRead},
 		{"analytics", AnalyticsPermissionRead, "operator", AnalyticsPermissionRead},
 		{"finance", FinancePermissionRead, "operator", FinancePermissionRead},
+		{"finance-manage", FinancePermissionManage, "operator", FinancePermissionManage},
 		{"support", SupportPermissionManage, "operator", SupportPermissionManage},
 		{"platform", PlatformPermissionManage, "operator", PlatformPermissionManage},
 		{"operations", OperationsPermissionManage, "operator", OperationsPermissionManage},
@@ -203,6 +204,37 @@ func TestRequirePermissionAcrossDomains(t *testing.T) {
 				t.Fatalf("%s: expected fine-grained grant to succeed, got status %d", tc.name, rec.Code)
 			}
 		})
+	}
+}
+
+// TestFinanceApproveReject_RequireManageNotRead is a regression guard for the
+// gap where payout approve/reject shared FinancePermissionRead with every
+// other read-only finance route -- an actor granted only finance.read must
+// not be able to approve or reject a payout.
+func TestFinanceApproveReject_RequireManageNotRead(t *testing.T) {
+	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(auth.Identity{
+			Subject:   "finance-reader-1",
+			TenantID:  "dsh",
+			Roles:     []string{"field"},
+			AuthState: "authenticated",
+			Permissions: []auth.Permission{
+				{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"},
+			},
+		})
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/dsh/control-panel/finance/payout-requests/payout-1/approve", nil)
+	req.Header.Set("Authorization", "Bearer valid-finance-read-token")
+	rec := httptest.NewRecorder()
+
+	_, ok := s.requirePermission(rec, req, "control-panel", FinancePermissionManage, "operator")
+	if ok {
+		t.Fatal("expected an actor with only finance.read to be rejected from a finance.manage action")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
 	}
 }
 

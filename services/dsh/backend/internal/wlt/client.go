@@ -308,6 +308,7 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/commissions":              {},
 	"/wlt/references/wallet-status": {},
 	"/wlt/payout-requests":          {},
+	"/wlt/reconciliation-cases":     {},
 }
 
 func financeReadPathAllowed(path string) bool {
@@ -316,6 +317,10 @@ func financeReadPathAllowed(path string) bool {
 	}
 	// Single-resource refund detail: /wlt/refunds/{refundId}
 	if rest, ok := strings.CutPrefix(path, "/wlt/refunds/"); ok {
+		return rest != "" && !strings.Contains(rest, "/")
+	}
+	// Single-resource reconciliation-case detail: /wlt/reconciliation-cases/{caseId}
+	if rest, ok := strings.CutPrefix(path, "/wlt/reconciliation-cases/"); ok {
 		return rest != "" && !strings.Contains(rest, "/")
 	}
 	return false
@@ -417,6 +422,12 @@ func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []b
 		parts := strings.Split(path, "/")
 		// e.g. /wlt/payout-requests/{id}/approve
 		if len(parts) == 5 && (parts[4] == "approve" || parts[4] == "reject" || parts[4] == "process" || parts[4] == "complete" || parts[4] == "fail") {
+			allowed = true
+		}
+	} else if strings.HasPrefix(path, "/wlt/reconciliation-cases/") {
+		parts := strings.Split(path, "/")
+		// e.g. /wlt/reconciliation-cases/{id}/assign or .../resolve
+		if len(parts) == 5 && (parts[4] == "assign" || parts[4] == "resolve") {
 			allowed = true
 		}
 	}

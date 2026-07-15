@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/lib/pq"
+
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/provider"
 	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
@@ -20,6 +23,16 @@ import (
 // so a refund can only be requested once the session is in a state where
 // those stored values are the true captured amount.
 var ErrSessionNotRefundable = errors.New("payment session is not in a refundable state")
+
+// ErrRefundNotInExpectedState is returned by transitionRefund when the
+// refund's current status is not one of the caller's allowed source
+// statuses -- either it was never eligible for this transition, or a
+// concurrent request already moved it first. Approve/Complete/Reject
+// previously performed an unconditional UPDATE with no status guard at all,
+// so two concurrent CompleteRefund calls (or a Complete before an Approve)
+// could both proceed and, for CompleteRefundWithProvider, both call the
+// refund provider.
+var ErrRefundNotInExpectedState = errors.New("refund is not in the expected state for this transition")
 
 type Refund struct {
 	ID               string  `json:"id"`
@@ -211,40 +224,101 @@ func ListRefunds(db *sql.DB, orderID, clientID string) ([]*Refund, error) {
 	return refunds, rows.Err()
 }
 
-func transitionRefund(db *sql.DB, refundID, status string, setResolvedAt bool) (*Refund, error) {
+// transitionRefund guards the UPDATE on status = ANY(allowedFrom), so a
+// concurrent second transition attempt (e.g. two racing CompleteRefund
+// calls, or a Complete before an Approve landed) affects zero rows and
+// returns ErrRefundNotInExpectedState instead of silently overwriting an
+// already-transitioned refund.
+func transitionRefund(db *sql.DB, refundID string, allowedFrom []string, status string, setResolvedAt bool) (*Refund, error) {
 	if refundID == "" {
 		return nil, fmt.Errorf("refundId is required")
 	}
 	var q string
 	if setResolvedAt {
 		q = `UPDATE wlt_refunds SET status = $2, resolved_at = NOW(), updated_at = NOW()
-		     WHERE id = $1
+		     WHERE id = $1 AND status = ANY($3)
 		     RETURNING ` + refundCols
 	} else {
 		q = `UPDATE wlt_refunds SET status = $2, updated_at = NOW()
-		     WHERE id = $1
+		     WHERE id = $1 AND status = ANY($3)
 		     RETURNING ` + refundCols
 	}
-	row := db.QueryRow(q, refundID, status)
+	row := db.QueryRow(q, refundID, status, pq.Array(allowedFrom))
 	r, err := scanRefund(row)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		// Distinguish "refund does not exist" from "refund exists but is not
+		// in an allowed source status" so callers can return 409 vs 404.
+		existing, getErr := GetRefund(db, refundID)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if existing == nil {
+			return nil, nil
+		}
+		return nil, ErrRefundNotInExpectedState
 	}
 	return r, err
 }
 
 func ApproveRefund(db *sql.DB, refundID string) (*Refund, error) {
-	return transitionRefund(db, refundID, "approved", false)
+	return transitionRefund(db, refundID, []string{"requested"}, "approved", false)
 }
 
+// CompleteRefund performs the completion transition (requiring the refund to
+// currently be 'approved') and, in the same transaction, posts a balanced
+// ledger transaction -- debit platform_revenue / credit provider_clearing,
+// representing revenue being reversed as money leaves back out through the
+// provider to the client -- so refund completion is ledger-honest rather
+// than only flipping wlt_refunds.status.
 func CompleteRefund(db *sql.DB, refundID string) (*Refund, error) {
-	return transitionRefund(db, refundID, "completed", true)
+	if refundID == "" {
+		return nil, fmt.Errorf("refundId is required")
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	row := tx.QueryRow(`
+		UPDATE wlt_refunds SET status = 'completed', resolved_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND status = ANY($2)
+		RETURNING `+refundCols, refundID, pq.Array([]string{"approved"}))
+	r, err := scanRefund(row)
+	if err == sql.ErrNoRows {
+		existing, getErr := GetRefund(db, refundID)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if existing == nil {
+			return nil, nil
+		}
+		return nil, ErrRefundNotInExpectedState
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if r.AmountMinorUnits > 0 {
+		lines := []ledger.LedgerLine{
+			{AccountType: "platform_revenue", DebitCredit: "debit", AmountMinorUnits: r.AmountMinorUnits, Currency: r.Currency},
+			{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: r.AmountMinorUnits, Currency: r.Currency},
+		}
+		if _, err := ledger.PostLedgerTransaction(context.Background(), tx, "refund_completed", "refund", r.ID, lines, ledger.Actor{ID: "system", Type: "system"}); err != nil {
+			return nil, fmt.Errorf("post refund ledger transaction: %w", err)
+		}
+	}
+
+	return r, tx.Commit()
 }
 
 func CompleteRefundWithProvider(ctx context.Context, db *sql.DB, client financialProvider, refundID string, meta provider.RequestMeta) (*Refund, error) {
 	ref, err := GetRefund(db, refundID)
 	if err != nil || ref == nil {
 		return ref, err
+	}
+	if ref.Status != "approved" {
+		return nil, ErrRefundNotInExpectedState
 	}
 	result, err := client.Post(ctx, "/financial/card/refund", map[string]any{
 		"refundId":         ref.ID,
@@ -265,7 +339,7 @@ func CompleteRefundWithProvider(ctx context.Context, db *sql.DB, client financia
 }
 
 func RejectRefund(db *sql.DB, refundID string) (*Refund, error) {
-	return transitionRefund(db, refundID, "rejected", true)
+	return transitionRefund(db, refundID, []string{"requested", "approved"}, "rejected", true)
 }
 
 // HTTP handlers
@@ -325,6 +399,10 @@ func HandleListRefunds(db *sql.DB) http.HandlerFunc {
 func HandleApproveRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ref, err := ApproveRefund(db, r.PathValue("refundId"))
+		if errors.Is(err, ErrRefundNotInExpectedState) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "refund is not in a state that can be approved")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -345,6 +423,10 @@ func HandleCompleteRefund(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		ref, err := CompleteRefundWithProvider(r.Context(), db, client, r.PathValue("refundId"), provider.RequestMetaFromHTTP(r, "wlt-refund"))
+		if errors.Is(err, ErrRefundNotInExpectedState) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "refund must be approved before it can be completed")
+			return
+		}
 		if err != nil {
 			shared.SendProviderError(w, err)
 			return
@@ -362,6 +444,10 @@ func HandleCompleteRefund(db *sql.DB) http.HandlerFunc {
 func HandleRejectRefund(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ref, err := RejectRefund(db, r.PathValue("refundId"))
+		if errors.Is(err, ErrRefundNotInExpectedState) {
+			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "refund is not in a state that can be rejected")
+			return
+		}
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
