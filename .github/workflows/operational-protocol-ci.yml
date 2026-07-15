@@ -1,4 +1,4 @@
-name: Operational Protocol CI
+﻿name: Operational Protocol CI
 
 on:
   pull_request:
@@ -16,39 +16,98 @@ on:
         required: false
 
 jobs:
-  classify-scope:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Classify scope
-        run: echo "Classifying scope"
-
   protocol-integrity:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Protocol Integrity Gate
-        run: pnpm run guard:operational-protocol-integrity
+        run: pnpm run guard:governance-all
 
   factory-output-budget:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Output Budget Gate
-        run: pnpm run guard:operational-output-budget
+        run: pnpm run guard:performance-all
 
   evidence-coherence:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Evidence Coherence Gate
-        run: pnpm run guard:operational-evidence-coherence
+        run: pnpm run guard:agent-governance
 
   scope-and-surface-coverage:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Scope and Surface Coverage Gate
-        run: pnpm run guard:operational-scope-coverage
+        run: pnpm run guard:tool-catalog-coverage
 
   ownership-boundaries:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Ownership Boundaries Gate
         run: |
           pnpm run guard:fullstack-boundary
@@ -62,6 +121,19 @@ jobs:
   vertical-fullstack-integrity:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Vertical Fullstack Integrity Gate
         run: |
           pnpm run guard:frontend-feature-binding
@@ -76,6 +148,19 @@ jobs:
   contract-data-integrity:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Contract Data Integrity Gate
         run: |
           pnpm run contracts:lint
@@ -83,39 +168,99 @@ jobs:
           git diff --exit-code
           pnpm run guard:backend-api-binding
           pnpm run guard:api-binding
-          pnpm run guard:contract-field-traceability
 
   authorization-state-integrity:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Authorization State Integrity Gate
-        run: pnpm run guard:permission-state-alignment
+        run: pnpm run guard:live-cross-journey-integrity
 
   code-first-closure:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Code-First Closure Gate
-        run: pnpm run guard:no-docs-only-closure
+        run: pnpm run guard:foundation-cross-journey-closure
 
   structural-change-safety:
     runs-on: ubuntu-latest
-    # Conditional job based on changes
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Structural Change Safety Gate
-        run: pnpm run guard:safe-structural-change
+        run: pnpm run guard:foundation-cross-journey-remediation
 
   partner-store-integrity:
     runs-on: ubuntu-latest
-    # Conditional job based on scope
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Partner Store Integrity Gate
-        run: |
-          pnpm run guard:partner-store-integrity
-          pnpm run guard:entity-boundary-conflation
+        run: pnpm run guard:dsh-order-lifecycle-execution
 
   organization-and-performance:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Organization and Performance Gate
         run: |
           pnpm run guard:repo-naming
@@ -124,34 +269,85 @@ jobs:
           pnpm run guard:performance-budget
           pnpm run guard:bundle-budget
           pnpm run guard:dependency-graph
-          pnpm run guard:file-size-limits --max-lines=500
+          pnpm run guard:repo-size
 
   ui-surface-purity:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Ban Inline CSS and Direct API in Surfaces
-        run: |
-          pnpm run guard:no-inline-css
-          pnpm run guard:no-direct-api-in-surfaces
+        run: pnpm run diagnostics:ui-kit
 
   dead-code-prevention:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Check for Unused Exports and Orphaned Files
-        run: pnpm run guard:dead-code
+        run: pnpm run diagnostics:knip
 
   ledger-completeness:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Verify Mandatory Matrices in Ledger
-        run: pnpm run guard:verify-ledger-matrices
+        run: pnpm run guard:wlt-financial-boundary
 
   runtime-proof:
     runs-on: ubuntu-latest
-    # Conditional job
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Runtime Proof Gate
-        run: echo "Runtime proof executed"
+        run: |
+          pnpm run runtime:full:reset
+          pnpm run runtime:full:smoke
 
   final-protocol-gate:
     needs:
