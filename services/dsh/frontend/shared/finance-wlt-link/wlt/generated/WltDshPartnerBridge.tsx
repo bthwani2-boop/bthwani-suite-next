@@ -77,7 +77,9 @@ export function WltDshPartnerBridge({
           <StateView
             title="تعذر تحميل بيانات المحفظة"
             description={state.message}
-            primaryAction={{ label: 'إعادة المحاولة', onPress: () => loadSummary(partnerId) }}
+            tone="danger"
+            actionLabel="إعادة المحاولة"
+            onActionPress={() => loadSummary(partnerId)}
           />
         )}
 
@@ -106,7 +108,7 @@ export function WltDshPartnerBridge({
                 <Button label="مراجعة المسويات" tone="secondary" onPress={onOpenSettlementReview} />
               )}
               {onOpenFinancialReport && (
-                <Button label="التقارير المالية" tone="outline" onPress={onOpenFinancialReport} />
+                <Button label="التقارير المالية" tone="ghost" onPress={onOpenFinancialReport} />
               )}
             </View>
           </View>

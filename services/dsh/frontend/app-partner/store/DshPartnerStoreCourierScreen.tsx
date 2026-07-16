@@ -125,7 +125,7 @@ export function DshPartnerStoreCourierScreen({
   const selectedCompensationLabel = resolveStoreCourierCompensationLabel(compensation);
 
   const dynamicBranchOptions = React.useMemo(() => {
-    const branches = scopes.map(scope => ({ id: scope.id, label: scope.name }));
+    const branches = scopes.map(scope => ({ id: scope.scopeId, label: scope.displayName }));
     return [{ id: 'all', label: 'كل الفروع' }, ...branches];
   }, [scopes]);
 

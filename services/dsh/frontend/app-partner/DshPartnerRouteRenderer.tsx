@@ -6,6 +6,7 @@ import type {
   DshPartnerSupportRouteId,
   PartnerHubSection,
 } from './dsh-partner.types';
+import type { DshPartnerOperationalScope } from '../shared/partner/partner.types';
 import { DshPartnerHubSurface } from './account/PartnerHubScreen';
 import {
   AuctionStatusUpdateScreen,
@@ -61,7 +62,7 @@ type Props = {
   partnerOrdersState: 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled' | 'partial';
   partnerOrders: readonly PartnerOrderItem[];
   runtimePartnerProfile: { storeName: string; branchLabel: string; cityLabel: string; managerLabel: string; todayHoursLabel: string; activeZoneLabel: string };
-  selectedStoreScope: { label: string };
+  selectedStoreScope: DshPartnerOperationalScope;
   selectedStoreScopeId: string;
   deliveryOpsSummary: { outForDelivery: number; handoffReady: number; deliveredToday: number; delayedRisk: number };
   dshClientId: string | undefined;
@@ -147,7 +148,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     return renderSurfaceShell(
       <DshPartnerHubSurface
         section={accountHubSection} onSectionChange={props.setAccountHubSection}
-        storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.label}
+        storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.displayName}
         cityLabel={runtimePartnerProfile.cityLabel} managerLabel={runtimePartnerProfile.managerLabel}
         todayHoursLabel={runtimePartnerProfile.todayHoursLabel} activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
         storeOpen listingEnabled
@@ -284,7 +285,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
 
   return renderMainShell(
     <DshPartnerHubSurface
-      storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.label}
+      storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.displayName}
       cityLabel={runtimePartnerProfile.cityLabel} managerLabel={runtimePartnerProfile.managerLabel}
       todayHoursLabel={runtimePartnerProfile.todayHoursLabel} activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
       onOpenOrdersBoard={openOrdersBoard} onOpenInventoryManagement={openInventoryManagement}

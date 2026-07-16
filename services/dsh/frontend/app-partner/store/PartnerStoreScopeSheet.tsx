@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Surface, Text, spacing } from '@bthwani/ui-kit';
 
-import { DshPartnerOperationalScope } from '../shared/partner/partner.types';
+import { DshPartnerOperationalScope } from '../../shared/partner/partner.types';
 
 export function PartnerStoreScopeSheet({
   visible, onClose, options, selectedId, onSelect,

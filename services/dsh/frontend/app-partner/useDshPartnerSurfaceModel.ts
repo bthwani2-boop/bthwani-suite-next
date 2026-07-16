@@ -105,7 +105,7 @@ export function useDshPartnerSurfaceModel(
   const opsSummary = usePartnerOpsSummaryModel(orders.partnerOrders);
   const team = usePartnerTeamModel({
     route: profile.route,
-    selectedStoreScopeId: storeScope.selectedStoreScopeId,
+    selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
   });
 
   // ── Sync order search mode when route changes ─────────────────────────────
@@ -143,7 +143,7 @@ export function useDshPartnerSurfaceModel(
     storeScopeVisible: storeScope.storeScopeVisible,
     accountHubSection: profile.accountHubSection,
     ordersSearchMode: orders.ordersSearchMode,
-    selectedStoreScopeId: storeScope.selectedStoreScopeId,
+    selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
     editingProductId: orders.editingProductId,
     activeOrderId: orders.activeOrderId,
     supportNav: support.supportNav,

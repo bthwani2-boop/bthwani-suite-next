@@ -2,7 +2,6 @@ import React from 'react';
 import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
 import { Button, Card, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
-import { storeScopeOptions } from './dsh-partner.navigation-bridge';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, FeatureFlagProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
@@ -126,7 +125,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       <Pressable onPress={openStoreScope} style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start', gap: 2 }}>
         <Text role="bodyStrong" style={{ color: COLORS.text }}>{runtimePartnerProfile.storeName}</Text>
         <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 4 }}>
-          <Text role="caption" tone="muted">{`${selectedStoreScope.label} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
+          <Text role="caption" tone="muted">{`${selectedStoreScope.displayName} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
           <Icon name="chevron-down" size={12} tone="muted" />
         </View>
       </Pressable>

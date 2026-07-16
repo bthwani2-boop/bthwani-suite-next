@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Switch as RNSwitch, View, Share, BackHandler } from 'react-native';
+import { ActivityIndicator, Pressable, Switch as RNSwitch, View, Share, BackHandler } from 'react-native';
 import {
   Badge,
   Box,
@@ -17,6 +17,7 @@ import {
   Text,
   TextField,
   useDirection,
+  useTheme,
   TopBar,
   ListItem,
   radius,
@@ -693,6 +694,7 @@ function OperationsPanel({
   teamMembers,
   onBack,
   onOpenStoreCourierSetup,
+  onOpenTeamManagement,
   listingEnabled,
   storeVisibility,
   visibilityLabel,
@@ -705,9 +707,10 @@ function OperationsPanel({
   activeZoneLabel: string;
   serviceModes: readonly PartnerOperationalMode[];
   coverageZonesToUse: readonly PartnerCoverageZone[];
-  teamMembers: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
+  teamMembers: readonly import('../teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
   onBack: () => void;
   onOpenStoreCourierSetup?: () => void;
+  onOpenTeamManagement?: () => void;
   listingEnabled: boolean;
   storeVisibility: ReturnType<typeof resolveDshStoreClientVisibility>;
   visibilityLabel: string;
@@ -895,7 +898,7 @@ function OperationsPanel({
             tone="secondary"
             size="sm"
             fullWidth={false}
-            onPress={props.onOpenTeamManagement}
+            onPress={onOpenTeamManagement}
           />
         </Box>
 
@@ -1038,16 +1041,17 @@ function OperationsPanel({
  * Designed for later real-data binding without layout changes. */
 
 
-function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info' | 'muted'; icon: React.ComponentProps<typeof Icon>['name'] }) {
+function AnalyticsInsightMetric({ label, value, tone = 'default', icon }: { label: string; value: string; tone?: 'default' | 'action' | 'success' | 'info' | 'muted' | 'danger'; icon: React.ComponentProps<typeof Icon>['name'] }) {
 
   const { direction } = useDirection();
-  const accentColor = tone === 'action' ? theme.brand : tone === 'success' ? theme.success : tone === 'info' ? theme.info : theme.lineStrong;
+  const accentColor = tone === 'action' ? theme.brand : tone === 'success' ? theme.success : tone === 'info' ? theme.info : tone === 'danger' ? theme.danger : theme.lineStrong;
   const iconTone =
     tone === 'default' ? undefined
       : tone === 'action' ? ('brand' as const)
         : tone === 'info' ? ('action' as const)
           : tone === 'muted' ? ('muted' as const)
-            : tone;
+            : tone === 'danger' ? ('danger' as const)
+              : tone;
 
   return (
     <Box
@@ -1072,7 +1076,7 @@ function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: st
   const { direction } = useDirection();
   const theme = useTheme() as any;
 
-  const [performance, setPerformance] = React.useState<import('../../../shared/partner/partner.types').DshPartnerPerformanceResponse | null>(null);
+  const [performance, setPerformance] = React.useState<import('../../shared/partner/partner.types').DshPartnerPerformanceResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -1081,7 +1085,7 @@ function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: st
       return;
     }
     setLoading(true);
-    import('../../../shared/partner/partner.api').then(({ fetchPartnerPerformance }) => {
+    import('../../shared/partner/partner.api').then(({ fetchPartnerPerformance }) => {
       fetchPartnerPerformance('today').then(res => {
         setPerformance(res);
         setLoading(false);
@@ -1228,7 +1232,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   React.useEffect(() => {
     if (!canonicalStoreId) return;
 
-    import('../../../shared/partner/partner.api').then(({ fetchPartnerStoreSettings, fetchPartnerStoreCoverageZones }) => {
+    import('../../shared/partner/partner.api').then(({ fetchPartnerStoreSettings, fetchPartnerStoreCoverageZones }) => {
       fetchPartnerStoreSettings(canonicalStoreId).then((res: any) => {
         const backendModes = res?.deliveryModes || [];
         const mappedModes: PartnerOperationalMode[] = [
@@ -1278,7 +1282,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
       [preferenceId]: nextValue,
     }));
     // Wire to backend
-    import('../../../shared/notifications/notifications.api').then(({ updateNotificationPreferences }) => {
+    import('../../shared/notifications/notifications.api').then(({ updateNotificationPreferences }) => {
       updateNotificationPreferences(preferenceId, nextValue).catch(() => {
         // Rollback on failure (simplified)
         setNotificationPreferences((current) => ({
@@ -1465,7 +1469,12 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
         <WltDshPartnerBridge
           branchLabel={resolvedBranchLabel}
           activeZoneLabel={resolvedActiveZoneLabel}
-          serviceModes={serviceModes}
+          serviceModes={serviceModes.map((mode) => ({
+            id: mode.id,
+            label: mode.title,
+            description: mode.subtitle,
+            enabled: mode.enabled,
+          }))}
           onBack={() => updateSection('hub')}
           onOpenExpandedWallet={onOpenWalletHub}
           onOpenSettlementReview={onOpenWalletHub}
@@ -1820,6 +1829,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           teamMembers={props.teamMembers ?? []}
           onBack={() => updateSection('hub')}
           {...(onOpenStoreCourierSetup !== undefined ? { onOpenStoreCourierSetup } : {})}
+          {...(props.onOpenTeamManagement !== undefined ? { onOpenTeamManagement: props.onOpenTeamManagement } : {})}
           listingEnabled={listingEnabled}
           storeVisibility={storeVisibility}
           visibilityLabel={visibilityLabel}
@@ -1906,7 +1916,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           </View>
           {/* Service mode chips — readonly display */}
           <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-            {defaultOperationalModes.map((mode) => (
+            {serviceModes.map((mode) => (
               <Pressable
                 key={mode.id}
                 onPress={() => setSelectedModeId(mode.id)}
