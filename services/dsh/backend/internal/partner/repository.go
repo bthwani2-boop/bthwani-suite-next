@@ -848,6 +848,7 @@ func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error)
 		}
 		m.RoleLabel = roleLabel(m.Role)
 		m.StatusLabel = statusLabel(m.Status)
+		m.InlineAction = inlineActionForStatus(m.Status)
 		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
 		members = append(members, m)
 	}
@@ -893,6 +894,7 @@ func ListInvitesForPhone(db *sql.DB, phone string) ([]StoreTeamMember, error) {
 		}
 		m.RoleLabel = roleLabel(m.Role)
 		m.StatusLabel = statusLabel(m.Status)
+		m.InlineAction = inlineActionForStatus(m.Status)
 		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
 		members = append(members, m)
 	}
@@ -947,11 +949,11 @@ func RejectInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
 // OpenAPI contract, but since this backend is also the sole producer of the
 // labels shown to the user, the round-trip is closed and unambiguous.
 var teamActionStatusMap = map[string]string{
-	"إيقاف":               "paused",
-	"تفعيل":               "active",
-	"حظر":                 "blocked",
-	"إعادة إرسال الدعوة":  "invited",
-	"إلغاء الدعوة":        "blocked",
+	"pause":         "paused",
+	"activate":      "active",
+	"block":         "blocked",
+	"resend-invite": "invited",
+	"cancel-invite": "blocked",
 }
 
 // ExecuteStoreTeamMemberAction applies actionLabel to memberID, guarding
@@ -983,7 +985,7 @@ func ExecuteStoreTeamMemberAction(db *sql.DB, storeID, memberID string, input Te
 		return ErrForbidden
 	}
 
-	toStatus := teamActionStatusMap[input.ActionLabel]
+	toStatus := teamActionStatusMap[input.Action]
 	if toStatus != "" {
 		if _, err := tx.Exec(`
 			UPDATE dsh_store_team_members
@@ -997,7 +999,7 @@ func ExecuteStoreTeamMemberAction(db *sql.DB, storeID, memberID string, input Te
 		INSERT INTO dsh_store_team_member_actions (
 			member_id, store_id, action_label, from_status, to_status, actor_id
 		) VALUES ($1, $2, $3, $4, $5, $6)`,
-		memberID, storeID, input.ActionLabel, fromStatus, toStatus, input.ActorID); err != nil {
+		memberID, storeID, input.Action, fromStatus, toStatus, input.ActorID); err != nil {
 		return err
 	}
 
@@ -1046,6 +1048,21 @@ func inlineActionLabelForStatus(status string) string {
 		return "تفعيل"
 	default:
 		return "مراجعة"
+	}
+}
+
+func inlineActionForStatus(status string) string {
+	switch status {
+	case "active":
+		return "pause"
+	case "paused":
+		return "activate"
+	case "invited":
+		return "resend-invite"
+	case "blocked":
+		return "activate"
+	default:
+		return ""
 	}
 }
 

@@ -493,6 +493,7 @@ type StoreTeamMember struct {
 	InviteLifecycle    string `json:"inviteLifecycle"`
 	OperationalImpact  string `json:"operationalImpact"`
 	AuditNote          string `json:"auditNote"`
+	InlineAction       string `json:"inlineAction"`
 	InlineActionLabel  string `json:"inlineActionLabel"`
 }
 
@@ -509,12 +510,15 @@ func (i InviteTeamMemberInput) Validate() error {
 }
 
 type TeamMemberActionInput struct {
-	ActionLabel string `json:"actionLabel"`
-	ActorID     string `json:"-"`
+	Action  string `json:"action"`
+	ActorID string `json:"-"`
 }
 
 func (i TeamMemberActionInput) Validate() error {
-	if strings.TrimSpace(i.ActionLabel) == "" {
+	switch i.Action {
+	case "pause", "activate", "block", "resend-invite", "cancel-invite":
+		return nil
+	default:
 		return ErrInvalid
 	}
 	return nil

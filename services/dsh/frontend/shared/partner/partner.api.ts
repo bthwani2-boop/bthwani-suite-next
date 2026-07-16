@@ -147,8 +147,8 @@ export function invitePartnerTeamMember(storeId: string, identity: string): Prom
   return request(`/dsh/partner/stores/${storeId}/team/invites`, { method: "POST", body: { identity } });
 }
 
-export function executePartnerTeamMemberAction(storeId: string, memberId: string, actionLabel: string): Promise<{ success: boolean }> {
-  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, { method: "POST", body: { actionLabel } });
+export function executePartnerTeamMemberAction(storeId: string, memberId: string, action: string): Promise<{ success: boolean }> {
+  return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, { method: "POST", body: { action } });
 }
 
 export function fetchPartnerStoreCourierSettings(storeId: string): Promise<DshPartnerStoreCourierSettings> {

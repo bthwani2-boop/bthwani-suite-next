@@ -34,7 +34,7 @@ export type PartnerTeamManagementScreenProps = {
   readonly isLoading?: boolean;
   readonly error?: string | null;
   readonly onInviteMember?: (identity: string) => Promise<PartnerTeamMutationResult> | void;
-  readonly onMemberAction?: (memberId: string, actionLabel: string) => Promise<PartnerTeamMutationResult> | void;
+  readonly onMemberAction?: (memberId: string, action: string) => Promise<PartnerTeamMutationResult> | void;
   readonly onBack?: () => void;
 };
 
@@ -106,10 +106,10 @@ export function PartnerTeamManagementScreen({
     setInviteDraft('');
   }, [inviteDraft, onInviteMember]);
 
-  const handleMemberAction = React.useCallback((memberId: string, actionLabel: string, memberName: string) => {
+  const handleMemberAction = React.useCallback((memberId: string, action: string, actionLabel: string, memberName: string) => {
     if (!onMemberAction) return;
     setActionFeedback(`جارٍ إرسال إجراء (${actionLabel}) للعضو: ${memberName}`);
-    Promise.resolve(onMemberAction(memberId, actionLabel)).then((result) => {
+    Promise.resolve(onMemberAction(memberId, action)).then((result) => {
       if (result && !result.ok) {
         setActionFeedback(`فشل تنفيذ (${actionLabel}) للعضو ${memberName}: ${result.error}`);
         return;
@@ -273,7 +273,7 @@ export function PartnerTeamManagementScreen({
                           size="sm"
                           fullWidth={false}
                           disabled={isLastSupervisor}
-                          onPress={() => handleMemberAction(member.id, memberActionLabel, member.name)}
+                          onPress={() => handleMemberAction(member.id, member.inlineAction, memberActionLabel, member.name)}
                         />
                         <Button
                           label={member.status === 'invited' ? 'إلغاء الدعوة' : 'سجل العمليات'}

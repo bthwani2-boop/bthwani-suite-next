@@ -4658,9 +4658,10 @@ paths:
             schema:
               type: object
               properties:
-                actionLabel:
+                action:
                   type: string
-              required: [actionLabel]
+                  enum: [pause, activate, block, resend-invite, cancel-invite]
+              required: [action]
       responses:
         "200":
           description: Action executed.

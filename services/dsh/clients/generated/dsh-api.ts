@@ -10560,7 +10560,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    actionLabel: string;
+                    /** @enum {string} */
+                    action: "pause" | "activate" | "block" | "resend-invite" | "cancel-invite";
                 };
             };
         };

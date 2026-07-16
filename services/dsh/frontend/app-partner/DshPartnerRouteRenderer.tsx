@@ -88,7 +88,7 @@ type Props = {
   isTeamLoading?: boolean;
   teamError?: string | null;
   onInviteMember: (identity: string) => Promise<import('./team/usePartnerTeamModel').PartnerTeamMutationResult>;
-  onMemberAction: (memberId: string, actionLabel: string) => Promise<import('./team/usePartnerTeamModel').PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, action: string) => Promise<import('./team/usePartnerTeamModel').PartnerTeamMutationResult>;
   scopes: readonly import('../shared/partner/partner.types').DshPartnerOperationalScope[];
 };
 

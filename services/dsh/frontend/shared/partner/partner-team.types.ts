@@ -20,6 +20,7 @@ export type PartnerTeamMember = {
   readonly inviteLifecycle: string;
   readonly operationalImpact: string;
   readonly auditNote: string;
+  readonly inlineAction: string;
   readonly inlineActionLabel: string;
 };
 
@@ -65,6 +66,7 @@ export function toPartnerTeamMember(raw: unknown): PartnerTeamMember | null {
     inviteLifecycle: stringOr(record.inviteLifecycle, ''),
     operationalImpact: stringOr(record.operationalImpact, ''),
     auditNote: stringOr(record.auditNote, ''),
+    inlineAction: stringOr(record.inlineAction, ''),
     inlineActionLabel: stringOr(record.inlineActionLabel, ''),
   };
 }
