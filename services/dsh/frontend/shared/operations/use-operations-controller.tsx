@@ -12,22 +12,23 @@ import {
   getOperationsGroupMeta,
   buildOperationsHref,
   OPERATIONS_CANONICAL_GROUPS,
+  OPERATIONS_CANONICAL_GROUP_IDS,
 } from './operations-registry';
 
 export type UseOperationsControllerProps = {
-  group?: CanonicalOperationsGroupId;
-  orderId?: string;
-  panel?: any;
-  state?: OperationsViewState;
+  group?: CanonicalOperationsGroupId | undefined;
+  orderId?: string | undefined;
+  panel?: OperationsPanelId | undefined;
+  state?: OperationsViewState | undefined;
   searchParams?: {
     get: (key: string) => string | null;
-  };
+  } | undefined;
   router?: {
     push: (href: string) => void;
-  };
+  } | undefined;
 };
 
-function useOperationsController({
+export function useOperationsController({
   group = 'command-center',
   orderId,
   panel,
@@ -35,7 +36,13 @@ function useOperationsController({
   searchParams,
   router,
 }: UseOperationsControllerProps) {
-  const workspaceParam = searchParams?.get('workspace') as CanonicalOperationsGroupId | null;
+  const rawWorkspaceParam = searchParams?.get('workspace');
+  const workspaceParam = (
+    rawWorkspaceParam && OPERATIONS_CANONICAL_GROUP_IDS.includes(rawWorkspaceParam as CanonicalOperationsGroupId)
+      ? rawWorkspaceParam
+      : null
+  ) as CanonicalOperationsGroupId | null;
+
   const [activeGroupState, setActiveGroupState] = useState<CanonicalOperationsGroupId>(group);
 
   useEffect(() => {
@@ -57,7 +64,12 @@ function useOperationsController({
   }, [searchParams]);
 
   const activeSubGroup = useMemo(() => {
-    return getParam('subGroup') || activeGroupMeta.subGroups?.[0]?.id || undefined;
+    const rawSubGroup = getParam('subGroup');
+    const validSubGroups = activeGroupMeta.subGroups;
+    if (rawSubGroup && validSubGroups?.some(sub => sub.id === rawSubGroup)) {
+      return rawSubGroup;
+    }
+    return validSubGroups?.[0]?.id || undefined;
   }, [activeGroupMeta, getParam]);
 
   const activeSubGroupMeta = useMemo(() => {
@@ -71,9 +83,9 @@ function useOperationsController({
       ticketId: getParam('ticketId'),
       callId: getParam('callId'),
       panel: (getParam('panel') as OperationsPanelId) || panel,
-      subGroup: getParam('subGroup'),
+      subGroup: activeSubGroup,
     };
-  }, [orderId, getParam, panel]);
+  }, [orderId, getParam, panel, activeSubGroup]);
 
   const hubHref = useMemo(() => buildOperationsHref(activeGroup, focusParams), [activeGroup, focusParams]);
 
