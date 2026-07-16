@@ -96,7 +96,12 @@ jobs:
         run: pnpm run guard:tool-catalog-coverage
 
   ownership-boundaries:
-    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name != 'workflow_dispatch' ||
+        inputs.mode == 'full' ||
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -123,7 +128,12 @@ jobs:
           pnpm run guard:wlt-financial-boundary
 
   vertical-fullstack-integrity:
-    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name != 'workflow_dispatch' ||
+        inputs.mode == 'full' ||
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -151,7 +161,12 @@ jobs:
           pnpm run guard:runtime-real-bindings
 
   contract-data-integrity:
-    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name != 'workflow_dispatch' ||
+        inputs.mode == 'full' ||
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -176,7 +191,12 @@ jobs:
           pnpm run guard:api-binding
 
   authorization-state-integrity:
-    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name != 'workflow_dispatch' ||
+        inputs.mode == 'full' ||
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -197,7 +217,12 @@ jobs:
 
 
   organization-and-performance:
-    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name != 'workflow_dispatch' ||
+        inputs.mode == 'full' ||
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -262,7 +287,12 @@ jobs:
         run: pnpm run diagnostics:knip
 
   ledger-completeness:
-    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name != 'workflow_dispatch' ||
+        inputs.mode == 'full' ||
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -282,7 +312,11 @@ jobs:
         run: pnpm run guard:wlt-financial-boundary
 
   runtime-proof:
-    if: github.event.inputs.mode == 'runtime'
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' &&
+        inputs.mode == 'runtime'
+      }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

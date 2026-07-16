@@ -52,9 +52,9 @@ jobs:
         id: check_creds
         run: |
           if [ -n "${{ secrets.SONAR_TOKEN }}" ] && [ -n "${{ vars.SONAR_HOST_URL }}" ]; then
-            echo "has_creds=true" >> $GITHUB_OUTPUT
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_creds=false" >> $GITHUB_OUTPUT
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
             echo "SonarQube is NOT_CONFIGURED"
           fi
 
