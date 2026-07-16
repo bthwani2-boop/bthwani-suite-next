@@ -38,7 +38,7 @@ inspect("services/dsh/frontend/shared/dispatch/dispatch.api.ts", [
   },
 ]);
 
-inspect("services/dsh/frontend/app-partner/Catalog/ProductMediaScreen.tsx", [
+inspect("services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx", [
   {
     pattern: /متاح قريباً|disabled=\{isWorking \|\| Platform\.OS !== 'web'\}/,
     message: "Native media upload must not be disabled behind a future placeholder.",

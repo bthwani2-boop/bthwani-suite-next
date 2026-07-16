@@ -1,4 +1,5 @@
 ﻿import * as api from "./central-catalog.api";
+import { uploadBinaryToPresignedUrl } from "../media/presigned-upload";
 import type { CatalogAsset, CatalogAssetLink, AssetUploadIntentInput, AssetUploadProgress } from "./central-catalog.types";
 
 export type { AssetUploadProgress };
@@ -55,11 +56,7 @@ export async function uploadAndLinkAsset(
 
   // Upload binary directly to MinIO presigned URL.
   onProgress?.({ stage: "uploading", percent: 0 });
-  const uploadResp = await fetch(intent.uploadUrl, {
-    method: "PUT",
-    body: file,
-    headers: { "Content-Type": file.type || "image/jpeg" },
-  });
+  const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, file.type || "image/jpeg");
   if (!uploadResp.ok) {
     // Rollback draft asset so object storage does not accumulate orphans.
     try {
