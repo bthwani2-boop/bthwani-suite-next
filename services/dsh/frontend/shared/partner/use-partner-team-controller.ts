@@ -50,9 +50,9 @@ export function usePartnerTeamController({
     loadTeam();
   }, [loadTeam]);
 
-  const onInviteMember = React.useCallback((identity: string): Promise<PartnerTeamMutationResult> => {
+  const onInviteMember = React.useCallback(async (identity: string): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
-      return Promise.resolve({ ok: false, error: 'لا يوجد فرع محدد لإرسال الدعوة.' });
+      return { ok: false, error: 'لا يوجد فرع محدد لإرسال الدعوة.' };
     }
     return invitePartnerTeamMember(activeStoreId, identity).then((): PartnerTeamMutationResult => {
       loadTeam();
@@ -62,9 +62,9 @@ export function usePartnerTeamController({
     });
   }, [activeStoreId, loadTeam]);
 
-  const onMemberAction = React.useCallback((memberId: string, action: string): Promise<PartnerTeamMutationResult> => {
+  const onMemberAction = React.useCallback(async (memberId: string, action: string): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
-      return Promise.resolve({ ok: false, error: 'لا يوجد فرع محدد لتنفيذ الإجراء.' });
+      return { ok: false, error: 'لا يوجد فرع محدد لتنفيذ الإجراء.' };
     }
     return executePartnerTeamMemberAction(activeStoreId, memberId, action).then((): PartnerTeamMutationResult => {
       loadTeam();

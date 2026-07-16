@@ -466,7 +466,7 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
-// ─── Store team, courier settings, coverage zones, partner scopes (DSH-050) ─
+// ─── Store team, courier settings, coverage zones, partner scopes ───────────
 // Thin auth wrappers: verify the actor can access storeId via the existing
 // store.ActorCanAccessStore primitive, then delegate to the pure business
 // handler in partner/handler.go. Mirrors handleGetPartnerSettings above.

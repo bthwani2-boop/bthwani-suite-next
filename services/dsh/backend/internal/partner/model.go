@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	ErrNotFound                     = errors.New("partner not found")
-	ErrInvalid                      = errors.New("invalid partner input")
-	ErrForbidden                    = errors.New("partner action forbidden")
-	ErrInvalidTransition            = errors.New("invalid partner status transition")
-	ErrConflict                     = errors.New("partner conflict — duplicate legal identity")
-	ErrVersionConflict              = errors.New("optimistic concurrency control failed — version mismatch")
+	ErrNotFound                    = errors.New("partner not found")
+	ErrInvalid                     = errors.New("invalid partner input")
+	ErrForbidden                   = errors.New("partner action forbidden")
+	ErrInvalidTransition           = errors.New("invalid partner status transition")
+	ErrConflict                    = errors.New("partner conflict — duplicate legal identity")
+	ErrVersionConflict             = errors.New("optimistic concurrency control failed — version mismatch")
 	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, partner-ready, catalog approved, and marketing visible")
 )
 
@@ -103,21 +103,21 @@ type Partner struct {
 	Notes               string           `json:"notes"`
 	// Payout destination reference — DSH holds only the WLT reference ID and
 	// masked display strings. Raw bank data is never stored in DSH after Phase 5.
-	PayoutDestinationID  string `json:"payoutDestinationId"`
-	MaskedAccountNumber  string `json:"maskedAccountNumber"`
-	MaskedIBAN           string `json:"maskedIban"`
-	MaskedMobileNumber   string `json:"maskedMobileNumber"`
+	PayoutDestinationID string `json:"payoutDestinationId"`
+	MaskedAccountNumber string `json:"maskedAccountNumber"`
+	MaskedIBAN          string `json:"maskedIban"`
+	MaskedMobileNumber  string `json:"maskedMobileNumber"`
 	// Legacy bank display fields retained for backward compatibility.
 	// New writes go through WLT; these are populated from masked values only.
-	BeneficiaryName               string `json:"beneficiaryName"`
-	BankName                      string `json:"bankName"`
-	BankBranch                    string `json:"bankBranch"`
-	BankAccountNumber             string `json:"accountNumber"`
-	BankIBAN                      string `json:"iban"`
-	PayoutMobileNumber            string `json:"payoutMobileNumber"`
-	SettlementPreference          string `json:"settlementPreference"`
-	BankAccountHolderMatchesOwner bool   `json:"bankAccountHolderMatchesOwner"`
-	BankNotes                     string `json:"bankNotes"`
+	BeneficiaryName               string    `json:"beneficiaryName"`
+	BankName                      string    `json:"bankName"`
+	BankBranch                    string    `json:"bankBranch"`
+	BankAccountNumber             string    `json:"accountNumber"`
+	BankIBAN                      string    `json:"iban"`
+	PayoutMobileNumber            string    `json:"payoutMobileNumber"`
+	SettlementPreference          string    `json:"settlementPreference"`
+	BankAccountHolderMatchesOwner bool      `json:"bankAccountHolderMatchesOwner"`
+	BankNotes                     string    `json:"bankNotes"`
 	Version                       int       `json:"version"`
 	CreatedAt                     time.Time `json:"createdAt"`
 	UpdatedAt                     time.Time `json:"updatedAt"`
@@ -402,10 +402,10 @@ type UpdatePartnerInput struct {
 	BankAccountHolderMatchesOwner *bool  `json:"bankAccountHolderMatchesOwner"`
 	BankNotes                     string `json:"bankNotes"`
 	// WLT relay fields: populated by the repository after WLT upsert.
-	PayoutDestinationID  string `json:"-"`
-	MaskedAccountNumber  string `json:"-"`
-	MaskedIBAN           string `json:"-"`
-	MaskedMobileNumber   string `json:"-"`
+	PayoutDestinationID string `json:"-"`
+	MaskedAccountNumber string `json:"-"`
+	MaskedIBAN          string `json:"-"`
+	MaskedMobileNumber  string `json:"-"`
 	// ActorID of the caller issuing the update — used for WLT audit.
 	UpdatedByActorID string `json:"-"`
 }
@@ -476,10 +476,10 @@ type PartnerListQuery struct {
 }
 
 // ─── Store team members ─────────────────────────────────────────────────────
-// Closes the DSH-050 backend gap: app-partner's team management screen
+// Closes the partner-store backend gap: app-partner's team management screen
 // (services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx)
 // already calls these operations against the OpenAPI contract; there was no
-// Go implementation until this slice.
+// Go implementation until this backend path.
 
 type StoreTeamMember struct {
 	ID                 string `json:"id"`
@@ -542,7 +542,7 @@ func (i StoreCourierSettings) Validate() error {
 	if strings.TrimSpace(i.CourierName) == "" || strings.TrimSpace(i.CourierPhone) == "" {
 		return ErrInvalid
 	}
-	
+
 	// Validate combinations
 	if i.Policy == "free_delivery" && i.PricingSource != "bthwani_pricing" {
 		return ErrInvalid

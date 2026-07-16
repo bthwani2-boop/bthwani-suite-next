@@ -824,7 +824,7 @@ func CountApprovedDocuments(db *sql.DB, partnerID string) (int, int, error) {
 	return total, approved, nil
 }
 
-// ─── Store team members (DSH-050) ───────────────────────────────────────────
+// ─── Store team members ─────────────────────────────────────────────────────
 
 func ListStoreTeamMembers(db *sql.DB, storeID string) ([]StoreTeamMember, error) {
 	rows, err := db.Query(`
@@ -1066,7 +1066,7 @@ func inlineActionForStatus(status string) string {
 	}
 }
 
-// ─── Store courier settings (DSH-050) ───────────────────────────────────────
+// ─── Store courier settings ─────────────────────────────────────────────────
 
 func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, error) {
 	var s StoreCourierSettings
@@ -1147,7 +1147,7 @@ func UpsertStoreCourierSettings(db *sql.DB, storeID string, input StoreCourierSe
 	return s, nil
 }
 
-// ─── Store coverage zones (DSH-050) ─────────────────────────────────────────
+// ─── Store coverage zones ───────────────────────────────────────────────────
 
 func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, error) {
 	rows, err := db.Query(`
@@ -1176,7 +1176,7 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 	return zones, rows.Err()
 }
 
-// ─── Partner operational scopes (DSH-050) ───────────────────────────────────
+// ─── Partner operational scopes ─────────────────────────────────────────────
 // Scopes derive from dsh_stores.partner_id: a partner's stores are their
 // scopes. Role comes from the actor's own team-member row per store when one
 // exists (matched by invited_identity); absent a team-member row, the caller

@@ -731,7 +731,7 @@ func HandlePartnerMeReadiness(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// ─── Store team, courier settings, coverage zones (DSH-050) ────────────────
+// ─── Store team, courier settings, coverage zones ──────────────────────────
 // These are pure business handlers — no auth logic inside. Callers in
 // protected_store.go verify the actor can access storeId (via
 // store.ActorCanAccessStore) before invoking these.
