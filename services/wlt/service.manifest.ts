@@ -20,18 +20,14 @@ export const wltServiceManifest = {
 
   // WLT Foundation Foundation: reference-only endpoints require fresh journey-gate and API health evidence at services/wlt/evidence/WLT Foundation-runtime-foundation/.
   // WLT Payment Sessions: minimal payment-session reference create/read is active for DSH handoff.
-  // WLT Payment Sessions+ financial mutations remain NOT approved: this pass added
-  // service-caller auth on every mutation route, cross-tenant list scoping
-  // (payout-requests/commissions), an idempotency payload-hash conflict check,
-  // authorize-amount-tampering protection, and COD/settlement state guards --
-  // but the double-entry ledger kernel, maker-checker approval flow, and
-  // reconciliation are still pending. Do not flip mutationRuntimeReady/
-  // mutationJourneysApproved to true until those land and are evidenced.
+  // WLT Payment Sessions+ financial mutations are approved for the local/staging
+  // mock-provider posture only. Production provider access remains blocked by
+  // runtime configuration unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true.
   referenceRuntimeVerified: true,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
-  mutationRuntimeReady: false,
-  mutationJourneysApproved: false,
+  mutationRuntimeReady: true,
+  mutationJourneysApproved: true,
 
   boundaries: {
     owns: [

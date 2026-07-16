@@ -72,6 +72,28 @@ func (s *protectedStoreServer) handleFinanceSettlementSummary(w http.ResponseWri
 	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", financeQuery(r, "partnerId"))
 }
 
+// GET /dsh/partner/me/finance/settlements
+func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	query := financeQuery(r, "limit", "cursor")
+	query.Set("partnerId", actor.ID)
+	s.proxyFinanceRead(w, r, "/wlt/settlements", query)
+}
+
+// GET /dsh/partner/me/finance/settlements/summary
+func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	query := url.Values{}
+	query.Set("partnerId", actor.ID)
+	s.proxyFinanceRead(w, r, "/wlt/settlements/summary", query)
+}
+
 // GET /dsh/control-panel/finance/refunds
 func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {

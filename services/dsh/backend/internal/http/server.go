@@ -90,10 +90,12 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	// actor-authenticated routes, never directly from the browser.
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements", protected.handleFinanceSettlements)
 	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/summary", protected.handleFinanceSettlementSummary)
+	mux.HandleFunc("GET /dsh/partner/me/finance/settlements", protected.handlePartnerFinanceSettlements)
+	mux.HandleFunc("GET /dsh/partner/me/finance/settlements/summary", protected.handlePartnerFinanceSettlementSummary)
 	mux.HandleFunc("GET /dsh/control-panel/finance/refunds", protected.handleFinanceRefunds)
 	mux.HandleFunc("GET /dsh/control-panel/finance/refunds/{refundId}", protected.handleFinanceRefundDetail)
 	mux.HandleFunc("GET /dsh/control-panel/finance/ledger/entries", protected.handleFinanceLedgerEntries)
-		mux.HandleFunc("GET /dsh/control-panel/finance/financial-summary", protected.handleFinanceFinancialSummary)
+	mux.HandleFunc("GET /dsh/control-panel/finance/financial-summary", protected.handleFinanceFinancialSummary)
 	mux.HandleFunc("GET /dsh/control-panel/finance/cod-records", protected.handleFinanceCodRecords)
 	mux.HandleFunc("GET /dsh/control-panel/finance/commissions", protected.handleFinanceCommissions)
 	mux.HandleFunc("GET /dsh/control-panel/finance/payout-requests", protected.handleFinancePayoutRequests)
