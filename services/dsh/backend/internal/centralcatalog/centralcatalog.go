@@ -1316,7 +1316,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 		if err := rows.Scan(&e.ID, &e.DomainID, &e.CategoryNodeID, &e.CanonicalNameAr, &e.CanonicalNameEn,
 			&e.Brand, &e.Barcode, &e.GTIN, &e.SKU, &e.Unit, &e.MeasurementType, &e.CanonicalImageObjectKey,
 			&e.ApprovalStatus, &e.IsActive, &e.DuplicateGroupID, &e.CreatedSource, &e.CreatedAt, &e.UpdatedAt,
-			&e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
+			&e.Version, &e.assortmentID, &e.UnitPrice, &e.Currency, &e.StockStatus, &e.ImageObjectKey); err != nil {
 			return nil, nil, nil, nil, nil, err
 		}
 
