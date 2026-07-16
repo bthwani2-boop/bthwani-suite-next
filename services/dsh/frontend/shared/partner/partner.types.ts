@@ -415,7 +415,7 @@ export type DshPartnerRoute =
   | 'category-management'
   | 'product-media'
   | 'product-overrides'
-  | 'team-management';
+  | 'team';
 
 export type PartnerHubSection = 'hub' | 'profile' | 'operations' | 'inventory' | 'wallet' | 'analytics' | 'settings';
 

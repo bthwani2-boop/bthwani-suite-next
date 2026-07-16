@@ -19,8 +19,8 @@ import { useStoreScopeModel } from '../shared/partner/store-scope.model';
 import { usePartnerOrdersModel } from './orders/usePartnerOrdersModel';
 import { usePartnerSupportModel } from '../shared/support/partner-support.model';
 import { usePartnerOpsSummaryModel } from '../shared/operations/partner-ops-summary.model';
-import { usePartnerTeamModel, type PartnerTeamMutationResult } from './teammanagement/usePartnerTeamModel';
-import type { PartnerTeamMember } from './teammanagement/partner-team.types';
+import { usePartnerTeamModel, type PartnerTeamMutationResult } from './team/usePartnerTeamModel';
+import type { PartnerTeamMember } from './team/partner-team.types';
 import type { PartnerDeliveryOpsSummary } from '../shared/partner/partner.adapters';
 
 export type DshPartnerSurfaceState = {
@@ -71,6 +71,8 @@ export type DshPartnerSurfaceModel = {
   actions: DshPartnerSurfaceActions;
   scopes: DshPartnerOperationalScope[];
   selectedStoreScope: DshPartnerOperationalScope | undefined;
+  isLoadingScopes: boolean;
+  scopesError: string | null;
   runtimePartnerProfile: {
     storeName: string;
     branchLabel: string;
@@ -185,6 +187,8 @@ export function useDshPartnerSurfaceModel(
     actions,
     scopes: storeScope.scopes,
     selectedStoreScope: storeScope.selectedStoreScope,
+    isLoadingScopes: storeScope.isLoadingScopes,
+    scopesError: storeScope.scopesError,
     runtimePartnerProfile: storeScope.runtimePartnerProfile,
     partnerOrdersState: orders.partnerOrdersState,
     partnerOrders: orders.partnerOrders,

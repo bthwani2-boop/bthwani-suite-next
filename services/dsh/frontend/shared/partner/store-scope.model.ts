@@ -11,17 +11,27 @@ export function useStoreScopeModel() {
   const [storeScopeVisible, setStoreScopeVisible] = React.useState(false);
   const [selectedStoreScopeId, setSelectedStoreScopeId] = React.useState<string | null>(null);
   const [scopes, setScopes] = React.useState<DshPartnerOperationalScope[]>([]);
+  const [isLoadingScopes, setIsLoadingScopes] = React.useState(true);
+  const [scopesError, setScopesError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let active = true;
+    setIsLoadingScopes(true);
+    setScopesError(null);
     fetchPartnerScopes().then((res) => {
       if (active) {
         setScopes(res.scopes);
         if (res.scopes.length > 0 && !selectedStoreScopeId) {
           setSelectedStoreScopeId(res.scopes[0]!.scopeId);
         }
+        setIsLoadingScopes(false);
       }
-    }).catch(console.error);
+    }).catch((err) => {
+      if (active) {
+        setScopesError('Failed to load store scopes');
+        setIsLoadingScopes(false);
+      }
+    });
     return () => { active = false; };
   }, [selectedStoreScopeId]);
 
@@ -44,6 +54,8 @@ export function useStoreScopeModel() {
     setSelectedStoreScopeId,
     selectedStoreScope,
     scopes,
+    isLoadingScopes,
+    scopesError,
     runtimePartnerProfile,
     openStoreScope,
   };

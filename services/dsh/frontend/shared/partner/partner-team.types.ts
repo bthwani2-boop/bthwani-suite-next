@@ -1,7 +1,8 @@
 // Team-management domain types.
 // Canonical home for partner team member types shared between the
-// usePartnerTeamModel hook and PartnerTeamManagementScreen. Types live here
-// (not on the Screen component) so the hook does not depend on a UI screen.
+// usePartnerTeamController hook and the app-partner team screen. Types live
+// in the DSH shared brain (not on a UI screen) so non-UI code does not
+// depend on a surface module.
 
 export type PartnerTeamRole = 'owner' | 'supervisor' | 'staff' | 'courier';
 export type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';

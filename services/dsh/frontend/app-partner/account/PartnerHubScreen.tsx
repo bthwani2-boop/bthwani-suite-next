@@ -89,7 +89,7 @@ import {
 import { usePartnerSelfController } from '../../shared/partner/use-partner-self-controller';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
-import { PartnerCatalogManagementScreen } from '../Catalog/PartnerCatalogManagementScreen';
+import { PartnerCatalogManagementScreen } from '../catalog/PartnerCatalogManagementScreen';
 import { PromotionsScreen } from './PromotionsScreen';
 import { StoreProfileScreen } from '../store/StoreProfileScreen';
 
@@ -150,26 +150,6 @@ type PartnerCoverageZone = {
   reviewActionLabel: string;
   auditNote: string;
 };
-
-const runtimePartnerCoverageZones: readonly PartnerCoverageZone[] = [];
-
-const runtimePartnerAnalytics = {
-  storeFavoritesCount: 0,
-  productFavoritesCount: 0,
-  followersCount: 0,
-  totalRatings: 0,
-  averageRating: 0,
-  topOrderedProduct: { name: 'لا توجد بيانات تشغيلية', ordersCount: 0 },
-  topFavoritedProduct: { name: 'لا توجد بيانات تشغيلية', favoritesCount: 0 },
-  topViewedProduct: { name: 'لا توجد بيانات تشغيلية', viewsCount: 0 },
-  opportunityProduct: {
-    name: 'لا توجد بيانات تشغيلية',
-    favoritesCount: 0,
-    ordersCount: 0,
-    insight: 'اربط التحليلات بمسار API أو Control Panel قبل عرض فرص تسويقية تشغيلية.',
-  },
-  smartRecommendation: 'لا توجد توصية تشغيلية قبل ربط analytics runtime.',
-} as const;
 
 function resolveZoneStatusTone(status: PartnerCoverageZoneStatus): 'success' | 'warning' | 'danger' {
   if (status === 'active') return 'success';
@@ -707,7 +687,7 @@ function OperationsPanel({
   activeZoneLabel: string;
   serviceModes: readonly PartnerOperationalMode[];
   coverageZonesToUse: readonly PartnerCoverageZone[];
-  teamMembers: readonly import('../teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
+  teamMembers: readonly import('../team/PartnerTeamManagementScreen').PartnerTeamMember[];
   onBack: () => void;
   onOpenStoreCourierSetup?: () => void;
   onOpenTeamManagement?: () => void;
@@ -779,7 +759,7 @@ function OperationsPanel({
         </Box>
 
         <Text role="caption" tone="muted" align="start">
-          التسعير والتسويات مركزيًا في WLT/Finance. (ربط WLT قيد التنفيذ — J-010)
+          التسعير والتسويات مملوكة مركزيًا لـ WLT/Finance؛ راجع تفاصيلها من قسم المحفظة.
         </Text>
       </Box>
 
@@ -1164,6 +1144,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   } = props as DshPartnerHubSurfaceProps & { partnerLifecycleStage?: DshPartnerLifecycleStage; dshClientId?: string | null };
 
   const [isAvailable, setIsAvailable] = React.useState<boolean>(storeOpen);
+  const [resolvedListingEnabled, setResolvedListingEnabled] = React.useState<boolean>(listingEnabled);
 
 
   const { direction } = useDirection();
@@ -1241,6 +1222,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           { id: 'bthwani_delivery', title: 'توصيل بثواني', subtitle: 'توصيل عبر كابتن بثواني.', commission: getWltDshPartnerOperationalModeCommission('bthwani_delivery'), enabled: backendModes.includes('express') },
         ];
         setFetchedServiceModes(mappedModes);
+        if (typeof res?.storeOpen === 'boolean') setIsAvailable(res.storeOpen);
+        if (typeof res?.listingEnabled === 'boolean') setResolvedListingEnabled(res.listingEnabled);
       }).catch(() => {});
 
       fetchPartnerStoreCoverageZones(canonicalStoreId).then((res: any) => {
@@ -1255,20 +1238,20 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     { id: 'bthwani_delivery', title: 'توصيل بثواني', subtitle: 'توصيل عبر كابتن بثواني.', commission: getWltDshPartnerOperationalModeCommission('bthwani_delivery'), enabled: false },
   ] as PartnerOperationalMode[];
 
-  const coverageZonesToUse = fetchedCoverageZones.length > 0 ? fetchedCoverageZones : runtimePartnerCoverageZones;
+  const coverageZonesToUse = fetchedCoverageZones;
 
   const storeVisibility = React.useMemo(() => {
     return resolveDshStoreClientVisibility({
       ...(activeCanonicalStore?.publishStage !== undefined ? { publishStage: activeCanonicalStore.publishStage } : {}),
       activationStatus: resolvedActivationStatus,
-      catalogPublished: listingEnabled,
+      catalogPublished: resolvedListingEnabled,
       deliveryModesReady: serviceModes.some((mode) => mode.enabled),
       serviceabilityAvailable: true,
       storeOpen: isAvailable,
     });
-  }, [listingEnabled, activeCanonicalStore?.publishStage, resolvedActivationStatus, serviceModes, isAvailable]);
+  }, [resolvedListingEnabled, activeCanonicalStore?.publishStage, resolvedActivationStatus, serviceModes, isAvailable]);
 
-  const visibilityLabel = listingEnabled ? 'مفعّل' : 'موقوف';
+  const visibilityLabel = resolvedListingEnabled ? 'مفعّل' : 'موقوف';
 
   const enabledNotificationChannelsCount = React.useMemo(
     () => ['orders', 'operations', 'inventory', 'finance', 'marketing', 'system'].filter((key) => notificationPreferences[key as NotificationPreferenceId]).length,
@@ -1429,8 +1412,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             managerLabel={resolvedManagerLabel}
             todayHoursLabel={resolvedTodayHoursLabel}
             activeZoneLabel={resolvedActiveZoneLabel}
-            storeOpen={storeOpen}
-            listingEnabled={listingEnabled}
+            storeOpen={isAvailable}
+            listingEnabled={resolvedListingEnabled}
             {...(activeCanonicalStore?.id !== undefined ? { canonicalStoreId: activeCanonicalStore.id } : {})}
             {...(activeCanonicalStore?.sourceRecordId !== undefined ? { sourceRecordId: activeCanonicalStore.sourceRecordId } : {})}
             {...(activeCanonicalStore?.deliveryReadinessLabel !== undefined ? { deliveryReadinessLabel: activeCanonicalStore.deliveryReadinessLabel } : {})}
@@ -1662,8 +1645,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
                 { label: 'مستوى التنبيه', value: notificationPreferences.priorityOnly ? 'العاجلة فقط' : 'كل التنبيهات', tone: notificationPreferences.priorityOnly ? 'warning' : 'success' },
                 { label: 'الصوت والاهتزاز', value: notificationPreferences.sound ? 'مفعّل' : 'موقوف', tone: notificationPreferences.sound ? 'success' : 'warning' },
                 { label: 'الملخص اليومي', value: notificationPreferences.dailyDigest ? 'مفعّل' : 'موقوف', tone: notificationPreferences.dailyDigest ? 'info' : 'default' },
-                { label: 'الظهور في القائمة', value: listingEnabled ? 'مفعل' : 'موقوف', tone: listingEnabled ? 'success' : 'warning' },
-                { label: 'حالة المتجر', value: storeOpen ? 'مفتوح الآن' : 'مغلق الآن', tone: storeOpen ? 'success' : 'warning' },
+                { label: 'الظهور في القائمة', value: resolvedListingEnabled ? 'مفعل' : 'موقوف', tone: resolvedListingEnabled ? 'success' : 'warning' },
+                { label: 'حالة المتجر', value: isAvailable ? 'مفتوح الآن' : 'مغلق الآن', tone: isAvailable ? 'success' : 'warning' },
                 { label: 'ساعات العمل', value: todayHoursLabel, tone: 'default' },
               ] as const).map((item, index, arr) => (
                 <View
@@ -1830,7 +1813,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onBack={() => updateSection('hub')}
           {...(onOpenStoreCourierSetup !== undefined ? { onOpenStoreCourierSetup } : {})}
           {...(props.onOpenTeamManagement !== undefined ? { onOpenTeamManagement: props.onOpenTeamManagement } : {})}
-          listingEnabled={listingEnabled}
+          listingEnabled={resolvedListingEnabled}
           storeVisibility={storeVisibility}
           visibilityLabel={visibilityLabel}
         />

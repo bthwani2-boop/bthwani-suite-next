@@ -64,7 +64,7 @@ export type DshPartnerHubSurfaceProps = {
   onOpenSupportScreen?: (screenId: DshPartnerSupportRouteId) => void;
   onOpenStoreCourierSetup?: () => void;
   onOpenTeamManagement?: () => void;
-  teamMembers?: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
+  teamMembers?: readonly import('./team/PartnerTeamManagementScreen').PartnerTeamMember[];
   onToggleAvailability?: (isAvailable: boolean) => void;
   canonicalStoreId?: string;
   dshClientId?: string | null;

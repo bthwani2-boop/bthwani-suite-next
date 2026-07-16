@@ -78,7 +78,7 @@ function SelectionBlock<T extends string>({
   );
 }
 
-import { fetchPartnerStoreCourierSettings, updatePartnerStoreCourierSettings } from '../../shared/partner/partner.api';
+import { fetchPartnerStoreCourierSettings, updatePartnerStoreCourierSettings } from '../../shared/partner';
 import type { DshPartnerOperationalScope } from '../../shared/partner/partner.types';
 
 export function DshPartnerStoreCourierScreen({

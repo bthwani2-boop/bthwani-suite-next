@@ -21,15 +21,14 @@ import {
 import { OrdersInboxScreen } from './orders/OrdersInboxScreen';
 import { DshPartnerOrderRejectionScreen, type DshPartnerOrderRejectionScreenProps } from './orders/DshPartnerOrderRejectionScreen';
 import { DshPartnerStoreCourierScreen } from './store/DshPartnerStoreCourierScreen';
-import { PartnerStoreScreen } from './store/PartnerStoreScreen';
-import { PartnerTeamManagementScreen } from './teammanagement/PartnerTeamManagementScreen';
+import { PartnerTeamManagementScreen } from './team/PartnerTeamManagementScreen';
 import { PartnerEntryScreen } from './account/PartnerEntryScreen';
 import { PartnerSupportScreen } from './account/PartnerSupportScreen';
-import { PartnerCatalogManagementScreen } from './Catalog/PartnerCatalogManagementScreen';
-import { ProductEditScreen } from './Catalog/ProductEditScreen';
-import { CategoryManagementScreen } from './Catalog/CategoryManagementScreen';
-import { ProductMediaScreen } from './Catalog/ProductMediaScreen';
-import { ProductOverridesScreen } from './Catalog/ProductOverridesScreen';
+import { PartnerCatalogManagementScreen } from './catalog/PartnerCatalogManagementScreen';
+import { ProductEditScreen } from './catalog/ProductEditScreen';
+import { CategoryManagementScreen } from './catalog/CategoryManagementScreen';
+import { ProductMediaScreen } from './catalog/ProductMediaScreen';
+import { ProductOverridesScreen } from './catalog/ProductOverridesScreen';
 import { defaultServiceModes } from '../shared/delivery';
 import { DSH_PARTNER_BINDING_CONTRACTS } from './dsh-partner-binding.contracts';
 
@@ -87,11 +86,11 @@ type Props = {
   openSupportCommandFromOperationalFlow: (flowId: DshPartnerOperationalFlowId, source?: DshPartnerSupportCommandContext['source']) => void;
   handleMarkReady: (orderId: string) => void;
   refreshOrders: () => void;
-  teamMembers: readonly import('./teammanagement/partner-team.types').PartnerTeamMember[];
+  teamMembers: readonly import('./team/partner-team.types').PartnerTeamMember[];
   isTeamLoading?: boolean;
   teamError?: string | null;
-  onInviteMember: (identity: string) => Promise<import('./teammanagement/usePartnerTeamModel').PartnerTeamMutationResult>;
-  onMemberAction: (memberId: string, actionLabel: string) => Promise<import('./teammanagement/usePartnerTeamModel').PartnerTeamMutationResult>;
+  onInviteMember: (identity: string) => Promise<import('./team/usePartnerTeamModel').PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, actionLabel: string) => Promise<import('./team/usePartnerTeamModel').PartnerTeamMutationResult>;
   scopes: readonly import('../shared/partner/partner.types').DshPartnerOperationalScope[];
 };
 
@@ -233,7 +232,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} storeId={activeStoreIdForStoreScopedScreens} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'product-overrides') return renderSurfaceShell(<ProductOverridesScreen storeId={activeStoreIdForStoreScopedScreens} productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
   if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen storeId={activeStoreIdForStoreScopedScreens} scopes={scopes} onBack={() => openAccountHub('operations')} />) as React.ReactElement;
-  if (route === 'team-management') return renderSurfaceShell(
+  if (route === 'team') return renderSurfaceShell(
     <PartnerTeamManagementScreen
       storeName={runtimePartnerProfile.storeName}
       branchLabel={runtimePartnerProfile.branchLabel}

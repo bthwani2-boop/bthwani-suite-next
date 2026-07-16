@@ -111,8 +111,11 @@ function buildFinancialCenterSections(summary: WltFinancialSummaryRaw | null): {
   };
 }
 
-function partyLabel(entry: any): string {
-  const subject = entry.subject ?? entry.actorId ?? '';
+import type { components } from "../../../clients/generated/wlt-api";
+type WltLedgerEntry = components["schemas"]["WltLedgerEntry"];
+
+function partyLabel(entry: WltLedgerEntry): string {
+  const subject = (entry as any).subject ?? entry.actorId ?? '';
   if (subject.startsWith('captain')) return `كابتن · ${subject}`;
   if (subject.startsWith('partner')) return `شريك · ${subject}`;
   if (subject.startsWith('field')) return `ميداني · ${subject}`;
@@ -120,8 +123,8 @@ function partyLabel(entry: any): string {
   return 'WLT';
 }
 
-function partyKind(entry: any): WltLedgerEntryFormatted['partyKind'] {
-  const subject = entry.subject ?? entry.actorId ?? '';
+function partyKind(entry: WltLedgerEntry): WltLedgerEntryFormatted['partyKind'] {
+  const subject = (entry as any).subject ?? entry.actorId ?? '';
   if (subject.startsWith('captain')) return 'captain';
   if (subject.startsWith('partner')) return 'partner';
   if (subject.startsWith('field')) return 'field';
@@ -136,10 +139,10 @@ function partyKind(entry: any): WltLedgerEntryFormatted['partyKind'] {
 // left empty rather than fabricated. Real fields (amountMinorUnits,
 // debitCredit) are read directly -- no *100 conversion, no inference from
 // referenceType.
-function toFinancialCenterEntry(entry: any): WltLedgerEntryFormatted {
+function toFinancialCenterEntry(entry: WltLedgerEntry): WltLedgerEntryFormatted {
   const amount: number = typeof entry.amountMinorUnits === 'number' ? entry.amountMinorUnits : 0;
-  const debitCredit: string = entry.debitCredit ?? '';
-  const status = mapEntryStatus(entry.status ?? '');
+  const debitCredit: string = (entry as any).debitCredit ?? '';
+  const status = mapEntryStatus((entry as any).status ?? '');
   const sideLabel = ACCOUNT_TYPE_LABELS[entry.actorType] ?? entry.entryType ?? entry.referenceType ?? '';
 
   return {

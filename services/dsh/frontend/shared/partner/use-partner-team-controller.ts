@@ -1,6 +1,6 @@
 import React from 'react';
-import { fetchPartnerTeam, invitePartnerTeamMember, executePartnerTeamMemberAction } from '../../shared/partner/partner.api';
-import type { DshPartnerRoute } from '../../shared/partner/partner.types';
+import { fetchPartnerTeam, invitePartnerTeamMember, executePartnerTeamMemberAction } from './partner.api';
+import type { DshPartnerRoute } from './partner.types';
 import { toPartnerTeamMember, type PartnerTeamMember } from './partner-team.types';
 
 export type PartnerTeamMutationResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
@@ -12,7 +12,7 @@ function resolveErrorMessage(err: unknown): string {
   return 'خطأ غير متوقع أثناء الاتصال بـ runtime.';
 }
 
-export function usePartnerTeamModel({
+export function usePartnerTeamController({
   route,
   selectedStoreScopeId,
 }: {
@@ -27,7 +27,7 @@ export function usePartnerTeamModel({
   const activeStoreId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
 
   const loadTeam = React.useCallback(() => {
-    if (route !== 'team-management' || !activeStoreId) return;
+    if (route !== 'team' || !activeStoreId) return;
     setLoading(true);
     setStatus('loading');
     fetchPartnerTeam(activeStoreId).then((res) => {

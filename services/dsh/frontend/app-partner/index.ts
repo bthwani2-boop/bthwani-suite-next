@@ -22,8 +22,8 @@ export type {
 export { DSH_PARTNER_BINDING_CONTRACTS } from './dsh-partner-binding.contracts';
 
 // UI panels (surface-specific)
-export { PartnerCatalogReadinessPanel } from './Catalog/PartnerCatalogReadinessPanel';
-export type { PartnerCatalogReadinessPanelProps } from './Catalog/PartnerCatalogReadinessPanel';
+export { PartnerCatalogReadinessPanel } from './catalog/PartnerCatalogReadinessPanel';
+export type { PartnerCatalogReadinessPanelProps } from './catalog/PartnerCatalogReadinessPanel';
 
 export { DshPartnerOrderRejectionScreen } from './orders/DshPartnerOrderRejectionScreen';
 export type { DshPartnerOrderRejectionScreenProps } from './orders/DshPartnerOrderRejectionScreen';

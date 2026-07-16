@@ -164,6 +164,10 @@ export function fetchPartnerStoreSettings(storeId: string): Promise<unknown> {
   return request(`/dsh/partner/stores/${storeId}/settings`);
 }
 
+export function updatePartnerStoreSettings(storeId: string, settings: unknown): Promise<unknown> {
+  return request(`/dsh/partner/stores/${storeId}/settings`, { method: "PATCH", body: settings });
+}
+
 // ── Field intake ──────────────────────────────────────────────────────────────
 
 export function fieldListDrafts(params: { status?: string; limit?: number; offset?: number } = {}): Promise<DshPartnerListResponse> {

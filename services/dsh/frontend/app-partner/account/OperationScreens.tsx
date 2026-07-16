@@ -15,7 +15,7 @@ import {
   DSH_ORDER_LIFECYCLE_HANDOFFS,
   getSurfaceObservation,
 } from '../../shared/orders';
-import { DshPartnerInventoryActionPanel, type PartnerInventoryFlowId } from '../Catalog/PartnerInventoryActionPanel';
+import { DshPartnerInventoryActionPanel, type PartnerInventoryFlowId } from '../catalog/PartnerInventoryActionPanel';
 import { DshPartnerOnboardingActionPanel, type PartnerOnboardingFlowId } from './PartnerOnboardingActionPanel';
 import { DshPartnerOrderActionPanel, type PartnerOrderActionFlowId } from '../orders/PartnerOrderActionPanel';
 import { DshPartnerOrderAlertsPanel } from '../orders/PartnerOrderAlertsPanel';

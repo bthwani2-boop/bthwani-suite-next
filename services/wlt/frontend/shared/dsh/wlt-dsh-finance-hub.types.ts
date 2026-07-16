@@ -116,12 +116,14 @@ export type WltCloseStatus = {
   readonly businessDate: string;
 };
 
+import type { components } from "../../../clients/generated/wlt-api";
+
 export type WltDshFinanceRuntimeReadModel = {
   readonly runtimeApiUrl: string;
-  readonly overview: any; // settlements list
-  readonly ledgerEntries: readonly any[]; // raw legacy ledger entries (individual movements, not accounting truth)
-  readonly refunds: readonly any[]; // raw refunds queue
-  readonly payoutRequests: readonly any[]; // raw payout requests queue
+  readonly overview: components["schemas"]["WltSettlementListResponse"] | null; // settlements list
+  readonly ledgerEntries: readonly components["schemas"]["WltLedgerEntry"][]; // raw legacy ledger entries (individual movements, not accounting truth)
+  readonly refunds: readonly components["schemas"]["WltRefund"][]; // raw refunds queue
+  readonly payoutRequests: readonly components["schemas"]["WltPayoutRequest"][]; // raw payout requests queue
   readonly financialSummary: WltFinancialSummaryRaw | null; // kernel-backed Assets/Liabilities/Revenue/Net Position
   // Optional: WLT does not expose a reconciliation close-status endpoint yet,
   // so runtime read models omit it. Consumers must treat "absent" as open.

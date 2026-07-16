@@ -374,6 +374,36 @@ func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *h
 	s.writeActionResponse(w, response, err)
 }
 
+func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	row, err := store.GetStoreByIDInternal(r.Context(), s.db, storeID)
+	if err != nil {
+		s.writeStoreError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"storeId":        row.ID,
+		"status":         row.Status,
+		"deliveryModes":  row.DeliveryModes,
+		"storeOpen":      row.Status == store.StatusActive,
+		"listingEnabled": row.IsVisible,
+		"version":        row.Version,
+	})
+}
+
 func (s *protectedStoreServer) handleFieldVerification(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")
 	if !ok {
