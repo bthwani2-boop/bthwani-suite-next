@@ -237,6 +237,7 @@ export function CartScreen({
   const applyQuickAction = () => {
     if (!quickActionKey) return;
     if (quickActionKey === "coupon") setCouponCode(quickActionDraft);
+    else if (quickActionKey === "address") setClientAddress(quickActionDraft);
     else if (quickActionKey === "note") setNote(quickActionDraft);
     else if (quickActionKey === "extra") setExtraRequest(quickActionDraft);
     setQuickActionKey(null);
