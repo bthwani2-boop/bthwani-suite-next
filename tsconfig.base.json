@@ -34,6 +34,9 @@
       "@bthwani/core-identity": [
         "core/identity/clients/index.ts"
       ],
+      "@bthwani/core-platform-control": [
+        "core/platform-control/clients/generated/platform-control-api.ts"
+      ],
       "@bthwani/core-providers": [
         "core/providers/clients/generated/providers-api.ts"
       ],

@@ -16,6 +16,7 @@ export function DshPlatformVarsWorkspace() {
     activeDomain,
     addAuditEvent,
   });
+  const mutationUnavailableReason = "يتطلب حفظ المقترحات عقد platform-control فعلياً مع تحقق واعتماد وتدقيق وتراجع.";
 
   return (
     <div
@@ -150,14 +151,17 @@ export function DshPlatformVarsWorkspace() {
                   {model.quickPicks.map((pick) => (
                     <button
                       key={pick}
-                      onClick={() => model.setEditVal(pick)}
+                      disabled
+                      aria-disabled="true"
+                      title={mutationUnavailableReason}
                       style={{
                         padding: "4px 8px",
                         borderRadius: "4px",
                         fontSize: "11px",
                         border: model.editVal === pick ? `1px solid ${colorRoles.brandAction}` : `1px solid ${colorRoles.surfaceBase}`,
                         background: model.editVal === pick ? colorRoles.surfaceBase : "white",
-                        cursor: "pointer",
+                        cursor: "not-allowed",
+                        opacity: 0.55,
                       }}
                     >
                       {pick}
@@ -165,16 +169,19 @@ export function DshPlatformVarsWorkspace() {
                   ))}
                 </div>
               ) : (
-                <CpTextInput value={model.editVal} onChange={model.setEditVal} placeholder="أدخل القيمة الجديدة..." aria-label="القيمة الجديدة" />
+                <CpTextInput value={model.editVal} onChange={model.setEditVal} placeholder="عقد التغيير غير متاح حالياً" aria-label="القيمة الجديدة" disabled />
               )}
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <CpButton onClick={() => model.confirmSaveProposed(model.selectedVar!, model.editVal)} style={{ background: colorRoles.brandAction, color: colorRoles.surfaceBase, border: "none" }}>
+                <CpButton disabled aria-label="حفظ الاقتراح غير متاح" style={{ background: colorRoles.surfaceBase, color: colorRoles.textMuted, border: `1px solid ${colorRoles.surfaceBase}`, cursor: "not-allowed" }}>
                   حفظ الاقتراح
                 </CpButton>
-                <CpButton onClick={() => model.setEditVal(model.selectedVar?.proposedValue || "")} style={{ background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.brandStructure }}>
+                <CpButton disabled aria-label="إلغاء الاقتراح غير متاح" style={{ background: "transparent", border: `1px solid ${colorRoles.surfaceBase}`, color: colorRoles.textMuted, cursor: "not-allowed" }}>
                   إلغاء
                 </CpButton>
+              </div>
+              <div role="status" style={{ fontSize: "11px", color: colorRoles.textMuted, lineHeight: 1.6 }}>
+                {mutationUnavailableReason}
               </div>
             </div>
 

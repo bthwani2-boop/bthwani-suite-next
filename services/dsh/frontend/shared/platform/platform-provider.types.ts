@@ -11,7 +11,7 @@ export type PlatformProviderKind =
   | "ai"
   | "fraud";
 
-export type PlatformProviderEnvironment = "development" | "sandbox" | "production";
+export type PlatformProviderEnvironment = "development" | "sandbox" | "production" | "unknown";
 
 export type PlatformProviderStatus =
   | "active"

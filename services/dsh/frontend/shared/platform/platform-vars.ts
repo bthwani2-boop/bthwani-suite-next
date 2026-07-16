@@ -6,11 +6,12 @@ export interface PlatformVarsConfig {
   dshClientId: string | null;
   mediaBaseUrl: string | null;
   devMediaBaseUrl: string | null;
-  captainWalletBalanceThreshold: string;
-  dshVisibilityRegionSanaa: string;
-  partnerAcceptanceTimeoutSecs: string;
-  dispatchSearchRadiusKm: string;
-  partnerSettlementSchedule: string;
+  captainWalletBalanceThreshold: string | null;
+  dshVisibilityRegionSanaa: string | null;
+  partnerAcceptanceTimeoutSecs: string | null;
+  dispatchSearchRadiusKm: string | null;
+  partnerSettlementSchedule: string | null;
+  runtimeBindingState: 'not_bound';
 }
 
 export const DEFAULT_PLATFORM_VARS: PlatformVarsConfig = {
@@ -19,11 +20,12 @@ export const DEFAULT_PLATFORM_VARS: PlatformVarsConfig = {
   dshClientId: null,
   mediaBaseUrl: null,
   devMediaBaseUrl: null,
-  captainWalletBalanceThreshold: '10,000 ريال',
-  dshVisibilityRegionSanaa: 'مفعّل',
-  partnerAcceptanceTimeoutSecs: '90 ثانية',
-  dispatchSearchRadiusKm: '3.5 كم',
-  partnerSettlementSchedule: 'كل أحد 10:00 ص',
+  captainWalletBalanceThreshold: null,
+  dshVisibilityRegionSanaa: null,
+  partnerAcceptanceTimeoutSecs: null,
+  dispatchSearchRadiusKm: null,
+  partnerSettlementSchedule: null,
+  runtimeBindingState: 'not_bound',
 };
 
 // Static registry lets non-React runtime adapters read values synchronously.
@@ -36,37 +38,29 @@ export class PlatformVarsRegistry {
     this.initialized = true;
 
     if (typeof process !== 'undefined' && process.env) {
-      const env = process.env;
-
-      this.config.dshApiBaseUrl = (env.EXPO_PUBLIC_DSH_API_BASE_URL ?? env.NEXT_PUBLIC_DSH_API_BASE_URL ?? null)?.trim() || null;
-      this.config.authBaseUrl = (env.EXPO_PUBLIC_AUTH_BASE_URL ?? env.NEXT_PUBLIC_AUTH_BASE_URL ?? null)?.trim() || null;
-      this.config.dshClientId = (env.EXPO_PUBLIC_DSH_CLIENT_ID ?? null)?.trim() || null;
-      this.config.mediaBaseUrl = (env.EXPO_PUBLIC_MEDIA_BASE_URL ?? null)?.trim() || null;
-      this.config.devMediaBaseUrl = (
-        env.EXPO_PUBLIC_DEV_MEDIA_BASE_URL ??
-        env.EXPO_PUBLIC_DEV_MEDIA_BASE ??
-        env.NEXT_PUBLIC_DEV_MEDIA_BASE_URL ??
-        env.NEXT_PUBLIC_DEV_MEDIA_BASE ??
-        env.DEV_MEDIA_BASE_URL ??
-        env.DEV_MEDIA_BASE ??
+      this.config.dshApiBaseUrl = (
+        process.env.EXPO_PUBLIC_DSH_API_BASE_URL ??
+        process.env.NEXT_PUBLIC_DSH_API_BASE_URL ??
         null
       )?.trim() || null;
-
-      if (env.VAR_DSH_CAPTAIN_MIN_WALLET_BALANCE) {
-        this.config.captainWalletBalanceThreshold = env.VAR_DSH_CAPTAIN_MIN_WALLET_BALANCE;
-      }
-      if (env.VAR_DSH_VISIBILITY_REGION_SANAA) {
-        this.config.dshVisibilityRegionSanaa = env.VAR_DSH_VISIBILITY_REGION_SANAA;
-      }
-      if (env.VAR_DSH_PARTNER_ACCEPTANCE_TIMEOUT_SECS) {
-        this.config.partnerAcceptanceTimeoutSecs = env.VAR_DSH_PARTNER_ACCEPTANCE_TIMEOUT_SECS;
-      }
-      if (env.VAR_DSH_DISPATCH_SEARCH_RADIUS_KM) {
-        this.config.dispatchSearchRadiusKm = env.VAR_DSH_DISPATCH_SEARCH_RADIUS_KM;
-      }
-      if (env.VAR_DSH_PARTNER_SETTLEMENT_SCHEDULE) {
-        this.config.partnerSettlementSchedule = env.VAR_DSH_PARTNER_SETTLEMENT_SCHEDULE;
-      }
+      this.config.authBaseUrl = (
+        process.env.EXPO_PUBLIC_AUTH_BASE_URL ??
+        process.env.NEXT_PUBLIC_AUTH_BASE_URL ??
+        null
+      )?.trim() || null;
+      this.config.dshClientId = (process.env.EXPO_PUBLIC_DSH_CLIENT_ID ?? null)?.trim() || null;
+      this.config.mediaBaseUrl = (
+        process.env.EXPO_PUBLIC_MEDIA_BASE_URL ??
+        process.env.NEXT_PUBLIC_MEDIA_BASE_URL ??
+        null
+      )?.trim() || null;
+      this.config.devMediaBaseUrl = (
+        process.env.EXPO_PUBLIC_DEV_MEDIA_BASE_URL ??
+        process.env.EXPO_PUBLIC_DEV_MEDIA_BASE ??
+        process.env.NEXT_PUBLIC_DEV_MEDIA_BASE_URL ??
+        process.env.NEXT_PUBLIC_DEV_MEDIA_BASE ??
+        null
+      )?.trim() || null;
     }
   }
 

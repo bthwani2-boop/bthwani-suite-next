@@ -26,6 +26,10 @@ export const wltServiceManifest = {
   referenceRuntimeVerified: true,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
+  localSimulatorMutationsReady: true,
+  stagingProviderLabMutationsReady: true,
+  productionMutationsReady: false,
+  productionMutationBlocker: "Production provider mutations remain blocked unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and journey runtime evidence is refreshed.",
   mutationRuntimeReady: true,
   mutationJourneysApproved: true,
 

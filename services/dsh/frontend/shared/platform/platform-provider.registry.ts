@@ -13,7 +13,7 @@ export const PLATFORM_PROVIDER_REGISTRY: readonly PlatformProviderRecord[] = [
     label: "Google Maps",
     selectedProvider: "google",
     fallbackProvider: null,
-    environment: "production",
+    environment: "unknown",
     status: "inactive",
     owner: "platform-team",
     priority: 1,

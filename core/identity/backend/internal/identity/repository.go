@@ -104,6 +104,22 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 				Permission{Service: "workforce", Surface: "control-panel", Action: "provider.activation:issue", Scope: "all"},
 				Permission{Service: "workforce", Surface: "control-panel", Action: "reference:manage", Scope: "all"},
 				Permission{Service: "workforce", Surface: "control-panel", Action: "audit:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:propose", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:approve", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:apply", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:rollback", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:flags:manage", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:rollouts:manage", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:services:manage", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:health:acknowledge", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:audit:export", Scope: "all"},
+				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:wlt-policy:read", Scope: "all"},
+				Permission{Service: "providers", Surface: "control-panel", Action: "provider:read", Scope: "all"},
+				Permission{Service: "providers", Surface: "control-panel", Action: "provider:update", Scope: "all"},
+				Permission{Service: "providers", Surface: "control-panel", Action: "provider:test", Scope: "all"},
 			)
 		}
 		if actor.role == "field" || actor.role == "captain" {

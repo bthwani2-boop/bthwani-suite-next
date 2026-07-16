@@ -481,6 +481,30 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
+  core/platform-control:
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  core/providers:
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
   core/workforce:
     devDependencies:
       '@types/react':
@@ -505,6 +529,9 @@ importers:
       '@bthwani/core-identity':
         specifier: workspace:*
         version: link:../../core/identity
+      '@bthwani/core-platform-control':
+        specifier: workspace:*
+        version: link:../../core/platform-control
       '@bthwani/ui-kit':
         specifier: workspace:*
         version: link:../../shared/ui-kit
@@ -8447,7 +8474,9 @@ snapshots:
       metro-config: 0.84.4
       metro-runtime: 0.84.4
     transitivePeerDependencies:
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-color@2.1.0': {}
 

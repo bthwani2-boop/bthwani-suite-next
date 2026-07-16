@@ -1,6 +1,13 @@
 // Canonical location: dsh/frontend/shared/view-models/control-panel/platform/platform.types.ts
 // Authority: dsh/frontend/shared — moved from control-panel/platform/*/types files
 
+export type PlatformSovereignRuntimeState =
+  | 'FIX_REQUIRED'
+  | 'PARTIALLY_BOUND'
+  | 'UNKNOWN_HEALTH'
+  | 'ROLLBACK_UNAVAILABLE'
+  | 'CONTRACT_REQUIRED';
+
 // ── Appearance Types ──────────────────────────────────────────────────────────
 export type AppearanceStatus = 'snapshot-only' | 'contract-needed' | 'ready-for-binding';
 export type AppearanceScope = 'Global' | 'Platform' | 'App' | 'Surface' | 'Service';
