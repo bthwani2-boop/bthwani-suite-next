@@ -2455,7 +2455,7 @@ func LinkAsset(ctx context.Context, db dbtx, input AssetLinkInput) (CatalogAsset
 		(id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
-		  sort_order=EXCLUDED.sort_order, is_primary=EXCLUDED.is_primary, status=EXCLUDED.status, updated_at=now(), version = version + 1`,
+		  sort_order=EXCLUDED.sort_order, is_primary=EXCLUDED.is_primary, status=EXCLUDED.status, updated_at=now(), version = dsh_catalog_asset_links.version + 1`,
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder, false, linkStatus)
 	if err != nil {
 		return CatalogAssetLink{}, err
@@ -2493,7 +2493,7 @@ func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInp
 		(id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
 		VALUES ($1,$2,$3,$4,$5,$6,true,'approved')
 		ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
-		  sort_order=EXCLUDED.sort_order, is_primary=true, status='approved', updated_at=now(), version = version + 1`,
+		  sort_order=EXCLUDED.sort_order, is_primary=true, status='approved', updated_at=now(), version = dsh_catalog_asset_links.version + 1`,
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder); err != nil {
 		return CatalogAssetLink{}, err
 	}
