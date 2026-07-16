@@ -5264,6 +5264,165 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DshAdminAuditListResponse" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+  /dsh/client/special-requests:
+    post:
+      operationId: createDshClientSpecialRequest
+      summary: Create a special request
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshCreateSpecialRequest" }
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    get:
+      operationId: listDshClientSpecialRequests
+      summary: List special requests for the client
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/client/special-requests/{requestId}:
+    get:
+      operationId: getDshClientSpecialRequest
+      summary: Get special request
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/client/special-requests/{requestId}/cancel:
+    post:
+      operationId: cancelDshClientSpecialRequest
+      summary: Cancel special request
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/special-requests:
+    get:
+      operationId: listDshOperatorSpecialRequests
+      summary: List special requests for operators
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: requestType
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestListResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/special-requests/{requestId}:
+    get:
+      operationId: getDshOperatorSpecialRequest
+      summary: Get special request
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateDshOperatorSpecialRequest
+      summary: Update special request
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshUpdateSpecialRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
 components:
   securitySchemes:
@@ -8043,3 +8202,72 @@ components:
           type: array
           items: { $ref: "#/components/schemas/DshAdminAuditEntry" }
         total: { type: integer }
+
+    DshCreateSpecialRequest:
+      type: object
+      required: [requestType, idempotencyKey]
+      properties:
+        requestType: { type: string, enum: [SHEIN_ASSISTED_PURCHASE, AWNAK_ERRAND] }
+        idempotencyKey: { type: string }
+        customerNotes: { type: string }
+        productUrl: { type: string }
+        quantity: { type: integer }
+        size: { type: string }
+        color: { type: string }
+        variantNotes: { type: string }
+        deliveryAddressReference: { type: string }
+        pickupAddressReference: { type: string }
+        dropoffAddressReference: { type: string }
+        itemType: { type: string }
+        scheduleMode: { type: string }
+        scheduledAt: { type: string, format: date-time }
+        handlingRequirements: { type: string }
+
+    DshSpecialRequestResponse:
+      type: object
+      required: [id, clientId, requestType, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        clientId: { type: string }
+        requestType: { type: string }
+        status: { type: string }
+        customerNotes: { type: ["string", "null"] }
+        currency: { type: ["string", "null"] }
+        estimatedAmountReference: { type: ["string", "null"] }
+        productUrl: { type: ["string", "null"] }
+        quantity: { type: ["integer", "null"] }
+        size: { type: ["string", "null"] }
+        color: { type: ["string", "null"] }
+        variantNotes: { type: ["string", "null"] }
+        deliveryAddressReference: { type: ["string", "null"] }
+        pickupAddressReference: { type: ["string", "null"] }
+        dropoffAddressReference: { type: ["string", "null"] }
+        itemType: { type: ["string", "null"] }
+        scheduleMode: { type: ["string", "null"] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        handlingRequirements: { type: ["string", "null"] }
+        assignedOperatorId: { type: ["string", "null"] }
+        dispatchAssignmentId: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
+        cancelledAt: { type: ["string", "null"], format: date-time }
+
+    DshSpecialRequestListResponse:
+      type: object
+      required: [requests, total]
+      properties:
+        requests:
+          type: array
+          items: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        total: { type: integer }
+
+    DshUpdateSpecialRequest:
+      type: object
+      properties:
+        status: { type: string, enum: [under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
+        assignedOperatorId: { type: ["string", "null"] }
+        rejectionReason: { type: ["string", "null"] }
+        estimatedAmountReference: { type: ["string", "null"] }
+        currency: { type: ["string", "null"] }

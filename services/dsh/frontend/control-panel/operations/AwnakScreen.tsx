@@ -11,6 +11,7 @@ import { buildOperationsHref } from './operations.registry';
 import { Box } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
+import { fetchOperatorSpecialRequests, type SpecialRequestRow } from '../../shared/operations/dsh-special-requests-adapter';
 
 export type AwnakScreenProps = {
   hubHref?: string;
@@ -21,18 +22,43 @@ const STAGE_ORDER = Object.keys(AWNAK_STAGE_LABELS) as Array<keyof typeof AWNAK_
 
 export function AwnakScreen({ hubHref: _hubHref, subGroup }: AwnakScreenProps) {
   const router = useRouter();
+  const [requests, setRequests] = React.useState<SpecialRequestRow[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let active = true;
+    fetchOperatorSpecialRequests({ requestType: 'awnak' }).then(res => {
+      if (active) {
+        if (res.kind === 'ok') setRequests(res.requests);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   const summaryKpi = STAGE_ORDER.map((stage) => ({
     id: stage,
     label: AWNAK_STAGE_LABELS[stage],
-    value: '0',
+    value: String(requests.filter(r => r.status === stage).length),
     tone: stage === 'escalated' || stage === 'dispatch_pending' ? ('danger' as const)
       : stage === 'quote_review' || stage === 'proof_review' ? ('neutral' as const)
       : stage === 'completed' ? ('success' as const)
       : ('neutral' as const),
   }));
 
-  const rows: { requestId: string; type: string; customer: string; status: string; statusTone: string; risk: string; nextAction: string; note: string; owner: string; sla: string; captainId?: string }[] = [];
+  const rows = requests.map(r => ({
+    requestId: r.id,
+    type: r.itemType || 'طلب عونك',
+    customer: r.clientId,
+    status: r.status,
+    statusTone: r.status === 'completed' ? 'success' : r.status === 'cancelled' ? 'danger' : 'warning',
+    risk: r.status === 'processing' ? 'متوسط' : 'neutral',
+    nextAction: 'مراجعة',
+    note: r.customerNotes,
+    owner: r.assignedOperatorId || 'غير مسند',
+    sla: r.createdAt,
+    captainId: r.dispatchAssignmentId,
+  }));
 
   return (
     <Box gap={3}>
@@ -42,6 +68,7 @@ export function AwnakScreen({ hubHref: _hubHref, subGroup }: AwnakScreenProps) {
 
       <WebControlPanelKpiStrip items={summaryKpi} />
 
+      {loading ? <p>جاري التحميل...</p> : (
       <Box gap={2} style={{}}>
         {rows.map((item) => (
           <WebControlPanelDecisionRow
@@ -67,6 +94,7 @@ export function AwnakScreen({ hubHref: _hubHref, subGroup }: AwnakScreenProps) {
           />
         ))}
       </Box>
+      )}
     </Box>
   );
 }

@@ -11,6 +11,7 @@ import { buildOperationsHref } from './operations.registry';
 import { Box } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
+import { fetchOperatorSpecialRequests, type SpecialRequestRow } from '../../shared/operations/dsh-special-requests-adapter';
 
 export type ControlPanelDshSheinProxyScreenProps = {
   hubHref?: string;
@@ -21,18 +22,41 @@ const STAGE_ORDER = Object.keys(SHEIN_PROXY_STAGE_LABELS) as Array<keyof typeof 
 
 export function ControlPanelDshSheinProxyScreen({ hubHref: _hubHref, subGroup }: ControlPanelDshSheinProxyScreenProps) {
   const router = useRouter();
+  const [data, setData] = React.useState<SpecialRequestRow[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let active = true;
+    fetchOperatorSpecialRequests({ requestType: 'shein' }).then(res => {
+      if (active) {
+        if (res.kind === 'ok') setData(res.requests);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   const summaryKpi = STAGE_ORDER.map((stage) => ({
     id: stage,
     label: SHEIN_PROXY_STAGE_LABELS[stage],
-    value: '0',
+    value: String(data.filter(r => r.status === stage).length),
     tone: stage === 'exception' ? ('danger' as const)
       : stage === 'intake_review' || stage === 'quote_pending' || stage === 'customer_approval' ? ('neutral' as const)
       : stage === 'delivered' ? ('success' as const)
       : ('neutral' as const),
   }));
 
-  const requests: { id: string; customer: string; statusLabel: string; statusTone: string; nextStep: string; note: string; owner: string; sla: string; total: string }[] = [];
+  const requests = data.map(r => ({
+    id: r.id,
+    customer: r.clientId,
+    statusLabel: r.status,
+    statusTone: r.status === 'completed' ? 'success' : r.status === 'cancelled' ? 'danger' : 'warning',
+    nextStep: 'مراجعة',
+    note: r.customerNotes,
+    owner: r.assignedOperatorId || 'غير مسند',
+    sla: r.createdAt,
+    total: r.estimatedAmountReference ? `${r.estimatedAmountReference} ${r.currency}` : '—',
+  }));
 
   return (
     <Box gap={3}>
@@ -42,6 +66,7 @@ export function ControlPanelDshSheinProxyScreen({ hubHref: _hubHref, subGroup }:
 
       <WebControlPanelKpiStrip items={summaryKpi} />
 
+      {loading ? <p>جاري التحميل...</p> : (
       <Box gap={2} style={{}}>
         {requests.map((request) => (
           <WebControlPanelDecisionRow
@@ -67,6 +92,7 @@ export function ControlPanelDshSheinProxyScreen({ hubHref: _hubHref, subGroup }:
           />
         ))}
       </Box>
+      )}
     </Box>
   );
 }

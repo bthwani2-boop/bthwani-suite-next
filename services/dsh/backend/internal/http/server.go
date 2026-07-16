@@ -85,6 +85,16 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/location", protected.handlePushDispatchLocation)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
 
+	// Special Requests (Shein, Awnak)
+	mux.HandleFunc("POST /dsh/client/special-requests", protected.handleCreateSpecialRequest)
+	mux.HandleFunc("GET /dsh/client/special-requests", protected.handleListClientSpecialRequests)
+	mux.HandleFunc("GET /dsh/client/special-requests/{requestId}", protected.handleGetClientSpecialRequest)
+	mux.HandleFunc("POST /dsh/client/special-requests/{requestId}/cancel", protected.handleCancelClientSpecialRequest)
+	
+	mux.HandleFunc("GET /dsh/operator/special-requests", protected.handleListOperatorSpecialRequests)
+	mux.HandleFunc("GET /dsh/operator/special-requests/{requestId}", protected.handleGetOperatorSpecialRequest)
+	mux.HandleFunc("PATCH /dsh/operator/special-requests/{requestId}", protected.handleUpdateOperatorSpecialRequest)
+
 	// Governed read-only finance proxy — WLT internal financial reads are
 	// service-authenticated; DSH surfaces must consume them through these
 	// actor-authenticated routes, never directly from the browser.

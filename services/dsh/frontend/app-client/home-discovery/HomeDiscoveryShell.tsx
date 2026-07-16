@@ -16,10 +16,11 @@ type Props = {
   activeFilter: DiscoveryFilterKind;
   onFilterChange: (kind: DiscoveryFilterKind) => void;
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
+  onSpecialCategoryPress?: ((nodeId: string) => void) | undefined;
   onRetry?: (() => void) | undefined;
 };
 
-export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStorePress, onRetry }: Props) {
+export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStorePress, onSpecialCategoryPress, onRetry }: Props) {
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -200,8 +201,12 @@ export function HomeDiscoveryShell({ state, activeFilter, onFilterChange, onStor
                         isSelected && styles.dropdownItemActive,
                       ]}
                       onPress={() => {
-                        setActiveCategoryId(isSelected ? null : cat.id);
                         setShowDropdown(false);
+                        if (cat.id === 'node-shein' || cat.id === 'node-awnak') {
+                          onSpecialCategoryPress?.(cat.id);
+                        } else {
+                          setActiveCategoryId(isSelected ? null : cat.id);
+                        }
                       }}
                     >
                       {/* Leftmost Selection Indicator */}
