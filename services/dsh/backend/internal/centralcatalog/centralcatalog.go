@@ -28,9 +28,9 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("central catalog entity not found")
-	ErrInvalid   = errors.New("invalid central catalog input")
-	ErrConflict  = errors.New("central catalog conflict")
+	ErrNotFound = errors.New("central catalog entity not found")
+	ErrInvalid  = errors.New("invalid central catalog input")
+	ErrConflict = errors.New("central catalog conflict")
 )
 
 type ConflictError struct {
@@ -66,7 +66,7 @@ var (
 // ── L1: BUSINESS_DOMAIN ─────────────────────────────────────────────────────
 
 type Domain struct {
-	Version int `json:"version"`
+	Version                int       `json:"version"`
 	ID                     string    `json:"id"`
 	Slug                   string    `json:"slug"`
 	NameAr                 string    `json:"nameAr"`
@@ -94,8 +94,8 @@ type DomainInput struct {
 }
 
 type DomainPatchInput struct {
-		ExpectedVersion *int `json:"expectedVersion"`
-NameAr                 *string `json:"nameAr"`
+	ExpectedVersion        *int    `json:"expectedVersion"`
+	NameAr                 *string `json:"nameAr"`
 	NameEn                 *string `json:"nameEn"`
 	Icon                   *string `json:"icon"`
 	SortOrder              *int    `json:"sortOrder"`
@@ -327,7 +327,7 @@ func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput
 		}
 		nameAr = &trimmed
 	}
-	
+
 	if input.ExpectedVersion != nil {
 		current, err := GetNode(ctx, db, id)
 		if err != nil {
@@ -558,7 +558,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 	if input.ApprovalStatus != nil {
 		newStatus = *input.ApprovalStatus
 	}
-	
+
 	// We might also check client_visible in StoreAssortment since the request mentioned "publication state",
 	// but just in case they meant MasterProduct as well:
 	// A MasterProduct cannot be approved (which makes it eligible for store publication) if it lacks an image.
@@ -590,7 +590,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 // ── Product proposals (request-to-add; never a sellable entity) ────────────
 
 type ProductProposal struct {
-	Version int `json:"version"`
+	Version                int        `json:"version"`
 	ID                     string     `json:"id"`
 	ProposedNameAr         string     `json:"proposedNameAr"`
 	ProposedNameEn         string     `json:"proposedNameEn"`
@@ -626,7 +626,6 @@ var validProposalStatus = map[string]bool{
 	"catalog-draft": true, "partner-proposed": true, "partner-review": true, "marketing-review": true,
 	"catalog-adopted": true, "catalog-approved": true, "client-visible": true, "needs-fix": true, "rejected": true,
 }
-
 
 type ProductProposalPatchInput struct {
 	ProposedNameAr *string `json:"proposedNameAr"`
@@ -677,7 +676,7 @@ type ProductProposalInput struct {
 
 const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
 	image_object_key, source_surface, source_actor_id, source_store_id, status, review_note,
-	adopted_master_product_id, created_at, updated_at, review_stage, partner_reviewed_by,
+	adopted_master_product_id, created_at, updated_at, version, review_stage, partner_reviewed_by,
 	marketing_reviewed_by, catalog_adopted_by, catalog_approved_by, client_visible_at,
 	audit_required, blocked_reason, resubmission_count, linked_store_id`
 
@@ -959,10 +958,10 @@ func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProdu
 		if err != nil {
 			return StoreAssortment{}, err
 		}
-		
+
 		hasCustomImage := input.CustomImageObjectKey != nil && *input.CustomImageObjectKey != ""
 		hasMasterImage := masterImage != nil && *masterImage != ""
-		
+
 		if !hasCustomImage && !hasMasterImage {
 			return StoreAssortment{}, fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
 		}
@@ -1736,7 +1735,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 // ── Catalog assets (DAM) ─────────────────────────────────────────────────────
 
 type CatalogAsset struct {
-	Version int `json:"version"`
+	Version            int       `json:"version"`
 	ID                 string    `json:"id"`
 	ObjectKey          string    `json:"objectKey"`
 	PublicURL          *string   `json:"publicUrl"`
@@ -1847,7 +1846,7 @@ func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 	err := scanner.Scan(&a.ID, &a.ObjectKey, &a.PublicURL, &a.OriginalFileName, &a.MimeType, &a.SizeBytes,
 		&a.Width, &a.Height, &a.ChecksumSHA256, &a.AltAr, &a.AltEn, &a.DominantColor, &a.Status, &a.SourceSurface,
 		&a.UploadedBy, &a.ReviewedBy, &a.ReviewNote, &a.IntendedEntityType, &a.IntendedEntityID, &a.IntendedRole,
-		&a.CreatedAt, &a.UpdatedAt)
+		&a.CreatedAt, &a.UpdatedAt, &a.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -2163,9 +2162,9 @@ func UpdateAsset(ctx context.Context, db *sql.DB, id string, input AssetUpdateIn
 }
 
 type AssetReviewInput struct {
-	ExpectedVersion *int `json:"expectedVersion"`
-	Decision   string `json:"decision"` // approved | rejected | pending_review | archived
-	ReviewNote string `json:"reviewNote"`
+	ExpectedVersion *int   `json:"expectedVersion"`
+	Decision        string `json:"decision"` // approved | rejected | pending_review | archived
+	ReviewNote      string `json:"reviewNote"`
 }
 
 var assetReviewTransitions = map[string]map[string]bool{

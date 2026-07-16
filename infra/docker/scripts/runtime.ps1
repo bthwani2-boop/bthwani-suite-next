@@ -707,9 +707,22 @@ function Invoke-DshSmoke {
   Write-Host "  /dsh/health: $($health | ConvertTo-Json -Compress)"
   if ($health.status -ne "healthy") { throw "/dsh/health not healthy: $($health.status)" }
 
-  $readiness = Invoke-RestMethod "http://localhost:58080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
-  Write-Host "  /dsh/readiness: $($readiness | ConvertTo-Json -Compress)"
-  if ($readiness.status -ne "ready") { throw "/dsh/readiness not ready: $($readiness.status)" }
+  $readiness = $null
+  $readinessReady = $false
+  for ($i = 1; $i -le 10; $i++) {
+    try {
+      $readiness = Invoke-RestMethod "http://localhost:58080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
+      Write-Host "  /dsh/readiness attempt $i/10: $($readiness | ConvertTo-Json -Compress)"
+      if ($readiness.status -eq "ready") {
+        $readinessReady = $true
+        break
+      }
+    } catch {
+      Write-Host "  /dsh/readiness attempt $i/10 not ready: $_"
+    }
+    Start-Sleep -Seconds 3
+  }
+  if (-not $readinessReady) { throw "/dsh/readiness not ready after retries" }
 
   $stores = Invoke-RestMethod "http://localhost:58080/dsh/stores?limit=10&offset=0" -TimeoutSec 10 -ErrorAction Stop
   $count = if ($stores.stores) { $stores.stores.Count } else { 0 }
