@@ -12,6 +12,7 @@ var (
 	ErrForbidden                    = errors.New("partner action forbidden")
 	ErrInvalidTransition            = errors.New("invalid partner status transition")
 	ErrConflict                     = errors.New("partner conflict — duplicate legal identity")
+	ErrVersionConflict              = errors.New("optimistic concurrency control failed — version mismatch")
 	ErrStorePublicationGatesFailed = errors.New("store publication gates failed: linked store must be active, visible, serviceable, partner-ready, catalog approved, and marketing visible")
 )
 
@@ -534,12 +535,22 @@ type StoreCourierSettings struct {
 	PricingSource     string   `json:"pricingSource"`
 	Compensation      string   `json:"compensation"`
 	SelectedBranchIDs []string `json:"selectedBranchIds"`
+	Version           int64    `json:"version"`
 }
 
 func (i StoreCourierSettings) Validate() error {
 	if strings.TrimSpace(i.CourierName) == "" || strings.TrimSpace(i.CourierPhone) == "" {
 		return ErrInvalid
 	}
+	
+	// Validate combinations
+	if i.Policy == "free_delivery" && i.PricingSource != "bthwani_pricing" {
+		return ErrInvalid
+	}
+	if i.Policy == "store_paid" && i.Compensation != "store_wallet" {
+		return ErrInvalid
+	}
+
 	return nil
 }
 

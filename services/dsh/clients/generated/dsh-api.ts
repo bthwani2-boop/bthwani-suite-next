@@ -4570,6 +4570,8 @@ export interface components {
             pricingSource: string;
             compensation: string;
             selectedBranchIds: string[];
+            /** Format: int64 */
+            version: number;
         };
         DshPartnerCoverageZone: {
             id: string;

@@ -1071,9 +1071,9 @@ func inlineActionForStatus(status string) string {
 func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, error) {
 	var s StoreCourierSettings
 	err := db.QueryRow(`
-		SELECT courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids
+		SELECT courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version
 		FROM dsh_store_courier_settings WHERE store_id = $1`, storeID).
-		Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs))
+		Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		// The OpenAPI contract has no 404 response for this operation — return
 		// the zero-value settings shape instead of an error.
@@ -1082,6 +1082,7 @@ func GetStoreCourierSettings(db *sql.DB, storeID string) (StoreCourierSettings, 
 			PricingSource:     "bthwani_pricing",
 			Compensation:      "none",
 			SelectedBranchIDs: []string{},
+			Version:           0,
 		}, nil
 	}
 	if err != nil {
@@ -1098,27 +1099,48 @@ func UpsertStoreCourierSettings(db *sql.DB, storeID string, input StoreCourierSe
 		return StoreCourierSettings{}, err
 	}
 	var s StoreCourierSettings
-	err := db.QueryRow(`
-		INSERT INTO dsh_store_courier_settings (
-			store_id, courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-		ON CONFLICT (store_id) DO UPDATE SET
-			courier_name = EXCLUDED.courier_name,
-			courier_phone = EXCLUDED.courier_phone,
-			is_active = EXCLUDED.is_active,
-			policy = EXCLUDED.policy,
-			pricing_source = EXCLUDED.pricing_source,
-			compensation = EXCLUDED.compensation,
-			selected_branch_ids = EXCLUDED.selected_branch_ids,
-			version = dsh_store_courier_settings.version + 1,
-			updated_at = NOW()
-		RETURNING courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids`,
-		storeID, input.CourierName, input.CourierPhone, input.IsActive, input.Policy,
-		input.PricingSource, input.Compensation, pq.Array(input.SelectedBranchIDs)).
-		Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs))
-	if err != nil {
-		return StoreCourierSettings{}, err
+	if input.Version == 0 {
+		// Expect new insert
+		err := db.QueryRow(`
+			INSERT INTO dsh_store_courier_settings (
+				store_id, courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1)
+			RETURNING courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version`,
+			storeID, input.CourierName, input.CourierPhone, input.IsActive, input.Policy,
+			input.PricingSource, input.Compensation, pq.Array(input.SelectedBranchIDs)).
+			Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key value") {
+				return StoreCourierSettings{}, ErrVersionConflict
+			}
+			return StoreCourierSettings{}, err
+		}
+	} else {
+		// Expect update of existing version
+		err := db.QueryRow(`
+			UPDATE dsh_store_courier_settings SET
+				courier_name = $2,
+				courier_phone = $3,
+				is_active = $4,
+				policy = $5,
+				pricing_source = $6,
+				compensation = $7,
+				selected_branch_ids = $8,
+				version = version + 1,
+				updated_at = NOW()
+			WHERE store_id = $1 AND version = $9
+			RETURNING courier_name, courier_phone, is_active, policy, pricing_source, compensation, selected_branch_ids, version`,
+			storeID, input.CourierName, input.CourierPhone, input.IsActive, input.Policy,
+			input.PricingSource, input.Compensation, pq.Array(input.SelectedBranchIDs), input.Version).
+			Scan(&s.CourierName, &s.CourierPhone, &s.IsActive, &s.Policy, &s.PricingSource, &s.Compensation, pq.Array(&s.SelectedBranchIDs), &s.Version)
+		if errors.Is(err, sql.ErrNoRows) {
+			return StoreCourierSettings{}, ErrVersionConflict
+		}
+		if err != nil {
+			return StoreCourierSettings{}, err
+		}
 	}
+
 	if s.SelectedBranchIDs == nil {
 		s.SelectedBranchIDs = []string{}
 	}

@@ -7404,7 +7404,8 @@ components:
         selectedBranchIds:
           type: array
           items: { type: string }
-      required: [courierName, courierPhone, isActive, policy, pricingSource, compensation, selectedBranchIds]
+        version: { type: integer, format: int64 }
+      required: [courierName, courierPhone, isActive, policy, pricingSource, compensation, selectedBranchIds, version]
 
     DshPartnerCoverageZone:
       type: object

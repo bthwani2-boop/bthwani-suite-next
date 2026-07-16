@@ -98,6 +98,7 @@ export function DshPartnerStoreCourierScreen({
   const [policy, setPolicy] = React.useState<StoreDeliveryPolicy>('free_delivery');
   const [pricingSource, setPricingSource] = React.useState<StoreDeliveryPricingSource>('bthwani_pricing');
   const [compensation, setCompensation] = React.useState<StoreCourierCompensation>('none');
+  const [version, setVersion] = React.useState<number>(0);
   const [savedLabel, setSavedLabel] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -111,6 +112,7 @@ export function DshPartnerStoreCourierScreen({
         setPricingSource((data.pricingSource as StoreDeliveryPricingSource) || 'bthwani_pricing');
         setCompensation((data.compensation as StoreCourierCompensation) || 'none');
         setSelectedBranchIds(data.selectedBranchIds?.length ? [...data.selectedBranchIds] : ['all']);
+        setVersion(data.version || 0);
       }
     }).finally(() => {
       setIsLoading(false);
@@ -297,15 +299,18 @@ export function DshPartnerStoreCourierScreen({
             pricingSource,
             compensation,
             selectedBranchIds,
-          }).then(() => {
-            setSavedLabel('تم الحفظ بنجاح.');
-          }).catch(() => {
-            setSavedLabel('حدث خطأ أثناء الحفظ.');
+            version,
+          }).then((res) => {
+            setVersion(res.version || 0);
+            setSavedLabel('تم الحفظ بنجاح');
+            setTimeout(() => setSavedLabel(null), 3000);
+          }).catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء الحفظ';
+            setSavedLabel(`فشل الحفظ: ${msg}`);
           });
         }}
       />
     </MobileScrollView>
   );
-}
 
 // export default DshPartnerStoreCourierScreen; // Unused default export
