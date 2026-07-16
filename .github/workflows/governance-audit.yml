@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0 # needed for gitleaks history checks
 
       # ── 1. Setup Node & Run Custom Schema / Coherence Gates ────────────────
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.34.2
 
