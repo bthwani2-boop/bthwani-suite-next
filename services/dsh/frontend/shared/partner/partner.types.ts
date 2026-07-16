@@ -392,6 +392,22 @@ export type DshPartnerOperationalScope = {
   readonly permissions: string[];
 };
 
+export type DshPartnerTeamMember = {
+  readonly id: string;
+  readonly name: string;
+  readonly role: 'owner' | 'supervisor' | 'staff' | 'courier';
+  readonly roleLabel: string;
+  readonly status: 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
+  readonly statusLabel: string;
+  readonly branchAssignment: string;
+  readonly permissionsSummary: string;
+  readonly deliveryAssignment: string;
+  readonly inviteLifecycle: string;
+  readonly operationalImpact: string;
+  readonly auditNote: string;
+  readonly inlineActionLabel: string;
+};
+
 export type DshPartnerStoreCourierSettings = {
   readonly courierName: string;
   readonly courierPhone: string;

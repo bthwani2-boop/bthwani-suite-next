@@ -18,6 +18,7 @@ import type {
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
   DshPartnerOperationalScope,
+  DshPartnerTeamMember,
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
 } from "./partner.types";
@@ -138,7 +139,7 @@ export function fetchPartnerScopes(): Promise<{ scopes: DshPartnerOperationalSco
   return request("/dsh/partner/scopes");
 }
 
-export function fetchPartnerTeam(storeId: string): Promise<{ members: unknown[] }> {
+export function fetchPartnerTeam(storeId: string): Promise<{ members: DshPartnerTeamMember[] }> {
   return request(`/dsh/partner/stores/${storeId}/team`);
 }
 

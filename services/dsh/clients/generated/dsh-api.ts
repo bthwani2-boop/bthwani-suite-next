@@ -311,7 +311,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get store coverage zones. */
-        get: operations["getDshPartnerStoreCoverageZones"];
+        get: operations["listDshPartnerStoreCoverageZones"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2912,7 +2912,7 @@ export interface paths {
             cookie?: never;
         };
         /** List team members for a store. */
-        get: operations["listDshPartnerTeam"];
+        get: operations["listDshPartnerStoreTeam"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2931,7 +2931,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Invite a new team member. */
-        post: operations["inviteDshPartnerTeamMember"];
+        post: operations["inviteDshPartnerStoreTeamMember"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2948,7 +2948,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Execute an action on a team member. */
-        post: operations["executeDshPartnerTeamMemberAction"];
+        post: operations["executeDshPartnerStoreTeamMemberAction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2963,7 +2963,7 @@ export interface paths {
             cookie?: never;
         };
         /** Partner lists their authorized operational scopes (stores/branches). */
-        get: operations["listPartnerScopes"];
+        get: operations["listDshPartnerScopes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5774,7 +5774,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
-    getDshPartnerStoreCoverageZones: {
+    listDshPartnerStoreCoverageZones: {
         parameters: {
             query?: never;
             header?: never;
@@ -10440,7 +10440,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
-    listDshPartnerTeam: {
+    listDshPartnerStoreTeam: {
         parameters: {
             query?: never;
             header?: never;
@@ -10465,7 +10465,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
-    inviteDshPartnerTeamMember: {
+    inviteDshPartnerStoreTeamMember: {
         parameters: {
             query?: never;
             header?: never;
@@ -10496,7 +10496,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
-    executeDshPartnerTeamMemberAction: {
+    executeDshPartnerStoreTeamMemberAction: {
         parameters: {
             query?: never;
             header?: never;
@@ -10528,7 +10528,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
-    listPartnerScopes: {
+    listDshPartnerScopes: {
         parameters: {
             query?: never;
             header?: never;

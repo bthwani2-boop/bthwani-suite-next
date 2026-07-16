@@ -671,7 +671,7 @@ paths:
 
   /dsh/partner/stores/{storeId}/coverage-zones:
     get:
-      operationId: getDshPartnerStoreCoverageZones
+      operationId: listDshPartnerStoreCoverageZones
       summary: Get store coverage zones.
       tags: [DshPartner]
       security:
@@ -4575,7 +4575,7 @@ paths:
 
   /dsh/partner/stores/{storeId}/team:
     get:
-      operationId: listDshPartnerTeam
+      operationId: listDshPartnerStoreTeam
       summary: List team members for a store.
       tags: [DshPartner]
       security:
@@ -4602,7 +4602,7 @@ paths:
 
   /dsh/partner/stores/{storeId}/team/invites:
     post:
-      operationId: inviteDshPartnerTeamMember
+      operationId: inviteDshPartnerStoreTeamMember
       summary: Invite a new team member.
       tags: [DshPartner]
       security:
@@ -4637,7 +4637,7 @@ paths:
 
   /dsh/partner/stores/{storeId}/team/members/{memberId}/action:
     post:
-      operationId: executeDshPartnerTeamMemberAction
+      operationId: executeDshPartnerStoreTeamMemberAction
       summary: Execute an action on a team member.
       tags: [DshPartner]
       security:
@@ -4676,7 +4676,7 @@ paths:
 
   /dsh/partner/scopes:
     get:
-      operationId: listPartnerScopes
+      operationId: listDshPartnerScopes
       summary: Partner lists their authorized operational scopes (stores/branches).
       tags: [DshPartnerActivation]
       security:
