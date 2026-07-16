@@ -1,4 +1,7 @@
-import { dshHttpRequest } from '../_kernel/dsh-http-request';
+import { resolveDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
+import { createDshHttpClient } from '../_kernel/dsh-http-request';
+
+const { request } = createDshHttpClient(resolveDshApiBaseUrl(), 'special-requests-corr');
 
 export type SpecialRequestStatus = 'submitted' | 'processing' | 'completed' | 'cancelled';
 
@@ -48,19 +51,23 @@ export async function fetchOperatorSpecialRequests(options: {
   if (options.requestType) query.set('requestType', options.requestType);
   if (options.status) query.set('status', options.status);
 
-  const res = await dshHttpRequest<{ requests: SpecialRequestRow[]; total: number }>(
-    'GET',
-    `/dsh/operator/special-requests?${query.toString()}`
-  );
-
-  if (res.error) {
-    if (res.error.code === 'NETWORK_ERROR') return { kind: 'offline' };
-    return { kind: 'error', message: res.error.message || 'Failed to fetch special requests' };
+  try {
+    const res = await request<{ requests: SpecialRequestRow[]; total: number }>(
+      `/dsh/operator/special-requests?${query.toString()}`
+    );
+    return {
+      kind: 'ok',
+      requests: res.requests || [],
+      total: res.total || 0,
+    };
+  } catch (error) {
+    if (error && typeof error === 'object' && (error as { kind?: string }).kind === 'network') {
+      return { kind: 'offline' };
+    }
+    const message =
+      error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : 'Failed to fetch special requests';
+    return { kind: 'error', message };
   }
-
-  return {
-    kind: 'ok',
-    requests: res.data?.requests || [],
-    total: res.data?.total || 0,
-  };
 }

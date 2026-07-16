@@ -49,6 +49,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-020_payment_pending_states.sql"            = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_payment_sessions_status_chk' AND pg_get_constraintdef(oid) LIKE '%authorization_pending%')"
   "wlt-021_reconciliation_resolution.sql"         = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_reconciliation_cases' AND column_name = 'assigned_to_operator_id')"
   "wlt-022_commission_lifecycle.sql"              = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commissions' AND column_name = 'updated_at')"
+  "wlt-023_special_request_payment_sessions.sql"  = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payment_sessions' AND column_name = 'special_request_id')"
 }
 
 function Test-WltMigrationProbeCoverage {

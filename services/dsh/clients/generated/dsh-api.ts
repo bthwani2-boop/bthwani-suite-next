@@ -3367,6 +3367,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/client/special-requests/{requestId}/approve-quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve an operator-set quote and hand off to WLT for a payment session */
+        post: operations["approveDshSpecialRequestQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/operator/special-requests": {
         parameters: {
             query?: never;
@@ -3400,6 +3417,23 @@ export interface paths {
         head?: never;
         /** Update special request */
         patch: operations["updateDshOperatorSpecialRequest"];
+        trace?: never;
+    };
+    "/dsh/operator/special-requests/{requestId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dispatch an approved special request to a captain */
+        post: operations["assignDshSpecialRequestDispatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -4098,6 +4132,8 @@ export interface components {
         DshDispatchAssignment: {
             id: string;
             orderId: string;
+            specialRequestId: string;
+            requestType: string;
             captainId: string;
             assignedBy: string;
             status: components["schemas"]["DshAssignmentStatus"];
@@ -5156,15 +5192,29 @@ export interface components {
             /** Format: date-time */
             scheduledAt?: string;
             handlingRequirements?: string;
+            /** @description Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend. */
+            pickupLocation?: Record<string, never> | null;
+            /** @description Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend. */
+            dropoffLocation?: Record<string, never> | null;
         };
         DshSpecialRequestResponse: {
             id: string;
             clientId: string;
             requestType: string;
             status: string;
+            version: number;
+            workflowStage?: string | null;
             customerNotes?: string | null;
             currency?: string | null;
+            /**
+             * @deprecated
+             * @description Deprecated: use estimatedAmountMinorUnits/currency.
+             */
             estimatedAmountReference?: string | null;
+            /** Format: int64 */
+            estimatedAmountMinorUnits?: number | null;
+            wltPaymentSessionId?: string | null;
+            correlationId?: string | null;
             productUrl?: string | null;
             quantity?: number | null;
             size?: string | null;
@@ -5173,6 +5223,8 @@ export interface components {
             deliveryAddressReference?: string | null;
             pickupAddressReference?: string | null;
             dropoffAddressReference?: string | null;
+            pickupLocation?: Record<string, never> | null;
+            dropoffLocation?: Record<string, never> | null;
             itemType?: string | null;
             scheduleMode?: string | null;
             /** Format: date-time */
@@ -5195,11 +5247,15 @@ export interface components {
             total: number;
         };
         DshUpdateSpecialRequest: {
+            expectedVersion: number;
             /** @enum {string} */
             status?: "under_review" | "needs_customer_input" | "approved" | "assigned" | "in_progress" | "completed" | "cancelled" | "rejected";
+            workflowStage?: string | null;
             assignedOperatorId?: string | null;
             rejectionReason?: string | null;
-            estimatedAmountReference?: string | null;
+            /** Format: int64 */
+            estimatedAmountMinorUnits?: number | null;
+            wltPaymentSessionId?: string | null;
             currency?: string | null;
         };
     };
@@ -11484,6 +11540,44 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    approveDshSpecialRequestQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expectedVersion: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshSpecialRequestResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description WLT payment-session handoff is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listDshOperatorSpecialRequests: {
         parameters: {
             query?: {
@@ -11563,6 +11657,38 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    assignDshSpecialRequestDispatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    captainId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
 }

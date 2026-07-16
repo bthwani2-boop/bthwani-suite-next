@@ -42,7 +42,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *dshnotify.Client) erro
 	}
 	for _, e := range events {
 		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
-		err := client.Notify(notifyCtx, e.CheckoutIntentID, e.PaymentSessionID, e.EventType)
+		err := client.Notify(notifyCtx, e.CheckoutIntentID, e.SpecialRequestID, e.PaymentSessionID, e.EventType)
 		cancel()
 		if err != nil {
 			log.Printf("[dsh-outbox] payment-session event notify failed for session %s (attempt %d): %v", e.PaymentSessionID, e.AttemptCount+1, err)

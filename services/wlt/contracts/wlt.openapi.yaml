@@ -1953,7 +1953,6 @@ components:
       type: object
       required:
         - id
-        - checkoutIntentId
         - clientId
         - storeId
         - paymentMethod
@@ -1966,6 +1965,18 @@ components:
           type: string
         checkoutIntentId:
           type: string
+          nullable: true
+          description: >-
+            Set when this session originated from a DSH checkout-intent
+            handoff. Mutually exclusive with specialRequestId -- exactly one
+            of the two is always non-null.
+        specialRequestId:
+          type: string
+          nullable: true
+          description: >-
+            Set when this session originated from a DSH special-request
+            (Shein/Awnak) quote approval. Mutually exclusive with
+            checkoutIntentId -- exactly one of the two is always non-null.
         clientId:
           type: string
         storeId:
@@ -2011,7 +2022,6 @@ components:
     WltCreatePaymentSessionRequest:
       type: object
       required:
-        - checkoutIntentId
         - clientId
         - storeId
         - amountMinorUnits
@@ -2019,6 +2029,14 @@ components:
       properties:
         checkoutIntentId:
           type: string
+          description: >-
+            Exactly one of checkoutIntentId or specialRequestId must be
+            provided.
+        specialRequestId:
+          type: string
+          description: >-
+            Exactly one of checkoutIntentId or specialRequestId must be
+            provided.
         clientId:
           type: string
         storeId:

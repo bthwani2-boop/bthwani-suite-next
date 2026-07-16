@@ -90,10 +90,12 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/client/special-requests", protected.handleListClientSpecialRequests)
 	mux.HandleFunc("GET /dsh/client/special-requests/{requestId}", protected.handleGetClientSpecialRequest)
 	mux.HandleFunc("POST /dsh/client/special-requests/{requestId}/cancel", protected.handleCancelClientSpecialRequest)
-	
+	mux.HandleFunc("POST /dsh/client/special-requests/{requestId}/approve-quote", protected.handleApproveSpecialRequestQuote)
+
 	mux.HandleFunc("GET /dsh/operator/special-requests", protected.handleListOperatorSpecialRequests)
 	mux.HandleFunc("GET /dsh/operator/special-requests/{requestId}", protected.handleGetOperatorSpecialRequest)
 	mux.HandleFunc("PATCH /dsh/operator/special-requests/{requestId}", protected.handleUpdateOperatorSpecialRequest)
+	mux.HandleFunc("POST /dsh/operator/special-requests/{requestId}/dispatch", protected.handleAssignSpecialRequestDispatch)
 
 	// Governed read-only finance proxy — WLT internal financial reads are
 	// service-authenticated; DSH surfaces must consume them through these

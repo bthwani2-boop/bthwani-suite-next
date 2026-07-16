@@ -19,7 +19,8 @@ type Client struct {
 }
 
 type CreatePaymentSessionInput struct {
-	CheckoutIntentID string `json:"checkoutIntentId"`
+	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
+	SpecialRequestID string `json:"specialRequestId,omitempty"`
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
@@ -33,6 +34,7 @@ type CreatePaymentSessionInput struct {
 type PaymentSession struct {
 	ID                string `json:"id"`
 	CheckoutIntentID  string `json:"checkoutIntentId"`
+	SpecialRequestID  string `json:"specialRequestId"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`
@@ -77,11 +79,15 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("X-Service-Caller", "dsh")
 	if input.CorrelationID != "" {
 		req.Header.Set("X-Correlation-ID", input.CorrelationID)
+	} else if input.SpecialRequestID != "" {
+		req.Header.Set("X-Correlation-ID", input.SpecialRequestID)
 	} else {
 		req.Header.Set("X-Correlation-ID", input.CheckoutIntentID)
 	}
 	if input.IdempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", input.IdempotencyKey)
+	} else if input.SpecialRequestID != "" {
+		req.Header.Set("Idempotency-Key", "dsh-special-request:"+input.SpecialRequestID)
 	} else {
 		req.Header.Set("Idempotency-Key", "dsh-checkout-intent:"+input.CheckoutIntentID)
 	}

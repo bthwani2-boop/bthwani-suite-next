@@ -9,7 +9,6 @@ export * from './finance/finance-registry';
 
 export * from './finance-boundary/dsh-wlt-boundary';
 export * from './finance-boundary/dsh-client-wlt-payment-bridge';
-export * from './finance-boundary/dsh-wlt-payment-session.client';
 export * from './finance-boundary/dsh-wlt-settlement-bridge.contract';
 
 export * from './finance-visibility/finance-visibility.types';

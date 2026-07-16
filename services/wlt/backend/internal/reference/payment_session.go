@@ -14,7 +14,8 @@ var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
 
 type PaymentSession struct {
 	ID                string  `json:"id"`
-	CheckoutIntentID  string  `json:"checkoutIntentId"`
+	CheckoutIntentID  *string `json:"checkoutIntentId"`
+	SpecialRequestID  *string `json:"specialRequestId"`
 	ClientID          string  `json:"clientId"`
 	StoreID           string  `json:"storeId"`
 	PaymentMethod     string  `json:"paymentMethod"`
@@ -27,8 +28,13 @@ type PaymentSession struct {
 	UpdatedAt         string  `json:"updatedAt"`
 }
 
+// CreatePaymentSessionInput's CheckoutIntentID/SpecialRequestID are plain
+// strings (not pointers) at the input boundary -- exactly one must be
+// non-empty (see CreatePaymentSession); the empty one is converted to NULL
+// on insert via NULLIF, matching wlt_payment_sessions_source_xor_chk.
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId"`
+	SpecialRequestID string `json:"specialRequestId"`
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
@@ -40,8 +46,13 @@ type CreatePaymentSessionInput struct {
 }
 
 func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*PaymentSession, error) {
-	if input.CheckoutIntentID == "" || input.ClientID == "" || input.StoreID == "" {
-		return nil, fmt.Errorf("checkoutIntentId, clientId, and storeId are required")
+	hasCheckoutIntent := input.CheckoutIntentID != ""
+	hasSpecialRequest := input.SpecialRequestID != ""
+	if hasCheckoutIntent == hasSpecialRequest {
+		return nil, fmt.Errorf("exactly one of checkoutIntentId or specialRequestId is required")
+	}
+	if input.ClientID == "" || input.StoreID == "" {
+		return nil, fmt.Errorf("clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
 		input.PaymentMethod = "cod"
@@ -58,7 +69,13 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")
 	}
 
-	existing, err := getPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+	var existing *PaymentSession
+	var err error
+	if hasCheckoutIntent {
+		existing, err = getPaymentSessionByCheckoutIntent(db, input.CheckoutIntentID)
+	} else {
+		existing, err = getPaymentSessionBySpecialRequest(db, input.SpecialRequestID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +92,15 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 
 	const q = `
 		INSERT INTO wlt_payment_sessions
-			(checkout_intent_id, client_id, store_id, payment_method, status,
+			(checkout_intent_id, special_request_id, client_id, store_id, payment_method, status,
 			 amount_minor_units, currency, cart_snapshot_hash, idempotency_key, correlation_id)
-		VALUES ($1, $2, $3, $4, 'reference_created', $5, $6, $7, $8, $9)
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		VALUES (NULLIF($1, ''), NULLIF($2, ''), $3, $4, $5, 'reference_created', $6, $7, $8, $9, $10)
+		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at`
 
 	row := db.QueryRow(q,
 		input.CheckoutIntentID,
+		input.SpecialRequestID,
 		input.ClientID,
 		input.StoreID,
 		input.PaymentMethod,
@@ -100,7 +118,7 @@ func GetPaymentSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
 	const q = `
-		SELECT id, checkout_intent_id, client_id, store_id, payment_method,
+		SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
 		FROM wlt_payment_sessions
 		WHERE id = $1`
@@ -133,7 +151,7 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		}
 		session, err := CreatePaymentSession(db, input)
 		if errors.Is(err, ErrIdempotencyConflict) {
-			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "checkoutIntentId was already used with a different payload")
+			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "checkoutIntentId or specialRequestId was already used with a different payload")
 			return
 		}
 		if err != nil {
@@ -154,11 +172,28 @@ func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*Pa
 
 func getPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
 	const q = `
-		SELECT id, checkout_intent_id, client_id, store_id, payment_method,
+		SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
 		FROM wlt_payment_sessions
 		WHERE checkout_intent_id = $1`
 	session, err := scanPaymentSession(db.QueryRow(q, checkoutIntentID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return session, err
+}
+
+// getPaymentSessionBySpecialRequest is the special-request-sourced sibling
+// of getPaymentSessionByCheckoutIntent, used by CreatePaymentSession's
+// idempotency check when the caller supplies specialRequestId instead of
+// checkoutIntentId.
+func getPaymentSessionBySpecialRequest(db *sql.DB, specialRequestID string) (*PaymentSession, error) {
+	const q = `
+		SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
+		       status, provider_reference, amount_minor_units, currency, captured_at, created_at, updated_at
+		FROM wlt_payment_sessions
+		WHERE special_request_id = $1`
+	session, err := scanPaymentSession(db.QueryRow(q, specialRequestID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -189,6 +224,7 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 	err := row.Scan(
 		&session.ID,
 		&session.CheckoutIntentID,
+		&session.SpecialRequestID,
 		&session.ClientID,
 		&session.StoreID,
 		&session.PaymentMethod,

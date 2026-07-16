@@ -183,6 +183,8 @@ func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 	return map[string]any{
 		"id":                 a.ID,
 		"orderId":            a.OrderID,
+		"specialRequestId":   a.SpecialRequestID,
+		"requestType":        a.SpecialRequestType,
 		"captainId":          a.CaptainID,
 		"assignedBy":         a.AssignedBy,
 		"status":             string(a.Status),

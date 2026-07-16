@@ -5348,6 +5348,38 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /dsh/client/special-requests/{requestId}/approve-quote:
+    post:
+      operationId: approveDshSpecialRequestQuote
+      summary: Approve an operator-set quote and hand off to WLT for a payment session
+      tags:
+        - DshClientSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshSpecialRequestResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { description: WLT payment-session handoff is unavailable. }
+
   /dsh/operator/special-requests:
     get:
       operationId: listDshOperatorSpecialRequests
@@ -5423,6 +5455,38 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/operator/special-requests/{requestId}/dispatch:
+    post:
+      operationId: assignDshSpecialRequestDispatch
+      summary: Dispatch an approved special request to a captain
+      tags:
+        - DshOperatorSpecialRequests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [captainId]
+              properties:
+                captainId: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DshDispatchAssignmentResponse" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
 components:
   securitySchemes:
@@ -6726,10 +6790,12 @@ components:
 
     DshDispatchAssignment:
       type: object
-      required: [id, orderId, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, delivery]
+      required: [id, orderId, specialRequestId, requestType, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, delivery]
       properties:
         id: { type: string }
         orderId: { type: string }
+        specialRequestId: { type: string }
+        requestType: { type: string }
         captainId: { type: string }
         assignedBy: { type: string }
         status: { $ref: "#/components/schemas/DshAssignmentStatus" }
@@ -8222,18 +8288,32 @@ components:
         scheduleMode: { type: string }
         scheduledAt: { type: string, format: date-time }
         handlingRequirements: { type: string }
+        pickupLocation:
+          type: ["object", "null"]
+          description: Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend.
+        dropoffLocation:
+          type: ["object", "null"]
+          description: Raw JSON passthrough, e.g. `{lat, lng}`-shaped. Stored as-is by the backend.
 
     DshSpecialRequestResponse:
       type: object
-      required: [id, clientId, requestType, status, createdAt, updatedAt]
+      required: [id, clientId, requestType, status, version, createdAt, updatedAt]
       properties:
         id: { type: string }
         clientId: { type: string }
         requestType: { type: string }
         status: { type: string }
+        version: { type: integer }
+        workflowStage: { type: ["string", "null"] }
         customerNotes: { type: ["string", "null"] }
         currency: { type: ["string", "null"] }
-        estimatedAmountReference: { type: ["string", "null"] }
+        estimatedAmountReference:
+          type: ["string", "null"]
+          description: "Deprecated: use estimatedAmountMinorUnits/currency."
+          deprecated: true
+        estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+        wltPaymentSessionId: { type: ["string", "null"] }
+        correlationId: { type: ["string", "null"] }
         productUrl: { type: ["string", "null"] }
         quantity: { type: ["integer", "null"] }
         size: { type: ["string", "null"] }
@@ -8242,6 +8322,8 @@ components:
         deliveryAddressReference: { type: ["string", "null"] }
         pickupAddressReference: { type: ["string", "null"] }
         dropoffAddressReference: { type: ["string", "null"] }
+        pickupLocation: { type: ["object", "null"] }
+        dropoffLocation: { type: ["object", "null"] }
         itemType: { type: ["string", "null"] }
         scheduleMode: { type: ["string", "null"] }
         scheduledAt: { type: ["string", "null"], format: date-time }
@@ -8265,9 +8347,13 @@ components:
 
     DshUpdateSpecialRequest:
       type: object
+      required: [expectedVersion]
       properties:
+        expectedVersion: { type: integer }
         status: { type: string, enum: [under_review, needs_customer_input, approved, assigned, in_progress, completed, cancelled, rejected] }
+        workflowStage: { type: ["string", "null"] }
         assignedOperatorId: { type: ["string", "null"] }
         rejectionReason: { type: ["string", "null"] }
-        estimatedAmountReference: { type: ["string", "null"] }
+        estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+        wltPaymentSessionId: { type: ["string", "null"] }
         currency: { type: ["string", "null"] }

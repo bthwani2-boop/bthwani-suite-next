@@ -41,7 +41,8 @@ var ErrSessionClaimConflict = errors.New("payment session could not be claimed f
 
 type PaymentSession struct {
 	ID                string  `json:"id"`
-	CheckoutIntentID  string  `json:"checkoutIntentId"`
+	CheckoutIntentID  *string `json:"checkoutIntentId"`
+	SpecialRequestID  *string `json:"specialRequestId"`
 	ClientID          string  `json:"clientId"`
 	StoreID           string  `json:"storeId"`
 	PaymentMethod     string  `json:"paymentMethod"`
@@ -54,6 +55,18 @@ type PaymentSession struct {
 	UpdatedAt         string  `json:"updatedAt"`
 }
 
+// strOrEmpty dereferences a nullable text-column pointer (CheckoutIntentID /
+// SpecialRequestID), returning "" for nil rather than requiring every caller
+// to nil-check. Used only where a plain string is needed (e.g. the provider
+// request payload); the JSON-marshaled PaymentSession itself keeps the
+// pointer so a nil source identity serializes as null, not "".
+func strOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 type financialProvider interface {
 	Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error)
 }
@@ -63,6 +76,7 @@ func scanSession(row *sql.Row) (*PaymentSession, error) {
 	err := row.Scan(
 		&s.ID,
 		&s.CheckoutIntentID,
+		&s.SpecialRequestID,
 		&s.ClientID,
 		&s.StoreID,
 		&s.PaymentMethod,
@@ -93,7 +107,7 @@ func getSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 }
 
 const selectCols = `
-	SELECT id, checkout_intent_id, client_id, store_id, payment_method,
+	SELECT id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 	       status, provider_reference, amount_minor_units, currency,
 	       captured_at, created_at, updated_at
 	FROM wlt_payment_sessions
@@ -207,7 +221,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 		UPDATE wlt_payment_sessions
 		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
 		WHERE id = $1 AND status = 'authorization_pending'
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID, result.ProviderReference)
@@ -258,7 +272,7 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 func authorizeProvider(ctx context.Context, client financialProvider, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	result, err := client.Post(ctx, "/financial/card/authorize", map[string]any{
 		"paymentSessionId":  session.ID,
-		"checkoutIntentId":  session.CheckoutIntentID,
+		"checkoutIntentId":  strOrEmpty(session.CheckoutIntentID),
 		"clientId":          session.ClientID,
 		"storeId":           session.StoreID,
 		"amountMinorUnits":  amountMinorUnits,
@@ -333,7 +347,7 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedSta
 	if affected, _ := res.RowsAffected(); affected == 0 {
 		return fmt.Errorf("session %s was no longer %s when marking failed", session.ID, expectedStatus)
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.CheckoutIntentID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -395,7 +409,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 		UPDATE wlt_payment_sessions
 		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID, providerReference)
@@ -406,7 +420,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 	if err != nil {
 		return nil, err
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.CheckoutIntentID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -425,7 +439,7 @@ func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'cod_pending', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := db.QueryRow(q, sessionID)
@@ -444,7 +458,7 @@ func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'cod_collected', captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := db.QueryRow(q, sessionID)
@@ -502,7 +516,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 		UPDATE wlt_payment_sessions
 		SET status = 'expired', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, client_id, store_id, payment_method,
+		RETURNING id, checkout_intent_id, special_request_id, client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
 	row := tx.QueryRow(q, sessionID)
@@ -513,7 +527,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.CheckoutIntentID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
 	}
 	return s, nil

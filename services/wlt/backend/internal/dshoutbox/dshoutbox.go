@@ -19,12 +19,15 @@ const (
 	EventTypeExpired  = "expired"
 )
 
-// Event is a pending or retried notification bound for DSH.
+// Event is a pending or retried notification bound for DSH. Exactly one of
+// CheckoutIntentID/SpecialRequestID is set, matching the source identity of
+// the payment session that produced it (see wlt_payment_sessions_source_xor_chk).
 type Event struct {
 	ID               string
 	EventType        string
 	PaymentSessionID string
-	CheckoutIntentID string
+	CheckoutIntentID *string
+	SpecialRequestID *string
 	AttemptCount     int
 }
 
@@ -32,12 +35,17 @@ type Event struct {
 // inside the same transaction that commits the session's status transition
 // so the event can never be committed without the notification, or vice
 // versa. Re-enqueuing the same (sessionID, eventType) pair is a no-op.
-func Enqueue(tx *sql.Tx, eventType, sessionID, checkoutIntentID string) error {
+//
+// Exactly one of checkoutIntentID/specialRequestID must be non-nil, matching
+// the session's own source identity -- callers pass the session's
+// CheckoutIntentID/SpecialRequestID fields straight through, so this is
+// enforced transitively by wlt_payment_sessions_source_xor_chk.
+func Enqueue(tx *sql.Tx, eventType, sessionID string, checkoutIntentID, specialRequestID *string) error {
 	_, err := tx.Exec(`
-		INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, checkout_intent_id)
-		VALUES ($1, $2, $3)
+		INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, checkout_intent_id, special_request_id)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (payment_session_id, event_type) DO NOTHING`,
-		eventType, sessionID, checkoutIntentID,
+		eventType, sessionID, checkoutIntentID, specialRequestID,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue dsh outbox event: %w", err)
@@ -57,7 +65,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback()
 
 	rows, err := tx.Query(`
-		SELECT id, event_type, payment_session_id, checkout_intent_id, attempt_count
+		SELECT id, event_type, payment_session_id, checkout_intent_id, special_request_id, attempt_count
 		FROM wlt_dsh_outbox_events
 		WHERE status = 'pending' AND next_retry_at <= NOW()
 		ORDER BY created_at
@@ -71,7 +79,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	var events []Event
 	for rows.Next() {
 		var e Event
-		if err := rows.Scan(&e.ID, &e.EventType, &e.PaymentSessionID, &e.CheckoutIntentID, &e.AttemptCount); err != nil {
+		if err := rows.Scan(&e.ID, &e.EventType, &e.PaymentSessionID, &e.CheckoutIntentID, &e.SpecialRequestID, &e.AttemptCount); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan dsh outbox event: %w", err)
 		}
