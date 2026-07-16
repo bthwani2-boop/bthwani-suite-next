@@ -256,8 +256,8 @@ export const dshServiceManifest = {
     screensReady: false,
     technicalRuntimeReady: false,
     realExperienceReady: false,
-    platformControlRuntimeState: "FIX_REQUIRED",
-    platformControlReason: "core/platform-control is not implemented yet; /dsh/platform must not claim sovereign runtime readiness.",
+    platformControlRuntimeState: "PARTIALLY_BOUND",
+    platformControlReason: "core/platform-control P1 read-only runtime contract is bound; mutation, change-set, rollout, audit persistence, and rollback workflows remain contract-blocked.",
     sharedOwnershipEnforced: true,
     controllersInShared: [
       "useStoreAdminController",

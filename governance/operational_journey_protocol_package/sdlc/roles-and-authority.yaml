@@ -1,0 +1,35 @@
+version: 1
+authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authorities:
+  sdlc_program_authority:
+    owns: stage_state
+    may_block: true
+  product_requirements_owner:
+    owns: business_scope
+    may_block: true
+  architecture_authority:
+    owns: architecture_contracts_data_flow
+    may_block: true
+  engineering:
+    owns: implementation_developer_verification
+    may_final_approve_own_high_risk_change: false
+  independent_quality_authority:
+    owns: qa_approval
+    block_decision: QA_BLOCK
+  application_security_authority:
+    owns: security_approval
+    block_decision: SECURITY_BLOCK
+  release_authority:
+    owns: release_deploy_rollback_production_verification
+    block_decision: RELEASE_BLOCK
+  risk_acceptance_authority:
+    owns: residual_risk_acceptance
+    must_not_be_change_author: true
+separation_of_duties_required_for:
+  - auth_sessions_rbac
+  - tenant_isolation
+  - pii_secrets_security
+  - wlt_finance
+  - migrations_production_data
+  - infrastructure_ci_release
+  - critical_high_vulnerabilities

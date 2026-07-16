@@ -185,6 +185,14 @@
       "evidence_required": true
     },
     {
+      "id": "bthwani-sdlc-stage-gate-orchestrator",
+      "name": "SDLC Stage Gate Orchestrator",
+      "path": ".agents/skills/bthwani-sdlc-stage-gate-orchestrator",
+      "owner": "BThwani Platform Team",
+      "scope": "platform",
+      "evidence_required": true
+    },
+    {
       "id": "bthwani-ui-kit-design-lock",
       "name": "UI Kit Design Lock",
       "path": ".agents/skills/bthwani-ui-kit-design-lock",

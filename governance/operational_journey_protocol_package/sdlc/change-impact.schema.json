@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BThwani SDLC Change Impact",
+  "type": "object",
+  "required": ["capabilityId", "taskMode", "affectedPaths", "riskClass", "impacts"],
+  "additionalProperties": false,
+  "properties": {
+    "capabilityId": { "type": "string", "minLength": 1 },
+    "taskMode": { "type": "string", "enum": ["analysis_only", "implementation_or_closure", "merge_review"] },
+    "affectedPaths": { "type": "array", "items": { "type": "string" } },
+    "riskClass": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "impacts": {
+      "type": "object",
+      "required": ["backend", "frontend", "apiContract", "database", "security", "runtime", "wltFinance", "tenant"],
+      "additionalProperties": false,
+      "properties": {
+        "backend": { "type": "boolean" },
+        "frontend": { "type": "boolean" },
+        "apiContract": { "type": "boolean" },
+        "database": { "type": "boolean" },
+        "security": { "type": "boolean" },
+        "runtime": { "type": "boolean" },
+        "wltFinance": { "type": "boolean" },
+        "tenant": { "type": "boolean" }
+      }
+    }
+  }
+}

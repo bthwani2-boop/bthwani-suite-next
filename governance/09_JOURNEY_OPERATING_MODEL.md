@@ -30,6 +30,12 @@ The following sequence serves as illustrative examples of the journey order and 
 
 Do not continue while current journey is NOT_APPROVED_YET, BLOCKED_NEEDS_BLUEPRINT, BLOCKED_NEEDS_API_CONTRACT, or BLOCKED_NEEDS_RUNTIME_EVIDENCE.
 
+## SDLC gate rule
+
+Journeys that require formal approval must use the stage sequence in [26_SDLC_TEAM_AND_STAGE_GATES.md](26_SDLC_TEAM_AND_STAGE_GATES.md).
+
+No journey may claim `CLOSED_WITH_EVIDENCE`, release readiness, SaaS readiness, or production readiness when an applicable QA, security, tenant-isolation, release, or risk-acceptance gate is missing.
+
 ## Acceptance condition
 
-Accepted only when every journey declares scope, exclusions, evidence requirements, and closure state.
+Accepted only when every journey declares scope, exclusions, evidence requirements, closure state, and any applicable SDLC/SaaS gate state.

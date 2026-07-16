@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BThwani SDLC Artifact Manifest",
+  "type": "object",
+  "required": ["capabilityId", "branch", "resolvedCommitSha", "currentStage", "requestedStage", "applicableGates", "evidence", "decision"],
+  "additionalProperties": false,
+  "properties": {
+    "capabilityId": { "type": "string", "minLength": 1 },
+    "branch": { "type": "string", "minLength": 1 },
+    "resolvedCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "currentStage": { "type": "string" },
+    "requestedStage": { "type": "string" },
+    "applicableGates": { "type": "array", "items": { "type": "string" } },
+    "passedGates": { "type": "array", "items": { "type": "string" } },
+    "failedGates": { "type": "array", "items": { "type": "string" } },
+    "missingEvidence": { "type": "array", "items": { "type": "string" } },
+    "requiredApprovals": { "type": "array", "items": { "type": "string" } },
+    "separationOfDutiesPass": { "type": "boolean" },
+    "openBlockers": { "type": "array", "items": { "type": "string" } },
+    "residualRisks": { "type": "array", "items": { "type": "string" } },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "decision": {
+      "type": "string",
+      "enum": ["GATE_PASS", "FIX_REQUIRED", "QA_BLOCK", "SECURITY_BLOCK", "RELEASE_BLOCK", "HARD_BLOCKED_EXTERNAL_ONLY", "CLOSED_WITH_EVIDENCE"]
+    }
+  }
+}

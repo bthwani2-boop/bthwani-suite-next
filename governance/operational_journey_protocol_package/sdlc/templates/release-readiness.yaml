@@ -1,0 +1,10 @@
+capabilityId:
+qaApproval:
+securityApproval:
+productApproval:
+unresolvedBlockers: []
+criticalVulnerabilities: 0
+unacceptedHighVulnerabilities: 0
+rollbackProcedure:
+monitoringOwner:
+supportRunbook:

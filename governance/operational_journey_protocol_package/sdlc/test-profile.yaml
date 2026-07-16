@@ -1,0 +1,34 @@
+version: 1
+authority: governance/06_EVIDENCE_AND_GATES.md
+default_strategy: affected_only
+checks_by_impact:
+  docs_only:
+    - git_diff_check
+  backend_logic:
+    - targeted_type_or_build
+    - unit
+  api_contract:
+    - schema
+    - generated_client
+    - contract
+  visible_ui:
+    - targeted_typecheck
+    - requested_visual_or_runtime_when_applicable
+  security_sensitive:
+    - secure_design
+    - security_verification
+    - threat_model_when_applicable
+    - tenant_isolation_negative_tests_when_applicable
+    - independent_retest_for_critical_or_high
+  release:
+    - release_profile
+    - rollback_procedure
+    - monitoring_owner
+    - unresolved_blocker_review
+  tenant_or_saas:
+    - saas_context
+    - tenant_context_propagation_matrix
+    - tenant_isolation_matrix
+    - tenant_resource_isolation_matrix
+    - wlt_tenant_financial_isolation_when_applicable
+stop_on_blocking_failure: true

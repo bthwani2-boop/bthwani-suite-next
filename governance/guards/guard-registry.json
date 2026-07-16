@@ -241,6 +241,14 @@
       "source_file": "tools/guards/guard-registry-gate.mjs"
     },
     {
+      "id": "sdlc",
+      "name": "SDLC Stage Gate",
+      "script": "guard:sdlc",
+      "exit_level": "fail",
+      "description": "Validates SDLC support package structure, stage transition vocabulary, authority separation, and quality/security profiles.",
+      "source_file": "tools/guards/sdlc/Invoke-SdlcGate.ps1"
+    },
+    {
       "id": "markdown-governance",
       "name": "Markdown Governance Linter",
       "script": "guard:markdown-governance",

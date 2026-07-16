@@ -11,6 +11,7 @@ export const PLATFORM_RUNTIME_STATES = {
   unknownHealth: "UNKNOWN_HEALTH",
   rollbackUnavailable: "ROLLBACK_UNAVAILABLE",
   contractRequired: "CONTRACT_REQUIRED",
+  readOnlyBound: "READ_ONLY_BOUND",
 } as const;
 
 // ─── Main Tab Registry ────────────────────────────────────────────────────────
@@ -91,10 +92,10 @@ export type PlatformOwnershipInfo = {
 };
 
 export const PLATFORM_OWNERSHIP: PlatformOwnershipInfo = {
-  owner: "platform / dsh-platform",
-  ownerPath: "future: core/platform-control",
-  activeServices: PLATFORM_RUNTIME_STATES.contractRequired,
-  status: `${PLATFORM_RUNTIME_STATES.fixRequired} / ${PLATFORM_RUNTIME_STATES.partiallyBound}`,
+  owner: "platform / core-platform-control",
+  ownerPath: "core/platform-control",
+  activeServices: PLATFORM_RUNTIME_STATES.readOnlyBound,
+  status: `${PLATFORM_RUNTIME_STATES.readOnlyBound} / mutations=${PLATFORM_RUNTIME_STATES.contractRequired}`,
 };
 
 // ─── Inner Stats Registry ─────────────────────────────────────────────────────

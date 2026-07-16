@@ -76,6 +76,25 @@ jobs:
       - name: Evidence Coherence Gate
         run: pnpm run guard:agent-governance
 
+  sdlc-stage-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.34.2
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: SDLC Stage Gate
+        run: pnpm run guard:sdlc -- --stage G4_IMPLEMENTATION_VERIFIED --affected
+
   scope-and-surface-coverage:
     runs-on: ubuntu-latest
     steps:
@@ -342,6 +361,7 @@ jobs:
       - protocol-integrity
       - factory-output-budget
       - evidence-coherence
+      - sdlc-stage-gate
       - scope-and-surface-coverage
       - ownership-boundaries
       - vertical-fullstack-integrity

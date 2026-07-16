@@ -1,0 +1,11 @@
+capabilityId:
+adr:
+systemContext:
+dataFlow:
+apiContractImpact:
+databaseImpact:
+migrationImpact:
+trustBoundaries: []
+observabilityPlan:
+rollbackPlan:
+crossSurfaceImpact: []

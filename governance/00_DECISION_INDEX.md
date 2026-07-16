@@ -30,6 +30,13 @@ No governance file is canonical unless listed here.
 17. 16_MASTER_MATRIX_V3_BUSINESS_RULES.md
 18. 17_PERFORMANCE_AND_RUNTIME_BASELINE.md
 19. 99_LEGACY_EXTRACTION_LEDGER.md
+20. 26_SDLC_TEAM_AND_STAGE_GATES.md
+
+## Conditional protocol annexes
+
+These files are canonical only when their `applies_when` conditions match the journey:
+
+1. operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md
 
 ## Allowed unresolved states
 
@@ -41,4 +48,4 @@ No governance file is canonical unless listed here.
 
 ## Acceptance condition
 
-Accepted only when all listed files exist, every listed file has an `Acceptance condition`, and no operational journey starts before `foundation:gate` passes.
+Accepted only when all listed files exist, every listed file has an `Acceptance condition`, every applicable conditional annex is applied, and no operational journey starts before `foundation:gate` passes.

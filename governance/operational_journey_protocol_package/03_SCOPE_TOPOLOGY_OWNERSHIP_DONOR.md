@@ -76,6 +76,35 @@ entity_boundary:
 
 غياب `entity_boundary` مكتملًا في أي رحلة DSH فيها Partner أو Store = `FIX_REQUIRED`.
 
+وسّع `topic_definition` بهذه الحقول عندما تنطبق شروط ملحق SaaS/Tenancy:
+
+```yaml
+saas_context:
+  mode: NOT_APPLICABLE | SAAS_READY_DEFERRED | SAAS_ACTIVE
+  tenant_entity_defined: true | false
+  tenant_context_source:
+  tenant_selection_authority:
+  tenant_owned_entities:
+  global_entities:
+  tenant_isolation_model:
+  cross_tenant_access_policy:
+  privileged_cross_tenant_workflow:
+  tenant_data_classification:
+  tenant_data_residency:
+  tenant_export_required: true | false
+  tenant_deletion_required: true | false
+  tenant_backup_restore_required: true | false
+  tenant_observability_required: true | false
+  tenant_quota_required: true | false
+  entitlement_impact: NONE | READ_ONLY | REQUIRED
+  subscription_impact: NONE | READ_ONLY | REQUIRED
+  metering_impact: NONE | READ_ONLY | REQUIRED
+  billing_impact: NONE | READ_ONLY | REQUIRED
+  saas_activation_gate_required: true | false
+```
+
+إذا كانت الرحلة تمس بيانات مملوكة لمستأجر أو عملية عابرة للمستأجرين ولم تملأ `saas_context` فالنتيجة `FIX_REQUIRED`.
+
 ### 11.1) Entity Boundary Gate — Partner vs Store
 
 لا يجوز استخدام `Partner` و`Store` كمرادفين داخل أي رحلة DSH.

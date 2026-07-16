@@ -2,7 +2,7 @@
 
 **Package:** Unified Operational Journey Protocol — v3 modular strict + Amendment v2
 **File:** 00 of 12
-**File count:** 12 Markdown files (10 protocol files + 2 execution amendments) + 1 trace file
+**File count:** 12 core Markdown files (10 protocol files + 2 execution amendments) + conditional annexes + 1 trace file
 **Repository:** `<REPO_REMOTE>`
 **Remote ref:** `<REF>`
 **Source path:** governance/operational_journey_protocol_package (self-contained) (see also `LEGACY_SOURCE_TRACE.md`)
@@ -40,6 +40,8 @@
 | `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | معيار القبول النهائي، الأمر المختصر، وقاعدة الخاتمة. |
 | `10_EXECUTION_PLAN_NO_SKIP_GATE.md` | Amendment: Execution Plan No-Skip Gate, docker_hosting_runtime_matrix, guards محصودة من `command_old_new`. |
 | `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` | Amendment: تقييد التنفيذ بوضع Code-First / Fix-First / Minimal Evidence / Full-Stack Multi-Surface. |
+| `annexes/SAAS_READINESS_AND_TENANCY_GATES.md` | Conditional mandatory annex for SaaS readiness, tenant boundaries, tenant isolation, and delayed commercial SaaS activation. |
+| `sdlc/` | Derived support package for SDLC stage-gate manifests, schemas, profiles, templates, and guard validation. |
 | `LEGACY_SOURCE_TRACE.md` | trace-only: تتبع مصادر ما قبل الحزمة (command_old_new, command_operational_journey_unified). |
 
 > قاعدة حاكمة: الملفات القديمة `tools/plan/command_operational_journey_unified` و `tools/plan/command_old_new` مؤرشفة ومحذوفة بالكامل، ولا تُستخدم في التشغيل مطلقًا. الحزمة الحالية هي المصدر الذاتي الوحيد للحوكمة.
@@ -355,6 +357,16 @@ package_changelog:
     change: >-
       إضافة بند منع التنسيقات السطرية (No Inline CSS Styles) إلى الملف 11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md.
     reason: توحيد سياسة التنسيق في الواجهات ومنع استخدام التنسيقات السطرية (inline CSS).
+  - date: 2026-07-16
+    change: >-
+      إضافة ملحق SAAS_READINESS_AND_TENANCY_GATES.md كملحق مشروط إلزامي عندما تمس الرحلة
+      بيانات مملوكة لمستأجر أو عمليات عابرة للمستأجرين أو حدود SaaS مستقبلية.
+    reason: تثبيت وضع SaaS-ready deferred دون تفعيل SaaS تجاري مبكر.
+  - date: 2026-07-16
+    change: >-
+      إضافة حزمة sdlc/ كملفات دعم مشتقة من 26_SDLC_TEAM_AND_STAGE_GATES.md مع قوالب
+      ومخططات وملفات profile قابلة للتحقق عبر guard:sdlc.
+    reason: جعل Stage Gate قابلاً للقراءة والتحقق آلياً دون إنشاء سلطة موازية.
 ```
 
 

@@ -44,6 +44,8 @@ type Variable struct {
 	ScopeID        string               `json:"scopeId,omitempty"`
 	Revision       string               `json:"revision"`
 	Status         PlatformControlState `json:"status"`
+	EffectiveFrom  *time.Time           `json:"effectiveFrom,omitempty"`
+	ExpiresAt      *time.Time           `json:"expiresAt,omitempty"`
 }
 
 type FeatureFlag struct {
