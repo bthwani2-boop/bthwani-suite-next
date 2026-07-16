@@ -11,7 +11,7 @@ import { buildOperationsHref } from './operations.registry';
 import { Box } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
-import { fetchOperatorSpecialRequests, type SpecialRequestRow } from '../../shared/operations/dsh-special-requests-adapter';
+import { fetchOperatorSpecialRequests, type DshSpecialRequestResponse } from '../../shared/special-requests';
 
 export type AwnakScreenProps = {
   hubHref?: string;
@@ -22,17 +22,21 @@ const STAGE_ORDER = Object.keys(AWNAK_STAGE_LABELS) as Array<keyof typeof AWNAK_
 
 export function AwnakScreen({ hubHref: _hubHref, subGroup }: AwnakScreenProps) {
   const router = useRouter();
-  const [requests, setRequests] = React.useState<SpecialRequestRow[]>([]);
+  const [requests, setRequests] = React.useState<DshSpecialRequestResponse[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     let active = true;
-    fetchOperatorSpecialRequests({ requestType: 'awnak' }).then(res => {
-      if (active) {
-        if (res.kind === 'ok') setRequests(res.requests);
-        setLoading(false);
-      }
-    });
+    fetchOperatorSpecialRequests({ requestType: 'AWNAK_ERRAND' })
+      .then(res => {
+        if (active) {
+          setRequests(res.requests ?? []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
     return () => { active = false; };
   }, []);
 
@@ -54,10 +58,10 @@ export function AwnakScreen({ hubHref: _hubHref, subGroup }: AwnakScreenProps) {
     statusTone: r.status === 'completed' ? 'success' : r.status === 'cancelled' ? 'danger' : 'warning',
     risk: r.status === 'processing' ? 'متوسط' : 'neutral',
     nextAction: 'مراجعة',
-    note: r.customerNotes,
+    note: r.customerNotes ?? '',
     owner: r.assignedOperatorId || 'غير مسند',
     sla: r.createdAt,
-    captainId: r.dispatchAssignmentId,
+    captainId: r.dispatchAssignmentId ?? '',
   }));
 
   return (

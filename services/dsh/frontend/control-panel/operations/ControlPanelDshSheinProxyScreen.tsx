@@ -11,7 +11,7 @@ import { buildOperationsHref } from './operations.registry';
 import { Box } from '@bthwani/ui-kit';
 import styles from '../shared/control-panel-surface.module.css';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../shared/ControlPanelDshDecisionBoard';
-import { fetchOperatorSpecialRequests, type SpecialRequestRow } from '../../shared/operations/dsh-special-requests-adapter';
+import { fetchOperatorSpecialRequests, type DshSpecialRequestResponse } from '../../shared/special-requests';
 
 export type ControlPanelDshSheinProxyScreenProps = {
   hubHref?: string;
@@ -22,17 +22,21 @@ const STAGE_ORDER = Object.keys(SHEIN_PROXY_STAGE_LABELS) as Array<keyof typeof 
 
 export function ControlPanelDshSheinProxyScreen({ hubHref: _hubHref, subGroup }: ControlPanelDshSheinProxyScreenProps) {
   const router = useRouter();
-  const [data, setData] = React.useState<SpecialRequestRow[]>([]);
+  const [data, setData] = React.useState<DshSpecialRequestResponse[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     let active = true;
-    fetchOperatorSpecialRequests({ requestType: 'shein' }).then(res => {
-      if (active) {
-        if (res.kind === 'ok') setData(res.requests);
-        setLoading(false);
-      }
-    });
+    fetchOperatorSpecialRequests({ requestType: 'SHEIN_ASSISTED_PURCHASE' })
+      .then(res => {
+        if (active) {
+          setData(res.requests ?? []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
     return () => { active = false; };
   }, []);
 
@@ -52,7 +56,7 @@ export function ControlPanelDshSheinProxyScreen({ hubHref: _hubHref, subGroup }:
     statusLabel: r.status,
     statusTone: r.status === 'completed' ? 'success' : r.status === 'cancelled' ? 'danger' : 'warning',
     nextStep: 'مراجعة',
-    note: r.customerNotes,
+    note: r.customerNotes ?? '',
     owner: r.assignedOperatorId || 'غير مسند',
     sla: r.createdAt,
     total: r.estimatedAmountReference ? `${r.estimatedAmountReference} ${r.currency}` : '—',
