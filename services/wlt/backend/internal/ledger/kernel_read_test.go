@@ -43,13 +43,14 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 	}
 	ctx := context.Background()
 	actorID := uniqueActorID("field-agent")
+	currency := "TST"
 
 	before, err := BuildFinancialSummary(ctx, db)
 	if err != nil {
 		t.Fatalf("BuildFinancialSummary (before): %v", err)
 	}
-	walletBefore := findAccountBalance(findCurrencySummary(before, "YER"), "wallet")
-	receivableBefore := findAccountBalance(findCurrencySummary(before, "YER"), "platform_commission_receivable")
+	walletBefore := findAccountBalance(findCurrencySummary(before, currency), "wallet")
+	receivableBefore := findAccountBalance(findCurrencySummary(before, currency), "platform_commission_receivable")
 	var walletBeforeBalance, receivableBeforeBalance int64
 	if walletBefore != nil {
 		walletBeforeBalance = walletBefore.BalanceMinorUnits
@@ -65,8 +66,8 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 		}
 		defer tx.Rollback()
 		lines := []LedgerLine{
-			{AccountType: "platform_commission_receivable", DebitCredit: receivableSide, AmountMinorUnits: amount, Currency: "YER"},
-			{AccountType: "wallet", ActorType: "captain", ActorID: actorID, DebitCredit: walletSide, AmountMinorUnits: amount, Currency: "YER"},
+			{AccountType: "platform_commission_receivable", DebitCredit: receivableSide, AmountMinorUnits: amount, Currency: currency},
+			{AccountType: "wallet", ActorType: "captain", ActorID: actorID, DebitCredit: walletSide, AmountMinorUnits: amount, Currency: currency},
 		}
 		if _, err := PostLedgerTransaction(ctx, tx, transactionType, "test", actorID, lines, Actor{ID: "system", Type: "system"}); err != nil {
 			t.Fatalf("post %s: %v", transactionType, err)
@@ -85,13 +86,13 @@ func TestBuildFinancialSummary_NormalBalanceSideMatchesRealWalletDirection(t *te
 	if err != nil {
 		t.Fatalf("BuildFinancialSummary (after): %v", err)
 	}
-	walletAfter := findAccountBalance(findCurrencySummary(after, "YER"), "wallet")
-	receivableAfter := findAccountBalance(findCurrencySummary(after, "YER"), "platform_commission_receivable")
+	walletAfter := findAccountBalance(findCurrencySummary(after, currency), "wallet")
+	receivableAfter := findAccountBalance(findCurrencySummary(after, currency), "platform_commission_receivable")
 	if walletAfter == nil {
-		t.Fatalf("expected a YER wallet account balance after posting")
+		t.Fatalf("expected a %s wallet account balance after posting", currency)
 	}
 	if receivableAfter == nil {
-		t.Fatalf("expected a YER platform_commission_receivable account balance after posting")
+		t.Fatalf("expected a %s platform_commission_receivable account balance after posting", currency)
 	}
 
 	walletDelta := walletAfter.BalanceMinorUnits - walletBeforeBalance

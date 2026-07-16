@@ -345,7 +345,7 @@ func UpdateNode(ctx context.Context, db *sql.DB, id string, input NodePatchInput
 		allows_product_proposal=COALESCE($8, allows_product_proposal),
 		allows_store_product_custom_image=COALESCE($9, allows_store_product_custom_image),
 		requires_catalog_review=COALESCE($10, requires_catalog_review),
-		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now(), version = version + 1, version=version+1
+		requires_product_catalog=COALESCE($11, requires_product_catalog), updated_at=now(), version = version + 1
 		WHERE id=$12 AND ($13::int IS NULL OR version=$13)`,
 		nameAr, input.NameEn, input.Icon, input.SortOrder, input.IsActive,
 		input.IsClientVisible, input.RequiresBarcode, input.AllowsProductProposal,
@@ -573,7 +573,7 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 		canonical_name_en=COALESCE($3, canonical_name_en), brand=COALESCE($4, brand),
 		barcode=COALESCE($5, barcode), gtin=COALESCE($6, gtin), sku=COALESCE($7, sku),
 		unit=COALESCE(NULLIF($8::text,''), unit), measurement_type=COALESCE(NULLIF($9::text,''), measurement_type),
-		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now(), version = version + 1, version=version+1
+		approval_status=COALESCE($10, approval_status), is_active=COALESCE($11, is_active), updated_at=now(), version = version + 1
 		WHERE id=$12 AND ($13::int IS NULL OR version=$13)`,
 		input.CategoryNodeID, canonicalNameAr, input.CanonicalNameEn, input.Brand,
 		input.Barcode, input.GTIN, input.SKU, input.Unit, input.MeasurementType,
@@ -759,9 +759,13 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 	// does not itself verify the node's domain, so a mismatched node could
 	// silently borrow another domain's policy (or the wrong node-scoped
 	// policy) unless this is checked here first.
+	var categoryNodeID *string
 	var nodeID string
 	if input.CategoryNodeID != nil {
 		nodeID = strings.TrimSpace(*input.CategoryNodeID)
+		if nodeID != "" {
+			categoryNodeID = &nodeID
+		}
 	}
 	if nodeID != "" {
 		node, err := GetNode(ctx, db, nodeID)
@@ -798,7 +802,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 		(id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode, image_object_key,
 		 source_surface, source_actor_id, source_store_id, status)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'partner-proposed')`,
-		id, strings.TrimSpace(input.ProposedNameAr), input.ProposedNameEn, input.DomainID, input.CategoryNodeID,
+		id, strings.TrimSpace(input.ProposedNameAr), input.ProposedNameEn, input.DomainID, categoryNodeID,
 		input.Brand, input.Barcode, input.ImageObjectKey, input.SourceSurface, actorID, input.SourceStoreID)
 	if err != nil {
 		return ProductProposal{}, err
@@ -976,7 +980,7 @@ func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProdu
 		  unit_price=EXCLUDED.unit_price, currency=EXCLUDED.currency, available=EXCLUDED.available,
 		  stock_status=EXCLUDED.stock_status, local_note=EXCLUDED.local_note,
 		  custom_image_object_key=EXCLUDED.custom_image_object_key,
-		  publication_status=EXCLUDED.publication_status, updated_at=now(), version = version + 1, version=dsh_store_assortments.version+1
+		  publication_status=EXCLUDED.publication_status, updated_at=now(), version = dsh_store_assortments.version + 1
 		WHERE ($12::int IS NULL OR dsh_store_assortments.version=$12)`,
 		id, storeID, masterProductID, input.UnitPrice, currency, input.Available, stockStatus, input.LocalNote,
 		input.CustomImageObjectKey, publicationStatus, actorID, input.ExpectedVersion)
@@ -1611,7 +1615,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 
 	case "catalog-approved":
 		if proposal.AdoptedMasterProductID != nil {
-			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now(), version = version + 1, version=version+1 WHERE id=$1`, *proposal.AdoptedMasterProductID)
+			_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now(), version = version + 1 WHERE id=$1`, *proposal.AdoptedMasterProductID)
 			if err != nil {
 				return ProductProposal{}, err
 			}
@@ -1693,7 +1697,7 @@ func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id 
 			}
 		}
 
-		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now(), version = version + 1, version=dsh_store_assortments.version+1 WHERE store_id=$2 AND master_product_id=$3`,
+		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now(), version = version + 1 WHERE store_id=$2 AND master_product_id=$3`,
 			actorID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID)
 		if err != nil {
 			return ProductProposal{}, err
@@ -2253,7 +2257,7 @@ func syncProductImageProjection(ctx context.Context, tx *sql.Tx, productID strin
 		key := primaryObjectKey.String
 		objectKey = &key
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET canonical_image_object_key=$1, version=version+1, updated_at=now(), version = version + 1 WHERE id=$2`, objectKey, productID)
+	_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET canonical_image_object_key=$1, updated_at=now(), version = version + 1 WHERE id=$2`, objectKey, productID)
 	return err
 }
 

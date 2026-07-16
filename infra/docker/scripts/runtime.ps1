@@ -840,7 +840,7 @@ function Invoke-DshSmoke {
 
   # Attach an image to the Master Product so it can be approved and client-visible
   $imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
-  Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/primary" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10
+  Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10
 
   # Transition to catalog-approved
   $transBody4 = @{ nextStatus = "catalog-approved"; note = "smoke approve" } | ConvertTo-Json
