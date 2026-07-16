@@ -3,15 +3,15 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
-import { Platform, ActivityIndicator } from "react-native";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import {
   configureIdentitySession,
   configureIdentitySessionStorage,
-  useIdentitySession,
   type SessionStorageAdapter,
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
+import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -31,7 +31,9 @@ function AppContent() {
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
       <View style={styles.screen}>
-        <DshPartnerSurface />
+        <IdentitySessionGate requiredRole="partner" requiredSurface="app-partner">
+          <DshPartnerSurface />
+        </IdentitySessionGate>
       </View>
     </View>
   );

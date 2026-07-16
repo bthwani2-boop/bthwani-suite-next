@@ -14,6 +14,7 @@ import {
   type SessionStorageAdapter,
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
+import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 
 // Only call this from app-field's own tree — expo-secure-store is only
 // installed there, not in app-partner/app-client/app-captain.
@@ -102,7 +103,9 @@ function AppContent() {
   return (
     <View style={styles.root}>
       <View style={styles.screen}>
-        <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
+        <IdentitySessionGate requiredRole="field" requiredSurface="app-field">
+          <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
+        </IdentitySessionGate>
       </View>
     </View>
   );

@@ -179,10 +179,6 @@ export function fieldCreateDraft(input: DshCreatePartnerInput): Promise<DshPartn
   return request("/dsh/field/partners/drafts", { method: "POST", body: input });
 }
 
-export function fieldSubmitPartner(partnerId: string): Promise<DshPartner> {
-  return request(`/dsh/field/partners/${partnerId}/submit`, { method: "POST" });
-}
-
 // ── Partner: analytics ────────────────────────────────────────────────────
 
 export function fetchPartnerPerformance(period: 'today' | 'week' | 'month' = 'today'): Promise<import('./partner.types').DshPartnerPerformanceResponse> {

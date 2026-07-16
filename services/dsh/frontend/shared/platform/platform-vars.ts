@@ -3,7 +3,6 @@ declare const process: any;
 export interface PlatformVarsConfig {
   dshApiBaseUrl: string | null;
   authBaseUrl: string | null;
-  dshAuthBearerToken: string | null;
   dshClientId: string | null;
   mediaBaseUrl: string | null;
   devMediaBaseUrl: string | null;
@@ -17,7 +16,6 @@ export interface PlatformVarsConfig {
 export const DEFAULT_PLATFORM_VARS: PlatformVarsConfig = {
   dshApiBaseUrl: null,
   authBaseUrl: null,
-  dshAuthBearerToken: null,
   dshClientId: null,
   mediaBaseUrl: null,
   devMediaBaseUrl: null,
@@ -42,7 +40,6 @@ export class PlatformVarsRegistry {
 
       this.config.dshApiBaseUrl = (env.EXPO_PUBLIC_DSH_API_BASE_URL ?? env.NEXT_PUBLIC_DSH_API_BASE_URL ?? null)?.trim() || null;
       this.config.authBaseUrl = (env.EXPO_PUBLIC_AUTH_BASE_URL ?? env.NEXT_PUBLIC_AUTH_BASE_URL ?? null)?.trim() || null;
-      this.config.dshAuthBearerToken = (env.EXPO_PUBLIC_DSH_AUTH_BEARER_TOKEN ?? null)?.trim() || null;
       this.config.dshClientId = (env.EXPO_PUBLIC_DSH_CLIENT_ID ?? null)?.trim() || null;
       this.config.mediaBaseUrl = (env.EXPO_PUBLIC_MEDIA_BASE_URL ?? null)?.trim() || null;
       this.config.devMediaBaseUrl = (

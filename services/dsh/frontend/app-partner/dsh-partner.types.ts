@@ -67,7 +67,6 @@ export type DshPartnerHubSurfaceProps = {
   teamMembers?: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
   onToggleAvailability?: (isAvailable: boolean) => void;
   canonicalStoreId?: string;
-  dshAuthBearerToken?: string | null;
   dshClientId?: string | null;
   walletBalanceLabel?: string;
 };

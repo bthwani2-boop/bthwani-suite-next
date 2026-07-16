@@ -57,7 +57,7 @@ export function DshCaptainSurface(props: DshCaptainSurfaceProps) {
 function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshCaptainSurfaceProps) {
   const identity = useIdentitySession();
   const { theme } = useTheme();
-  const { dshAuthBearerToken, dshClientId } = usePlatformVars();
+  const { dshClientId } = usePlatformVars();
   
   // Enforce Identity Bootstrap: User identity comes from token subject/session, not from props.
   const captainRuntimeId = identity.state.kind === 'authenticated' ? identity.state.identity.subject || '' : '';
@@ -206,7 +206,6 @@ function DshCaptainSurfaceInner({ command, captainId, walletBalanceLabel }: DshC
         activeOrderDraft={ui.activeOrderDraft}
         showBottomNav={derived.showBottomNav}
         bottomNavNode={captainBottomNavBar}
-        dshAuthBearerToken={dshAuthBearerToken}
         dshClientId={dshClientId}
         isCaptainAvailable={derived.isCaptainAvailable}
         captainDisplayName=""

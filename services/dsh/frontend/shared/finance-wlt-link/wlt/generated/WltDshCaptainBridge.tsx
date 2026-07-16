@@ -80,7 +80,6 @@ function ActionStrip({ icon, title, subtitle, expanded, onPress, children }: Act
 export type WltDshCaptainBridgeProps = {
   section?: string;
   onBack?: () => void;
-  dshAuthBearerToken?: string | null;
   dshClientId?: string | null;
 };
 

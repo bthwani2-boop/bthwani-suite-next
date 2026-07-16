@@ -1153,12 +1153,11 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenStoreCourierSetup,
     onToggleAvailability,
     canonicalStoreId,
-    dshAuthBearerToken,
     dshClientId,
     walletBalanceLabel,
     // ML-T1: partner lifecycle stage for readiness status summary (read-only, summary-only per on-demand contract)
     partnerLifecycleStage = 'partner-review' as DshPartnerLifecycleStage,
-  } = props as DshPartnerHubSurfaceProps & { partnerLifecycleStage?: DshPartnerLifecycleStage; dshAuthBearerToken?: string | null; dshClientId?: string | null };
+  } = props as DshPartnerHubSurfaceProps & { partnerLifecycleStage?: DshPartnerLifecycleStage; dshClientId?: string | null };
 
   const [isAvailable, setIsAvailable] = React.useState<boolean>(storeOpen);
 
@@ -1471,7 +1470,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onOpenExpandedWallet={onOpenWalletHub}
           onOpenSettlementReview={onOpenWalletHub}
           onOpenFinancialReport={onOpenWalletHub}
-          dshAuthBearerToken={dshAuthBearerToken}
           dshClientId={dshClientId}
           canonicalStoreId={canonicalStoreId}
         />

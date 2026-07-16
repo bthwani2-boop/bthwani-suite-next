@@ -1,5 +1,5 @@
 import React from 'react';
-import { BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
+import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
 import { Button, Card, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { storeScopeOptions } from './dsh-partner.navigation-bridge';
@@ -31,7 +31,7 @@ export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
 }
 
 function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }: DshPartnerSurfaceProps = {}) {
-  const { dshAuthBearerToken, dshClientId } = usePlatformVars();
+  const { dshClientId } = usePlatformVars();
 
   const {
     state,
@@ -42,6 +42,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     partnerOrdersState,
     partnerOrders,
     deliveryOpsSummary,
+    teamMembers,
   } = useDshPartnerSurfaceModel(initialRoute, initialOrderId);
 
   const {
@@ -89,6 +90,29 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     return () => subscription.remove();
   }, [actions]);
 
+  const bottomActiveId = React.useMemo(() => {
+    if (route === 'inbox') return 'orders';
+    if (route === 'home') {
+      if (accountHubSection === 'wallet') return 'wallet';
+      if (accountHubSection === 'operations') return 'operations';
+      if (accountHubSection === 'inventory') return 'inventory';
+      return 'profile';
+    }
+    if (route === 'inventory-management') return 'inventory';
+    if (route === 'support-directory' || route === 'support-screen' || route === 'order-rejection') return 'operations';
+    return '';
+  }, [route, accountHubSection]);
+
+  if (!selectedStoreScope) {
+    return (
+      <View style={styles.shellContainer}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={COLORS.brand} />
+        </View>
+      </View>
+    );
+  }
+
   const isRTL = I18nManager.isRTL;
   const rowDirection = isRTL ? 'row-reverse' : 'row';
 
@@ -129,18 +153,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   );
 
   const showBottomNav = route !== 'entry';
-  const bottomActiveId = React.useMemo(() => {
-    if (route === 'inbox') return 'orders';
-    if (route === 'home') {
-      if (accountHubSection === 'wallet') return 'wallet';
-      if (accountHubSection === 'operations') return 'operations';
-      if (accountHubSection === 'inventory') return 'inventory';
-      return 'profile';
-    }
-    if (route === 'inventory-management') return 'inventory';
-    if (route === 'support-directory' || route === 'support-screen' || route === 'order-rejection') return 'operations';
-    return '';
-  }, [route, accountHubSection]);
 
   const navItems = [
     { id: 'operations', label: 'العمليات', icon: 'people-outline', activeIcon: 'people' },
@@ -224,7 +236,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       selectedStoreScope={selectedStoreScope}
       selectedStoreScopeId={selectedStoreScopeId}
       deliveryOpsSummary={deliveryOpsSummary}
-      dshAuthBearerToken={dshAuthBearerToken ?? undefined}
       dshClientId={dshClientId ?? undefined}
       renderMainShell={renderMainShell}
       renderSurfaceShell={renderSurfaceShell}
@@ -250,10 +261,10 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
       handleMarkReady={handleMarkReady}
       refreshOrders={actions.refreshOrders}
-      teamMembers={model.teamMembers}
+      teamMembers={teamMembers}
       onInviteMember={actions.onInviteMember}
       onMemberAction={actions.onMemberAction}
-      scopes={model.scopes}
+      scopes={scopes}
     />
   );
 }

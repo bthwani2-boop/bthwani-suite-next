@@ -64,7 +64,6 @@ type Props = {
   selectedStoreScope: { label: string };
   selectedStoreScopeId: string;
   deliveryOpsSummary: { outForDelivery: number; handoffReady: number; deliveredToday: number; delayedRisk: number };
-  dshAuthBearerToken: string | undefined;
   dshClientId: string | undefined;
   renderMainShell: (content: React.ReactNode) => React.ReactElement;
   renderSurfaceShell: (content: React.ReactNode) => React.ReactElement;
@@ -124,7 +123,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     route, initialOrderId, activeOrderId, ordersSearchMode, accountHubSection,
     editingProductId, selectedSupportScreen, supportCommandContext,
     partnerOrdersState, partnerOrders, runtimePartnerProfile, selectedStoreScope,
-    deliveryOpsSummary, dshAuthBearerToken, dshClientId,
+    deliveryOpsSummary, dshClientId,
     renderMainShell, renderSurfaceShell,
     setRoute, setActiveOrderId, setOrdersSearchMode, openOrdersBoard, openOrdersSearch, openAccountHub,
     goBackToHub, openSupportDirectory, returnToSupportDirectory, openSupportScreen,
@@ -162,7 +161,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
         onOpenSupportScreen={(screenId) => openSupportScreen(screenId, 'hub')}
         onOpenStoreCourierSetup={openStoreCourier}
         canonicalStoreId={activeStoreRuntimeId}
-        dshAuthBearerToken={dshAuthBearerToken ?? null} dshClientId={dshClientId ?? null}
+        dshClientId={dshClientId ?? null}
       />,
     ) as React.ReactElement;
   }

@@ -13,7 +13,6 @@ export type WltDshPartnerBridgeProps = {
   readonly onOpenExpandedWallet?: (() => void) | undefined;
   readonly onOpenSettlementReview?: (() => void) | undefined;
   readonly onOpenFinancialReport?: (() => void) | undefined;
-  readonly dshAuthBearerToken?: string | null | undefined;
   readonly dshClientId?: string | null | undefined;
   readonly canonicalStoreId?: string | undefined;
 };
