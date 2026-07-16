@@ -140,7 +140,7 @@
     "guard:governance-schema": "node tools/guards/governance-schema-gate.mjs",
     "guard:agent-governance": "node tools/guards/agent-governance-gate.mjs",
     "guard:guard-registry": "node tools/guards/guard-registry-gate.mjs",
-    "guard:sdlc": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/guards/sdlc/Invoke-SdlcGate.ps1",
+    "guard:sdlc": "node tools/guards/sdlc/invoke-sdlc-gate.mjs",
     "guard:markdown-governance": "node -e \"try { require('child_process').execSync('npx markdownlint-cli2 \\\"governance/**/*.md\\\" \\\"AGENTS.md\\\" \\\".github/**/*.md\\\"', { stdio: 'inherit' }); } catch (e) { console.log('Markdown linting completed with warnings.'); }\"",
     "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose",
     "guard:governance-all": "pnpm run guard:governance-schema && pnpm run guard:agent-governance && pnpm run guard:guard-registry && pnpm run guard:markdown-governance",
