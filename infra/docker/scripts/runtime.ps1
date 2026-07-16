@@ -1122,6 +1122,15 @@ elseif ($Action -eq "reset") {
   docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d postgres
   Wait-ForPostgres
 
+  if (($ProfileList -contains "media") -or ($ProfileList -contains "dsh")) {
+    docker compose @(Get-ComposeBase) @(Get-ComposeProfileArgs) up -d minio
+    if ($LASTEXITCODE -ne 0) { throw "MinIO start failed for reset (exit $LASTEXITCODE)" }
+
+    Wait-ForMinIO
+    Invoke-MinioInit
+    Invoke-DshMediaSeed
+  }
+
   # Run database migrations before starting the API containers
   if ($ProfileList -contains "identity") {
     Invoke-IdentityMigrate

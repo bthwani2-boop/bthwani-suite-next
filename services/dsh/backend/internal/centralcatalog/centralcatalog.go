@@ -255,14 +255,14 @@ type NodePatchInput struct {
 const nodeColumns = `id, domain_id, parent_id, level, slug, name_ar, name_en, icon, sort_order,
 	is_active, is_client_visible, requires_barcode, allows_product_proposal,
 	allows_store_product_custom_image, requires_catalog_review, requires_product_catalog,
-	version, created_at, updated_at, version`
+	created_at, updated_at, version`
 
 func scanNode(scanner interface{ Scan(...any) error }) (Node, error) {
 	var n Node
 	err := scanner.Scan(&n.ID, &n.DomainID, &n.ParentID, &n.Level, &n.Slug, &n.NameAr, &n.NameEn, &n.Icon,
 		&n.SortOrder, &n.IsActive, &n.IsClientVisible, &n.RequiresBarcode, &n.AllowsProductProposal,
 		&n.AllowsStoreProductCustomImage, &n.RequiresCatalogReview, &n.RequiresProductCatalog,
-		&n.Version, &n.CreatedAt, &n.UpdatedAt, &n.Version)
+		&n.CreatedAt, &n.UpdatedAt, &n.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return n, ErrNotFound
 	}
@@ -889,7 +889,7 @@ func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, e
 	var a StoreAssortment
 	err := scanner.Scan(&a.ID, &a.StoreID, &a.MasterProductID, &a.UnitPrice, &a.Currency, &a.Available,
 		&a.StockStatus, &a.LocalNote, &a.CustomImageObjectKey, &a.PublicationStatus, &a.SubmittedBy,
-		&a.ApprovedBy, &a.CreatedAt, &a.UpdatedAt, &a.Version, &a.Version)
+		&a.ApprovedBy, &a.CreatedAt, &a.UpdatedAt, &a.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -1003,6 +1003,7 @@ func scanInto(dst *StoreAssortment, row *sql.Row) error {
 // ── Platform catalog policy (commission/fee/capability flags per category) ─
 
 type CatalogPolicy struct {
+	Version                                  int       `json:"version"`
 	ID                                       string    `json:"id"`
 	DomainID                                 *string   `json:"domainId"`
 	NodeID                                   *string   `json:"nodeId"`
@@ -1048,7 +1049,7 @@ func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) 
 		&p.AllowsProductProposal, &p.RequiresBarcode, &p.RequiresCatalogReview, &p.RequiresMarketingReview,
 		&p.RequiresProductImage, &p.RequiresCategoryImage, &p.RequiresDescription, &p.RequiresBrand, &p.RequiresUnit,
 		&p.ProductDataQualityMinimumScore, &p.MaxGalleryImages, &p.ManualRequestMode, &p.IsActive,
-		&p.EffectiveFrom, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
+		&p.EffectiveFrom, &p.Notes, &p.CreatedAt, &p.UpdatedAt, &p.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p, ErrNotFound
 	}
@@ -2346,6 +2347,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 }
 
 type CatalogAssetLink struct {
+	Version    int       `json:"version"`
 	ID         string    `json:"id"`
 	AssetID    string    `json:"assetId"`
 	EntityType string    `json:"entityType"`
@@ -2381,7 +2383,7 @@ func publicMediaPath(assetID string) string {
 func scanAssetLinkWithAsset(scanner interface{ Scan(...any) error }) (CatalogAssetLinkWithAsset, error) {
 	var l CatalogAssetLinkWithAsset
 	err := scanner.Scan(&l.ID, &l.AssetID, &l.EntityType, &l.EntityID, &l.Role, &l.SortOrder, &l.IsPrimary,
-		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.ObjectKey, &l.AltAr, &l.AltEn, &l.MimeType)
+		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.Version, &l.ObjectKey, &l.AltAr, &l.AltEn, &l.MimeType)
 	if errors.Is(err, sql.ErrNoRows) {
 		return l, ErrNotFound
 	}
@@ -2395,7 +2397,7 @@ func scanAssetLinkWithAsset(scanner interface{ Scan(...any) error }) (CatalogAss
 func scanAssetLink(scanner interface{ Scan(...any) error }) (CatalogAssetLink, error) {
 	var l CatalogAssetLink
 	err := scanner.Scan(&l.ID, &l.AssetID, &l.EntityType, &l.EntityID, &l.Role, &l.SortOrder, &l.IsPrimary,
-		&l.Status, &l.CreatedAt, &l.UpdatedAt)
+		&l.Status, &l.CreatedAt, &l.UpdatedAt, &l.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return l, ErrNotFound
 	}
