@@ -610,6 +610,7 @@ components:
       required:
         - subject
         - tenantId
+        - phoneE164
         - roles
         - permissions
         - authState
@@ -622,6 +623,9 @@ components:
           type: string
           minLength: 1
         tenantId:
+          type: string
+          minLength: 1
+        phoneE164:
           type: string
           minLength: 1
         roles:

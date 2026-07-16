@@ -162,7 +162,7 @@ export type OperationsNormalizationResult =
       kind: 'redirect';
       sourceWorkspace: AnyOperationsWorkspaceId;
       section: NonOperationsSectionRootId;
-      href: `/${NonOperationsSectionRootId}`;
+      href: `/dsh/${NonOperationsSectionRootId}`;
     };
 
 export type OperationsViewState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';

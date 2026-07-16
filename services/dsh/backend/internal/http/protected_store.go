@@ -113,6 +113,7 @@ func (s *protectedStoreServer) mediaClient() *media.Client {
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := context.WithValue(r.Context(), "actor_id", actor.ID)
+	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
 	return r.WithContext(ctx)
 }
@@ -506,6 +507,30 @@ func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWrit
 	partner.HandleInviteStoreTeamMember(s.db)(w, partnerRequestWithActor(r, actor))
 }
 
+func (s *protectedStoreServer) handlePartnerListInvites(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	partner.HandleListInvites(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerAcceptInvite(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	partner.HandleAcceptInvite(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerRejectInvite(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	partner.HandleRejectInvite(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
 func (s *protectedStoreServer) handlePartnerTeamMemberAction(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
@@ -598,7 +623,7 @@ func (s *protectedStoreServer) requireActor(
 	}
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role}, true
+			return store.StoreActor{ID: identity.Subject, Role: role, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")

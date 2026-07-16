@@ -870,6 +870,77 @@ func InviteStoreTeamMember(db *sql.DB, storeID string, input InviteTeamMemberInp
 	return err
 }
 
+// ListInvitesForPhone finds all pending team member records matching phone.
+func ListInvitesForPhone(db *sql.DB, phone string) ([]StoreTeamMember, error) {
+	rows, err := db.Query(`
+		SELECT id, name, role, status, branch_assignment, permissions_summary,
+		       delivery_assignment, invite_lifecycle, operational_impact, audit_note
+		FROM dsh_store_team_members
+		WHERE invited_identity = $1 AND status = 'invited'
+		ORDER BY created_at ASC`, phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	members := []StoreTeamMember{}
+	for rows.Next() {
+		var m StoreTeamMember
+		if err := rows.Scan(&m.ID, &m.Name, &m.Role, &m.Status, &m.BranchAssignment,
+			&m.PermissionsSummary, &m.DeliveryAssignment, &m.InviteLifecycle,
+			&m.OperationalImpact, &m.AuditNote); err != nil {
+			return nil, err
+		}
+		m.RoleLabel = roleLabel(m.Role)
+		m.StatusLabel = statusLabel(m.Status)
+		m.InlineActionLabel = inlineActionLabelForStatus(m.Status)
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+// AcceptInvite binds the identity_actor_id and marks the member active.
+func AcceptInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
+	res, err := db.Exec(`
+		UPDATE dsh_store_team_members
+		SET status = 'active',
+		    identity_actor_id = $1,
+		    invite_lifecycle = 'دعوة مقبولة',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $2 AND invited_identity = $3 AND status = 'invited'`,
+		actorID, inviteID, actorPhone)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// RejectInvite marks the member blocked/rejected.
+func RejectInvite(db *sql.DB, inviteID, actorID, actorPhone string) error {
+	res, err := db.Exec(`
+		UPDATE dsh_store_team_members
+		SET status = 'blocked',
+		    identity_actor_id = $1,
+		    invite_lifecycle = 'دعوة مرفوضة',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $2 AND invited_identity = $3 AND status = 'invited'`,
+		actorID, inviteID, actorPhone)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // teamActionStatusMap maps the inlineActionLabel strings this backend itself
 // generates (see inlineActionLabelForStatus) back to the resulting status.
 // executeDshPartnerTeamMemberAction's actionLabel is free-form per the

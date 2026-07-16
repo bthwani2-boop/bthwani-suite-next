@@ -396,6 +396,7 @@ export interface components {
         ActorIdentity: {
             subject: string;
             tenantId: string;
+            phoneE164: string;
             roles: ("client" | "partner" | "captain" | "field" | "operator" | "system")[];
             permissions: components["schemas"]["Permission"][];
             /** @constant */

@@ -4695,6 +4695,79 @@ paths:
                     items: { $ref: "#/components/schemas/DshPartnerOperationalScope" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
 
+  /dsh/partner/invites:
+    get:
+      operationId: listDshPartnerInvites
+      summary: List pending team invitations for the authenticated actor across all stores.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Pending invites.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invites]
+                properties:
+                  invites:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPartnerTeamMember" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /dsh/partner/invites/{inviteId}/accept:
+    post:
+      operationId: acceptDshPartnerInvite
+      summary: Accept a pending team invitation.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Invite accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                required: [success]
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/partner/invites/{inviteId}/reject:
+    post:
+      operationId: rejectDshPartnerInvite
+      summary: Reject a pending team invitation.
+      tags: [DshPartner]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Invite rejected.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                required: [success]
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /dsh/field/partners:
     get:
       operationId: listFieldPartnerDrafts

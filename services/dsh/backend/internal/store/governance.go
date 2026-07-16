@@ -19,8 +19,9 @@ var (
 )
 
 type StoreActor struct {
-	ID   string
-	Role string
+	ID        string
+	Role      string
+	PhoneE164 string
 }
 
 type StoreScope struct {

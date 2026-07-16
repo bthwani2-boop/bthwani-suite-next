@@ -770,6 +770,67 @@ func HandleInviteStoreTeamMember(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// GET /dsh/partner/invites
+func HandleListInvites(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorPhone, ok := r.Context().Value("actor_phone").(string)
+		if !ok || actorPhone == "" {
+			sendJSON(w, http.StatusOK, map[string]any{"invites": []StoreTeamMember{}})
+			return
+		}
+		invites, err := ListInvitesForPhone(db, actorPhone)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list invites")
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]any{"invites": invites})
+	}
+}
+
+// POST /dsh/partner/invites/{inviteId}/accept
+func HandleAcceptInvite(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		actorPhone, ok := r.Context().Value("actor_phone").(string)
+		if !ok || actorPhone == "" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "actor has no bound phone number")
+			return
+		}
+		err := AcceptInvite(db, r.PathValue("inviteId"), actorID, actorPhone)
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "invite not found")
+			return
+		}
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to accept invite")
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]bool{"success": true})
+	}
+}
+
+// POST /dsh/partner/invites/{inviteId}/reject
+func HandleRejectInvite(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		actorID, _ := actorFromContext(r)
+		actorPhone, ok := r.Context().Value("actor_phone").(string)
+		if !ok || actorPhone == "" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "actor has no bound phone number")
+			return
+		}
+		err := RejectInvite(db, r.PathValue("inviteId"), actorID, actorPhone)
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "invite not found")
+			return
+		}
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to reject invite")
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]bool{"success": true})
+	}
+}
+
 // POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action
 func HandleExecuteStoreTeamMemberAction(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

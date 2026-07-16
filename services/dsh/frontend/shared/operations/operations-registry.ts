@@ -85,15 +85,15 @@ export const NON_OPERATIONS_SECTION_SHORTCUTS: ReadonlyArray<{
   id: NonOperationsSectionRootId;
   label: string;
   description: string;
-  href: `/${NonOperationsSectionRootId}`;
+  href: `/dsh/${NonOperationsSectionRootId}`;
 }> = [
-  { id: 'support', label: 'الدعم', description: 'التذاكر والمتابعة والتصعيد تبقى في قسم الدعم.', href: '/support' },
-  { id: 'finance', label: 'المالية', description: 'الحقائق المالية تبقى في قسم المالية.', href: '/finance' },
-  { id: 'catalogs', label: 'الكتالوجات', description: 'حوكمة الكتالوج تبقى في قسم الكتالوجات.', href: '/catalogs' },
-  { id: 'marketing', label: 'التسويق', description: 'التسويق والنمو يبقيان في قسم التسويق.', href: '/marketing' },
-  { id: 'partners', label: 'الشركاء', description: 'إدارة الشركاء تبقى في قسم الشركاء.', href: '/partners' },
-  { id: 'platform', label: 'المنصة', description: 'السياسات والمتغيرات والـ rollouts تبقى في قسم المنصة.', href: '/platform' },
-  { id: 'administration', label: 'الإدارة', description: 'الأدوار وسلسلة الاعتماد تبقى في قسم الإدارة.', href: '/administration' },
+  { id: 'support', label: 'الدعم', description: 'التذاكر والمتابعة والتصعيد تبقى في قسم الدعم.', href: '/dsh/support' },
+  { id: 'finance', label: 'المالية', description: 'الحقائق المالية تبقى في قسم المالية.', href: '/dsh/finance' },
+  { id: 'catalogs', label: 'الكتالوجات', description: 'حوكمة الكتالوج تبقى في قسم الكتالوجات.', href: '/dsh/catalogs' },
+  { id: 'marketing', label: 'التسويق', description: 'التسويق والنمو يبقيان في قسم التسويق.', href: '/dsh/marketing' },
+  { id: 'partners', label: 'الشركاء', description: 'إدارة الشركاء تبقى في قسم الشركاء.', href: '/dsh/partners' },
+  { id: 'platform', label: 'المنصة', description: 'السياسات والمتغيرات والـ rollouts تبقى في قسم المنصة.', href: '/dsh/platform' },
+  { id: 'administration', label: 'الإدارة', description: 'الأدوار وسلسلة الاعتماد تبقى في قسم الإدارة.', href: '/dsh/administration' },
 ] as const;
 
 type CanonicalMapping = { group: CanonicalOperationsGroupId; subGroup?: string };
@@ -208,7 +208,7 @@ export function normalizeOperationsLocation(
       kind: 'redirect',
       sourceWorkspace: workspace as AnyOperationsWorkspaceId,
       section,
-      href: `/${section}`,
+      href: `/dsh/${section}`,
     };
   }
 
@@ -286,8 +286,8 @@ export function buildOperationsHref(
   return query ? `/dsh/operations?${query}` : '/dsh/operations';
 }
 
-export function getOperationsGroupMeta(groupId: CanonicalOperationsGroupId) {
-  return OPERATIONS_CANONICAL_GROUPS.find((group) => group.id === groupId) ?? OPERATIONS_CANONICAL_GROUPS[0];
+export function getOperationsGroupMeta(groupId: CanonicalOperationsGroupId): OperationsGroupMeta {
+  return OPERATIONS_CANONICAL_GROUPS.find((group) => group.id === groupId) ?? OPERATIONS_CANONICAL_GROUPS[0]!;
 }
 
 const STATE_COPY: Record<Exclude<OperationsViewState, 'ready'>, StateViewCopy> = {

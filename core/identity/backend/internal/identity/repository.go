@@ -461,7 +461,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var sessionID string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.tenant_id, a.roles, a.permissions, a.active,
+		SELECT a.id, a.username, a.password_hash, a.tenant_id, a.phone_e164, a.roles, a.permissions, a.active,
 		       s.id, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id
@@ -469,7 +469,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 		  AND s.revoked_at IS NULL
 		  AND s.access_expires_at > now()
 		  AND a.active = true`, hash).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active, &sessionID, &expiresAt,
 	)
 	if err != nil {
@@ -620,7 +620,7 @@ func toIdentity(actor Actor, sessionID string, expiresAt time.Time) ActorIdentit
 		services[permission.Service] = true
 	}
 	return ActorIdentity{
-		Subject: actor.ID, TenantID: actor.TenantID, Roles: actor.Roles,
+		Subject: actor.ID, TenantID: actor.TenantID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
 		Permissions: actor.Permissions, AuthState: "authenticated",
 		SurfaceAccess: surfaces, ServiceAccess: services,
 		SessionID: sessionID, ExpiresAt: expiresAt,
