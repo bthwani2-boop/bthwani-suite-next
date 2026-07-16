@@ -8,16 +8,14 @@ import type {
 } from './dsh-partner.types';
 import type { DshPartnerOperationalScope } from '../shared/partner/partner.types';
 import { DshPartnerHubSurface } from './account/PartnerHubScreen';
-import {
-  AuctionStatusUpdateScreen,
-  ConversationScreen,
-  InventoryActionScreen,
-  NotificationsScreen,
-  OnboardingActionScreen,
-  OrderActionScreen,
-  OrderIssueScreen,
-  VideoUploadScreen,
-} from './account/OperationScreens';
+import { AuctionStatusUpdateScreen } from './account/AuctionStatusUpdateScreen';
+import { ConversationScreen } from './orders/PartnerConversationScreen';
+import { InventoryActionScreen } from './catalog/InventoryActionScreen';
+import { NotificationsScreen } from './account/NotificationsScreen';
+import { OnboardingActionScreen } from './account/OnboardingActionScreen';
+import { OrderActionScreen } from './orders/OrderActionScreen';
+import { OrderIssueScreen } from './orders/OrderIssueScreen';
+import { VideoUploadScreen } from './account/VideoUploadScreen';
 import { OrdersInboxScreen } from './orders/OrdersInboxScreen';
 import { DshPartnerOrderRejectionScreen, type DshPartnerOrderRejectionScreenProps } from './orders/DshPartnerOrderRejectionScreen';
 import { DshPartnerStoreCourierScreen } from './store/DshPartnerStoreCourierScreen';

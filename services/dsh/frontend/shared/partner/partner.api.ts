@@ -18,6 +18,8 @@ import type {
   DshCreatePartnerFieldVisitRequest,
   DshPartnerListResponse,
   DshPartnerOperationalScope,
+  DshPartnerStoreCourierSettings,
+  DshPartnerCoverageZone,
 } from "./partner.types";
 
 const baseUrl = resolveDshApiBaseUrl();
@@ -148,15 +150,15 @@ export function executePartnerTeamMemberAction(storeId: string, memberId: string
   return request(`/dsh/partner/stores/${storeId}/team/members/${memberId}/action`, { method: "POST", body: { actionLabel } });
 }
 
-export function fetchPartnerStoreCourierSettings(storeId: string): Promise<unknown> {
+export function fetchPartnerStoreCourierSettings(storeId: string): Promise<DshPartnerStoreCourierSettings> {
   return request(`/dsh/partner/stores/${storeId}/courier-settings`);
 }
 
-export function updatePartnerStoreCourierSettings(storeId: string, settings: unknown): Promise<unknown> {
+export function updatePartnerStoreCourierSettings(storeId: string, settings: DshPartnerStoreCourierSettings): Promise<DshPartnerStoreCourierSettings> {
   return request(`/dsh/partner/stores/${storeId}/courier-settings`, { method: "PUT", body: settings });
 }
 
-export function fetchPartnerStoreCoverageZones(storeId: string): Promise<unknown> {
+export function fetchPartnerStoreCoverageZones(storeId: string): Promise<DshPartnerCoverageZone[]> {
   return request(`/dsh/partner/stores/${storeId}/coverage-zones`);
 }
 

@@ -102,15 +102,15 @@ export function DshPartnerStoreCourierScreen({
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    fetchPartnerStoreCourierSettings(storeId).then((data: any) => {
+    fetchPartnerStoreCourierSettings(storeId).then((data) => {
       if (data) {
         setCourierName(data.courierName || '');
         setCourierPhone(data.courierPhone || '');
         setIsActive(data.isActive || false);
-        setPolicy(data.policy || 'free_delivery');
-        setPricingSource(data.pricingSource || 'bthwani_pricing');
-        setCompensation(data.compensation || 'none');
-        setSelectedBranchIds(data.selectedBranchIds || ['all']);
+        setPolicy((data.policy as StoreDeliveryPolicy) || 'free_delivery');
+        setPricingSource((data.pricingSource as StoreDeliveryPricingSource) || 'bthwani_pricing');
+        setCompensation((data.compensation as StoreCourierCompensation) || 'none');
+        setSelectedBranchIds(data.selectedBranchIds?.length ? [...data.selectedBranchIds] : ['all']);
       }
     }).finally(() => {
       setIsLoading(false);

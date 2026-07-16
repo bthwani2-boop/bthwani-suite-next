@@ -392,6 +392,33 @@ export type DshPartnerOperationalScope = {
   readonly permissions: string[];
 };
 
+export type DshPartnerStoreCourierSettings = {
+  readonly courierName: string;
+  readonly courierPhone: string;
+  readonly isActive: boolean;
+  readonly policy: string;
+  readonly pricingSource: string;
+  readonly compensation: string;
+  readonly selectedBranchIds: string[];
+};
+
+export type DshPartnerCoverageZone = {
+  readonly id: string;
+  readonly name: string;
+  readonly status: 'active' | 'pending' | 'blocked';
+  readonly statusLabel: string;
+  readonly branchRelation: string;
+  readonly serviceModeRelation: string;
+  readonly policySummary: string;
+  readonly policyReason: string;
+  readonly operationalImpact: string;
+  readonly pricingReference: string;
+  readonly commissionReference: string;
+  readonly payoutReference: string;
+  readonly reviewActionLabel: string;
+  readonly auditNote: string;
+};
+
 export type PartnerRuntimeProfile = {
   storeName: string;
   branchLabel: string;

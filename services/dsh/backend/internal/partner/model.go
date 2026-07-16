@@ -2,6 +2,7 @@ package partner
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -471,4 +472,117 @@ type PartnerListQuery struct {
 	CreatedByActorID string
 	Limit            int
 	Offset           int
+}
+
+// ─── Store team members ─────────────────────────────────────────────────────
+// Closes the DSH-050 backend gap: app-partner's team management screen
+// (services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx)
+// already calls these operations against the OpenAPI contract; there was no
+// Go implementation until this slice.
+
+type StoreTeamMember struct {
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Role               string `json:"role"`
+	RoleLabel          string `json:"roleLabel"`
+	Status             string `json:"status"`
+	StatusLabel        string `json:"statusLabel"`
+	BranchAssignment   string `json:"branchAssignment"`
+	PermissionsSummary string `json:"permissionsSummary"`
+	DeliveryAssignment string `json:"deliveryAssignment"`
+	InviteLifecycle    string `json:"inviteLifecycle"`
+	OperationalImpact  string `json:"operationalImpact"`
+	AuditNote          string `json:"auditNote"`
+	InlineActionLabel  string `json:"inlineActionLabel"`
+}
+
+type InviteTeamMemberInput struct {
+	Identity         string `json:"identity"`
+	InvitedByActorID string `json:"-"`
+}
+
+func (i InviteTeamMemberInput) Validate() error {
+	if strings.TrimSpace(i.Identity) == "" {
+		return ErrInvalid
+	}
+	return nil
+}
+
+type TeamMemberActionInput struct {
+	ActionLabel string `json:"actionLabel"`
+	ActorID     string `json:"-"`
+}
+
+func (i TeamMemberActionInput) Validate() error {
+	if strings.TrimSpace(i.ActionLabel) == "" {
+		return ErrInvalid
+	}
+	return nil
+}
+
+// ─── Store courier settings ─────────────────────────────────────────────────
+
+type StoreCourierSettings struct {
+	CourierName       string   `json:"courierName"`
+	CourierPhone      string   `json:"courierPhone"`
+	IsActive          bool     `json:"isActive"`
+	Policy            string   `json:"policy"`
+	PricingSource     string   `json:"pricingSource"`
+	Compensation      string   `json:"compensation"`
+	SelectedBranchIDs []string `json:"selectedBranchIds"`
+}
+
+func (i StoreCourierSettings) Validate() error {
+	if strings.TrimSpace(i.CourierName) == "" || strings.TrimSpace(i.CourierPhone) == "" {
+		return ErrInvalid
+	}
+	return nil
+}
+
+// ─── Store coverage zones ───────────────────────────────────────────────────
+
+type StoreCoverageZone struct {
+	ID                  string `json:"id"`
+	Name                string `json:"name"`
+	Status              string `json:"status"`
+	StatusLabel         string `json:"statusLabel"`
+	BranchRelation      string `json:"branchRelation"`
+	ServiceModeRelation string `json:"serviceModeRelation"`
+	PolicySummary       string `json:"policySummary"`
+	PolicyReason        string `json:"policyReason"`
+	OperationalImpact   string `json:"operationalImpact"`
+	PricingReference    string `json:"pricingReference"`
+	CommissionReference string `json:"commissionReference"`
+	PayoutReference     string `json:"payoutReference"`
+	ReviewActionLabel   string `json:"reviewActionLabel"`
+	AuditNote           string `json:"auditNote"`
+}
+
+// ─── Partner operational scopes ─────────────────────────────────────────────
+
+type OperationalScope struct {
+	ScopeID     string   `json:"scopeId"`
+	StoreID     string   `json:"storeId"`
+	PartnerID   string   `json:"partnerId"`
+	DisplayName string   `json:"displayName"`
+	Role        string   `json:"role"`
+	Permissions []string `json:"permissions"`
+}
+
+// scopePermissionsByRole is the auditable source of truth for what each
+// team role can do within a store scope. Referenced by
+// ListPartnerScopesForActor — not duplicated inline in query-mapping code.
+var scopePermissionsByRole = map[string][]string{
+	"owner":      {"team.manage", "courier.manage", "coverage.read", "catalog.manage", "orders.manage"},
+	"manager":    {"team.manage", "courier.manage", "coverage.read", "orders.manage"},
+	"supervisor": {"coverage.read", "orders.manage"},
+	"staff":      {"orders.manage"},
+	"courier":    {"orders.manage"},
+}
+
+func permissionsForRole(role string) []string {
+	if perms, ok := scopePermissionsByRole[role]; ok {
+		return perms
+	}
+	return scopePermissionsByRole["staff"]
 }

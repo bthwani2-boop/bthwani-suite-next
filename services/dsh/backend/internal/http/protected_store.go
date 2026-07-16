@@ -465,6 +465,123 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
+// ─── Store team, courier settings, coverage zones, partner scopes (DSH-050) ─
+// Thin auth wrappers: verify the actor can access storeId via the existing
+// store.ActorCanAccessStore primitive, then delegate to the pure business
+// handler in partner/handler.go. Mirrors handleGetPartnerSettings above.
+
+func (s *protectedStoreServer) handlePartnerStoreTeam(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleGetStoreTeam(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerInviteTeamMember(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleInviteStoreTeamMember(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerTeamMemberAction(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleExecuteStoreTeamMemberAction(s.db)(w, partnerRequestWithActor(r, actor))
+}
+
+func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleGetStoreCourierSettings(s.db)(w, r)
+}
+
+func (s *protectedStoreServer) handlePartnerUpdateCourierSettings(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleUpdateStoreCourierSettings(s.db)(w, r)
+}
+
+func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	storeID := r.PathValue("storeId")
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	if !canAccess {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+		return
+	}
+	partner.HandleListStoreCoverageZones(s.db)(w, r)
+}
+
+func (s *protectedStoreServer) handlePartnerScopes(w http.ResponseWriter, r *http.Request) {
+	s.servePartnerSelfHandler(w, r, partner.HandleListPartnerScopes(s.db))
+}
+
 func (s *protectedStoreServer) requireActor(
 	w http.ResponseWriter,
 	r *http.Request,

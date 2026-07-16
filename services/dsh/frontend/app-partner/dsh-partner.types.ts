@@ -7,6 +7,7 @@ import type {
   DshPartnerSupportRouteId,
   PartnerHubSection,
 } from '../shared/partner/partner.types';
+import type { PartnerTeamMember } from './team/partner-team.types';
 // Re-export domain types from shared so consumers can import from one place.
 export type {
   DshPartnerOperationalFlowId,
@@ -64,7 +65,7 @@ export type DshPartnerHubSurfaceProps = {
   onOpenSupportScreen?: (screenId: DshPartnerSupportRouteId) => void;
   onOpenStoreCourierSetup?: () => void;
   onOpenTeamManagement?: () => void;
-  teamMembers?: readonly import('./team/PartnerTeamManagementScreen').PartnerTeamMember[];
+  teamMembers?: readonly PartnerTeamMember[];
   onToggleAvailability?: (isAvailable: boolean) => void;
   canonicalStoreId?: string;
   dshClientId?: string | null;
