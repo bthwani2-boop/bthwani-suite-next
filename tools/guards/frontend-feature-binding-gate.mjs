@@ -70,7 +70,7 @@ const SEGMENTS = [
       },
       {
         name: "central catalog workspace",
-        path: "services/dsh/frontend/app-partner/Catalog/PartnerCatalogManagementScreen.tsx",
+        path: "services/dsh/frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
         controller: "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
         openapi: "getPartnerCatalogTaxonomy",
         route: "GET /dsh/partner/catalog/taxonomy",
@@ -78,7 +78,7 @@ const SEGMENTS = [
       },
       {
         name: "product proposal",
-        path: "services/dsh/frontend/app-partner/Catalog/ProductEditScreen.tsx",
+        path: "services/dsh/frontend/app-partner/catalog/ProductEditScreen.tsx",
         controller: "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
         openapi: "createPartnerProductProposal",
         route: "POST /dsh/partner/catalog/product-proposals",
@@ -86,7 +86,7 @@ const SEGMENTS = [
       },
       {
         name: "central taxonomy browse",
-        path: "services/dsh/frontend/app-partner/Catalog/CategoryManagementScreen.tsx",
+        path: "services/dsh/frontend/app-partner/catalog/CategoryManagementScreen.tsx",
         controller: "services/dsh/frontend/shared/catalog/central-catalog.api.ts",
         openapi: "getPartnerCatalogTaxonomy",
         route: "GET /dsh/partner/catalog/taxonomy",
