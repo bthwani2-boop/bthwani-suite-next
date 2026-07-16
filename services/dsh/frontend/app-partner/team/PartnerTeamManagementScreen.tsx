@@ -283,6 +283,7 @@ export function PartnerTeamManagementScreen({
                           onPress={() => handleMemberAction(
                             member.id,
                             member.status === 'invited' ? 'cancel-invite' : 'audit-log',
+                            member.status === 'invited' ? 'إلغاء الدعوة' : 'سجل العمليات',
                             member.name,
                           )}
                         />

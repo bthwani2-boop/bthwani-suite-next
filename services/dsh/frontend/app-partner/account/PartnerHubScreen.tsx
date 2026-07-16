@@ -36,8 +36,10 @@ import {
 import { usePartnerSelfController } from '../../shared/partner/use-partner-self-controller';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useDshEntityMedia } from '../../shared/media/useDshEntityMedia';
+import { PartnerHubStoreHero } from './PartnerHubStoreHero';
 import { PartnerCatalogManagementScreen } from '../catalog/PartnerCatalogManagementScreen';
 import { StoreProfileScreen } from '../store/StoreProfileScreen';
+import { PartnerOnboardingStatusView } from './PartnerOnboardingStatusView';
 
 import type {
   BThwaniAppearanceMode,
@@ -314,66 +316,13 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   }
 
   if (identity.state.kind === 'authenticated' && selfStatusState.kind === 'success' && !isDshPartnerActivationComplete(selfStatusState.partner.activationStatus)) {
-    const statusMeta = getDshPartnerActivationStateMetadata(selfStatusState.partner.activationStatus);
-    const readinessItems = selfReadinessViewModel?.items ?? [];
     return (
-      <MobileScrollView
-        contentContainerStyle={{ padding: spacing[4], gap: spacing[3] }}
-        showsVerticalScrollIndicator={false}
-      >
-        <Surface style={{ padding: spacing[4], gap: spacing[3], borderRadius: radius.md }}>
-          <View style={{ alignItems: 'flex-end', gap: spacing[1] }}>
-            <Text role="titleMd" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-              حالة الانضمام
-            </Text>
-            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-              لا يمكن تفعيل الحساب ذاتيًا. تتم المراجعة والتفعيل من لوحة التحكم.
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
-            <Badge label={getDshPartnerActivationStatusLabel(selfStatusState.partner.activationStatus)} tone="info" />
-            <Badge label={selfReadinessState.kind === 'success' && selfReadinessState.readiness.canActivatePartner ? 'جاهز للمراجعة' : 'بانتظار استكمال الاعتماد'} tone={selfReadinessState.kind === 'success' && selfReadinessState.readiness.canActivatePartner ? 'success' : 'warning'} />
-          </View>
-
-          <View style={{ gap: spacing[2], alignItems: 'flex-end' }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right' }}>الخطوة التالية</Text>
-            <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>
-              {statusMeta.nextAction}
-            </Text>
-            {statusMeta.blockedReason ? (
-              <Text role="caption" tone="danger" style={{ textAlign: 'right' }}>
-                {statusMeta.blockedReason}
-              </Text>
-            ) : null}
-          </View>
-        </Surface>
-
-        <Surface style={{ padding: spacing[4], gap: spacing[2], borderRadius: radius.md }}>
-          <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-            النواقص والجاهزية
-          </Text>
-          {selfReadinessState.kind === 'loading' || selfReadinessState.kind === 'idle' ? (
-            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>جاري تحميل الجاهزية…</Text>
-          ) : readinessItems.length === 0 ? (
-            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>لا توجد تفاصيل جاهزية متاحة الآن.</Text>
-          ) : (
-            readinessItems.map((item) => (
-              <View key={item.label} style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: spacing[2] }}>
-                <Icon name={item.satisfied ? 'checkmark-circle' : 'ellipse-outline'} size={18} tone={item.satisfied ? 'success' : 'muted'} />
-                <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                  <Text role="bodySm" style={{ textAlign: 'right' }}>{item.label}</Text>
-                  {!item.satisfied && item.blockedReason ? (
-                    <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>{item.blockedReason}</Text>
-                  ) : null}
-                </View>
-              </View>
-            ))
-          )}
-        </Surface>
-
-        <Button label="تحديث الحالة" tone="secondary" onPress={reloadSelfStatus} />
-      </MobileScrollView>
+      <PartnerOnboardingStatusView
+        selfStatusState={selfStatusState as any}
+        selfReadinessState={selfReadinessState}
+        selfReadinessViewModel={selfReadinessViewModel}
+        reloadSelfStatus={reloadSelfStatus}
+      />
     );
   }
 
@@ -511,101 +460,18 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   return (
     <Box style={{ flex: 1, position: 'relative' }} background="background">
       <MobileScrollView fill padding={0} gap={4} contentContainerStyle={{ paddingBottom: partnerHubBottomInset }}>
-        {/* Store header — inline replacement for StoreHero (not in new-repo ui-kit) */}
-        <Box
-          padding={4}
-          gap={3}
-          style={{
-            borderBottomWidth: 1,
-            borderBottomColor: theme.line,
-            backgroundColor: theme.surface,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View
-              style={{
-                flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-                alignItems: 'center',
-                gap: spacing[3],
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: radius.md,
-                  backgroundColor: theme.brandSurface,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: theme.brand + '33',
-                  flexShrink: 0,
-                }}
-              >
-                <Icon name="storefront-outline" size={24} tone="brand" />
-              </View>
-              <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: direction === 'rtl' ? 'flex-end' : 'flex-start' }}>
-                <Text role="bodyStrong" numberOfLines={1} style={{ textAlign: direction === 'rtl' ? 'right' : 'left' }}>
-                  {resolvedStoreName}
-                </Text>
-                <Text role="bodySm" tone="muted" numberOfLines={1} style={{ textAlign: direction === 'rtl' ? 'right' : 'left' }}>
-                  {resolvedBranchLabel} · {resolvedActiveZoneLabel}
-                </Text>
-              </View>
-            </View>
-            <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', alignItems: 'center', gap: spacing[2] }}>
-              <Badge label={isAvailable ? 'مفتوح' : 'مغلق'} tone={isAvailable ? 'success' : 'warning'} />
-              <Pressable
-                onPress={onOpenStoreScope}
-                accessibilityRole="button"
-                accessibilityLabel="اختيار الفرع"
-                style={{ padding: spacing[2], borderRadius: radius.md }}
-              >
-                <Icon name="git-branch-outline" size={18} tone="muted" />
-              </Pressable>
-            </View>
-          </View>
-          {/* Service mode chips — readonly display */}
-          <View style={{ flexDirection: direction === 'rtl' ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-            {serviceModes.map((mode) => (
-              <Pressable
-                key={mode.id}
-                onPress={() => setSelectedModeId(mode.id)}
-                style={({ pressed }: { pressed: boolean }) => ({
-                  flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingHorizontal: spacing[3],
-                  paddingVertical: 6,
-                  borderRadius: radius.round,
-                  borderWidth: 1,
-                  borderColor: selectedModeId === mode.id ? theme.brand : theme.line,
-                  backgroundColor: selectedModeId === mode.id ? theme.brandSurface : pressed ? theme.surfaceInset : theme.surface,
-                })}
-              >
-                <Icon
-                  name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'}
-                  size={14}
-                  tone={selectedModeId === mode.id ? 'brand' : 'muted'}
-                />
-                <Text
-                  role="caption"
-                  style={{ color: selectedModeId === mode.id ? theme.brand : theme.text }}
-                >
-                  {mode.title}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </Box>
+        {/* Store header */}
+        <PartnerHubStoreHero
+          direction={direction}
+          resolvedStoreName={resolvedStoreName}
+          resolvedBranchLabel={resolvedBranchLabel}
+          resolvedActiveZoneLabel={resolvedActiveZoneLabel}
+          isAvailable={isAvailable}
+          onOpenStoreScope={onOpenStoreScope}
+          serviceModes={serviceModes}
+          selectedModeId={selectedModeId}
+          setSelectedModeId={setSelectedModeId}
+        />
 
         <Box padding={4} gap={4}>
           {isInternalActiveOnly ? (

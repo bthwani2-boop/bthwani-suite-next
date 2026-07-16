@@ -416,6 +416,7 @@ export type DshPartnerStoreCourierSettings = {
   readonly pricingSource: string;
   readonly compensation: string;
   readonly selectedBranchIds: string[];
+  readonly version?: number;
 };
 
 export type DshPartnerCoverageZone = {
