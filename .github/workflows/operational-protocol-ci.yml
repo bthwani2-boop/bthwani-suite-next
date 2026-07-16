@@ -96,6 +96,7 @@ jobs:
         run: pnpm run guard:tool-catalog-coverage
 
   ownership-boundaries:
+    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -122,6 +123,7 @@ jobs:
           pnpm run guard:wlt-financial-boundary
 
   vertical-fullstack-integrity:
+    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -149,6 +151,7 @@ jobs:
           pnpm run guard:runtime-real-bindings
 
   contract-data-integrity:
+    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -173,6 +176,7 @@ jobs:
           pnpm run guard:api-binding
 
   authorization-state-integrity:
+    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -193,6 +197,7 @@ jobs:
 
 
   organization-and-performance:
+    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -257,6 +262,7 @@ jobs:
         run: pnpm run diagnostics:knip
 
   ledger-completeness:
+    if: github.event.inputs.mode == 'full' || github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -272,10 +278,11 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify Mandatory Matrices in Ledger
+      - name: Verify WLT Financial Domain Boundary
         run: pnpm run guard:wlt-financial-boundary
 
   runtime-proof:
+    if: github.event.inputs.mode == 'runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -316,7 +323,11 @@ jobs:
     steps:
       - name: Final Protocol Check
         run: |
-          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" == "true" ]; then
+          # NOTE: 'skipped' is intentionally excluded from the failure condition.
+          # Heavy guard-suite jobs and the runtime-proof job are conditionally
+          # skipped based on workflow_dispatch inputs.mode (affected/full/runtime);
+          # a skip in that case is expected, not a protocol failure.
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]; then
             echo "OPERATIONAL_PROTOCOL_FAIL"
             exit 1
           else

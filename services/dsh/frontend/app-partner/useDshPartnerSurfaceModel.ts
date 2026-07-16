@@ -19,7 +19,8 @@ import { useStoreScopeModel } from '../shared/partner/store-scope.model';
 import { usePartnerOrdersModel } from './orders/usePartnerOrdersModel';
 import { usePartnerSupportModel } from '../shared/support/partner-support.model';
 import { usePartnerOpsSummaryModel } from '../shared/operations/partner-ops-summary.model';
-import { usePartnerTeamModel } from './teammanagement/usePartnerTeamModel';
+import { usePartnerTeamModel, type PartnerTeamMutationResult } from './teammanagement/usePartnerTeamModel';
+import type { PartnerTeamMember } from './teammanagement/partner-team.types';
 import type { PartnerDeliveryOpsSummary } from '../shared/partner/partner.adapters';
 
 export type DshPartnerSurfaceState = {
@@ -60,8 +61,8 @@ export type DshPartnerSurfaceActions = {
   openSupportScreen: (screenId: DshPartnerSupportRouteId, source?: DshPartnerSupportCommandContext['source']) => void;
   handleMarkReady: (orderId: string) => void;
   refreshOrders: () => void;
-  onInviteMember: (identity: string) => void;
-  onMemberAction: (memberId: string, actionLabel: string) => void;
+  onInviteMember: (identity: string) => Promise<PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, actionLabel: string) => Promise<PartnerTeamMutationResult>;
   handleHardwareBackPress: () => boolean;
 };
 
@@ -82,8 +83,9 @@ export type DshPartnerSurfaceModel = {
   partnerOrders: readonly PartnerOrderItem[];
   deliveryOpsSummary: PartnerDeliveryOpsSummary;
   isCommandCenterInline: boolean;
-  teamMembers: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
+  teamMembers: readonly PartnerTeamMember[];
   isTeamLoading: boolean;
+  teamError: string | null;
 };
 
 export function useDshPartnerSurfaceModel(
@@ -190,5 +192,6 @@ export function useDshPartnerSurfaceModel(
     isCommandCenterInline: support.isCommandCenterInline,
     teamMembers: team.teamMembers,
     isTeamLoading: team.isTeamLoading,
+    teamError: team.teamError,
   };
 }

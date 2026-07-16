@@ -15,31 +15,26 @@ import {
   resolveRowDirection,
 } from '@bthwani/ui-kit';
 
-export type PartnerTeamRole = 'owner' | 'supervisor' | 'staff' | 'courier';
-export type PartnerTeamStatus = 'active' | 'paused' | 'invited' | 'blocked' | 'review-needed';
+// Domain types live in ./partner-team.types so non-UI code (e.g. the
+// usePartnerTeamModel hook) does not need to depend on this Screen module.
+// Re-exported here for backward compatibility with existing consumers.
+export type {
+  PartnerTeamRole,
+  PartnerTeamStatus,
+  PartnerTeamMember,
+} from './partner-team.types';
+import type { PartnerTeamMember, PartnerTeamRole, PartnerTeamStatus } from './partner-team.types';
 
-export type PartnerTeamMember = {
-  readonly id: string;
-  readonly name: string;
-  readonly role: PartnerTeamRole;
-  readonly roleLabel: string;
-  readonly status: PartnerTeamStatus;
-  readonly statusLabel: string;
-  readonly branchAssignment: string;
-  readonly permissionsSummary: string;
-  readonly deliveryAssignment: string;
-  readonly inviteLifecycle: string;
-  readonly operationalImpact: string;
-  readonly auditNote: string;
-  readonly inlineActionLabel: string;
-};
+export type PartnerTeamMutationResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
 
 export type PartnerTeamManagementScreenProps = {
   readonly storeName: string;
   readonly branchLabel: string;
   readonly members?: readonly PartnerTeamMember[];
-  readonly onInviteMember?: (identity: string) => void;
-  readonly onMemberAction?: (memberId: string, actionLabel: string) => void;
+  readonly isLoading?: boolean;
+  readonly error?: string | null;
+  readonly onInviteMember?: (identity: string) => Promise<PartnerTeamMutationResult> | void;
+  readonly onMemberAction?: (memberId: string, actionLabel: string) => Promise<PartnerTeamMutationResult> | void;
   readonly onBack?: () => void;
 };
 
@@ -72,6 +67,8 @@ export function PartnerTeamManagementScreen({
   storeName,
   branchLabel,
   members = EMPTY_TEAM_MEMBERS,
+  isLoading = false,
+  error = null,
   onInviteMember,
   onMemberAction,
   onBack,
@@ -96,10 +93,32 @@ export function PartnerTeamManagementScreen({
       return;
     }
 
-    onInviteMember(trimmed);
-    setActionFeedback(`تم إرسال طلب دعوة العضو إلى runtime: ${trimmed}`);
+    setActionFeedback(`جارٍ إرسال طلب دعوة العضو: ${trimmed}`);
+    Promise.resolve(onInviteMember(trimmed)).then((result) => {
+      if (result && !result.ok) {
+        setActionFeedback(`فشل إرسال الدعوة إلى ${trimmed}: ${result.error}`);
+        return;
+      }
+      setActionFeedback(`تم إرسال طلب دعوة العضو إلى runtime: ${trimmed}`);
+    }).catch((err: unknown) => {
+      setActionFeedback(`فشل إرسال الدعوة إلى ${trimmed}: ${err instanceof Error ? err.message : 'خطأ غير متوقع'}`);
+    });
     setInviteDraft('');
   }, [inviteDraft, onInviteMember]);
+
+  const handleMemberAction = React.useCallback((memberId: string, actionLabel: string, memberName: string) => {
+    if (!onMemberAction) return;
+    setActionFeedback(`جارٍ إرسال إجراء (${actionLabel}) للعضو: ${memberName}`);
+    Promise.resolve(onMemberAction(memberId, actionLabel)).then((result) => {
+      if (result && !result.ok) {
+        setActionFeedback(`فشل تنفيذ (${actionLabel}) للعضو ${memberName}: ${result.error}`);
+        return;
+      }
+      setActionFeedback(`تم إرسال إجراء (${actionLabel}) إلى runtime للعضو: ${memberName}`);
+    }).catch((err: unknown) => {
+      setActionFeedback(`فشل تنفيذ (${actionLabel}) للعضو ${memberName}: ${err instanceof Error ? err.message : 'خطأ غير متوقع'}`);
+    });
+  }, [onMemberAction]);
 
   return (
     <ScrollView
@@ -131,6 +150,18 @@ export function PartnerTeamManagementScreen({
           </View>
         </Card>
 
+        {/* Read-path error banner */}
+        {error && (
+          <Card tone="danger" padding={3}>
+            <View style={{ flexDirection: resolveRowDirection(direction), gap: spacing[2], alignItems: 'flex-start' }}>
+              <Icon name="alert-circle-outline" size={18} tone="danger" style={{ marginTop: 2 }} />
+              <Text role="bodySm" tone="danger" align="start" style={{ flex: 1 }}>
+                تعذر تحميل بيانات الفريق من runtime: {error}
+              </Text>
+            </View>
+          </Card>
+        )}
+
         {/* Add Member Form */}
         <Card padding={3} gap={3}>
           <Text role="bodyStrong" align="start">دعوة عضو جديد للفريق</Text>
@@ -150,7 +181,7 @@ export function PartnerTeamManagementScreen({
             onPress={handleAddMember}
           />
           {actionFeedback && (
-            <Text role="caption" tone="success" align="start" style={{ marginTop: spacing[1] }}>
+            <Text role="caption" tone={actionFeedback.startsWith('فشل') ? 'danger' : 'success'} align="start" style={{ marginTop: spacing[1] }}>
               {actionFeedback}
             </Text>
           )}
@@ -165,7 +196,7 @@ export function PartnerTeamManagementScreen({
           {members.length === 0 ? (
             <Card tone="default" padding={3}>
               <Text role="bodySm" tone="muted" align="start">
-                لا توجد بيانات أعضاء runtime لهذا الفرع حالياً.
+                {isLoading ? 'جارٍ تحميل بيانات الفريق من runtime...' : 'لا توجد بيانات أعضاء runtime لهذا الفرع حالياً.'}
               </Text>
             </Card>
           ) : (
@@ -242,20 +273,18 @@ export function PartnerTeamManagementScreen({
                           size="sm"
                           fullWidth={false}
                           disabled={isLastSupervisor}
-                          onPress={() => {
-                            onMemberAction?.(member.id, memberActionLabel);
-                            setActionFeedback(`تم إرسال إجراء (${memberActionLabel}) إلى runtime للعضو: ${member.name}`);
-                          }}
+                          onPress={() => handleMemberAction(member.id, memberActionLabel, member.name)}
                         />
                         <Button
                           label={member.status === 'invited' ? 'إلغاء الدعوة' : 'سجل العمليات'}
                           tone="secondary"
                           size="sm"
                           fullWidth={false}
-                          onPress={() => {
-                            onMemberAction?.(member.id, member.status === 'invited' ? 'cancel-invite' : 'audit-log');
-                            setActionFeedback(`تم إرسال طلب إجراء للعضو: ${member.name}`);
-                          }}
+                          onPress={() => handleMemberAction(
+                            member.id,
+                            member.status === 'invited' ? 'cancel-invite' : 'audit-log',
+                            member.name,
+                          )}
                         />
                       </View>
                     </View>

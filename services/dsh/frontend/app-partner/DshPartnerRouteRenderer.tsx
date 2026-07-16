@@ -87,9 +87,11 @@ type Props = {
   openSupportCommandFromOperationalFlow: (flowId: DshPartnerOperationalFlowId, source?: DshPartnerSupportCommandContext['source']) => void;
   handleMarkReady: (orderId: string) => void;
   refreshOrders: () => void;
-  teamMembers: readonly import('./teammanagement/PartnerTeamManagementScreen').PartnerTeamMember[];
-  onInviteMember: (identity: string) => void;
-  onMemberAction: (memberId: string, actionLabel: string) => void;
+  teamMembers: readonly import('./teammanagement/partner-team.types').PartnerTeamMember[];
+  isTeamLoading?: boolean;
+  teamError?: string | null;
+  onInviteMember: (identity: string) => Promise<import('./teammanagement/usePartnerTeamModel').PartnerTeamMutationResult>;
+  onMemberAction: (memberId: string, actionLabel: string) => Promise<import('./teammanagement/usePartnerTeamModel').PartnerTeamMutationResult>;
   scopes: readonly import('../shared/partner/partner.types').DshPartnerOperationalScope[];
 };
 
@@ -131,11 +133,18 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     openInventoryManagement, openStoreCourier, openSupportCommandFromOperationalFlow,
     handleMarkReady, setEditingProductId,
     selectedStoreScopeId, openStoreScope, refreshOrders,
-    teamMembers, onInviteMember, onMemberAction,
+    teamMembers, isTeamLoading, teamError, onInviteMember, onMemberAction,
     scopes,
   } = props;
 
-  const activeStoreRuntimeId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
+  // 'all' means no single store is selected (multi-store scope). Represent that
+  // as `undefined` rather than an empty-string store id, matching the optional
+  // `canonicalStoreId?: string` contract used elsewhere in app-partner.
+  const activeStoreRuntimeId: string | undefined = selectedStoreScopeId === 'all' ? undefined : selectedStoreScopeId;
+  // Store-scoped screens (product/category/courier editing) require a concrete
+  // store id; they are only reachable when a specific store is selected, but
+  // fall back to '' defensively rather than silently reusing the 'all' sentinel.
+  const activeStoreIdForStoreScopedScreens = activeStoreRuntimeId ?? '';
   const activePartnerOrder = React.useMemo(
     () => partnerOrders.find(order => order.id === activeOrderId) ?? partnerOrders[0],
     [activeOrderId, partnerOrders],
@@ -145,13 +154,19 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   assertRouteHasBindingContract(route);
 
   if (route === 'home') {
+    // storeOpen/listingEnabled intentionally omitted below: no real store-status
+    // data is available at this call site (selectedStoreScope only carries
+    // scopeId/storeId/displayName/role/permissions). DshPartnerHubSurface
+    // defaults both to `true` internally and derives live values itself from
+    // its own state/fetches. Follow-up: plumb real store open/listing status
+    // into DshPartnerSurfaceState so it can be passed here explicitly instead
+    // of relying on the surface's internal default.
     return renderSurfaceShell(
       <DshPartnerHubSurface
         section={accountHubSection} onSectionChange={props.setAccountHubSection}
         storeName={runtimePartnerProfile.storeName} branchLabel={selectedStoreScope.displayName}
         cityLabel={runtimePartnerProfile.cityLabel} managerLabel={runtimePartnerProfile.managerLabel}
         todayHoursLabel={runtimePartnerProfile.todayHoursLabel} activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
-        storeOpen listingEnabled
         activeOrdersCount={deliveryOpsSummary.outForDelivery + deliveryOpsSummary.handoffReady}
         urgentOrdersCount={deliveryOpsSummary.delayedRisk} pendingActionsCount={deliveryOpsSummary.handoffReady}
         onOpenOrdersBoard={openOrdersBoard} onOpenOrdersSearch={openOrdersSearch}
@@ -161,7 +176,7 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
         onOpenOperationalFlow={(flowId) => openSupportCommandFromOperationalFlow(flowId, 'hub')}
         onOpenSupportScreen={(screenId) => openSupportScreen(screenId, 'hub')}
         onOpenStoreCourierSetup={openStoreCourier}
-        canonicalStoreId={activeStoreRuntimeId}
+        {...(activeStoreRuntimeId !== undefined ? { canonicalStoreId: activeStoreRuntimeId } : {})}
         dshClientId={dshClientId ?? null}
       />,
     ) as React.ReactElement;
@@ -207,22 +222,24 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
 
   if (route === 'product-edit') {
     return renderSurfaceShell(
-      <ProductEditScreen storeId={activeStoreRuntimeId} productId={editingProductId ?? ''}
+      <ProductEditScreen storeId={activeStoreIdForStoreScopedScreens} productId={editingProductId ?? ''}
         onBack={() => setRoute('inventory-management')}
         onSaved={() => { setEditingProductId(undefined); setRoute('inventory-management'); }}
       />,
     ) as React.ReactElement;
   }
 
-  if (route === 'category-management') return renderSurfaceShell(<CategoryManagementScreen storeId={activeStoreRuntimeId} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
-  if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} storeId={activeStoreRuntimeId} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
-  if (route === 'product-overrides') return renderSurfaceShell(<ProductOverridesScreen storeId={activeStoreRuntimeId} productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
-  if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen storeId={activeStoreRuntimeId} scopes={scopes} onBack={() => openAccountHub('operations')} />) as React.ReactElement;
+  if (route === 'category-management') return renderSurfaceShell(<CategoryManagementScreen storeId={activeStoreIdForStoreScopedScreens} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
+  if (route === 'product-media') return renderSurfaceShell(<ProductMediaScreen productId={editingProductId ?? ''} storeId={activeStoreIdForStoreScopedScreens} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
+  if (route === 'product-overrides') return renderSurfaceShell(<ProductOverridesScreen storeId={activeStoreIdForStoreScopedScreens} productId={editingProductId ?? ''} onBack={() => setRoute('inventory-management')} />) as React.ReactElement;
+  if (route === 'store-courier') return renderSurfaceShell(<DshPartnerStoreCourierScreen storeId={activeStoreIdForStoreScopedScreens} scopes={scopes} onBack={() => openAccountHub('operations')} />) as React.ReactElement;
   if (route === 'team-management') return renderSurfaceShell(
     <PartnerTeamManagementScreen
       storeName={runtimePartnerProfile.storeName}
       branchLabel={runtimePartnerProfile.branchLabel}
       members={teamMembers}
+      isLoading={isTeamLoading ?? false}
+      error={teamError ?? null}
       onInviteMember={onInviteMember}
       onMemberAction={onMemberAction}
     />
