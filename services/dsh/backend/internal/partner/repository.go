@@ -1073,10 +1073,10 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 // is the store's owning partner and defaults to "owner".
 func ListPartnerScopesForActor(db *sql.DB, partnerID, actorIdentity string) ([]OperationalScope, error) {
 	rows, err := db.Query(`
-		SELECT s.id, s.partner_id, s.display_name, COALESCE(tm.role, 'owner') AS role
+		SELECT s.id, s.partner_id, s.display_name, tm.role AS role
 		FROM dsh_stores s
-		LEFT JOIN dsh_store_team_members tm
-			ON tm.store_id = s.id AND tm.invited_identity = $2 AND tm.status = 'active'
+		INNER JOIN dsh_store_team_members tm
+			ON tm.store_id = s.id AND tm.identity_actor_id = $2 AND tm.status = 'active'
 		WHERE s.partner_id = $1
 		ORDER BY s.display_name ASC`, partnerID, actorIdentity)
 	if err != nil {
