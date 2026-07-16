@@ -8,40 +8,23 @@ import {
   WebControlPanelDecisionRow,
 } from '@bthwani/ui-kit/web';
 import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
-import type { AnyOperationsWorkspaceId } from './operations.registry';
-import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from './operations.registry';
+import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from '../../shared/operations';
 import styles from '../shared/control-panel-surface.module.css';
-import { getDshSignalSummaries, getDshSignalEventLabel, getDshSignalEventTone, refreshDshMarketingSignals } from '../../shared/marketing/dsh-signal-layer.model';
 
 export type CommandCenterScreenProps = { hubHref: string; subGroup?: string; };
 
-export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCenterScreenProps) {
+export function CommandCenterScreen({ hubHref, subGroup = 'overview' }: CommandCenterScreenProps) {
   const router = useRouter();
-  const [opsUrgentSignals, setOpsUrgentSignals] = React.useState(() =>
-    getDshSignalSummaries('control-panel', 'ops').filter((s) => s.priority === 'urgent' && s.readState === 'unread').slice(0, 3)
-  );
-  React.useEffect(() => {
-    let cancelled = false;
-    refreshDshMarketingSignals().then(() => {
-      if (cancelled) return;
-      setOpsUrgentSignals(getDshSignalSummaries('control-panel', 'ops').filter((s) => s.priority === 'urgent' && s.readState === 'unread').slice(0, 3));
-    });
-    return () => { cancelled = true; };
-  }, []);
+
   const operationsGovernance = getDshControlPanelGovernanceEntry('operations');
   const supportGovernance = getDshControlPanelGovernanceEntry('support');
   const financeGovernance = getDshControlPanelGovernanceEntry('finance');
 
-  return (
-    <Box gap={3}>
-      {/* ── Header ── */}
-      <div className={styles.surfaceSectionHeader} style={{ marginBottom: '4px' }}>
-        <h2 className={styles.surfaceSectionTitle} style={{ fontSize: '15px' }}>لوحة التحكم والمراقبة النشطة</h2>
-        <p className={styles.surfaceSectionSubtitle} style={{ fontSize: '11px' }}>التدخلات السريعة وتوجيه قرارات الإسناد وحوكمة أسطح DSH</p>
-      </div>
+  let content = null;
 
+  if (subGroup === 'overview') {
+    content = (
       <div className={styles.surfaceGridTwoCol} style={{ gap: '10px' }}>
-
         {/* 1. Decision routing map */}
         <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
           <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>خريطة القرار السريع</h3>
@@ -68,7 +51,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
               recommendation="حوّل إلى الدعم"
               reason={supportGovernance.notes}
               sla="التذاكر، المحادثات، المتابعة"
-              primaryAction={{ id: 'go-support', label: 'فتح الدعم', onAction: () => router.push('/support') }}
+              primaryAction={{ id: 'go-support', label: 'فتح الدعم', onAction: () => router.push('/dsh/support') }}
             />
             <WebControlPanelDecisionRow
               entityId="FIN"
@@ -78,98 +61,7 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
               recommendation="حوّل إلى المحفظة المالية WLT — عرض فقط"
               reason={financeGovernance.notes}
               sla="معاينة فقط — لا تعديل مالي"
-              primaryAction={{ id: 'go-finance', label: 'فتح المالية', onAction: () => router.push('/finance') }}
-            />
-          </div>
-        </div>
-
-        {/* 2. Top system recommendations */}
-        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
-          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>أعلى توصيات النظام الآن</h3>
-          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            <WebControlPanelRecommendation
-              title="لا توجد توصيات نشطة"
-              reason="لا يوجد مصدر بيانات حي لتوصيات النظام حالياً."
-              confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
-            />
-          </div>
-        </div>
-
-        {/* 3. Urgent quick actions */}
-        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
-          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>تدخل سريع مطلوب</h3>
-          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            <WebControlPanelRecommendation
-              title="لا توجد تدخلات عاجلة"
-              reason="لا يوجد مصدر بيانات حي لقائمة التدخل السريع حالياً."
-              confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
-            />
-          </div>
-        </div>
-
-        {/* 3.5. Playbooks */}
-        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
-          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>خطط التدخل</h3>
-          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            <WebControlPanelRecommendation
-              title="لا توجد خطط تدخل نشطة"
-              reason="لا يوجد مصدر بيانات حي لخطط التدخل حالياً."
-              confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
-            />
-          </div>
-        </div>
-
-        {/* 4. Signal layer */}
-        {opsUrgentSignals.length > 0 ? (
-          <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
-            <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>إشارات النظام العاجلة</h3>
-            <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-              {opsUrgentSignals.map((signal) => {
-                const tone = getDshSignalEventTone(signal.kind);
-                const statusTone = tone === 'danger' ? 'danger' as const
-                  : tone === 'warning' ? 'warning' as const
-                  : 'neutral' as const;
-                return (
-                  <WebControlPanelDecisionRow
-                    key={signal.eventId}
-                    entityId={signal.entityId}
-                    entityLabel={getDshSignalEventLabel(signal.kind)}
-                    status={signal.title}
-                    statusTone={statusTone}
-                    risk="danger"
-                    recommendation={`الكيان: ${signal.entityId} · ${signal.emittedAt}`}
-                    sla={signal.emittedAt}
-                    primaryAction={{
-                      id: `sig-${signal.eventId}`,
-                      label: 'فتح التفاصيل',
-                      onAction: () => {
-                        const OPS_PREFIX = 'cp/operations/';
-                        if (signal.routeId.startsWith(OPS_PREFIX)) {
-                          router.push(buildOperationsHref(signal.routeId.slice(OPS_PREFIX.length) as AnyOperationsWorkspaceId));
-                        } else {
-                          router.push(`/${signal.routeId}`);
-                        }
-                      },
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-
-        {/* 5. Service health */}
-        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
-          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>حالة الخدمة والمؤشرات</h3>
-          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
-            <WebControlPanelRecommendation
-              title="لا توجد مؤشرات خدمة نشطة"
-              reason="لا يوجد مصدر بيانات حي لمؤشرات الخدمة حالياً."
-              confidence="low"
-              auditTag="NEEDS_RUNTIME_EVIDENCE"
+              primaryAction={{ id: 'go-finance', label: 'فتح المالية', onAction: () => router.push('/dsh/finance') }}
             />
           </div>
         </div>
@@ -186,8 +78,67 @@ export function CommandCenterScreen({ hubHref, subGroup: _subGroup }: CommandCen
             <Text role="caption" tone="muted">لا يوجد مصدر بيانات حي لتنبيهات WLT المالية حالياً.</Text>
           </div>
         </div>
-
       </div>
+    );
+  } else if (subGroup === 'anomalies') {
+    content = (
+      <div className={styles.surfaceGridTwoCol} style={{ gap: '10px' }}>
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>شواذ النظام (Anomalies)</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <WebControlPanelRecommendation
+              title="BLOCKED_NEEDS_RUNTIME_SOURCE"
+              reason="لا يوجد مصدر عمليات حي."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  } else if (subGroup === 'recommendations') {
+    content = (
+      <div className={styles.surfaceGridTwoCol} style={{ gap: '10px' }}>
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>توصيات ذكية</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <WebControlPanelRecommendation
+              title="BLOCKED_NEEDS_RUNTIME_SOURCE"
+              reason="لا يوجد مصدر عمليات حي."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  } else {
+    content = (
+      <div className={styles.surfaceGridTwoCol} style={{ gap: '10px' }}>
+        <div className={styles.surfaceCompactPanel} style={{ padding: '10px' }}>
+          <h3 className={styles.surfacePanelTitle} style={{ fontSize: '12px', marginBottom: '8px' }}>{subGroup}</h3>
+          <div className={styles.surfaceStackSmall} style={{ gap: '6px' }}>
+            <WebControlPanelRecommendation
+              title="BLOCKED_NEEDS_RUNTIME_SOURCE"
+              reason="لا يوجد مصدر عمليات حي."
+              confidence="low"
+              auditTag="NEEDS_RUNTIME_EVIDENCE"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Box gap={3}>
+      {/* ── Header ── */}
+      <div className={styles.surfaceSectionHeader} style={{ marginBottom: '4px' }}>
+        <h2 className={styles.surfaceSectionTitle} style={{ fontSize: '15px' }}>لوحة التحكم والمراقبة النشطة</h2>
+        <p className={styles.surfaceSectionSubtitle} style={{ fontSize: '11px' }}>التدخلات السريعة وتوجيه قرارات الإسناد وحوكمة أسطح DSH</p>
+      </div>
+
+      {content}
 
       {/* ── Governance Footnote Section ── */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderTop: '1px solid var(--bthwani-control-panel-border)', paddingTop: '10px' }}>
